@@ -153,7 +153,7 @@ describe('StatusBar', () => {
   describe('loaded label', () => {
     it('shows loaded label next to device name when provided', () => {
       render(<StatusBar {...defaultProps} loadedLabel="My Layout" />)
-      expect(screen.getByTestId('loaded-label')).toHaveTextContent('— My Layout')
+      expect(screen.getByTestId('loaded-label')).toHaveTextContent('My Layout')
     })
 
     it('does not render loaded label when empty string', () => {

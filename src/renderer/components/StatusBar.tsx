@@ -42,7 +42,10 @@ export function StatusBar({
       <div className="flex items-center gap-3">
         <span>{deviceName}</span>
         {loadedLabel && (
-          <span className="text-content-muted" data-testid="loaded-label">— {loadedLabel}</span>
+          <>
+            <span className="text-edge">|</span>
+            <span className="text-content-muted" data-testid="loaded-label">{loadedLabel}</span>
+          </>
         )}
         <span className="text-edge">|</span>
         {autoAdvance && (
