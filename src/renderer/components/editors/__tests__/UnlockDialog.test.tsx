@@ -14,6 +14,8 @@ vi.mock('react-i18next', () => ({
         'unlock.title': 'Unlock',
         'unlock.instructions': 'Press the highlighted keys',
         'unlock.cancel': 'Cancel',
+        'editor.macro.unlockClickAgain': 'Click the macro key again after unlocking.',
+        'editor.macro.unlockWarning': 'Do not store passwords or sensitive information in macros.',
       }
       return map[key] ?? key
     },
@@ -125,5 +127,33 @@ describe('UnlockDialog', () => {
     await act(async () => { renderDialog() })
 
     expect(screen.queryByText('Cancel')).not.toBeInTheDocument()
+  })
+
+  it('does not show macro warning by default', async () => {
+    unlockPoll.mockResolvedValue([0, 0, 50])
+    await act(async () => { renderDialog() })
+
+    expect(screen.queryByTestId('macro-unlock-warning')).not.toBeInTheDocument()
+  })
+
+  it('shows macro warning when macroWarning is true', async () => {
+    unlockPoll.mockResolvedValue([0, 0, 50])
+    await act(async () => {
+      render(
+        <UnlockDialog
+          keys={keys}
+          unlockKeys={unlockKeys}
+          unlockStart={unlockStart}
+          unlockPoll={unlockPoll}
+          onComplete={onComplete}
+          macroWarning
+        />,
+      )
+    })
+
+    const warning = screen.getByTestId('macro-unlock-warning')
+    expect(warning).toBeInTheDocument()
+    expect(screen.getByText('Click the macro key again after unlocking.')).toBeInTheDocument()
+    expect(screen.getByText('Do not store passwords or sensitive information in macros.')).toBeInTheDocument()
   })
 })

@@ -32,6 +32,7 @@ vi.mock('../../keyboard/KeyboardWidget', () => ({
 }))
 
 const QK_BOOT = 0x7c00
+const MACRO_0 = 0x7700 // M0 keycode value
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
   TabbedKeycodes: (props: {
@@ -50,6 +51,12 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
       >
         A
       </button>
+      <button
+        data-testid="kc-m0"
+        onClick={() => props.onKeycodeSelect?.({ qmkId: 'M0' })}
+      >
+        M0
+      </button>
     </div>
   ),
 }))
@@ -57,19 +64,21 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => {
     if (code === QK_BOOT) return 'QK_BOOT'
+    if (code === MACRO_0) return 'M0'
     return `KC_${code}`
   },
   deserialize: (val: string) => {
     if (val === 'QK_BOOT') return QK_BOOT
     if (val === 'KC_A') return 4
+    if (val === 'M0') return MACRO_0
     return 0
   },
   isMask: () => false,
   isResetKeycode: (code: number) => code === QK_BOOT,
   isTapDanceKeycode: () => false,
   getTapDanceIndex: () => -1,
-  isMacroKeycode: () => false,
-  getMacroIndex: () => -1,
+  isMacroKeycode: (code: number) => code === MACRO_0,
+  getMacroIndex: (code: number) => (code === MACRO_0 ? 0 : -1),
   keycodeLabel: (qmkId: string) => qmkId,
   keycodeTooltip: (qmkId: string) => qmkId,
 }))
@@ -83,7 +92,7 @@ vi.mock('../TapDanceModal', () => ({
 }))
 
 vi.mock('../MacroModal', () => ({
-  MacroModal: () => null,
+  MacroModal: () => <div data-testid="macro-modal">MacroModal</div>,
 }))
 
 import { KeymapEditor } from '../KeymapEditor'
@@ -211,5 +220,82 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
 
     expect(onUnlock).not.toHaveBeenCalled()
     expect(onSetKey).not.toHaveBeenCalled()
+  })
+})
+
+describe('KeymapEditor — macro unlock gate', () => {
+  const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetEncoder = vi.fn().mockResolvedValue(undefined)
+  const onUnlock = vi.fn()
+  const onSaveMacros = vi.fn().mockResolvedValue(undefined)
+
+  const macroProps = {
+    layout: makeLayout(),
+    layers: 2,
+    currentLayer: 0,
+    onLayerChange: vi.fn(),
+    keymap: new Map([['0,0,0', 4], ['0,0,1', 5]]),
+    encoderLayout: new Map<string, number>(),
+    encoderCount: 0,
+    layoutOptions: new Map<number, number>(),
+    onSetKey,
+    onSetEncoder,
+    macroCount: 4,
+    macroBufferSize: 256,
+    macroBuffer: [0],
+    vialProtocol: 9,
+    onSaveMacros,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedOnKeyClick = undefined
+  })
+
+  it('calls onUnlock with macroWarning when clicking macro key while locked', () => {
+    render(
+      <KeymapEditor
+        {...macroProps}
+        unlocked={false}
+        onUnlock={onUnlock}
+      />,
+    )
+
+    // No key selected — clicking M0 triggers openMacroModal path
+    fireEvent.click(screen.getByTestId('kc-m0'))
+
+    expect(onUnlock).toHaveBeenCalledWith({ macroWarning: true })
+    expect(screen.queryByTestId('macro-modal')).not.toBeInTheDocument()
+  })
+
+  it('opens macro modal when clicking macro key while unlocked', () => {
+    render(
+      <KeymapEditor
+        {...macroProps}
+        unlocked={true}
+        onUnlock={onUnlock}
+      />,
+    )
+
+    // No key selected — clicking M0 opens macro modal
+    fireEvent.click(screen.getByTestId('kc-m0'))
+
+    expect(onUnlock).not.toHaveBeenCalled()
+    expect(screen.getByTestId('macro-modal')).toBeInTheDocument()
+  })
+
+  it('does not open macro modal when unlocked is undefined (backwards compat)', () => {
+    render(
+      <KeymapEditor
+        {...macroProps}
+        onUnlock={onUnlock}
+      />,
+    )
+
+    // unlocked is undefined — should NOT gate (backwards compat)
+    fireEvent.click(screen.getByTestId('kc-m0'))
+
+    expect(onUnlock).not.toHaveBeenCalled()
+    expect(screen.getByTestId('macro-modal')).toBeInTheDocument()
   })
 })

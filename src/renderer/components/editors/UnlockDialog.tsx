@@ -6,6 +6,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import { KeyboardWidget } from '../keyboard'
 
 const UNLOCK_POLL_INTERVAL = 200 // ms
+const EMPTY_KEYCODES = new Map<string, string>()
 
 interface Props {
   keys: KleKey[]
@@ -14,6 +15,7 @@ interface Props {
   unlockStart: () => Promise<void>
   unlockPoll: () => Promise<number[]>
   onComplete: () => void
+  macroWarning?: boolean
 }
 
 export function UnlockDialog({
@@ -23,6 +25,7 @@ export function UnlockDialog({
   unlockStart,
   unlockPoll,
   onComplete,
+  macroWarning,
 }: Props) {
   const { t } = useTranslation()
   const [counter, setCounter] = useState(0)
@@ -88,8 +91,6 @@ export function UnlockDialog({
   const total = totalRef.current
   const progress = total > 0 ? total - counter : 0
 
-  const emptyKeycodes = new Map<string, string>()
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-[600px] max-w-[90vw] rounded-lg bg-surface-alt p-6 shadow-xl">
@@ -99,7 +100,7 @@ export function UnlockDialog({
         <div className="mb-4 flex justify-center overflow-auto">
           <KeyboardWidget
             keys={keys}
-            keycodes={emptyKeycodes}
+            keycodes={EMPTY_KEYCODES}
             highlightedKeys={highlightedKeys}
             layoutOptions={layoutOptions}
             readOnly
@@ -119,6 +120,16 @@ export function UnlockDialog({
         </div>
 
         <p className="text-xs text-content-muted">{t('unlock.hint')}</p>
+
+        {macroWarning && (
+          <div
+            className="mt-4 space-y-2 rounded border border-warning/50 bg-warning/10 p-3 text-xs text-warning"
+            data-testid="macro-unlock-warning"
+          >
+            <p>{t('editor.macro.unlockClickAgain')}</p>
+            <p>{t('editor.macro.unlockWarning')}</p>
+          </div>
+        )}
       </div>
     </div>
   )

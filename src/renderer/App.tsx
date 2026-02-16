@@ -177,6 +177,7 @@ export function App() {
   })
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
   const [showUnlockDialog, setShowUnlockDialog] = useState(false)
+  const [unlockMacroWarning, setUnlockMacroWarning] = useState(false)
   const [matrixState, setMatrixState] = useState({ matrixMode: false, hasMatrixTester: false })
   const [keymapScale, setKeymapScale] = useState(1)
 
@@ -717,6 +718,7 @@ export function App() {
       setEditorSettingsTab('layers')
       setShowEditorSettings(false)
       setShowUnlockDialog(false)
+      setUnlockMacroWarning(false)
       setFileSuccessKind(null)
       setLastLoadedLabel('')
       setMatrixState({ matrixMode: false, hasMatrixTester: false })
@@ -895,7 +897,10 @@ export function App() {
             cols={keyboard.cols}
             getMatrixState={!device.isDummy && keyboard.vialProtocol >= 3 ? api.getMatrixState : undefined}
             unlocked={keyboard.unlockStatus.unlocked}
-            onUnlock={() => setShowUnlockDialog(true)}
+            onUnlock={(options) => {
+              setShowUnlockDialog(true)
+              setUnlockMacroWarning(!!options?.macroWarning)
+            }}
             tapDanceEntries={keyboard.tapDanceEntries}
             onSetTapDanceEntry={keyboard.setTapDanceEntry}
             macroCount={keyboard.macroCount}
@@ -973,8 +978,10 @@ export function App() {
           unlockPoll={api.unlockPoll}
           onComplete={async () => {
             setShowUnlockDialog(false)
+            setUnlockMacroWarning(false)
             await keyboard.refreshUnlockStatus()
           }}
+          macroWarning={unlockMacroWarning}
         />
       )}
 

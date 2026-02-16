@@ -87,7 +87,9 @@
       "textEditorTitle": "Edit Macro (Text)",
       "invalidJson": "Invalid JSON format",
       "addKeycode": "Add keycode",
-      "asciiOnly": "Only ASCII characters (A-Z, 0-9, symbols) are supported"
+      "asciiOnly": "Only ASCII characters (A-Z, 0-9, symbols) are supported",
+      "unlockClickAgain": "After unlocking, click the macro key again to open the editor.",
+      "unlockWarning": "Do not store passwords or sensitive information in macros, as they may be replayed or shared."
     },
     "lighting": {
       "title": "Lighting",

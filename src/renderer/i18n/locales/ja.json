@@ -87,7 +87,9 @@
       "textEditorTitle": "マクロ編集 (テキスト)",
       "invalidJson": "無効なJSON形式",
       "addKeycode": "キーコード追加",
-      "asciiOnly": "ASCII文字（英数字・記号）のみ対応しています"
+      "asciiOnly": "ASCII文字（英数字・記号）のみ対応しています",
+      "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください。",
+      "unlockWarning": "パスワードや機密情報をマクロに保存しないでください。再生・共有される可能性があります。"
     },
     "lighting": {
       "title": "ライティング",

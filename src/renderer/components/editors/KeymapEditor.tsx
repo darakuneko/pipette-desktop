@@ -381,7 +381,7 @@ interface Props {
   cols?: number
   getMatrixState?: () => Promise<number[]>
   unlocked?: boolean
-  onUnlock?: () => void
+  onUnlock?: (options?: { macroWarning?: boolean }) => void
   tapDanceEntries?: TapDanceEntry[]
   onSetTapDanceEntry?: (index: number, entry: TapDanceEntry) => Promise<void>
   macroCount?: number
@@ -1049,16 +1049,23 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     [tapDanceEntries, onSetTapDanceEntry],
   )
 
-  // Open the macro modal for a given raw keycode if it is a valid macro index
+  // Open the macro modal for a given raw keycode if it is a valid macro index.
+  // When the keyboard is locked, trigger the unlock flow with a macro warning
+  // instead of opening the modal. The user can click the macro key again after
+  // unlocking to open the editor.
   const openMacroModal = useCallback(
     (rawCode: number) => {
       if (macroCount == null || macroCount === 0 || !onSaveMacros || !macroBuffer || !macroBufferSize) return
       if (!isMacroKeycode(rawCode)) return
       const idx = getMacroIndex(rawCode)
       if (idx >= macroCount) return
+      if (unlocked === false) {
+        onUnlock?.({ macroWarning: true })
+        return
+      }
       setMacroModalIndex(idx)
     },
-    [macroCount, macroBuffer, macroBufferSize, onSaveMacros],
+    [macroCount, macroBuffer, macroBufferSize, onSaveMacros, unlocked, onUnlock],
   )
 
   // Track whether the layer change is from a pane switch (not a manual layer change)
