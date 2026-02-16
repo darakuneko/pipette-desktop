@@ -5,6 +5,7 @@ import type { SyncStatusType } from '../../shared/types/sync'
 
 interface Props {
   deviceName: string
+  loadedLabel?: string
   autoAdvance: boolean
   unlocked: boolean
   syncStatus: SyncStatusType
@@ -24,6 +25,7 @@ const SYNC_STATUS_CLASS: Record<Exclude<SyncStatusType, 'none'>, string> = {
 
 export function StatusBar({
   deviceName,
+  loadedLabel,
   autoAdvance,
   unlocked,
   syncStatus,
@@ -39,6 +41,9 @@ export function StatusBar({
     <div className="flex items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs text-content-secondary" data-testid="status-bar">
       <div className="flex items-center gap-3">
         <span>{deviceName}</span>
+        {loadedLabel && (
+          <span className="text-content-muted" data-testid="loaded-label">— {loadedLabel}</span>
+        )}
         <span className="text-edge">|</span>
         {autoAdvance && (
           <>

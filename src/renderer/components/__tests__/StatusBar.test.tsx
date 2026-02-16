@@ -150,6 +150,23 @@ describe('StatusBar', () => {
     })
   })
 
+  describe('loaded label', () => {
+    it('shows loaded label next to device name when provided', () => {
+      render(<StatusBar {...defaultProps} loadedLabel="My Layout" />)
+      expect(screen.getByTestId('loaded-label')).toHaveTextContent('— My Layout')
+    })
+
+    it('does not render loaded label when empty string', () => {
+      render(<StatusBar {...defaultProps} loadedLabel="" />)
+      expect(screen.queryByTestId('loaded-label')).not.toBeInTheDocument()
+    })
+
+    it('does not render loaded label when not provided', () => {
+      render(<StatusBar {...defaultProps} />)
+      expect(screen.queryByTestId('loaded-label')).not.toBeInTheDocument()
+    })
+  })
+
   describe('cancel pending button', () => {
     it('shows Cancel button when syncStatus is pending and onCancelPending is provided', () => {
       const onCancelPending = vi.fn()

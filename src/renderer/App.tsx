@@ -82,6 +82,8 @@ export function App() {
   const hubUploadingRef = useRef(false)
   const [hubUploadResult, setHubUploadResult] = useState<HubEntryResult | null>(null)
   const [lastLoadedLabel, setLastLoadedLabel] = useState('')
+  // Clear loaded label when device identity changes (USB unplug/replug, device switch)
+  useEffect(() => { setLastLoadedLabel('') }, [keyboard.uid])
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
   const [hubConnected, setHubConnected] = useState(false)
   const [hubDisplayName, setHubDisplayName] = useState<string | null>(null)
@@ -712,6 +714,7 @@ export function App() {
       setShowEditorSettings(false)
       setShowUnlockDialog(false)
       setFileSuccessKind(null)
+      setLastLoadedLabel('')
       setMatrixState({ matrixMode: false, hasMatrixTester: false })
       setResettingKeyboard(false)
       setHubConnected(false)
@@ -946,6 +949,7 @@ export function App() {
 
       <StatusBar
         deviceName={device.connectedDevice.productName || 'Unknown'}
+        loadedLabel={lastLoadedLabel}
         autoAdvance={devicePrefs.autoAdvance}
         unlocked={keyboard.unlockStatus.unlocked}
         syncStatus={sync.syncStatus}
