@@ -794,12 +794,24 @@ describe('SettingsModal', () => {
       expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
     })
 
-    it('calls onHubEnabledChange when toggle is clicked', () => {
+    it('shows enabled status when hub is enabled', () => {
+      renderAndSwitchToHub({ hubEnabled: true })
+      expect(screen.getByTestId('hub-enabled-status')).toBeInTheDocument()
+    })
+
+    it('calls onHubEnabledChange with false when disable button is clicked', () => {
       const onHubEnabledChange = vi.fn()
       renderAndSwitchToHub({ hubEnabled: true, onHubEnabledChange })
 
       fireEvent.click(screen.getByTestId('hub-enable-toggle'))
       expect(onHubEnabledChange).toHaveBeenCalledWith(false)
+    })
+
+    it('calls onHubEnabledChange with true when enable button is clicked', () => {
+      const onHubEnabledChange = vi.fn()
+      renderAndSwitchToHub({ hubEnabled: false, onHubEnabledChange })
+      fireEvent.click(screen.getByTestId('hub-enable-toggle'))
+      expect(onHubEnabledChange).toHaveBeenCalledWith(true)
     })
 
     it('shows auth required message when not authenticated', () => {

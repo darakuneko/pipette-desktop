@@ -1114,27 +1114,35 @@ export function SettingsModal({
             <div className="pt-4 space-y-6">
               {/* Hub Enable/Disable */}
               <section>
-                <div className={ROW_CLASS} data-testid="hub-enable-row">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-[13px] font-medium text-content">
-                      {t('hub.enableToggle')}
+                <h4 className="mb-2 text-sm font-medium text-content-secondary">
+                  {t('hub.enableToggle')}
+                </h4>
+                {hubEnabled ? (
+                  <div className="flex items-center justify-between" data-testid="hub-enable-row">
+                    <span className="text-sm text-accent" data-testid="hub-enabled-status">
+                      {t('hub.enabled')}
                     </span>
-                    <span className="text-xs text-content-muted">
-                      {t('hub.enableDescription')}
-                    </span>
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      onClick={() => onHubEnabledChange(false)}
+                      data-testid="hub-enable-toggle"
+                    >
+                      {t('hub.disable')}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={hubEnabled}
-                    aria-label={t('hub.enableToggle')}
-                    className={toggleTrackClass(hubEnabled)}
-                    onClick={() => onHubEnabledChange(!hubEnabled)}
-                    data-testid="hub-enable-toggle"
-                  >
-                    <span className={toggleKnobClass(hubEnabled)} />
-                  </button>
-                </div>
+                ) : (
+                  <div data-testid="hub-enable-row">
+                    <button
+                      type="button"
+                      className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90"
+                      onClick={() => onHubEnabledChange(true)}
+                      data-testid="hub-enable-toggle"
+                    >
+                      {t('hub.enable')}
+                    </button>
+                  </div>
+                )}
               </section>
 
               {/* Display Name */}
