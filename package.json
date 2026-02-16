@@ -1,0 +1,129 @@
+{
+  "name": "pipette-desktop",
+  "version": "0.1.0",
+  "description": "Pipette — Vial-compatible keyboard configurator built with Electron and TypeScript",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "author": "",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "dev:linux": "electron-vite dev --noSandbox",
+    "build": "electron-vite build",
+    "dist": "electron-vite build && electron-builder",
+    "dist:linux": "electron-vite build && electron-builder --linux",
+    "dist:win": "electron-vite build && electron-builder --win",
+    "dist:mac": "electron-vite build && electron-builder --mac",
+    "preview": "electron-vite preview",
+    "rebuild": "electron-builder install-app-deps",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test:e2e:dev": "E2E_MODE=dev playwright test",
+    "generate:language-manifest": "tsx scripts/generate-language-manifest.ts"
+  },
+  "dependencies": {
+    "@zxcvbn-ts/core": "^3.0.4",
+    "@zxcvbn-ts/language-common": "^3.0.4",
+    "@zxcvbn-ts/language-en": "^3.0.2",
+    "electron-store": "^11.0.2",
+    "i18next": "^25.8.4",
+    "jspdf": "^4.1.0",
+    "lucide-react": "^0.564.0",
+    "lzma": "^2.3.2",
+    "node-hid": "^3.3.0",
+    "pdfjs-dist": "^5.4.624",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-i18next": "^16.5.4"
+  },
+  "devDependencies": {
+    "@playwright/mcp": "0.0.64",
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/vite": "^4.1.18",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
+    "@vitejs/plugin-react": "^4.5.0",
+    "electron": "~40.2.1",
+    "electron-builder": "^26.7.0",
+    "electron-vite": "^5.0.0",
+    "eslint": "^9.27.0",
+    "eslint-plugin-react": "^7.37.5",
+    "jsdom": "^28.0.0",
+    "prettier": "^3.8.1",
+    "tailwindcss": "^4.1.18",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.0"
+  },
+  "build": {
+    "appId": "app.pipette.desktop",
+    "productName": "Pipette",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "build/icon.png",
+      "extraResources": [
+        {
+          "from": "scripts/99-vial.rules",
+          "to": "udev/99-vial.rules"
+        }
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "license": "LICENSE"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "build/icon.icns",
+      "category": "public.app-category.utilities"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "node-hid"
+    ]
+  }
+}

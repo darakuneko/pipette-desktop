@@ -1,0 +1,11 @@
+# Pipette: Grant user access to HID raw devices
+#
+# Vial keyboards use usagePage 0xFF60 (Vendor Defined).
+# Since udev cannot filter by HID usage page directly, this rule
+# grants access to all hidraw devices via the "uaccess" tag.
+#
+# Install:
+#   sudo cp 99-vial.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", TAG+="uaccess"

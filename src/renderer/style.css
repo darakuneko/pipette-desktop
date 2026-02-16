@@ -1,0 +1,190 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Interactive elements use pointer cursor */
+button:not(:disabled),
+a,
+select:not(:disabled),
+input[type="checkbox"]:not(:disabled),
+input[type="radio"]:not(:disabled),
+input[type="range"]:not(:disabled),
+summary,
+[role="button"] {
+  cursor: pointer;
+}
+
+label:has(> input[type="checkbox"]:not(:disabled)),
+label:has(> input[type="radio"]:not(:disabled)) {
+  cursor: pointer;
+}
+
+/* Light theme (default) */
+:root {
+  color-scheme: light;
+  --surface: #f5f6f8;
+  --surface-alt: #ffffff;
+  --surface-dim: #ebedf2;
+  --surface-raised: #ffffff;
+
+  --content: #1a1d27;
+  --content-secondary: #5c6478;
+  --content-muted: #8b94a8;
+  --content-inverse: #ffffff;
+
+  --edge: #d8dce6;
+  --edge-subtle: #e8ebf0;
+  --edge-strong: #b8bfcf;
+
+  --accent: #2563eb;
+  --accent-hover: #3b82f6;
+  --accent-alt: #0ea5e9;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --pending: #ea580c;
+
+  --key-bg: #ffffff;
+  --key-bg-hover: #f0f2f7;
+  --key-bg-active: #2563eb;
+  --key-border: #c8cdd8;
+  --key-shadow: #b0b8c8;
+  --key-label: #1f2937;
+  --key-sublabel: #7c8598;
+  --key-label-remap: #0000ff;
+  --key-bg-multi-selected: #93bbfd;
+  --key-mask-bg: color-mix(in srgb, var(--key-bg) 70%, var(--surface) 30%);
+
+  --tab-bg-active: #2563eb;
+  --tab-text: #6b7280;
+  --tab-text-active: #ffffff;
+
+  --picker-bg: #f8f9fb;
+  --picker-item-bg: #ffffff;
+  --picker-item-hover: #eef0f5;
+  --picker-item-text: #374151;
+  --picker-item-border: #dfe3eb;
+}
+
+/* Dark theme */
+.dark {
+  color-scheme: dark;
+  --surface: #0f1117;
+  --surface-alt: #1a1d27;
+  --surface-dim: #242836;
+  --surface-raised: #2e3347;
+
+  --content: #e8eaf0;
+  --content-secondary: #9ba3b5;
+  --content-muted: #636d83;
+  --content-inverse: #0f1117;
+
+  --edge: #333a4d;
+  --edge-subtle: #272d3d;
+  --edge-strong: #4a5270;
+
+  --accent: #4c8dff;
+  --accent-hover: #6ba1ff;
+  --accent-alt: #38bdf8;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --pending: #fb923c;
+
+  --key-bg: #262b3a;
+  --key-bg-hover: #323850;
+  --key-bg-active: #4c8dff;
+  --key-border: #3d4560;
+  --key-shadow: #0a0c12;
+  --key-label: #d4d8e3;
+  --key-sublabel: #7a839a;
+  --key-label-remap: #f7a948;
+  --key-bg-multi-selected: #3a6fcf;
+  --key-mask-bg: color-mix(in srgb, var(--key-bg) 70%, var(--surface) 30%);
+
+  --tab-bg-active: #4c8dff;
+  --tab-text: #8892a8;
+  --tab-text-active: #ffffff;
+
+  --picker-bg: #1e2233;
+  --picker-item-bg: #282e40;
+  --picker-item-hover: #353d55;
+  --picker-item-text: #c5cbd8;
+  --picker-item-border: #363e54;
+}
+
+/* Connecting overlay animations */
+@keyframes pulse-ring {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0; }
+}
+
+.animate-pulse-ring {
+  animation: pulse-ring 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin 1.2s linear infinite;
+}
+
+/* Typing test cursor blink — sharp on/off toggle */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+@theme {
+  /* Background */
+  --color-surface: var(--surface);
+  --color-surface-alt: var(--surface-alt);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-raised: var(--surface-raised);
+
+  /* Text */
+  --color-content: var(--content);
+  --color-content-secondary: var(--content-secondary);
+  --color-content-muted: var(--content-muted);
+  --color-content-inverse: var(--content-inverse);
+
+  /* Border */
+  --color-edge: var(--edge);
+  --color-edge-subtle: var(--edge-subtle);
+  --color-edge-strong: var(--edge-strong);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-alt: var(--accent-alt);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-pending: var(--pending);
+
+  /* Key */
+  --color-key-bg: var(--key-bg);
+  --color-key-bg-hover: var(--key-bg-hover);
+  --color-key-bg-active: var(--key-bg-active);
+  --color-key-border: var(--key-border);
+  --color-key-shadow: var(--key-shadow);
+  --color-key-label: var(--key-label);
+  --color-key-sublabel: var(--key-sublabel);
+  --color-key-label-remap: var(--key-label-remap);
+  --color-key-bg-multi-selected: var(--key-bg-multi-selected);
+
+  /* Tab */
+  --color-tab-bg-active: var(--tab-bg-active);
+  --color-tab-text: var(--tab-text);
+  --color-tab-text-active: var(--tab-text-active);
+
+  /* Picker */
+  --color-picker-bg: var(--picker-bg);
+  --color-picker-item-bg: var(--picker-item-bg);
+  --color-picker-item-hover: var(--picker-item-hover);
+  --color-picker-item-text: var(--picker-item-text);
+  --color-picker-item-border: var(--picker-item-border);
+}

@@ -1,0 +1,602 @@
+[
+  {
+    "id": 1,
+    "text": "There is something about yourself that you don't know.",
+    "source": "Revolver",
+    "length": 54
+  },
+  {
+    "id": 2,
+    "text": "Funny. The line between Light and Dark is so very thin. Do you know which side you're on",
+    "source": "Destiny 2: Forsaken - Uldren Sov",
+    "length": 88
+  },
+  {
+    "id": 3,
+    "text": "Books are my friends, my companions. They make me laugh and cry and find meaning in life.",
+    "source": "Jeod, Eragon (by Christopher Paolini)",
+    "length": 89
+  },
+  {
+    "id": 4,
+    "text": "Well, maybe I don't need your money. Wait, wait, I said maybe",
+    "source": "Friends",
+    "length": 61
+  },
+  {
+    "id": 5,
+    "text": "Life is a book and there are a thousand pages I have not yet read.",
+    "source": "Clockwork Princess",
+    "length": 66
+  },
+  {
+    "id": 6,
+    "text": "You truly are the lowest scum in history. You can't pay back what you owe with money.",
+    "source": "JoJo's Bizarre Adventure: Stardust Crusaders",
+    "length": 85
+  },
+  {
+    "id": 7,
+    "text": "It's just, eventually we're all gonna move on. It's called growing up.",
+    "source": "How I met your mother",
+    "length": 70
+  },
+  {
+    "id": 8,
+    "text": "You can tell a lot about someone's character by the way they treat service staff.",
+    "source": "Unknown",
+    "length": 81
+  },
+  {
+    "id": 9,
+    "text": "Welcome to White Space. You've been living here for as long as you can remember.",
+    "source": "OMORI",
+    "length": 80
+  },
+  {
+    "id": 10,
+    "text": "The shape of the wedding ring has two meanings. One is eternity. The other is completeness.",
+    "source": "Fumihiko Shimo, Clannad",
+    "length": 91
+  },
+  {
+    "id": 11,
+    "text": "When you become untouchable you're unable to touch.",
+    "source": "My Ordinary Life (The Living Tombstone)",
+    "length": 51
+  },
+  {
+    "id": 12,
+    "text": "I thought I felt your shape, but I was wrong. Really all I felt, was falsely strong.",
+    "source": "I Felt Your Shape",
+    "length": 84
+  },
+  {
+    "id": 13,
+    "text": "Anyone can speak Troll. All you have to do is point and grunt.",
+    "source": "Harry Potter and the Goblet of Fire",
+    "length": 62
+  },
+  {
+    "id": 14,
+    "text": "Life seems to go on without effort when I am filled with music.",
+    "source": "George Eliot",
+    "length": 63
+  },
+  {
+    "id": 15,
+    "text": "Rejection, I have found, can be the only antidote to delusion.",
+    "source": "My Year of Rest and Relaxation - Ottessa Moshfegh",
+    "length": 62
+  },
+  {
+    "id": 16,
+    "text": "I haven't understood a bar of music in my life, but I have felt it.",
+    "source": "Igor Stravinsky",
+    "length": 67
+  },
+  {
+    "id": 17,
+    "text": "Life is not about how you survive the storm, it's about how you dance in the rain.",
+    "source": "The Paramour (Book 1) ",
+    "length": 82
+  },
+  {
+    "id": 18,
+    "text": "Lights up and they know who you are, know who you are. Do you know who you are",
+    "source": "Lights Up",
+    "length": 78
+  },
+  {
+    "id": 19,
+    "text": "You're saying I'm the one but it's your actions that speak louder.",
+    "source": "I Love You So - The Walters",
+    "length": 66
+  },
+  {
+    "id": 20,
+    "text": "Nature's great masterpiece, an elephant; the only harmless great thing.",
+    "source": "John Donne",
+    "length": 71
+  },
+  {
+    "id": 21,
+    "text": "You can get more of what you want with a kind word and a gun than you can with just a kind word.",
+    "source": "Professor Irwin Corey",
+    "length": 96
+  },
+  {
+    "id": 22,
+    "text": "And sometimes when he looks at me, I know he needs you, you're all that he sees.",
+    "source": "Phoebe Bridgers - Georgia",
+    "length": 80
+  },
+  {
+    "id": 23,
+    "text": "You lock the door, and throw away the key. There's someone in my head but it's not me.",
+    "source": "Brain Damage",
+    "length": 86
+  },
+  {
+    "id": 24,
+    "text": "What I want to do most Let's see... Just once, I really want to let loose and pee in my pants.",
+    "source": "Danshi Koukousei no Nichijou",
+    "length": 94
+  },
+  {
+    "id": 25,
+    "text": "The only thing that we're allowed to believe is that we won't regret the choice we made.",
+    "source": "Hajime Isayama, Attack on Titan",
+    "length": 88
+  },
+  {
+    "id": 26,
+    "text": "You can't get back what you've lost, what's important now is what it is that you still have.",
+    "source": "One Piece",
+    "length": 92
+  },
+  {
+    "id": 27,
+    "text": "If we are the same person before and after we loved, that means we haven't loved enough.",
+    "source": "The Forty Rules of Love",
+    "length": 88
+  },
+  {
+    "id": 28,
+    "text": "If we waited until we were ready, we would be waiting our entire lives.",
+    "source": "Violet and Klaus Baudelaire, A Series of Unfortunate Events by Lemony Snicket",
+    "length": 71
+  },
+  {
+    "id": 29,
+    "text": "Don't worry about the world coming to an end today. It's already tomorrow in Australia.",
+    "source": "Charles M. Schulz",
+    "length": 87
+  },
+  {
+    "id": 30,
+    "text": "When you hit rock-bottom, you still have a way to go until the abyss.",
+    "source": "La Casa de Papel",
+    "length": 69
+  },
+  {
+    "id": 31,
+    "text": "Beautiful dreamer, wake unto me, starlight and dewdrops are waiting for thee. Sounds of the rude world heard in the day, lulled by the moonlight have all passed away. Beautiful dreamer, queen of my song, listen while I woo thee with soft melody.",
+    "source": "Beautiful Dreamer",
+    "length": 245
+  },
+  {
+    "id": 32,
+    "text": "Power isn't control at all - power is strength, and giving that strength to others. A leader isn't someone who forces others to make him stronger; a leader is someone willing to give his strength to others so that they may have the strength to stand on their own.",
+    "source": "Across the Universe",
+    "length": 263
+  },
+  {
+    "id": 33,
+    "text": "I don't care who you are, where you're from, what you did, as long as you love me. Every little thing that you have said and done feels like it's deep within me. Doesn't really matter if you're on the run, it seems like we're meant to be.",
+    "source": "As Long as You Love Me",
+    "length": 238
+  },
+  {
+    "id": 34,
+    "text": "You happen upon a group of what looks like purple fire spirits dancing around a large bonfire. The spirits toss small bones and fragments into the fire, which brilliantly erupts each time. As you approach, the spirits all turn to you, expectantly...",
+    "source": "Slay The Spire",
+    "length": 249
+  },
+  {
+    "id": 35,
+    "text": "Look, you should admit to yourself that Microsoft will miss you for a month or two. Someone will quickly fill the void. It will be like you never worked there. Ask yourself, Are there thousands lining up to help poor villages build schools and libraries",
+    "source": "Leaving Microsoft to Change the World",
+    "length": 253
+  },
+  {
+    "id": 36,
+    "text": "I've been fighting to be who I am all my life. What's the point of being who I am, if I can't have the person who was worth all the fighting for",
+    "source": "I Don't Remember You",
+    "length": 144
+  },
+  {
+    "id": 37,
+    "text": "Gax is a name you should not give to your child at all. It's only in the book because my kids are beside me as I'm writing and they absolutely insisted. Keep this in mind, prospective parents, if you're planning to work from home.",
+    "source": "The Baby Name Wizard",
+    "length": 230
+  },
+  {
+    "id": 38,
+    "text": "To graduate you need my course, dear boy. So it seems I have something to say about what you do and where you go. So from now on you and Mitch are going to spend every waking moment in the lab. You will solve my power problem, and you will solve it by my deadline.",
+    "source": "Real Genius",
+    "length": 264
+  },
+  {
+    "id": 39,
+    "text": "You're gonna blame me because you were the business head of the company and you made a bad business deal with your own company",
+    "source": "The Social Network",
+    "length": 126
+  },
+  {
+    "id": 40,
+    "text": "Let's say, sunshine for everyone, but as far as I can remember we've been migratory animals, living under changing weather. Someday, we'll foresee obstacles through the blizzard, through the blizzard.",
+    "source": "Syd Matters - Obstacles",
+    "length": 200
+  },
+  {
+    "id": 41,
+    "text": "I will move away from here. You won't be afraid of fear. No thought was put into this. I always knew it'd come to this. Things have never been so swell. And I have never failed to fail.",
+    "source": "You Know You're Right",
+    "length": 185
+  },
+  {
+    "id": 42,
+    "text": "That's right, and the one who wins gets a prize, only there really isn't a prize. It's just the honor of winning, because all the money goes to charity, that is, if there is any money left over, but there never is.",
+    "source": "My Man Godfrey",
+    "length": 214
+  },
+  {
+    "id": 43,
+    "text": "I have a small favor to ask regarding our impending wedding. Since all of my close friends will be out of town and we have had a previous conversation and our eyes have met on a number of occasions I was wondering if you'd consent to be my maid of honor.",
+    "source": "Cheers",
+    "length": 254
+  },
+  {
+    "id": 44,
+    "text": "Maybe the best thing to do is stop trying to figure out where you're going and just enjoy where you're at.",
+    "source": "Scrubs",
+    "length": 106
+  },
+  {
+    "id": 45,
+    "text": "You'll tell them it didn't work out because it didn't. And you'll tell them the next thing will be better because it always is.",
+    "source": "Mad Men",
+    "length": 127
+  },
+  {
+    "id": 46,
+    "text": "In my restless dreams, I see that town... Silent Hill. You promised me you'd take me there again someday... but you never did. Well I'm alone there now, in our special place... waiting for you.",
+    "source": "Silent Hill 2",
+    "length": 193
+  },
+  {
+    "id": 47,
+    "text": "Tim and the Princess lounge in the castle garden, laughing together, giving names to the colorful birds. Their mistakes are hidden from each other, tucked away between the folds of time, safe.",
+    "source": "Braid",
+    "length": 192
+  },
+  {
+    "id": 48,
+    "text": "That is right, but I held something back. I see some real genius in your flying, Maverick, but I can't say that in there. I was afraid that everyone in the tax trailer would see right through me, and I just don't want anyone to know that I've fallen for you.",
+    "source": "Top Gun",
+    "length": 258
+  },
+  {
+    "id": 49,
+    "text": "And you'd say, Time to rest your weary head, take your wings and go to bed; I know you want to know it all, my darling. And I'd say, Set me down and rock me, rock me to sleep.",
+    "source": "Time to Rest your Weary Head",
+    "length": 175
+  },
+  {
+    "id": 50,
+    "text": "Well obviously Lionel Tribbey is a brilliant lawyer whom we cannot live without or there would be very little reason not to put him in prison.",
+    "source": "The West Wing",
+    "length": 142
+  },
+  {
+    "id": 51,
+    "text": "Give me a lifetime of promises and a world of dreams. Speak the language of love like you know what it means. You're simply the best, better than all the rest, better than anyone I ever met.",
+    "source": "The Best",
+    "length": 190
+  },
+  {
+    "id": 52,
+    "text": "Nicasia's wrong about me. I don't desire to do as well in the tournament as one of the fey. I want to win. I do not yearn to be their equal. In my heart, I yearn to best them.",
+    "source": "The Cruel Prince",
+    "length": 175
+  },
+  {
+    "id": 53,
+    "text": "Tonight I'll dream while in my bed. When silly thoughts go through my head, about the bugs and alphabet, and when I wake tomorrow I'll bet that you and I will walk together again. I can tell that we are going to be friends.",
+    "source": "We're going to be friends",
+    "length": 223
+  },
+  {
+    "id": 54,
+    "text": "OK, let me get something straight this is a journal, not a diary. I know what it says on the cover, but when Mom went out to buy this thing I specifically told her to get one that didn't say diary on it. Great. All I need is some jerk to catch me carrying this book around and get the wrong idea.",
+    "source": "Diary of a Wimpy Kid",
+    "length": 296
+  },
+  {
+    "id": 55,
+    "text": "I don't feel very much like Pooh today, said Pooh. There, there, said Piglet. I'll bring you tea and honey until you do.",
+    "source": "Pooh and Piglet, Winnie-the-Pooh",
+    "length": 120
+  },
+  {
+    "id": 56,
+    "text": "Farewell, King under the Mountain This is a bitter adventure, if it must end so; and not a mountain of gold can amend it. Yet I am glad that I have shared in your perils - that has been more than any Baggins deserves.",
+    "source": "Bilbo Baggins, The Hobbit",
+    "length": 217
+  },
+  {
+    "id": 57,
+    "text": "Finally, sparing neither labor nor expense, I succeeded in constructing for myself so excellent an instrument that objects seen by means of it appeared nearly one thousand times larger and over thirty times closer than when regarded with our natural vision.",
+    "source": "Sidereus Nuncius",
+    "length": 257
+  },
+  {
+    "id": 58,
+    "text": "I do not for one think that the problem was that the band was down. I think that the problem may have been that there was a Stonehenge monument on the stage that was in danger of being crushed by a dwarf. All right That tended to understate the hugeness of the object.",
+    "source": "This Is Spinal Tap",
+    "length": 268
+  },
+  {
+    "id": 59,
+    "text": "The intertrochanteric line is at the junction of the neck and shaft on the anterior surface; the intertrochanteric crest is in a similar position on the posterior surface.",
+    "source": "Clinical Atlas of Human Anatomy",
+    "length": 171
+  },
+  {
+    "id": 60,
+    "text": "Boy, what a pair we're going to make A football player and a lover boy I could get you girls, and you could get me football tickets. It certainly has amazing advantages.",
+    "source": "40: A Doonesbury Retrospective",
+    "length": 169
+  },
+  {
+    "id": 61,
+    "text": "If one must drink, then let one drink thrice a month, for more is bad. If one gets drunk twice a month, it is better; if one gets drunk once a month, that is better still; and if one doesn't drink at all, that is the best of all.",
+    "source": "Compendium of Chronicles",
+    "length": 229
+  },
+  {
+    "id": 62,
+    "text": "Three hidden keys open three secret gates wherein the errant will be tested for worthy traits, and those with the skill to survive these straits will reach the end where the prize awaits.",
+    "source": "Ready Player One: A Novel",
+    "length": 187
+  },
+  {
+    "id": 63,
+    "text": "Dear Sushie, you followed Mario, didn't you How are you doing I never expected you'd go with him. I want to hear about you, Mario and everything else, so why don't you come to see me when you finish traveling If you have a hard time climbing the tree, I'll come down for you.",
+    "source": "Paper Mario",
+    "length": 275
+  },
+  {
+    "id": 64,
+    "text": "The number one challenge I've seen with myself and with other teen entrepreneurs is that they get too caught up in the idea that teen entrepreneurs are supposed to be cut some slack for what they do. That mindset undermines your potential.",
+    "source": "What it Takes to Make More Money than Your Parents",
+    "length": 239
+  },
+  {
+    "id": 65,
+    "text": "I am sailing home again. 'Cross the sea I am sailing stormy waters to be near you, to be free. I am flying like a bird 'cross the sky. I am flying, passing high clouds to be with you, to be free.",
+    "source": "Sailing",
+    "length": 195
+  },
+  {
+    "id": 66,
+    "text": "There will be today, there will be tomorrow, there will be always, and there was yesterday, and there was the day before.",
+    "source": "War and Peace",
+    "length": 121
+  },
+  {
+    "id": 67,
+    "text": "Some feeling had started in my stomach and was traveling up to my face, and I knew that when it got there I would turn bright red and hear the ocean, which is what happens when I get put on the spot.",
+    "source": "When You Reach Me",
+    "length": 199
+  },
+  {
+    "id": 68,
+    "text": "We look not at the things which are what you would call seen, but at the things which are not seen. For the things which are seen are temporal. But the things which are not seen are eternal.",
+    "source": "A Wrinkle in Time",
+    "length": 190
+  },
+  {
+    "id": 69,
+    "text": "I had a son... he passed away. I had a girl who loved me... I threw that away. My momma died when I was a kid... and my daddy... well, I watched him die... and it weren't soon enough.",
+    "source": "Red Dead Redemption 2",
+    "length": 183
+  },
+  {
+    "id": 70,
+    "text": "The things you're doing in your free time... if they don't recharge you, you're screwed. You're just a ticking time bomb.",
+    "source": "Mr. Beast",
+    "length": 121
+  },
+  {
+    "id": 71,
+    "text": "The beginner writes just twenty pieces. The professional writes three times what's needed, as many as sixty different bits, keeps trying them out on small groups but never your own family, rewrites discards, rewrites some more, then finally settles on the twenty which work best for that specific audience.",
+    "source": "Comedy Writing Secrets",
+    "length": 306
+  },
+  {
+    "id": 72,
+    "text": "What do I do System architecture. Networking and security. No one in this house can touch me on that. But does anyone appreciate that While you were busy minoring in gender studies and singing acapella at Sarah Lawrence, I was gaining root access to NSA servers. I was one click away from starting a second Iranian Revolution. I prevent cross-site scripting, I monitor for DDoS attacks, emergency database rollbacks, and faulty transaction handlings. The Internet - heard of it Transfers half a petabyte of data every minute. Do you have any idea how that happens All those YouTube ones and zeroes streaming directly to your little smart phone day after day Every joe who gets outraged if he can't get the new dubstep Skrillex remix in under 12 seconds It's not magic, it's talent and sweat. People like me, ensuring your packets get delivered, un-sniffed. So what do I do I make sure that one bad config on one key component doesn't bankrupt the entire company. That's what I do.",
+    "source": "Bertram Gilfoyle - Silicon Valley",
+    "length": 980
+  },
+  {
+    "id": 73,
+    "text": "It is pleasing to human vanity to believe that one suffers because of one's virtues; but not until a man has extirpated every sickly, bitter, and impure thought from his mind, and washed every sinful stain from his soul, can he be in a position to know and declare that his sufferings are the result of his good, and not of his bad qualities; and on the way to, yet long before he has reached, that supreme perfection, he will have found, working in his mind and life, the Great Law which is absolutely just, and which cannot, therefore, give good for evil, evil for good. Possessed of such knowledge, he will then know, looking back upon his past ignorance and blindness, that his life is, and always was, justly ordered, and that all his past experiences, good and bad, were the equitable outworking of his evolving, yet unevolved self.",
+    "source": "As a Man Thinketh",
+    "length": 838
+  },
+  {
+    "id": 74,
+    "text": "Once I lived the life of a millionaire, spending my money, I didn't care. I carried my friends out for a good time buying bootleg liquor, champagne, and wine. Then I began to fall so low, I didn't have a friend, and no place to go. So if I ever get my hand on a dollar again I'm gonna hold on to it till them eagles grin. Nobody knows you when you're down and out. In my pocket, not one penny, and my friends I haven't any. But if I ever get on my feet again, then I'll meet my long lost friend. It's mighty strange, without a doubt, nobody knows you when you're down and out.",
+    "source": "Nobody Knows You When You're Down and Out",
+    "length": 576
+  },
+  {
+    "id": 75,
+    "text": "When Chekhov saw the long winter, he saw a winter bleak and dark and bereft of hope. Yet we know that winter is just another step in the cycle of life. But standing here among the people of Punxsutawney and basking in the warmth of their hearths and hearts, I couldn't imagine a better fate than a long and lustrous winter.",
+    "source": "Groundhog Day",
+    "length": 323
+  },
+  {
+    "id": 76,
+    "text": "Alchemy; the science of understanding the structure of matter, breaking it down, then reconstructing it as something else. It can even make gold from lead. But alchemy is a science, so it must follow the natural laws To create, something of equal value must be lost. This is the principle of Equivalent Exchange. But on that night, I learned the value of some things can't be measured on a simple scale. My brother and I knew the laws of science, of Equivalent Exchange, that gain required sacrifice, that something had to be taken from us. But we thought there was nothing more we could lose, we were wrong...",
+    "source": "Fullmetal Alchemist: Brotherhood",
+    "length": 610
+  },
+  {
+    "id": 77,
+    "text": "Gold and rose, the color of the dream I had not too long ago. A misty blue and the lilac, too, never to grow old. There you were under the tree of song, sleeping so peacefully. In your hand a flower played, awaiting there for me. I have never laid eyes on you, not before this timeless day, but you walked and you once smiled my name, and you stole my heart away.",
+    "source": "One Rainy Wish",
+    "length": 363
+  },
+  {
+    "id": 78,
+    "text": "When you type faster than usual, it forces you to start looking ahead at the words that are coming up so you can figure out where to place your fingers in anticipation. So, if you see that the next four letters will all be typed with fingers on your left hand, you can move the correct finger on your right hand into place for the fifth letter ahead. Tests on the best typists have shown that their speeds are closely related to how far ahead they look at upcoming letters while they type.",
+    "source": "Peak: Secrets from the New Science of Expertise",
+    "length": 489
+  },
+  {
+    "id": 79,
+    "text": "I'd discovered, after a lot of extreme apprehension about what spoons to use, that if you do something incorrect at table with a certain arrogance, as if you knew perfectly well you were doing it properly, you can get away with it and nobody will think you are bad-mannered or poorly brought up. They will think you are original and very witty.",
+    "source": "The Bell Jar",
+    "length": 344
+  },
+  {
+    "id": 80,
+    "text": "These nights are endless, and a man can sleep through them, or he can enjoy listening to stories, and you have no need to go to bed before it is time. Too much sleep is only a bore. And of the others, any one whose heart and spirit urge him can go outside and sleep, and then, when the dawn shows, breakfast first, then go out to tend the swine of our master.",
+    "source": "The Odyssey",
+    "length": 359
+  },
+  {
+    "id": 81,
+    "text": "I've known good criminals and bad cops. Bad priests. Honorable thieves. You can be on one side of the law or the other. But if you make a deal with somebody, you keep your word. You can go home today with your money and never do this again. But you took something that wasn't yours, and you sold it for a profit, you're now a criminal. Good one, bad one That's up to you.",
+    "source": "Better Call Saul",
+    "length": 371
+  },
+  {
+    "id": 82,
+    "text": "Add a number to itself and it changes. One and one is not one - it's two. Two and two is four. But zero and zero is zero. This violates the basic principle of numbers called the axiom of Archimedes, which says that if you add something to itself enough times, it will exceed any other number in magnitude.",
+    "source": "Zero",
+    "length": 305
+  },
+  {
+    "id": 83,
+    "text": "Well, if it isn't the man of the hour... You're late. I've been waiting for you FOREVER, mister I was beginning to think you'd stood me up. I thought to myself, Wendy, is Mario ever going to show up And then I dozed off. Anyway, Mr. Bowser sent me to stop you from getting your grubby little mitts on this Big Paint Star. And now that I've gotten some peaceful rest, it's time to help you rest in peace",
+    "source": "Paper Mario: Color Splash",
+    "length": 402
+  },
+  {
+    "id": 84,
+    "text": "Do you know I've been sitting here thinking to myself that if I didn't believe in life, if I lost faith in the woman I love, lost faith in the order of things, were convinced in fact that everything is a disorderly, damnable, and perhaps devil-ridden chaos, if I were struck by every horror of man's disillusionment - still I should want to live.",
+    "source": "The Brothers Karamazov",
+    "length": 346
+  },
+  {
+    "id": 85,
+    "text": "Estella, to the last hour of my life, you cannot choose but remain part of my character, part of the little good in me, part of the evil. But, in this separation I associate you only with the good, and I will faithfully hold you to that always, for you must have done me far more good than harm, let me feel now what sharp distress I may. O God bless you, God forgive you",
+    "source": "Great Expectations",
+    "length": 371
+  },
+  {
+    "id": 86,
+    "text": "Moreover, Lincoln possessed an uncanny understanding of his shifting moods, a profound self-awareness that enabled him to find constructive ways to alleviate sadness and stress. Indeed, when he is compared with his colleagues, it is clear that he possessed the most even-tempered disposition of them all.",
+    "source": "Team of Rivals: The Political Genius of Abraham Lincoln",
+    "length": 304
+  },
+  {
+    "id": 87,
+    "text": "There comes a point when you just love someone. Not because they're good, or bad, or anything really. You just love them. It doesn't mean you'll be together forever. It doesn't mean you won't hurt each other. It just means you love them. Sometimes in spite of who they are, and sometimes because of who they are. And you know that they love you, sometimes because of who you are, and sometimes in spite of it.",
+    "source": "Incubus Dreams",
+    "length": 409
+  },
+  {
+    "id": 88,
+    "text": "There will come a time when all of us are dead. All of us. There will come a time when there are no human beings remaining to remember that anyone ever existed or that our species ever did anything. There will be no one left to remember Aristotle or Cleopatra, let alone you. Everything that we did and built and wrote and thought and discovered will be forgotten and all of this will have been for naught. Maybe that time is coming soon and maybe it is millions of years away, but even if we survive the collapse of our sun, we will not survive forever.",
+    "source": "The Fault in Our Stars",
+    "length": 554
+  },
+  {
+    "id": 89,
+    "text": "Let folly be our cloak, a veil before the eyes of the Enemy For he is very wise, and weighs all things to a nicety in the scales of his malice. But the only measure that he knows is desire, desire for power; and so he judges all hearts. Into his heart the thought will not enter that any will refuse it, that having the Ring we may seek to destroy it. If we seek this, we shall put him out of reckoning.",
+    "source": "The Fellowship of the Ring",
+    "length": 403
+  },
+  {
+    "id": 90,
+    "text": "What is finished is the idea that this great country is dedicated to the freedom and flourishing of every individual in it. It's the individual that's finished. It's the single, solitary human being that's finished. It's every single one of you out there that's finished, because this is no longer a nation of independent individuals.",
+    "source": "Network",
+    "length": 334
+  },
+  {
+    "id": 91,
+    "text": "Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it. If nothing within you stays rigid, outward things will disclose themselves. Empty your mind, be formless, shapeless, like water. If you put water into a cup, it becomes the cup. You put water into a bottle and it becomes the bottle. You put it in a teapot it becomes the teapot. Now, water can flow or it can crash. Be water, my friend.",
+    "source": "Bruce Lee",
+    "length": 475
+  },
+  {
+    "id": 92,
+    "text": "The creation ends in South Georgia, at the very edge of the sweet earth. Only the sky, widest of the wide, goes on, flatness against flatness. The sky appears so close that, with a long-enough extension ladder, you think you could touch it, and sometimes you do, when clouds descend in the night to set a fine pelt of dew on the grasses, leaving behind white trails of fog and mist.",
+    "source": "Ecology of a Cracker Childhood",
+    "length": 382
+  },
+  {
+    "id": 93,
+    "text": "Where there's a will, there's a way - kinda beautiful. And every night has its day - so magical. And if there's love in this life, there's no obstacle that can't be defeated. For every tyrant, a tear for the vulnerable; in every lost soul the bones of a miracle; for every dreamer a dream - we're unstoppable with something to believe in.",
+    "source": "Waiting For Love",
+    "length": 338
+  },
+  {
+    "id": 94,
+    "text": "The thunder of the guns swells to a single heavy roar and then breaks up again into separate explosions. The dry bursts of the machine-guns rattle; above us the air teems with invisible swift movement, with howls, pipings, and hisses. They are smaller shells; and amongst them, booming through the night like an organ, go the great coal-boxes and the heavies. They have a hoarse, distant bellow like a rutting stag and make their way high above the howl and whistle of the smaller shells. It reminds me of flocks of wild geese when I hear them. Last autumn the wild geese flew day after day across the path of the shells. The searchlights begin to sweep the dark sky. They slide along it like gigantic tapering rulers. One of them pauses, and quivers a little. Immediately a second is beside it; a black insect is caught between them and tries to escape - the airman. He hesitates, is blinded and falls.",
+    "source": "All Quiet on the Western Front",
+    "length": 903
+  },
+  {
+    "id": 95,
+    "text": "I started to walk down the street when I heard a voice saying, Good evening, Mr. Dowd. I turned, and there was this big white rabbit leaning against a lamp-post. Well, I thought nothing of that, because when you've lived in a town as long as I've lived in this one, you get used to the fact that everybody knows your name. And naturally, I went over to chat with him.",
+    "source": "Harvey",
+    "length": 367
+  },
+  {
+    "id": 96,
+    "text": "I was shaking like a leaf, so without thinking I lit up a cigarette on the airplane to calm my nerves. I was trembling, I was very emotional and that's when all the rest of it happened. It's very regrettable. Now, I don't want to kick up a fuss, press charges, contact the British embassy. I'd rather not pursue those channels, that's not my style. I'm not that sort of a bloke.",
+    "source": "Sexy Beast",
+    "length": 378
+  },
+  {
+    "id": 97,
+    "text": "At the bottom of her heart, however, she was waiting for something to happen. Like shipwrecked sailors, she turned despairing eyes upon the solitude of her life, seeking afar off some white sail in the mists of the horizon. She did not know what this chance would be, what wind would bring it her, towards what shore it would drive her, if it would be a shallop or a three-decker, laden with anguish or full of bliss to the portholes. But each morning, as she awoke, she hoped it would come that day; she listened to every sound, sprang up with a start, wondered that it did not come; then at sunset, always more saddened, she longed for the morrow.",
+    "source": "Madame Bovary",
+    "length": 649
+  },
+  {
+    "id": 98,
+    "text": "I'm not fighting because of my feelings of debt or obligation to others. I fight 'cause in the end, I love boxing. It's certainly quite a world apart from the bright youth you talk about, but that burning sense of worth and completeness is something I've only tasted on a bloodied ring. And this burning sensation isn't a momentary sputter that others my age go through. It's so intense that it burns your entire body up in an instant. And when it's over, only white ashes remain. Not even any tiny cinders... just pure white ash. I've never felt anything like this before I started boxing. So you see, I'm not fighting on a sense of debt or obligation alone. I fight because I love to fight.",
+    "source": "Tomorrow's Joe",
+    "length": 692
+  },
+  {
+    "id": 99,
+    "text": "I'll tell you bedtime stories, and you pretend they're not boring. One day we'll have a house of our very own and we'll make it our home. And I'll do anything for you. It's just two little words. They're gonna change my world. Three letters, in all. And I mean them with all I got. We're gonna say I do.",
+    "source": "Two Little Words (I do)",
+    "length": 303
+  },
+  {
+    "id": 100,
+    "text": "Books are not absolutely dead things, but do contain a potency of life in them to be as active as that soul was whose progeny they are; nay, they do preserve as in a vial the purest efficacy and extraction of that living intellect that bred them. I know they are as lively, and as vigorously productive, as those fabulous dragon's teeth; and being sown up and down, may chance to spring up armed men. And yet, on the other hand, unless wariness be used, as good almost kill a man as kill a good book. Who kills a man kills a reasonable creature, God's image; but he who destroys a good book, kills reason itself, kills the image of God, as it were in the eye. Many a man lives a burden to the earth; but a good book is the precious life-blood of a master spirit, embalmed and treasured up on purpose to a life beyond life.",
+    "source": "Areopagitica",
+    "length": 822
+  }
+]

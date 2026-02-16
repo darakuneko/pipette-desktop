@@ -1,0 +1,2570 @@
+[
+  {
+    "name": "afrikaans",
+    "wordCount": 180,
+    "rightToLeft": false,
+    "fileSize": 2302
+  },
+  {
+    "name": "afrikaans_10k",
+    "wordCount": 8164,
+    "rightToLeft": false,
+    "fileSize": 127053
+  },
+  {
+    "name": "afrikaans_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 15625
+  },
+  {
+    "name": "albanian",
+    "wordCount": 195,
+    "rightToLeft": false,
+    "fileSize": 2426
+  },
+  {
+    "name": "albanian_1k",
+    "wordCount": 896,
+    "rightToLeft": false,
+    "fileSize": 12951
+  },
+  {
+    "name": "amharic",
+    "wordCount": 273,
+    "rightToLeft": false,
+    "fileSize": 5276
+  },
+  {
+    "name": "amharic_1k",
+    "wordCount": 1001,
+    "rightToLeft": false,
+    "fileSize": 21417
+  },
+  {
+    "name": "amharic_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 110743
+  },
+  {
+    "name": "arabic",
+    "wordCount": 199,
+    "rightToLeft": true,
+    "fileSize": 5114
+  },
+  {
+    "name": "arabic_10k",
+    "wordCount": 9281,
+    "rightToLeft": true,
+    "fileSize": 259126
+  },
+  {
+    "name": "arabic_egypt",
+    "wordCount": 210,
+    "rightToLeft": true,
+    "fileSize": 3385
+  },
+  {
+    "name": "arabic_egypt_1k",
+    "wordCount": 1141,
+    "rightToLeft": true,
+    "fileSize": 19630
+  },
+  {
+    "name": "arabic_morocco",
+    "wordCount": 229,
+    "rightToLeft": true,
+    "fileSize": 3840
+  },
+  {
+    "name": "armenian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4019
+  },
+  {
+    "name": "armenian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 20568
+  },
+  {
+    "name": "armenian_western",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 3828
+  },
+  {
+    "name": "armenian_western_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 21615
+  },
+  {
+    "name": "azerbaijani",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2812
+  },
+  {
+    "name": "azerbaijani_1k",
+    "wordCount": 989,
+    "rightToLeft": false,
+    "fileSize": 13856
+  },
+  {
+    "name": "bangla",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 3960
+  },
+  {
+    "name": "bangla_10k",
+    "wordCount": 9734,
+    "rightToLeft": false,
+    "fileSize": 246015
+  },
+  {
+    "name": "bangla_letters",
+    "wordCount": 62,
+    "rightToLeft": false,
+    "fileSize": 823
+  },
+  {
+    "name": "bashkir",
+    "wordCount": 207,
+    "rightToLeft": false,
+    "fileSize": 3516
+  },
+  {
+    "name": "belarusian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 3134
+  },
+  {
+    "name": "belarusian_100k",
+    "wordCount": 106381,
+    "rightToLeft": false,
+    "fileSize": 2904588
+  },
+  {
+    "name": "belarusian_10k",
+    "wordCount": 10725,
+    "rightToLeft": false,
+    "fileSize": 213829
+  },
+  {
+    "name": "belarusian_1k",
+    "wordCount": 997,
+    "rightToLeft": false,
+    "fileSize": 19709
+  },
+  {
+    "name": "belarusian_25k",
+    "wordCount": 24133,
+    "rightToLeft": false,
+    "fileSize": 480840
+  },
+  {
+    "name": "belarusian_50k",
+    "wordCount": 52817,
+    "rightToLeft": false,
+    "fileSize": 1199619
+  },
+  {
+    "name": "belarusian_5k",
+    "wordCount": 5044,
+    "rightToLeft": false,
+    "fileSize": 100666
+  },
+  {
+    "name": "belarusian_lacinka",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2511
+  },
+  {
+    "name": "belarusian_lacinka_1k",
+    "wordCount": 997,
+    "rightToLeft": false,
+    "fileSize": 14610
+  },
+  {
+    "name": "bosnian",
+    "wordCount": 189,
+    "rightToLeft": false,
+    "fileSize": 2781
+  },
+  {
+    "name": "bosnian_4k",
+    "wordCount": 3816,
+    "rightToLeft": false,
+    "fileSize": 58014
+  },
+  {
+    "name": "bulgarian",
+    "wordCount": 214,
+    "rightToLeft": false,
+    "fileSize": 3673
+  },
+  {
+    "name": "bulgarian_1k",
+    "wordCount": 1010,
+    "rightToLeft": false,
+    "fileSize": 19314
+  },
+  {
+    "name": "bulgarian_latin",
+    "wordCount": 213,
+    "rightToLeft": false,
+    "fileSize": 2806
+  },
+  {
+    "name": "bulgarian_latin_1k",
+    "wordCount": 1007,
+    "rightToLeft": false,
+    "fileSize": 14054
+  },
+  {
+    "name": "catalan",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2600
+  },
+  {
+    "name": "catalan_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14307
+  },
+  {
+    "name": "chinese_simplified",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2962
+  },
+  {
+    "name": "chinese_simplified_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 143886
+  },
+  {
+    "name": "chinese_simplified_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14216
+  },
+  {
+    "name": "chinese_simplified_50k",
+    "wordCount": 50000,
+    "rightToLeft": false,
+    "fileSize": 753569
+  },
+  {
+    "name": "chinese_simplified_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 71548
+  },
+  {
+    "name": "chinese_traditional",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2701
+  },
+  {
+    "name": "code_abap",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2958
+  },
+  {
+    "name": "code_abap_1k",
+    "wordCount": 1111,
+    "rightToLeft": false,
+    "fileSize": 17432
+  },
+  {
+    "name": "code_arduino",
+    "wordCount": 104,
+    "rightToLeft": false,
+    "fileSize": 1629
+  },
+  {
+    "name": "code_assembly",
+    "wordCount": 81,
+    "rightToLeft": false,
+    "fileSize": 1000
+  },
+  {
+    "name": "code_bash",
+    "wordCount": 276,
+    "rightToLeft": false,
+    "fileSize": 3609
+  },
+  {
+    "name": "code_brainfck",
+    "wordCount": 194,
+    "rightToLeft": false,
+    "fileSize": 4075
+  },
+  {
+    "name": "code_c++",
+    "wordCount": 111,
+    "rightToLeft": false,
+    "fileSize": 1683
+  },
+  {
+    "name": "code_c",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2997
+  },
+  {
+    "name": "code_clojure",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 3054
+  },
+  {
+    "name": "code_cobol",
+    "wordCount": 105,
+    "rightToLeft": false,
+    "fileSize": 1703
+  },
+  {
+    "name": "code_common_lisp",
+    "wordCount": 204,
+    "rightToLeft": false,
+    "fileSize": 3115
+  },
+  {
+    "name": "code_csharp",
+    "wordCount": 130,
+    "rightToLeft": false,
+    "fileSize": 1811
+  },
+  {
+    "name": "code_css",
+    "wordCount": 72,
+    "rightToLeft": false,
+    "fileSize": 1285
+  },
+  {
+    "name": "code_cuda",
+    "wordCount": 237,
+    "rightToLeft": false,
+    "fileSize": 6838
+  },
+  {
+    "name": "code_dart",
+    "wordCount": 73,
+    "rightToLeft": false,
+    "fileSize": 1029
+  },
+  {
+    "name": "code_elixir",
+    "wordCount": 554,
+    "rightToLeft": false,
+    "fileSize": 10124
+  },
+  {
+    "name": "code_erlang",
+    "wordCount": 245,
+    "rightToLeft": false,
+    "fileSize": 3786
+  },
+  {
+    "name": "code_fortran",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2919
+  },
+  {
+    "name": "code_fsharp",
+    "wordCount": 102,
+    "rightToLeft": false,
+    "fileSize": 1410
+  },
+  {
+    "name": "code_gdscript",
+    "wordCount": 103,
+    "rightToLeft": false,
+    "fileSize": 1568
+  },
+  {
+    "name": "code_gdscript_2",
+    "wordCount": 102,
+    "rightToLeft": false,
+    "fileSize": 1561
+  },
+  {
+    "name": "code_gleam",
+    "wordCount": 442,
+    "rightToLeft": false,
+    "fileSize": 9120
+  },
+  {
+    "name": "code_go",
+    "wordCount": 63,
+    "rightToLeft": false,
+    "fileSize": 885
+  },
+  {
+    "name": "code_haskell",
+    "wordCount": 208,
+    "rightToLeft": false,
+    "fileSize": 2730
+  },
+  {
+    "name": "code_html",
+    "wordCount": 232,
+    "rightToLeft": false,
+    "fileSize": 3408
+  },
+  {
+    "name": "code_java",
+    "wordCount": 89,
+    "rightToLeft": false,
+    "fileSize": 1283
+  },
+  {
+    "name": "code_javascript",
+    "wordCount": 126,
+    "rightToLeft": false,
+    "fileSize": 2039
+  },
+  {
+    "name": "code_javascript_1k",
+    "wordCount": 1001,
+    "rightToLeft": false,
+    "fileSize": 14420
+  },
+  {
+    "name": "code_javascript_react",
+    "wordCount": 202,
+    "rightToLeft": false,
+    "fileSize": 3697
+  },
+  {
+    "name": "code_jule",
+    "wordCount": 59,
+    "rightToLeft": false,
+    "fileSize": 784
+  },
+  {
+    "name": "code_julia",
+    "wordCount": 103,
+    "rightToLeft": false,
+    "fileSize": 1487
+  },
+  {
+    "name": "code_kotlin",
+    "wordCount": 85,
+    "rightToLeft": false,
+    "fileSize": 1165
+  },
+  {
+    "name": "code_latex",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4244
+  },
+  {
+    "name": "code_lua",
+    "wordCount": 59,
+    "rightToLeft": false,
+    "fileSize": 867
+  },
+  {
+    "name": "code_luau",
+    "wordCount": 73,
+    "rightToLeft": false,
+    "fileSize": 1082
+  },
+  {
+    "name": "code_matlab",
+    "wordCount": 63,
+    "rightToLeft": false,
+    "fileSize": 904
+  },
+  {
+    "name": "code_nim",
+    "wordCount": 99,
+    "rightToLeft": false,
+    "fileSize": 1212
+  },
+  {
+    "name": "code_nix",
+    "wordCount": 125,
+    "rightToLeft": false,
+    "fileSize": 2132
+  },
+  {
+    "name": "code_ocaml",
+    "wordCount": 495,
+    "rightToLeft": false,
+    "fileSize": 7891
+  },
+  {
+    "name": "code_odin",
+    "wordCount": 129,
+    "rightToLeft": false,
+    "fileSize": 1842
+  },
+  {
+    "name": "code_ook",
+    "wordCount": 9,
+    "rightToLeft": false,
+    "fileSize": 280
+  },
+  {
+    "name": "code_opencl",
+    "wordCount": 221,
+    "rightToLeft": false,
+    "fileSize": 3126
+  },
+  {
+    "name": "code_pascal",
+    "wordCount": 151,
+    "rightToLeft": false,
+    "fileSize": 2028
+  },
+  {
+    "name": "code_perl",
+    "wordCount": 234,
+    "rightToLeft": false,
+    "fileSize": 3280
+  },
+  {
+    "name": "code_php",
+    "wordCount": 296,
+    "rightToLeft": false,
+    "fileSize": 3955
+  },
+  {
+    "name": "code_powershell",
+    "wordCount": 106,
+    "rightToLeft": false,
+    "fileSize": 2277
+  },
+  {
+    "name": "code_python",
+    "wordCount": 174,
+    "rightToLeft": false,
+    "fileSize": 2436
+  },
+  {
+    "name": "code_python_1k",
+    "wordCount": 1096,
+    "rightToLeft": false,
+    "fileSize": 18061
+  },
+  {
+    "name": "code_python_2k",
+    "wordCount": 2060,
+    "rightToLeft": false,
+    "fileSize": 35949
+  },
+  {
+    "name": "code_python_5k",
+    "wordCount": 5235,
+    "rightToLeft": false,
+    "fileSize": 96235
+  },
+  {
+    "name": "code_r",
+    "wordCount": 21,
+    "rightToLeft": false,
+    "fileSize": 342
+  },
+  {
+    "name": "code_r_2k",
+    "wordCount": 2270,
+    "rightToLeft": false,
+    "fileSize": 40977
+  },
+  {
+    "name": "code_rockstar",
+    "wordCount": 103,
+    "rightToLeft": false,
+    "fileSize": 1321
+  },
+  {
+    "name": "code_ruby",
+    "wordCount": 118,
+    "rightToLeft": false,
+    "fileSize": 1992
+  },
+  {
+    "name": "code_rust",
+    "wordCount": 192,
+    "rightToLeft": false,
+    "fileSize": 3036
+  },
+  {
+    "name": "code_scala",
+    "wordCount": 96,
+    "rightToLeft": false,
+    "fileSize": 1301
+  },
+  {
+    "name": "code_sql",
+    "wordCount": 174,
+    "rightToLeft": false,
+    "fileSize": 2554
+  },
+  {
+    "name": "code_swift",
+    "wordCount": 69,
+    "rightToLeft": false,
+    "fileSize": 1024
+  },
+  {
+    "name": "code_systemverilog",
+    "wordCount": 222,
+    "rightToLeft": false,
+    "fileSize": 3295
+  },
+  {
+    "name": "code_typescript",
+    "wordCount": 198,
+    "rightToLeft": false,
+    "fileSize": 2969
+  },
+  {
+    "name": "code_typst",
+    "wordCount": 43,
+    "rightToLeft": false,
+    "fileSize": 615
+  },
+  {
+    "name": "code_v",
+    "wordCount": 64,
+    "rightToLeft": false,
+    "fileSize": 872
+  },
+  {
+    "name": "code_vim",
+    "wordCount": 167,
+    "rightToLeft": false,
+    "fileSize": 1888
+  },
+  {
+    "name": "code_vimscript",
+    "wordCount": 85,
+    "rightToLeft": false,
+    "fileSize": 1260
+  },
+  {
+    "name": "code_visual_basic",
+    "wordCount": 180,
+    "rightToLeft": false,
+    "fileSize": 2564
+  },
+  {
+    "name": "code_yoptascript",
+    "wordCount": 239,
+    "rightToLeft": false,
+    "fileSize": 6125
+  },
+  {
+    "name": "code_zig",
+    "wordCount": 146,
+    "rightToLeft": false,
+    "fileSize": 2338
+  },
+  {
+    "name": "croatian",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 2848
+  },
+  {
+    "name": "croatian_1k",
+    "wordCount": 1108,
+    "rightToLeft": false,
+    "fileSize": 15561
+  },
+  {
+    "name": "czech",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2629
+  },
+  {
+    "name": "czech_10k",
+    "wordCount": 9629,
+    "rightToLeft": false,
+    "fileSize": 153767
+  },
+  {
+    "name": "czech_1k",
+    "wordCount": 899,
+    "rightToLeft": false,
+    "fileSize": 12435
+  },
+  {
+    "name": "danish",
+    "wordCount": 196,
+    "rightToLeft": false,
+    "fileSize": 2446
+  },
+  {
+    "name": "danish_10k",
+    "wordCount": 9624,
+    "rightToLeft": false,
+    "fileSize": 153004
+  },
+  {
+    "name": "danish_1k",
+    "wordCount": 954,
+    "rightToLeft": false,
+    "fileSize": 13456
+  },
+  {
+    "name": "docker_file",
+    "wordCount": 19,
+    "rightToLeft": false,
+    "fileSize": 325
+  },
+  {
+    "name": "dutch",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2633
+  },
+  {
+    "name": "dutch_10k",
+    "wordCount": 9998,
+    "rightToLeft": false,
+    "fileSize": 195750
+  },
+  {
+    "name": "dutch_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13683
+  },
+  {
+    "name": "english",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2540
+  },
+  {
+    "name": "english_10k",
+    "wordCount": 9945,
+    "rightToLeft": false,
+    "fileSize": 151330
+  },
+  {
+    "name": "english_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 12943
+  },
+  {
+    "name": "english_25k",
+    "wordCount": 24175,
+    "rightToLeft": false,
+    "fileSize": 382221
+  },
+  {
+    "name": "english_450k",
+    "wordCount": 451435,
+    "rightToLeft": false,
+    "fileSize": 7934575
+  },
+  {
+    "name": "english_5k",
+    "wordCount": 4957,
+    "rightToLeft": false,
+    "fileSize": 73793
+  },
+  {
+    "name": "english_commonly_misspelled",
+    "wordCount": 1729,
+    "rightToLeft": false,
+    "fileSize": 28609
+  },
+  {
+    "name": "english_contractions",
+    "wordCount": 189,
+    "rightToLeft": false,
+    "fileSize": 2897
+  },
+  {
+    "name": "english_doubleletter",
+    "wordCount": 202,
+    "rightToLeft": false,
+    "fileSize": 3229
+  },
+  {
+    "name": "english_medical",
+    "wordCount": 580,
+    "rightToLeft": false,
+    "fileSize": 10311
+  },
+  {
+    "name": "english_old",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2688
+  },
+  {
+    "name": "english_shakespearean",
+    "wordCount": 193,
+    "rightToLeft": false,
+    "fileSize": 2785
+  },
+  {
+    "name": "esperanto",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2455
+  },
+  {
+    "name": "esperanto_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 148893
+  },
+  {
+    "name": "esperanto_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13524
+  },
+  {
+    "name": "esperanto_25k",
+    "wordCount": 24998,
+    "rightToLeft": false,
+    "fileSize": 392244
+  },
+  {
+    "name": "esperanto_36k",
+    "wordCount": 36342,
+    "rightToLeft": false,
+    "fileSize": 578620
+  },
+  {
+    "name": "esperanto_h_sistemo",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2479
+  },
+  {
+    "name": "esperanto_h_sistemo_10k",
+    "wordCount": 9969,
+    "rightToLeft": false,
+    "fileSize": 148332
+  },
+  {
+    "name": "esperanto_h_sistemo_1k",
+    "wordCount": 999,
+    "rightToLeft": false,
+    "fileSize": 13507
+  },
+  {
+    "name": "esperanto_h_sistemo_25k",
+    "wordCount": 24922,
+    "rightToLeft": false,
+    "fileSize": 390673
+  },
+  {
+    "name": "esperanto_h_sistemo_36k",
+    "wordCount": 36131,
+    "rightToLeft": false,
+    "fileSize": 574694
+  },
+  {
+    "name": "esperanto_x_sistemo",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2487
+  },
+  {
+    "name": "esperanto_x_sistemo_10k",
+    "wordCount": 9993,
+    "rightToLeft": false,
+    "fileSize": 148842
+  },
+  {
+    "name": "esperanto_x_sistemo_1k",
+    "wordCount": 999,
+    "rightToLeft": false,
+    "fileSize": 13545
+  },
+  {
+    "name": "esperanto_x_sistemo_25k",
+    "wordCount": 24970,
+    "rightToLeft": false,
+    "fileSize": 391883
+  },
+  {
+    "name": "esperanto_x_sistemo_36k",
+    "wordCount": 36296,
+    "rightToLeft": false,
+    "fileSize": 577987
+  },
+  {
+    "name": "estonian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2564
+  },
+  {
+    "name": "estonian_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 155889
+  },
+  {
+    "name": "estonian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13905
+  },
+  {
+    "name": "estonian_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 75330
+  },
+  {
+    "name": "euskera",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2756
+  },
+  {
+    "name": "filipino",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2609
+  },
+  {
+    "name": "filipino_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14131
+  },
+  {
+    "name": "finnish",
+    "wordCount": 204,
+    "rightToLeft": false,
+    "fileSize": 2958
+  },
+  {
+    "name": "finnish_10k",
+    "wordCount": 9906,
+    "rightToLeft": false,
+    "fileSize": 180355
+  },
+  {
+    "name": "finnish_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14789
+  },
+  {
+    "name": "french",
+    "wordCount": 174,
+    "rightToLeft": false,
+    "fileSize": 2341
+  },
+  {
+    "name": "french_10k",
+    "wordCount": 10253,
+    "rightToLeft": false,
+    "fileSize": 163316
+  },
+  {
+    "name": "french_1k",
+    "wordCount": 1394,
+    "rightToLeft": false,
+    "fileSize": 20100
+  },
+  {
+    "name": "french_2k",
+    "wordCount": 2041,
+    "rightToLeft": false,
+    "fileSize": 30991
+  },
+  {
+    "name": "french_600k",
+    "wordCount": 633941,
+    "rightToLeft": false,
+    "fileSize": 12225660
+  },
+  {
+    "name": "french_bitoduc",
+    "wordCount": 138,
+    "rightToLeft": false,
+    "fileSize": 2558
+  },
+  {
+    "name": "frisian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2653
+  },
+  {
+    "name": "frisian_1k",
+    "wordCount": 909,
+    "rightToLeft": false,
+    "fileSize": 12416
+  },
+  {
+    "name": "friulian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2712
+  },
+  {
+    "name": "galician",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2547
+  },
+  {
+    "name": "georgian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 5735
+  },
+  {
+    "name": "german",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2669
+  },
+  {
+    "name": "german_10k",
+    "wordCount": 9994,
+    "rightToLeft": false,
+    "fileSize": 163036
+  },
+  {
+    "name": "german_1k",
+    "wordCount": 988,
+    "rightToLeft": false,
+    "fileSize": 14076
+  },
+  {
+    "name": "german_250k",
+    "wordCount": 239243,
+    "rightToLeft": false,
+    "fileSize": 4710520
+  },
+  {
+    "name": "git",
+    "wordCount": 52,
+    "rightToLeft": false,
+    "fileSize": 764
+  },
+  {
+    "name": "greek",
+    "wordCount": 209,
+    "rightToLeft": false,
+    "fileSize": 4263
+  },
+  {
+    "name": "greek_10k",
+    "wordCount": 9936,
+    "rightToLeft": false,
+    "fileSize": 251963
+  },
+  {
+    "name": "greek_1k",
+    "wordCount": 993,
+    "rightToLeft": false,
+    "fileSize": 21850
+  },
+  {
+    "name": "greek_25k",
+    "wordCount": 24836,
+    "rightToLeft": false,
+    "fileSize": 653439
+  },
+  {
+    "name": "greek_5k",
+    "wordCount": 4963,
+    "rightToLeft": false,
+    "fileSize": 121536
+  },
+  {
+    "name": "greeklish",
+    "wordCount": 209,
+    "rightToLeft": false,
+    "fileSize": 3058
+  },
+  {
+    "name": "greeklish_10k",
+    "wordCount": 9808,
+    "rightToLeft": false,
+    "fileSize": 165410
+  },
+  {
+    "name": "greeklish_1k",
+    "wordCount": 990,
+    "rightToLeft": false,
+    "fileSize": 15048
+  },
+  {
+    "name": "greeklish_25k",
+    "wordCount": 24273,
+    "rightToLeft": false,
+    "fileSize": 421424
+  },
+  {
+    "name": "greeklish_5k",
+    "wordCount": 4926,
+    "rightToLeft": false,
+    "fileSize": 80879
+  },
+  {
+    "name": "gujarati",
+    "wordCount": 214,
+    "rightToLeft": false,
+    "fileSize": 5177
+  },
+  {
+    "name": "gujarati_1k",
+    "wordCount": 1004,
+    "rightToLeft": false,
+    "fileSize": 21842
+  },
+  {
+    "name": "hausa",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2656
+  },
+  {
+    "name": "hausa_1k",
+    "wordCount": 829,
+    "rightToLeft": false,
+    "fileSize": 11528
+  },
+  {
+    "name": "hawaiian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2599
+  },
+  {
+    "name": "hawaiian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13765
+  },
+  {
+    "name": "hebrew",
+    "wordCount": 198,
+    "rightToLeft": true,
+    "fileSize": 3374
+  },
+  {
+    "name": "hebrew_10k",
+    "wordCount": 10000,
+    "rightToLeft": true,
+    "fileSize": 181736
+  },
+  {
+    "name": "hebrew_1k",
+    "wordCount": 1000,
+    "rightToLeft": true,
+    "fileSize": 16653
+  },
+  {
+    "name": "hebrew_5k",
+    "wordCount": 5000,
+    "rightToLeft": true,
+    "fileSize": 88561
+  },
+  {
+    "name": "hindi",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4108
+  },
+  {
+    "name": "hindi_1k",
+    "wordCount": 999,
+    "rightToLeft": false,
+    "fileSize": 22188
+  },
+  {
+    "name": "hinglish",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 2689
+  },
+  {
+    "name": "hungarian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2706
+  },
+  {
+    "name": "hungarian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14857
+  },
+  {
+    "name": "hungarian_2k",
+    "wordCount": 2452,
+    "rightToLeft": false,
+    "fileSize": 38607
+  },
+  {
+    "name": "icelandic",
+    "wordCount": 214,
+    "rightToLeft": false,
+    "fileSize": 2775
+  },
+  {
+    "name": "icelandic_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13627
+  },
+  {
+    "name": "indonesian",
+    "wordCount": 310,
+    "rightToLeft": false,
+    "fileSize": 4231
+  },
+  {
+    "name": "indonesian_10k",
+    "wordCount": 13769,
+    "rightToLeft": false,
+    "fileSize": 230601
+  },
+  {
+    "name": "indonesian_1k",
+    "wordCount": 1020,
+    "rightToLeft": false,
+    "fileSize": 14971
+  },
+  {
+    "name": "irish",
+    "wordCount": 183,
+    "rightToLeft": false,
+    "fileSize": 2367
+  },
+  {
+    "name": "italian",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2878
+  },
+  {
+    "name": "italian_1k",
+    "wordCount": 1159,
+    "rightToLeft": false,
+    "fileSize": 17212
+  },
+  {
+    "name": "italian_280k",
+    "wordCount": 279833,
+    "rightToLeft": false,
+    "fileSize": 5004897
+  },
+  {
+    "name": "italian_60k",
+    "wordCount": 60442,
+    "rightToLeft": false,
+    "fileSize": 984995
+  },
+  {
+    "name": "italian_7k",
+    "wordCount": 7154,
+    "rightToLeft": false,
+    "fileSize": 114063
+  },
+  {
+    "name": "japanese_hiragana",
+    "wordCount": 554,
+    "rightToLeft": false,
+    "fileSize": 9319
+  },
+  {
+    "name": "japanese_katakana",
+    "wordCount": 343,
+    "rightToLeft": false,
+    "fileSize": 6638
+  },
+  {
+    "name": "japanese_romaji",
+    "wordCount": 153,
+    "rightToLeft": false,
+    "fileSize": 2032
+  },
+  {
+    "name": "japanese_romaji_1k",
+    "wordCount": 987,
+    "rightToLeft": false,
+    "fileSize": 13793
+  },
+  {
+    "name": "jyutping",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2335
+  },
+  {
+    "name": "kabyle",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2857
+  },
+  {
+    "name": "kabyle_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 152605
+  },
+  {
+    "name": "kabyle_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 15259
+  },
+  {
+    "name": "kabyle_2k",
+    "wordCount": 2000,
+    "rightToLeft": false,
+    "fileSize": 30606
+  },
+  {
+    "name": "kabyle_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 76701
+  },
+  {
+    "name": "kannada",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4761
+  },
+  {
+    "name": "kazakh",
+    "wordCount": 202,
+    "rightToLeft": false,
+    "fileSize": 3254
+  },
+  {
+    "name": "kazakh_1k",
+    "wordCount": 990,
+    "rightToLeft": false,
+    "fileSize": 19044
+  },
+  {
+    "name": "khmer",
+    "wordCount": 331,
+    "rightToLeft": false,
+    "fileSize": 8078
+  },
+  {
+    "name": "kinyarwanda",
+    "wordCount": 273,
+    "rightToLeft": false,
+    "fileSize": 3983
+  },
+  {
+    "name": "klingon",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 2892
+  },
+  {
+    "name": "klingon_1k",
+    "wordCount": 1001,
+    "rightToLeft": false,
+    "fileSize": 13499
+  },
+  {
+    "name": "korean",
+    "wordCount": 470,
+    "rightToLeft": false,
+    "fileSize": 6806
+  },
+  {
+    "name": "korean_1k",
+    "wordCount": 975,
+    "rightToLeft": false,
+    "fileSize": 14911
+  },
+  {
+    "name": "korean_5k",
+    "wordCount": 4201,
+    "rightToLeft": false,
+    "fileSize": 67650
+  },
+  {
+    "name": "kurdish_central",
+    "wordCount": 204,
+    "rightToLeft": true,
+    "fileSize": 3497
+  },
+  {
+    "name": "kurdish_central_2k",
+    "wordCount": 1486,
+    "rightToLeft": true,
+    "fileSize": 27564
+  },
+  {
+    "name": "kurdish_central_4k",
+    "wordCount": 4256,
+    "rightToLeft": true,
+    "fileSize": 79563
+  },
+  {
+    "name": "kyrgyz",
+    "wordCount": 234,
+    "rightToLeft": false,
+    "fileSize": 4455
+  },
+  {
+    "name": "kyrgyz_1k",
+    "wordCount": 849,
+    "rightToLeft": false,
+    "fileSize": 16274
+  },
+  {
+    "name": "latin",
+    "wordCount": 362,
+    "rightToLeft": false,
+    "fileSize": 4676
+  },
+  {
+    "name": "latvian",
+    "wordCount": 179,
+    "rightToLeft": false,
+    "fileSize": 2494
+  },
+  {
+    "name": "latvian_1k",
+    "wordCount": 930,
+    "rightToLeft": false,
+    "fileSize": 13856
+  },
+  {
+    "name": "league_of_legends",
+    "wordCount": 442,
+    "rightToLeft": false,
+    "fileSize": 8320
+  },
+  {
+    "name": "lithuanian",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2789
+  },
+  {
+    "name": "lithuanian_1k",
+    "wordCount": 990,
+    "rightToLeft": false,
+    "fileSize": 15084
+  },
+  {
+    "name": "lithuanian_3k",
+    "wordCount": 2978,
+    "rightToLeft": false,
+    "fileSize": 47828
+  },
+  {
+    "name": "lojban_cmavo",
+    "wordCount": 674,
+    "rightToLeft": false,
+    "fileSize": 7880
+  },
+  {
+    "name": "lojban_gismu",
+    "wordCount": 1392,
+    "rightToLeft": false,
+    "fileSize": 18164
+  },
+  {
+    "name": "lorem_ipsum",
+    "wordCount": 185,
+    "rightToLeft": false,
+    "fileSize": 2846
+  },
+  {
+    "name": "macedonian",
+    "wordCount": 173,
+    "rightToLeft": false,
+    "fileSize": 3084
+  },
+  {
+    "name": "macedonian_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 215286
+  },
+  {
+    "name": "macedonian_1k",
+    "wordCount": 901,
+    "rightToLeft": false,
+    "fileSize": 18003
+  },
+  {
+    "name": "macedonian_75k",
+    "wordCount": 75000,
+    "rightToLeft": false,
+    "fileSize": 1822852
+  },
+  {
+    "name": "malagasy",
+    "wordCount": 197,
+    "rightToLeft": false,
+    "fileSize": 2444
+  },
+  {
+    "name": "malagasy_1k",
+    "wordCount": 975,
+    "rightToLeft": false,
+    "fileSize": 16596
+  },
+  {
+    "name": "malay",
+    "wordCount": 228,
+    "rightToLeft": false,
+    "fileSize": 3141
+  },
+  {
+    "name": "malay_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14607
+  },
+  {
+    "name": "malayalam",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4538
+  },
+  {
+    "name": "maltese",
+    "wordCount": 183,
+    "rightToLeft": false,
+    "fileSize": 2460
+  },
+  {
+    "name": "maltese_1k",
+    "wordCount": 927,
+    "rightToLeft": false,
+    "fileSize": 13213
+  },
+  {
+    "name": "maori_1k",
+    "wordCount": 975,
+    "rightToLeft": false,
+    "fileSize": 13566
+  },
+  {
+    "name": "marathi",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 4394
+  },
+  {
+    "name": "mongolian",
+    "wordCount": 1085,
+    "rightToLeft": false,
+    "fileSize": 23043
+  },
+  {
+    "name": "mongolian_10k",
+    "wordCount": 9219,
+    "rightToLeft": false,
+    "fileSize": 180063
+  },
+  {
+    "name": "myanmar_burmese",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 6293
+  },
+  {
+    "name": "nepali",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4724
+  },
+  {
+    "name": "nepali_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 22257
+  },
+  {
+    "name": "nepali_romanized",
+    "wordCount": 430,
+    "rightToLeft": false,
+    "fileSize": 6164
+  },
+  {
+    "name": "norwegian_bokmal",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2505
+  },
+  {
+    "name": "norwegian_bokmal_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 159268
+  },
+  {
+    "name": "norwegian_bokmal_150k",
+    "wordCount": 142938,
+    "rightToLeft": false,
+    "fileSize": 2677680
+  },
+  {
+    "name": "norwegian_bokmal_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13994
+  },
+  {
+    "name": "norwegian_bokmal_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 76684
+  },
+  {
+    "name": "norwegian_bokmal_600k",
+    "wordCount": 614970,
+    "rightToLeft": false,
+    "fileSize": 12321154
+  },
+  {
+    "name": "norwegian_nynorsk",
+    "wordCount": 250,
+    "rightToLeft": false,
+    "fileSize": 3218
+  },
+  {
+    "name": "norwegian_nynorsk_100k",
+    "wordCount": 104745,
+    "rightToLeft": false,
+    "fileSize": 1840523
+  },
+  {
+    "name": "norwegian_nynorsk_10k",
+    "wordCount": 9939,
+    "rightToLeft": false,
+    "fileSize": 162441
+  },
+  {
+    "name": "norwegian_nynorsk_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13984
+  },
+  {
+    "name": "norwegian_nynorsk_400k",
+    "wordCount": 410719,
+    "rightToLeft": false,
+    "fileSize": 7681215
+  },
+  {
+    "name": "norwegian_nynorsk_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 78072
+  },
+  {
+    "name": "occitan",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2470
+  },
+  {
+    "name": "occitan_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 148964
+  },
+  {
+    "name": "occitan_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13459
+  },
+  {
+    "name": "occitan_2k",
+    "wordCount": 2000,
+    "rightToLeft": false,
+    "fileSize": 28013
+  },
+  {
+    "name": "occitan_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 72816
+  },
+  {
+    "name": "oromo",
+    "wordCount": 337,
+    "rightToLeft": false,
+    "fileSize": 5008
+  },
+  {
+    "name": "oromo_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 16348
+  },
+  {
+    "name": "oromo_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 86981
+  },
+  {
+    "name": "pashto",
+    "wordCount": 192,
+    "rightToLeft": true,
+    "fileSize": 3381
+  },
+  {
+    "name": "persian",
+    "wordCount": 196,
+    "rightToLeft": true,
+    "fileSize": 3430
+  },
+  {
+    "name": "persian_1k",
+    "wordCount": 1000,
+    "rightToLeft": true,
+    "fileSize": 17051
+  },
+  {
+    "name": "persian_20k",
+    "wordCount": 21715,
+    "rightToLeft": true,
+    "fileSize": 391081
+  },
+  {
+    "name": "persian_5k",
+    "wordCount": 5000,
+    "rightToLeft": true,
+    "fileSize": 89347
+  },
+  {
+    "name": "persian_romanized",
+    "wordCount": 195,
+    "rightToLeft": false,
+    "fileSize": 2992
+  },
+  {
+    "name": "pig_latin",
+    "wordCount": 197,
+    "rightToLeft": false,
+    "fileSize": 2872
+  },
+  {
+    "name": "pinyin",
+    "wordCount": 175,
+    "rightToLeft": false,
+    "fileSize": 2321
+  },
+  {
+    "name": "pinyin_10k",
+    "wordCount": 1293,
+    "rightToLeft": false,
+    "fileSize": 15923
+  },
+  {
+    "name": "pinyin_1k",
+    "wordCount": 612,
+    "rightToLeft": false,
+    "fileSize": 7640
+  },
+  {
+    "name": "polish",
+    "wordCount": 183,
+    "rightToLeft": false,
+    "fileSize": 2558
+  },
+  {
+    "name": "polish_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 160979
+  },
+  {
+    "name": "polish_200k",
+    "wordCount": 199979,
+    "rightToLeft": false,
+    "fileSize": 3622698
+  },
+  {
+    "name": "polish_20k",
+    "wordCount": 20000,
+    "rightToLeft": false,
+    "fileSize": 330846
+  },
+  {
+    "name": "polish_2k",
+    "wordCount": 2338,
+    "rightToLeft": false,
+    "fileSize": 35311
+  },
+  {
+    "name": "polish_40k",
+    "wordCount": 40000,
+    "rightToLeft": false,
+    "fileSize": 690741
+  },
+  {
+    "name": "polish_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 78565
+  },
+  {
+    "name": "portuguese",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 2815
+  },
+  {
+    "name": "portuguese_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14803
+  },
+  {
+    "name": "portuguese_320k",
+    "wordCount": 318601,
+    "rightToLeft": false,
+    "fileSize": 5998764
+  },
+  {
+    "name": "portuguese_3k",
+    "wordCount": 3043,
+    "rightToLeft": false,
+    "fileSize": 49279
+  },
+  {
+    "name": "portuguese_550k",
+    "wordCount": 558207,
+    "rightToLeft": false,
+    "fileSize": 10399131
+  },
+  {
+    "name": "portuguese_5k",
+    "wordCount": 5665,
+    "rightToLeft": false,
+    "fileSize": 92772
+  },
+  {
+    "name": "portuguese_acentos_e_cedilha",
+    "wordCount": 1999,
+    "rightToLeft": false,
+    "fileSize": 36183
+  },
+  {
+    "name": "quenya",
+    "wordCount": 1883,
+    "rightToLeft": false,
+    "fileSize": 26694
+  },
+  {
+    "name": "romanian",
+    "wordCount": 270,
+    "rightToLeft": false,
+    "fileSize": 3570
+  },
+  {
+    "name": "romanian_100k",
+    "wordCount": 100000,
+    "rightToLeft": false,
+    "fileSize": 1687365
+  },
+  {
+    "name": "romanian_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 168800
+  },
+  {
+    "name": "romanian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 16690
+  },
+  {
+    "name": "romanian_200k",
+    "wordCount": 200000,
+    "rightToLeft": false,
+    "fileSize": 3374931
+  },
+  {
+    "name": "romanian_25k",
+    "wordCount": 25000,
+    "rightToLeft": false,
+    "fileSize": 422202
+  },
+  {
+    "name": "romanian_50k",
+    "wordCount": 50000,
+    "rightToLeft": false,
+    "fileSize": 842909
+  },
+  {
+    "name": "romanian_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 83912
+  },
+  {
+    "name": "russian",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 3511
+  },
+  {
+    "name": "russian_10k",
+    "wordCount": 9996,
+    "rightToLeft": false,
+    "fileSize": 238859
+  },
+  {
+    "name": "russian_1k",
+    "wordCount": 996,
+    "rightToLeft": false,
+    "fileSize": 20251
+  },
+  {
+    "name": "russian_25k",
+    "wordCount": 26038,
+    "rightToLeft": false,
+    "fileSize": 680857
+  },
+  {
+    "name": "russian_375k",
+    "wordCount": 376092,
+    "rightToLeft": false,
+    "fileSize": 10065196
+  },
+  {
+    "name": "russian_50k",
+    "wordCount": 51684,
+    "rightToLeft": false,
+    "fileSize": 1354123
+  },
+  {
+    "name": "russian_5k",
+    "wordCount": 4972,
+    "rightToLeft": false,
+    "fileSize": 112748
+  },
+  {
+    "name": "russian_abbreviations",
+    "wordCount": 245,
+    "rightToLeft": false,
+    "fileSize": 3760
+  },
+  {
+    "name": "russian_contractions",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4081
+  },
+  {
+    "name": "russian_contractions_1k",
+    "wordCount": 880,
+    "rightToLeft": false,
+    "fileSize": 15123
+  },
+  {
+    "name": "sanskrit",
+    "wordCount": 252,
+    "rightToLeft": false,
+    "fileSize": 5745
+  },
+  {
+    "name": "sanskrit_roman",
+    "wordCount": 252,
+    "rightToLeft": false,
+    "fileSize": 3757
+  },
+  {
+    "name": "santali",
+    "wordCount": 260,
+    "rightToLeft": false,
+    "fileSize": 5905
+  },
+  {
+    "name": "serbian",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 3877
+  },
+  {
+    "name": "serbian_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 207777
+  },
+  {
+    "name": "serbian_latin",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 2934
+  },
+  {
+    "name": "serbian_latin_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 147472
+  },
+  {
+    "name": "shona",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2764
+  },
+  {
+    "name": "shona_1k",
+    "wordCount": 816,
+    "rightToLeft": false,
+    "fileSize": 11959
+  },
+  {
+    "name": "sinhala",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 4211
+  },
+  {
+    "name": "slovak",
+    "wordCount": 177,
+    "rightToLeft": false,
+    "fileSize": 2361
+  },
+  {
+    "name": "slovak_10k",
+    "wordCount": 9944,
+    "rightToLeft": false,
+    "fileSize": 152706
+  },
+  {
+    "name": "slovak_1k",
+    "wordCount": 1001,
+    "rightToLeft": false,
+    "fileSize": 13772
+  },
+  {
+    "name": "slovenian",
+    "wordCount": 309,
+    "rightToLeft": false,
+    "fileSize": 4027
+  },
+  {
+    "name": "slovenian_1k",
+    "wordCount": 1023,
+    "rightToLeft": false,
+    "fileSize": 14182
+  },
+  {
+    "name": "slovenian_5k",
+    "wordCount": 4971,
+    "rightToLeft": false,
+    "fileSize": 73385
+  },
+  {
+    "name": "spanish",
+    "wordCount": 197,
+    "rightToLeft": false,
+    "fileSize": 2627
+  },
+  {
+    "name": "spanish_10k",
+    "wordCount": 9992,
+    "rightToLeft": false,
+    "fileSize": 157797
+  },
+  {
+    "name": "spanish_1k",
+    "wordCount": 999,
+    "rightToLeft": false,
+    "fileSize": 14638
+  },
+  {
+    "name": "spanish_650k",
+    "wordCount": 646584,
+    "rightToLeft": false,
+    "fileSize": 11979182
+  },
+  {
+    "name": "swahili_1k",
+    "wordCount": 820,
+    "rightToLeft": false,
+    "fileSize": 11792
+  },
+  {
+    "name": "swedish",
+    "wordCount": 198,
+    "rightToLeft": false,
+    "fileSize": 2462
+  },
+  {
+    "name": "swedish_1k",
+    "wordCount": 994,
+    "rightToLeft": false,
+    "fileSize": 13414
+  },
+  {
+    "name": "swedish_diacritics",
+    "wordCount": 261,
+    "rightToLeft": false,
+    "fileSize": 4198
+  },
+  {
+    "name": "swiss_german",
+    "wordCount": 204,
+    "rightToLeft": false,
+    "fileSize": 2728
+  },
+  {
+    "name": "swiss_german_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 14357
+  },
+  {
+    "name": "swiss_german_2k",
+    "wordCount": 2000,
+    "rightToLeft": false,
+    "fileSize": 35880
+  },
+  {
+    "name": "tamil",
+    "wordCount": 366,
+    "rightToLeft": false,
+    "fileSize": 9681
+  },
+  {
+    "name": "tamil_1k",
+    "wordCount": 951,
+    "rightToLeft": false,
+    "fileSize": 26745
+  },
+  {
+    "name": "tamil_old",
+    "wordCount": 460,
+    "rightToLeft": false,
+    "fileSize": 12150
+  },
+  {
+    "name": "tanglish",
+    "wordCount": 272,
+    "rightToLeft": false,
+    "fileSize": 3779
+  },
+  {
+    "name": "tatar",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 3660
+  },
+  {
+    "name": "tatar_1k",
+    "wordCount": 1001,
+    "rightToLeft": false,
+    "fileSize": 19383
+  },
+  {
+    "name": "tatar_5k",
+    "wordCount": 5004,
+    "rightToLeft": false,
+    "fileSize": 105791
+  },
+  {
+    "name": "tatar_9k",
+    "wordCount": 9034,
+    "rightToLeft": false,
+    "fileSize": 196859
+  },
+  {
+    "name": "tatar_crimean",
+    "wordCount": 214,
+    "rightToLeft": false,
+    "fileSize": 2912
+  },
+  {
+    "name": "tatar_crimean_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 159991
+  },
+  {
+    "name": "tatar_crimean_15k",
+    "wordCount": 15082,
+    "rightToLeft": false,
+    "fileSize": 241963
+  },
+  {
+    "name": "tatar_crimean_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 15465
+  },
+  {
+    "name": "tatar_crimean_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 79838
+  },
+  {
+    "name": "tatar_crimean_cyrillic",
+    "wordCount": 214,
+    "rightToLeft": false,
+    "fileSize": 3988
+  },
+  {
+    "name": "tatar_crimean_cyrillic_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 232364
+  },
+  {
+    "name": "tatar_crimean_cyrillic_15k",
+    "wordCount": 15082,
+    "rightToLeft": false,
+    "fileSize": 351718
+  },
+  {
+    "name": "tatar_crimean_cyrillic_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 22169
+  },
+  {
+    "name": "tatar_crimean_cyrillic_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 115947
+  },
+  {
+    "name": "telugu",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 4931
+  },
+  {
+    "name": "telugu_1k",
+    "wordCount": 901,
+    "rightToLeft": false,
+    "fileSize": 23412
+  },
+  {
+    "name": "thai",
+    "wordCount": 972,
+    "rightToLeft": false,
+    "fileSize": 21338
+  },
+  {
+    "name": "thai_10k",
+    "wordCount": 10000,
+    "rightToLeft": false,
+    "fileSize": 314221
+  },
+  {
+    "name": "thai_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 31213
+  },
+  {
+    "name": "thai_20k",
+    "wordCount": 18737,
+    "rightToLeft": false,
+    "fileSize": 470736
+  },
+  {
+    "name": "thai_50k",
+    "wordCount": 50000,
+    "rightToLeft": false,
+    "fileSize": 1572965
+  },
+  {
+    "name": "thai_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 156867
+  },
+  {
+    "name": "thai_60k",
+    "wordCount": 60000,
+    "rightToLeft": false,
+    "fileSize": 1888649
+  },
+  {
+    "name": "tibetan",
+    "wordCount": 277,
+    "rightToLeft": false,
+    "fileSize": 8407
+  },
+  {
+    "name": "tibetan_1k",
+    "wordCount": 1080,
+    "rightToLeft": false,
+    "fileSize": 40811
+  },
+  {
+    "name": "toki_pona",
+    "wordCount": 124,
+    "rightToLeft": false,
+    "fileSize": 1537
+  },
+  {
+    "name": "toki_pona_ku_lili",
+    "wordCount": 190,
+    "rightToLeft": false,
+    "fileSize": 2390
+  },
+  {
+    "name": "toki_pona_ku_suli",
+    "wordCount": 138,
+    "rightToLeft": false,
+    "fileSize": 1735
+  },
+  {
+    "name": "turkish",
+    "wordCount": 299,
+    "rightToLeft": false,
+    "fileSize": 4065
+  },
+  {
+    "name": "turkish_1k",
+    "wordCount": 1026,
+    "rightToLeft": false,
+    "fileSize": 14482
+  },
+  {
+    "name": "turkish_5k",
+    "wordCount": 5016,
+    "rightToLeft": false,
+    "fileSize": 77317
+  },
+  {
+    "name": "twitch_emotes",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 3242
+  },
+  {
+    "name": "typing_of_the_dead",
+    "wordCount": 10098,
+    "rightToLeft": false,
+    "fileSize": 232808
+  },
+  {
+    "name": "udmurt",
+    "wordCount": 212,
+    "rightToLeft": false,
+    "fileSize": 3682
+  },
+  {
+    "name": "ukrainian",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 3603
+  },
+  {
+    "name": "ukrainian_10k",
+    "wordCount": 9998,
+    "rightToLeft": false,
+    "fileSize": 244506
+  },
+  {
+    "name": "ukrainian_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 21403
+  },
+  {
+    "name": "ukrainian_50k",
+    "wordCount": 49991,
+    "rightToLeft": false,
+    "fileSize": 1329620
+  },
+  {
+    "name": "ukrainian_endings",
+    "wordCount": 118,
+    "rightToLeft": false,
+    "fileSize": 1623
+  },
+  {
+    "name": "ukrainian_latynka",
+    "wordCount": 199,
+    "rightToLeft": false,
+    "fileSize": 2721
+  },
+  {
+    "name": "ukrainian_latynka_10k",
+    "wordCount": 9998,
+    "rightToLeft": false,
+    "fileSize": 168690
+  },
+  {
+    "name": "ukrainian_latynka_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 15260
+  },
+  {
+    "name": "ukrainian_latynka_50k",
+    "wordCount": 49991,
+    "rightToLeft": false,
+    "fileSize": 901862
+  },
+  {
+    "name": "ukrainian_latynka_endings",
+    "wordCount": 117,
+    "rightToLeft": false,
+    "fileSize": 1367
+  },
+  {
+    "name": "urdish",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 2764
+  },
+  {
+    "name": "urdu",
+    "wordCount": 200,
+    "rightToLeft": true,
+    "fileSize": 3234
+  },
+  {
+    "name": "urdu_1k",
+    "wordCount": 934,
+    "rightToLeft": true,
+    "fileSize": 16107
+  },
+  {
+    "name": "urdu_5k",
+    "wordCount": 4981,
+    "rightToLeft": true,
+    "fileSize": 86433
+  },
+  {
+    "name": "uzbek",
+    "wordCount": 196,
+    "rightToLeft": false,
+    "fileSize": 2854
+  },
+  {
+    "name": "uzbek_1k",
+    "wordCount": 821,
+    "rightToLeft": false,
+    "fileSize": 11789
+  },
+  {
+    "name": "uzbek_70k",
+    "wordCount": 76595,
+    "rightToLeft": false,
+    "fileSize": 1329022
+  },
+  {
+    "name": "vietnamese",
+    "wordCount": 319,
+    "rightToLeft": false,
+    "fileSize": 4420
+  },
+  {
+    "name": "vietnamese_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13318
+  },
+  {
+    "name": "vietnamese_5k",
+    "wordCount": 5000,
+    "rightToLeft": false,
+    "fileSize": 64961
+  },
+  {
+    "name": "viossa",
+    "wordCount": 210,
+    "rightToLeft": false,
+    "fileSize": 2598
+  },
+  {
+    "name": "viossa_njutro",
+    "wordCount": 221,
+    "rightToLeft": false,
+    "fileSize": 2950
+  },
+  {
+    "name": "welsh",
+    "wordCount": 200,
+    "rightToLeft": false,
+    "fileSize": 2529
+  },
+  {
+    "name": "welsh_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13764
+  },
+  {
+    "name": "wordle",
+    "wordCount": 201,
+    "rightToLeft": false,
+    "fileSize": 2733
+  },
+  {
+    "name": "wordle_1k",
+    "wordCount": 1000,
+    "rightToLeft": false,
+    "fileSize": 13065
+  },
+  {
+    "name": "xhosa",
+    "wordCount": 871,
+    "rightToLeft": false,
+    "fileSize": 13224
+  },
+  {
+    "name": "xhosa_3k",
+    "wordCount": 2935,
+    "rightToLeft": false,
+    "fileSize": 47210
+  },
+  {
+    "name": "yiddish",
+    "wordCount": 200,
+    "rightToLeft": true,
+    "fileSize": 4100
+  },
+  {
+    "name": "yoruba_1k",
+    "wordCount": 731,
+    "rightToLeft": false,
+    "fileSize": 9842
+  },
+  {
+    "name": "zulu",
+    "wordCount": 174,
+    "rightToLeft": false,
+    "fileSize": 2856
+  }
+]

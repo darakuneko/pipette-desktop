@@ -1,0 +1,17 @@
+node_modules/
+dist/
+out/
+.vite/
+*.tsbuildinfo
+test-results/
+playwright-report/
+.playwright-cli/
+CLAUDE.md
+.claude/
+.cursorrules
+.cursorignore
+.copilot/
+.github/copilot*
+.aider*
+.env
+.env.*
