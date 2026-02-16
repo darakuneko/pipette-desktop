@@ -55,11 +55,6 @@ function formatDeviceId(dev: DeviceInfo): string {
   return `${vid}:${pid}`
 }
 
-function findHubEntry(entries: SnapshotMeta[], entryId: string): SnapshotMeta | undefined {
-  const entry = entries.find((e) => e.id === entryId)
-  return entry?.hubPostId ? entry : undefined
-}
-
 export function App() {
   const { t } = useTranslation()
   const appConfig = useAppConfig()
@@ -85,6 +80,7 @@ export function App() {
   // Clear loaded label when device identity changes (USB unplug/replug, device switch)
   useEffect(() => { setLastLoadedLabel('') }, [keyboard.uid])
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
+  const [hubKeyboardPosts, setHubKeyboardPosts] = useState<HubMyPost[]>([])
   const [hubOrigin, setHubOrigin] = useState('')
   useEffect(() => { window.vialAPI.hubGetOrigin().then(setHubOrigin).catch(() => {}) }, [])
   const [hubConnected, setHubConnected] = useState(false)
@@ -298,23 +294,43 @@ export function App() {
     setHubConnected(false)
   }, [appConfig.config.hubEnabled, sync.authStatus.authenticated])
 
+  const refreshHubKeyboardPosts = useCallback(async () => {
+    if (!appConfig.config.hubEnabled || !sync.authStatus.authenticated || !deviceName || device.isDummy) {
+      setHubKeyboardPosts([])
+      return
+    }
+    try {
+      const result = await window.vialAPI.hubFetchMyKeyboardPosts(deviceName)
+      setHubKeyboardPosts(result.success && result.posts ? result.posts : [])
+    } catch {
+      setHubKeyboardPosts([])
+    }
+  }, [appConfig.config.hubEnabled, sync.authStatus.authenticated, deviceName, device.isDummy])
+
+  const getHubPostId = useCallback((label: string): string | undefined => {
+    return hubKeyboardPosts.find((p) => p.title === label)?.id
+  }, [hubKeyboardPosts])
+
   const handleHubRenamePost = useCallback(async (postId: string, newTitle: string) => {
     const result = await window.vialAPI.hubPatchPost({ postId, title: newTitle })
     if (!result.success) throw new Error(result.error ?? 'Rename failed')
     await refreshHubMyPosts()
-  }, [refreshHubMyPosts])
+    await refreshHubKeyboardPosts()
+  }, [refreshHubMyPosts, refreshHubKeyboardPosts])
 
   const handleHubDeletePost = useCallback(async (postId: string) => {
     const result = await window.vialAPI.hubDeletePost(postId)
     if (!result.success) throw new Error(result.error ?? 'Delete failed')
     await refreshHubMyPosts()
-  }, [refreshHubMyPosts])
+    await refreshHubKeyboardPosts()
+  }, [refreshHubMyPosts, refreshHubKeyboardPosts])
 
   // Auto-check Hub connectivity when auth status changes
   useEffect(() => {
     void refreshHubMyPosts()
+    void refreshHubKeyboardPosts()
     void fetchHubUser()
-  }, [refreshHubMyPosts, fetchHubUser])
+  }, [refreshHubMyPosts, refreshHubKeyboardPosts, fetchHubUser])
 
   const handleOpenEditorSettings = useCallback(async () => {
     if (device.isDummy) {
@@ -481,6 +497,8 @@ export function App() {
     }
   }, [buildEntryParams, buildVilExportContext, deviceName])
 
+  const hubReady = appConfig.config.hubEnabled && sync.authStatus.authenticated && hubConnected
+
   const runHubOperation = useCallback(async (
     entryId: string,
     findEntry: (entries: SnapshotMeta[]) => SnapshotMeta | undefined,
@@ -520,52 +538,61 @@ export function App() {
         if (!vilData) return { success: false, error: t('hub.uploadFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
         const result = await window.vialAPI.hubUploadPost(postParams)
-        if (result.success && result.postId) {
-          await window.vialAPI.snapshotStoreSetHubPostId(keyboard.uid, entryId, result.postId)
-          await layoutStore.refreshEntries()
+        if (result.success) {
           await refreshHubMyPosts()
+          await refreshHubKeyboardPosts()
         }
         return result
       },
       t('hub.uploadSuccess'),
       t('hub.uploadFailed'),
     )
-  }, [runHubOperation, layoutStore, keyboard.uid, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, t])
+  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   const handleUpdateOnHub = useCallback(async (entryId: string) => {
+    const entry = layoutStore.entries.find((e) => e.id === entryId)
+    const postId = entry ? getHubPostId(entry.label) : undefined
+    if (!entry || !postId) return
+
     await runHubOperation(
       entryId,
-      (entries) => findHubEntry(entries, entryId),
-      async (entry) => {
+      () => entry,
+      async () => {
         const vilData = await loadEntryVilData(entryId)
         if (!vilData) return { success: false, error: t('hub.updateFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
-        const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: entry.hubPostId! })
-        if (result.success) await refreshHubMyPosts()
+        const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId })
+        if (result.success) {
+          await refreshHubMyPosts()
+          await refreshHubKeyboardPosts()
+        }
         return result
       },
       t('hub.updateSuccess'),
       t('hub.updateFailed'),
     )
-  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, t])
+  }, [runHubOperation, layoutStore.entries, loadEntryVilData, buildHubPostParams, getHubPostId, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   const handleRemoveFromHub = useCallback(async (entryId: string) => {
+    const entry = layoutStore.entries.find((e) => e.id === entryId)
+    const postId = entry ? getHubPostId(entry.label) : undefined
+    if (!entry || !postId) return
+
     await runHubOperation(
       entryId,
-      (entries) => findHubEntry(entries, entryId),
-      async (entry) => {
-        const result = await window.vialAPI.hubDeletePost(entry.hubPostId!)
+      () => entry,
+      async () => {
+        const result = await window.vialAPI.hubDeletePost(postId)
         if (result.success) {
-          await window.vialAPI.snapshotStoreSetHubPostId(keyboard.uid, entryId, null)
-          await layoutStore.refreshEntries()
           await refreshHubMyPosts()
+          await refreshHubKeyboardPosts()
         }
         return result
       },
       t('hub.removeSuccess'),
       t('hub.removeFailed'),
     )
-  }, [runHubOperation, layoutStore, keyboard.uid, refreshHubMyPosts, t])
+  }, [runHubOperation, layoutStore.entries, getHubPostId, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   const handleReuploadToHub = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -577,17 +604,16 @@ export function App() {
         if (!vilData) return { success: false, error: t('hub.uploadFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
         const result = await window.vialAPI.hubUploadPost(postParams)
-        if (result.success && result.postId) {
-          await window.vialAPI.snapshotStoreSetHubPostId(keyboard.uid, entryId, result.postId)
-          await layoutStore.refreshEntries()
+        if (result.success) {
+          await refreshHubMyPosts()
+          await refreshHubKeyboardPosts()
         }
-        await refreshHubMyPosts()
         return result
       },
       t('hub.uploadSuccess'),
       t('hub.uploadFailed'),
     )
-  }, [runHubOperation, layoutStore, keyboard.uid, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, t])
+  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   const handleDeleteOrphanedHubPost = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -604,123 +630,68 @@ export function App() {
   }, [runHubOperation, refreshHubMyPosts, t])
 
   const handleOverwriteSave = useCallback(async (overwriteEntryId: string, label: string) => {
-    const oldHubPostId = layoutStore.entries.find((e) => e.id === overwriteEntryId)?.hubPostId ?? null
+    const existingPostId = getHubPostId(label)
 
     await layoutStore.deleteEntry(overwriteEntryId)
     const newEntryId = await layoutStore.saveLayout(label)
     if (!newEntryId) return
 
-    if (oldHubPostId) {
-      const setResult = await window.vialAPI.snapshotStoreSetHubPostId(keyboard.uid, newEntryId, oldHubPostId)
-      await layoutStore.refreshEntries()
-
-      if (!setResult.success) {
-        setHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId: newEntryId })
-        return
-      }
-
-      if (hubUploadingRef.current) return
-      hubUploadingRef.current = true
-      setHubUploading(newEntryId)
-      setHubUploadResult(null)
-      try {
-        const vilData = await loadEntryVilData(newEntryId)
-        if (!vilData) {
-          setHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId: newEntryId })
-          return
-        }
-        const postParams = await buildHubPostParams({ label }, vilData)
-        const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: oldHubPostId })
-        if (result.success) {
-          await refreshHubMyPosts()
-          setHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: newEntryId })
-        } else {
-          setHubUploadResult({ kind: 'error', message: result.error || t('hub.updateFailed'), entryId: newEntryId })
-        }
-      } catch {
-        setHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId: newEntryId })
-      } finally {
-        setHubUploading(null)
-        hubUploadingRef.current = false
-      }
+    if (existingPostId && hubReady) {
+      await runHubOperation(
+        newEntryId,
+        () => ({ id: newEntryId, label, filename: '', savedAt: '' }),
+        async () => {
+          const vilData = await loadEntryVilData(newEntryId)
+          if (!vilData) return { success: false, error: t('hub.updateFailed') }
+          const postParams = await buildHubPostParams({ label }, vilData)
+          const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: existingPostId })
+          if (result.success) {
+            await refreshHubMyPosts()
+            await refreshHubKeyboardPosts()
+          }
+          return result
+        },
+        t('hub.updateSuccess'),
+        t('hub.updateFailed'),
+      )
     }
-  }, [layoutStore, keyboard.uid, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, t])
+  }, [layoutStore, getHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
   const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
   const keyOverrideSupported = !device.isDummy && keyboard.dynamicCounts.keyOverride > 0
-  const hubReady = appConfig.config.hubEnabled && sync.authStatus.authenticated && hubConnected
-
-  // Auto-link local Synced Data entries with Hub posts on keyboard connect
-  const reconcileUidRef = useRef('')
-  useEffect(() => {
-    if (!hubReady || !keyboard.uid || device.isDummy) return
-    if (reconcileUidRef.current === keyboard.uid) return
-    void layoutStore.refreshEntries()
-  }, [hubReady, keyboard.uid, device.isDummy, layoutStore.refreshEntries])
-
-  useEffect(() => {
-    if (!hubReady || !keyboard.uid || device.isDummy) return
-    if (reconcileUidRef.current === keyboard.uid) return
-    if (layoutStore.entries.length === 0) return
-    if (!layoutStore.entries.some((e) => !e.hubPostId)) return
-
-    reconcileUidRef.current = keyboard.uid
-    const uid = keyboard.uid
-
-    void (async () => {
-      try {
-        const result = await window.vialAPI.hubFetchMyKeyboardPosts(deviceName)
-        if (!result.success || !result.posts?.length) return
-
-        const consumed = new Set<string>()
-        let linked = false
-        for (const hubPost of result.posts) {
-          const alreadyLinked = layoutStore.entries.some((e) => e.hubPostId === hubPost.id)
-          if (alreadyLinked) continue
-
-          const match = layoutStore.entries.find(
-            (e) => e.label === hubPost.title && !e.hubPostId && !consumed.has(e.id),
-          )
-          if (match) {
-            consumed.add(match.id)
-            await window.vialAPI.snapshotStoreSetHubPostId(uid, match.id, hubPost.id)
-            linked = true
-          }
-        }
-        if (linked) {
-          await layoutStore.refreshEntries()
-          await refreshHubMyPosts()
-        }
-      } catch {
-        // Best-effort reconciliation
-      }
-    })()
-  }, [hubReady, keyboard.uid, device.isDummy, deviceName, layoutStore.entries, layoutStore.refreshEntries, refreshHubMyPosts])
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
-    const hubPostId = layoutStore.entries.find((e) => e.id === entryId)?.hubPostId
+    const entry = layoutStore.entries.find((e) => e.id === entryId)
+    const postId = entry ? getHubPostId(entry.label) : undefined
     const deleted = await layoutStore.deleteEntry(entryId)
-    if (deleted && hubPostId && hubReady) {
+    if (deleted && postId && hubReady) {
       try {
-        const result = await window.vialAPI.hubDeletePost(hubPostId)
-        if (result.success) await refreshHubMyPosts()
+        const result = await window.vialAPI.hubDeletePost(postId)
+        if (result.success) {
+          await refreshHubMyPosts()
+          await refreshHubKeyboardPosts()
+        }
       } catch {
         // Hub deletion is best-effort; local entry is already removed
       }
     }
-  }, [layoutStore, hubReady, refreshHubMyPosts])
+  }, [layoutStore, getHubPostId, hubReady, refreshHubMyPosts, refreshHubKeyboardPosts])
 
   const handleRenameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
-    const hubPostId = layoutStore.entries.find((e) => e.id === entryId)?.hubPostId
+    const entry = layoutStore.entries.find((e) => e.id === entryId)
+    const postId = entry ? getHubPostId(entry.label) : undefined
     const ok = await layoutStore.renameEntry(entryId, newLabel)
-    if (ok && hubReady && hubPostId) {
+    if (ok && hubReady && postId) {
       void runHubOperation(
         entryId,
-        (entries) => findHubEntry(entries, entryId),
+        (entries) => entries.find((e) => e.id === entryId),
         async () => {
-          const result = await window.vialAPI.hubPatchPost({ postId: hubPostId, title: newLabel })
-          if (result.success) await refreshHubMyPosts()
+          const result = await window.vialAPI.hubPatchPost({ postId, title: newLabel })
+          if (result.success) {
+            await refreshHubMyPosts()
+            await refreshHubKeyboardPosts()
+          }
           return result
         },
         t('hub.hubSynced'),
@@ -728,7 +699,7 @@ export function App() {
       )
     }
     return ok
-  }, [layoutStore, hubReady, runHubOperation, refreshHubMyPosts, t])
+  }, [layoutStore, getHubPostId, hubReady, runHubOperation, refreshHubMyPosts, refreshHubKeyboardPosts, t])
 
   // Close modals when their feature support is lost
   useEffect(() => {
@@ -1149,6 +1120,7 @@ export function App() {
           onDeleteOrphanedHubPost={hubReady ? handleDeleteOrphanedHubPost : undefined}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubMyPosts={hubReady ? hubMyPosts : undefined}
+          hubKeyboardPosts={hubReady ? hubKeyboardPosts : undefined}
           hubUploading={hubUploading}
           hubUploadResult={hubUploadResult}
           fileDisabled={fileIO.saving || fileIO.loading}

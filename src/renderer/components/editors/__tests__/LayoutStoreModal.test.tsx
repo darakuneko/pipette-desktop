@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { LayoutStoreModal, LayoutStoreContent, type FileStatus } from '../LayoutStoreModal'
 import type { SnapshotMeta } from '../../../../shared/types/snapshot-store'
+import type { HubMyPost } from '../../../../shared/types/hub'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -751,13 +752,15 @@ describe('LayoutStoreModal', () => {
   })
 
   describe('Hub actions', () => {
+    const HUB_KEYBOARD_POSTS: HubMyPost[] = [
+      { id: 'post-42', title: 'First Layout', keyboard_name: 'KB', created_at: '2026-01-01T00:00:00.000Z' },
+    ]
     const ENTRIES_WITH_HUB: SnapshotMeta[] = [
       {
         id: 'entry-1',
         label: 'First Layout',
         filename: 'KB_2026-01-01.pipette',
         savedAt: '2026-01-01T00:00:00.000Z',
-        hubPostId: 'post-42',
       },
       {
         id: 'entry-2',
@@ -827,6 +830,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -846,6 +850,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={onUpdateOnHub}
           onRemoveFromHub={vi.fn()}
@@ -861,6 +866,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -884,6 +890,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={onRemoveFromHub}
@@ -902,6 +909,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={onRemoveFromHub}
@@ -939,6 +947,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -956,6 +965,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -1023,6 +1033,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -1041,6 +1052,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -1071,6 +1083,7 @@ describe('LayoutStoreModal', () => {
         <LayoutStoreModal
           entries={ENTRIES_WITH_HUB}
           {...DEFAULT_PROPS}
+          hubKeyboardPosts={HUB_KEYBOARD_POSTS}
           onUploadToHub={vi.fn()}
           onUpdateOnHub={vi.fn()}
           onRemoveFromHub={vi.fn()}
@@ -1084,9 +1097,9 @@ describe('LayoutStoreModal', () => {
   })
 
   describe('orphaned hub post detection', () => {
-    const HUB_MY_POSTS = [
-      { id: 'orphan-post-1', title: 'First Layout' },
-      { id: 'orphan-post-2', title: 'Other Layout' },
+    const HUB_MY_POSTS: HubMyPost[] = [
+      { id: 'orphan-post-1', title: 'First Layout', keyboard_name: 'KB', created_at: '2026-01-01T00:00:00.000Z' },
+      { id: 'orphan-post-2', title: 'Other Layout', keyboard_name: 'KB', created_at: '2026-01-01T00:00:00.000Z' },
     ]
 
     const ENTRIES_NO_HUB: SnapshotMeta[] = [

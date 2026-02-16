@@ -221,6 +221,7 @@ export interface LayoutStoreContentProps {
   onDeleteOrphanedHubPost?: (entryId: string, orphanedPostId: string) => void
   hubOrigin?: string
   hubMyPosts?: HubMyPost[]
+  hubKeyboardPosts?: HubMyPost[]
   hubUploading?: string | null
   hubUploadResult?: HubEntryResult | null
   fileDisabled?: boolean
@@ -255,6 +256,7 @@ export function LayoutStoreContent({
   onDeleteOrphanedHubPost,
   hubOrigin,
   hubMyPosts,
+  hubKeyboardPosts,
   hubUploading,
   hubUploadResult,
   fileDisabled,
@@ -446,8 +448,9 @@ export function LayoutStoreContent({
 
           {!loading && entries.length > 0 && (
             <div className={`flex flex-col gap-1.5${isPanel ? ` flex-1 ${listClassName}` : ''}`} data-testid="layout-store-list">
-              {entries.map((entry) => (
-                <div
+              {entries.map((entry) => {
+                const entryHubPostId = hubKeyboardPosts?.find((p) => p.title === entry.label)?.id
+                return (<div
                   key={entry.id}
                   className="rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30"
                   data-testid="layout-store-entry"
@@ -554,12 +557,12 @@ export function LayoutStoreContent({
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1">
                           <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
-                          {entry.hubPostId && hubOrigin && (
-                            <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entry.hubPostId)}`} />
+                          {entryHubPostId && hubOrigin && (
+                            <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entryHubPostId)}`} />
                           )}
                         </div>
                         <div className="flex gap-1">
-                          {entry.hubPostId && confirmHubRemoveId === entry.id && (
+                          {entryHubPostId && confirmHubRemoveId === entry.id && (
                             <>
                               <button
                                 type="button"
@@ -579,7 +582,7 @@ export function LayoutStoreContent({
                               </button>
                             </>
                           )}
-                          {entry.hubPostId && confirmHubRemoveId !== entry.id && (
+                          {entryHubPostId && confirmHubRemoveId !== entry.id && (
                             <>
                               {onUpdateOnHub && (
                                 <button
@@ -605,7 +608,7 @@ export function LayoutStoreContent({
                               )}
                             </>
                           )}
-                          {!entry.hubPostId && (
+                          {!entryHubPostId && (
                             <HubOrphanButtons
                               entry={entry}
                               hubMyPosts={hubMyPosts}
@@ -629,7 +632,8 @@ export function LayoutStoreContent({
                     </div>
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
