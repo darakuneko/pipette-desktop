@@ -3,18 +3,28 @@
 
 import { ipcMain } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult } from '../../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubUserResult } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts } from './hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe } from './hub-client'
 import type { HubUploadFiles } from './hub-client'
 
 const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
 const POST_ID_RE = /^[a-zA-Z0-9_-]+$/
+const DISPLAY_NAME_MAX_LENGTH = 100
 
 function validatePostId(postId: string): void {
   if (!postId || !POST_ID_RE.test(postId)) {
     throw new Error('Invalid post ID')
   }
+}
+
+function validateDisplayName(displayName: unknown): string | null {
+  if (displayName === null) return null
+  if (typeof displayName !== 'string') throw new Error('Invalid display name')
+  const trimmed = displayName.trim()
+  if (trimmed.length === 0) return null
+  if (trimmed.length > DISPLAY_NAME_MAX_LENGTH) throw new Error('Display name too long')
+  return trimmed
 }
 
 async function getHubToken(): Promise<string> {
@@ -106,6 +116,33 @@ export function setupHubIpc(): void {
         return { success: true, posts }
       } catch (err) {
         return { success: false, error: extractError(err, 'Fetch my posts failed') }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.HUB_FETCH_AUTH_ME,
+    async (): Promise<HubUserResult> => {
+      try {
+        const jwt = await getHubToken()
+        const user = await fetchAuthMe(jwt)
+        return { success: true, user }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Fetch auth failed') }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.HUB_PATCH_AUTH_ME,
+    async (_event, displayName: unknown): Promise<HubUserResult> => {
+      try {
+        const validated = validateDisplayName(displayName)
+        const jwt = await getHubToken()
+        const user = await patchAuthMe(jwt, validated)
+        return { success: true, user }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Patch auth failed') }
       }
     },
   )

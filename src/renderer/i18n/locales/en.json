@@ -13,7 +13,8 @@
     "apply": "Apply",
     "noEntries": "No entries configured on this device",
     "notConfigured": "N/C",
-    "settingsLabel": "Settings:"
+    "settingsLabel": "Settings:",
+    "saving": "Saving..."
   },
   "app": {
     "title": "Pipette",
@@ -464,7 +465,11 @@
     "requiresAuth": "Connect your Google account in the Data tab to use Hub features.",
     "renameFailed": "Rename failed",
     "deleteFailed": "Delete failed",
-    "hubSynced": "Synced"
+    "hubSynced": "Synced",
+    "displayName": "Display Name",
+    "displayNameDescription": "Your display name on Hub posts",
+    "displayNameSaved": "Display name saved",
+    "displayNameSaveFailed": "Failed to save display name"
   },
   "favoriteStore": {
     "title": "Favorites",

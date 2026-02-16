@@ -13,7 +13,8 @@
     "apply": "適用",
     "noEntries": "このデバイスにはエントリが設定されていません",
     "notConfigured": "未設定",
-    "settingsLabel": "設定:"
+    "settingsLabel": "設定:",
+    "saving": "保存中..."
   },
   "app": {
     "title": "Pipette",
@@ -464,7 +465,11 @@
     "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください。",
     "renameFailed": "名前変更に失敗しました",
     "deleteFailed": "削除に失敗しました",
-    "hubSynced": "同期しました"
+    "hubSynced": "同期しました",
+    "displayName": "投稿者名",
+    "displayNameDescription": "Hub での表示名を設定します",
+    "displayNameSaved": "投稿者名を保存しました",
+    "displayNameSaveFailed": "投稿者名の保存に失敗しました"
   },
   "favoriteStore": {
     "title": "お気に入り",

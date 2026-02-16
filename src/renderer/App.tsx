@@ -84,6 +84,7 @@ export function App() {
   const [lastLoadedLabel, setLastLoadedLabel] = useState('')
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
   const [hubConnected, setHubConnected] = useState(false)
+  const [hubDisplayName, setHubDisplayName] = useState<string | null>(null)
 
   // Startup auto-sync
   const { loading: syncLoading, config: syncConfig, authStatus: syncAuth, hasPassword: syncHasPassword, syncNow } = sync
@@ -254,6 +255,27 @@ export function App() {
     setFileSuccessKind(null)
   }, [])
 
+  const fetchHubUser = useCallback(async () => {
+    if (!sync.authStatus.authenticated) return
+    try {
+      const result = await window.vialAPI.hubFetchAuthMe()
+      if (result.success && result.user) {
+        setHubDisplayName(result.user.display_name)
+      }
+    } catch {}
+  }, [sync.authStatus.authenticated])
+
+  const handleUpdateHubDisplayName = useCallback(async (name: string | null): Promise<boolean> => {
+    try {
+      const result = await window.vialAPI.hubPatchAuthMe(name)
+      if (result.success && result.user) {
+        setHubDisplayName(result.user.display_name)
+        return true
+      }
+    } catch {}
+    return false
+  }, [])
+
   const refreshHubMyPosts = useCallback(async () => {
     if (sync.authStatus.authenticated) {
       try {
@@ -284,7 +306,8 @@ export function App() {
   // Auto-check Hub connectivity when auth status changes
   useEffect(() => {
     void refreshHubMyPosts()
-  }, [refreshHubMyPosts])
+    void fetchHubUser()
+  }, [refreshHubMyPosts, fetchHubUser])
 
   const handleOpenEditorSettings = useCallback(async () => {
     if (device.isDummy) {
@@ -785,6 +808,8 @@ export function App() {
             onHubRefresh={refreshHubMyPosts}
             onHubRename={handleHubRenamePost}
             onHubDelete={handleHubDeletePost}
+            hubDisplayName={hubDisplayName}
+            onHubDisplayNameChange={handleUpdateHubDisplayName}
           />
         )}
       </>

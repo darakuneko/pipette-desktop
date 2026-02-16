@@ -18,7 +18,7 @@ import type { AppConfig } from './app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubUserResult } from './hub'
 
 export interface VialAPI {
   // Device Management
@@ -154,6 +154,8 @@ export interface VialAPI {
   hubPatchPost(params: HubPatchPostParams): Promise<HubDeleteResult>
   hubDeletePost(postId: string): Promise<HubDeleteResult>
   hubFetchMyPosts(): Promise<HubFetchMyPostsResult>
+  hubFetchAuthMe(): Promise<HubUserResult>
+  hubPatchAuthMe(displayName: string | null): Promise<HubUserResult>
 
   // Snapshot Store extensions
   snapshotStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>

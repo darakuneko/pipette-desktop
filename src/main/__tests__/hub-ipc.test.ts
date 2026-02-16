@@ -28,11 +28,13 @@ vi.mock('../hub/hub-client', () => ({
   patchPostOnHub: vi.fn(),
   deletePostFromHub: vi.fn(),
   fetchMyPosts: vi.fn(),
+  fetchAuthMe: vi.fn(),
+  patchAuthMe: vi.fn(),
 }))
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts } from '../hub/hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe } from '../hub/hub-client'
 import { setupHubIpc } from '../hub/hub-ipc'
 
 describe('hub-ipc', () => {
@@ -43,11 +45,23 @@ describe('hub-ipc', () => {
     setupHubIpc()
   })
 
-  function getHandler(): (...args: unknown[]) => Promise<unknown> {
+  function getHandlerFor(channel: string): (...args: unknown[]) => Promise<unknown> {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = (ipcMain as any)._handlers.get('hub:upload-post')
+    const handler = (ipcMain as any)._handlers.get(channel)
     expect(handler).toBeDefined()
     return handler
+  }
+
+  function mockHubAuth(): void {
+    vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
+    vi.mocked(authenticateWithHub).mockResolvedValueOnce({
+      token: 'hub-jwt',
+      user: { id: 'u1', email: 'test@example.com', display_name: null },
+    })
+  }
+
+  function getHandler(): (...args: unknown[]) => Promise<unknown> {
+    return getHandlerFor('hub:upload-post')
   }
 
   const VALID_PARAMS = {
@@ -90,11 +104,7 @@ describe('hub-ipc', () => {
   })
 
   it('uploads successfully with all files', async () => {
-    vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-    vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-      token: 'hub-jwt',
-      user: { id: 'u1', email: 'test@example.com', display_name: null },
-    })
+    mockHubAuth()
     vi.mocked(uploadPostToHub).mockResolvedValueOnce({
       id: 'post-42',
       title: 'My Keymap',
@@ -120,11 +130,7 @@ describe('hub-ipc', () => {
   })
 
   it('returns error when upload fails', async () => {
-    vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-    vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-      token: 'hub-jwt',
-      user: { id: 'u1', email: 'test@example.com', display_name: null },
-    })
+    mockHubAuth()
     vi.mocked(uploadPostToHub).mockRejectedValueOnce(new Error('Hub upload failed: 500'))
 
     const handler = getHandler()
@@ -138,10 +144,7 @@ describe('hub-ipc', () => {
 
   describe('HUB_UPDATE_POST', () => {
     function getUpdateHandler(): (...args: unknown[]) => Promise<unknown> {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (ipcMain as any)._handlers.get('hub:update-post')
-      expect(handler).toBeDefined()
-      return handler
+      return getHandlerFor('hub:update-post')
     }
 
     it('registers HUB_UPDATE_POST handler', () => {
@@ -161,11 +164,7 @@ describe('hub-ipc', () => {
     })
 
     it('updates successfully', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(updatePostOnHub).mockResolvedValueOnce({
         id: 'post-1',
         title: 'Updated',
@@ -197,11 +196,7 @@ describe('hub-ipc', () => {
     })
 
     it('returns error on update failure', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(updatePostOnHub).mockRejectedValueOnce(new Error('Hub update failed: 403'))
 
       const handler = getUpdateHandler()
@@ -216,10 +211,7 @@ describe('hub-ipc', () => {
 
   describe('HUB_PATCH_POST', () => {
     function getPatchHandler(): (...args: unknown[]) => Promise<unknown> {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (ipcMain as any)._handlers.get('hub:patch-post')
-      expect(handler).toBeDefined()
-      return handler
+      return getHandlerFor('hub:patch-post')
     }
 
     it('registers HUB_PATCH_POST handler', () => {
@@ -236,11 +228,7 @@ describe('hub-ipc', () => {
     })
 
     it('patches successfully', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(patchPostOnHub).mockResolvedValueOnce(undefined)
 
       const handler = getPatchHandler()
@@ -251,11 +239,7 @@ describe('hub-ipc', () => {
     })
 
     it('returns error on failure', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(patchPostOnHub).mockRejectedValueOnce(new Error('Hub patch failed: 404'))
 
       const handler = getPatchHandler()
@@ -267,10 +251,7 @@ describe('hub-ipc', () => {
 
   describe('HUB_DELETE_POST', () => {
     function getDeleteHandler(): (...args: unknown[]) => Promise<unknown> {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (ipcMain as any)._handlers.get('hub:delete-post')
-      expect(handler).toBeDefined()
-      return handler
+      return getHandlerFor('hub:delete-post')
     }
 
     it('registers HUB_DELETE_POST handler', () => {
@@ -312,11 +293,7 @@ describe('hub-ipc', () => {
     })
 
     it('deletes successfully', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(deletePostFromHub).mockResolvedValueOnce(undefined)
 
       const handler = getDeleteHandler()
@@ -327,11 +304,7 @@ describe('hub-ipc', () => {
     })
 
     it('returns error on API failure', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(deletePostFromHub).mockRejectedValueOnce(new Error('Hub delete failed: 500'))
 
       const handler = getDeleteHandler()
@@ -346,10 +319,7 @@ describe('hub-ipc', () => {
 
   describe('HUB_FETCH_MY_POSTS', () => {
     function getFetchMyPostsHandler(): (...args: unknown[]) => Promise<unknown> {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const handler = (ipcMain as any)._handlers.get('hub:fetch-my-posts')
-      expect(handler).toBeDefined()
-      return handler
+      return getHandlerFor('hub:fetch-my-posts')
     }
 
     it('registers HUB_FETCH_MY_POSTS handler', () => {
@@ -358,11 +328,7 @@ describe('hub-ipc', () => {
 
     it('fetches posts successfully', async () => {
       const posts = [{ id: 'post-1', title: 'My Keymap', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(fetchMyPosts).mockResolvedValueOnce(posts)
 
       const handler = getFetchMyPostsHandler()
@@ -373,11 +339,7 @@ describe('hub-ipc', () => {
     })
 
     it('returns error on failure', async () => {
-      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
-      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
-        token: 'hub-jwt',
-        user: { id: 'u1', email: 'test@example.com', display_name: null },
-      })
+      mockHubAuth()
       vi.mocked(fetchMyPosts).mockRejectedValueOnce(new Error('Hub fetch my posts failed: 500'))
 
       const handler = getFetchMyPostsHandler()
@@ -387,6 +349,157 @@ describe('hub-ipc', () => {
         success: false,
         error: 'Hub fetch my posts failed: 500',
       })
+    })
+  })
+
+  describe('HUB_FETCH_AUTH_ME', () => {
+    function getFetchAuthMeHandler(): (...args: unknown[]) => Promise<unknown> {
+      return getHandlerFor('hub:fetch-auth-me')
+    }
+
+    it('registers HUB_FETCH_AUTH_ME handler', () => {
+      expect(ipcMain.handle).toHaveBeenCalledWith('hub:fetch-auth-me', expect.any(Function))
+    })
+
+    it('fetches user info successfully', async () => {
+      const user = { id: 'u1', email: 'test@example.com', display_name: 'Test User', role: 'user' }
+      mockHubAuth()
+      vi.mocked(fetchAuthMe).mockResolvedValueOnce(user)
+
+      const handler = getFetchAuthMeHandler()
+      const result = await handler()
+
+      expect(result).toEqual({ success: true, user })
+      expect(fetchAuthMe).toHaveBeenCalledWith('hub-jwt')
+    })
+
+    it('returns error when not authenticated', async () => {
+      vi.mocked(getIdToken).mockResolvedValueOnce(null)
+
+      const handler = getFetchAuthMeHandler()
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Not authenticated with Google. Please sign in again.',
+      })
+    })
+
+    it('returns error on failure', async () => {
+      mockHubAuth()
+      vi.mocked(fetchAuthMe).mockRejectedValueOnce(new Error('Hub fetch auth me failed: 500'))
+
+      const handler = getFetchAuthMeHandler()
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Hub fetch auth me failed: 500',
+      })
+    })
+  })
+
+  describe('HUB_PATCH_AUTH_ME', () => {
+    function getPatchAuthMeHandler(): (...args: unknown[]) => Promise<unknown> {
+      return getHandlerFor('hub:patch-auth-me')
+    }
+
+    it('registers HUB_PATCH_AUTH_ME handler', () => {
+      expect(ipcMain.handle).toHaveBeenCalledWith('hub:patch-auth-me', expect.any(Function))
+    })
+
+    it('patches display name successfully', async () => {
+      const user = { id: 'u1', email: 'test@example.com', display_name: 'New Name', role: 'user' }
+      mockHubAuth()
+      vi.mocked(patchAuthMe).mockResolvedValueOnce(user)
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, 'New Name')
+
+      expect(result).toEqual({ success: true, user })
+      expect(patchAuthMe).toHaveBeenCalledWith('hub-jwt', 'New Name')
+    })
+
+    it('patches with null display name', async () => {
+      const user = { id: 'u1', email: 'test@example.com', display_name: null, role: 'user' }
+      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
+      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
+        token: 'hub-jwt',
+        user: { id: 'u1', email: 'test@example.com', display_name: 'Old Name' },
+      })
+      vi.mocked(patchAuthMe).mockResolvedValueOnce(user)
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, null)
+
+      expect(result).toEqual({ success: true, user })
+      expect(patchAuthMe).toHaveBeenCalledWith('hub-jwt', null)
+    })
+
+    it('returns error when not authenticated', async () => {
+      vi.mocked(getIdToken).mockResolvedValueOnce(null)
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, 'Name')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Not authenticated with Google. Please sign in again.',
+      })
+    })
+
+    it('returns error on failure', async () => {
+      mockHubAuth()
+      vi.mocked(patchAuthMe).mockRejectedValueOnce(new Error('Hub patch auth me failed: 403'))
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, 'Name')
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Hub patch auth me failed: 403',
+      })
+    })
+
+    it('rejects non-string displayName', async () => {
+      const handler = getPatchAuthMeHandler()
+      for (const bad of [123, true, { name: 'x' }, ['a']]) {
+        const result = await handler({}, bad)
+        expect(result).toEqual({ success: false, error: 'Invalid display name' })
+      }
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it('rejects display name exceeding max length', async () => {
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, 'a'.repeat(101))
+
+      expect(result).toEqual({ success: false, error: 'Display name too long' })
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it('normalizes whitespace-only to null', async () => {
+      const user = { id: 'u1', email: 'test@example.com', display_name: null, role: 'user' }
+      mockHubAuth()
+      vi.mocked(patchAuthMe).mockResolvedValueOnce(user)
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, '   ')
+
+      expect(result).toEqual({ success: true, user })
+      expect(patchAuthMe).toHaveBeenCalledWith('hub-jwt', null)
+    })
+
+    it('trims whitespace from display name', async () => {
+      const user = { id: 'u1', email: 'test@example.com', display_name: 'Hello', role: 'user' }
+      mockHubAuth()
+      vi.mocked(patchAuthMe).mockResolvedValueOnce(user)
+
+      const handler = getPatchAuthMeHandler()
+      const result = await handler({}, '  Hello  ')
+
+      expect(result).toEqual({ success: true, user })
+      expect(patchAuthMe).toHaveBeenCalledWith('hub-jwt', 'Hello')
     })
   })
 })

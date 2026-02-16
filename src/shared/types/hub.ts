@@ -43,3 +43,16 @@ export interface HubFetchMyPostsResult {
   posts?: HubMyPost[]
   error?: string
 }
+
+export interface HubUser {
+  id: string
+  email: string
+  display_name: string | null
+  role: string
+}
+
+export interface HubUserResult {
+  success: boolean
+  user?: HubUser
+  error?: string
+}

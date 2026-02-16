@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Hub API client — auth token exchange + multipart post upload
 
-import type { HubMyPost } from '../../shared/types/hub'
+import type { HubMyPost, HubUser } from '../../shared/types/hub'
 
 const HUB_API_DEFAULT = 'https://pipette-hub.pages.dev'
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -9,7 +9,7 @@ const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT
 
 interface HubAuthResult {
   token: string
-  user: { id: string; email: string; display_name: string | null }
+  user: HubUser
 }
 
 interface HubPostResponse {
@@ -89,6 +89,24 @@ function buildMultipartBody(
   parts.push(Buffer.from(`--${boundary}--\r\n`))
 
   return { body: Buffer.concat(parts), boundary }
+}
+
+export async function fetchAuthMe(jwt: string): Promise<HubUser> {
+  return hubFetch<HubUser>(`${HUB_API_BASE}/api/auth/me`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${jwt}` },
+  }, 'Hub fetch auth me failed')
+}
+
+export async function patchAuthMe(jwt: string, displayName: string | null): Promise<HubUser> {
+  return hubFetch<HubUser>(`${HUB_API_BASE}/api/auth/me`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ display_name: displayName }),
+  }, 'Hub patch auth me failed')
 }
 
 export async function fetchMyPosts(jwt: string): Promise<HubMyPost[]> {
