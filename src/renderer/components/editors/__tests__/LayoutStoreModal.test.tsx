@@ -296,6 +296,85 @@ describe('LayoutStoreModal', () => {
     expect(input.value).toBe('')
   })
 
+  it('shows overwrite confirmation when saving with existing label', () => {
+    const onSave = vi.fn()
+    const onDelete = vi.fn()
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+        onDelete={onDelete}
+      />,
+    )
+
+    const input = screen.getByTestId('layout-store-save-input')
+    fireEvent.change(input, { target: { value: 'First Layout' } })
+    fireEvent.submit(input.closest('form')!)
+
+    // Should show confirmation, not save yet
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByTestId('layout-store-overwrite-confirm')).toBeInTheDocument()
+    expect(screen.getByTestId('layout-store-overwrite-cancel')).toBeInTheDocument()
+  })
+
+  it('overwrites on confirm: deletes old and saves new', () => {
+    const onSave = vi.fn()
+    const onDelete = vi.fn()
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+        onDelete={onDelete}
+      />,
+    )
+
+    const input = screen.getByTestId('layout-store-save-input')
+    fireEvent.change(input, { target: { value: 'First Layout' } })
+    fireEvent.submit(input.closest('form')!)
+
+    // Confirm overwrite
+    fireEvent.click(screen.getByTestId('layout-store-overwrite-confirm'))
+
+    expect(onDelete).toHaveBeenCalledWith('entry-1')
+    expect(onSave).toHaveBeenCalledWith('First Layout')
+  })
+
+  it('cancels overwrite confirmation', () => {
+    const onSave = vi.fn()
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+      />,
+    )
+
+    const input = screen.getByTestId('layout-store-save-input')
+    fireEvent.change(input, { target: { value: 'First Layout' } })
+    fireEvent.submit(input.closest('form')!)
+
+    // Cancel
+    fireEvent.click(screen.getByTestId('layout-store-overwrite-cancel'))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(screen.getByTestId('layout-store-save-submit')).toBeInTheDocument()
+  })
+
+  it('initializes save input from defaultSaveLabel', () => {
+    render(
+      <LayoutStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        defaultSaveLabel="My Layout"
+      />,
+    )
+
+    const input = screen.getByTestId('layout-store-save-input') as HTMLInputElement
+    expect(input.value).toBe('My Layout')
+  })
+
   it('does not call onSave when saving is true (Enter key guard)', () => {
     const onSave = vi.fn()
     render(

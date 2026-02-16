@@ -357,6 +357,7 @@
     "saveCurrentState": "Save Current State",
     "history": "Synced Data",
     "exportCurrent": "Export Current State",
+    "confirmOverwrite": "Overwrite?",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
     "exportPdf": ".pdf"

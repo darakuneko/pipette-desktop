@@ -73,6 +73,7 @@ export function App() {
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
   const [hubUploadResult, setHubUploadResult] = useState<HubEntryResult | null>(null)
+  const [lastLoadedLabel, setLastLoadedLabel] = useState('')
 
   // Startup auto-sync
   const { loading: syncLoading, config: syncConfig, authStatus: syncAuth, hasPassword: syncHasPassword, syncNow } = sync
@@ -288,8 +289,10 @@ export function App() {
   const fileStatus = deriveFileStatus()
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
+    const entry = layoutStore.entries.find((e) => e.id === entryId)
     const ok = await layoutStore.loadLayout(entryId)
     if (ok) {
+      setLastLoadedLabel(entry?.label ?? '')
       setShowEditorSettings(false)
       clearFileStatus()
     }
@@ -867,6 +870,7 @@ export function App() {
           saving={layoutStore.saving}
           fileStatus={fileStatus}
           isDummy={device.isDummy}
+          defaultSaveLabel={lastLoadedLabel}
           onSave={layoutStore.saveLayout}
           onLoad={handleLoadEntry}
           onRename={layoutStore.renameEntry}

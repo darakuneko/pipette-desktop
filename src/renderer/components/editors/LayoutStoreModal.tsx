@@ -111,6 +111,7 @@ export interface LayoutStoreContentProps {
   saving?: boolean
   fileStatus?: FileStatus
   isDummy?: boolean
+  defaultSaveLabel?: string
   onSave: (label: string) => void
   onLoad: (entryId: string) => void
   onRename: (entryId: string, newLabel: string) => void
@@ -139,6 +140,7 @@ export function LayoutStoreContent({
   saving,
   fileStatus,
   isDummy,
+  defaultSaveLabel,
   onSave,
   onLoad,
   onRename,
@@ -161,17 +163,28 @@ export function LayoutStoreContent({
   footer,
 }: LayoutStoreContentProps) {
   const { t } = useTranslation()
-  const [saveLabel, setSaveLabel] = useState('')
+  const [saveLabel, setSaveLabel] = useState(defaultSaveLabel ?? '')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editLabel, setEditLabel] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
+  const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
   const originalLabelRef = useRef('')
 
   function handleSaveSubmit(e: React.FormEvent): void {
     e.preventDefault()
     if (saving) return
-    onSave(saveLabel.trim())
+    const trimmed = saveLabel.trim()
+    const existing = entries.find((entry) => entry.label === trimmed)
+    if (existing && !confirmOverwriteId) {
+      setConfirmOverwriteId(existing.id)
+      return
+    }
+    if (confirmOverwriteId) {
+      onDelete(confirmOverwriteId)
+      setConfirmOverwriteId(null)
+    }
+    onSave(trimmed)
     setSaveLabel('')
   }
 
@@ -268,19 +281,40 @@ export function LayoutStoreContent({
             <input
               type="text"
               value={saveLabel}
-              onChange={(e) => setSaveLabel(e.target.value)}
+              onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
               placeholder={t('layoutStore.labelPlaceholder')}
               className="flex-1 rounded-lg border border-edge bg-surface px-3.5 py-2 text-[13px] text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
               data-testid="layout-store-save-input"
             />
-            <button
-              type="submit"
-              disabled={saving}
-              className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
-              data-testid="layout-store-save-submit"
-            >
-              {t('common.save')}
-            </button>
+            {confirmOverwriteId ? (
+              <>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="shrink-0 rounded-lg bg-danger px-4 py-2 text-[13px] font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+                  data-testid="layout-store-overwrite-confirm"
+                >
+                  {t('layoutStore.confirmOverwrite')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmOverwriteId(null)}
+                  className="shrink-0 rounded-lg border border-edge px-3 py-2 text-[13px] font-medium text-content-muted hover:text-content"
+                  data-testid="layout-store-overwrite-cancel"
+                >
+                  {t('common.cancel')}
+                </button>
+              </>
+            ) : (
+              <button
+                type="submit"
+                disabled={saving}
+                className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+                data-testid="layout-store-save-submit"
+              >
+                {t('common.save')}
+              </button>
+            )}
           </form>
         </div>
       )}

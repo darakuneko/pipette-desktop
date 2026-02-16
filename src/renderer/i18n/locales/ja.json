@@ -357,6 +357,7 @@
     "saveCurrentState": "現在の状態を保存",
     "history": "同期データ",
     "exportCurrent": "現在の状態をエクスポート",
+    "confirmOverwrite": "上書きしますか？",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
     "exportPdf": ".pdf"
