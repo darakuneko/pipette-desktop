@@ -275,8 +275,8 @@ describe('google-auth', () => {
     })
 
     it('returns id_token when not expired', async () => {
-      // Create a valid JWT (exp in the future)
-      const payload = { exp: Math.floor(Date.now() / 1000) + 3600 }
+      // Create a valid JWT (exp in the future, iat now)
+      const payload = { exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000) }
       const validJwt = `header.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`
 
       mockFetch.mockResolvedValueOnce({
@@ -296,9 +296,42 @@ describe('google-auth', () => {
       expect(token).toBe(validJwt)
     })
 
+    it('returns null when id_token is stale and refresh does not return new one', async () => {
+      // Create a JWT with old iat (> 5 min ago) but not expired
+      const payload = { exp: Math.floor(Date.now() / 1000) + 3600, iat: Math.floor(Date.now() / 1000) - 600 }
+      const staleJwt = `header.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`
+
+      // Initial exchange with stale id_token
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'access-token',
+          refresh_token: 'refresh-token',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          id_token: staleJwt,
+        }),
+      })
+
+      await exchangeCodeForTokens('code', 'verifier', 8080)
+
+      // Refresh response (no new id_token — preserved stale one)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          access_token: 'refreshed-token',
+          expires_in: 3600,
+          token_type: 'Bearer',
+        }),
+      })
+
+      const token = await getIdToken()
+      expect(token).toBeNull()
+    })
+
     it('preserves id_token after refresh', async () => {
-      // Create a JWT that won't expire during the test
-      const payload = { exp: Math.floor(Date.now() / 1000) + 7200 }
+      // Create a JWT that won't expire during the test (iat now)
+      const payload = { exp: Math.floor(Date.now() / 1000) + 7200, iat: Math.floor(Date.now() / 1000) }
       const validJwt = `header.${Buffer.from(JSON.stringify(payload)).toString('base64url')}.sig`
 
       // Initial exchange with id_token (access token expired to trigger refresh)

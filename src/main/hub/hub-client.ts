@@ -92,10 +92,22 @@ function buildMultipartBody(
 }
 
 export async function fetchMyPosts(jwt: string): Promise<HubMyPost[]> {
-  return hubFetch<HubMyPost[]>(`${HUB_API_BASE}/api/files/me`, {
+  const page = await hubFetch<{ items: HubMyPost[] }>(`${HUB_API_BASE}/api/files/me`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${jwt}` },
   }, 'Hub fetch my posts failed')
+  return page.items
+}
+
+export async function patchPostOnHub(jwt: string, postId: string, fields: { title?: string }): Promise<void> {
+  await hubFetch<unknown>(`${HUB_API_BASE}/api/files/${encodeURIComponent(postId)}`, {
+    method: 'PATCH',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(fields),
+  }, 'Hub patch failed')
 }
 
 export async function deletePostFromHub(jwt: string, postId: string): Promise<void> {

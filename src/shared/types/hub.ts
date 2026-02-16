@@ -21,6 +21,11 @@ export interface HubUpdatePostParams extends HubUploadPostParams {
   postId: string
 }
 
+export interface HubPatchPostParams {
+  postId: string
+  title?: string
+}
+
 export interface HubDeleteResult {
   success: boolean
   error?: string

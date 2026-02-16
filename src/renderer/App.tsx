@@ -54,6 +54,11 @@ function formatDeviceId(dev: DeviceInfo): string {
   return `${vid}:${pid}`
 }
 
+function findHubEntry(entries: SnapshotMeta[], entryId: string): SnapshotMeta | undefined {
+  const entry = entries.find((e) => e.id === entryId)
+  return entry?.hubPostId ? entry : undefined
+}
+
 export function App() {
   const { t } = useTranslation()
   const themeCtx = useTheme()
@@ -248,34 +253,33 @@ export function App() {
   }, [])
 
   const refreshHubMyPosts = useCallback(async () => {
-    if (!sync.authStatus.authenticated) {
-      setHubMyPosts([])
-      setHubConnected(false)
-      return
-    }
-    try {
-      const result = await window.vialAPI.hubFetchMyPosts()
-      if (result.success && Array.isArray(result.posts)) {
-        setHubMyPosts(result.posts)
-        setHubConnected(true)
-        return
-      }
-    } catch {
-      // Hub unreachable or auth expired -- fall through to disconnect state
+    if (sync.authStatus.authenticated) {
+      try {
+        const result = await window.vialAPI.hubFetchMyPosts()
+        if (result.success && Array.isArray(result.posts)) {
+          setHubMyPosts(result.posts)
+          setHubConnected(true)
+          return
+        }
+      } catch {}
     }
     setHubMyPosts([])
     setHubConnected(false)
   }, [sync.authStatus.authenticated])
+
+  // Auto-check Hub connectivity when auth status changes
+  useEffect(() => {
+    void refreshHubMyPosts()
+  }, [refreshHubMyPosts])
 
   const handleOpenEditorSettings = useCallback(async () => {
     if (device.isDummy) {
       setEditorSettingsTab('tools')
     } else {
       await layoutStore.refreshEntries()
-      await refreshHubMyPosts()
     }
     setShowEditorSettings(true)
-  }, [layoutStore, device.isDummy, refreshHubMyPosts])
+  }, [layoutStore, device.isDummy])
 
   const handleCloseEditorSettings = useCallback(() => {
     setShowEditorSettings(false)
@@ -463,11 +467,6 @@ export function App() {
     }
   }, [layoutStore.entries])
 
-  const findHubEntry = useCallback((entries: SnapshotMeta[], entryId: string): SnapshotMeta | undefined => {
-    const entry = entries.find((e) => e.id === entryId)
-    return entry?.hubPostId ? entry : undefined
-  }, [])
-
   const handleUploadToHub = useCallback(async (entryId: string) => {
     await runHubOperation(
       entryId,
@@ -497,12 +496,14 @@ export function App() {
         const vilData = await loadEntryVilData(entryId)
         if (!vilData) return { success: false, error: t('hub.updateFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
-        return window.vialAPI.hubUpdatePost({ ...postParams, postId: entry.hubPostId! })
+        const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: entry.hubPostId! })
+        if (result.success) await refreshHubMyPosts()
+        return result
       },
       t('hub.updateSuccess'),
       t('hub.updateFailed'),
     )
-  }, [runHubOperation, findHubEntry, loadEntryVilData, buildHubPostParams, t])
+  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubMyPosts, t])
 
   const handleRemoveFromHub = useCallback(async (entryId: string) => {
     await runHubOperation(
@@ -520,7 +521,7 @@ export function App() {
       t('hub.removeSuccess'),
       t('hub.removeFailed'),
     )
-  }, [runHubOperation, findHubEntry, layoutStore, keyboard.uid, refreshHubMyPosts, t])
+  }, [runHubOperation, layoutStore, keyboard.uid, refreshHubMyPosts, t])
 
   const handleReuploadToHub = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -557,6 +558,17 @@ export function App() {
       t('hub.removeFailed'),
     )
   }, [runHubOperation, refreshHubMyPosts, t])
+
+  const handleRenameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
+    const ok = await layoutStore.renameEntry(entryId, newLabel)
+    if (ok && hubConnected) {
+      const entry = layoutStore.entries.find((e) => e.id === entryId)
+      if (entry?.hubPostId) {
+        await window.vialAPI.hubPatchPost({ postId: entry.hubPostId, title: newLabel }).catch(() => {})
+      }
+    }
+    return ok
+  }, [layoutStore, hubConnected])
 
   const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
   const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
@@ -939,7 +951,7 @@ export function App() {
           defaultSaveLabel={lastLoadedLabel}
           onSave={layoutStore.saveLayout}
           onLoad={handleLoadEntry}
-          onRename={layoutStore.renameEntry}
+          onRename={handleRenameEntry}
           onDelete={layoutStore.deleteEntry}
           onClose={handleCloseEditorSettings}
           activeTab={editorSettingsTab}

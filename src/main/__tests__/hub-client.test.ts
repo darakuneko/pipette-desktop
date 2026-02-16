@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, type HubUploadFiles } from '../hub/hub-client'
+import { authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, patchPostOnHub, type HubUploadFiles } from '../hub/hub-client'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -226,7 +226,7 @@ describe('hub-client', () => {
       ]
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ ok: true, data: posts }),
+        json: async () => ({ ok: true, data: { items: posts, total: 2, page: 1, per_page: 20 } }),
       })
 
       const result = await fetchMyPosts('jwt-token')
@@ -258,6 +258,46 @@ describe('hub-client', () => {
       })
 
       await expect(fetchMyPosts('expired-jwt')).rejects.toThrow('Hub fetch my posts failed: Token expired')
+    })
+  })
+
+  describe('patchPostOnHub', () => {
+    it('sends PATCH request with JSON body', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ok: true, data: {} }),
+      })
+
+      await patchPostOnHub('jwt', 'post-1', { title: 'New Title' })
+
+      const [url, options] = mockFetch.mock.calls[0]
+      expect(url).toBe('https://pipette-hub.pages.dev/api/files/post-1')
+      expect(options.method).toBe('PATCH')
+      expect(options.headers.Authorization).toBe('Bearer jwt')
+      expect(options.headers['Content-Type']).toBe('application/json')
+      expect(JSON.parse(options.body as string)).toEqual({ title: 'New Title' })
+    })
+
+    it('throws on HTTP error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: async () => 'Not Found',
+      })
+
+      await expect(patchPostOnHub('jwt', 'bad-id', { title: 'x' })).rejects.toThrow('Hub patch failed: 404')
+    })
+
+    it('encodes postId in URL', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ ok: true, data: {} }),
+      })
+
+      await patchPostOnHub('jwt', 'id with spaces', { title: 'test' })
+
+      const [url] = mockFetch.mock.calls[0]
+      expect(url).toBe('https://pipette-hub.pages.dev/api/files/id%20with%20spaces')
     })
   })
 

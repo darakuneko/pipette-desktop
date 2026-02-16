@@ -81,6 +81,7 @@ export const IpcChannels = {
   // Hub (renderer → main → renderer)
   HUB_UPLOAD_POST: 'hub:upload-post',
   HUB_UPDATE_POST: 'hub:update-post',
+  HUB_PATCH_POST: 'hub:patch-post',
   HUB_DELETE_POST: 'hub:delete-post',
   HUB_FETCH_MY_POSTS: 'hub:fetch-my-posts',
 

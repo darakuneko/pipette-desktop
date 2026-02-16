@@ -191,28 +191,41 @@ export async function getAccessToken(): Promise<string | null> {
   return tokens.accessToken
 }
 
-function isJwtExpired(jwt: string): boolean {
+function parseJwtPayload(jwt: string): Record<string, unknown> | null {
   try {
     const payloadB64 = jwt.split('.')[1]
-    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString())
-    if (typeof payload.exp !== 'number') return true
-    return Date.now() >= payload.exp * 1000
+    return JSON.parse(Buffer.from(payloadB64, 'base64url').toString()) as Record<string, unknown>
   } catch {
-    return true
+    return null
   }
 }
+
+function isJwtExpired(jwt: string): boolean {
+  const payload = parseJwtPayload(jwt)
+  if (!payload || typeof payload.exp !== 'number') return true
+  return Date.now() >= payload.exp * 1000
+}
+
+/** Check if jwt iat is older than maxAge seconds (Hub rejects stale tokens) */
+function isJwtStale(jwt: string, maxAgeSeconds: number): boolean {
+  const payload = parseJwtPayload(jwt)
+  if (!payload || typeof payload.iat !== 'number') return true
+  return Date.now() / 1000 - payload.iat > maxAgeSeconds
+}
+
+const ID_TOKEN_MAX_AGE = 300 // refresh if older than 5 min (Hub allows 10 min)
 
 export async function getIdToken(): Promise<string | null> {
   const tokens = await loadTokens()
   if (!tokens) return null
 
-  // If id_token is missing or expired, try refreshing to get a new one
-  if (!tokens.idToken || isJwtExpired(tokens.idToken)) {
+  // If id_token is missing, expired, or too old for Hub, refresh it
+  if (!tokens.idToken || isJwtExpired(tokens.idToken) || isJwtStale(tokens.idToken, ID_TOKEN_MAX_AGE)) {
     if (!tokens.refreshToken) return null
     try {
       await refreshAccessToken(tokens.refreshToken)
       const refreshed = await loadTokens()
-      if (refreshed?.idToken && !isJwtExpired(refreshed.idToken)) {
+      if (refreshed?.idToken && !isJwtExpired(refreshed.idToken) && !isJwtStale(refreshed.idToken, ID_TOKEN_MAX_AGE)) {
         return refreshed.idToken
       }
     } catch {

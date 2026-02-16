@@ -3,9 +3,9 @@
 
 import { ipcMain } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
-import type { HubUploadPostParams, HubUpdatePostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult } from '../../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, deletePostFromHub, fetchMyPosts } from './hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts } from './hub-client'
 import type { HubUploadFiles } from './hub-client'
 
 const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
@@ -65,6 +65,20 @@ export function setupHubIpc(): void {
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'Update failed') }
+      }
+    },
+  )
+
+  ipcMain.handle(
+    IpcChannels.HUB_PATCH_POST,
+    async (_event, params: HubPatchPostParams): Promise<HubDeleteResult> => {
+      try {
+        validatePostId(params.postId)
+        const jwt = await getHubToken()
+        await patchPostOnHub(jwt, params.postId, { title: params.title })
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Patch failed') }
       }
     },
   )

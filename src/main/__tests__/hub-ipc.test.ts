@@ -25,13 +25,14 @@ vi.mock('../hub/hub-client', () => ({
   authenticateWithHub: vi.fn(),
   uploadPostToHub: vi.fn(),
   updatePostOnHub: vi.fn(),
+  patchPostOnHub: vi.fn(),
   deletePostFromHub: vi.fn(),
   fetchMyPosts: vi.fn(),
 }))
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, deletePostFromHub, fetchMyPosts } from '../hub/hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts } from '../hub/hub-client'
 import { setupHubIpc } from '../hub/hub-ipc'
 
 describe('hub-ipc', () => {
@@ -210,6 +211,57 @@ describe('hub-ipc', () => {
         success: false,
         error: 'Hub update failed: 403',
       })
+    })
+  })
+
+  describe('HUB_PATCH_POST', () => {
+    function getPatchHandler(): (...args: unknown[]) => Promise<unknown> {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const handler = (ipcMain as any)._handlers.get('hub:patch-post')
+      expect(handler).toBeDefined()
+      return handler
+    }
+
+    it('registers HUB_PATCH_POST handler', () => {
+      expect(ipcMain.handle).toHaveBeenCalledWith('hub:patch-post', expect.any(Function))
+    })
+
+    it('rejects invalid postId', async () => {
+      const handler = getPatchHandler()
+      for (const bad of ['', '../escape', 'has/slash']) {
+        const result = await handler({ sender: {} }, { postId: bad, title: 'x' })
+        expect(result).toEqual({ success: false, error: 'Invalid post ID' })
+      }
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it('patches successfully', async () => {
+      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
+      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
+        token: 'hub-jwt',
+        user: { id: 'u1', email: 'test@example.com', display_name: null },
+      })
+      vi.mocked(patchPostOnHub).mockResolvedValueOnce(undefined)
+
+      const handler = getPatchHandler()
+      const result = await handler({ sender: {} }, { postId: 'post-1', title: 'New Title' })
+
+      expect(result).toEqual({ success: true })
+      expect(patchPostOnHub).toHaveBeenCalledWith('hub-jwt', 'post-1', { title: 'New Title' })
+    })
+
+    it('returns error on failure', async () => {
+      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
+      vi.mocked(authenticateWithHub).mockResolvedValueOnce({
+        token: 'hub-jwt',
+        user: { id: 'u1', email: 'test@example.com', display_name: null },
+      })
+      vi.mocked(patchPostOnHub).mockRejectedValueOnce(new Error('Hub patch failed: 404'))
+
+      const handler = getPatchHandler()
+      const result = await handler({ sender: {} }, { postId: 'post-1', title: 'x' })
+
+      expect(result).toEqual({ success: false, error: 'Hub patch failed: 404' })
     })
   })
 
