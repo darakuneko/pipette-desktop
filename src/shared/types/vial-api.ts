@@ -156,6 +156,10 @@ export interface VialAPI {
   hubFetchMyPosts(): Promise<HubFetchMyPostsResult>
   hubFetchAuthMe(): Promise<HubUserResult>
   hubPatchAuthMe(displayName: string): Promise<HubUserResult>
+  hubGetOrigin(): Promise<string>
+
+  // Shell
+  openExternal(url: string): Promise<void>
 
   // Snapshot Store extensions
   snapshotStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>

@@ -30,11 +30,12 @@ vi.mock('../hub/hub-client', () => ({
   fetchMyPosts: vi.fn(),
   fetchAuthMe: vi.fn(),
   patchAuthMe: vi.fn(),
+  getHubOrigin: vi.fn(() => 'https://pipette-hub-worker.keymaps.workers.dev'),
 }))
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe } from '../hub/hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
 import { setupHubIpc } from '../hub/hub-ipc'
 
 describe('hub-ipc', () => {
@@ -488,6 +489,20 @@ describe('hub-ipc', () => {
 
       expect(result).toEqual({ success: true, user })
       expect(patchAuthMe).toHaveBeenCalledWith('hub-jwt', 'Hello')
+    })
+  })
+
+  describe('HUB_GET_ORIGIN', () => {
+    it('registers HUB_GET_ORIGIN handler', () => {
+      expect(ipcMain.handle).toHaveBeenCalledWith('hub:get-origin', expect.any(Function))
+    })
+
+    it('returns hub origin from client', () => {
+      const handler = getHandlerFor('hub:get-origin')
+      const result = handler()
+
+      expect(result).toBe('https://pipette-hub-worker.keymaps.workers.dev')
+      expect(getHubOrigin).toHaveBeenCalled()
     })
   })
 })

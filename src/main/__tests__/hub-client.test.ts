@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, patchPostOnHub, type HubUploadFiles } from '../hub/hub-client'
+import { authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, patchPostOnHub, getHubOrigin, type HubUploadFiles } from '../hub/hub-client'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -336,6 +336,13 @@ describe('hub-client', () => {
       await expect(
         updatePostOnHub('jwt', 'post-1', 'title', 'board', testFiles),
       ).rejects.toThrow('Hub update failed: 403')
+    })
+
+  })
+
+  describe('getHubOrigin', () => {
+    it('returns default Hub origin', () => {
+      expect(getHubOrigin()).toBe('https://pipette-hub-worker.keymaps.workers.dev')
     })
   })
 })

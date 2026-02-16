@@ -86,6 +86,10 @@ export const IpcChannels = {
   HUB_FETCH_MY_POSTS: 'hub:fetch-my-posts',
   HUB_FETCH_AUTH_ME: 'hub:fetch-auth-me',
   HUB_PATCH_AUTH_ME: 'hub:patch-auth-me',
+  HUB_GET_ORIGIN: 'hub:get-origin',
+
+  // Shell (renderer → main)
+  SHELL_OPEN_EXTERNAL: 'shell:open-external',
 
   // Snapshot Store extensions
   SNAPSHOT_STORE_SET_HUB_POST_ID: 'snapshot-store:set-hub-post-id',

@@ -28,6 +28,7 @@ const FORMAT_BTN = 'text-[11px] font-medium text-content-muted bg-surface/50 bor
 const IMPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3.5 py-2 text-[13px] font-medium text-content-muted hover:text-content hover:border-content-muted'
 const EXPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted disabled:opacity-50'
 const HUB_BTN = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50 disabled:opacity-50'
+const SHARE_LINK_BTN = 'ml-1 text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-1.5 py-0 rounded hover:bg-accent/20 hover:border-accent/50'
 
 interface FormatButtonsProps {
   className: string
@@ -146,6 +147,26 @@ function HubOrphanButtons({
   )
 }
 
+function ShareLink({ url }: { url: string }) {
+  const { t } = useTranslation()
+
+  function handleClick(e: React.MouseEvent): void {
+    e.preventDefault()
+    window.vialAPI.openExternal(url).catch(() => {})
+  }
+
+  return (
+    <a
+      href={url}
+      onClick={handleClick}
+      className={SHARE_LINK_BTN}
+      data-testid="layout-store-hub-share-link"
+    >
+      {t('hub.openInBrowser')}
+    </a>
+  )
+}
+
 function fileStatusColorClass(status: FileStatus): string {
   if (status === 'importing' || status === 'exporting') return 'text-content-muted'
   if (typeof status === 'object' && status.kind === 'success') return 'text-accent'
@@ -196,9 +217,10 @@ export interface LayoutStoreContentProps {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
-  hubMyPosts?: HubMyPost[]
   onReuploadToHub?: (entryId: string, orphanedPostId: string) => void
   onDeleteOrphanedHubPost?: (entryId: string, orphanedPostId: string) => void
+  hubOrigin?: string
+  hubMyPosts?: HubMyPost[]
   hubUploading?: string | null
   hubUploadResult?: HubEntryResult | null
   fileDisabled?: boolean
@@ -229,9 +251,10 @@ export function LayoutStoreContent({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
-  hubMyPosts,
   onReuploadToHub,
   onDeleteOrphanedHubPost,
+  hubOrigin,
+  hubMyPosts,
   hubUploading,
   hubUploadResult,
   fileDisabled,
@@ -529,7 +552,12 @@ export function LayoutStoreContent({
                   {hasHubActions && (
                     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="layout-store-hub-row">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+                        <div className="flex items-center gap-1">
+                          <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+                          {entry.hubPostId && hubOrigin && (
+                            <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entry.hubPostId)}`} />
+                          )}
+                        </div>
                         <div className="flex gap-1">
                           {entry.hubPostId && confirmHubRemoveId === entry.id && (
                             <>
@@ -592,7 +620,7 @@ export function LayoutStoreContent({
                       </div>
                       {hubUploadResult && hubUploadResult.entryId === entry.id && (
                         <div
-                          className={`mt-1 text-[11px] font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+                          className={`mt-1 flex items-center text-[11px] font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
                           data-testid="layout-store-hub-result"
                         >
                           {hubUploadResult.message}

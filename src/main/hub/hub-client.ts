@@ -12,7 +12,7 @@ interface HubAuthResult {
   user: HubUser
 }
 
-interface HubPostResponse {
+export interface HubPostResponse {
   id: string
   title: string
 }
@@ -135,7 +135,7 @@ export async function deletePostFromHub(jwt: string, postId: string): Promise<vo
   }, 'Hub delete failed')
 }
 
-function submitPost(
+async function submitPost(
   jwt: string,
   method: 'POST' | 'PUT',
   path: string,
@@ -172,4 +172,8 @@ export function updatePostOnHub(
   files: HubUploadFiles,
 ): Promise<HubPostResponse> {
   return submitPost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, keyboardName, files, 'Hub update failed')
+}
+
+export function getHubOrigin(): string {
+  return HUB_API_BASE
 }

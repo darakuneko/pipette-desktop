@@ -43,7 +43,7 @@ import {
 } from '../shared/keycodes/keycodes'
 import type { DeviceInfo, QmkSettingsTab, VilFile } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
-import type { HubMyPost } from '../shared/types/hub'
+import type { HubMyPost, HubUploadResult } from '../shared/types/hub'
 import settingsDefs from '../shared/qmk-settings-defs.json'
 
 // Lighting types that require the RGBConfigurator modal
@@ -85,6 +85,8 @@ export function App() {
   // Clear loaded label when device identity changes (USB unplug/replug, device switch)
   useEffect(() => { setLastLoadedLabel('') }, [keyboard.uid])
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
+  const [hubOrigin, setHubOrigin] = useState('')
+  useEffect(() => { window.vialAPI.hubGetOrigin().then(setHubOrigin).catch(() => {}) }, [])
   const [hubConnected, setHubConnected] = useState(false)
   const [hubDisplayName, setHubDisplayName] = useState<string | null>(null)
 
@@ -481,7 +483,7 @@ export function App() {
   const runHubOperation = useCallback(async (
     entryId: string,
     findEntry: (entries: SnapshotMeta[]) => SnapshotMeta | undefined,
-    operation: (entry: SnapshotMeta) => Promise<{ success: boolean; error?: string }>,
+    operation: (entry: SnapshotMeta) => Promise<HubUploadResult>,
     successMsg: string,
     failMsg: string,
   ) => {
@@ -1089,9 +1091,10 @@ export function App() {
           onUploadToHub={hubEnabled ? handleUploadToHub : undefined}
           onUpdateOnHub={hubEnabled ? handleUpdateOnHub : undefined}
           onRemoveFromHub={hubEnabled ? handleRemoveFromHub : undefined}
-          hubMyPosts={hubEnabled ? hubMyPosts : undefined}
           onReuploadToHub={hubEnabled ? handleReuploadToHub : undefined}
           onDeleteOrphanedHubPost={hubEnabled ? handleDeleteOrphanedHubPost : undefined}
+          hubOrigin={hubEnabled ? hubOrigin : undefined}
+          hubMyPosts={hubEnabled ? hubMyPosts : undefined}
           hubUploading={hubUploading}
           hubUploadResult={hubUploadResult}
           fileDisabled={fileIO.saving || fileIO.loading}

@@ -242,10 +242,16 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.HUB_FETCH_AUTH_ME),
   hubPatchAuthMe: (displayName: string): Promise<HubUserResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_PATCH_AUTH_ME, displayName),
+  hubGetOrigin: (): Promise<string> =>
+    ipcRenderer.invoke(IpcChannels.HUB_GET_ORIGIN),
 
   // --- Snapshot Store extensions ---
   snapshotStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SET_HUB_POST_ID, uid, entryId, hubPostId),
+
+  // --- Shell ---
+  openExternal: (url: string): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.SHELL_OPEN_EXTERNAL, url),
 
   // --- Data Management ---
   resetKeyboardData: (uid: string): Promise<{ success: boolean; error?: string }> =>

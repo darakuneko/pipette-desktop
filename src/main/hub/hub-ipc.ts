@@ -5,7 +5,7 @@ import { ipcMain } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubUserResult } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe } from './hub-client'
+import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchAuthMe, patchAuthMe, getHubOrigin } from './hub-client'
 import type { HubUploadFiles } from './hub-client'
 
 const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
@@ -145,4 +145,6 @@ export function setupHubIpc(): void {
       }
     },
   )
+
+  ipcMain.handle(IpcChannels.HUB_GET_ORIGIN, (): string => getHubOrigin())
 }

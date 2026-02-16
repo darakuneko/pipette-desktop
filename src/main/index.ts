@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, session } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron'
 import { join, resolve, dirname } from 'node:path'
 import { statSync } from 'node:fs'
 import { spawn } from 'node:child_process'
@@ -172,6 +172,18 @@ function decompressLzma(data: number[]): Promise<string | null> {
   })
 }
 
+function setupShellIpc(): void {
+  ipcMain.handle(IpcChannels.SHELL_OPEN_EXTERNAL, async (_event, url: string) => {
+    if (typeof url !== 'string') throw new Error('Invalid URL')
+    let parsed: URL
+    try { parsed = new URL(url) } catch { throw new Error('Invalid URL') }
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('Invalid URL scheme')
+    }
+    await shell.openExternal(url)
+  })
+}
+
 function setupLogIpc(): void {
   ipcMain.on(IpcChannels.LOG_ENTRY, (_event, level: LogLevel, message: string) => {
     log(level, message)
@@ -195,6 +207,7 @@ app.whenReady().then(() => {
   setupHubIpc()
   setupLzmaIpc()
   setupLogIpc()
+  setupShellIpc()
   createWindow()
 
   app.on('activate', () => {

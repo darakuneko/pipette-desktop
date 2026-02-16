@@ -1017,6 +1017,70 @@ describe('LayoutStoreModal', () => {
 
       expect(screen.queryByTestId('layout-store-hub-result')).not.toBeInTheDocument()
     })
+
+    it('shows share link for entry with hubPostId when hubOrigin is set', () => {
+      render(
+        <LayoutStoreModal
+          entries={ENTRIES_WITH_HUB}
+          {...DEFAULT_PROPS}
+          onUploadToHub={vi.fn()}
+          onUpdateOnHub={vi.fn()}
+          onRemoveFromHub={vi.fn()}
+          hubOrigin="https://example.com"
+        />,
+      )
+
+      const link = screen.getByTestId('layout-store-hub-share-link')
+      expect(link).toBeInTheDocument()
+      expect(link.textContent).toBe('hub.openInBrowser')
+      expect(link.getAttribute('href')).toBe('https://example.com/post/post-42')
+    })
+
+    it('does not show share link when hubOrigin is not set', () => {
+      render(
+        <LayoutStoreModal
+          entries={ENTRIES_WITH_HUB}
+          {...DEFAULT_PROPS}
+          onUploadToHub={vi.fn()}
+          onUpdateOnHub={vi.fn()}
+          onRemoveFromHub={vi.fn()}
+        />,
+      )
+
+      expect(screen.queryByTestId('layout-store-hub-share-link')).not.toBeInTheDocument()
+    })
+
+    it('does not show share link for entry without hubPostId', () => {
+      render(
+        <LayoutStoreModal
+          entries={MOCK_ENTRIES}
+          {...DEFAULT_PROPS}
+          onUploadToHub={vi.fn()}
+          hubOrigin="https://example.com"
+        />,
+      )
+
+      expect(screen.queryByTestId('layout-store-hub-share-link')).not.toBeInTheDocument()
+    })
+
+    it('calls openExternal when share link clicked', () => {
+      const openExternal = vi.fn().mockResolvedValue(undefined)
+      window.vialAPI = { ...window.vialAPI, openExternal }
+
+      render(
+        <LayoutStoreModal
+          entries={ENTRIES_WITH_HUB}
+          {...DEFAULT_PROPS}
+          onUploadToHub={vi.fn()}
+          onUpdateOnHub={vi.fn()}
+          onRemoveFromHub={vi.fn()}
+          hubOrigin="https://example.com"
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('layout-store-hub-share-link'))
+      expect(openExternal).toHaveBeenCalledWith('https://example.com/post/post-42')
+    })
   })
 
   describe('orphaned hub post detection', () => {
