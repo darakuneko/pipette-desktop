@@ -20,10 +20,6 @@ Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, l
 - **QMK Settings** — Dynamic firmware settings with boolean/integer fields
 - **Matrix Tester** — Real-time key switch verification (20 ms polling)
 
-### Firmware
-
-- **Firmware Flasher** — Flash `.vfw` firmware via Vial Bootloader with optional layout restore
-
 ### Data Management
 
 - **Snapshots** — Save and restore complete keyboard states (keymap, macros, dynamic entries, QMK settings)
