@@ -179,6 +179,27 @@ describe('LanguageSelectorModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('does not update state after unmount when langList resolves late', async () => {
+    let resolveLangList: (value: LanguageListEntry[]) => void
+    const langListPromise = new Promise<LanguageListEntry[]>((resolve) => { resolveLangList = resolve })
+    vi.mocked(window.vialAPI.langList).mockReturnValue(langListPromise)
+
+    const { unmount } = render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    // Unmount before langList resolves
+    unmount()
+
+    // Resolve after unmount — should not throw or update state
+    resolveLangList!(mockLanguages)
+    await langListPromise
+  })
+
   it('shows RTL badge for right-to-left languages', async () => {
     render(
       <LanguageSelectorModal

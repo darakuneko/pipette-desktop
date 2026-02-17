@@ -1166,6 +1166,31 @@ describe('SettingsModal', () => {
       })
     })
 
+    it('clears saved indicator timeout on unmount', async () => {
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+      const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+      const { unmount } = renderAndSwitchToHub({
+        hubEnabled: true,
+        hubAuthenticated: true,
+        hubDisplayName: 'Alice',
+        onHubDisplayNameChange,
+      })
+
+      const input = screen.getByTestId('hub-display-name-input')
+      fireEvent.change(input, { target: { value: 'Bob' } })
+      fireEvent.click(screen.getByTestId('hub-display-name-save'))
+
+      await waitFor(() => {
+        expect(onHubDisplayNameChange).toHaveBeenCalledWith('Bob')
+      })
+
+      clearTimeoutSpy.mockClear()
+      unmount()
+
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      clearTimeoutSpy.mockRestore()
+    })
+
     describe('display name empty save prevention', () => {
       it('disables save button when input is cleared to empty', () => {
         const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })

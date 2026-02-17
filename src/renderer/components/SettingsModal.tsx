@@ -500,10 +500,15 @@ function HubDisplayNameField({ currentName, onSave }: HubDisplayNameFieldProps) 
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   useEffect(() => {
     setValue(currentName ?? '')
   }, [currentName])
+
+  useEffect(() => {
+    return () => clearTimeout(savedTimerRef.current)
+  }, [])
 
   const hasChanged = value !== (currentName ?? '')
 
@@ -515,7 +520,8 @@ function HubDisplayNameField({ currentName, onSave }: HubDisplayNameFieldProps) 
       const result = await onSave(value.trim())
       if (result.success) {
         setSaved(true)
-        setTimeout(() => setSaved(false), 2000)
+        clearTimeout(savedTimerRef.current)
+        savedTimerRef.current = setTimeout(() => setSaved(false), 2000)
       } else if (result.error === HUB_ERROR_DISPLAY_NAME_CONFLICT) {
         setError(t('hub.displayNameTaken'))
       } else if (result.error === HUB_ERROR_RATE_LIMITED) {

@@ -25,8 +25,12 @@ export function LanguageSelectorModal({ currentLanguage, onSelectLanguage, onClo
   const searchRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    window.vialAPI.langList().then(setLanguages).catch(() => {})
+    let alive = true
+    window.vialAPI.langList().then((list) => {
+      if (alive) setLanguages(list)
+    }).catch(() => {})
     searchRef.current?.focus()
+    return () => { alive = false }
   }, [])
 
   useEffect(() => {
