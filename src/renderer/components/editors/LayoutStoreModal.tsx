@@ -325,6 +325,10 @@ export function LayoutStoreContent({
     originalLabelRef.current = entry.label
   }
 
+  function getEntryHubPostId(entry: SnapshotMeta): string | undefined {
+    return entry.hubPostId || hubKeyboardPosts?.find((p) => p.title === entry.label)?.id
+  }
+
   const hasImportSideload = onImportVil || onSideloadJson
   const hasEntryExport = onExportEntryVil || onExportEntryKeymapC || onExportEntryPdf
   const hasCurrentExport = onExportVil || onExportKeymapC || onExportPdf
@@ -452,7 +456,7 @@ export function LayoutStoreContent({
           {!loading && entries.length > 0 && (
             <div className={`flex flex-col gap-1.5${isPanel ? ` flex-1 ${listClassName}` : ''}`} data-testid="layout-store-list">
               {entries.map((entry) => {
-                const entryHubPostId = hubKeyboardPosts?.find((p) => p.title === entry.label)?.id
+                const entryHubPostId = getEntryHubPostId(entry)
                 return (<div
                   key={entry.id}
                   className="rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30"

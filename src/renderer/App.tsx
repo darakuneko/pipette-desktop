@@ -360,9 +360,14 @@ export function App() {
     }
   }, [refreshHubPosts])
 
-  const getHubPostId = useCallback((label: string): string | undefined => {
-    return hubKeyboardPosts.find((p) => p.title === label)?.id
+  const getHubPostId = useCallback((entry: { hubPostId?: string; label: string }): string | undefined => {
+    return entry.hubPostId || hubKeyboardPosts.find((p) => p.title === entry.label)?.id
   }, [hubKeyboardPosts])
+
+  const persistHubPostId = useCallback(async (entryId: string, postId: string | null) => {
+    await window.vialAPI.snapshotStoreSetHubPostId(keyboard.uid, entryId, postId)
+    await layoutStore.refreshEntries()
+  }, [keyboard.uid, layoutStore])
 
   const handleHubRenamePost = useCallback(async (postId: string, newTitle: string) => {
     const result = await window.vialAPI.hubPatchPost({ postId, title: newTitle })
@@ -598,17 +603,20 @@ export function App() {
         if (!vilData) return { success: false, error: t('hub.uploadFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
         const result = await window.vialAPI.hubUploadPost(postParams)
-        if (result.success) await refreshHubPosts()
+        if (result.success) {
+          if (result.postId) await persistHubPostId(entryId, result.postId)
+          await refreshHubPosts()
+        }
         return result
       },
       t('hub.uploadSuccess'),
       t('hub.uploadFailed'),
     )
-  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
+  }, [runHubOperation, loadEntryVilData, buildHubPostParams, persistHubPostId, refreshHubPosts, t])
 
   const handleUpdateOnHub = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry.label) : undefined
+    const postId = entry ? getHubPostId(entry) : undefined
     if (!entry || !postId) return
 
     await runHubOperation(
@@ -629,7 +637,7 @@ export function App() {
 
   const handleRemoveFromHub = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry.label) : undefined
+    const postId = entry ? getHubPostId(entry) : undefined
     if (!entry || !postId) return
 
     await runHubOperation(
@@ -637,13 +645,16 @@ export function App() {
       () => entry,
       async () => {
         const result = await window.vialAPI.hubDeletePost(postId)
-        if (result.success) await refreshHubPosts()
+        if (result.success) {
+          await persistHubPostId(entryId, null)
+          await refreshHubPosts()
+        }
         return result
       },
       t('hub.removeSuccess'),
       t('hub.removeFailed'),
     )
-  }, [runHubOperation, layoutStore.entries, getHubPostId, refreshHubPosts, t])
+  }, [runHubOperation, layoutStore, getHubPostId, persistHubPostId, refreshHubPosts, t])
 
   const handleReuploadToHub = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -655,13 +666,16 @@ export function App() {
         if (!vilData) return { success: false, error: t('hub.uploadFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
         const result = await window.vialAPI.hubUploadPost(postParams)
-        if (result.success) await refreshHubPosts()
+        if (result.success) {
+          if (result.postId) await persistHubPostId(entryId, result.postId)
+          await refreshHubPosts()
+        }
         return result
       },
       t('hub.uploadSuccess'),
       t('hub.uploadFailed'),
     )
-  }, [runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
+  }, [runHubOperation, loadEntryVilData, buildHubPostParams, persistHubPostId, refreshHubPosts, t])
 
   const handleDeleteOrphanedHubPost = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -678,29 +692,34 @@ export function App() {
   }, [runHubOperation, refreshHubPosts, t])
 
   const handleOverwriteSave = useCallback(async (overwriteEntryId: string, label: string) => {
-    const existingPostId = getHubPostId(label)
+    const overwriteEntry = layoutStore.entries.find((e) => e.id === overwriteEntryId)
+    const existingPostId = overwriteEntry ? getHubPostId(overwriteEntry) : undefined
 
     await layoutStore.deleteEntry(overwriteEntryId)
     const newEntryId = await layoutStore.saveLayout(label)
     if (!newEntryId) return
 
-    if (existingPostId && hubReady) {
-      await runHubOperation(
-        newEntryId,
-        () => ({ id: newEntryId, label, filename: '', savedAt: '' }),
-        async () => {
-          const vilData = await loadEntryVilData(newEntryId)
-          if (!vilData) return { success: false, error: t('hub.updateFailed') }
-          const postParams = await buildHubPostParams({ label }, vilData)
-          const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: existingPostId })
-          if (result.success) await refreshHubPosts()
-          return result
-        },
-        t('hub.updateSuccess'),
-        t('hub.updateFailed'),
-      )
+    if (existingPostId) {
+      await persistHubPostId(newEntryId, existingPostId)
+
+      if (hubReady) {
+        await runHubOperation(
+          newEntryId,
+          () => ({ id: newEntryId, label, filename: '', savedAt: '', hubPostId: existingPostId }),
+          async () => {
+            const vilData = await loadEntryVilData(newEntryId)
+            if (!vilData) return { success: false, error: t('hub.updateFailed') }
+            const postParams = await buildHubPostParams({ label }, vilData)
+            const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: existingPostId })
+            if (result.success) await refreshHubPosts()
+            return result
+          },
+          t('hub.updateSuccess'),
+          t('hub.updateFailed'),
+        )
+      }
     }
-  }, [layoutStore, getHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
+  }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
 
   const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
   const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
@@ -708,7 +727,7 @@ export function App() {
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry.label) : undefined
+    const postId = entry ? getHubPostId(entry) : undefined
     const deleted = await layoutStore.deleteEntry(entryId)
     if (deleted && postId && hubReady) {
       try {
@@ -722,7 +741,7 @@ export function App() {
 
   const handleRenameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry.label) : undefined
+    const postId = entry ? getHubPostId(entry) : undefined
     const ok = await layoutStore.renameEntry(entryId, newLabel)
     if (ok && hubReady && postId) {
       void runHubOperation(
@@ -1159,7 +1178,7 @@ export function App() {
           onExportEntryVil={!device.isDummy ? handleExportEntryVil : undefined}
           onExportEntryKeymapC={!device.isDummy ? handleExportEntryKeymapC : undefined}
           onExportEntryPdf={!device.isDummy ? handleExportEntryPdf : undefined}
-          onOverwriteSave={hubReady ? handleOverwriteSave : undefined}
+          onOverwriteSave={handleOverwriteSave}
           onUploadToHub={hubCanUpload ? handleUploadToHub : undefined}
           onUpdateOnHub={hubCanUpload ? handleUpdateOnHub : undefined}
           onRemoveFromHub={hubReady ? handleRemoveFromHub : undefined}
