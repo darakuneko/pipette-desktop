@@ -9,10 +9,13 @@ import { secureHandle } from './ipc-guard'
 
 const BUNDLED_LANGUAGES = new Set(['english'])
 
-const MANIFEST_NAMES = new Set((manifest as LanguageManifestEntry[]).map((e) => e.name))
+const MANIFEST_MAP = new Map(
+  (manifest as LanguageManifestEntry[]).map((e) => [e.name, e]),
+)
 
+const LANG_SOURCE_COMMIT = '629c82e112a2db2122c789dc6abe970b82c3f8c5'
 const DOWNLOAD_URL_BASE =
-  'https://github.com/monkeytypegame/monkeytype/raw/refs/heads/master/frontend/static/languages'
+  `https://github.com/monkeytypegame/monkeytype/raw/${LANG_SOURCE_COMMIT}/frontend/static/languages`
 
 function getLanguagesDir(): string {
   return join(app.getPath('userData'), 'local', 'downloads', 'languages')
@@ -92,7 +95,8 @@ export function setupLanguageStore(): void {
     async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
       if (BUNDLED_LANGUAGES.has(name)) return { success: false, error: 'Language is bundled' }
-      if (!MANIFEST_NAMES.has(name)) return { success: false, error: 'Unknown language' }
+      const entry = MANIFEST_MAP.get(name)
+      if (!entry) return { success: false, error: 'Unknown language' }
 
       const url = `${DOWNLOAD_URL_BASE}/${name}.json`
       try {
@@ -101,6 +105,12 @@ export function setupLanguageStore(): void {
           return { success: false, error: `HTTP ${response.status}` }
         }
         const text = await response.text()
+        const actualSize = Buffer.byteLength(text, 'utf-8')
+        if (actualSize !== entry.fileSize) {
+          const detail = `size mismatch (expected ${entry.fileSize}, got ${actualSize})`
+          log('warn', `Language ${name}: ${detail}`)
+          return { success: false, error: `Integrity check failed: ${detail}` }
+        }
         const data: unknown = JSON.parse(text)
         if (!validateLanguageData(data)) {
           return { success: false, error: 'Invalid language data' }

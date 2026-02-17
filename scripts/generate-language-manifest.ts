@@ -1,5 +1,6 @@
 // Fetches the monkeytype language list from GitHub and generates a manifest.
-// Usage: pnpm run generate:language-manifest
+// Usage: pnpm run generate:language-manifest [commit-hash]
+// When updating, set the same hash in src/main/language-store.ts LANG_SOURCE_COMMIT.
 
 import { writeFile } from 'node:fs/promises'
 import { join, dirname } from 'node:path'
@@ -17,10 +18,11 @@ interface GithubContentEntry {
   type: string
 }
 
+const COMMIT = process.argv[2] || 'master'
 const REPO_CONTENTS_URL =
-  'https://api.github.com/repos/monkeytypegame/monkeytype/contents/frontend/static/languages'
+  `https://api.github.com/repos/monkeytypegame/monkeytype/contents/frontend/static/languages?ref=${COMMIT}`
 const DOWNLOAD_URL_BASE =
-  'https://github.com/monkeytypegame/monkeytype/raw/refs/heads/master/frontend/static/languages'
+  `https://github.com/monkeytypegame/monkeytype/raw/${COMMIT}/frontend/static/languages`
 const CONCURRENCY = 8
 
 const scriptDir = dirname(fileURLToPath(import.meta.url))
@@ -72,7 +74,7 @@ async function processInBatches(names: string[], concurrency: number): Promise<M
 }
 
 async function main(): Promise<void> {
-  console.log('Fetching language list from GitHub...')
+  console.log(`Fetching language list from GitHub (ref: ${COMMIT})...`)
   const names = await fetchLanguageNames()
   console.log(`Found ${names.length} languages. Fetching metadata...`)
 
