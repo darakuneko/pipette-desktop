@@ -104,11 +104,11 @@ Pipette reads and writes this data via USB HID using the VIA/Vial protocol. Chan
 
 ---
 
-## Cloud Sync (Google Drive)
+## Cloud Sync (Google Drive appDataFolder)
 
 ### How It Works
 
-Pipette uses Google Drive's **Application Data folder** (`appDataFolder`) to sync your data across devices.
+Pipette uses [Google Drive **appDataFolder**](https://developers.google.com/workspace/drive/api/guides/appdata) to sync your data across devices. The appDataFolder is **not** regular Google Drive storage — it is a hidden, app-specific folder that only the app which created it (identified by its OAuth client ID) can access. Its contents are invisible to the user and to other Google Drive applications.
 
 - Sync is **opt-in** — you must sign in with Google and set a sync password to enable it
 - Synced data is **end-to-end encrypted** before upload (AES-256-GCM with a key derived from your sync password via PBKDF2)
@@ -134,8 +134,8 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **Can other apps see Pipette's data?** | **No.** The Application Data folder is invisible to the user and to other applications. Only the app that created it (identified by its OAuth client ID) can access it. |
 | **Is my data encrypted?** | **Yes.** All data is encrypted with AES-256-GCM using a key derived from your sync password (PBKDF2, 600,000 iterations) before it leaves your device. Google stores only encrypted blobs. |
 | **Can Pipette's developers read my synced data?** | **No.** Encryption happens on your device with your password. Without your sync password, the encrypted data is unreadable. |
-| **What happens if I sign out?** | Local data is preserved. Cloud data remains on Google Drive but is no longer synced. You can sign back in to resume syncing. |
-| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings. This removes all Pipette data from Google Drive. |
+| **What happens if I sign out?** | Local data is preserved. Cloud data remains in Google Drive appDataFolder but is no longer synced. You can sign back in to resume syncing. |
+| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings. This removes all Pipette data from Google Drive appDataFolder. |
 | **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`). File names contain keyboard UIDs but no personal information. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
 

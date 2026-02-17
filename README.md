@@ -44,9 +44,9 @@ Pipette allows you to assign custom names to each layer. Layer names are stored 
 
 You can rename layers freely in the editor settings to match your workflow.
 
-### Cloud Sync (Google Drive)
+### Cloud Sync (Google Drive appDataFolder)
 
-Sync your snapshots, favorites, and per-keyboard settings across devices via Google Drive.
+Sync your snapshots, favorites, and per-keyboard settings across devices via [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata). The appDataFolder is **not** regular Google Drive storage — it is a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
 
 See [Data Guide](docs/Data.md) for details on what is synced and how your data is protected.
 
