@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron'
+import { app, BrowserWindow, Menu, session, shell } from 'electron'
 import { join, resolve, dirname } from 'node:path'
 import { statSync } from 'node:fs'
 import { spawn } from 'node:child_process'
@@ -14,6 +14,7 @@ import { setupHubIpc } from './hub/hub-ipc'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
 import { loadWindowState, saveWindowState, setupAppConfigIpc } from './app-config'
+import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
 
@@ -117,7 +118,7 @@ function createWindow(): void {
 }
 
 function setupLzmaIpc(): void {
-  ipcMain.handle(IpcChannels.LZMA_DECOMPRESS, (_event, data: number[]): Promise<string | null> => {
+  secureHandle(IpcChannels.LZMA_DECOMPRESS, (_event, data: number[]): Promise<string | null> => {
     if (!data || !Array.isArray(data) || data.length === 0) {
       return Promise.resolve(null)
     }
@@ -173,7 +174,7 @@ function decompressLzma(data: number[]): Promise<string | null> {
 }
 
 function setupShellIpc(): void {
-  ipcMain.handle(IpcChannels.SHELL_OPEN_EXTERNAL, async (_event, url: string) => {
+  secureHandle(IpcChannels.SHELL_OPEN_EXTERNAL, async (_event, url: string) => {
     if (typeof url !== 'string') throw new Error('Invalid URL')
     let parsed: URL
     try { parsed = new URL(url) } catch { throw new Error('Invalid URL') }
@@ -185,10 +186,10 @@ function setupShellIpc(): void {
 }
 
 function setupLogIpc(): void {
-  ipcMain.on(IpcChannels.LOG_ENTRY, (_event, level: LogLevel, message: string) => {
+  secureOn(IpcChannels.LOG_ENTRY, (_event, level: LogLevel, message: string) => {
     log(level, message)
   })
-  ipcMain.on(IpcChannels.LOG_HID_PACKET, (_event, direction: 'TX' | 'RX', data: number[]) => {
+  secureOn(IpcChannels.LOG_HID_PACKET, (_event, direction: 'TX' | 'RX', data: number[]) => {
     logHidPacket(direction, new Uint8Array(data))
   })
 }

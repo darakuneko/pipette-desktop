@@ -21,6 +21,11 @@ const mockStoreData = vi.hoisted(() => {
   return data
 })
 
+vi.mock('../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
 vi.mock('electron-store', () => {
   return {
     default: class MockStore {

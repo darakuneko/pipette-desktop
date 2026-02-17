@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // IPC handler for Hub upload operations
 
-import { ipcMain } from 'electron'
+import { secureHandle } from '../ipc-guard'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams } from '../../shared/types/hub'
@@ -171,7 +171,7 @@ function buildFiles(params: HubUploadPostParams): HubUploadFiles {
 }
 
 export function setupHubIpc(): void {
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_UPLOAD_POST,
     async (_event, params: HubUploadPostParams): Promise<HubUploadResult> => {
       try {
@@ -187,7 +187,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_UPDATE_POST,
     async (_event, params: HubUpdatePostParams): Promise<HubUploadResult> => {
       try {
@@ -204,7 +204,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_PATCH_POST,
     async (_event, params: HubPatchPostParams): Promise<HubDeleteResult> => {
       try {
@@ -220,7 +220,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_DELETE_POST,
     async (_event, postId: string): Promise<HubDeleteResult> => {
       try {
@@ -233,7 +233,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_FETCH_MY_POSTS,
     async (_event, params?: HubFetchMyPostsParams): Promise<HubFetchMyPostsResult> => {
       try {
@@ -259,7 +259,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_FETCH_AUTH_ME,
     async (): Promise<HubUserResult> => {
       try {
@@ -271,7 +271,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_PATCH_AUTH_ME,
     async (_event, displayName: unknown): Promise<HubUserResult> => {
       try {
@@ -287,7 +287,7 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_FETCH_MY_KEYBOARD_POSTS,
     async (_event, keyboardName: unknown): Promise<HubFetchMyKeyboardPostsResult> => {
       try {
@@ -302,9 +302,9 @@ export function setupHubIpc(): void {
     },
   )
 
-  ipcMain.handle(IpcChannels.HUB_GET_ORIGIN, (): string => getHubOrigin())
+  secureHandle(IpcChannels.HUB_GET_ORIGIN, (): string => getHubOrigin())
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.HUB_SET_AUTH_DISPLAY_NAME,
     (_event, displayName: string | null): void => {
       pendingAuthDisplayName = typeof displayName === 'string' ? displayName : null

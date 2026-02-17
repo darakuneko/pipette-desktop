@@ -1,10 +1,11 @@
-import { app, ipcMain, net } from 'electron'
+import { app, net } from 'electron'
 import { join } from 'node:path'
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { LanguageManifestEntry, LanguageListEntry, LanguageDownloadStatus } from '../shared/types/language-store'
 import manifest from '../shared/data/language-manifest.json'
 import { log } from './logger'
+import { secureHandle } from './ipc-guard'
 
 const BUNDLED_LANGUAGES = new Set(['english'])
 
@@ -59,7 +60,7 @@ function validateLanguageData(data: unknown): data is LanguageFileData {
 }
 
 export function setupLanguageStore(): void {
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.LANG_LIST,
     async (): Promise<LanguageListEntry[]> => {
       const downloaded = await getDownloadedSet()
@@ -70,7 +71,7 @@ export function setupLanguageStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.LANG_GET,
     async (_event, name: string): Promise<LanguageFileData | null> => {
       if (!isSafeName(name)) return null
@@ -86,7 +87,7 @@ export function setupLanguageStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.LANG_DOWNLOAD,
     async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
@@ -115,7 +116,7 @@ export function setupLanguageStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.LANG_DELETE,
     async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }

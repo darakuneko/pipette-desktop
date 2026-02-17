@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Pipette settings store — per-UID device settings persistence
 
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import { join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
+import { secureHandle } from './ipc-guard'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 
 function isSafePathSegment(segment: string): boolean {
@@ -76,7 +77,7 @@ async function writeData(uid: string, prefs: PipetteSettings): Promise<void> {
 }
 
 export function setupPipetteSettingsStore(): void {
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.PIPETTE_SETTINGS_GET,
     async (_event, uid: string): Promise<PipetteSettings | null> => {
       try {
@@ -88,7 +89,7 @@ export function setupPipetteSettingsStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.PIPETTE_SETTINGS_SET,
     async (
       _event,

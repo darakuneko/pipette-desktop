@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Internal favorite store — save/load individual entry snapshots within app userData
 
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import { join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { isValidFavoriteType } from '../shared/favorite-data'
 import { notifyChange } from './sync/sync-service'
+import { secureHandle } from './ipc-guard'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteIndex } from '../shared/types/favorite-store'
 
 function isSafePathSegment(segment: string): boolean {
@@ -52,7 +53,7 @@ async function writeIndex(type: FavoriteType, index: FavoriteIndex): Promise<voi
 }
 
 export function setupFavoriteStore(): void {
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.FAVORITE_STORE_LIST,
     async (_event, type: unknown): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }> => {
       try {
@@ -65,7 +66,7 @@ export function setupFavoriteStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.FAVORITE_STORE_SAVE,
     async (
       _event,
@@ -106,7 +107,7 @@ export function setupFavoriteStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.FAVORITE_STORE_LOAD,
     async (_event, type: unknown, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
       try {
@@ -129,7 +130,7 @@ export function setupFavoriteStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.FAVORITE_STORE_RENAME,
     async (_event, type: unknown, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }> => {
       try {
@@ -151,7 +152,7 @@ export function setupFavoriteStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.FAVORITE_STORE_DELETE,
     async (_event, type: unknown, entryId: string): Promise<{ success: boolean; error?: string }> => {
       try {

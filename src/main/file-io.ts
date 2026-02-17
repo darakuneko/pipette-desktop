@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // File I/O for .vil layout save/restore — runs in main process
 
-import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { dialog, BrowserWindow } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
+import { secureHandle } from './ipc-guard'
 
 interface SaveResult {
   success: boolean
@@ -51,7 +52,7 @@ async function saveFileWithDialog(
 }
 
 export function setupFileIO(): void {
-  ipcMain.handle(IpcChannels.FILE_SAVE_LAYOUT, async (event, jsonData: string, deviceName?: string) => {
+  secureHandle(IpcChannels.FILE_SAVE_LAYOUT, async (event, jsonData: string, deviceName?: string) => {
     const filename = deviceName ? `${sanitizeFilename(deviceName)}.vil` : 'keyboard.vil'
     return saveFileWithDialog(event, jsonData, {
       title: 'Export Layout',
@@ -63,7 +64,7 @@ export function setupFileIO(): void {
     })
   })
 
-  ipcMain.handle(IpcChannels.FILE_EXPORT_KEYMAP_C, async (event, content: string, deviceName?: string) => {
+  secureHandle(IpcChannels.FILE_EXPORT_KEYMAP_C, async (event, content: string, deviceName?: string) => {
     const filename = deviceName ? `${sanitizeFilename(deviceName)}_keymap.c` : 'keymap.c'
     return saveFileWithDialog(event, content, {
       title: 'Export keymap.c',
@@ -75,7 +76,7 @@ export function setupFileIO(): void {
     })
   })
 
-  ipcMain.handle(IpcChannels.FILE_EXPORT_PDF, async (event, base64Data: string, deviceName?: string) => {
+  secureHandle(IpcChannels.FILE_EXPORT_PDF, async (event, base64Data: string, deviceName?: string) => {
     const filename = deviceName ? `${sanitizeFilename(deviceName)}.pdf` : 'keymap.pdf'
     return saveFileWithDialog(event, Buffer.from(base64Data, 'base64'), {
       title: 'Export Keymap PDF',
@@ -87,7 +88,7 @@ export function setupFileIO(): void {
     })
   })
 
-  ipcMain.handle(IpcChannels.FILE_EXPORT_CSV, async (event, content: string, defaultName?: string) => {
+  secureHandle(IpcChannels.FILE_EXPORT_CSV, async (event, content: string, defaultName?: string) => {
     const filename = defaultName ? `${sanitizeFilename(defaultName)}.csv` : 'typing-test-history.csv'
     return saveFileWithDialog(event, content, {
       title: 'Export CSV',
@@ -99,7 +100,7 @@ export function setupFileIO(): void {
     })
   })
 
-  ipcMain.handle(IpcChannels.FILE_LOAD_LAYOUT, async (event) => {
+  secureHandle(IpcChannels.FILE_LOAD_LAYOUT, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'No window' }
 
@@ -124,7 +125,7 @@ export function setupFileIO(): void {
     }
   })
 
-  ipcMain.handle(IpcChannels.SIDELOAD_JSON, async (event) => {
+  secureHandle(IpcChannels.SIDELOAD_JSON, async (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'No window' }
 

@@ -25,6 +25,11 @@ vi.mock('../sync/sync-service', () => ({
   notifyChange: vi.fn(),
 }))
 
+vi.mock('../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
 // --- Import after mocking ---
 
 import { ipcMain } from 'electron'

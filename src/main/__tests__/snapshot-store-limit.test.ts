@@ -16,6 +16,11 @@ vi.mock('../sync/sync-service', () => ({
   notifyChange: vi.fn(),
 }))
 
+vi.mock('../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
 // Mock fs/promises
 const mockMkdir = vi.fn().mockResolvedValue(undefined)
 const mockWriteFile = vi.fn().mockResolvedValue(undefined)

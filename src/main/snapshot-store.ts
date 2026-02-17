@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Snapshot store — save/load .pipette snapshots within app userData
 
-import { app, ipcMain } from 'electron'
+import { app } from 'electron'
 import { join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
+import { secureHandle } from './ipc-guard'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
 
 const MAX_ENTRIES_PER_KEYBOARD = 30
@@ -92,7 +93,7 @@ function withWriteLock<T>(uid: string, fn: () => Promise<T>): Promise<T> {
 }
 
 export function setupSnapshotStore(): void {
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_LIST,
     async (_event, uid: string): Promise<{ success: boolean; entries?: SnapshotMeta[]; error?: string }> => {
       try {
@@ -105,7 +106,7 @@ export function setupSnapshotStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_SAVE,
     async (
       _event,
@@ -155,7 +156,7 @@ export function setupSnapshotStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_LOAD,
     async (_event, uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> => {
       try {
@@ -174,19 +175,19 @@ export function setupSnapshotStore(): void {
     },
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_RENAME,
     async (_event, uid: string, entryId: string, newLabel: string) =>
       updateEntry(uid, entryId, (entry) => { entry.label = newLabel }),
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_DELETE,
     async (_event, uid: string, entryId: string) =>
       updateEntry(uid, entryId, (entry) => { entry.deletedAt = new Date().toISOString() }),
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_SET_HUB_POST_ID,
     async (_event, uid: string, entryId: string, hubPostId: string | null) => {
       const normalized = hubPostId?.trim() || null

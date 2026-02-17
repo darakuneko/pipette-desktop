@@ -16,6 +16,11 @@ vi.mock('../logger', () => ({
   log: vi.fn(),
 }))
 
+vi.mock('../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
 // Import after mocking
 import { app, ipcMain, net } from 'electron'
 import { setupLanguageStore } from '../language-store'

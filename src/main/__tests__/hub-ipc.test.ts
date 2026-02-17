@@ -15,6 +15,12 @@ vi.mock('electron', () => {
   }
 })
 
+// Mock ipc-guard — bypass origin check (tested in ipc-guard.test.ts)
+vi.mock('../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
 // Mock google-auth
 vi.mock('../sync/google-auth', () => ({
   getIdToken: vi.fn(),

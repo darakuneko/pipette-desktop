@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // App configuration backed by electron-store
 
-import { ipcMain, screen } from 'electron'
+import { screen } from 'electron'
 import Store from 'electron-store'
 import { IpcChannels } from '../shared/ipc/channels'
 import { DEFAULT_APP_CONFIG, SETTABLE_APP_CONFIG_KEYS, type AppConfig, type WindowState } from '../shared/types/app-config'
+import { secureHandle } from './ipc-guard'
 
 const MIN_WIDTH = 1280
 const MIN_HEIGHT = 960
@@ -97,9 +98,9 @@ export function onAppConfigChange(cb: ConfigChangeCallback): void {
 }
 
 export function setupAppConfigIpc(): void {
-  ipcMain.handle(IpcChannels.APP_CONFIG_GET_ALL, () => loadAppConfig())
+  secureHandle(IpcChannels.APP_CONFIG_GET_ALL, () => loadAppConfig())
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.APP_CONFIG_SET,
     (_event, key: string, value: unknown) => {
       if (!SETTABLE_APP_CONFIG_KEYS.has(key as keyof AppConfig)) return

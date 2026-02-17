@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // IPC handler registration for sync operations
 
-import { ipcMain, BrowserWindow, app, dialog } from 'electron'
+import { BrowserWindow, app, dialog } from 'electron'
 import { rm, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
@@ -29,6 +29,7 @@ import {
   readIndexFile,
 } from './sync-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
+import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
 
@@ -110,13 +111,13 @@ async function mergeImportEntries<T extends EntryMeta>(
 
 export function setupSyncIpc(): void {
   // --- Auth ---
-  ipcMain.handle(IpcChannels.SYNC_AUTH_START, () =>
+  secureHandle(IpcChannels.SYNC_AUTH_START, () =>
     wrapIpc('Auth failed', () => startOAuthFlow()),
   )
 
-  ipcMain.handle(IpcChannels.SYNC_AUTH_STATUS, () => getAuthStatus())
+  secureHandle(IpcChannels.SYNC_AUTH_STATUS, () => getAuthStatus())
 
-  ipcMain.handle(IpcChannels.SYNC_AUTH_SIGN_OUT, () =>
+  secureHandle(IpcChannels.SYNC_AUTH_SIGN_OUT, () =>
     wrapIpc('Sign out failed', async () => {
       stopPolling()
       clearHubTokenCache()
@@ -125,13 +126,13 @@ export function setupSyncIpc(): void {
   )
 
   // --- Password ---
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SYNC_SET_PASSWORD,
     (_event, password: string) =>
       wrapIpc('Store password failed', () => storePassword(password)),
   )
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SYNC_RESET_PASSWORD,
     (_event, password: string) =>
       wrapIpc('Reset password failed', async () => {
@@ -140,7 +141,7 @@ export function setupSyncIpc(): void {
       }),
   )
 
-  ipcMain.handle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>
+  secureHandle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>
     wrapIpc('Reset sync targets failed', async () => {
       if (typeof targets !== 'object' || targets === null) throw new Error('Invalid targets')
       if (typeof targets.keyboards !== 'boolean' || typeof targets.favorites !== 'boolean') {
@@ -159,15 +160,15 @@ export function setupSyncIpc(): void {
     }),
   )
 
-  ipcMain.handle(IpcChannels.SYNC_HAS_PASSWORD, () => hasStoredPassword())
+  secureHandle(IpcChannels.SYNC_HAS_PASSWORD, () => hasStoredPassword())
 
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SYNC_VALIDATE_PASSWORD,
     (_event, password: string): PasswordStrength => checkPasswordStrength(password),
   )
 
   // --- Sync execution ---
-  ipcMain.handle(
+  secureHandle(
     IpcChannels.SYNC_EXECUTE,
     (_event, direction: 'download' | 'upload') =>
       wrapIpc('Sync failed', async () => {
@@ -182,7 +183,7 @@ export function setupSyncIpc(): void {
   )
 
   // --- Reset keyboard data (per-device) ---
-  ipcMain.handle(IpcChannels.RESET_KEYBOARD_DATA, (_event, uid: string) =>
+  secureHandle(IpcChannels.RESET_KEYBOARD_DATA, (_event, uid: string) =>
     wrapIpc('Reset keyboard data failed', async () => {
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       if (!isSafeKey(uid)) {
@@ -197,7 +198,7 @@ export function setupSyncIpc(): void {
   )
 
   // --- Reset local targets ---
-  ipcMain.handle(IpcChannels.RESET_LOCAL_TARGETS, (_event, targets: LocalResetTargets) =>
+  secureHandle(IpcChannels.RESET_LOCAL_TARGETS, (_event, targets: LocalResetTargets) =>
     wrapIpc('Reset local targets failed', async () => {
       if (typeof targets !== 'object' || targets === null) throw new Error('Invalid targets')
       if (typeof targets.keyboards !== 'boolean' || typeof targets.favorites !== 'boolean' || typeof targets.appSettings !== 'boolean') {
@@ -232,7 +233,7 @@ export function setupSyncIpc(): void {
   )
 
   // --- Export local data ---
-  ipcMain.handle(IpcChannels.EXPORT_LOCAL_DATA, () =>
+  secureHandle(IpcChannels.EXPORT_LOCAL_DATA, () =>
     wrapIpc('Export failed', async () => {
       const syncUnits = await collectAllSyncUnits()
 
@@ -274,7 +275,7 @@ export function setupSyncIpc(): void {
   )
 
   // --- Import local data ---
-  ipcMain.handle(IpcChannels.IMPORT_LOCAL_DATA, () =>
+  secureHandle(IpcChannels.IMPORT_LOCAL_DATA, () =>
     wrapIpc('Import failed', async () => {
       const dialogOpts = {
         filters: [{ name: 'JSON', extensions: ['json'] }],
@@ -368,16 +369,16 @@ export function setupSyncIpc(): void {
   )
 
   // --- Pending status (renderer polls on mount) ---
-  ipcMain.handle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
+  secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
 
   // --- Cancel pending changes ---
-  ipcMain.handle(IpcChannels.SYNC_CANCEL_PENDING, () => {
+  secureHandle(IpcChannels.SYNC_CANCEL_PENDING, () => {
     cancelPendingChanges()
     return { success: true } satisfies IpcResult
   })
 
   // --- Change notification (from stores) ---
-  ipcMain.on(IpcChannels.SYNC_NOTIFY_CHANGE, (_event, syncUnit: string) => {
+  secureOn(IpcChannels.SYNC_NOTIFY_CHANGE, (_event, syncUnit: string) => {
     notifyChange(syncUnit)
   })
 
