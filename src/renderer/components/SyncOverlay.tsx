@@ -5,7 +5,7 @@ import type { SyncProgress } from '../../shared/types/sync'
 
 interface Props {
   progress: SyncProgress | null
-  onSkip: () => void
+  onSkip?: () => void
 }
 
 export function SyncOverlay({ progress, onSkip }: Props) {
@@ -45,14 +45,16 @@ export function SyncOverlay({ progress, onSkip }: Props) {
           <div className="h-full w-3/5 animate-pulse rounded bg-accent" />
         </div>
 
-        <button
-          type="button"
-          className="mt-6 rounded border border-edge px-4 py-2 text-sm text-content-secondary hover:bg-surface-dim"
-          onClick={onSkip}
-          data-testid="sync-overlay-skip"
-        >
-          {t('sync.continueOffline')}
-        </button>
+        {onSkip && (
+          <button
+            type="button"
+            className="mt-6 rounded border border-edge px-4 py-2 text-sm text-content-secondary hover:bg-surface-dim"
+            onClick={onSkip}
+            data-testid="sync-overlay-skip"
+          >
+            {t('sync.continueOffline')}
+          </button>
+        )}
       </div>
     </div>
   )

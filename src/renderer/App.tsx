@@ -72,7 +72,8 @@ export function App() {
 
   const [showSettings, setShowSettings] = useState(false)
   const [dummyError, setDummyError] = useState<string | null>(null)
-  const [startupSync, setStartupSync] = useState<'pending' | 'syncing' | 'done'>('pending')
+  const [deviceSyncing, setDeviceSyncing] = useState(false)
+  const hasSyncedRef = useRef(false)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
@@ -90,20 +91,31 @@ export function App() {
   const [hubAuthConflict, setHubAuthConflict] = useState(false)
   const [hubAccountDeactivated, setHubAccountDeactivated] = useState(false)
 
-  // Startup auto-sync
-  const { loading: syncLoading, config: syncConfig, authStatus: syncAuth, hasPassword: syncHasPassword, syncNow } = sync
+  // Device-triggered auto-sync: sync when Vial keyboard detected
+  const vialDeviceCount = useMemo(
+    () => device.devices.filter((d) => d.type === 'vial').length,
+    [device.devices],
+  )
   useEffect(() => {
-    if (syncLoading || startupSync !== 'pending') return
-    const shouldSync = syncConfig.autoSync && syncAuth.authenticated && syncHasPassword
-    if (shouldSync) {
-      setStartupSync('syncing')
-      syncNow('download')
-        .catch(() => {})
-        .finally(() => setStartupSync('done'))
-    } else {
-      setStartupSync('done')
+    // No Vial devices and not syncing: reset flag so next connection triggers sync
+    if (vialDeviceCount === 0 && !deviceSyncing) {
+      hasSyncedRef.current = false
+      return
     }
-  }, [syncLoading, syncConfig.autoSync, syncAuth.authenticated, syncHasPassword, startupSync, syncNow])
+
+    // Skip if sync module loading, already syncing, or already synced this connection
+    if (sync.loading || deviceSyncing || hasSyncedRef.current) return
+
+    if (!sync.config.autoSync || !sync.authStatus.authenticated || !sync.hasPassword) return
+
+    // Vial device(s) detected - start sync
+    hasSyncedRef.current = true
+    setDeviceSyncing(true)
+    sync.syncNow('download')
+      .catch(() => {})
+      .finally(() => setDeviceSyncing(false))
+  }, [vialDeviceCount, sync.loading, sync.config.autoSync, sync.authStatus.authenticated,
+      sync.hasPassword, sync.syncNow, deviceSyncing])
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels
@@ -857,11 +869,8 @@ export function App() {
   if (!device.connectedDevice) {
     return (
       <>
-        {startupSync === 'syncing' && (
-          <SyncOverlay
-            progress={sync.progress}
-            onSkip={() => setStartupSync('done')}
-          />
+        {deviceSyncing && (
+          <SyncOverlay progress={sync.progress} />
         )}
         <DeviceSelector
           devices={device.devices}
@@ -914,6 +923,9 @@ export function App() {
   // preserving state (e.g. pendingMatrix for deferred matrix mode entry after unlock).
   return (
     <div className="relative flex h-screen flex-col bg-surface text-content">
+      {deviceSyncing && (
+        <SyncOverlay progress={sync.progress} />
+      )}
       {!keyboard.loading && (
         <>
           {device.isDummy && (

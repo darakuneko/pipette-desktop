@@ -73,4 +73,10 @@ describe('SyncOverlay', () => {
 
     expect(screen.queryByText(/\d+ \/ \d+/)).not.toBeInTheDocument()
   })
+
+  it('does not render skip button when onSkip is not provided', () => {
+    render(<SyncOverlay progress={null} />)
+    expect(screen.getByTestId('sync-overlay')).toBeInTheDocument()
+    expect(screen.queryByTestId('sync-overlay-skip')).not.toBeInTheDocument()
+  })
 })
