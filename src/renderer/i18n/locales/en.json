@@ -423,7 +423,7 @@
     "resetLocalData": "Reset Local Data",
     "resetLocalConfirm": "This will delete all saved layouts and favorites on this device. This action cannot be undone.",
     "resetKeyboardData": "Reset Keyboard Data",
-    "resetKeyboardDataConfirm": "{{name}}'s saved layouts and settings will be deleted.\nSettings stored on the keyboard itself are not affected.",
+    "resetKeyboardDataConfirm": "{{name}}'s saved layouts and settings will be deleted.\nSynced data in Google Drive appDataFolder and Hub posts for this keyboard will also be deleted.\nSettings stored on the keyboard itself are not affected.",
     "resettingKeyboardData": "Deleting data...",
     "cancelPending": "Cancel",
     "resetDisabledWhileSyncing": "Cannot reset while sync is in progress"

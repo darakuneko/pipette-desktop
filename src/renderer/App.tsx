@@ -823,10 +823,15 @@ export function App() {
   const [resettingKeyboard, setResettingKeyboard] = useState(false)
 
   const handleResetKeyboardData = useCallback(async () => {
+    setShowEditorSettings(false)
     setResettingKeyboard(true)
     try {
       const result = await window.vialAPI.resetKeyboardData(keyboard.uid)
       if (result.success) {
+        // Best-effort: delete all Hub posts for this keyboard
+        for (const post of hubKeyboardPosts) {
+          await window.vialAPI.hubDeletePost(post.id).catch(() => {})
+        }
         await handleDisconnect()
       } else {
         setResettingKeyboard(false)
@@ -834,7 +839,7 @@ export function App() {
     } catch {
       setResettingKeyboard(false)
     }
-  }, [keyboard.uid, handleDisconnect])
+  }, [keyboard.uid, handleDisconnect, hubKeyboardPosts])
 
   const handleLock = useCallback(async () => {
     await window.vialAPI.lock()

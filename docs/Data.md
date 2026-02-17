@@ -202,11 +202,11 @@ Pipette can export keymap data in several formats. These are local file download
 
 ## Reset Operations
 
-| Operation | Snapshots | Settings | Favorites | Cloud Data | App Settings |
-|-----------|:---------:|:--------:|:---------:|:----------:|:------------:|
-| Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | - |
-| Reset Local Data | All deleted | All deleted | All deleted | - | Reset to defaults |
-| Reset Sync Data | - | - | - | All deleted | - |
-| Reset Password | - | - | - | All deleted | - |
-| Sign Out | - | - | - | - | - |
-| Export/Import Local Data | Included | Included | Included | - | - |
+| Operation | Snapshots | Settings | Favorites | Cloud Data | Hub Posts | App Settings |
+|-----------|:---------:|:--------:|:---------:|:----------:|:--------:|:------------:|
+| Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | Deleted for that keyboard | - |
+| Reset Local Data | All deleted | All deleted | All deleted | - | - | Reset to defaults |
+| Reset Sync Data | - | - | - | All deleted | - | - |
+| Reset Password | - | - | - | All deleted | - | - |
+| Sign Out | - | - | - | - | - | - |
+| Export/Import Local Data | Included | Included | Included | - | - | - |
