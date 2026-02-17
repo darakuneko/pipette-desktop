@@ -2,7 +2,7 @@
 
 Refining the way you interact with your Vial-powered keyboards.
 
-Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).
+Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
 Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, lighting, and more.
 
 ## Features
@@ -33,7 +33,8 @@ Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, l
 
 ### Layer Names
 
-Pipette allows you to assign custom names to each layer. Layer names are stored per-keyboard and synced across devices. These names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
+Pipette allows you to assign custom names to each layer. Layer names are stored per-keyboard and synced across devices.  \
+These names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
 
 | Default Name | Common Example |
 |-------------|----------------|
@@ -46,7 +47,8 @@ You can rename layers freely in the editor settings to match your workflow.
 
 ### Cloud Sync (Google Drive appDataFolder)
 
-Sync your snapshots, favorites, and per-keyboard settings across devices via [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata). The appDataFolder is **not** regular Google Drive storage — it is a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
+Sync your snapshots, favorites, and per-keyboard settings across devices via [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata).  \
+The appDataFolder is **not** regular Google Drive storage — it is a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
 
 See [Data Guide](docs/Data.md) for details on what is synced and how your data is protected.
 
