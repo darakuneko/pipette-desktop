@@ -74,6 +74,7 @@ const makeLayout = () => ({
 
 describe('KeymapEditor — click-to-paste', () => {
   const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetKeysBulk = vi.fn().mockResolvedValue(undefined)
   const onActivePaneChange = vi.fn()
 
   const defaultProps = {
@@ -94,6 +95,7 @@ describe('KeymapEditor — click-to-paste', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk,
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
     onDualModeChange: vi.fn(),
     onActivePaneChange,
@@ -170,8 +172,10 @@ describe('KeymapEditor — click-to-paste', () => {
 
     // Source: primary pane layer 0, key [0,1] = code 11
     // Target: secondary pane layer 1, key [0,2]
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 2, 11)
-    expect(onSetKey).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 1, row: 0, col: 2, keycode: 11 },
+    ])
   })
 
   it('pastes in selection (click) order for Ctrl selection', async () => {
@@ -197,9 +201,11 @@ describe('KeymapEditor — click-to-paste', () => {
 
     // Ctrl selection order: [0,2]=12, [0,0]=10
     // Target positions from [0,1]: [0,1], [0,2]
-    expect(onSetKey).toHaveBeenCalledTimes(2)
-    expect(onSetKey).toHaveBeenNthCalledWith(1, 1, 0, 1, 12) // source [0,2] -> target [0,1]
-    expect(onSetKey).toHaveBeenNthCalledWith(2, 1, 0, 2, 10) // source [0,0] -> target [0,2]
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 1, row: 0, col: 1, keycode: 12 }, // source [0,2] -> target [0,1]
+      { layer: 1, row: 0, col: 2, keycode: 10 }, // source [0,0] -> target [0,2]
+    ])
   })
 
   it('pastes in layout order for Shift selection', async () => {
@@ -227,10 +233,12 @@ describe('KeymapEditor — click-to-paste', () => {
 
     // Shift selection -> layout order: [0,0]=10, [0,1]=11, [0,2]=12
     // Target from [0,1]: [0,1], [0,2], [0,3]
-    expect(onSetKey).toHaveBeenCalledTimes(3)
-    expect(onSetKey).toHaveBeenNthCalledWith(1, 1, 0, 1, 10) // source [0,0] -> target [0,1]
-    expect(onSetKey).toHaveBeenNthCalledWith(2, 1, 0, 2, 11) // source [0,1] -> target [0,2]
-    expect(onSetKey).toHaveBeenNthCalledWith(3, 1, 0, 3, 12) // source [0,2] -> target [0,3]
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 1, row: 0, col: 1, keycode: 10 }, // source [0,0] -> target [0,1]
+      { layer: 1, row: 0, col: 2, keycode: 11 }, // source [0,1] -> target [0,2]
+      { layer: 1, row: 0, col: 3, keycode: 12 }, // source [0,2] -> target [0,3]
+    ])
   })
 
   it('clears selection after paste', async () => {
@@ -280,7 +288,7 @@ describe('KeymapEditor — click-to-paste', () => {
     })
 
     // No paste should happen
-    expect(onSetKey).not.toHaveBeenCalled()
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
 
     // Normal click fallback: multi-selection should be cleared
     const finalWidgets = capturedWidgetProps.slice(-2)
@@ -305,7 +313,7 @@ describe('KeymapEditor — click-to-paste', () => {
     const pane = screen.getByTestId('secondary-pane')
     fireEvent.click(pane)
 
-    expect(onSetKey).not.toHaveBeenCalled()
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
 
     // Selection should be cleared
     const lastWidgets = capturedWidgetProps.slice(-2)
@@ -330,7 +338,7 @@ describe('KeymapEditor — click-to-paste', () => {
       onKeyClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
     })
 
-    expect(onSetKey).not.toHaveBeenCalled()
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
 
     const lastWidget = capturedWidgetProps[capturedWidgetProps.length - 2]
     const ms = lastWidget?.multiSelectedKeys as Set<string> | undefined
@@ -364,8 +372,10 @@ describe('KeymapEditor — click-to-paste', () => {
     })
 
     // Only 1 key should be pasted (truncated to available positions)
-    expect(onSetKey).toHaveBeenCalledTimes(1)
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 3, 10)
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 1, row: 0, col: 3, keycode: 10 },
+    ])
   })
 
   it('hides Copy All and shows paste hint when paste-ready on target pane', () => {

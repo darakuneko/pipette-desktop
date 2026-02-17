@@ -141,6 +141,7 @@ describe('KeymapEditor — auto advance', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
   }
 

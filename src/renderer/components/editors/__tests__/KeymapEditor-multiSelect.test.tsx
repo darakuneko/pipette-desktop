@@ -74,6 +74,7 @@ const makeLayout = () => ({
 
 describe('KeymapEditor — multi-select & copy', () => {
   const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetKeysBulk = vi.fn().mockResolvedValue(undefined)
   const onDualModeChange = vi.fn()
   const onActivePaneChange = vi.fn()
 
@@ -95,6 +96,7 @@ describe('KeymapEditor — multi-select & copy', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk,
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
     onDualModeChange,
     onActivePaneChange,
@@ -284,11 +286,11 @@ describe('KeymapEditor — multi-select & copy', () => {
     render(<KeymapEditor {...defaultProps} />)
     const btn = screen.getByTestId('copy-all-button')
 
-    // First click: shows confirmation, does NOT call onSetKey
+    // First click: shows confirmation, does NOT call onSetKeysBulk
     await act(async () => {
       fireEvent.click(btn)
     })
-    expect(onSetKey).not.toHaveBeenCalled()
+    expect(onSetKeysBulk).not.toHaveBeenCalled()
     expect(btn).toHaveTextContent('Confirm Copy All?')
 
     // Second click: executes copy
@@ -296,11 +298,15 @@ describe('KeymapEditor — multi-select & copy', () => {
       fireEvent.click(btn)
     })
 
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 0, 10)
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 1, 11)
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 2, 12)
-    expect(onSetKey).toHaveBeenCalledWith(1, 0, 3, 13)
-    expect(onSetKey).toHaveBeenCalledTimes(4)
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    const entries = onSetKeysBulk.mock.calls[0][0]
+    expect(entries).toEqual(expect.arrayContaining([
+      { layer: 1, row: 0, col: 0, keycode: 10 },
+      { layer: 1, row: 0, col: 1, keycode: 11 },
+      { layer: 1, row: 0, col: 2, keycode: 12 },
+      { layer: 1, row: 0, col: 3, keycode: 13 },
+    ]))
+    expect(entries.length).toBe(4)
   })
 
   it('Copy All confirmation resets after timeout', async () => {
@@ -341,10 +347,14 @@ describe('KeymapEditor — multi-select & copy', () => {
     await act(async () => { fireEvent.click(btn) })
 
     // Source is currentLayer=1, target is inactivePaneLayer=primaryLayer=0
-    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 20)
-    expect(onSetKey).toHaveBeenCalledWith(0, 0, 1, 21)
-    expect(onSetKey).toHaveBeenCalledWith(0, 0, 2, 22)
-    expect(onSetKey).toHaveBeenCalledWith(0, 0, 3, 23)
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    const entries = onSetKeysBulk.mock.calls[0][0]
+    expect(entries).toEqual(expect.arrayContaining([
+      { layer: 0, row: 0, col: 0, keycode: 20 },
+      { layer: 0, row: 0, col: 1, keycode: 21 },
+      { layer: 0, row: 0, col: 2, keycode: 22 },
+      { layer: 0, row: 0, col: 3, keycode: 23 },
+    ]))
   })
 
   it('hides copy buttons when both panes show the same layer', () => {

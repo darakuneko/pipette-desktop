@@ -68,6 +68,7 @@ describe('KeymapEditor — zoom controls', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey: vi.fn().mockResolvedValue(undefined),
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
     onScaleChange,
   }

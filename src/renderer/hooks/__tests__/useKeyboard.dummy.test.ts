@@ -136,6 +136,44 @@ describe('useKeyboard — dummy mode', () => {
   })
 
   describe('setters skip vialAPI when isDummy', () => {
+    it('setKeysBulk updates multiple keys in one call without calling vialAPI.setKeycode', async () => {
+      const { result } = renderHook(() => useKeyboard())
+
+      act(() => {
+        result.current.loadDummy(dummyDefinition)
+      })
+
+      await act(async () => {
+        await result.current.setKeysBulk([
+          { layer: 0, row: 0, col: 0, keycode: 0x0004 },
+          { layer: 0, row: 0, col: 1, keycode: 0x0005 },
+          { layer: 1, row: 1, col: 2, keycode: 0x0006 },
+        ])
+      })
+
+      expect(mockSetKeycode).not.toHaveBeenCalled()
+      expect(result.current.keymap.get('0,0,0')).toBe(0x0004)
+      expect(result.current.keymap.get('0,0,1')).toBe(0x0005)
+      expect(result.current.keymap.get('1,1,2')).toBe(0x0006)
+    })
+
+    it('setKeysBulk with empty array does nothing', async () => {
+      const { result } = renderHook(() => useKeyboard())
+
+      act(() => {
+        result.current.loadDummy(dummyDefinition)
+      })
+
+      const keymapBefore = new Map(result.current.keymap)
+
+      await act(async () => {
+        await result.current.setKeysBulk([])
+      })
+
+      expect(mockSetKeycode).not.toHaveBeenCalled()
+      expect(result.current.keymap).toEqual(keymapBefore)
+    })
+
     it('setKey updates state without calling vialAPI.setKeycode', async () => {
       const { result } = renderHook(() => useKeyboard())
 

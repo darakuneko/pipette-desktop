@@ -122,6 +122,7 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
   }
 
@@ -239,6 +240,7 @@ describe('KeymapEditor — macro unlock gate', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
     macroCount: 4,
     macroBufferSize: 256,

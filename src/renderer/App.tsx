@@ -955,6 +955,7 @@ export function App() {
             remapLabel={devicePrefs.remapLabel}
             isRemapped={devicePrefs.isRemapped}
             onSetKey={keyboard.setKey}
+            onSetKeysBulk={keyboard.setKeysBulk}
             onSetEncoder={keyboard.setEncoder}
             rows={keyboard.rows}
             cols={keyboard.cols}

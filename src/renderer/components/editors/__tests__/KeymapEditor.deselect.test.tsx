@@ -160,6 +160,7 @@ describe('KeymapEditor — click-outside deselect', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
   }
 
@@ -231,6 +232,7 @@ describe('KeymapEditor — TD/Macro single-click modal', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
     tapDanceEntries: tdEntries,
     onSetTapDanceEntry,
@@ -304,6 +306,7 @@ describe('KeymapEditor — Macro single-click modal', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder,
     macroCount: 16,
     macroBufferSize: 512,

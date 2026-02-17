@@ -8,6 +8,7 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve } from '../../../shared/keycodes/keycodes'
+import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserializeAllMacros } from '../../../preload/macro'
 import {
@@ -376,6 +377,7 @@ interface Props {
   remapLabel?: (qmkId: string) => string
   isRemapped?: (qmkId: string) => boolean
   onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
+  onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
   onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
   rows?: number
   cols?: number
@@ -444,6 +446,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   remapLabel,
   isRemapped,
   onSetKey,
+  onSetKeysBulk,
   onSetEncoder,
   rows,
   cols,
@@ -1136,18 +1139,20 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     const targetPositions = selectableKeys.slice(targetIdx, targetIdx + orderedSourceKeys.length)
 
     await runCopy(async () => {
+      const entries: BulkKeyEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
         const [srcR, srcC] = orderedSourceKeys[i].split(',').map(Number)
         const code = keymap.get(`${srcLayer},${srcR},${srcC}`)
         if (code !== undefined) {
-          await onSetKey(tgtLayer, targetPositions[i].row, targetPositions[i].col, code)
+          entries.push({ layer: tgtLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: code })
         }
       }
+      await onSetKeysBulk(entries)
     })
 
     clearMultiSelection()
   }, [effectivePrimaryLayer, effectiveSecondaryLayer, selectionSourcePane, selectionMode,
-    selectableKeys, multiSelectedKeys, currentLayer, keymap, onSetKey, runCopy, clearMultiSelection])
+    selectableKeys, multiSelectedKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearMultiSelection])
 
   // Mirror pickerAnchor into a ref so handlePickerMultiSelect can read
   // the latest value without listing it as a dependency (avoids stale closure).
@@ -1195,14 +1200,16 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     const targetPositions = selectableKeys.slice(targetIdx, targetIdx + pickerSelectedKeycodes.length)
 
     await runCopy(async () => {
+      const entries: BulkKeyEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
         const code = deserialize(pickerSelectedKeycodes[i].qmkId)
-        await onSetKey(currentLayer, targetPositions[i].row, targetPositions[i].col, code)
+        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: code })
       }
+      await onSetKeysBulk(entries)
     })
 
     clearPickerSelection()
-  }, [pickerSelectedKeycodes, selectableKeys, currentLayer, onSetKey, runCopy, clearPickerSelection])
+  }, [pickerSelectedKeycodes, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
 
   const handleKeyClick = useCallback(
     (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
@@ -1425,12 +1432,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     const src = currentLayer
     const tgt = inactivePaneLayer
     await runCopy(async () => {
+      const entries: BulkKeyEntry[] = []
       for (const [key, code] of keymap) {
         const [l, r, c] = key.split(',').map(Number)
-        if (l === src) await onSetKey(tgt, r, c, code)
+        if (l === src) entries.push({ layer: tgt, row: r, col: c, keycode: code })
       }
+      await onSetKeysBulk(entries)
     })
-  }, [copyAllPending, clearCopyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKey, runCopy])
+  }, [copyAllPending, clearCopyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, runCopy])
 
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'

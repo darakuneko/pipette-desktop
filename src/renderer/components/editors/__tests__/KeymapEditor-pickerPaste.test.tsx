@@ -94,6 +94,7 @@ const TAB_KEYCODES = [
 
 describe('KeymapEditor — picker paste', () => {
   const onSetKey = vi.fn().mockResolvedValue(undefined)
+  const onSetKeysBulk = vi.fn().mockResolvedValue(undefined)
 
   const defaultProps = {
     layout: makeLayout(),
@@ -109,6 +110,7 @@ describe('KeymapEditor — picker paste', () => {
     encoderCount: 0,
     layoutOptions: new Map<number, number>(),
     onSetKey,
+    onSetKeysBulk,
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
     onDualModeChange: vi.fn(),
     onActivePaneChange: vi.fn(),
@@ -212,9 +214,11 @@ describe('KeymapEditor — picker paste', () => {
       onKeyClick({ row: 0, col: 1 } as KleKey, false, { ctrlKey: false, shiftKey: false })
     })
 
-    expect(onSetKey).toHaveBeenCalledTimes(2)
-    expect(onSetKey).toHaveBeenNthCalledWith(1, 0, 0, 1, 10) // KC_10 -> [0,1]
-    expect(onSetKey).toHaveBeenNthCalledWith(2, 0, 0, 2, 11) // KC_11 -> [0,2]
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 1, keycode: 10 }, // KC_10 -> [0,1]
+      { layer: 0, row: 0, col: 2, keycode: 11 }, // KC_11 -> [0,2]
+    ])
   })
 
   it('pastes in click order for Ctrl selection', async () => {
@@ -235,9 +239,11 @@ describe('KeymapEditor — picker paste', () => {
     })
 
     // Ctrl order: KC_12, KC_10
-    expect(onSetKey).toHaveBeenCalledTimes(2)
-    expect(onSetKey).toHaveBeenNthCalledWith(1, 0, 0, 0, 12) // KC_12 -> [0,0]
-    expect(onSetKey).toHaveBeenNthCalledWith(2, 0, 0, 1, 10) // KC_10 -> [0,1]
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 0, keycode: 12 }, // KC_12 -> [0,0]
+      { layer: 0, row: 0, col: 1, keycode: 10 }, // KC_10 -> [0,1]
+    ])
   })
 
   it('clears picker selection after paste', async () => {
@@ -362,8 +368,10 @@ describe('KeymapEditor — picker paste', () => {
       onKeyClick({ row: 0, col: 3 } as KleKey, false, { ctrlKey: false, shiftKey: false })
     })
 
-    expect(onSetKey).toHaveBeenCalledTimes(1)
-    expect(onSetKey).toHaveBeenCalledWith(0, 0, 3, 10)
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 3, keycode: 10 },
+    ])
   })
 
   it('shows paste hint in single pane mode when picker selection exists', () => {
@@ -412,10 +420,12 @@ describe('KeymapEditor — picker paste', () => {
     })
 
     // Should paste in tab order: KC_11, KC_12, KC_13 (indices 1-3)
-    expect(onSetKey).toHaveBeenCalledTimes(3)
-    expect(onSetKey).toHaveBeenNthCalledWith(1, 0, 0, 0, 11) // KC_11 -> [0,0]
-    expect(onSetKey).toHaveBeenNthCalledWith(2, 0, 0, 1, 12) // KC_12 -> [0,1]
-    expect(onSetKey).toHaveBeenNthCalledWith(3, 0, 0, 2, 13) // KC_13 -> [0,2]
+    expect(onSetKeysBulk).toHaveBeenCalledTimes(1)
+    expect(onSetKeysBulk).toHaveBeenCalledWith([
+      { layer: 0, row: 0, col: 0, keycode: 11 }, // KC_11 -> [0,0]
+      { layer: 0, row: 0, col: 1, keycode: 12 }, // KC_12 -> [0,1]
+      { layer: 0, row: 0, col: 2, keycode: 13 }, // KC_13 -> [0,2]
+    ])
   })
 
   it('Shift+click with stale anchor (not in tab) is a no-op', () => {

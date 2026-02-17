@@ -30,6 +30,13 @@ import { parseKle } from '../../shared/kle/kle-parser'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
 
+export interface BulkKeyEntry {
+  layer: number
+  row: number
+  col: number
+  keycode: number
+}
+
 export interface KeyboardState {
   loading: boolean
   isDummy: boolean
@@ -461,6 +468,26 @@ export function useKeyboard() {
     [bumpActivity],
   )
 
+  const setKeysBulk = useCallback(
+    async (entries: BulkKeyEntry[]) => {
+      if (entries.length === 0) return
+      if (!stateRef.current.isDummy) {
+        for (const { layer, row, col, keycode } of entries) {
+          await window.vialAPI.setKeycode(layer, row, col, keycode)
+        }
+      }
+      setState((s) => {
+        const newKeymap = new Map(s.keymap)
+        for (const { layer, row, col, keycode } of entries) {
+          newKeymap.set(`${layer},${row},${col}`, keycode)
+        }
+        return { ...s, keymap: newKeymap }
+      })
+      bumpActivity()
+    },
+    [bumpActivity],
+  )
+
   const setEncoder = useCallback(
     async (
       layer: number,
@@ -820,6 +847,7 @@ export function useKeyboard() {
     refreshUnlockStatus,
     loadDummy,
     setKey,
+    setKeysBulk,
     setEncoder,
     setLayoutOptions,
     setMacroBuffer,
