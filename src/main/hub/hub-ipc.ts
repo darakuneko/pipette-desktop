@@ -139,15 +139,35 @@ async function withTokenRetry<T>(operation: (jwt: string) => Promise<T>): Promis
   }
 }
 
+const MB = 1024 * 1024
+const FILE_SIZE_LIMITS: Record<string, { max: number; label: string }> = {
+  thumbnail: { max: 2 * MB, label: 'thumbnail' },
+  vil: { max: 10 * MB, label: 'vil' },
+  pippette: { max: 10 * MB, label: 'pippette' },
+  c: { max: 10 * MB, label: 'keymap C' },
+  pdf: { max: 10 * MB, label: 'PDF' },
+}
+
+function validateFileSize(files: HubUploadFiles): void {
+  for (const [key, limit] of Object.entries(FILE_SIZE_LIMITS)) {
+    const file = files[key as keyof HubUploadFiles]
+    if (file.data.byteLength > limit.max) {
+      throw new Error(`File too large: ${limit.label} exceeds ${limit.max / MB} MB limit`)
+    }
+  }
+}
+
 function buildFiles(params: HubUploadPostParams): HubUploadFiles {
   const baseName = params.keyboardName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  return {
+  const files: HubUploadFiles = {
     vil: { name: `${baseName}.vil`, data: Buffer.from(params.vilJson, 'utf-8') },
     pippette: { name: `${baseName}.pippette`, data: Buffer.from(params.pippetteJson, 'utf-8') },
     c: { name: `${baseName}.c`, data: Buffer.from(params.keymapC, 'utf-8') },
     pdf: { name: `${baseName}.pdf`, data: Buffer.from(params.pdfBase64, 'base64') },
     thumbnail: { name: `${baseName}.jpg`, data: Buffer.from(params.thumbnailBase64, 'base64') },
   }
+  validateFileSize(files)
+  return files
 }
 
 export function setupHubIpc(): void {

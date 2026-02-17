@@ -191,6 +191,61 @@ describe('hub-ipc', () => {
     })
   })
 
+  describe('file size validation', () => {
+    const MB = 1024 * 1024
+
+    it('rejects thumbnail exceeding 2 MB', async () => {
+      const handler = getHandler()
+      const oversized = Buffer.alloc(2 * MB + 1).toString('base64')
+      const result = await handler({}, { ...VALID_PARAMS, thumbnailBase64: oversized })
+
+      expect(result).toEqual({ success: false, error: expect.stringContaining('thumbnail') })
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it.each([
+      ['vilJson', 'vil'],
+      ['pippetteJson', 'pippette'],
+      ['keymapC', 'keymap C'],
+    ] as const)('rejects %s exceeding 10 MB', async (paramKey, errorLabel) => {
+      const handler = getHandler()
+      const oversized = 'x'.repeat(10 * MB + 1)
+      const result = await handler({}, { ...VALID_PARAMS, [paramKey]: oversized })
+
+      expect(result).toEqual({ success: false, error: expect.stringContaining(errorLabel) })
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it('rejects pdf exceeding 10 MB', async () => {
+      const handler = getHandler()
+      const oversized = Buffer.alloc(10 * MB + 1).toString('base64')
+      const result = await handler({}, { ...VALID_PARAMS, pdfBase64: oversized })
+
+      expect(result).toEqual({ success: false, error: expect.stringContaining('PDF') })
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+
+    it('accepts files at exact size limit', async () => {
+      mockHubAuth()
+      vi.mocked(uploadPostToHub).mockResolvedValueOnce({ id: 'post-1', title: 'ok' })
+
+      const handler = getHandler()
+      const exactThumbnail = Buffer.alloc(2 * MB).toString('base64')
+      const result = await handler({}, { ...VALID_PARAMS, thumbnailBase64: exactThumbnail })
+
+      expect(result).toEqual({ success: true, postId: 'post-1' })
+    })
+
+    it('also validates file sizes on update', async () => {
+      const handler = getHandlerFor('hub:update-post')
+      const oversized = Buffer.alloc(2 * MB + 1).toString('base64')
+      const result = await handler({}, { ...VALID_PARAMS, postId: 'post-1', thumbnailBase64: oversized })
+
+      expect(result).toEqual({ success: false, error: expect.stringContaining('thumbnail') })
+      expect(getIdToken).not.toHaveBeenCalled()
+    })
+  })
+
   describe('HUB_UPDATE_POST', () => {
     function getUpdateHandler(): (...args: unknown[]) => Promise<unknown> {
       return getHandlerFor('hub:update-post')
