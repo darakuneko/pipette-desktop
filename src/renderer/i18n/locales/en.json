@@ -499,7 +499,8 @@
     "needsDisplayName": "Set a display name in Settings to upload",
     "displayNameRequired": "Required to upload to Hub",
     "authDisplayNameConflict": "Your Google account name conflicts with an existing display name. Please choose a different display name to continue.",
-    "accountDeactivated": "Your account has been deactivated. Please contact support for assistance."
+    "accountDeactivated": "Your account has been deactivated. Please contact support for assistance.",
+    "rateLimited": "Too many requests. Please try again later."
   },
   "favoriteStore": {
     "title": "Favorites",

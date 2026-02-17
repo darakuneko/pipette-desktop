@@ -13,7 +13,7 @@ import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, Lo
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes, PanelSide } from '../hooks/useDevicePrefs'
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT } from '../../shared/types/hub'
+import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import { AboutTabContent } from './AboutTabContent'
@@ -511,6 +511,8 @@ function HubDisplayNameField({ currentName, onSave }: HubDisplayNameFieldProps) 
         setTimeout(() => setSaved(false), 2000)
       } else if (result.error === HUB_ERROR_DISPLAY_NAME_CONFLICT) {
         setError(t('hub.displayNameTaken'))
+      } else if (result.error === HUB_ERROR_RATE_LIMITED) {
+        setError(t('hub.rateLimited'))
       } else {
         setError(t('hub.displayNameSaveFailed'))
       }

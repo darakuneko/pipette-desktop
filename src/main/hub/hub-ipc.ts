@@ -3,10 +3,10 @@
 
 import { ipcMain } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED } from '../../shared/types/hub'
+import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { Hub401Error, Hub403Error, Hub409Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from './hub-client'
+import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from './hub-client'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
 
 const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
@@ -83,12 +83,8 @@ async function getHubToken(): Promise<string> {
       try {
         auth = await authenticateWithHub(idToken, pendingAuthDisplayName ?? undefined)
       } catch (err) {
-        if (err instanceof Hub403Error) {
-          throw new Error(HUB_ERROR_ACCOUNT_DEACTIVATED)
-        }
-        if (err instanceof Hub409Error) {
-          throw new Error(HUB_ERROR_DISPLAY_NAME_CONFLICT)
-        }
+        if (err instanceof Hub409Error) throw new Error(HUB_ERROR_DISPLAY_NAME_CONFLICT)
+        rethrowAsHubSentinel(err)
         throw err
       }
       // Only cache if not invalidated (e.g. by sign-out) during the request
@@ -118,6 +114,11 @@ function extractError(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback
 }
 
+function rethrowAsHubSentinel(err: unknown): void {
+  if (err instanceof Hub403Error) throw new Error(HUB_ERROR_ACCOUNT_DEACTIVATED)
+  if (err instanceof Hub429Error) throw new Error(HUB_ERROR_RATE_LIMITED)
+}
+
 async function withTokenRetry<T>(operation: (jwt: string) => Promise<T>): Promise<T> {
   const jwt = await getHubToken()
   try {
@@ -129,15 +130,11 @@ async function withTokenRetry<T>(operation: (jwt: string) => Promise<T>): Promis
       try {
         return await operation(freshJwt)
       } catch (retryErr) {
-        if (retryErr instanceof Hub403Error) {
-          throw new Error(HUB_ERROR_ACCOUNT_DEACTIVATED)
-        }
+        rethrowAsHubSentinel(retryErr)
         throw retryErr
       }
     }
-    if (err instanceof Hub403Error) {
-      throw new Error(HUB_ERROR_ACCOUNT_DEACTIVATED)
-    }
+    rethrowAsHubSentinel(err)
     throw err
   }
 }

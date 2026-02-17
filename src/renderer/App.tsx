@@ -43,7 +43,7 @@ import {
 } from '../shared/keycodes/keycodes'
 import type { DeviceInfo, QmkSettingsTab, VilFile } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED } from '../shared/types/hub'
+import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../shared/types/hub'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../shared/types/hub'
 import settingsDefs from '../shared/qmk-settings-defs.json'
 
@@ -570,12 +570,16 @@ export function App() {
       if (result.success) {
         setHubUploadResult({ kind: 'success', message: successMsg, entryId })
       } else {
+        let message: string
         if (result.error === HUB_ERROR_ACCOUNT_DEACTIVATED) {
           markAccountDeactivated()
-          setHubUploadResult({ kind: 'error', message: t('hub.accountDeactivated'), entryId })
+          message = t('hub.accountDeactivated')
+        } else if (result.error === HUB_ERROR_RATE_LIMITED) {
+          message = t('hub.rateLimited')
         } else {
-          setHubUploadResult({ kind: 'error', message: result.error || failMsg, entryId })
+          message = result.error || failMsg
         }
+        setHubUploadResult({ kind: 'error', message, entryId })
       }
     } catch {
       setHubUploadResult({ kind: 'error', message: failMsg, entryId })

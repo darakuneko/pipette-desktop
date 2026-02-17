@@ -499,7 +499,8 @@
     "needsDisplayName": "アップロードするには設定で表示名を設定してください",
     "displayNameRequired": "Hub へのアップロードに必要です",
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",
-    "accountDeactivated": "アカウントが無効化されています。サポートにお問い合わせください。"
+    "accountDeactivated": "アカウントが無効化されています。サポートにお問い合わせください。",
+    "rateLimited": "リクエストが多すぎます。しばらくしてからもう一度お試しください。"
   },
   "favoriteStore": {
     "title": "お気に入り",

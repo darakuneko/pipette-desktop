@@ -27,6 +27,7 @@ vi.mock('../hub/hub-client', async () => {
     Hub401Error: actual.Hub401Error,
     Hub403Error: actual.Hub403Error,
     Hub409Error: actual.Hub409Error,
+    Hub429Error: actual.Hub429Error,
     authenticateWithHub: vi.fn(),
     uploadPostToHub: vi.fn(),
     updatePostOnHub: vi.fn(),
@@ -42,8 +43,8 @@ vi.mock('../hub/hub-client', async () => {
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
-import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED } from '../../shared/types/hub'
-import { Hub401Error, Hub403Error, Hub409Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
+import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
+import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
 import { setupHubIpc, clearHubTokenCache } from '../hub/hub-ipc'
 
 describe('hub-ipc', () => {
@@ -1195,6 +1196,91 @@ describe('hub-ipc', () => {
 
       expect(result).toBe('https://pipette-hub-worker.keymaps.workers.dev')
       expect(getHubOrigin).toHaveBeenCalled()
+    })
+  })
+
+  describe('429 rate limiting', () => {
+    function mockHubAuthPersistent(): void {
+      vi.mocked(getIdToken).mockResolvedValue('id-token')
+      vi.mocked(authenticateWithHub).mockResolvedValue({
+        token: 'hub-jwt',
+        user: { id: 'u1', email: 'test@example.com', display_name: null },
+      })
+    }
+
+    it('returns RATE_LIMITED when fetchMyPosts throws Hub429Error', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(fetchMyPosts).mockRejectedValueOnce(
+        new Hub429Error('Hub fetch my posts failed', 'Too Many Requests'),
+      )
+
+      const handler = getHandlerFor('hub:fetch-my-posts')
+      const result = await handler({})
+
+      expect(result).toEqual({
+        success: false,
+        error: HUB_ERROR_RATE_LIMITED,
+      })
+    })
+
+    it('returns RATE_LIMITED when uploadPostToHub throws Hub429Error', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(uploadPostToHub).mockRejectedValueOnce(
+        new Hub429Error('Hub upload failed', 'Too Many Requests'),
+      )
+
+      const handler = getHandlerFor('hub:upload-post')
+      const result = await handler({}, VALID_PARAMS)
+
+      expect(result).toEqual({
+        success: false,
+        error: HUB_ERROR_RATE_LIMITED,
+      })
+    })
+
+    it('returns RATE_LIMITED when deletePostFromHub throws Hub429Error', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(deletePostFromHub).mockRejectedValueOnce(
+        new Hub429Error('Hub delete failed', 'Too Many Requests'),
+      )
+
+      const handler = getHandlerFor('hub:delete-post')
+      const result = await handler({}, 'post-1')
+
+      expect(result).toEqual({
+        success: false,
+        error: HUB_ERROR_RATE_LIMITED,
+      })
+    })
+
+    it('returns RATE_LIMITED when authenticateWithHub throws Hub429Error (token acquisition)', async () => {
+      vi.mocked(getIdToken).mockResolvedValueOnce('id-token')
+      vi.mocked(authenticateWithHub).mockRejectedValueOnce(
+        new Hub429Error('Hub auth failed', 'Too Many Requests'),
+      )
+
+      const handler = getHandlerFor('hub:fetch-my-posts')
+      const result = await handler({})
+
+      expect(result).toEqual({
+        success: false,
+        error: HUB_ERROR_RATE_LIMITED,
+      })
+    })
+
+    it('returns RATE_LIMITED when patchAuthMe throws Hub429Error', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(patchAuthMe).mockRejectedValueOnce(
+        new Hub429Error('Hub patch auth me failed', 'Too Many Requests'),
+      )
+
+      const handler = getHandlerFor('hub:patch-auth-me')
+      const result = await handler({}, 'SomeName')
+
+      expect(result).toEqual({
+        success: false,
+        error: HUB_ERROR_RATE_LIMITED,
+      })
     })
   })
 })

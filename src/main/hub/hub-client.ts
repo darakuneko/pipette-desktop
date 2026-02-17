@@ -46,26 +46,66 @@ export class Hub409Error extends HubHttpError {
   constructor(label: string, body: string) { super(label, 409, body) }
 }
 
+export class Hub429Error extends HubHttpError {
+  override name = 'Hub429Error'
+  readonly retryAfterSeconds: number | null
+  constructor(label: string, body: string, retryAfterSeconds?: number | null) {
+    super(label, 429, body)
+    this.retryAfterSeconds = retryAfterSeconds ?? null
+  }
+}
+
 interface HubApiResponse<T> {
   ok: boolean
   data: T
   error?: string
 }
 
+const MAX_RETRY_AFTER_S = 60
+
+function parseRetryAfter(header: string | null): number | null {
+  if (!header) return null
+  const seconds = Number(header)
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds
+  const date = Date.parse(header)
+  if (!Number.isNaN(date)) return Math.max(0, Math.ceil((date - Date.now()) / 1000))
+  return null
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 async function hubFetch<T>(url: string, init: RequestInit, label: string): Promise<T> {
-  const response = await fetch(url, init)
-  if (!response.ok) {
-    const text = await response.text()
-    if (response.status === 401) throw new Hub401Error(label, text)
-    if (response.status === 403) throw new Hub403Error(label, text)
-    if (response.status === 409) throw new Hub409Error(label, text)
-    throw new Error(`${label}: ${response.status} ${text}`)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const response = await fetch(url, init)
+
+    if (response.status === 429) {
+      const retryAfter = parseRetryAfter(response.headers.get('Retry-After'))
+      if (attempt === 0 && retryAfter != null && retryAfter <= MAX_RETRY_AFTER_S) {
+        await sleep(retryAfter * 1000)
+        continue
+      }
+      const text = await response.text()
+      throw new Hub429Error(label, text, retryAfter)
+    }
+
+    if (!response.ok) {
+      const text = await response.text()
+      if (response.status === 401) throw new Hub401Error(label, text)
+      if (response.status === 403) throw new Hub403Error(label, text)
+      if (response.status === 409) throw new Hub409Error(label, text)
+      throw new Error(`${label}: ${response.status} ${text}`)
+    }
+
+    const json = (await response.json()) as HubApiResponse<T>
+    if (!json.ok) {
+      throw new Error(`${label}: ${json.error ?? 'unknown error'}`)
+    }
+    return json.data
   }
-  const json = (await response.json()) as HubApiResponse<T>
-  if (!json.ok) {
-    throw new Error(`${label}: ${json.error ?? 'unknown error'}`)
-  }
-  return json.data
+  /* istanbul ignore next -- unreachable: loop always returns or throws */
+  throw new Error(`${label}: unexpected retry exhaustion`)
 }
 
 export async function authenticateWithHub(

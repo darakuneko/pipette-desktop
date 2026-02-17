@@ -80,6 +80,7 @@ export interface HubUser {
 
 export const HUB_ERROR_DISPLAY_NAME_CONFLICT = 'DISPLAY_NAME_CONFLICT'
 export const HUB_ERROR_ACCOUNT_DEACTIVATED = 'ACCOUNT_DEACTIVATED'
+export const HUB_ERROR_RATE_LIMITED = 'RATE_LIMITED'
 
 export interface HubUserResult {
   success: boolean

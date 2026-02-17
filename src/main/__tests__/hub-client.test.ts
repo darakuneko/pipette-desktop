@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { Hub401Error, Hub403Error, Hub409Error, authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, fetchMyPostsByKeyboard, patchPostOnHub, getHubOrigin, patchAuthMe, type HubUploadFiles } from '../hub/hub-client'
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest'
+import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, fetchMyPostsByKeyboard, patchPostOnHub, getHubOrigin, patchAuthMe, type HubUploadFiles } from '../hub/hub-client'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -522,6 +522,136 @@ describe('hub-client', () => {
   describe('getHubOrigin', () => {
     it('returns default Hub origin', () => {
       expect(getHubOrigin()).toBe('https://pipette-hub-worker.keymaps.workers.dev')
+    })
+  })
+
+  describe('429 rate limiting', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('throws Hub429Error on 429 response without Retry-After', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: { get: () => null },
+        text: async () => 'Too Many Requests',
+      })
+
+      const err = await authenticateWithHub('token').catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(Hub429Error)
+      expect((err as Hub429Error).retryAfterSeconds).toBeNull()
+    })
+
+    it('throws Hub429Error on 429 with Retry-After exceeding max wait', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        headers: { get: (name: string) => name.toLowerCase() === 'retry-after' ? '120' : null },
+        text: async () => 'Too Many Requests',
+      })
+
+      const err = await authenticateWithHub('token').catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(Hub429Error)
+      expect((err as Hub429Error).retryAfterSeconds).toBe(120)
+    })
+
+    it('retries on 429 with short Retry-After and succeeds', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: (name: string) => name.toLowerCase() === 'retry-after' ? '2' : null },
+          text: async () => 'Too Many Requests',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ok: true,
+            data: { token: 'jwt', user: { id: '1', email: 'a@b.c', display_name: null } },
+          }),
+        })
+
+      const promise = authenticateWithHub('token')
+      await vi.advanceTimersByTimeAsync(2000)
+      const result = await promise
+
+      expect(result.token).toBe('jwt')
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('throws Hub429Error when retry also returns 429', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: (name: string) => name.toLowerCase() === 'retry-after' ? '1' : null },
+          text: async () => 'Too Many Requests',
+        })
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: () => null },
+          text: async () => 'Still rate limited',
+        })
+
+      const promise = authenticateWithHub('token').catch((e: unknown) => e)
+      await vi.advanceTimersByTimeAsync(1000)
+      const err = await promise
+
+      expect(err).toBeInstanceOf(Hub429Error)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('retries fetchMyPosts on 429 with Retry-After header', async () => {
+      const posts = [{ id: 'post-1', title: 'Test' }]
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: (name: string) => name.toLowerCase() === 'retry-after' ? '3' : null },
+          text: async () => 'Too Many Requests',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ ok: true, data: { items: posts, total: 1, page: 1, per_page: 20 } }),
+        })
+
+      const promise = fetchMyPosts('jwt-token')
+      await vi.advanceTimersByTimeAsync(3000)
+      const result = await promise
+
+      expect(result.items).toEqual(posts)
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('parses Retry-After as HTTP date', async () => {
+      const futureDate = new Date(Date.now() + 5000).toUTCString()
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 429,
+          headers: { get: (name: string) => name.toLowerCase() === 'retry-after' ? futureDate : null },
+          text: async () => 'Too Many Requests',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            ok: true,
+            data: { token: 'jwt', user: { id: '1', email: 'a@b.c', display_name: null } },
+          }),
+        })
+
+      const promise = authenticateWithHub('token')
+      await vi.advanceTimersByTimeAsync(6000)
+      const result = await promise
+
+      expect(result.token).toBe('jwt')
+      expect(mockFetch).toHaveBeenCalledTimes(2)
     })
   })
 })
