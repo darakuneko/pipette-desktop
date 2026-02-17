@@ -64,7 +64,7 @@ function ResetKeyboardDataSection({
       {confirming ? (
         <div className="space-y-2">
           <div
-            className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger"
+            className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger whitespace-pre-line"
             data-testid="reset-keyboard-data-warning"
           >
             {t('sync.resetKeyboardDataConfirm', { name: deviceName })}

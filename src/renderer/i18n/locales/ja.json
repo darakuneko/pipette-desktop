@@ -414,7 +414,7 @@
     "resetLocalData": "ローカルデータリセット",
     "resetLocalConfirm": "この端末に保存されたすべてのレイアウトとお気に入りが削除されます。この操作は取り消せません。",
     "resetKeyboardData": "キーボードデータリセット",
-    "resetKeyboardDataConfirm": "{{name}} の保存済みレイアウトと設定が削除されます。",
+    "resetKeyboardDataConfirm": "{{name}} の保存済みレイアウトと設定が削除されます。\nキーボード本体に保存されている設定には影響しません。",
     "resettingKeyboardData": "データを削除中...",
     "cancelPending": "キャンセル",
     "resetDisabledWhileSyncing": "同期中はリセットできません"
