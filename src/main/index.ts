@@ -11,6 +11,7 @@ import { setupLanguageStore } from './language-store'
 import { setupSyncIpc } from './sync/sync-ipc'
 import { setupHubIpc } from './hub/hub-ipc'
 import { setupLzmaIpc } from './lzma'
+import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
@@ -133,6 +134,7 @@ app.whenReady().then(() => {
   setupSyncIpc()
   setupHubIpc()
   setupLzmaIpc()
+  setupNotificationStore()
   setupLogIpc()
   setupShellIpc()
   createWindow()

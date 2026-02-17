@@ -446,6 +446,7 @@
     "panelLeft": "左",
     "panelRight": "右",
     "tabHub": "Hub",
+    "tabNotification": "お知らせ",
     "tabAbout": "情報",
     "about": {
       "version": "バージョン {{version}}",
@@ -510,6 +511,10 @@
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",
     "accountDeactivated": "アカウントが無効化されています。サポートにお問い合わせください。",
     "rateLimited": "リクエストが多すぎます。しばらくしてからもう一度お試しください。"
+  },
+  "notification": {
+    "title": "お知らせ",
+    "empty": "お知らせはありません"
   },
   "favoriteStore": {
     "title": "お気に入り",

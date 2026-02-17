@@ -446,6 +446,7 @@
     "panelLeft": "Left",
     "panelRight": "Right",
     "tabHub": "Hub",
+    "tabNotification": "Notification",
     "tabAbout": "About",
     "about": {
       "version": "Version {{version}}",
@@ -510,6 +511,10 @@
     "authDisplayNameConflict": "Your Google account name conflicts with an existing display name. Please choose a different display name to continue.",
     "accountDeactivated": "Your account has been deactivated. Please contact support for assistance.",
     "rateLimited": "Too many requests. Please try again later."
+  },
+  "notification": {
+    "title": "Notifications",
+    "empty": "No notifications"
   },
   "favoriteStore": {
     "title": "Favorites",

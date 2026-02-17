@@ -93,6 +93,9 @@ export const IpcChannels = {
   // Shell (renderer → main)
   SHELL_OPEN_EXTERNAL: 'shell:open-external',
 
+  // Notification (renderer → main → renderer)
+  NOTIFICATION_FETCH: 'notification:fetch',
+
   // Snapshot Store extensions
   SNAPSHOT_STORE_SET_HUB_POST_ID: 'snapshot-store:set-hub-post-id',
 } as const

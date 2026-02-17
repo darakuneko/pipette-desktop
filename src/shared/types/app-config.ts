@@ -22,6 +22,7 @@ export interface AppConfig {
   panelSide: PanelSide
   language?: string
   hubEnabled: boolean
+  lastNotificationSeen?: string
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -34,6 +35,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'panelSide',
   'language',
   'hubEnabled',
+  'lastNotificationSeen',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {

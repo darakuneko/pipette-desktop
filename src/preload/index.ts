@@ -15,6 +15,7 @@ import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, 
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult } from '../shared/types/hub'
+import type { NotificationFetchResult } from '../shared/types/notification'
 
 /**
  * API exposed to renderer via contextBridge.
@@ -248,6 +249,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.HUB_SET_AUTH_DISPLAY_NAME, displayName),
   hubGetOrigin: (): Promise<string> =>
     ipcRenderer.invoke(IpcChannels.HUB_GET_ORIGIN),
+
+  // --- Notification ---
+  notificationFetch: (): Promise<NotificationFetchResult> =>
+    ipcRenderer.invoke(IpcChannels.NOTIFICATION_FETCH),
 
   // --- Snapshot Store extensions ---
   snapshotStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>

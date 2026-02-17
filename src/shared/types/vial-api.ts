@@ -19,6 +19,7 @@ import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, 
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult } from './hub'
+import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
   // Device Management
@@ -159,6 +160,9 @@ export interface VialAPI {
   hubPatchAuthMe(displayName: string): Promise<HubUserResult>
   hubSetAuthDisplayName(displayName: string | null): Promise<void>
   hubGetOrigin(): Promise<string>
+
+  // Notification
+  notificationFetch(): Promise<NotificationFetchResult>
 
   // Shell
   openExternal(url: string): Promise<void>

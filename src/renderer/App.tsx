@@ -14,8 +14,10 @@ import { useAutoLock } from './hooks/useAutoLock'
 import { DeviceSelector } from './components/DeviceSelector'
 import { SettingsModal } from './components/SettingsModal'
 import { SyncOverlay } from './components/SyncOverlay'
+import { NotificationModal } from './components/NotificationModal'
 import { ConnectingOverlay } from './components/ConnectingOverlay'
 import { useSync } from './hooks/useSync'
+import { useStartupNotification } from './hooks/useStartupNotification'
 import { StatusBar } from './components/StatusBar'
 import { ComboPanelModal } from './components/editors/ComboPanelModal'
 import { AltRepeatKeyPanelModal } from './components/editors/AltRepeatKeyPanelModal'
@@ -64,6 +66,7 @@ export function App() {
   const device = useDeviceConnection()
   const keyboard = useKeyboard()
   const sync = useSync()
+  const startupNotification = useStartupNotification()
 
   // Wire keyboard's layer name persistence through devicePrefs
   useEffect(() => {
@@ -912,6 +915,12 @@ export function App() {
             hubAccountDeactivated={hubAccountDeactivated}
           />
         )}
+        {startupNotification.visible && (
+          <NotificationModal
+            notifications={startupNotification.notifications}
+            onClose={startupNotification.dismiss}
+          />
+        )}
       </>
     )
   }
@@ -1223,6 +1232,13 @@ export function App() {
             }
             keymapEditorRef.current?.toggleMatrix()
           }}
+        />
+      )}
+
+      {startupNotification.visible && (
+        <NotificationModal
+          notifications={startupNotification.notifications}
+          onClose={startupNotification.dismiss}
         />
       )}
     </div>

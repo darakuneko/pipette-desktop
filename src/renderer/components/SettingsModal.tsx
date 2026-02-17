@@ -18,11 +18,13 @@ import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../s
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import { AboutTabContent } from './AboutTabContent'
+import type { AppNotification } from '../../shared/types/notification'
 
 const TABS = [
   { id: 'tools' as const, labelKey: 'settings.tabTools' },
   { id: 'data' as const, labelKey: 'settings.tabData' },
   { id: 'hub' as const, labelKey: 'settings.tabHub' },
+  { id: 'notification' as const, labelKey: 'settings.tabNotification' },
   { id: 'about' as const, labelKey: 'settings.tabAbout' },
 ]
 
@@ -664,11 +666,37 @@ export function SettingsModal({
   const [confirmingHubDisconnect, setConfirmingHubDisconnect] = useState(false)
   const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
   const [hubPage, setHubPage] = useState(1)
+  const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
+  const [notificationLoading, setNotificationLoading] = useState(false)
+  const notificationFetchedRef = useRef(false)
 
   // Keep local page in sync when parent provides updated pagination (e.g. after refresh)
   useEffect(() => {
     if (hubPostsPagination?.page != null) setHubPage(hubPostsPagination.page)
   }, [hubPostsPagination?.page])
+
+  useEffect(() => {
+    if (activeTab !== 'notification' || notificationFetchedRef.current) return
+
+    let cancelled = false
+    setNotificationLoading(true)
+    window.vialAPI.notificationFetch().then((result) => {
+      if (cancelled) return
+      if (result.success && result.notifications) {
+        const sorted = [...result.notifications]
+          .sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+          .slice(0, 3)
+        setRecentNotifications(sorted)
+      }
+    }).catch(() => {
+      // Network errors are non-critical
+    }).finally(() => {
+      if (cancelled) return
+      notificationFetchedRef.current = true
+      setNotificationLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [activeTab])
 
   useEffect(() => { setConfirmingGoogleDisconnect(false) }, [sync.authStatus.authenticated])
   useEffect(() => { setConfirmingHubDisconnect(false) }, [hubEnabled])
@@ -1408,6 +1436,38 @@ export function SettingsModal({
                   </div>
                   {renderHubPostList()}
                 </section>
+              )}
+            </div>
+          )}
+          {activeTab === 'notification' && (
+            <div className="pt-4" aria-live="polite" data-testid="notification-tab-content">
+              {notificationLoading && (
+                <p className="text-sm text-content-muted">{t('common.loading')}</p>
+              )}
+              {!notificationLoading && recentNotifications.length === 0 && (
+                <p className="text-sm text-content-muted" data-testid="notification-empty">
+                  {t('notification.empty')}
+                </p>
+              )}
+              {!notificationLoading && recentNotifications.length > 0 && (
+                <ul className="space-y-4">
+                  {recentNotifications.map((notification, index) => (
+                    <li key={`${notification.publishedAt}-${index}`} className="rounded-md border border-edge p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-sm font-medium text-content">{notification.title}</span>
+                        <span className="rounded-full bg-accent/15 px-2 py-0.5 text-xs text-accent">
+                          {notification.type}
+                        </span>
+                      </div>
+                      <p className="whitespace-pre-line text-sm text-content-secondary">
+                        {notification.body}
+                      </p>
+                      <time className="mt-2 block text-xs text-content-muted" dateTime={notification.publishedAt}>
+                        {formatDate(notification.publishedAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
           )}

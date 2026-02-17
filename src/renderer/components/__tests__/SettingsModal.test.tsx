@@ -6,6 +6,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { SettingsModal } from '../SettingsModal'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT } from '../../../shared/types/hub'
+import type { NotificationFetchResult } from '../../../shared/types/notification'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
 
 vi.mock('react-i18next', () => ({
@@ -26,12 +27,14 @@ const mockResetLocalTargets = vi.fn().mockResolvedValue({ success: true })
 const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockOpenExternal = vi.fn().mockResolvedValue(undefined)
+const mockNotificationFetch = vi.fn().mockResolvedValue({ success: true, notifications: [] })
 Object.defineProperty(window, 'vialAPI', {
   value: {
     resetLocalTargets: mockResetLocalTargets,
     exportLocalData: mockExportLocalData,
     importLocalData: mockImportLocalData,
     openExternal: mockOpenExternal,
+    notificationFetch: mockNotificationFetch,
   },
   writable: true,
 })
@@ -108,6 +111,7 @@ describe('SettingsModal', () => {
     mockExportLocalData.mockClear()
     mockImportLocalData.mockClear()
     mockOpenExternal.mockClear()
+    mockNotificationFetch.mockClear()
   })
 
   function renderAndSwitchToTools(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
@@ -1333,6 +1337,163 @@ describe('SettingsModal', () => {
       fireEvent.click(screen.getByTestId('hub-rename-p1'))
       const input = screen.getByTestId('hub-rename-input-p1')
       expect(input).toHaveAttribute('maxLength', '200')
+    })
+  })
+
+  describe('Notification tab', () => {
+    function renderAndSwitchToNotification(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
+      const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)
+      fireEvent.click(screen.getByTestId('settings-tab-notification'))
+      return result
+    }
+
+    it('renders notification tab', () => {
+      render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
+      expect(screen.getByTestId('settings-tab-notification')).toBeInTheDocument()
+    })
+
+    it('fetches notifications when tab is activated', async () => {
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(mockNotificationFetch).toHaveBeenCalledOnce()
+      })
+    })
+
+    it('shows empty message when no notifications', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({ success: true, notifications: [] })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('notification.empty')).toBeInTheDocument()
+      })
+    })
+
+    it('renders notification cards when notifications exist', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({
+        success: true,
+        notifications: [
+          { title: 'Update v2.0', body: 'New features', type: 'Info', publishedAt: '2025-06-01T00:00:00Z' },
+          { title: 'Maintenance', body: 'Scheduled downtime', type: 'Warning', publishedAt: '2025-05-15T00:00:00Z' },
+        ],
+      })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('Update v2.0')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Maintenance')).toBeInTheDocument()
+    })
+
+    it('shows at most 3 notifications sorted by date descending', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({
+        success: true,
+        notifications: [
+          { title: 'Oldest', body: 'b1', type: 'Info', publishedAt: '2025-01-01T00:00:00Z' },
+          { title: 'Newest', body: 'b2', type: 'Info', publishedAt: '2025-06-01T00:00:00Z' },
+          { title: 'Middle', body: 'b3', type: 'Info', publishedAt: '2025-03-01T00:00:00Z' },
+          { title: 'Hidden', body: 'b4', type: 'Info', publishedAt: '2024-12-01T00:00:00Z' },
+        ],
+      })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('Newest')).toBeInTheDocument()
+      })
+      expect(screen.getByText('Middle')).toBeInTheDocument()
+      expect(screen.getByText('Oldest')).toBeInTheDocument()
+      expect(screen.queryByText('Hidden')).not.toBeInTheDocument()
+    })
+
+    it('shows empty message when fetch fails', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({ success: false, error: 'Network error' })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('notification.empty')).toBeInTheDocument()
+      })
+    })
+
+    it('shows empty message when fetch rejects', async () => {
+      mockNotificationFetch.mockRejectedValueOnce(new Error('Network error'))
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('notification.empty')).toBeInTheDocument()
+      })
+    })
+
+    it('re-fetches when switching away during in-flight fetch and returning', async () => {
+      let resolveFetch!: (value: NotificationFetchResult) => void
+      mockNotificationFetch.mockReturnValueOnce(new Promise((resolve) => { resolveFetch = resolve }))
+
+      render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
+
+      // Switch to notification tab - starts fetch
+      fireEvent.click(screen.getByTestId('settings-tab-notification'))
+      expect(mockNotificationFetch).toHaveBeenCalledOnce()
+
+      // Switch away before fetch resolves
+      fireEvent.click(screen.getByTestId('settings-tab-tools'))
+
+      // Resolve the in-flight fetch (cancelled by cleanup)
+      resolveFetch({ success: true, notifications: [{ title: 'Old', body: 'b', type: 'Info', publishedAt: '2025-01-01T00:00:00Z' }] })
+
+      // Set up new mock for second fetch
+      mockNotificationFetch.mockResolvedValueOnce({
+        success: true,
+        notifications: [{ title: 'Fresh', body: 'b', type: 'Info', publishedAt: '2025-06-01T00:00:00Z' }],
+      })
+
+      // Switch back to notification tab - should re-fetch
+      fireEvent.click(screen.getByTestId('settings-tab-notification'))
+
+      await waitFor(() => {
+        expect(mockNotificationFetch).toHaveBeenCalledTimes(2)
+      })
+      await waitFor(() => {
+        expect(screen.getByText('Fresh')).toBeInTheDocument()
+      })
+    })
+
+    it('does not re-fetch when switching tabs after successful load', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({
+        success: true,
+        notifications: [{ title: 'Cached', body: 'b', type: 'Info', publishedAt: '2025-06-01T00:00:00Z' }],
+      })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('Cached')).toBeInTheDocument()
+      })
+
+      // Switch away and back
+      fireEvent.click(screen.getByTestId('settings-tab-tools'))
+      fireEvent.click(screen.getByTestId('settings-tab-notification'))
+
+      expect(mockNotificationFetch).toHaveBeenCalledOnce()
+      expect(screen.getByText('Cached')).toBeInTheDocument()
+    })
+
+    it('has aria-live region for async updates', () => {
+      renderAndSwitchToNotification()
+
+      expect(screen.getByTestId('notification-tab-content')).toHaveAttribute('aria-live', 'polite')
+    })
+
+    it('renders notifications as semantic list items', async () => {
+      mockNotificationFetch.mockResolvedValueOnce({
+        success: true,
+        notifications: [{ title: 'Test', body: 'body', type: 'Info', publishedAt: '2025-06-01T00:00:00Z' }],
+      })
+      renderAndSwitchToNotification()
+
+      await waitFor(() => {
+        expect(screen.getByText('Test')).toBeInTheDocument()
+      })
+      const list = screen.getByTestId('notification-tab-content').querySelector('ul')
+      expect(list).toBeInTheDocument()
+      expect(list!.querySelectorAll('li')).toHaveLength(1)
     })
   })
 

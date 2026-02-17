@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ModalTabId = 'layers' | 'tools' | 'data' | 'hub' | 'about'
+export type ModalTabId = 'layers' | 'tools' | 'data' | 'hub' | 'notification' | 'about'
 
 const TAB_BASE = 'px-4 py-2 text-[13px] font-medium transition-colors border-b-2'
 
