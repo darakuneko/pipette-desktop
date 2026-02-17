@@ -21,22 +21,26 @@ vi.mock('../sync/google-auth', () => ({
 }))
 
 // Mock hub-client
-vi.mock('../hub/hub-client', () => ({
-  authenticateWithHub: vi.fn(),
-  uploadPostToHub: vi.fn(),
-  updatePostOnHub: vi.fn(),
-  patchPostOnHub: vi.fn(),
-  deletePostFromHub: vi.fn(),
-  fetchMyPosts: vi.fn(),
-  fetchMyPostsByKeyboard: vi.fn(),
-  fetchAuthMe: vi.fn(),
-  patchAuthMe: vi.fn(),
-  getHubOrigin: vi.fn(() => 'https://pipette-hub-worker.keymaps.workers.dev'),
-}))
+vi.mock('../hub/hub-client', async () => {
+  const actual = await vi.importActual<typeof import('../hub/hub-client')>('../hub/hub-client')
+  return {
+    Hub401Error: actual.Hub401Error,
+    authenticateWithHub: vi.fn(),
+    uploadPostToHub: vi.fn(),
+    updatePostOnHub: vi.fn(),
+    patchPostOnHub: vi.fn(),
+    deletePostFromHub: vi.fn(),
+    fetchMyPosts: vi.fn(),
+    fetchMyPostsByKeyboard: vi.fn(),
+    fetchAuthMe: vi.fn(),
+    patchAuthMe: vi.fn(),
+    getHubOrigin: vi.fn(() => 'https://pipette-hub-worker.keymaps.workers.dev'),
+  }
+})
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'
-import { authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
+import { Hub401Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from '../hub/hub-client'
 import { setupHubIpc, clearHubTokenCache } from '../hub/hub-ipc'
 
 describe('hub-ipc', () => {
@@ -753,6 +757,98 @@ describe('hub-ipc', () => {
       })
       await handler()
       expect(authenticateWithHub).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe('withTokenRetry', () => {
+    function mockHubAuthPersistent(): void {
+      vi.mocked(getIdToken).mockResolvedValue('id-token')
+      vi.mocked(authenticateWithHub).mockResolvedValue({
+        token: 'hub-jwt',
+        user: { id: 'u1', email: 'test@example.com', display_name: null },
+      })
+    }
+
+    it('retries on Hub401Error and succeeds on second attempt', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(fetchAuthMe)
+        .mockRejectedValueOnce(new Hub401Error('Hub fetch auth me failed', 'Unauthorized'))
+        .mockResolvedValueOnce({ id: 'u1', email: 'test@example.com', display_name: 'User' })
+
+      const handler = getHandlerFor('hub:fetch-auth-me')
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: true,
+        user: { id: 'u1', email: 'test@example.com', display_name: 'User' },
+      })
+      expect(authenticateWithHub).toHaveBeenCalledTimes(2)
+      expect(fetchAuthMe).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not retry more than once on consecutive 401s', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(fetchAuthMe)
+        .mockRejectedValueOnce(new Hub401Error('Hub fetch auth me failed', 'Unauthorized'))
+        .mockRejectedValueOnce(new Hub401Error('Hub fetch auth me failed', 'Unauthorized'))
+
+      const handler = getHandlerFor('hub:fetch-auth-me')
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Hub fetch auth me failed: 401 Unauthorized',
+      })
+      expect(fetchAuthMe).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not retry on non-401 errors', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(fetchAuthMe)
+        .mockRejectedValueOnce(new Error('Hub fetch auth me failed: 500 Internal Server Error'))
+
+      const handler = getHandlerFor('hub:fetch-auth-me')
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Hub fetch auth me failed: 500 Internal Server Error',
+      })
+      expect(fetchAuthMe).toHaveBeenCalledTimes(1)
+    })
+
+    it('retries upload handler on 401', async () => {
+      mockHubAuthPersistent()
+      vi.mocked(uploadPostToHub)
+        .mockRejectedValueOnce(new Hub401Error('Hub upload failed', 'Unauthorized'))
+        .mockResolvedValueOnce({ id: 'post-1', title: 'My Keymap' })
+
+      const handler = getHandlerFor('hub:upload-post')
+      const result = await handler({}, VALID_PARAMS)
+
+      expect(result).toEqual({ success: true, postId: 'post-1' })
+      expect(uploadPostToHub).toHaveBeenCalledTimes(2)
+      expect(authenticateWithHub).toHaveBeenCalledTimes(2)
+    })
+
+    it('propagates auth failure during retry', async () => {
+      vi.mocked(getIdToken).mockResolvedValue('id-token')
+      vi.mocked(authenticateWithHub)
+        .mockResolvedValueOnce({
+          token: 'hub-jwt',
+          user: { id: 'u1', email: 'test@example.com', display_name: null },
+        })
+        .mockRejectedValueOnce(new Error('Hub auth failed: 401 Unauthorized'))
+      vi.mocked(fetchAuthMe)
+        .mockRejectedValueOnce(new Hub401Error('Hub fetch auth me failed', 'Unauthorized'))
+
+      const handler = getHandlerFor('hub:fetch-auth-me')
+      const result = await handler()
+
+      expect(result).toEqual({
+        success: false,
+        error: 'Hub auth failed: 401 Unauthorized',
+      })
     })
   })
 

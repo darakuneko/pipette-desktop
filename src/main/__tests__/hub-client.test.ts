@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
-import { authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, fetchMyPostsByKeyboard, patchPostOnHub, getHubOrigin, type HubUploadFiles } from '../hub/hub-client'
+import { Hub401Error, authenticateWithHub, uploadPostToHub, deletePostFromHub, updatePostOnHub, fetchMyPosts, fetchMyPostsByKeyboard, patchPostOnHub, getHubOrigin, type HubUploadFiles } from '../hub/hub-client'
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)
@@ -93,14 +93,29 @@ describe('hub-client', () => {
       )
     })
 
-    it('throws on HTTP error', async () => {
+    it('throws Hub401Error on 401 response', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: false,
         status: 401,
         text: async () => 'Unauthorized',
       })
 
-      await expect(authenticateWithHub('bad-token')).rejects.toThrow('Hub auth failed: 401')
+      const err = await authenticateWithHub('bad-token').catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(Hub401Error)
+      expect((err as Error).message).toBe('Hub auth failed: 401 Unauthorized')
+    })
+
+    it('throws plain Error on non-401 HTTP error', async () => {
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        text: async () => 'Internal Server Error',
+      })
+
+      const err = await authenticateWithHub('token').catch((e: unknown) => e)
+      expect(err).toBeInstanceOf(Error)
+      expect(err).not.toBeInstanceOf(Hub401Error)
+      expect((err as Error).message).toBe('Hub auth failed: 500 Internal Server Error')
     })
 
     it('throws on payload-level failure (HTTP 200 + ok:false)', async () => {
