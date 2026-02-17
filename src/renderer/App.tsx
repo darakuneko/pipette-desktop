@@ -283,26 +283,6 @@ export function App() {
     }
   }, [])
 
-  const handleResolveAuthConflict = useCallback(async (name: string): Promise<{ success: boolean; error?: string }> => {
-    try {
-      await window.vialAPI.hubSetAuthDisplayName(name)
-      const result = await window.vialAPI.hubFetchAuthMe()
-      if (!result.success) {
-        return { success: false, error: result.error }
-      }
-      if (result.user) {
-        setHubAuthConflict(false)
-        setHubDisplayName(result.user.display_name)
-        await refreshHubPosts()
-      }
-      return { success: true }
-    } catch (err) {
-      return { success: false, error: err instanceof Error ? err.message : undefined }
-    } finally {
-      await window.vialAPI.hubSetAuthDisplayName(null).catch(() => {})
-    }
-  }, [refreshHubPosts])
-
   const clearHubPostsState = useCallback(() => {
     setHubMyPosts([])
     setHubMyPostsPagination(undefined)
@@ -359,6 +339,26 @@ export function App() {
     await refreshHubKeyboardPosts()
     await refreshHubMyPosts()
   }, [refreshHubMyPosts, refreshHubKeyboardPosts])
+
+  const handleResolveAuthConflict = useCallback(async (name: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await window.vialAPI.hubSetAuthDisplayName(name)
+      const result = await window.vialAPI.hubFetchAuthMe()
+      if (!result.success) {
+        return { success: false, error: result.error }
+      }
+      if (result.user) {
+        setHubAuthConflict(false)
+        setHubDisplayName(result.user.display_name)
+        await refreshHubPosts()
+      }
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : undefined }
+    } finally {
+      await window.vialAPI.hubSetAuthDisplayName(null).catch(() => {})
+    }
+  }, [refreshHubPosts])
 
   const getHubPostId = useCallback((label: string): string | undefined => {
     return hubKeyboardPosts.find((p) => p.title === label)?.id
