@@ -25,6 +25,12 @@ const FAVORITE_TYPES: FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverri
 const DEBOUNCE_MS = 10_000
 const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
 
+function safeTimestamp(value: string | undefined): number {
+  if (!value) return 0
+  const t = new Date(value).getTime()
+  return Number.isNaN(t) ? 0 : t
+}
+
 type ProgressCallback = (progress: SyncProgress) => void
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -187,11 +193,11 @@ async function mergeSyncUnit(
     try {
       const raw = await readFile(filePath, 'utf-8')
       const local = JSON.parse(raw) as { _updatedAt?: string }
-      localTime = local._updatedAt ? new Date(local._updatedAt).getTime() : 0
+      localTime = safeTimestamp(local._updatedAt)
     } catch { /* no local settings */ }
 
     const remoteSettings = JSON.parse(remoteContent) as { _updatedAt?: string }
-    const remoteTime = remoteSettings._updatedAt ? new Date(remoteSettings._updatedAt).getTime() : 0
+    const remoteTime = safeTimestamp(remoteSettings._updatedAt)
 
     if (remoteTime > localTime) {
       await writeFile(filePath, remoteContent, 'utf-8')

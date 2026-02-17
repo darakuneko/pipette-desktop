@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 
 // --- Mock electron ---
@@ -139,8 +139,33 @@ function makeRemoteEnvelope(
   }
 }
 
+function makeSettingsEnvelope(
+  uid: string,
+  updatedAt: string | undefined,
+): Record<string, unknown> {
+  const settings: Record<string, unknown> = { theme: 'dark' }
+  if (updatedAt !== undefined) settings._updatedAt = updatedAt
+  return {
+    version: 1,
+    syncUnit: `keyboards/${uid}/settings`,
+    updatedAt: updatedAt ?? new Date().toISOString(),
+    salt: 's',
+    iv: 'i',
+    ciphertext: JSON.stringify({
+      type: 'settings',
+      key: uid,
+      index: { uid, entries: [] },
+      files: { 'pipette_settings.json': JSON.stringify(settings) },
+    }),
+  }
+}
+
 function makeDriveFile(modifiedTime: string): { id: string; name: string; modifiedTime: string } {
   return { id: 'file-1', name: 'favorites_tapDance.enc', modifiedTime }
+}
+
+function makeSettingsDriveFile(uid: string, modifiedTime: string): { id: string; name: string; modifiedTime: string } {
+  return { id: `settings-${uid}`, name: `keyboards_${uid}_settings.enc`, modifiedTime }
 }
 
 async function setupLocalFavorite(
@@ -475,9 +500,8 @@ describe('sync-service', () => {
       expect(mockUploadFile).toHaveBeenCalled()
 
       // Verify merged index on disk
-      const { readFile: rf } = await import('node:fs/promises')
       const indexPath = join(mockUserDataPath, 'sync', 'favorites', 'tapDance', 'index.json')
-      const index = JSON.parse(await rf(indexPath, 'utf-8'))
+      const index = JSON.parse(await readFile(indexPath, 'utf-8'))
       expect(index.entries).toHaveLength(2)
       const ids = index.entries.map((e: { id: string }) => e.id).sort()
       expect(ids).toEqual(['1', 'r1'])
@@ -628,6 +652,65 @@ describe('sync-service', () => {
       const final = progressEvents[progressEvents.length - 1]
       expect(final.status).toBe('error')
       expect(final.failedUnits).toBeUndefined()
+    })
+  })
+
+  describe('settings timestamp NaN handling', () => {
+    const uid = 'test-kb'
+
+    async function setupLocalSettings(updatedAt?: string): Promise<void> {
+      const dir = join(mockUserDataPath, 'sync', 'keyboards', uid)
+      await mkdir(dir, { recursive: true })
+      const settings: Record<string, unknown> = { theme: 'light' }
+      if (updatedAt !== undefined) settings._updatedAt = updatedAt
+      await writeFile(join(dir, 'pipette_settings.json'), JSON.stringify(settings), 'utf-8')
+    }
+
+    async function readLocalSettings(): Promise<Record<string, unknown>> {
+      const raw = await readFile(
+        join(mockUserDataPath, 'sync', 'keyboards', uid, 'pipette_settings.json'),
+        'utf-8',
+      )
+      return JSON.parse(raw) as Record<string, unknown>
+    }
+
+    it('treats invalid local _updatedAt as 0 and accepts valid remote', async () => {
+      await setupLocalSettings('invalid-date-string')
+
+      const remoteTime = '2025-06-01T00:00:00.000Z'
+      mockListFiles.mockResolvedValue([makeSettingsDriveFile(uid, remoteTime)])
+      mockDownloadFile.mockResolvedValue(makeSettingsEnvelope(uid, remoteTime))
+
+      await executeSync('download')
+
+      const settings = await readLocalSettings()
+      expect(settings._updatedAt).toBe(remoteTime)
+    })
+
+    it('treats invalid remote _updatedAt as 0 and keeps valid local', async () => {
+      const localTime = '2025-06-01T00:00:00.000Z'
+      await setupLocalSettings(localTime)
+
+      mockListFiles.mockResolvedValue([makeSettingsDriveFile(uid, '2025-06-01T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue(makeSettingsEnvelope(uid, 'garbage'))
+
+      await executeSync('download')
+
+      const settings = await readLocalSettings()
+      expect(settings._updatedAt).toBe(localTime)
+      expect(settings.theme).toBe('light')
+    })
+
+    it('treats both invalid timestamps as 0 — remote does not overwrite local', async () => {
+      await setupLocalSettings('not-a-date')
+
+      mockListFiles.mockResolvedValue([makeSettingsDriveFile(uid, '2025-01-01T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue(makeSettingsEnvelope(uid, 'also-not-a-date'))
+
+      await executeSync('download')
+
+      const settings = await readLocalSettings()
+      expect(settings.theme).toBe('light')
     })
   })
 })
