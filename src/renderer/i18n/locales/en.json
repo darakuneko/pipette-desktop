@@ -356,7 +356,7 @@
   "layoutStore": {
     "load": "Load",
     "title": "Data",
-    "labelPlaceholder": "Label (optional)",
+    "labelPlaceholder": "Label",
     "noSavedLayouts": "No saved layouts",
     "saveFailed": "Failed to save layout",
     "maxEntriesReached": "Maximum saved layouts reached (30). Delete an existing entry to save a new one.",

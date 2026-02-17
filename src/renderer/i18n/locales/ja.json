@@ -356,7 +356,7 @@
   "layoutStore": {
     "load": "読み込み",
     "title": "データ",
-    "labelPlaceholder": "ラベル（任意）",
+    "labelPlaceholder": "ラベル",
     "noSavedLayouts": "保存済みレイアウトはありません",
     "saveFailed": "レイアウトの保存に失敗しました",
     "maxEntriesReached": "保存数の上限（30件）に達しました。新しく保存するには既存のエントリを削除してください。",
