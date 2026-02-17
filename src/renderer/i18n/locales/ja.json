@@ -25,6 +25,14 @@
     "udevHelp": "Linuxでデバイスが見つからない場合は、udevルールがインストールされていることを確認してください。詳細はプロジェクトのREADMEを参照してください。",
     "loadDummy": "JSONファイルから読み込み…"
   },
+  "loading": {
+    "protocol": "デバイス情報を読み取り中",
+    "definition": "定義を読み込み中",
+    "keymap": "キーマップを読み込み中",
+    "macros": "マクロを読み込み中",
+    "dynamicEntries": "機能を読み込み中",
+    "settings": "設定を読み込み中"
+  },
   "editor": {
     "autoAdvance": "自動移動",
     "keymap": {

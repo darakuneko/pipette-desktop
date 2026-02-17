@@ -25,6 +25,14 @@
     "udevHelp": "If no devices are found on Linux, ensure udev rules are installed. See the project README for details.",
     "loadDummy": "Load from JSON file…"
   },
+  "loading": {
+    "protocol": "Reading device info",
+    "definition": "Loading definition",
+    "keymap": "Loading keymap",
+    "macros": "Loading macros",
+    "dynamicEntries": "Loading features",
+    "settings": "Loading settings"
+  },
   "editor": {
     "autoAdvance": "Auto Move",
     "keymap": {

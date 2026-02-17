@@ -921,6 +921,7 @@ export function App() {
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
+          loadingProgress={keyboard.loadingProgress}
         />
       )}
 

@@ -6,9 +6,10 @@ import { useTranslation } from 'react-i18next'
 interface Props {
   deviceName: string
   deviceId: string
+  loadingProgress?: string
 }
 
-export function ConnectingOverlay({ deviceName, deviceId }: Props) {
+export function ConnectingOverlay({ deviceName, deviceId, loadingProgress }: Props) {
   const { t } = useTranslation()
   const [dots, setDots] = useState(0)
 
@@ -41,6 +42,11 @@ export function ConnectingOverlay({ deviceName, deviceId }: Props) {
             {t('app.connecting', { dots: '.'.repeat(dots) })}
             <span className="invisible">{'.'.repeat(3 - dots)}</span>
           </p>
+          {loadingProgress && (
+            <p className="text-xs text-content-muted">
+              {t(loadingProgress)}
+            </p>
+          )}
           <p className="max-w-full truncate font-mono text-sm font-semibold text-content">
             {deviceName}
           </p>

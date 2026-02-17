@@ -39,6 +39,7 @@ export interface BulkKeyEntry {
 
 export interface KeyboardState {
   loading: boolean
+  loadingProgress: string
   isDummy: boolean
   viaProtocol: number
   vialProtocol: number
@@ -90,6 +91,7 @@ export interface KeyboardState {
 function emptyState(): KeyboardState {
   return {
     loading: false,
+    loadingProgress: '',
     isDummy: false,
     viaProtocol: -1,
     vialProtocol: -1,
@@ -141,7 +143,10 @@ export function useKeyboard() {
   const bumpActivity = useCallback(() => setActivityCount((c) => c + 1), [])
 
   const reload = useCallback(async (): Promise<string | null> => {
-    setState((s) => ({ ...s, loading: true }))
+    const progress = (key: string) =>
+      setState((s) => ({ ...s, loading: true, loadingProgress: key }))
+
+    progress('loading.protocol')
     const api = window.vialAPI
 
     try {
@@ -155,6 +160,7 @@ export function useKeyboard() {
       newState.uid = kbId.uid
 
       // Phase 2: Layer count + macros metadata
+      progress('loading.definition')
       newState.layers = await api.getLayerCount()
       const prefs = await api.pipetteSettingsGet(newState.uid)
       const storedNames = prefs?.layerNames ?? []
@@ -226,6 +232,7 @@ export function useKeyboard() {
       }
 
       // Phase 3: Layout options
+      progress('loading.keymap')
       newState.layoutOptions = await api.getLayoutOptions()
 
       // Phase 3.5: Keymap buffer fetch
@@ -283,6 +290,7 @@ export function useKeyboard() {
       }
 
       // Phase 5: Macro buffer (non-fatal: empty buffer if fetch fails)
+      progress('loading.macros')
       if (newState.macroBufferSize > 0) {
         try {
           newState.macroBuffer = await api.getMacroBuffer(newState.macroBufferSize)
@@ -292,6 +300,7 @@ export function useKeyboard() {
       }
 
       // Phase 6: Dynamic entries (Vial protocol >= 4)
+      progress('loading.dynamicEntries')
       // Each entry is fetched independently; failures skip the entry
       // rather than aborting the entire reload.
       if (newState.vialProtocol >= VIAL_PROTOCOL_DYNAMIC) {
@@ -350,6 +359,7 @@ export function useKeyboard() {
       })
 
       // Phase 8: QMK Settings discovery
+      progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
         try {
           const supported = new Set<number>()
