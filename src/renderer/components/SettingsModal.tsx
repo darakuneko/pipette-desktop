@@ -372,6 +372,7 @@ function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowProps) {
             onChange={(e) => setEditLabel(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={busy}
+            maxLength={200}
             autoFocus
             data-testid={`hub-rename-input-${post.id}`}
           />
@@ -541,6 +542,7 @@ function HubDisplayNameField({ currentName, onSave }: HubDisplayNameFieldProps) 
           onChange={(e) => { setValue(e.target.value); setSaved(false); setError(null) }}
           onKeyDown={handleKeyDown}
           disabled={saving}
+          maxLength={50}
           data-testid="hub-display-name-input"
         />
         <button

@@ -1275,6 +1275,22 @@ describe('SettingsModal', () => {
     })
   })
 
+  describe('input maxLength attributes', () => {
+    it('display name input has maxLength=50', () => {
+      renderAndSwitchToHub({ hubEnabled: true, hubAuthenticated: true })
+      const input = screen.getByTestId('hub-display-name-input')
+      expect(input).toHaveAttribute('maxLength', '50')
+    })
+
+    it('hub post rename input has maxLength=200', () => {
+      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
+      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
+      fireEvent.click(screen.getByTestId('hub-rename-p1'))
+      const input = screen.getByTestId('hub-rename-input-p1')
+      expect(input).toHaveAttribute('maxLength', '200')
+    })
+  })
+
   describe('About tab', () => {
     function renderAndSwitchToAbout(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
       const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)

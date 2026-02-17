@@ -1375,6 +1375,32 @@ describe('LayoutStoreModal', () => {
     })
   })
 
+  describe('input maxLength attributes', () => {
+    it('save input has maxLength=200', () => {
+      render(
+        <LayoutStoreModal
+          entries={[]}
+          {...DEFAULT_PROPS}
+        />,
+      )
+      const input = screen.getByTestId('layout-store-save-input')
+      expect(input).toHaveAttribute('maxLength', '200')
+    })
+
+    it('rename input has maxLength=200', () => {
+      render(
+        <LayoutStoreModal
+          entries={MOCK_ENTRIES}
+          {...DEFAULT_PROPS}
+        />,
+      )
+      const renameButtons = screen.getAllByTestId('layout-store-rename-btn')
+      fireEvent.click(renameButtons[0])
+      const input = screen.getByTestId('layout-store-rename-input')
+      expect(input).toHaveAttribute('maxLength', '200')
+    })
+  })
+
   describe('onOverwriteSave callback', () => {
     it('calls onOverwriteSave instead of onDelete+onSave when provided and overwrite confirmed', () => {
       const onSave = vi.fn()

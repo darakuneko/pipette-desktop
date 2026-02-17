@@ -397,6 +397,7 @@ export function LayoutStoreContent({
               value={saveLabel}
               onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
               placeholder={t('layoutStore.labelPlaceholder')}
+              maxLength={200}
               className="flex-1 rounded-lg border border-edge bg-surface px-3.5 py-2 text-[13px] text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
               data-testid="layout-store-save-input"
             />
@@ -468,6 +469,7 @@ export function LayoutStoreContent({
                             onChange={(e) => setEditLabel(e.target.value)}
                             onBlur={() => handleRenameSubmit(entry.id)}
                             onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
+                            maxLength={200}
                             className="flex-1 rounded-md border border-accent bg-surface px-2 py-0.5 text-sm font-semibold text-content focus:outline-none"
                             data-testid="layout-store-rename-input"
                             autoFocus
