@@ -309,6 +309,54 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(entries.length).toBe(4)
   })
 
+  it('Copy All copies encoder keys along with regular keys', async () => {
+    const onSetEncoder = vi.fn().mockResolvedValue(undefined)
+    const encoderLayout = new Map<string, number>([
+      ['0,0,0', 100], // Layer 0, encoder 0, CW
+      ['0,0,1', 101], // Layer 0, encoder 0, CCW
+      ['1,0,0', 200], // Layer 1, encoder 0, CW
+      ['1,0,1', 201], // Layer 1, encoder 0, CCW
+    ])
+    render(
+      <KeymapEditor
+        {...defaultProps}
+        encoderLayout={encoderLayout}
+        encoderCount={1}
+        onSetEncoder={onSetEncoder}
+      />,
+    )
+    const btn = screen.getByTestId('copy-all-button')
+    await act(async () => { fireEvent.click(btn) })
+    await act(async () => { fireEvent.click(btn) })
+
+    expect(onSetEncoder).toHaveBeenCalledTimes(2)
+    expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 0, 100)
+    expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 1, 101)
+  })
+
+  it('Copy All writes 0 for missing encoder entries on source layer', async () => {
+    const onSetEncoder = vi.fn().mockResolvedValue(undefined)
+    const encoderLayout = new Map<string, number>([
+      ['1,0,0', 200], // Only target layer has entries
+      ['1,0,1', 201],
+    ])
+    render(
+      <KeymapEditor
+        {...defaultProps}
+        encoderLayout={encoderLayout}
+        encoderCount={1}
+        onSetEncoder={onSetEncoder}
+      />,
+    )
+    const btn = screen.getByTestId('copy-all-button')
+    await act(async () => { fireEvent.click(btn) })
+    await act(async () => { fireEvent.click(btn) })
+
+    expect(onSetEncoder).toHaveBeenCalledTimes(2)
+    expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 0, 0)
+    expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 1, 0)
+  })
+
   it('Copy All confirmation resets after timeout', async () => {
     vi.useFakeTimers()
     render(<KeymapEditor {...defaultProps} />)
