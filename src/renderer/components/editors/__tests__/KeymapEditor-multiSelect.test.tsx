@@ -320,11 +320,11 @@ describe('KeymapEditor — multi-select & copy', () => {
     })
     expect(btn).toHaveTextContent('Confirm Copy All?')
 
-    // Advance past 3s timeout
+    // Advance past 5s timeout
     await act(async () => {
-      vi.advanceTimersByTime(3000)
+      vi.advanceTimersByTime(5000)
     })
-    expect(btn).toHaveTextContent('Copy All')
+    expect(btn.textContent).toBe('Copy All')
 
     vi.useRealTimers()
   })

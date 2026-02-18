@@ -80,6 +80,8 @@ function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
   ))
 }
 
+const COPY_ALL_RESET_MS = 5000
+
 const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
@@ -537,10 +539,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   /** Reset the two-step Copy All confirmation and cancel its auto-reset timer. */
   const clearCopyAllPending = useCallback(() => {
     setCopyAllPending(false)
-    if (copyAllTimerRef.current) {
-      clearTimeout(copyAllTimerRef.current)
-      copyAllTimerRef.current = undefined
-    }
+    clearTimeout(copyAllTimerRef.current)
+    copyAllTimerRef.current = undefined
   }, [])
 
   // Clean up the copy-all auto-reset timer on unmount
@@ -1420,10 +1420,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   const handleCopyAllClick = useCallback(async () => {
     if (!copyAllPending) {
-      // First click -- show confirmation with 3s auto-reset
+      // First click -- show confirmation with auto-reset
       setCopyAllPending(true)
-      if (copyAllTimerRef.current) clearTimeout(copyAllTimerRef.current)
-      copyAllTimerRef.current = setTimeout(() => setCopyAllPending(false), 3000)
+      clearTimeout(copyAllTimerRef.current)
+      copyAllTimerRef.current = setTimeout(() => setCopyAllPending(false), COPY_ALL_RESET_MS)
       return
     }
     // Second click -- execute copy

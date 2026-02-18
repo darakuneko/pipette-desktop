@@ -941,7 +941,7 @@ export function SettingsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="w-[480px] max-w-[90vw] h-[min(760px,85vh)] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-[480px] max-w-[90vw] h-[min(840px,85vh)] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         data-testid="settings-modal"
       >
@@ -1468,15 +1468,13 @@ export function SettingsModal({
           )}
           {activeTab === 'notification' && (
             <div className="pt-4" aria-live="polite" data-testid="notification-tab-content">
-              {notificationLoading && (
+              {notificationLoading ? (
                 <p className="text-sm text-content-muted">{t('common.loading')}</p>
-              )}
-              {!notificationLoading && recentNotifications.length === 0 && (
+              ) : recentNotifications.length === 0 ? (
                 <p className="text-sm text-content-muted" data-testid="notification-empty">
                   {t('notification.empty')}
                 </p>
-              )}
-              {!notificationLoading && recentNotifications.length > 0 && (
+              ) : (
                 <ul className="space-y-4">
                   {recentNotifications.map((notification, index) => (
                     <li key={`${notification.publishedAt}-${index}`} className="rounded-md border border-edge p-4">
