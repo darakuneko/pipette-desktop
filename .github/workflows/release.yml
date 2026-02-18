@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+            arch: arm64
+          - os: windows-latest
+            platform: win
+            arch: x64
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install Linux dependencies
+        if: matrix.platform == 'linux'
+        run: sudo apt-get update && sudo apt-get install -y libudev-dev
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm exec electron-vite build
+
+      - name: Build Electron app
+        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: artifact-${{ matrix.platform }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            dist/*.dmg
+            dist/*.exe
+            dist/*.AppImage
