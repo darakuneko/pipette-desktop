@@ -3,6 +3,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react'
 import { createElement, type ReactNode } from 'react'
 import { DEFAULT_APP_CONFIG, type AppConfig } from '../../shared/types/app-config'
+import i18n from '../i18n'
 
 interface AppConfigContextValue {
   config: AppConfig
@@ -19,6 +20,7 @@ export function AppConfigProvider({ children }: { children: ReactNode }): ReactN
   useEffect(() => {
     window.vialAPI.appConfigGetAll().then((loaded) => {
       setConfig(loaded)
+      void i18n.changeLanguage(loaded.language ?? 'en')
       setLoading(false)
     }).catch(() => {
       setLoading(false)

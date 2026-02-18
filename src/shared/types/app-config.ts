@@ -46,5 +46,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   defaultAutoAdvance: true,
   autoLockTime: 10,
   panelSide: 'left',
+  language: 'en',
   hubEnabled: false,
 }

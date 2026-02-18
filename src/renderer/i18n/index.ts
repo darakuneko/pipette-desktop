@@ -5,6 +5,11 @@ import { initReactI18next } from 'react-i18next'
 import en from './locales/en.json'
 import ja from './locales/ja.json'
 
+export const SUPPORTED_LANGUAGES = [
+  { id: 'en', name: 'English' },
+  { id: 'ja', name: '日本語' },
+] as const
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },

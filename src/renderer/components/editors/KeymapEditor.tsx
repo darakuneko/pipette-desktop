@@ -119,7 +119,7 @@ interface KeyboardPaneProps {
   onEncoderClick?: (key: KleKey, dir: number) => void
   onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect) => void
   onCopyAll?: () => void
-  copyAllPending?: boolean
+  copyAllPending?: string
   isCopying?: boolean
   pasteHint?: string
   onDeselect?: () => void
@@ -202,7 +202,7 @@ function KeyboardPane({
               : `${COPY_BTN_BASE} border-edge text-content-secondary hover:text-content`}
             onClick={(e) => { e.stopPropagation(); onCopyAll() }}
           >
-            {copyAllPending ? t('editor.keymap.copyAllConfirm') : t('editor.keymap.copyAll')}
+            {copyAllPending || t('editor.keymap.copyAll')}
           </button>
         </div>
       )}
@@ -1515,6 +1515,9 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const pasteReady = panePasteReady || pickerPasteReady
   const showCopyAll = canCopy && !panePasteReady
   const pasteHintText = pasteReady ? t('editor.keymap.clickToPaste') : undefined
+  const copyAllConfirmText = inactivePaneLayer != null
+    ? t('editor.keymap.copyAllConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
+    : undefined
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
@@ -1759,7 +1762,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 onEncoderClick={handleEncoderClick}
                 onEncoderDoubleClick={handleEncoderDoubleClick}
                 onCopyAll={showCopyAll && activePane === 'primary' ? handleCopyAllClick : undefined}
-                copyAllPending={activePane === 'primary' && dualMode ? copyAllPending : undefined}
+                copyAllPending={activePane === 'primary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
                 isCopying={isCopying}
                 pasteHint={activePane === 'primary' ? pasteHintText : undefined}
                 onDeselect={handleDeselect}
@@ -1792,7 +1795,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onEncoderClick={handleEncoderClick}
                   onEncoderDoubleClick={handleEncoderDoubleClick}
                   onCopyAll={showCopyAll && activePane === 'secondary' ? handleCopyAllClick : undefined}
-                  copyAllPending={activePane === 'secondary' && dualMode ? copyAllPending : undefined}
+                  copyAllPending={activePane === 'secondary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
                   isCopying={isCopying}
                   pasteHint={activePane === 'secondary' ? pasteHintText : undefined}
                   onDeselect={handleDeselect}
