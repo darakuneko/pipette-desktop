@@ -17,7 +17,9 @@ import type { KeyboardLayoutId, AutoLockMinutes, PanelSide } from '../hooks/useD
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
+import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
 import { AboutTabContent } from './AboutTabContent'
+import { useAppConfig } from '../hooks/useAppConfig'
 import type { AppNotification } from '../../shared/types/notification'
 
 const TABS = [
@@ -649,6 +651,7 @@ export function SettingsModal({
   hubAccountDeactivated,
 }: Props) {
   const { t } = useTranslation()
+  const appConfig = useAppConfig()
   const [activeTab, setActiveTab] = useState<ModalTabId>('tools')
   const [password, setPassword] = useState('')
   const [passwordScore, setPasswordScore] = useState<number | null>(null)
@@ -1003,6 +1006,30 @@ export function SettingsModal({
                       {t(labelKey)}
                     </button>
                   ))}
+                </div>
+              </section>
+
+              <section>
+                <div className={ROW_CLASS} data-testid="settings-language-row">
+                  <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
+                    {t('settings.language')}
+                  </label>
+                  <select
+                    id="settings-language-selector"
+                    value={appConfig.config.language ?? 'en'}
+                    onChange={(e) => {
+                      appConfig.set('language', e.target.value)
+                      void i18n.changeLanguage(e.target.value)
+                    }}
+                    className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                    data-testid="settings-language-selector"
+                  >
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <option key={lang.id} value={lang.id}>
+                        {lang.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </section>
 
