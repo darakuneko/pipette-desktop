@@ -74,6 +74,7 @@
       "out/**/*",
       "package.json"
     ],
+    "artifactName": "${productName}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
         "AppImage"
