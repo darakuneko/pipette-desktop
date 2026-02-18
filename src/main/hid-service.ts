@@ -10,6 +10,9 @@ import {
   HID_REPORT_ID,
   HID_TIMEOUT_MS,
   HID_RETRY_COUNT,
+  HID_RETRY_DELAY_MS,
+  HID_OPEN_RETRY_COUNT,
+  HID_OPEN_RETRY_DELAY_MS,
   VIAL_SERIAL_MAGIC,
   BOOTLOADER_SERIAL_MAGIC,
 } from '../shared/constants/protocol'
@@ -99,23 +102,23 @@ export async function listDevices(): Promise<DeviceInfo[]> {
   return result
 }
 
-// macOS has a limitation where reopening a HID device immediately after
-// closing can fail. We add a short delay and retry on macOS to work around this.
-const MACOS_REOPEN_DELAY_MS = 500
-const MACOS_REOPEN_RETRIES = 3
-
-function isMacOS(): boolean {
-  return process.platform === 'darwin'
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function isTransientError(err: Error): boolean {
+  const msg = err.message.toLowerCase()
+  return (
+    msg.includes('timeout') ||
+    msg.includes('could not read') ||
+    msg.includes('cannot write')
+  )
 }
 
 /**
  * Open a HID device by vendorId and productId.
  * Uses device path for precise matching.
- * On macOS, retries with a delay to work around the device reopen limitation.
+ * Retries with a delay to work around transient open failures on all platforms.
  */
 export async function openHidDevice(vendorId: number, productId: number): Promise<boolean> {
   if (openDevice) {
@@ -133,15 +136,14 @@ export async function openHidDevice(vendorId: number, productId: number): Promis
 
   if (!deviceInfo?.path) return false
 
-  const retries = isMacOS() ? MACOS_REOPEN_RETRIES : 1
-  for (let attempt = 0; attempt < retries; attempt++) {
+  for (let attempt = 0; attempt < HID_OPEN_RETRY_COUNT; attempt++) {
     try {
       openDevice = await HID.HIDAsync.open(deviceInfo.path)
       openDevicePath = deviceInfo.path
       return true
     } catch (err) {
-      if (attempt < retries - 1 && isMacOS()) {
-        await delay(MACOS_REOPEN_DELAY_MS)
+      if (attempt < HID_OPEN_RETRY_COUNT - 1) {
+        await delay(HID_OPEN_RETRY_DELAY_MS)
       } else {
         throw err
       }
@@ -216,7 +218,10 @@ export function sendReceive(data: number[]): Promise<number[]> {
           return result
         } catch (err) {
           lastError = err instanceof Error ? err : new Error(String(err))
-          if (!lastError.message.includes('timeout')) throw lastError
+          if (!isTransientError(lastError)) throw lastError
+          if (attempt < HID_RETRY_COUNT - 1) {
+            await delay(HID_RETRY_DELAY_MS)
+          }
         }
       }
       throw lastError ?? new Error('HID send/receive failed')

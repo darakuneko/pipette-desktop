@@ -58,10 +58,10 @@
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
       "zoomLabel": "Zoom",
-      "dualMode": "Dual View",
-      "copyAll": "Copy All",
-      "copyAllConfirm": "Confirm Copy All?",
-      "copySelected": "Copy Selected ({{count}})",
+      "dualMode": "Split Edit",
+      "copyAll": "Copy Layer",
+      "copyAllConfirm": "Overwrite {{target}} with {{source}}?",
+      "copySelected": "Paste Selected ({{count}})",
       "clickToPaste": "Click a key to paste",
       "pickerHint": "Ctrl+click: multi-select / Shift+click: range select → click a key to paste",
       "keyPopover": {
@@ -234,6 +234,9 @@
     "exportPdfFailed": "Failed to export Keymap PDF",
     "sideloadFailed": "Failed to load JSON definition file",
     "sideloadInvalidDefinition": "Invalid keyboard definition: missing required fields (matrix, layouts)"
+  },
+  "warning": {
+    "echoDetected": "Communication error detected. Please check your USB cable and reconnect the device."
   },
   "keycodes": {
     "basic": "Basic",
@@ -442,6 +445,7 @@
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",
     "autoLockMinutes": "{{minutes}} min",
+    "language": "Language",
     "panelSide": "Panel Side",
     "panelLeft": "Left",
     "panelRight": "Right",
@@ -451,14 +455,7 @@
     "about": {
       "version": "Version {{version}}",
       "license": "License: {{license}}",
-      "licenseValue": "GPL-3.0-or-later",
-      "termsTitle": "Terms of Service",
-      "termsGoogleDrive": "Pipette uses Google Drive appDataFolder to store encrypted sync data. The appDataFolder is not regular Google Drive storage — it is a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.",
-      "termsHubData": "Data uploaded to Pipette Hub is subject to Pipette Hub's Terms of Service. Uploaded content (keymaps, thumbnails, metadata) is stored on Pipette Hub's servers and may be publicly visible.",
-      "termsOpenSource": "Pipette is open-source software distributed under the GPL-3.0-or-later license.",
-      "termsHidAccess": "Pipette communicates with connected keyboards via USB HID. Keymap changes are written directly to the keyboard's firmware.",
-      "termsLocalData": "Pipette stores application settings and saved keymaps locally. This data remains on your device unless you explicitly enable sync or upload to Pipette Hub.",
-      "termsDisclaimer": "Pipette is provided as-is, without warranty of any kind. Use at your own risk."
+      "licenseValue": "GPL-3.0-or-later"
     }
   },
   "editorSettings": {

@@ -15,6 +15,23 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../i18n', () => ({
+  default: { changeLanguage: vi.fn() },
+  SUPPORTED_LANGUAGES: [
+    { id: 'en', name: 'English' },
+    { id: 'ja', name: '日本語' },
+  ],
+}))
+
+const mockAppConfigSet = vi.fn()
+vi.mock('../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({
+    config: { language: 'en' },
+    loading: false,
+    set: mockAppConfigSet,
+  }),
+}))
+
 vi.mock('../../assets/app-icon.png', () => ({ default: 'test-app-icon.png' }))
 
 vi.mock('../editors/ModalCloseButton', () => ({
@@ -853,6 +870,22 @@ describe('SettingsModal', () => {
     })
   })
 
+  describe('Language selector (Tools tab)', () => {
+    it('renders the language selector', () => {
+      renderAndSwitchToTools()
+      expect(screen.getByTestId('settings-language-selector')).toBeInTheDocument()
+    })
+
+    it('calls appConfig.set and i18n.changeLanguage when language is changed', async () => {
+      const { default: i18nMock } = await import('../../i18n')
+      renderAndSwitchToTools()
+
+      fireEvent.change(screen.getByTestId('settings-language-selector'), { target: { value: 'ja' } })
+      expect(mockAppConfigSet).toHaveBeenCalledWith('language', 'ja')
+      expect(i18nMock.changeLanguage).toHaveBeenCalledWith('ja')
+    })
+  })
+
   describe('Hub tab', () => {
     it('switches to Hub tab and shows hub toggle', () => {
       renderAndSwitchToHub()
@@ -1518,10 +1551,10 @@ describe('SettingsModal', () => {
       expect(screen.getByTestId('about-license')).toBeInTheDocument()
     })
 
-    it('shows terms of service content by default', () => {
+    it('shows legal content', () => {
       renderAndSwitchToAbout()
 
-      expect(screen.getByTestId('about-terms-content')).toBeInTheDocument()
+      expect(screen.getByTestId('about-legal-content')).toBeInTheDocument()
     })
 
     it('does not show other tab content when About is active', () => {

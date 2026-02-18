@@ -80,6 +80,8 @@ function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
   ))
 }
 
+const COPY_ALL_RESET_MS = 5000
+
 const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
@@ -119,7 +121,7 @@ interface KeyboardPaneProps {
   onEncoderClick?: (key: KleKey, dir: number) => void
   onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect) => void
   onCopyAll?: () => void
-  copyAllPending?: boolean
+  copyAllPending?: string
   isCopying?: boolean
   pasteHint?: string
   onDeselect?: () => void
@@ -202,7 +204,7 @@ function KeyboardPane({
               : `${COPY_BTN_BASE} border-edge text-content-secondary hover:text-content`}
             onClick={(e) => { e.stopPropagation(); onCopyAll() }}
           >
-            {copyAllPending ? t('editor.keymap.copyAllConfirm') : t('editor.keymap.copyAll')}
+            {copyAllPending || t('editor.keymap.copyAll')}
           </button>
         </div>
       )}
@@ -537,10 +539,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   /** Reset the two-step Copy All confirmation and cancel its auto-reset timer. */
   const clearCopyAllPending = useCallback(() => {
     setCopyAllPending(false)
-    if (copyAllTimerRef.current) {
-      clearTimeout(copyAllTimerRef.current)
-      copyAllTimerRef.current = undefined
-    }
+    clearTimeout(copyAllTimerRef.current)
+    copyAllTimerRef.current = undefined
   }, [])
 
   // Clean up the copy-all auto-reset timer on unmount
@@ -1420,10 +1420,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   const handleCopyAllClick = useCallback(async () => {
     if (!copyAllPending) {
-      // First click -- show confirmation with 3s auto-reset
+      // First click -- show confirmation with auto-reset
       setCopyAllPending(true)
-      if (copyAllTimerRef.current) clearTimeout(copyAllTimerRef.current)
-      copyAllTimerRef.current = setTimeout(() => setCopyAllPending(false), 3000)
+      clearTimeout(copyAllTimerRef.current)
+      copyAllTimerRef.current = setTimeout(() => setCopyAllPending(false), COPY_ALL_RESET_MS)
       return
     }
     // Second click -- execute copy
@@ -1515,6 +1515,9 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const pasteReady = panePasteReady || pickerPasteReady
   const showCopyAll = canCopy && !panePasteReady
   const pasteHintText = pasteReady ? t('editor.keymap.clickToPaste') : undefined
+  const copyAllConfirmText = inactivePaneLayer != null
+    ? t('editor.keymap.copyAllConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
+    : undefined
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
@@ -1759,7 +1762,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 onEncoderClick={handleEncoderClick}
                 onEncoderDoubleClick={handleEncoderDoubleClick}
                 onCopyAll={showCopyAll && activePane === 'primary' ? handleCopyAllClick : undefined}
-                copyAllPending={activePane === 'primary' && dualMode ? copyAllPending : undefined}
+                copyAllPending={activePane === 'primary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
                 isCopying={isCopying}
                 pasteHint={activePane === 'primary' ? pasteHintText : undefined}
                 onDeselect={handleDeselect}
@@ -1792,7 +1795,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onEncoderClick={handleEncoderClick}
                   onEncoderDoubleClick={handleEncoderDoubleClick}
                   onCopyAll={showCopyAll && activePane === 'secondary' ? handleCopyAllClick : undefined}
-                  copyAllPending={activePane === 'secondary' && dualMode ? copyAllPending : undefined}
+                  copyAllPending={activePane === 'secondary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
                   isCopying={isCopying}
                   pasteHint={activePane === 'secondary' ? pasteHintText : undefined}
                   onDeselect={handleDeselect}
