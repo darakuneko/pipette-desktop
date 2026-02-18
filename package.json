@@ -10,11 +10,12 @@
   "scripts": {
     "dev": "electron-vite dev",
     "dev:linux": "electron-vite dev --noSandbox",
-    "build": "electron-vite build",
-    "dist": "electron-vite build && electron-builder",
-    "dist:linux": "electron-vite build && electron-builder --linux",
-    "dist:win": "electron-vite build && electron-builder --win",
-    "dist:mac": "electron-vite build && electron-builder --mac",
+    "build": "rm -rf out && electron-vite build",
+    "build:win": "if exist out (rd /s /q \"out\") && electron-vite build",
+    "dist": "rm -rf out dist && electron-vite build && electron-builder",
+    "dist:linux": "rm -rf out dist && electron-vite build && electron-builder --linux",
+    "dist:win": "if exist out (rd /s /q \"out\") && if exist dist (rd /s /q \"dist\") && electron-vite build && electron-builder --win",
+    "dist:mac": "rm -rf out dist && electron-vite build && electron-builder --mac",
     "preview": "electron-vite preview",
     "rebuild": "electron-builder install-app-deps",
     "lint": "eslint src/",
@@ -74,6 +75,7 @@
       "out/**/*",
       "package.json"
     ],
+    "artifactName": "${productName}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
         "AppImage"
