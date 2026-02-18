@@ -651,6 +651,43 @@ describe('Dynamic Entry Commands', () => {
 
       expect(counts.featureFlags).toBe(0x03)
     })
+
+    it('retries on echo and succeeds on subsequent attempt', async () => {
+      // First call: echo (response matches sent packet header)
+      const echo = resp(0xfe, 0x0d, 0x00, 0x00)
+      mockSendReceive.mockResolvedValueOnce(echo)
+      // Second call: valid response
+      mockSendReceive.mockResolvedValueOnce(resp(5, 3, 1, 0))
+
+      const counts = await getDynamicEntryCount()
+
+      expect(mockSendReceive).toHaveBeenCalledTimes(2)
+      expect(counts.tapDance).toBe(5)
+      expect(counts.combo).toBe(3)
+    })
+
+    it('throws ECHO_DETECTED after exhausting retries', async () => {
+      // All 3 attempts return echo
+      const echo = resp(0xfe, 0x0d, 0x00, 0x00)
+      mockSendReceive.mockResolvedValue(echo)
+
+      await expect(getDynamicEntryCount()).rejects.toThrow('ECHO_DETECTED')
+      expect(mockSendReceive).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not false-positive when first 2 bytes collide but bytes 2-3 differ', async () => {
+      // resp[0]=0xFE (tapDance=254) and resp[1]=0x0D (combo=13) match pkt[0..1],
+      // but resp[2]=0x05 differs from pkt[2]=0x00, so 4-byte check passes
+      mockSendReceive.mockResolvedValueOnce(resp(0xfe, 0x0d, 0x05, 0x02))
+
+      const counts = await getDynamicEntryCount()
+
+      expect(mockSendReceive).toHaveBeenCalledTimes(1)
+      expect(counts.tapDance).toBe(0xfe)
+      expect(counts.combo).toBe(0x0d)
+      expect(counts.keyOverride).toBe(5)
+      expect(counts.altRepeatKey).toBe(2)
+    })
   })
 
   describe('getTapDance', () => {
@@ -1087,6 +1124,42 @@ describe('QMK Settings Commands', () => {
       // 0x0301 LE16: low byte = 0x01, high byte = 0x03
       expect(pkt[2]).toBe(0x01)
       expect(pkt[3]).toBe(0x03)
+    })
+
+    it('retries on echo and succeeds on subsequent attempt', async () => {
+      // Echo for startId=0: pkt=[0xFE, 0x09, 0x00, 0x00, ...]
+      const echo = resp(0xfe, 0x09, 0x00, 0x00)
+      mockSendReceive.mockResolvedValueOnce(echo)
+      // Valid response with QSIDs
+      mockSendReceive.mockResolvedValueOnce(resp(0x01, 0x00, 0xff, 0xff))
+
+      const result = await qmkSettingsQuery(0)
+
+      expect(mockSendReceive).toHaveBeenCalledTimes(2)
+      expect(result[0]).toBe(0x01)
+    })
+
+    it('throws ECHO_DETECTED after exhausting retries', async () => {
+      const echo = resp(0xfe, 0x09, 0x00, 0x00)
+      mockSendReceive.mockResolvedValue(echo)
+
+      await expect(qmkSettingsQuery(0)).rejects.toThrow('ECHO_DETECTED')
+      expect(mockSendReceive).toHaveBeenCalledTimes(3)
+    })
+
+    it('does not false-positive on QSID 0x09FE (4-byte check prevents it)', async () => {
+      // QSID 0x09FE in LE16 = [0xFE, 0x09] — matches first 2 bytes of echo
+      // But bytes 2-3 differ: response has next QSID, pkt has startId
+      // startId=1 → pkt[2..3] = [0x01, 0x00], response[2..3] = [0xFF, 0xFF]
+      const response = resp(0xfe, 0x09, 0xff, 0xff)
+      mockSendReceive.mockResolvedValueOnce(response)
+
+      const result = await qmkSettingsQuery(1)
+
+      // Should NOT retry — 4-byte check passes (bytes 2-3 don't match)
+      expect(mockSendReceive).toHaveBeenCalledTimes(1)
+      expect(result[0]).toBe(0xfe)
+      expect(result[1]).toBe(0x09)
     })
   })
 

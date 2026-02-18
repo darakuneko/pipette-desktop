@@ -235,6 +235,9 @@
     "sideloadFailed": "JSON定義ファイルの読み込みに失敗しました",
     "sideloadInvalidDefinition": "無効なキーボード定義: 必須フィールド（matrix, layouts）がありません"
   },
+  "warning": {
+    "echoDetected": "通信エラーが検出されました。USBケーブルを確認し、デバイスを再接続してください。"
+  },
   "keycodes": {
     "basic": "基本",
     "iso": "ISO/JIS",

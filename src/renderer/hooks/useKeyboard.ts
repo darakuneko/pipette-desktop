@@ -22,6 +22,7 @@ import {
   QMK_RGBLIGHT_EFFECT,
   QMK_RGBLIGHT_EFFECT_SPEED,
   QMK_RGBLIGHT_COLOR,
+  ECHO_DETECTED_MSG,
 } from '../../shared/constants/protocol'
 import { mapToRecord, recordToMap } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
@@ -40,6 +41,7 @@ export interface BulkKeyEntry {
 export interface KeyboardState {
   loading: boolean
   loadingProgress: string
+  connectionWarning: string | null
   isDummy: boolean
   viaProtocol: number
   vialProtocol: number
@@ -92,6 +94,7 @@ function emptyState(): KeyboardState {
   return {
     loading: false,
     loadingProgress: '',
+    connectionWarning: null,
     isDummy: false,
     viaProtocol: -1,
     vialProtocol: -1,
@@ -133,6 +136,10 @@ function emptyState(): KeyboardState {
     qmkSettingsValues: {},
     layerNames: [],
   }
+}
+
+function isEchoDetected(err: unknown): boolean {
+  return err instanceof Error && err.message.includes(ECHO_DETECTED_MSG)
 }
 
 export function useKeyboard() {
@@ -286,7 +293,15 @@ export function useKeyboard() {
 
       // Phase 4: Dynamic entry counts (Vial protocol >= 4)
       if (newState.vialProtocol >= VIAL_PROTOCOL_DYNAMIC) {
-        newState.dynamicCounts = await api.getDynamicEntryCount()
+        try {
+          newState.dynamicCounts = await api.getDynamicEntryCount()
+        } catch (err) {
+          if (isEchoDetected(err)) {
+            newState.connectionWarning = 'warning.echoDetected'
+          } else {
+            console.error('[KB] dynamic entry count failed:', err)
+          }
+        }
       }
 
       // Phase 5: Macro buffer (non-fatal: empty buffer if fetch fails)
@@ -358,27 +373,29 @@ export function useKeyboard() {
         supportedFeatures,
       })
 
-      // Phase 8: QMK Settings discovery
+      // Phase 8: QMK Settings discovery (matches Python reload_settings)
       progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
         try {
           const supported = new Set<number>()
-          let startId = 0
-          while (true) {
-            const result = await api.qmkSettingsQuery(startId)
-            let found = false
+          let cur = 0
+          while (cur !== 0xffff) {
+            const result = await api.qmkSettingsQuery(cur)
             for (let i = 0; i + 1 < result.length; i += 2) {
               const qsid = result[i] | (result[i + 1] << 8)
-              if (qsid === 0xffff) break
-              supported.add(qsid)
-              startId = qsid + 1
-              found = true
+              cur = Math.max(cur, qsid)
+              if (qsid !== 0xffff) {
+                supported.add(qsid)
+              }
             }
-            if (!found) break
           }
           newState.supportedQsids = supported
         } catch (err) {
-          console.error('[KB] QMK settings discovery failed:', err)
+          if (isEchoDetected(err)) {
+            newState.connectionWarning = 'warning.echoDetected'
+          } else {
+            console.error('[KB] QMK settings discovery failed:', err)
+          }
         }
       }
 

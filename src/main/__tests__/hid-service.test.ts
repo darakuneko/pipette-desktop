@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import {
   MSG_LEN,
   HID_USAGE_PAGE,
   HID_USAGE,
   HID_REPORT_ID,
   HID_RETRY_COUNT,
+  HID_RETRY_DELAY_MS,
+  HID_OPEN_RETRY_COUNT,
+  HID_OPEN_RETRY_DELAY_MS,
   VIAL_SERIAL_MAGIC,
   BOOTLOADER_SERIAL_MAGIC,
 } from '../../shared/constants/protocol'
@@ -75,6 +78,10 @@ beforeEach(async () => {
   vi.clearAllMocks()
   mockWrite.mockReturnValue(MSG_LEN + 1)
   await closeHidDevice()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('listDevices', () => {
@@ -199,6 +206,36 @@ describe('openHidDevice / closeHidDevice', () => {
     expect(mockClose).toHaveBeenCalled()
   })
 
+  it('openHidDevice retries on failure', async () => {
+    vi.useFakeTimers()
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen
+      .mockRejectedValueOnce(new Error('cannot open device'))
+      .mockRejectedValueOnce(new Error('cannot open device'))
+      .mockResolvedValueOnce(createMockOpenDevice())
+
+    const promise = openHidDevice(0x1234, 0x5678)
+    await vi.advanceTimersByTimeAsync(HID_OPEN_RETRY_DELAY_MS)
+    await vi.advanceTimersByTimeAsync(HID_OPEN_RETRY_DELAY_MS)
+    const result = await promise
+
+    expect(result).toBe(true)
+    expect(mockHIDAsyncOpen).toHaveBeenCalledTimes(3)
+  })
+
+  it('openHidDevice throws after exhausting retries', async () => {
+    vi.useFakeTimers()
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    mockHIDAsyncOpen.mockImplementation(() => { throw new Error('cannot open device') })
+
+    const promise = openHidDevice(0x1234, 0x5678)
+    const assertion = expect(promise).rejects.toThrow('cannot open device')
+    await vi.runAllTimersAsync()
+
+    await assertion
+    expect(mockHIDAsyncOpen).toHaveBeenCalledTimes(HID_OPEN_RETRY_COUNT)
+  })
+
   it('closeHidDevice resets state', async () => {
     mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
     mockHIDAsyncOpen.mockResolvedValue(createMockOpenDevice())
@@ -263,18 +300,53 @@ describe('sendReceive', () => {
   })
 
   it('retries on timeout', async () => {
+    vi.useFakeTimers()
     mockRead
       .mockRejectedValueOnce(new Error('HID read timeout'))
       .mockRejectedValueOnce(new Error('HID read timeout'))
       .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
 
-    const result = await sendReceive([0x01])
+    const promise = sendReceive([0x01])
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    const result = await promise
 
     expect(mockWrite).toHaveBeenCalledTimes(3)
     expect(result.length).toBe(MSG_LEN)
   })
 
-  it('throws immediately on non-timeout errors', async () => {
+  it('retries on transient device errors', async () => {
+    vi.useFakeTimers()
+    mockRead
+      .mockRejectedValueOnce(new Error('could not read data from device'))
+      .mockRejectedValueOnce(new Error('could not read data from device'))
+      .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
+
+    const promise = sendReceive([0x01])
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    const result = await promise
+
+    expect(mockWrite).toHaveBeenCalledTimes(3)
+    expect(result.length).toBe(MSG_LEN)
+  })
+
+  it('retries on write errors', async () => {
+    vi.useFakeTimers()
+    mockWrite
+      .mockImplementationOnce(() => { throw new Error('Cannot write to hid device') })
+      .mockReturnValue(MSG_LEN + 1)
+    mockRead.mockResolvedValue(Buffer.alloc(MSG_LEN))
+
+    const promise = sendReceive([0x01])
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    const result = await promise
+
+    expect(mockWrite).toHaveBeenCalledTimes(2)
+    expect(result.length).toBe(MSG_LEN)
+  })
+
+  it('throws immediately on non-transient errors', async () => {
     mockRead.mockRejectedValue(new Error('Device disconnected'))
 
     await expect(sendReceive([0x01])).rejects.toThrow('Device disconnected')
@@ -282,11 +354,35 @@ describe('sendReceive', () => {
     expect(mockWrite).toHaveBeenCalledTimes(1)
   })
 
+  it('adds delay between retries', async () => {
+    vi.useFakeTimers()
+    mockRead
+      .mockRejectedValueOnce(new Error('HID read timeout'))
+      .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
+
+    const promise = sendReceive([0x01])
+
+    // Flush microtasks so .then() callback starts — first write+read happens, read rejects, delay starts
+    await vi.advanceTimersByTimeAsync(0)
+
+    // First write happened, second hasn't because delay hasn't elapsed
+    expect(mockWrite).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
+    await promise
+
+    expect(mockWrite).toHaveBeenCalledTimes(2)
+  })
+
   it('throws after exhausting retries', async () => {
-    mockRead.mockRejectedValue(new Error('HID read timeout'))
+    vi.useFakeTimers()
+    mockRead.mockImplementation(() => { throw new Error('HID read timeout') })
 
-    await expect(sendReceive([0x01])).rejects.toThrow('timeout')
+    const promise = sendReceive([0x01])
+    const assertion = expect(promise).rejects.toThrow('timeout')
+    await vi.runAllTimersAsync()
 
+    await assertion
     expect(mockWrite).toHaveBeenCalledTimes(HID_RETRY_COUNT)
   })
 

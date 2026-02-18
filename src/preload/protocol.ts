@@ -57,6 +57,9 @@ import {
   DYNAMIC_VIAL_KEY_OVERRIDE_SET,
   DYNAMIC_VIAL_ALT_REPEAT_KEY_GET,
   DYNAMIC_VIAL_ALT_REPEAT_KEY_SET,
+  ECHO_RETRY_COUNT,
+  ECHO_RETRY_DELAY_MS,
+  ECHO_DETECTED_MSG,
 } from '../shared/constants/protocol'
 import type {
   KeyboardId,
@@ -69,6 +72,40 @@ import type {
 } from '../shared/types/protocol'
 
 // --- Byte helpers ---
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * Detect echo: device echoes the sent packet when it doesn't support
+ * the command. Compare first 4 bytes to avoid false positives
+ * (e.g. a valid QSID of 0x09FE would match a 2-byte check).
+ */
+const ECHO_CHECK_BYTES = 4
+
+function isVialEcho(resp: Uint8Array, pkt: Uint8Array): boolean {
+  for (let i = 0; i < ECHO_CHECK_BYTES; i++) {
+    if (resp[i] !== pkt[i]) return false
+  }
+  return true
+}
+
+/**
+ * Send a Vial command with echo retry.
+ * If the device echoes the command, retry up to ECHO_RETRY_COUNT times.
+ * Throws with ECHO_DETECTED_MSG if all retries return echoes.
+ */
+async function sendWithEchoRetry(pkt: Uint8Array): Promise<Uint8Array> {
+  for (let attempt = 0; attempt < ECHO_RETRY_COUNT; attempt++) {
+    const resp = await sendReceive(pkt)
+    if (!isVialEcho(resp, pkt)) return resp
+    if (attempt < ECHO_RETRY_COUNT - 1) {
+      await delay(ECHO_RETRY_DELAY_MS)
+    }
+  }
+  throw new Error(ECHO_DETECTED_MSG)
+}
 
 /** Build a command packet (auto-padded to MSG_LEN). */
 function cmd(...bytes: number[]): Uint8Array {
@@ -494,9 +531,8 @@ export async function lock(): Promise<void> {
  * this may overlap with the altRepeatKey byte — same as the Python reference.
  */
 export async function getDynamicEntryCount(): Promise<DynamicEntryCounts> {
-  const resp = await sendReceive(
-    cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES),
-  )
+  const pkt = cmd(CMD_VIA_VIAL_PREFIX, CMD_VIAL_DYNAMIC_ENTRY_OP, DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES)
+  const resp = await sendWithEchoRetry(pkt)
   return {
     tapDance: resp[0],
     combo: resp[1],
@@ -645,13 +681,14 @@ export async function setAltRepeatKey(index: number, entry: AltRepeatKeyEntry): 
 /**
  * Query supported QMK settings starting from a given QSID.
  * Returns raw response bytes (list of LE u16 QSIDs, 0xFFFF = terminator).
+ * Throws ECHO_DETECTED if the device echoes the command after retries.
  */
 export async function qmkSettingsQuery(startId: number): Promise<number[]> {
   const pkt = new Uint8Array(MSG_LEN)
   pkt[0] = CMD_VIA_VIAL_PREFIX
   pkt[1] = CMD_VIAL_QMK_SETTINGS_QUERY
   writeLE16(pkt, 2, startId)
-  const resp = await sendReceive(pkt)
+  const resp = await sendWithEchoRetry(pkt)
   return Array.from(resp)
 }
 
