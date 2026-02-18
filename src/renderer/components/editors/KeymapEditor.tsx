@@ -1438,8 +1438,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         if (l === src) entries.push({ layer: tgt, row: r, col: c, keycode: code })
       }
       await onSetKeysBulk(entries)
+      for (let i = 0; i < encoderCount; i++) {
+        for (let dir = 0; dir < 2; dir++) {
+          const code = encoderLayout.get(`${src},${i},${dir}`) ?? 0
+          await onSetEncoder(tgt, i, dir, code)
+        }
+      }
     })
-  }, [copyAllPending, clearCopyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, runCopy])
+  }, [copyAllPending, clearCopyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
 
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
