@@ -1551,10 +1551,10 @@ describe('SettingsModal', () => {
       expect(screen.getByTestId('about-license')).toBeInTheDocument()
     })
 
-    it('shows terms of service content by default', () => {
+    it('shows legal content', () => {
       renderAndSwitchToAbout()
 
-      expect(screen.getByTestId('about-terms-content')).toBeInTheDocument()
+      expect(screen.getByTestId('about-legal-content')).toBeInTheDocument()
     })
 
     it('does not show other tab content when About is active', () => {

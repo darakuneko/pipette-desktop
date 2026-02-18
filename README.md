@@ -57,6 +57,7 @@ See [Data Guide](docs/Data.md) for details on how Hub authentication works.
 ### Utilities
 
 - **Typing Test** — Built-in typing test with WPM/accuracy tracking, downloadable language packs, and per-keyboard history
+- **Multilingual UI** — Multiple languages supported; selectable in Settings
 - **Light / Dark / System theme**
 - **Keyboard layout override** (QWERTY, Dvorak, etc.) for correct label display
 - **Configurable panel side** (left / right)
@@ -129,6 +130,14 @@ See the [Data Guide](docs/Data.md) for a complete guide on what data Pipette sto
 A cup of coffee keeps the commits coming ☕
 
 [Amazon Wishlist](https://www.amazon.co.jp/hz/wishlist/ls/66VQJTRHISQT) | [Ko-fi](https://ko-fi.com/darakuneko)
+
+## Contributing
+
+Contributions are welcome! In particular:
+
+- **Translations** — Add a locale JSON file to `src/renderer/i18n/locales/` and register it in `src/renderer/i18n/index.ts`.
+  PRs for new languages or corrections to existing translations are appreciated.
+- **Bug reports & feature requests** — Open an issue to let us know.
 
 ## Acknowledgments
 

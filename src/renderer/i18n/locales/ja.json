@@ -455,14 +455,7 @@
     "about": {
       "version": "バージョン {{version}}",
       "license": "ライセンス: {{license}}",
-      "licenseValue": "GPL-3.0-or-later",
-      "termsTitle": "利用規約",
-      "termsGoogleDrive": "Pipette は Google Drive appDataFolder を使用して、暗号化された同期データを保存します。appDataFolder は通常の Google Drive ストレージとは異なり、Pipette のみがアクセス可能な隠しフォルダです。個人の Drive ファイルには一切アクセスしません。",
-      "termsHubData": "Pipette Hub にアップロードされたデータは、Pipette Hub の利用規約に従います。アップロードされたコンテンツ（キーマップ、サムネイル、メタデータ）は Pipette Hub のサーバーに保存され、一般に公開される場合があります。",
-      "termsOpenSource": "Pipette は GPL-3.0-or-later ライセンスの下で配布されるオープンソースソフトウェアです。",
-      "termsHidAccess": "Pipette は USB HID 経由で接続されたキーボードと通信します。キーマップの変更はキーボードのファームウェアに直接書き込まれます。",
-      "termsLocalData": "Pipette はアプリケーション設定と保存済みキーマップをローカルに保存します。同期を有効にするか Pipette Hub にアップロードしない限り、データはデバイスに留まります。",
-      "termsDisclaimer": "Pipette は現状のまま提供され、いかなる保証もありません。ご自身の責任でご使用ください。"
+      "licenseValue": "GPL-3.0-or-later"
     }
   },
   "editorSettings": {

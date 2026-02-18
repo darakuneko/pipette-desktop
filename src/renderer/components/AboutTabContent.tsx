@@ -2,14 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import appIcon from '../assets/app-icon.png'
-
-const TERMS_SECTIONS = [
-  'termsGoogleDrive',
-  'termsHubData',
-  'termsHidAccess',
-  'termsLocalData',
-  'termsOpenSource',
-] as const
+import { LEGAL_SECTIONS } from './legal-content'
 
 export function AboutTabContent() {
   const { t } = useTranslation()
@@ -45,20 +38,19 @@ export function AboutTabContent() {
       </div>
 
       <div
-        className="max-h-60 overflow-y-auto rounded-lg border border-edge bg-surface p-4 space-y-3"
-        data-testid="about-terms-content"
+        className="max-h-60 overflow-y-auto rounded-lg border border-edge bg-surface p-4 space-y-4"
+        data-testid="about-legal-content"
       >
-        <h4 className="text-sm font-medium text-content">
-          {t('settings.about.termsTitle')}
-        </h4>
-        {TERMS_SECTIONS.map((key) => (
-          <p key={key} className="text-xs text-content-muted leading-relaxed">
-            {t(`settings.about.${key}`)}
-          </p>
+        {LEGAL_SECTIONS.map((section) => (
+          <div key={section.title} className="space-y-2">
+            <h5 className="text-sm font-medium text-content">{section.title}</h5>
+            {section.paragraphs.map((paragraph, i) => (
+              <p key={i} className="text-xs text-content-muted leading-relaxed">
+                {paragraph}
+              </p>
+            ))}
+          </div>
         ))}
-        <p className="text-xs text-content-muted leading-relaxed font-medium">
-          {t('settings.about.termsDisclaimer')}
-        </p>
       </div>
     </div>
   )
