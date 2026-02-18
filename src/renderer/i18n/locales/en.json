@@ -235,6 +235,9 @@
     "sideloadFailed": "Failed to load JSON definition file",
     "sideloadInvalidDefinition": "Invalid keyboard definition: missing required fields (matrix, layouts)"
   },
+  "warning": {
+    "echoDetected": "Communication error detected. Please check your USB cable and reconnect the device."
+  },
   "keycodes": {
     "basic": "Basic",
     "iso": "ISO/JIS",

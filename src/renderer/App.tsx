@@ -959,6 +959,12 @@ export function App() {
               {t('error.protocolVersion')}
             </div>
           )}
+
+          {keyboard.connectionWarning && (
+            <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
+              {t(keyboard.connectionWarning)}
+            </div>
+          )}
         </>
       )}
 
