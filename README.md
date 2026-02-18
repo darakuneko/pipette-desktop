@@ -130,6 +130,12 @@ A cup of coffee keeps the commits coming ☕
 
 [Amazon Wishlist](https://www.amazon.co.jp/hz/wishlist/ls/66VQJTRHISQT) | [Ko-fi](https://ko-fi.com/darakuneko)
 
+## Acknowledgments
+
+Pipette is built upon the foundation laid by [Vial](https://get.vial.today/) and [Vial GUI](https://github.com/vial-kb/vial-gui).
+The VIA/Vial protocol implementation, keyboard definition format, and overall design philosophy originate from these projects.
+We are deeply grateful to the Vial team and contributors for making open-source keyboard configuration accessible to everyone.
+
 ## License
 
 [GPL-3.0-or-later](LICENSE)
