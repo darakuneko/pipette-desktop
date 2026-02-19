@@ -178,12 +178,12 @@ describe('EditorSettingsModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('calls onClose on Escape key', () => {
+  it('does not close modal on Escape key', () => {
     const onClose = vi.fn()
     render(<EditorSettingsModal {...DEFAULT_PROPS} onClose={onClose} />)
 
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('auto-advance toggle has correct aria-checked attribute', () => {

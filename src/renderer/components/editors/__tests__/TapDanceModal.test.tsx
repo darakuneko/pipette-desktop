@@ -176,12 +176,12 @@ describe('TapDanceModal', () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
-  it('calls onClose when Escape is pressed', () => {
+  it('does not close modal on Escape key', () => {
     render(
       <TapDanceModal index={0} entry={makeEntry()} onSave={onSave} onClose={onClose} />,
     )
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('updates tapping term locally', () => {

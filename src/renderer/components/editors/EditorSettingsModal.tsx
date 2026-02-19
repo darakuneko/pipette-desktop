@@ -197,14 +197,6 @@ export function EditorSettingsModal({
     return () => cancelAnimationFrame(id)
   }, [])
 
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
-
   return (
     <div
       className={`fixed inset-0 z-50 transition-colors duration-300 ${open ? 'bg-black/30' : 'bg-transparent'}`}
@@ -270,6 +262,7 @@ export function EditorSettingsModal({
                             if (e.key === 'Enter') {
                               e.currentTarget.blur()
                             } else if (e.key === 'Escape') {
+                              e.stopPropagation()
                               e.currentTarget.value = name
                               e.currentTarget.blur()
                             }

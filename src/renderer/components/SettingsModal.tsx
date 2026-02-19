@@ -349,6 +349,7 @@ function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowProps) {
     if (e.key === 'Enter') {
       void handleSubmitRename()
     } else if (e.key === 'Escape') {
+      e.stopPropagation()
       handleCancelEdit()
     }
   }, [handleSubmitRename, handleCancelEdit])
@@ -705,14 +706,6 @@ export function SettingsModal({
   useEffect(() => { setConfirmingHubDisconnect(false) }, [hubEnabled])
   const authInFlight = useRef(false)
   const validationSeq = useRef(0)
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
 
   const handleSignIn = useCallback(async () => {
     if (authInFlight.current) return

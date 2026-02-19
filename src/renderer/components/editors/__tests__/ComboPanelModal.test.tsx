@@ -200,11 +200,11 @@ describe('ComboPanelModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onClose when Escape is pressed', () => {
+  it('does not close modal on Escape key', () => {
     render(
       <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

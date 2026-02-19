@@ -44,12 +44,12 @@ describe('NotificationModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('calls onClose when Escape key is pressed', () => {
+  it('does not close modal on Escape key', () => {
     const onClose = vi.fn()
     render(<NotificationModal notifications={sampleNotifications} onClose={onClose} />)
 
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('calls onClose when backdrop is clicked', () => {

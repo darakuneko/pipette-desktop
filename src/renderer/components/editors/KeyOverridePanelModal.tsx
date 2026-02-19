@@ -94,15 +94,6 @@ export function KeyOverridePanelModal({
     onClose()
   }, [clearPending, onClose])
 
-  // Escape key closes modal
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [handleClose])
-
   const handleEntrySave = useCallback(async () => {
     if (selectedIndex === null || !editedEntry) return
     const codes = [editedEntry.triggerKey, editedEntry.replacementKey]

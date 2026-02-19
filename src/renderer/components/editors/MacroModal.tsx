@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
@@ -31,14 +30,6 @@ export function MacroModal({
   isDummy,
 }: Props) {
   const { t } = useTranslation()
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [onClose])
 
   return (
     <div

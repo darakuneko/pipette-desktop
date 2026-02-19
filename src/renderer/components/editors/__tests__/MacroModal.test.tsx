@@ -72,10 +72,10 @@ describe('MacroModal', () => {
     expect(defaultProps.onClose).not.toHaveBeenCalled()
   })
 
-  it('calls onClose when pressing Escape', () => {
+  it('does not close modal on Escape key', () => {
     render(<MacroModal {...defaultProps} />)
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(defaultProps.onClose).toHaveBeenCalledOnce()
+    expect(defaultProps.onClose).not.toHaveBeenCalled()
   })
 
   it('calls onClose when clicking Close button', () => {

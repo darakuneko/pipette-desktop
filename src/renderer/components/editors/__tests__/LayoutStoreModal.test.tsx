@@ -198,7 +198,7 @@ describe('LayoutStoreModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('calls onClose on Escape key', () => {
+  it('does not close modal on Escape key', () => {
     const onClose = vi.fn()
     render(
       <LayoutStoreModal
@@ -210,7 +210,7 @@ describe('LayoutStoreModal', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('shows loading state', () => {
@@ -396,27 +396,25 @@ describe('LayoutStoreModal', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('does not close modal when Escape is pressed during rename', () => {
-    const onClose = vi.fn()
+  it('does not call onRename when Escape is pressed after changing rename text', () => {
+    const onRename = vi.fn()
     render(
       <LayoutStoreModal
         entries={MOCK_ENTRIES}
         {...DEFAULT_PROPS}
-        onClose={onClose}
+        onRename={onRename}
       />,
     )
 
-    // Enter rename mode
     const renameButtons = screen.getAllByTestId('layout-store-rename-btn')
     fireEvent.click(renameButtons[0])
 
-    // Press Escape on the rename input
     const input = screen.getByTestId('layout-store-rename-input')
-    fireEvent.keyDown(input, { key: 'Escape', bubbles: true })
+    fireEvent.change(input, { target: { value: 'Changed Name' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
 
-    // Rename should be cancelled but modal should stay open
+    expect(onRename).not.toHaveBeenCalled()
     expect(screen.queryByTestId('layout-store-rename-input')).not.toBeInTheDocument()
-    expect(onClose).not.toHaveBeenCalled()
   })
 
   describe('import/sideload section', () => {

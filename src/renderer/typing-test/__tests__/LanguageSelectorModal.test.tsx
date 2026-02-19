@@ -163,7 +163,7 @@ describe('LanguageSelectorModal', () => {
     expect(screen.queryByTestId('language-delete-english')).not.toBeInTheDocument()
   })
 
-  it('calls onClose when pressing Escape', async () => {
+  it('does not close modal on Escape key', async () => {
     const onClose = vi.fn()
 
     render(
@@ -176,7 +176,7 @@ describe('LanguageSelectorModal', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
-    expect(onClose).toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('does not update state after unmount when langList resolves late', async () => {

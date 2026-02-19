@@ -124,15 +124,6 @@ export function ComboPanelModal({
     onClose()
   }, [clearPending, onClose])
 
-  // Escape key closes modal
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [handleClose])
-
   const handleTimeoutSave = useCallback(async () => {
     if (comboTimeout === null || !qmkSettingsSet) return
     const bytes: number[] = []

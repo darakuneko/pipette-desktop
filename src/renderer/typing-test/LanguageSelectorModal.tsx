@@ -33,14 +33,6 @@ export function LanguageSelectorModal({ currentLanguage, onSelectLanguage, onClo
     return () => { alive = false }
   }, [])
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [onClose])
-
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === backdropRef.current) onClose()
   }, [onClose])

@@ -214,7 +214,7 @@ describe('FavoriteStoreModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('calls onClose on Escape key', () => {
+  it('does not close modal on Escape key', () => {
     const onClose = vi.fn()
     render(
       <FavoriteStoreModal
@@ -226,7 +226,7 @@ describe('FavoriteStoreModal', () => {
 
     fireEvent.keyDown(document, { key: 'Escape' })
 
-    expect(onClose).toHaveBeenCalledOnce()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('shows loading state', () => {
@@ -358,13 +358,13 @@ describe('FavoriteStoreModal', () => {
     expect(screen.getByTestId('favorite-store-save-submit')).not.toBeDisabled()
   })
 
-  it('does not close modal when Escape is pressed during rename', () => {
-    const onClose = vi.fn()
+  it('does not call onRename when Escape is pressed after changing rename text', () => {
+    const onRename = vi.fn()
     render(
       <FavoriteStoreModal
         entries={MOCK_ENTRIES}
         {...DEFAULT_PROPS}
-        onClose={onClose}
+        onRename={onRename}
       />,
     )
 
@@ -372,9 +372,11 @@ describe('FavoriteStoreModal', () => {
     fireEvent.click(renameButtons[0])
 
     const input = screen.getByTestId('favorite-store-rename-input')
-    fireEvent.keyDown(input, { key: 'Escape', bubbles: true })
+    fireEvent.change(input, { target: { value: 'Changed Name' } })
+    fireEvent.keyDown(input, { key: 'Escape' })
 
+    expect(onRename).not.toHaveBeenCalled()
     expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
-    expect(onClose).not.toHaveBeenCalled()
   })
+
 })

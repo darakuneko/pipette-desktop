@@ -54,15 +54,6 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     setPopoverState(null)
   }, [entry])
 
-  // Escape key closes modal
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [onClose])
-
   const hasChanges = JSON.stringify(entry) !== JSON.stringify(editedEntry)
 
   const handleTappingTermChange = (value: string) => {

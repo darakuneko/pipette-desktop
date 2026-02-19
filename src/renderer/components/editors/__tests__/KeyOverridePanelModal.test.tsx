@@ -235,12 +235,12 @@ describe('KeyOverridePanelModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('calls onClose when Escape is pressed', () => {
+  it('does not close modal on Escape key', () => {
     render(
       <KeyOverridePanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('shows mods-only label when triggerMods is set but triggerKey is 0', () => {

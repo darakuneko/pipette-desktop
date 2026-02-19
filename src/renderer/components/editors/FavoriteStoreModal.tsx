@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
@@ -45,6 +45,7 @@ export function FavoriteStoreModal({
   const [editLabel, setEditLabel] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const originalLabelRef = useRef('')
+  const cancellingRef = useRef(false)
 
   function handleSaveSubmit(e: React.FormEvent): void {
     e.preventDefault()
@@ -54,8 +55,12 @@ export function FavoriteStoreModal({
   }
 
   function handleRenameSubmit(entryId: string): void {
+    if (cancellingRef.current) {
+      cancellingRef.current = false
+      return
+    }
     const trimmed = editLabel.trim()
-    if (trimmed !== originalLabelRef.current) {
+    if (trimmed && trimmed !== originalLabelRef.current) {
       onRename(entryId, trimmed)
     }
     setEditingId(null)
@@ -66,23 +71,17 @@ export function FavoriteStoreModal({
       handleRenameSubmit(entryId)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
+      cancellingRef.current = true
       setEditingId(null)
     }
   }
 
   function startRename(entry: SavedFavoriteMeta): void {
+    cancellingRef.current = false
     setEditingId(entry.id)
     setEditLabel(entry.label)
     originalLabelRef.current = entry.label
   }
-
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') onClose()
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onClose])
 
   return (
     <div

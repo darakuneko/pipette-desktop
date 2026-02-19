@@ -1,4 +1,3 @@
-import { useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import type { AppNotification } from '../../shared/types/notification'
@@ -10,15 +9,6 @@ interface NotificationModalProps {
 
 export function NotificationModal({ notifications, onClose }: NotificationModalProps) {
   const { t } = useTranslation()
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') onClose()
-  }, [onClose])
-
-  useEffect(() => {
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [handleKeyDown])
 
   return (
     <div
