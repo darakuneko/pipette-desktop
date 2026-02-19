@@ -6,6 +6,7 @@
   "type": "module",
   "author": "darakuneko <tvkids@gmail.com>",
   "homepage": "https://github.com/darakuneko/pipette-desktop",
+  "packageManager": "pnpm@10.28.2",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
