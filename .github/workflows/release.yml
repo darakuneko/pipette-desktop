@@ -80,6 +80,7 @@ jobs:
             dist/*.AppImage
 
   release:
+    if: startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -92,6 +93,6 @@ jobs:
           draft: true
           generate_release_notes: true
           files: |
-            dist/*.dmg
-            dist/*.exe
-            dist/*.AppImage
+            *.dmg
+            *.exe
+            *.AppImage
