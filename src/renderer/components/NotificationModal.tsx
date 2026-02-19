@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './editors/ModalCloseButton'
+import { formatDateShort } from './editors/store-modal-shared'
 import type { AppNotification } from '../../shared/types/notification'
 
 interface NotificationModalProps {
@@ -37,7 +38,7 @@ export function NotificationModal({ notifications, onClose }: NotificationModalP
                 {notification.body}
               </p>
               <p className="mt-2 text-xs text-content-tertiary">
-                {new Date(notification.publishedAt).toLocaleDateString()}
+                {formatDateShort(notification.publishedAt)}
               </p>
             </div>
           ))}

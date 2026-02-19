@@ -6,7 +6,7 @@ import { Monitor, Sun, Moon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './editors/modal-controls'
-import { ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, formatDate } from './editors/store-modal-shared'
+import { ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, formatDate, formatDateShort } from './editors/store-modal-shared'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { ModalTabId } from './editors/modal-tabs'
@@ -1481,7 +1481,7 @@ export function SettingsModal({
                         {notification.body}
                       </p>
                       <time className="mt-2 block text-xs text-content-muted" dateTime={notification.publishedAt}>
-                        {formatDate(notification.publishedAt)}
+                        {formatDateShort(notification.publishedAt)}
                       </time>
                     </li>
                   ))}

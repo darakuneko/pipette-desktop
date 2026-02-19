@@ -6,6 +6,7 @@ import { Trophy } from 'lucide-react'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
+import { formatDate } from '../components/editors/store-modal-shared'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'accuracy' | 'mode' | 'duration'
@@ -26,12 +27,6 @@ function modeFilterButtonClass(active: boolean): string {
 
 const MAX_SPARKLINE_RESULTS = 50
 
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
-  const pad = (n: number): string => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
-}
 
 function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)
