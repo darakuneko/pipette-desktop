@@ -77,6 +77,7 @@
       "package.json"
     ],
     "artifactName": "${productName}-${os}-${arch}.${ext}",
+    "generateUpdatesFilesForAllChannels": false,
     "linux": {
       "target": [
         "AppImage"
@@ -99,7 +100,8 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "license": "LICENSE"
+      "license": "LICENSE",
+      "differentialPackage": false
     },
     "mac": {
       "target": [
