@@ -2,14 +2,25 @@
 
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { SyncProgress } from '../../shared/types/sync'
 
 interface Props {
   deviceName: string
   deviceId: string
   loadingProgress?: string
+  syncProgress?: SyncProgress | null
+  onSyncSkip?: () => void
+  syncOnly?: boolean
 }
 
-export function ConnectingOverlay({ deviceName, deviceId, loadingProgress }: Props) {
+export function ConnectingOverlay({
+  deviceName,
+  deviceId,
+  loadingProgress,
+  syncProgress,
+  onSyncSkip,
+  syncOnly,
+}: Props) {
   const { t } = useTranslation()
   const [dots, setDots] = useState(0)
 
@@ -19,7 +30,7 @@ export function ConnectingOverlay({ deviceName, deviceId, loadingProgress }: Pro
   }, [])
 
   return (
-    <div className="absolute inset-0 z-40 flex items-center justify-center bg-surface">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-surface">
       <div className="flex flex-col items-center gap-7">
         <div className="relative flex h-14 w-14 items-center justify-center" aria-hidden="true">
           <div className="animate-pulse-ring absolute h-14 w-14 rounded-full border border-accent/15" />
@@ -39,21 +50,68 @@ export function ConnectingOverlay({ deviceName, deviceId, loadingProgress }: Pro
 
         <div className="flex max-w-xs flex-col items-center gap-2">
           <p className="text-sm text-content-secondary">
-            {t('app.connecting', { dots: '.'.repeat(dots) })}
-            <span className="invisible">{'.'.repeat(3 - dots)}</span>
+            {syncOnly
+              ? t('sync.syncing')
+              : (
+                  <>
+                    {t('app.connecting', { dots: '.'.repeat(dots) })}
+                    <span className="invisible">{'.'.repeat(3 - dots)}</span>
+                  </>
+                )}
           </p>
           {loadingProgress && (
             <p className="text-xs text-content-muted">
               {t(loadingProgress)}
             </p>
           )}
-          <p className="max-w-full truncate font-mono text-sm font-semibold text-content">
-            {deviceName}
-          </p>
-          <p className="font-mono text-[11px] tracking-wide text-content-muted">
-            {deviceId}
-          </p>
+          {deviceName && (
+            <p className="max-w-full truncate font-mono text-sm font-semibold text-content">
+              {deviceName}
+            </p>
+          )}
+          {deviceId && (
+            <p className="font-mono text-[11px] tracking-wide text-content-muted">
+              {deviceId}
+            </p>
+          )}
         </div>
+
+        {syncProgress && (
+          <div className="flex flex-col items-center gap-2">
+            {syncProgress.syncUnit && (
+              <div className="text-sm text-content-secondary">
+                {syncProgress.syncUnit}
+              </div>
+            )}
+            {syncProgress.total != null && syncProgress.current != null && (
+              <div className="text-xs text-content-muted">
+                {syncProgress.current} / {syncProgress.total}
+              </div>
+            )}
+            {(syncProgress.status === 'error' || syncProgress.status === 'partial') && syncProgress.message && (
+              <div className={`text-sm ${syncProgress.status === 'error' ? 'text-danger' : 'text-warning'}`}>
+                {t(syncProgress.message, syncProgress.message)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {(syncOnly || syncProgress) && (
+          <div className="h-1 w-48 overflow-hidden rounded bg-surface-dim">
+            <div className="h-full w-3/5 animate-pulse rounded bg-accent" />
+          </div>
+        )}
+
+        {onSyncSkip && (
+          <button
+            type="button"
+            className="rounded border border-edge px-4 py-2 text-sm text-content-secondary hover:bg-surface-dim"
+            onClick={onSyncSkip}
+            data-testid="sync-overlay-skip"
+          >
+            {t('sync.continueOffline')}
+          </button>
+        )}
       </div>
     </div>
   )
