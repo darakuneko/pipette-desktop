@@ -81,11 +81,14 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     signOut: vi.fn().mockResolvedValue(undefined),
     setConfig: vi.fn().mockResolvedValue(undefined),
     setPassword: vi.fn().mockResolvedValue({ success: true }),
-    resetPassword: vi.fn().mockResolvedValue({ success: true }),
+    changePassword: vi.fn().mockResolvedValue({ success: true }),
     resetSyncTargets: vi.fn().mockResolvedValue({ success: true }),
     validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
+    cancelPending: vi.fn().mockResolvedValue(undefined),
     syncNow: vi.fn().mockResolvedValue(undefined),
     refreshStatus: vi.fn().mockResolvedValue(undefined),
+    listUndecryptable: vi.fn().mockResolvedValue([]),
+    deleteFiles: vi.fn().mockResolvedValue({ success: true }),
     ...overrides,
   }
 }
@@ -312,6 +315,36 @@ describe('SettingsModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
+  it('hides close button and prevents backdrop close while busy', async () => {
+    let resolveSet: (value: { success: boolean }) => void
+    const setPromise = new Promise<{ success: boolean }>((resolve) => { resolveSet = resolve })
+    const sync = makeSyncMock({
+      setPassword: vi.fn().mockReturnValue(setPromise),
+      validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
+    })
+    renderAndSwitchToData({ sync })
+
+    fireEvent.change(screen.getByTestId('sync-password-input'), { target: { value: 'Str0ng!Pass99' } })
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-save')).not.toBeDisabled()
+    })
+
+    fireEvent.click(screen.getByTestId('sync-password-save'))
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('settings-close')).not.toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByTestId('settings-backdrop'))
+    expect(onClose).not.toHaveBeenCalled()
+
+    resolveSet!({ success: true })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('settings-close')).toBeInTheDocument()
+    })
+  })
+
   it('enables auto-sync and triggers download when start button is clicked', async () => {
     const sync = makeSyncMock(FULLY_CONFIGURED)
     renderAndSwitchToData({ sync })
@@ -392,41 +425,70 @@ describe('SettingsModal', () => {
     expect(screen.getByTestId('sync-sign-in')).not.toBeDisabled()
   })
 
-  it('shows reset password button when password is set and authenticated', () => {
-    renderAndSwitchToData({
-      sync: makeSyncMock({ hasPassword: true, authStatus: { authenticated: true } }),
-    })
-
-    expect(screen.getByTestId('sync-password-reset-btn')).not.toBeDisabled()
-  })
-
-  it('disables reset password button when not authenticated', () => {
-    renderAndSwitchToData({ sync: makeSyncMock({ hasPassword: true }) })
-
-    expect(screen.getByTestId('sync-password-reset-btn')).toBeDisabled()
-  })
-
-  it('shows warning and input when reset password is clicked', () => {
-    renderAndSwitchToData({
-      sync: makeSyncMock({ hasPassword: true, authStatus: { authenticated: true } }),
-    })
-
-    fireEvent.click(screen.getByTestId('sync-password-reset-btn'))
-
-    expect(screen.getByTestId('sync-reset-warning')).toBeInTheDocument()
-    expect(screen.getByTestId('sync-password-input')).toBeInTheDocument()
-    expect(screen.getByTestId('sync-password-reset-cancel')).toBeInTheDocument()
-  })
-
-  it('calls resetPassword on submit during reset mode', async () => {
+  it('hides password controls and shows busy banner while setting password', async () => {
+    let resolveSet: (value: { success: boolean }) => void
+    const setPromise = new Promise<{ success: boolean }>((resolve) => { resolveSet = resolve })
     const sync = makeSyncMock({
-      hasPassword: true,
-      authStatus: { authenticated: true },
+      setPassword: vi.fn().mockReturnValue(setPromise),
       validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
     })
     renderAndSwitchToData({ sync })
 
-    fireEvent.click(screen.getByTestId('sync-password-reset-btn'))
+    fireEvent.change(screen.getByTestId('sync-password-input'), { target: { value: 'Str0ng!Pass99' } })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-save')).not.toBeDisabled()
+    })
+
+    fireEvent.click(screen.getByTestId('sync-password-save'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-busy')).toBeInTheDocument()
+      expect(screen.getByTestId('sync-password-busy')).toHaveTextContent('sync.settingPassword')
+      expect(screen.queryByTestId('sync-password-save')).not.toBeInTheDocument()
+      expect(screen.getByTestId('sync-password-input')).toBeDisabled()
+    })
+
+    resolveSet!({ success: true })
+
+    await waitFor(() => {
+      expect(screen.queryByTestId('sync-password-busy')).not.toBeInTheDocument()
+    })
+  })
+
+  it('disables change password button while busy', async () => {
+    let resolveImport: (value: { success: boolean }) => void
+    const importPromise = new Promise<{ success: boolean }>((resolve) => { resolveImport = resolve })
+    mockImportLocalData.mockReturnValueOnce(importPromise)
+
+    renderAndSwitchToData({ sync: makeSyncMock(FULLY_CONFIGURED) })
+
+    expect(screen.getByTestId('sync-password-change-btn')).not.toBeDisabled()
+
+    fireEvent.click(screen.getByTestId('local-data-import'))
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-change-btn')).toBeDisabled()
+    })
+
+    resolveImport!({ success: true })
+
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-change-btn')).not.toBeDisabled()
+    })
+  })
+
+  it('hides change password controls and shows busy banner while saving', async () => {
+    let resolveChange: (value: { success: boolean }) => void
+    const changePromise = new Promise<{ success: boolean }>((resolve) => { resolveChange = resolve })
+    const sync = makeSyncMock({
+      ...FULLY_CONFIGURED,
+      changePassword: vi.fn().mockReturnValue(changePromise),
+      validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
+    })
+    renderAndSwitchToData({ sync })
+
+    fireEvent.click(screen.getByTestId('sync-password-change-btn'))
     fireEvent.change(screen.getByTestId('sync-password-input'), { target: { value: 'NewStr0ng!Pass' } })
 
     await waitFor(() => {
@@ -436,22 +498,18 @@ describe('SettingsModal', () => {
     fireEvent.click(screen.getByTestId('sync-password-save'))
 
     await waitFor(() => {
-      expect(sync.resetPassword).toHaveBeenCalledWith('NewStr0ng!Pass')
-    })
-    expect(sync.setPassword).not.toHaveBeenCalled()
-  })
-
-  it('cancels reset and returns to password-set view', () => {
-    renderAndSwitchToData({
-      sync: makeSyncMock({ hasPassword: true, authStatus: { authenticated: true } }),
+      expect(screen.getByTestId('sync-password-busy')).toBeInTheDocument()
+      expect(screen.getByTestId('sync-password-busy')).toHaveTextContent('sync.changingPassword')
+      expect(screen.queryByTestId('sync-password-save')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('sync-password-reset-cancel')).not.toBeInTheDocument()
+      expect(screen.getByTestId('sync-password-input')).toBeDisabled()
     })
 
-    fireEvent.click(screen.getByTestId('sync-password-reset-btn'))
-    expect(screen.getByTestId('sync-reset-warning')).toBeInTheDocument()
+    resolveChange!({ success: true })
 
-    fireEvent.click(screen.getByTestId('sync-password-reset-cancel'))
-    expect(screen.queryByTestId('sync-reset-warning')).not.toBeInTheDocument()
-    expect(screen.getByTestId('sync-password-set')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('sync-password-set')).toBeInTheDocument()
+    })
   })
 
   it('shows syncing status in sync status section', () => {

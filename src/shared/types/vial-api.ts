@@ -128,7 +128,6 @@ export interface VialAPI {
   syncAuthSignOut(): Promise<{ success: boolean; error?: string }>
   syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<{ success: boolean; error?: string }>
   syncSetPassword(password: string): Promise<{ success: boolean; error?: string }>
-  syncResetPassword(password: string): Promise<{ success: boolean; error?: string }>
   syncChangePassword(newPassword: string): Promise<{ success: boolean; error?: string }>
   syncResetTargets(targets: SyncResetTargets): Promise<{ success: boolean; error?: string }>
   syncHasPassword(): Promise<boolean>

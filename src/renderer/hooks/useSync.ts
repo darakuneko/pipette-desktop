@@ -39,7 +39,6 @@ export interface UseSyncReturn {
   signOut: () => Promise<void>
   setConfig: (patch: Partial<AppConfig>) => void
   setPassword: (password: string) => Promise<{ success: boolean; error?: string }>
-  resetPassword: (password: string) => Promise<{ success: boolean; error?: string }>
   changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
   resetSyncTargets: (targets: SyncResetTargets) => Promise<{ success: boolean; error?: string }>
   validatePassword: (password: string) => Promise<PasswordStrength>
@@ -148,11 +147,6 @@ export function useSync(): UseSyncReturn {
     [callPasswordApi],
   )
 
-  const resetPassword = useCallback(
-    (password: string) => callPasswordApi(window.vialAPI.syncResetPassword, password),
-    [callPasswordApi],
-  )
-
   const changePassword = useCallback(
     (newPassword: string) => callPasswordApi(window.vialAPI.syncChangePassword, newPassword),
     [callPasswordApi],
@@ -209,7 +203,6 @@ export function useSync(): UseSyncReturn {
     signOut,
     setConfig,
     setPassword,
-    resetPassword,
     changePassword,
     resetSyncTargets,
     validatePassword,

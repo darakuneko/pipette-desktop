@@ -136,6 +136,7 @@ export async function changePassword(newPassword: string): Promise<void> {
   try {
     const oldPassword = await requireSyncCredentials()
     if (!oldPassword) throw new Error('No stored password found')
+    if (newPassword === oldPassword) throw new Error('sync.samePassword')
     const remoteFiles = await listFiles()
 
     // Validate old password against password-check first

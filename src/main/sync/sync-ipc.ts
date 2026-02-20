@@ -13,7 +13,7 @@ import {
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
-import { deleteAllFiles, deleteFilesByPrefix, deleteFile } from './google-drive'
+import { deleteFilesByPrefix, deleteFile } from './google-drive'
 import {
   executeSync,
   hasPendingChanges,
@@ -148,16 +148,6 @@ export function setupSyncIpc(): void {
     IpcChannels.SYNC_SET_PASSWORD,
     (_event, password: string) =>
       wrapIpc('Store password failed', async () => {
-        await storePassword(password)
-        resetPasswordCheckCache()
-      }),
-  )
-
-  secureHandle(
-    IpcChannels.SYNC_RESET_PASSWORD,
-    (_event, password: string) =>
-      wrapIpc('Reset password failed', async () => {
-        await deleteAllFiles()
         await storePassword(password)
         resetPasswordCheckCache()
       }),

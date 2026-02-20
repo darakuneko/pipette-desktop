@@ -201,8 +201,6 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_EXECUTE, direction, scope),
   syncSetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_SET_PASSWORD, password),
-  syncResetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SYNC_RESET_PASSWORD, password),
   syncChangePassword: (newPassword: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CHANGE_PASSWORD, newPassword),
   syncResetTargets: (targets: SyncResetTargets): Promise<{ success: boolean; error?: string }> =>
