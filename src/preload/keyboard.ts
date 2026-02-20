@@ -28,6 +28,7 @@ import type {
 import {
   BUFFER_FETCH_CHUNK,
   VIAL_PROTOCOL_DYNAMIC,
+  EMPTY_UID,
 } from '../shared/constants/protocol'
 
 export interface KeyboardState {
@@ -81,7 +82,7 @@ function emptyState(): KeyboardState {
   return {
     viaProtocol: -1,
     vialProtocol: -1,
-    keyboardId: { vialProtocol: -1, uid: '0x0' },
+    keyboardId: { vialProtocol: -1, uid: EMPTY_UID },
     definition: null,
     definitionRaw: null,
     layers: 0,

@@ -44,6 +44,7 @@ import {
   findInnerKeycode,
 } from '../shared/keycodes/keycodes'
 import type { DeviceInfo, QmkSettingsTab, VilFile } from '../shared/types/protocol'
+import { EMPTY_UID } from '../shared/constants/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../shared/types/hub'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../shared/types/hub'
@@ -101,10 +102,12 @@ export function App() {
     [device.devices],
   )
   useEffect(() => {
-    // No Vial devices and not syncing: reset flags so next connection triggers sync
-    if (vialDeviceCount === 0 && !deviceSyncing) {
-      hasSyncedRef.current = false
-      hasKeyboardSyncedRef.current = null
+    // Not connected or no Vial devices: reset flags so next connection triggers sync
+    if (!device.connectedDevice || vialDeviceCount === 0) {
+      if (!deviceSyncing) {
+        hasSyncedRef.current = false
+        hasKeyboardSyncedRef.current = null
+      }
       return
     }
 
@@ -119,12 +122,12 @@ export function App() {
     sync.syncNow('download', 'favorites')
       .catch(() => { hasSyncedRef.current = false })
       .finally(() => setDeviceSyncing(false))
-  }, [vialDeviceCount, sync.loading, sync.config.autoSync, sync.authStatus.authenticated,
-      sync.hasPassword, sync.syncNow, deviceSyncing])
+  }, [device.connectedDevice, vialDeviceCount, sync.loading, sync.config.autoSync,
+      sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, deviceSyncing])
 
   // Phase 2: Keyboard UID confirmed — download keyboard-specific files
   useEffect(() => {
-    if (!keyboard.uid) {
+    if (!device.connectedDevice || !keyboard.uid || keyboard.uid === EMPTY_UID) {
       hasKeyboardSyncedRef.current = null
       return
     }
@@ -138,8 +141,8 @@ export function App() {
     sync.syncNow('download', { keyboard: keyboard.uid })
       .catch(() => { hasKeyboardSyncedRef.current = null })
       .finally(() => setDeviceSyncing(false))
-  }, [keyboard.uid, keyboard.loading, sync.config.autoSync, sync.authStatus.authenticated,
-      sync.hasPassword, sync.syncNow, sync.loading, deviceSyncing])
+  }, [device.connectedDevice, keyboard.uid, keyboard.loading, sync.config.autoSync,
+      sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, sync.loading, deviceSyncing])
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels
@@ -969,7 +972,7 @@ export function App() {
             </div>
           )}
 
-          {!device.isDummy && keyboard.uid === '0x0' && (
+          {!device.isDummy && keyboard.uid === EMPTY_UID && (
             <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
               {t('error.exampleUid')}
             </div>

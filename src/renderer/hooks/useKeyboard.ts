@@ -23,6 +23,7 @@ import {
   QMK_RGBLIGHT_EFFECT_SPEED,
   QMK_RGBLIGHT_COLOR,
   ECHO_DETECTED_MSG,
+  EMPTY_UID,
 } from '../../shared/constants/protocol'
 import { mapToRecord, recordToMap } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
@@ -98,7 +99,7 @@ function emptyState(): KeyboardState {
     isDummy: false,
     viaProtocol: -1,
     vialProtocol: -1,
-    uid: '0x0',
+    uid: EMPTY_UID,
     definition: null,
     layout: null,
     layers: 0,

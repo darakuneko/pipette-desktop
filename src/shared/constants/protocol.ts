@@ -19,6 +19,9 @@ export const ECHO_RETRY_COUNT = 3
 export const ECHO_RETRY_DELAY_MS = 500
 export const ECHO_DETECTED_MSG = 'ECHO_DETECTED'
 
+/** Sentinel UID used for the empty/reset keyboard state (no device loaded). */
+export const EMPTY_UID = '0x0'
+
 // Sample keyboard UIDs (must not be shipped)
 export const EXAMPLE_UIDS = [
   0xd4a36200603e3007n,
