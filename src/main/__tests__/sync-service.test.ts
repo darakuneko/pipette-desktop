@@ -91,6 +91,7 @@ vi.mock('../app-config', () => ({
 
 vi.stubGlobal('fetch', vi.fn())
 
+import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
@@ -101,8 +102,13 @@ import {
   hasPendingChanges,
   cancelPendingChanges,
   isSyncInProgress,
+  resetPasswordCheckCache,
+  listUndecryptableFiles,
+  changePassword,
   _resetForTests,
 } from '../sync/sync-service'
+
+const POLL_INTERVAL_MS = 3 * 60 * 1000
 
 const FAKE_TIMER_OPTS = {
   toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval', 'Date'] as const,
@@ -166,6 +172,23 @@ function makeDriveFile(modifiedTime: string): { id: string; name: string; modifi
 
 function makeSettingsDriveFile(uid: string, modifiedTime: string): { id: string; name: string; modifiedTime: string } {
   return { id: `settings-${uid}`, name: `keyboards_${uid}_settings.enc`, modifiedTime }
+}
+
+const PASSWORD_CHECK_DRIVE_FILE = {
+  id: 'pc-1',
+  name: 'password-check.enc',
+  modifiedTime: '2025-01-01T00:00:00.000Z',
+}
+
+function makePasswordCheckEnvelope(): Record<string, unknown> {
+  return {
+    version: 1,
+    syncUnit: 'password-check',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    salt: 's',
+    iv: 'i',
+    ciphertext: JSON.stringify({ type: 'password-check', version: 1 }),
+  }
 }
 
 async function setupLocalFavorite(
@@ -375,7 +398,7 @@ describe('sync-service', () => {
       const sharedEntry = {
         id: '1', label: 'entry', filename: 'data.json', savedAt: '2025-01-01T00:00:00.000Z',
       }
-      mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
+      mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z', [sharedEntry]))
 
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{"data":1}' })
@@ -416,15 +439,40 @@ describe('sync-service', () => {
   })
 
   describe('polling', () => {
-    it('detects remote changes and downloads', async () => {
-      mockListFiles.mockResolvedValue([makeDriveFile('2026-01-01T00:00:00.000Z')])
-      mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2026-01-01T00:00:00.000Z'))
+    it('only records state on first poll without downloading data files', async () => {
+      mockListFiles.mockResolvedValue([
+        PASSWORD_CHECK_DRIVE_FILE,
+        makeDriveFile('2026-01-01T00:00:00.000Z'),
+      ])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
 
       startPolling()
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushIO()
 
-      expect(mockListFiles).toHaveBeenCalled()
+      // Password-check downloaded for validation, but data file NOT downloaded
+      expect(mockDownloadFile).toHaveBeenCalledTimes(1)
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+
+      stopPolling()
+    })
+
+    it('detects remote changes on subsequent polls and downloads', async () => {
+      mockListFiles
+        .mockResolvedValueOnce([makeDriveFile('2026-01-01T00:00:00.000Z')])
+        .mockResolvedValueOnce([makeDriveFile('2026-01-02T00:00:00.000Z')])
+      mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2026-01-02T00:00:00.000Z'))
+
+      startPolling()
+      // First poll: records state, no data download
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushIO()
+
+      // Second poll: detects modifiedTime change, downloads
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushIO()
+
+      expect(mockListFiles).toHaveBeenCalledTimes(2)
       expect(mockDownloadFile).toHaveBeenCalledWith('file-1')
 
       stopPolling()
@@ -434,12 +482,12 @@ describe('sync-service', () => {
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
 
       startPolling()
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushIO()
 
       const downloadCallCount = mockDownloadFile.mock.calls.length
 
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
       await flushIO()
 
       expect(mockDownloadFile.mock.calls.length).toBe(downloadCallCount)
@@ -455,7 +503,7 @@ describe('sync-service', () => {
       const syncPromise = executeSync('download')
 
       startPolling()
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
 
       expect(mockListFiles).toHaveBeenCalledTimes(1)
 
@@ -477,7 +525,7 @@ describe('sync-service', () => {
       startPolling()
       stopPolling()
 
-      await vi.advanceTimersByTimeAsync(3 * 60 * 1000)
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
 
       expect(mockListFiles).not.toHaveBeenCalled()
     })
@@ -514,13 +562,17 @@ describe('sync-service', () => {
       }
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'shared.json', content: '{}' }, { id: 'shared' })
 
-      mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
+      mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z'), PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z', [sharedEntry]))
 
       await executeSync('download')
 
       expect(mockDownloadFile).toHaveBeenCalled()
-      expect(mockUploadFile).not.toHaveBeenCalled()
+      // Only password-check download, no sync unit uploads
+      const syncUnitUploads = mockUploadFile.mock.calls.filter(
+        (call) => call[0] !== 'password-check.enc',
+      )
+      expect(syncUnitUploads).toHaveLength(0)
     })
 
     it('uses updatedAt for local timestamp comparison', async () => {
@@ -586,7 +638,8 @@ describe('sync-service', () => {
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{}' })
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{}' }, { id: '2', favoriteType: 'macro' })
 
-      mockListFiles.mockResolvedValue([])
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
       // tapDance upload succeeds, macro upload fails
       mockUploadFile
         .mockResolvedValueOnce('id1')
@@ -610,7 +663,8 @@ describe('sync-service', () => {
       notifyChange('favorites/macro')
       expect(hasPendingChanges()).toBe(true)
 
-      mockListFiles.mockResolvedValue([])
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
       // tapDance succeeds, macro fails
       mockUploadFile
         .mockResolvedValueOnce('id1')
@@ -627,17 +681,18 @@ describe('sync-service', () => {
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{}' })
       await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'macro.json', content: '{}' }, { id: '2', favoriteType: 'macro' })
 
-      mockListFiles.mockResolvedValue([])
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
       mockUploadFile.mockResolvedValue('id1')
 
       await executeSync('upload')
 
       // listFiles should be called exactly twice:
-      // 1. Initial fetch before the loop
+      // 1. Initial fetch in executeSync (password check + passed to executeUploadSync)
       // 2. Final refresh after the loop
       // NOT N+1 times (once per sync unit)
       expect(mockListFiles).toHaveBeenCalledTimes(2)
-      // Verify uploads actually happened (guards against false-positive)
+      // Verify uploads actually happened (2 sync units, password-check downloaded not uploaded)
       expect(mockUploadFile).toHaveBeenCalledTimes(2)
     })
 
@@ -711,6 +766,417 @@ describe('sync-service', () => {
 
       const settings = await readLocalSettings()
       expect(settings.theme).toBe('light')
+    })
+  })
+
+  describe('listUndecryptableFiles', () => {
+    const mockDecrypt = vi.mocked(mockDecryptFn)
+
+    it('returns empty array when all files decrypt successfully', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f2', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+      const result = await listUndecryptableFiles()
+      expect(result).toEqual([])
+    })
+
+    it('returns only files that fail decryption', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f2', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f3', name: 'keyboards_uid1_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+
+      mockDecrypt
+        .mockResolvedValueOnce('ok')
+        .mockRejectedValueOnce(new Error('Decryption failed'))
+        .mockResolvedValueOnce('ok')
+
+      const result = await listUndecryptableFiles()
+      expect(result).toHaveLength(1)
+      expect(result[0]).toEqual({
+        fileId: 'f2',
+        fileName: 'favorites_macro.enc',
+        syncUnit: 'favorites/macro',
+      })
+    })
+
+    it('returns empty array when not authenticated', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      const result = await listUndecryptableFiles()
+      expect(result).toEqual([])
+    })
+
+    it('includes syncUnit from fileName for keyboard files', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'keyboards_uid1_snapshots.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+      mockDecrypt.mockRejectedValueOnce(new Error('bad password'))
+
+      const result = await listUndecryptableFiles()
+      expect(result).toHaveLength(1)
+      expect(result[0].syncUnit).toBe('keyboards/uid1/snapshots')
+    })
+
+    it('sets syncUnit to null for unrecognized file names', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'unknown-file.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'data' })
+      mockDecrypt.mockRejectedValueOnce(new Error('bad password'))
+
+      const result = await listUndecryptableFiles()
+      expect(result).toHaveLength(1)
+      expect(result[0].syncUnit).toBeNull()
+      expect(result[0].fileName).toBe('unknown-file.enc')
+    })
+
+    it('excludes password-check file from results', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'pc', name: 'password-check.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce({ ciphertext: 'check' })
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+      mockDecrypt
+        .mockResolvedValueOnce(JSON.stringify({ type: 'password-check', version: 1 }))
+        .mockRejectedValueOnce(new Error('bad password'))
+
+      const result = await listUndecryptableFiles()
+      expect(result).toHaveLength(1)
+      expect(result[0].fileId).toBe('f1')
+    })
+
+    it('propagates PasswordMismatchError without scanning data files', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'pc', name: 'password-check.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValueOnce({ ciphertext: 'check' })
+      mockDecrypt.mockRejectedValueOnce(new Error('wrong password'))
+
+      await expect(listUndecryptableFiles()).rejects.toThrow('sync.passwordMismatch')
+      // Data file should never be downloaded
+      expect(mockDownloadFile).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('changePassword', () => {
+    const mockDecrypt = vi.mocked(mockDecryptFn)
+    const mockEncrypt = vi.mocked(mockEncryptFn)
+    const mockStorePassword = vi.mocked(mockStorePasswordFn)
+
+    it('re-encrypts all files and uploads with new password', async () => {
+      const dataFile = {
+        id: 'f1',
+        name: 'favorites_tapDance.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
+        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
+
+      await changePassword('new-password')
+
+      // Should upload the data file with the new password
+      expect(mockEncrypt).toHaveBeenCalledWith('{"data":"test"}', 'new-password', 'favorites/tapDance')
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'favorites_tapDance.enc',
+        expect.objectContaining({ syncUnit: 'favorites/tapDance' }),
+        'f1',
+      )
+      // Should upload password-check with new password
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'password-check.enc',
+        expect.objectContaining({ syncUnit: 'password-check' }),
+        'pc-1',
+      )
+      expect(mockStorePassword).toHaveBeenCalledWith('new-password')
+    })
+
+    it('aborts when a file cannot be decrypted (uploadFile not called)', async () => {
+      const dataFile = {
+        id: 'f1',
+        name: 'favorites_tapDance.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
+        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: 'bad' })
+      mockDecrypt
+        .mockResolvedValueOnce('ok') // validatePasswordCheck succeeds
+        .mockRejectedValueOnce(new Error('Decryption failed')) // data file fails
+
+      await expect(changePassword('new-password')).rejects.toThrow('sync.changePasswordUndecryptable')
+      expect(mockUploadFile).not.toHaveBeenCalled()
+    })
+
+    it('throws when sync is in progress', async () => {
+      mockListFiles.mockImplementation(
+        () => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
+      )
+      const syncPromise = executeSync('download')
+
+      await expect(changePassword('new-password')).rejects.toThrow(
+        'Cannot change password while sync is in progress',
+      )
+
+      await vi.advanceTimersByTimeAsync(200)
+      await syncPromise
+    })
+
+    it('throws when no password is stored', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      await expect(changePassword('new-password')).rejects.toThrow('No stored password found')
+    })
+
+    it('succeeds with no remote data files (password-check only)', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
+
+      await changePassword('new-password')
+
+      // Only password-check should be uploaded (re-created in Phase 3)
+      expect(mockUploadFile).toHaveBeenCalledTimes(1)
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'password-check.enc',
+        expect.objectContaining({ syncUnit: 'password-check' }),
+        'pc-1',
+      )
+      expect(mockStorePassword).toHaveBeenCalledWith('new-password')
+    })
+
+    it('validates old password against password-check before proceeding', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
+      mockDecrypt.mockRejectedValueOnce(new Error('wrong password'))
+
+      await expect(changePassword('new-password')).rejects.toThrow('sync.passwordMismatch')
+      // Should not upload anything since validation failed
+      expect(mockUploadFile).not.toHaveBeenCalled()
+      expect(mockStorePassword).not.toHaveBeenCalled()
+    })
+
+    it('skips password-check file during re-encryption and recreates it', async () => {
+      const dataFile = {
+        id: 'f1',
+        name: 'favorites_tapDance.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
+        .mockResolvedValueOnce({ version: 1, syncUnit: 'favorites/tapDance', ciphertext: '{"data":"test"}' })
+
+      await changePassword('new-password')
+
+      // downloadFile called twice: once for validation, once for data file
+      expect(mockDownloadFile).toHaveBeenCalledTimes(2)
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+      expect(mockDownloadFile).toHaveBeenCalledWith('f1')
+    })
+
+    it('uploads with existing file ID (overwrite)', async () => {
+      const dataFile = {
+        id: 'existing-id-123',
+        name: 'favorites_tapDance.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      // No PASSWORD_CHECK_DRIVE_FILE — validatePasswordCheck will create one
+      mockListFiles.mockResolvedValue([dataFile])
+      mockDownloadFile.mockResolvedValue({
+        version: 1,
+        syncUnit: 'favorites/tapDance',
+        ciphertext: '{"data":"test"}',
+      })
+
+      await changePassword('new-password')
+
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'favorites_tapDance.enc',
+        expect.anything(),
+        'existing-id-123',
+      )
+    })
+
+    it('preserves syncUnit from envelope for re-encryption', async () => {
+      const dataFile = {
+        id: 'f1',
+        name: 'keyboards_uid1_settings.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([dataFile])
+      mockDownloadFile.mockResolvedValue({
+        version: 1,
+        syncUnit: 'keyboards/uid1/settings',
+        ciphertext: '{"settings":"data"}',
+      })
+
+      await changePassword('new-password')
+
+      expect(mockEncrypt).toHaveBeenCalledWith(
+        '{"settings":"data"}',
+        'new-password',
+        'keyboards/uid1/settings',
+      )
+    })
+
+    it('releases sync lock on error', async () => {
+      mockListFiles.mockRejectedValue(new Error('network error'))
+
+      await expect(changePassword('new-password')).rejects.toThrow('network error')
+      expect(isSyncInProgress()).toBe(false)
+    })
+
+    it('propagates download errors without classifying as undecryptable', async () => {
+      const dataFile = {
+        id: 'f1',
+        name: 'favorites_tapDance.enc',
+        modifiedTime: '2025-01-01T00:00:00.000Z',
+      }
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE, dataFile])
+      mockDownloadFile
+        .mockResolvedValueOnce(makePasswordCheckEnvelope()) // validatePasswordCheck
+        .mockRejectedValueOnce(new Error('Network timeout')) // data file download fails
+
+      await expect(changePassword('new-password')).rejects.toThrow('Network timeout')
+      expect(mockUploadFile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('password check validation', () => {
+    const mockDecrypt = vi.mocked(mockDecryptFn)
+    const mockEncrypt = vi.mocked(mockEncryptFn)
+
+    it('creates password-check file when remote has none', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      await executeSync('download')
+
+      expect(mockEncrypt).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'password-check', version: 1 }),
+        'test-password',
+        'password-check',
+      )
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'password-check.enc',
+        expect.objectContaining({ syncUnit: 'password-check' }),
+      )
+    })
+
+    it('validates existing password-check file with correct password', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      await executeSync('download')
+
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+      expect(mockDecrypt).toHaveBeenCalled()
+    })
+
+    it('throws error when password-check decryption fails', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'))
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await expect(executeSync('download')).rejects.toThrow('sync.passwordMismatch')
+
+      const errorEvent = progressEvents.find((p) => p.message === 'sync.passwordMismatch')
+      expect(errorEvent).toBeDefined()
+      expect(errorEvent?.status).toBe('error')
+    })
+
+    it('lets network errors propagate without masking as password mismatch', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockRejectedValue(new Error('Network timeout'))
+
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      await expect(executeSync('download')).rejects.toThrow('Network timeout')
+
+      const errorEvent = progressEvents.find((p) => p.status === 'error')
+      expect(errorEvent?.message).toBe('Network timeout')
+    })
+
+    it('caches validation result for flushPendingChanges', async () => {
+      mockAutoSync = true
+      // First: manual sync creates and validates
+      mockListFiles.mockResolvedValue([])
+      await executeSync('download')
+
+      // Now trigger auto-sync — should skip password check (cached)
+      mockListFiles.mockResolvedValue([])
+      notifyChange('favorites/tapDance')
+      await vi.advanceTimersByTimeAsync(10_000)
+      await flushIO()
+
+      // No additional password-check upload (cached)
+      const passwordCheckUploads = mockUploadFile.mock.calls.filter(
+        (call) => call[0] === 'password-check.enc',
+      )
+      expect(passwordCheckUploads).toHaveLength(1) // Only from the manual sync
+    })
+
+    it('re-validates after cache reset', async () => {
+      // First: manual sync creates and validates
+      mockListFiles.mockResolvedValue([])
+      await executeSync('download')
+
+      resetPasswordCheckCache()
+
+      // Second manual sync should re-validate
+      mockListFiles.mockResolvedValue([])
+      await executeSync('download')
+
+      const passwordCheckUploads = mockUploadFile.mock.calls.filter(
+        (call) => call[0] === 'password-check.enc',
+      )
+      // executeSync always validates (ignores cache), so 2 uploads
+      expect(passwordCheckUploads).toHaveLength(2)
+    })
+
+    it('does not treat password-check as a regular sync unit during download', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      // syncUnitFromFileName should return null for password-check.enc
+      expect(mockSyncUnitFromFileName('password-check.enc')).toBeNull()
+
+      await executeSync('download')
+      // Should succeed without trying to merge password-check as a sync unit
+    })
+
+    it('validates password on polling when not yet validated', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      startPolling()
+      await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushIO()
+
+      // Should have downloaded password-check for validation
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+
+      stopPolling()
     })
   })
 })

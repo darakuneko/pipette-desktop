@@ -15,7 +15,7 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { SavedFavoriteMeta } from './favorite-store'
 import type { AppConfig } from './app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult } from './hub'
@@ -129,12 +129,15 @@ export interface VialAPI {
   syncExecute(direction: 'download' | 'upload'): Promise<{ success: boolean; error?: string }>
   syncSetPassword(password: string): Promise<{ success: boolean; error?: string }>
   syncResetPassword(password: string): Promise<{ success: boolean; error?: string }>
+  syncChangePassword(newPassword: string): Promise<{ success: boolean; error?: string }>
   syncResetTargets(targets: SyncResetTargets): Promise<{ success: boolean; error?: string }>
   syncHasPassword(): Promise<boolean>
   syncValidatePassword(password: string): Promise<PasswordStrength>
   syncOnProgress(callback: (progress: SyncProgress) => void): () => void
   syncHasPendingChanges(): Promise<boolean>
   syncCancelPending(): Promise<{ success: boolean; error?: string }>
+  syncListUndecryptable(): Promise<UndecryptableFile[]>
+  syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store

@@ -80,3 +80,9 @@ export interface LocalResetTargets {
   favorites: boolean
   appSettings: boolean
 }
+
+export interface UndecryptableFile {
+  fileId: string
+  fileName: string
+  syncUnit: string | null
+}

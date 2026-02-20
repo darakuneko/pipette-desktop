@@ -394,6 +394,9 @@
     "setPassword": "Set Password",
     "passwordTooWeak": "Password is too weak",
     "passwordSetFailed": "Failed to set password",
+    "changePassword": "Change Password",
+    "changePasswordInfo": "All synced data will be re-encrypted with the new password.",
+    "changePasswordUndecryptable": "Some files cannot be decrypted. Please scan and delete undecryptable files first.",
     "resetPassword": "Reset Password",
     "resetPasswordWarning": "Resetting the password will delete all synced data from Google Drive appDataFolder. Data encrypted with the old password cannot be recovered.",
     "autoSync": "Auto Sync",
@@ -429,7 +432,17 @@
     "resetKeyboardDataConfirm": "{{name}}'s saved layouts and settings will be deleted.\nSynced data in Google Drive appDataFolder and Hub posts for this keyboard will also be deleted.\nSettings stored on the keyboard itself are not affected.",
     "resettingKeyboardData": "Deleting data...",
     "cancelPending": "Cancel",
-    "resetDisabledWhileSyncing": "Cannot reset while sync is in progress"
+    "resetDisabledWhileSyncing": "Cannot reset while sync is in progress",
+    "passwordMismatch": "Sync password does not match. Please check your encryption password.",
+    "undecryptable": "Undecryptable Files",
+    "scanUndecryptable": "Scan",
+    "scanning": "Scanning...",
+    "noUndecryptable": "No undecryptable files found",
+    "undecryptableFound": "{{count}} undecryptable file(s) found",
+    "deleteUndecryptable": "Delete Selected",
+    "deleteUndecryptableConfirm": "The selected files will be permanently deleted from Google Drive. This action cannot be undone.",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All"
   },
   "settings": {
     "title": "Settings",

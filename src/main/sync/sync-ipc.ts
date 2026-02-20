@@ -13,7 +13,7 @@ import {
 } from './sync-crypto'
 import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
-import { deleteAllFiles, deleteFilesByPrefix } from './google-drive'
+import { deleteAllFiles, deleteFilesByPrefix, deleteFile } from './google-drive'
 import {
   executeSync,
   hasPendingChanges,
@@ -27,6 +27,9 @@ import {
   collectAllSyncUnits,
   bundleSyncUnit,
   readIndexFile,
+  resetPasswordCheckCache,
+  listUndecryptableFiles,
+  changePassword,
 } from './sync-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
@@ -121,6 +124,7 @@ export function setupSyncIpc(): void {
     wrapIpc('Sign out failed', async () => {
       stopPolling()
       clearHubTokenCache()
+      resetPasswordCheckCache()
       await signOut()
     }),
   )
@@ -129,7 +133,10 @@ export function setupSyncIpc(): void {
   secureHandle(
     IpcChannels.SYNC_SET_PASSWORD,
     (_event, password: string) =>
-      wrapIpc('Store password failed', () => storePassword(password)),
+      wrapIpc('Store password failed', async () => {
+        await storePassword(password)
+        resetPasswordCheckCache()
+      }),
   )
 
   secureHandle(
@@ -138,6 +145,15 @@ export function setupSyncIpc(): void {
       wrapIpc('Reset password failed', async () => {
         await deleteAllFiles()
         await storePassword(password)
+        resetPasswordCheckCache()
+      }),
+  )
+
+  secureHandle(
+    IpcChannels.SYNC_CHANGE_PASSWORD,
+    (_event, newPassword: string) =>
+      wrapIpc('Change password failed', async () => {
+        await changePassword(newPassword)
       }),
   )
 
@@ -364,6 +380,20 @@ export function setupSyncIpc(): void {
 
       for (const unit of changedUnits) {
         notifyChange(unit)
+      }
+    }),
+  )
+
+  // --- Undecryptable files ---
+  secureHandle(IpcChannels.SYNC_LIST_UNDECRYPTABLE, () => listUndecryptableFiles())
+
+  secureHandle(IpcChannels.SYNC_DELETE_FILES, (_event, fileIds: string[]) =>
+    wrapIpc('Delete files failed', async () => {
+      if (!Array.isArray(fileIds) || fileIds.length === 0) throw new Error('No files specified')
+      if (isSyncInProgress()) throw new Error('Cannot delete while sync is in progress')
+      for (const id of fileIds) {
+        if (typeof id !== 'string') throw new Error('Invalid file ID')
+        await deleteFile(id)
       }
     }),
   )

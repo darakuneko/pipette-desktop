@@ -11,7 +11,7 @@ import type { DeviceInfo, KeyboardDefinition } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { SavedFavoriteMeta } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult } from '../shared/types/hub'
@@ -203,6 +203,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_SET_PASSWORD, password),
   syncResetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_PASSWORD, password),
+  syncChangePassword: (newPassword: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_CHANGE_PASSWORD, newPassword),
   syncResetTargets: (targets: SyncResetTargets): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_TARGETS, targets),
   syncHasPassword: (): Promise<boolean> =>
@@ -220,6 +222,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_PENDING_STATUS),
   syncCancelPending: (): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CANCEL_PENDING),
+  syncListUndecryptable: (): Promise<UndecryptableFile[]> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_LIST_UNDECRYPTABLE),
+  syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
   syncOnPendingChange: (callback: (pending: boolean) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, pending: boolean): void => {
       callback(pending)

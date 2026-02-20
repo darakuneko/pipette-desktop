@@ -4,7 +4,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises'
-import { encrypt, decrypt, retrievePassword } from './sync-crypto'
+import { encrypt, decrypt, retrievePassword, storePassword } from './sync-crypto'
 import { loadAppConfig } from '../app-config'
 import { getAuthStatus } from './google-auth'
 import {
@@ -19,11 +19,13 @@ import { IpcChannels } from '../../shared/ipc/channels'
 import { mergeEntries, gcTombstones } from './merge'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
-import type { SyncBundle, SyncProgress, SyncEnvelope } from '../../shared/types/sync'
+import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile } from '../../shared/types/sync'
 
 const FAVORITE_TYPES: FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
 const DEBOUNCE_MS = 10_000
 const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
+const PASSWORD_CHECK_UNIT = 'password-check'
+const PASSWORD_CHECK_PAYLOAD = JSON.stringify({ type: 'password-check', version: 1 })
 
 function safeTimestamp(value: string | undefined): number {
   if (!value) return 0
@@ -39,6 +41,7 @@ let progressCallback: ProgressCallback | null = null
 let isQuitting = false
 let isSyncing = false
 let pollTimer: ReturnType<typeof setInterval> | null = null
+let passwordCheckValidated = false
 const lastKnownRemoteState = new Map<string, string>() // fileName -> modifiedTime
 
 export function hasPendingChanges(): boolean {
@@ -88,6 +91,81 @@ async function requireSyncCredentials(): Promise<string | null> {
   if (!authStatus.authenticated) return null
 
   return retrievePassword()
+}
+
+// --- Undecryptable files ---
+
+export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
+  const password = await requireSyncCredentials()
+  if (!password) return []
+  const remoteFiles = await listFiles()
+
+  await validatePasswordCheck(password, remoteFiles)
+
+  const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
+  const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
+
+  const result: UndecryptableFile[] = []
+  for (const file of dataFiles) {
+    try {
+      const envelope = await downloadFile(file.id)
+      await decrypt(envelope, password)
+    } catch {
+      result.push({
+        fileId: file.id,
+        fileName: file.name,
+        syncUnit: syncUnitFromFileName(file.name),
+      })
+    }
+  }
+  return result
+}
+
+// --- Non-destructive password change ---
+
+export async function changePassword(newPassword: string): Promise<void> {
+  if (isSyncing) throw new Error('Cannot change password while sync is in progress')
+  isSyncing = true
+  try {
+    const oldPassword = await requireSyncCredentials()
+    if (!oldPassword) throw new Error('No stored password found')
+    const remoteFiles = await listFiles()
+
+    // Validate old password against password-check first
+    await validatePasswordCheck(oldPassword, remoteFiles)
+
+    const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
+    const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
+
+    // Phase 1: Download + decrypt all files (fail-fast)
+    // Only catch decryption errors; let network/download errors propagate
+    const decrypted: Array<{ file: DriveFile; plaintext: string; syncUnit: string }> = []
+    for (const file of dataFiles) {
+      const envelope = await downloadFile(file.id)
+      try {
+        const plaintext = await decrypt(envelope, oldPassword)
+        decrypted.push({ file, plaintext, syncUnit: envelope.syncUnit })
+      } catch {
+        throw new Error('sync.changePasswordUndecryptable')
+      }
+    }
+
+    // Phase 2: Re-encrypt + upload with new password (overwrite)
+    for (const { file, plaintext, syncUnit } of decrypted) {
+      const newEnvelope = await encrypt(plaintext, newPassword, syncUnit)
+      await uploadFile(file.name, newEnvelope, file.id)
+    }
+
+    // Phase 3: Recreate password-check with new password
+    const existingPc = remoteFiles.find((f) => f.name === passwordCheckFileName)
+    const pcEnvelope = await encrypt(PASSWORD_CHECK_PAYLOAD, newPassword, PASSWORD_CHECK_UNIT)
+    await uploadFile(passwordCheckFileName, pcEnvelope, existingPc?.id)
+
+    await storePassword(newPassword)
+    resetPasswordCheckCache()
+  } finally {
+    isSyncing = false
+  }
 }
 
 // --- Bundle creation ---
@@ -146,6 +224,40 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   const type: SyncBundle['type'] = parts[0] === 'favorites' ? 'favorite' : 'layout'
 
   return { type, key: parts[1], index, files }
+}
+
+// --- Password check validation ---
+
+class PasswordMismatchError extends Error {
+  constructor() {
+    super('sync.passwordMismatch')
+    this.name = 'PasswordMismatchError'
+  }
+}
+
+async function validatePasswordCheck(
+  password: string,
+  remoteFiles: DriveFile[],
+): Promise<void> {
+  const fileName = driveFileName(PASSWORD_CHECK_UNIT)
+  const existing = remoteFiles.find((f) => f.name === fileName)
+
+  if (existing) {
+    const envelope = await downloadFile(existing.id)
+    try {
+      await decrypt(envelope, password)
+    } catch {
+      throw new PasswordMismatchError()
+    }
+  } else {
+    const envelope = await encrypt(PASSWORD_CHECK_PAYLOAD, password, PASSWORD_CHECK_UNIT)
+    await uploadFile(fileName, envelope)
+  }
+  passwordCheckValidated = true
+}
+
+export function resetPasswordCheckCache(): void {
+  passwordCheckValidated = false
 }
 
 // --- Sync operations ---
@@ -277,15 +389,17 @@ export async function executeSync(direction: 'download' | 'upload'): Promise<voi
 
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
+    // Always validate password on manual sync (ignore cache)
+    const initialFiles = await listFiles()
+    await validatePasswordCheck(password, initialFiles)
+
     let failedUnits: string[]
     if (direction === 'download') {
-      failedUnits = await executeDownloadSync(password)
+      failedUnits = await executeDownloadSync(password, initialFiles)
     } else {
-      failedUnits = await executeUploadSync(password)
+      failedUnits = await executeUploadSync(password, initialFiles)
       // Manual upload covers all sync units — clear pending, but re-add failed units
-      if (pendingChanges.size > 0) {
-        pendingChanges.clear()
-      }
+      pendingChanges.clear()
       for (const unit of failedUnits) {
         pendingChanges.add(unit)
       }
@@ -314,8 +428,8 @@ export async function executeSync(direction: 'download' | 'upload'): Promise<voi
   }
 }
 
-async function executeDownloadSync(password: string): Promise<string[]> {
-  const remoteFiles = await listFiles()
+async function executeDownloadSync(password: string, prefetchedFiles?: DriveFile[]): Promise<string[]> {
+  const remoteFiles = prefetchedFiles ?? await listFiles()
   updateRemoteState(remoteFiles)
   const total = remoteFiles.length
   let current = 0
@@ -350,9 +464,9 @@ async function executeDownloadSync(password: string): Promise<string[]> {
   return failedUnits
 }
 
-async function executeUploadSync(password: string): Promise<string[]> {
+async function executeUploadSync(password: string, prefetchedFiles?: DriveFile[]): Promise<string[]> {
   const syncUnits = await collectAllSyncUnits()
-  const remoteFiles = await listFiles()
+  const remoteFiles = prefetchedFiles ?? await listFiles()
   updateRemoteState(remoteFiles)
   const total = syncUnits.length
   let current = 0
@@ -435,6 +549,18 @@ async function pollForRemoteChanges(): Promise<void> {
     if (!password) return
 
     const remoteFiles = await listFiles()
+
+    if (!passwordCheckValidated) {
+      await validatePasswordCheck(password, remoteFiles)
+    }
+
+    // First poll: just validate password and record remote state
+    // Avoids downloading all files on startup
+    if (lastKnownRemoteState.size === 0) {
+      updateRemoteState(remoteFiles)
+      return
+    }
+
     const changedFiles = remoteFiles.filter(
       (file) => lastKnownRemoteState.get(file.name) !== file.modifiedTime,
     )
@@ -530,6 +656,21 @@ async function flushPendingChanges(): Promise<void> {
     const remoteFiles = await listFiles()
     updateRemoteState(remoteFiles)
 
+    if (!passwordCheckValidated) {
+      try {
+        await validatePasswordCheck(password, remoteFiles)
+      } catch (err) {
+        for (const unit of changes) pendingChanges.add(unit)
+        broadcastPendingStatus()
+        if (err instanceof PasswordMismatchError) {
+          emitProgress({ direction: 'upload', status: 'error', message: 'sync.passwordMismatch' })
+        } else {
+          emitProgress({ direction: 'upload', status: 'error', message: errorMessage(err, 'Password check failed') })
+        }
+        return
+      }
+    }
+
     for (const syncUnit of changes) {
       try {
         await syncOrUpload(syncUnit, password, remoteFiles)
@@ -594,4 +735,5 @@ export function _resetForTests(): void {
   isSyncing = false
   isQuitting = false
   progressCallback = null
+  passwordCheckValidated = false
 }

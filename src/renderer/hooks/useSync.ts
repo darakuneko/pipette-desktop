@@ -13,6 +13,7 @@ import type {
   PasswordStrength,
   LastSyncResult,
   SyncResetTargets,
+  UndecryptableFile,
 } from '../../shared/types/sync'
 
 /** Maps a SyncProgress status or LastSyncResult status to the UI SyncStatusType. */
@@ -38,11 +39,14 @@ export interface UseSyncReturn {
   setConfig: (patch: Partial<AppConfig>) => void
   setPassword: (password: string) => Promise<{ success: boolean; error?: string }>
   resetPassword: (password: string) => Promise<{ success: boolean; error?: string }>
+  changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
   resetSyncTargets: (targets: SyncResetTargets) => Promise<{ success: boolean; error?: string }>
   validatePassword: (password: string) => Promise<PasswordStrength>
   cancelPending: () => Promise<void>
   syncNow: (direction: 'download' | 'upload') => Promise<void>
   refreshStatus: () => Promise<void>
+  listUndecryptable: () => Promise<UndecryptableFile[]>
+  deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
 }
 
 export function useSync(): UseSyncReturn {
@@ -148,6 +152,11 @@ export function useSync(): UseSyncReturn {
     [callPasswordApi],
   )
 
+  const changePassword = useCallback(
+    (newPassword: string) => callPasswordApi(window.vialAPI.syncChangePassword, newPassword),
+    [callPasswordApi],
+  )
+
   const resetSyncTargets = useCallback(
     (targets: SyncResetTargets) => window.vialAPI.syncResetTargets(targets),
     [],
@@ -165,6 +174,16 @@ export function useSync(): UseSyncReturn {
   const syncNow = useCallback(async (direction: 'download' | 'upload') => {
     await window.vialAPI.syncExecute(direction)
   }, [])
+
+  const listUndecryptable = useCallback(
+    () => window.vialAPI.syncListUndecryptable(),
+    [],
+  )
+
+  const deleteFiles = useCallback(
+    (fileIds: string[]) => window.vialAPI.syncDeleteFiles(fileIds),
+    [],
+  )
 
   const syncStatus = useMemo((): SyncStatusType => {
     if (progress?.status && progress.status !== 'idle') {
@@ -190,10 +209,13 @@ export function useSync(): UseSyncReturn {
     setConfig,
     setPassword,
     resetPassword,
+    changePassword,
     resetSyncTargets,
     validatePassword,
     cancelPending,
     syncNow,
     refreshStatus,
+    listUndecryptable,
+    deleteFiles,
   }
 }

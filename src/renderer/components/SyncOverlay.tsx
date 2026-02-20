@@ -35,7 +35,7 @@ export function SyncOverlay({ progress, onSkip }: Props) {
             )}
             {(progress.status === 'error' || progress.status === 'partial') && progress.message && (
               <div className={`text-sm ${progress.status === 'error' ? 'text-danger' : 'text-warning'}`}>
-                {progress.message}
+                {t(progress.message, progress.message)}
               </div>
             )}
           </div>

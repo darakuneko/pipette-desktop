@@ -394,6 +394,9 @@
     "setPassword": "パスワードを設定",
     "passwordTooWeak": "パスワードが弱すぎます",
     "passwordSetFailed": "パスワードの設定に失敗しました",
+    "changePassword": "パスワード変更",
+    "changePasswordInfo": "すべての同期データが新しいパスワードで再暗号化されます。",
+    "changePasswordUndecryptable": "復号できないファイルがあります。先に復号できないファイルをスキャンして削除してください。",
     "resetPassword": "パスワード再設定",
     "resetPasswordWarning": "パスワードを再設定すると、Google Drive appDataFolder上の同期データがすべて削除されます。古いパスワードで暗号化されたデータは復元できません。",
     "autoSync": "自動同期",
@@ -429,7 +432,17 @@
     "resetKeyboardDataConfirm": "{{name}} の保存済みレイアウトと設定が削除されます。\nGoogle Drive appDataFolder の同期データおよび Hub の投稿も削除されます。\nキーボード本体に保存されている設定には影響しません。",
     "resettingKeyboardData": "データを削除中...",
     "cancelPending": "キャンセル",
-    "resetDisabledWhileSyncing": "同期中はリセットできません"
+    "resetDisabledWhileSyncing": "同期中はリセットできません",
+    "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
+    "undecryptable": "復号できないファイル",
+    "scanUndecryptable": "スキャン",
+    "scanning": "スキャン中...",
+    "noUndecryptable": "復号できないファイルはありません",
+    "undecryptableFound": "{{count}} 件の復号できないファイルが見つかりました",
+    "deleteUndecryptable": "選択を削除",
+    "deleteUndecryptableConfirm": "選択したファイルが Google Drive から完全に削除されます。この操作は取り消せません。",
+    "selectAll": "すべて選択",
+    "deselectAll": "すべて解除"
   },
   "settings": {
     "title": "設定",

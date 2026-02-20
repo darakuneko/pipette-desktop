@@ -54,6 +54,7 @@ export const IpcChannels = {
   SYNC_EXECUTE: 'sync:execute',
   SYNC_SET_PASSWORD: 'sync:set-password',
   SYNC_RESET_PASSWORD: 'sync:reset-password',
+  SYNC_CHANGE_PASSWORD: 'sync:change-password',
   SYNC_HAS_PASSWORD: 'sync:has-password',
   SYNC_VALIDATE_PASSWORD: 'sync:validate-password',
   SYNC_RESET_TARGETS: 'sync:reset-targets',
@@ -61,6 +62,8 @@ export const IpcChannels = {
   SYNC_PROGRESS: 'sync:progress',
   SYNC_PENDING_STATUS: 'sync:pending-status',
   SYNC_CANCEL_PENDING: 'sync:cancel-pending',
+  SYNC_LIST_UNDECRYPTABLE: 'sync:list-undecryptable',
+  SYNC_DELETE_FILES: 'sync:delete-files',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',

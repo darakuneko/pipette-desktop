@@ -10,7 +10,7 @@ import { ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, formatDate, formatDateShort
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { ModalTabId } from './editors/modal-tabs'
-import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
+import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, LocalResetTargets, UndecryptableFile } from '../../shared/types/sync'
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes, PanelSide } from '../hooks/useDevicePrefs'
@@ -91,7 +91,7 @@ function SyncStatusSection({ syncStatus, progress, lastSyncResult }: SyncStatusS
               className="rounded border border-danger/30 bg-danger/10 px-2 py-1 text-xs text-danger"
               data-testid="sync-status-error-message"
             >
-              {lastSyncResult.message}
+              {t(lastSyncResult.message, lastSyncResult.message)}
             </div>
           )}
           {syncStatus === 'partial' && lastSyncResult?.failedUnits && lastSyncResult.failedUnits.length > 0 && (
@@ -99,13 +99,194 @@ function SyncStatusSection({ syncStatus, progress, lastSyncResult }: SyncStatusS
               className="rounded border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning"
               data-testid="sync-status-partial-details"
             >
-              <div>{lastSyncResult.message}</div>
+              <div>{t(lastSyncResult.message ?? '', lastSyncResult.message ?? '')}</div>
               <ul className="mt-1 list-disc pl-4">
                 {lastSyncResult.failedUnits.map((unit) => (
                   <li key={unit}>{unit}</li>
                 ))}
               </ul>
             </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+interface UndecryptableFilesSectionProps {
+  sync: UseSyncReturn
+  disabled: boolean
+}
+
+function UndecryptableFilesSection({ sync, disabled }: UndecryptableFilesSectionProps) {
+  const { t } = useTranslation()
+  const [files, setFiles] = useState<UndecryptableFile[] | null>(null)
+  const [scanning, setScanning] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [confirming, setConfirming] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleScan = useCallback(async () => {
+    setScanning(true)
+    setFiles(null)
+    setSelected(new Set())
+    setConfirming(false)
+    setError(null)
+    try {
+      const result = await sync.listUndecryptable()
+      setFiles(result)
+    } catch {
+      setError(t('statusBar.sync.error'))
+    } finally {
+      setScanning(false)
+    }
+  }, [sync, t])
+
+  const toggleFile = useCallback((fileId: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(fileId)) next.delete(fileId)
+      else next.add(fileId)
+      return next
+    })
+    setConfirming(false)
+  }, [])
+
+  const toggleAll = useCallback(() => {
+    if (!files) return
+    if (selected.size === files.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(files.map((f) => f.fileId)))
+    }
+    setConfirming(false)
+  }, [files, selected.size])
+
+  const handleDelete = useCallback(async () => {
+    if (selected.size === 0) return
+    setDeleting(true)
+    setError(null)
+    try {
+      const result = await sync.deleteFiles([...selected])
+      if (result.success) {
+        setFiles((prev) => prev?.filter((f) => !selected.has(f.fileId)) ?? null)
+        setSelected(new Set())
+        setConfirming(false)
+      } else {
+        setError(result.error ?? t('statusBar.sync.error'))
+      }
+    } catch {
+      setError(t('statusBar.sync.error'))
+    } finally {
+      setDeleting(false)
+    }
+  }, [sync, selected, t])
+
+  const allSelected = files !== null && files.length > 0 && selected.size === files.length
+
+  return (
+    <section className="mb-6">
+      <div className="mb-2 flex items-center justify-between">
+        <h4 className="text-sm font-medium text-content-secondary">
+          {t('sync.undecryptable')}
+        </h4>
+        <button
+          type="button"
+          className={BTN_SECONDARY}
+          onClick={handleScan}
+          disabled={disabled || scanning}
+          data-testid="undecryptable-scan"
+        >
+          {scanning ? t('sync.scanning') : t('sync.scanUndecryptable')}
+        </button>
+      </div>
+      {error && (
+        <div className="mb-2 text-xs text-danger" data-testid="undecryptable-error">
+          {error}
+        </div>
+      )}
+      {files !== null && (
+        <div className="space-y-2">
+          {files.length === 0 ? (
+            <p className="text-sm text-content-muted" data-testid="undecryptable-empty">
+              {t('sync.noUndecryptable')}
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-content-muted" data-testid="undecryptable-count">
+                {t('sync.undecryptableFound', { count: files.length })}
+              </p>
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  className="text-xs text-content-muted hover:text-content"
+                  onClick={toggleAll}
+                  data-testid="undecryptable-toggle-all"
+                >
+                  {allSelected ? t('sync.deselectAll') : t('sync.selectAll')}
+                </button>
+              </div>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {files.map((file) => (
+                  <label
+                    key={file.fileId}
+                    className="flex items-center gap-2 rounded border border-edge bg-surface/20 px-2 py-1.5 text-sm text-content"
+                    data-testid={`undecryptable-file-${file.fileId}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(file.fileId)}
+                      onChange={() => toggleFile(file.fileId)}
+                      disabled={deleting}
+                      className="accent-danger"
+                    />
+                    <span className="truncate">{file.syncUnit ?? file.fileName}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="flex items-center justify-end">
+                <button
+                  type="button"
+                  className={`${BTN_DANGER_OUTLINE} disabled:opacity-50`}
+                  onClick={() => setConfirming(true)}
+                  disabled={selected.size === 0 || deleting}
+                  data-testid="undecryptable-delete"
+                >
+                  {t('sync.deleteUndecryptable')}
+                </button>
+              </div>
+              {confirming && (
+                <div className="space-y-2">
+                  <div
+                    className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger"
+                    data-testid="undecryptable-delete-warning"
+                  >
+                    {t('sync.deleteUndecryptableConfirm')}
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      onClick={() => setConfirming(false)}
+                      disabled={deleting}
+                      data-testid="undecryptable-delete-cancel"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
+                      onClick={handleDelete}
+                      disabled={selected.size === 0 || deleting}
+                      data-testid="undecryptable-delete-confirm"
+                    >
+                      {t('sync.deleteUndecryptable')}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}
@@ -658,6 +839,7 @@ export function SettingsModal({
   const [passwordScore, setPasswordScore] = useState<number | null>(null)
   const [passwordFeedback, setPasswordFeedback] = useState<string[]>([])
   const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [changingPassword, setChangingPassword] = useState(false)
   const [resettingPassword, setResettingPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [syncTargets, setSyncTargets] = useState<SyncResetTargets>({ keyboards: false, favorites: false })
@@ -758,6 +940,7 @@ export function SettingsModal({
     setPasswordScore(null)
     setPasswordFeedback([])
     setPasswordError(null)
+    setChangingPassword(false)
     setResettingPassword(false)
   }, [])
 
@@ -766,15 +949,21 @@ export function SettingsModal({
       setPasswordError(t('sync.passwordTooWeak'))
       return
     }
-    const result = resettingPassword
-      ? await sync.resetPassword(password)
-      : await sync.setPassword(password)
+    let result: { success: boolean; error?: string }
+    if (changingPassword) {
+      result = await sync.changePassword(password)
+    } else if (resettingPassword) {
+      result = await sync.resetPassword(password)
+    } else {
+      result = await sync.setPassword(password)
+    }
     if (result.success) {
       clearPasswordForm()
     } else {
-      setPasswordError(result.error ?? t('sync.passwordSetFailed'))
+      const errorKey = result.error ?? t('sync.passwordSetFailed')
+      setPasswordError(t(errorKey, errorKey))
     }
-  }, [sync, password, passwordScore, resettingPassword, clearPasswordForm, t])
+  }, [sync, password, passwordScore, changingPassword, resettingPassword, clearPasswordForm, t])
 
   const handleSyncNow = useCallback(async () => {
     setBusy(true)
@@ -1155,23 +1344,39 @@ export function SettingsModal({
                 <h4 className="mb-2 text-sm font-medium text-content-secondary">
                   {t('sync.encryptionPassword')}
                 </h4>
-                {sync.hasPassword && !resettingPassword ? (
+                {sync.hasPassword && !resettingPassword && !changingPassword ? (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-accent" data-testid="sync-password-set">
                       {t('sync.passwordSet')}
                     </span>
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={() => setResettingPassword(true)}
-                      disabled={!sync.authStatus.authenticated}
-                      data-testid="sync-password-reset-btn"
-                    >
-                      {t('sync.resetPassword')}
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={BTN_SECONDARY}
+                        onClick={() => setChangingPassword(true)}
+                        disabled={!sync.authStatus.authenticated}
+                        data-testid="sync-password-change-btn"
+                      >
+                        {t('sync.changePassword')}
+                      </button>
+                      <button
+                        type="button"
+                        className={BTN_DANGER_OUTLINE}
+                        onClick={() => setResettingPassword(true)}
+                        disabled={!sync.authStatus.authenticated}
+                        data-testid="sync-password-reset-btn"
+                      >
+                        {t('sync.resetPassword')}
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    {changingPassword && (
+                      <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-change-password-info">
+                        {t('sync.changePasswordInfo')}
+                      </div>
+                    )}
                     {resettingPassword && (
                       <div className="rounded border border-warning/50 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-reset-warning">
                         {t('sync.resetPasswordWarning')}
@@ -1203,7 +1408,7 @@ export function SettingsModal({
                       </div>
                     )}
                     {passwordError && (
-                      <div className="text-xs text-danger">{passwordError}</div>
+                      <div className="text-xs text-danger" data-testid="sync-password-error">{passwordError}</div>
                     )}
                     <div className="flex gap-2">
                       <button
@@ -1215,7 +1420,7 @@ export function SettingsModal({
                       >
                         {t('sync.setPassword')}
                       </button>
-                      {resettingPassword && (
+                      {(resettingPassword || changingPassword) && (
                         <button
                           type="button"
                           className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
@@ -1265,6 +1470,9 @@ export function SettingsModal({
 
               {/* Sync Status */}
               <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
+
+              {/* Undecryptable Files */}
+              <UndecryptableFilesSection sync={sync} disabled={syncDisabled} />
 
               {/* Reset Sync Data */}
               <section className="mb-6">
