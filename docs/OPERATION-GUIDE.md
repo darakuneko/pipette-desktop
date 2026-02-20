@@ -21,7 +21,9 @@ When you launch the app, a list of connected Vial-compatible keyboards is displa
 
 ### 1.2 Connecting a Keyboard
 
-Click a keyboard name in the list to open the keymap editor.
+Click a keyboard name in the list to open the keymap editor. A connecting overlay shows loading progress while the keyboard data is read.
+
+If Cloud Sync is configured, sync progress is also displayed during connection (favorites first, then keyboard-specific data).
 
 ---
 
@@ -317,9 +319,42 @@ Sync is configured in the **Settings** modal (gear icon on the device selection 
 
 ![Data & Sync Tab](screenshots/hub-settings-data-sync.png)
 
-1. **Sign in** with your Google account
-2. **Set a sync password** to encrypt your data (required for security)
-3. **Auto Sync**: Enable automatic sync, or use **Sync Now** for manual sync
+#### Google Account
+
+- Click **Connect** to sign in with your Google account
+- Click **Disconnect** to sign out. If Pipette Hub is also connected, a warning confirms that Hub will be disconnected as well
+
+#### Sync Encryption Password
+
+- Set a password to encrypt all synced data (required). A strength indicator helps you choose a strong password
+- If a password already exists on the server (set from another device), a hint is shown asking you to enter the same password
+- **Change Password**: Click **Change Password** to re-encrypt all synced files with a new password. No data is deleted — existing files are decrypted and re-encrypted in place
+
+#### Sync Controls
+
+- **Auto Sync**: Toggle automatic sync on or off. When enabled, changes sync automatically with a 10-second debounce and periodic 3-minute polling
+- **Sync**: Manually sync favorites and connected keyboard data. Only favorites and the currently connected keyboard are synced (not all keyboards)
+
+#### Sync Status
+
+- Displays current sync progress with the sync unit name and an item counter (current / total)
+- Shows error or partial-sync details if any units failed
+
+#### Undecryptable Files
+
+- Files that cannot be decrypted with the current password or are otherwise unreadable (e.g., encrypted with a forgotten previous password)
+- Click **Scan** to detect undecryptable files, select the ones to remove, then click **Delete Selected** to permanently delete them from Google Drive
+
+#### Sync Unavailable Alert
+
+- Displayed when the sync backend cannot be reached. Click **Retry** to attempt reconnection
+
+#### Reset Sync Data / Local Data
+
+- **Reset Sync Data**: Select targets (keyboard data, favorite data) and delete them from Google Drive
+- **Local Data**: Import/export local data, or reset selected local targets (keyboard data, favorites, app settings)
+
+#### Data Storage
 
 Synced data is stored in [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata) — a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
 

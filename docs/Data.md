@@ -114,6 +114,7 @@ Pipette uses [Google Drive **appDataFolder**](https://developers.google.com/work
 - Synced data is **end-to-end encrypted** before upload (AES-256-GCM with a key derived from your sync password via PBKDF2)
 - Sync happens automatically when changes are detected (with a 10-second debounce) and via periodic polling (every 3 minutes)
 - Pending changes are flushed on app exit
+- **Selective sync scope**: Not all data is synced at once. On device connection, favorites are downloaded first, then keyboard-specific data is downloaded once the keyboard UID is confirmed. Manual sync (**Sync**) syncs favorites and the currently connected keyboard only — other keyboards' data is not touched
 
 ### What Is Synced
 
@@ -138,6 +139,8 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **How do I delete all cloud data?** | Use "Reset Sync Data" in settings and select both keyboard and favorite data. This removes selected Pipette data from Google Drive appDataFolder. |
 | **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
+| **What happens if I change my password?** | All synced files are re-encrypted with the new password. No data is deleted — files are decrypted and re-encrypted in place. |
+| **What are undecryptable files?** | Files that cannot be decrypted with your current sync password or are otherwise unreadable (e.g., leftover from a previous password). You can scan for and delete them from the Data & Sync tab in settings. |
 
 ### Google OAuth Scopes
 
@@ -205,8 +208,10 @@ Pipette can export keymap data in several formats. These are local file download
 | Operation | Snapshots | Settings | Favorites | Cloud Data | Hub Posts | App Settings |
 |-----------|:---------:|:--------:|:---------:|:----------:|:--------:|:------------:|
 | Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | Deleted for that keyboard | - |
-| Reset Local Data | All deleted | All deleted | All deleted | - | - | Reset to defaults |
+| Reset Local Data | Selected targets deleted | Selected targets deleted | Selected targets deleted | - | - | Selected targets reset to defaults |
 | Reset Sync Data | - | - | - | Selected targets deleted | - | - |
 | Change Password | - | - | - | All files re-encrypted | - | - |
 | Sign Out | - | - | - | - | - | - |
 | Export/Import Local Data | Included | Included | Included | - | - | - |
+
+> **Note**: Reset Local Data allows you to select individual targets — keyboard data, favorites, and app settings can each be reset independently.
