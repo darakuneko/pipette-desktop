@@ -1,5 +1,8 @@
 # Pipette
 
+<img width="2648" height="2008" alt="03-keymap-editor" src="https://github.com/user-attachments/assets/7515d6c2-463b-4e62-be68-151ebad630c0" />
+
+
 Refining the way you interact with your Vial-powered keyboards.
 
 Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
