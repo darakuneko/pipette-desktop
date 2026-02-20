@@ -136,6 +136,7 @@ export interface VialAPI {
   syncHasPendingChanges(): Promise<boolean>
   syncListUndecryptable(): Promise<UndecryptableFile[]>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
+  syncCheckPasswordExists(): Promise<boolean>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store

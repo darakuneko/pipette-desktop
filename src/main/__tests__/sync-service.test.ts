@@ -70,6 +70,7 @@ vi.mock('../sync/google-auth', () => ({
 vi.mock('../sync/sync-crypto', () => ({
   retrievePassword: vi.fn(async () => 'test-password'),
   storePassword: vi.fn(async () => {}),
+  clearPassword: vi.fn(async () => {}),
   hasStoredPassword: vi.fn(async () => true),
   checkPasswordStrength: vi.fn(() => ({ score: 4, feedback: [] })),
   encrypt: vi.fn(async (plaintext: string, _password: string, syncUnit: string) => ({
@@ -91,7 +92,7 @@ vi.mock('../app-config', () => ({
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn } from '../sync/sync-crypto'
+import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
@@ -106,6 +107,8 @@ import {
   resetPasswordCheckCache,
   listUndecryptableFiles,
   changePassword,
+  checkPasswordCheckExists,
+  setPasswordAndValidate,
   _resetForTests,
 } from '../sync/sync-service'
 
@@ -1400,6 +1403,89 @@ describe('sync-service', () => {
       expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
 
       stopPolling()
+    })
+  })
+
+  describe('checkPasswordCheckExists', () => {
+    it('returns true when password-check file exists remotely', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+
+      const result = await checkPasswordCheckExists()
+      expect(result).toBe(true)
+    })
+
+    it('returns false when no password-check file exists remotely', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+
+      const result = await checkPasswordCheckExists()
+      expect(result).toBe(false)
+    })
+
+    it('returns false when remote has no files', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      const result = await checkPasswordCheckExists()
+      expect(result).toBe(false)
+    })
+
+    it('propagates network errors', async () => {
+      mockListFiles.mockRejectedValue(new Error('network error'))
+
+      await expect(checkPasswordCheckExists()).rejects.toThrow('network error')
+    })
+  })
+
+  describe('setPasswordAndValidate', () => {
+    const mockDecrypt = vi.mocked(mockDecryptFn)
+    const mockEncrypt = vi.mocked(mockEncryptFn)
+    const mockStorePassword = vi.mocked(mockStorePasswordFn)
+
+    it('stores password and validates against remote password-check', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+      await setPasswordAndValidate('my-password')
+
+      expect(mockStorePassword).toHaveBeenCalledWith('my-password')
+      expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
+      expect(mockDecrypt).toHaveBeenCalled()
+    })
+
+    it('creates password-check file when none exists remotely', async () => {
+      mockListFiles.mockResolvedValue([])
+
+      await setPasswordAndValidate('my-password')
+
+      expect(mockStorePassword).toHaveBeenCalledWith('my-password')
+      expect(mockEncrypt).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'password-check', version: 1 }),
+        'my-password',
+        'password-check',
+      )
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        'password-check.enc',
+        expect.objectContaining({ syncUnit: 'password-check' }),
+      )
+    })
+
+    it('throws PasswordMismatchError when password is wrong', async () => {
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'))
+
+      await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow('sync.passwordMismatch')
+    })
+
+    it('clears stored password on validation failure', async () => {
+      const mockClearPassword = vi.mocked(mockClearPasswordFn)
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+      mockDecrypt.mockRejectedValueOnce(new Error('Decryption failed'))
+
+      await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
+      expect(mockClearPassword).toHaveBeenCalled()
     })
   })
 })

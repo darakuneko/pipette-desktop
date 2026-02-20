@@ -77,6 +77,10 @@ function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
     lastSyncResult: null,
     syncStatus: 'none',
     loading: false,
+    hasRemotePassword: null,
+    checkingRemotePassword: false,
+    syncUnavailable: false,
+    retryRemoteCheck: vi.fn(),
     startAuth: vi.fn().mockResolvedValue(undefined),
     signOut: vi.fn().mockResolvedValue(undefined),
     setConfig: vi.fn().mockResolvedValue(undefined),
@@ -1633,6 +1637,69 @@ describe('SettingsModal', () => {
       expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
       expect(screen.queryByTestId('sync-sign-in')).not.toBeInTheDocument()
       expect(screen.queryByTestId('hub-enable-toggle')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('remote password check UI', () => {
+    it('shows checking spinner when checkingRemotePassword is true', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, hasPassword: false, checkingRemotePassword: true }),
+      })
+
+      expect(screen.getByTestId('sync-checking-remote')).toBeInTheDocument()
+      expect(screen.queryByTestId('sync-password-input')).not.toBeInTheDocument()
+    })
+
+    it('shows existing password hint when hasRemotePassword is true', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, hasPassword: false, hasRemotePassword: true }),
+      })
+
+      expect(screen.getByTestId('sync-existing-password-hint')).toBeInTheDocument()
+    })
+
+    it('does not show hint when hasRemotePassword is false', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, hasPassword: false, hasRemotePassword: false }),
+      })
+
+      expect(screen.queryByTestId('sync-existing-password-hint')).not.toBeInTheDocument()
+    })
+
+    it('shows sync unavailable banner when syncUnavailable is true', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, syncUnavailable: true }),
+      })
+
+      expect(screen.getByTestId('sync-unavailable')).toBeInTheDocument()
+    })
+
+    it('disables sync controls when syncUnavailable is true', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, syncUnavailable: true }),
+      })
+
+      expect(screen.getByTestId('sync-now')).toBeDisabled()
+      expect(screen.getByTestId('sync-auto-on')).toBeDisabled()
+    })
+
+    it('disables password input and save when syncUnavailable is true', () => {
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, hasPassword: false, syncUnavailable: true }),
+      })
+
+      expect(screen.getByTestId('sync-password-input')).toBeDisabled()
+      expect(screen.getByTestId('sync-password-save')).toBeDisabled()
+    })
+
+    it('calls retryRemoteCheck when retry button is clicked', async () => {
+      const retryRemoteCheck = vi.fn()
+      renderAndSwitchToData({
+        sync: makeSyncMock({ ...FULLY_CONFIGURED, syncUnavailable: true, retryRemoteCheck }),
+      })
+
+      fireEvent.click(screen.getByTestId('sync-retry-btn'))
+      expect(retryRemoteCheck).toHaveBeenCalledOnce()
     })
   })
 })

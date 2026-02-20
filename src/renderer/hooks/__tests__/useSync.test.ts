@@ -1,11 +1,13 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { waitFor, act } from '@testing-library/react'
 import { useSync } from '../useSync'
 import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/app-config'
+
+const RETRY_DELAY_MS = 2000
 
 const mockVialAPI = {
   syncAuthStatus: vi.fn().mockResolvedValue({ authenticated: false }),
@@ -15,6 +17,7 @@ const mockVialAPI = {
   syncAuthSignOut: vi.fn().mockResolvedValue({ success: true }),
   syncSetPassword: vi.fn().mockResolvedValue({ success: true }),
   syncResetTargets: vi.fn().mockResolvedValue({ success: true }),
+  syncCheckPasswordExists: vi.fn().mockResolvedValue(false),
   syncValidatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
   syncExecute: vi.fn().mockResolvedValue({ success: true }),
   syncOnProgress: vi.fn().mockReturnValue(() => {}),
@@ -273,6 +276,157 @@ describe('useSync', () => {
     })
 
     expect(mockVialAPI.syncExecute).toHaveBeenCalledWith('download', undefined)
+  })
+
+  describe('remote password check', () => {
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('checks remote password on mount when authenticated', async () => {
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists.mockResolvedValueOnce(true)
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      await waitFor(() => {
+        expect(result.current.hasRemotePassword).toBe(true)
+      })
+
+      expect(result.current.checkingRemotePassword).toBe(false)
+      expect(result.current.syncUnavailable).toBe(false)
+    })
+
+    it('does not check remote password when not authenticated', async () => {
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      expect(result.current.hasRemotePassword).toBeNull()
+      expect(mockVialAPI.syncCheckPasswordExists).not.toHaveBeenCalled()
+    })
+
+    it('retries on failure and sets syncUnavailable after max retries', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockRejectedValueOnce(new Error('network error'))
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      // First attempt fails immediately, retry delay starts
+      // Advance past first retry delay
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+      // Second attempt fails, retry delay starts
+      // Advance past second retry delay
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+      // Third attempt fails, no more retries
+
+      await waitFor(() => {
+        expect(result.current.syncUnavailable).toBe(true)
+      })
+
+      expect(result.current.hasRemotePassword).toBeNull()
+      expect(result.current.checkingRemotePassword).toBe(false)
+    })
+
+    it('succeeds on retry after initial failure', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists
+        .mockRejectedValueOnce(new Error('network error'))
+        .mockResolvedValueOnce(true)
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      // First attempt fails, advance past retry delay
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+
+      await waitFor(() => {
+        expect(result.current.hasRemotePassword).toBe(true)
+      })
+
+      expect(result.current.syncUnavailable).toBe(false)
+      expect(result.current.checkingRemotePassword).toBe(false)
+    })
+
+    it('resets remote password state on sign out', async () => {
+      mockVialAPI.syncAuthStatus.mockResolvedValueOnce({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists.mockResolvedValueOnce(true)
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      await waitFor(() => {
+        expect(result.current.hasRemotePassword).toBe(true)
+      })
+
+      await act(async () => {
+        await result.current.signOut()
+      })
+
+      expect(result.current.hasRemotePassword).toBeNull()
+    })
+
+    it('retryRemoteCheck clears syncUnavailable and re-triggers check', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+
+      mockVialAPI.syncAuthStatus.mockResolvedValue({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockResolvedValueOnce(true)
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+
+      await waitFor(() => {
+        expect(result.current.syncUnavailable).toBe(true)
+      })
+
+      // Retry should clear unavailable and trigger a new check
+      act(() => {
+        result.current.retryRemoteCheck()
+      })
+
+      await waitFor(() => {
+        expect(result.current.hasRemotePassword).toBe(true)
+      })
+
+      expect(result.current.syncUnavailable).toBe(false)
+
+      vi.useRealTimers()
+    })
   })
 
   describe('syncStatus', () => {

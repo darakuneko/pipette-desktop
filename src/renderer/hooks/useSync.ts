@@ -26,6 +26,9 @@ const SYNC_STATUS_MAP: Record<SyncStatus, SyncStatusType> & Record<SyncTerminalS
   partial: 'partial',
 }
 
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 2000
+
 export interface UseSyncReturn {
   config: AppConfig
   authStatus: SyncAuthStatus
@@ -35,6 +38,10 @@ export interface UseSyncReturn {
   lastSyncResult: LastSyncResult | null
   syncStatus: SyncStatusType
   loading: boolean
+  hasRemotePassword: boolean | null
+  checkingRemotePassword: boolean
+  syncUnavailable: boolean
+  retryRemoteCheck: () => void
   startAuth: () => Promise<void>
   signOut: () => Promise<void>
   setConfig: (patch: Partial<AppConfig>) => void
@@ -56,6 +63,9 @@ export function useSync(): UseSyncReturn {
   const [progress, setProgress] = useState<SyncProgress | null>(null)
   const [lastSyncResult, setLastSyncResult] = useState<LastSyncResult | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasRemotePassword, setHasRemotePassword] = useState<boolean | null>(null)
+  const [checkingRemotePassword, setCheckingRemotePassword] = useState(false)
+  const [syncUnavailable, setSyncUnavailable] = useState(false)
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -107,6 +117,45 @@ export function useSync(): UseSyncReturn {
       if (timeoutId) clearTimeout(timeoutId)
       cleanup()
     }
+  }, [])
+
+  const checkRemotePassword = useCallback(async () => {
+    setCheckingRemotePassword(true)
+    setSyncUnavailable(false)
+
+    try {
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const exists = await window.vialAPI.syncCheckPasswordExists()
+          setHasRemotePassword(exists)
+          return
+        } catch {
+          if (attempt < MAX_RETRIES) {
+            await new Promise((r) => setTimeout(r, RETRY_DELAY_MS))
+          }
+        }
+      }
+      setHasRemotePassword(null)
+      setSyncUnavailable(true)
+    } finally {
+      setCheckingRemotePassword(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!authStatus.authenticated) {
+      setHasRemotePassword(null)
+      setSyncUnavailable(false)
+      return
+    }
+    if (hasRemotePassword === null && !syncUnavailable) {
+      void checkRemotePassword()
+    }
+  }, [authStatus.authenticated, hasRemotePassword, syncUnavailable, checkRemotePassword])
+
+  const retryRemoteCheck = useCallback(() => {
+    setHasRemotePassword(null)
+    setSyncUnavailable(false)
   }, [])
 
   const startAuth = useCallback(async () => {
@@ -194,6 +243,10 @@ export function useSync(): UseSyncReturn {
     lastSyncResult,
     syncStatus,
     loading,
+    hasRemotePassword,
+    checkingRemotePassword,
+    syncUnavailable,
+    retryRemoteCheck,
     startAuth,
     signOut,
     setConfig,

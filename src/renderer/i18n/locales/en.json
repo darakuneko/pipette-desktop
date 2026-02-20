@@ -442,7 +442,11 @@
     "deleteUndecryptable": "Delete Selected",
     "deleteUndecryptableConfirm": "The selected files will be permanently deleted from Google Drive. This action cannot be undone.",
     "selectAll": "Select All",
-    "deselectAll": "Deselect All"
+    "deselectAll": "Deselect All",
+    "checkingRemotePassword": "Checking sync status...",
+    "existingPasswordHint": "A sync password already exists. Enter the same password used on your other device.",
+    "unavailable": "Unable to connect to sync server. Sync features are currently disabled.",
+    "retry": "Retry"
   },
   "settings": {
     "title": "Settings",

@@ -62,6 +62,7 @@ export const IpcChannels = {
   SYNC_PENDING_STATUS: 'sync:pending-status',
   SYNC_LIST_UNDECRYPTABLE: 'sync:list-undecryptable',
   SYNC_DELETE_FILES: 'sync:delete-files',
+  SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',

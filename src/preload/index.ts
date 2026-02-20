@@ -222,6 +222,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_LIST_UNDECRYPTABLE),
   syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
+  syncCheckPasswordExists: (): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS),
   syncOnPendingChange: (callback: (pending: boolean) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, pending: boolean): void => {
       callback(pending)

@@ -4,7 +4,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { readFile, writeFile, readdir, mkdir, access } from 'node:fs/promises'
-import { encrypt, decrypt, retrievePassword, storePassword } from './sync-crypto'
+import { encrypt, decrypt, retrievePassword, storePassword, clearPassword } from './sync-crypto'
 import { loadAppConfig } from '../app-config'
 import { getAuthStatus } from './google-auth'
 import {
@@ -266,6 +266,24 @@ async function validatePasswordCheck(
 
 export function resetPasswordCheckCache(): void {
   passwordCheckValidated = false
+}
+
+export async function checkPasswordCheckExists(): Promise<boolean> {
+  const remoteFiles = await listFiles()
+  const fileName = driveFileName(PASSWORD_CHECK_UNIT)
+  return remoteFiles.some((f) => f.name === fileName)
+}
+
+export async function setPasswordAndValidate(password: string): Promise<void> {
+  await storePassword(password)
+  resetPasswordCheckCache()
+  try {
+    const remoteFiles = await listFiles()
+    await validatePasswordCheck(password, remoteFiles)
+  } catch (err) {
+    await clearPassword()
+    throw err
+  }
 }
 
 // --- Sync operations ---

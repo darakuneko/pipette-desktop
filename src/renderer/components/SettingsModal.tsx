@@ -1031,7 +1031,7 @@ export function SettingsModal({
   }, [])
 
   const isSyncing = sync.syncStatus === 'syncing'
-  const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || isSyncing
+  const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || isSyncing || sync.syncUnavailable
 
   const refreshHubPage = useCallback(async (page: number) => {
     await onHubRefresh?.({ page, per_page: DEFAULT_PER_PAGE })
@@ -1055,6 +1055,109 @@ export function SettingsModal({
       void refreshHubPage(hubPage)
     }
   }, [onHubDelete, hubPosts.length, hubPage, handleHubPageChange, refreshHubPage])
+
+  function renderPasswordSection(): React.ReactNode {
+    if (sync.checkingRemotePassword) {
+      return (
+        <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-checking-remote" role="status">
+          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-hidden="true" />
+          {t('sync.checkingRemotePassword')}
+        </div>
+      )
+    }
+
+    if (sync.hasPassword && !changingPassword) {
+      return (
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-accent" data-testid="sync-password-set">
+            {t('sync.passwordSet')}
+          </span>
+          <button
+            type="button"
+            className={BTN_SECONDARY}
+            onClick={() => setChangingPassword(true)}
+            disabled={busy || !sync.authStatus.authenticated || sync.syncUnavailable}
+            data-testid="sync-password-change-btn"
+          >
+            {t('sync.changePassword')}
+          </button>
+        </div>
+      )
+    }
+
+    return (
+      <div className="space-y-2">
+        {busy && (
+          <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-password-busy" role="status">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-hidden="true" />
+            {t(changingPassword ? 'sync.changingPassword' : 'sync.settingPassword')}
+          </div>
+        )}
+        {!busy && changingPassword && (
+          <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-change-password-info">
+            {t('sync.changePasswordInfo')}
+          </div>
+        )}
+        {!busy && !changingPassword && sync.hasRemotePassword === true && (
+          <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-existing-password-hint">
+            {t('sync.existingPasswordHint')}
+          </div>
+        )}
+        <input
+          type="password"
+          className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content disabled:opacity-50"
+          placeholder={t('sync.passwordPlaceholder')}
+          value={password}
+          onChange={(e) => handlePasswordChange(e.target.value)}
+          disabled={busy || sync.syncUnavailable}
+          data-testid="sync-password-input"
+        />
+        {passwordScore !== null && !busy && (
+          <div className="space-y-1">
+            <div className="flex gap-1">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 flex-1 rounded ${i <= passwordScore ? scoreColor(passwordScore) : 'bg-surface-dim'}`}
+                />
+              ))}
+            </div>
+            {passwordFeedback.map((fb, i) => (
+              <div key={i} className="text-xs text-content-muted">
+                {fb}
+              </div>
+            ))}
+          </div>
+        )}
+        {passwordError && (
+          <div className="text-xs text-danger" data-testid="sync-password-error">{passwordError}</div>
+        )}
+        {!busy && (
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+              onClick={handleSetPassword}
+              disabled={!password || (passwordScore !== null && passwordScore < 4) || sync.syncUnavailable}
+              data-testid="sync-password-save"
+            >
+              {t('sync.setPassword')}
+            </button>
+            {changingPassword && (
+              <button
+                type="button"
+                className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+                onClick={clearPasswordForm}
+                data-testid="sync-password-reset-cancel"
+              >
+                {t('common.cancel')}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
 
   function renderHubPostList(): React.ReactNode {
     const totalPages = hubPostsPagination?.total_pages ?? 1
@@ -1338,93 +1441,27 @@ export function SettingsModal({
                 )}
               </section>
 
+              {/* Sync Unavailable */}
+              {sync.syncUnavailable && (
+                <div className="mb-6 flex items-center justify-between rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger" data-testid="sync-unavailable">
+                  <span>{t('sync.unavailable')}</span>
+                  <button
+                    type="button"
+                    className="ml-2 rounded border border-danger/50 px-2 py-1 text-xs hover:bg-danger/20"
+                    onClick={sync.retryRemoteCheck}
+                    data-testid="sync-retry-btn"
+                  >
+                    {t('sync.retry')}
+                  </button>
+                </div>
+              )}
+
               {/* Encryption Password */}
               <section className="mb-6">
                 <h4 className="mb-2 text-sm font-medium text-content-secondary">
                   {t('sync.encryptionPassword')}
                 </h4>
-                {sync.hasPassword && !changingPassword ? (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-accent" data-testid="sync-password-set">
-                      {t('sync.passwordSet')}
-                    </span>
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={() => setChangingPassword(true)}
-                      disabled={busy || !sync.authStatus.authenticated}
-                      data-testid="sync-password-change-btn"
-                    >
-                      {t('sync.changePassword')}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {busy && (
-                      <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-password-busy" role="status">
-                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-hidden="true" />
-                        {t(changingPassword ? 'sync.changingPassword' : 'sync.settingPassword')}
-                      </div>
-                    )}
-                    {!busy && changingPassword && (
-                      <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-change-password-info">
-                        {t('sync.changePasswordInfo')}
-                      </div>
-                    )}
-                    <input
-                      type="password"
-                      className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content disabled:opacity-50"
-                      placeholder={t('sync.passwordPlaceholder')}
-                      value={password}
-                      onChange={(e) => handlePasswordChange(e.target.value)}
-                      disabled={busy}
-                      data-testid="sync-password-input"
-                    />
-                    {passwordScore !== null && !busy && (
-                      <div className="space-y-1">
-                        <div className="flex gap-1">
-                          {[0, 1, 2, 3, 4].map((i) => (
-                            <div
-                              key={i}
-                              className={`h-1.5 flex-1 rounded ${i <= passwordScore ? scoreColor(passwordScore) : 'bg-surface-dim'}`}
-                            />
-                          ))}
-                        </div>
-                        {passwordFeedback.map((fb, i) => (
-                          <div key={i} className="text-xs text-content-muted">
-                            {fb}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    {passwordError && (
-                      <div className="text-xs text-danger" data-testid="sync-password-error">{passwordError}</div>
-                    )}
-                    {!busy && (
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-                          onClick={handleSetPassword}
-                          disabled={!password || (passwordScore !== null && passwordScore < 4)}
-                          data-testid="sync-password-save"
-                        >
-                          {t('sync.setPassword')}
-                        </button>
-                        {changingPassword && (
-                          <button
-                            type="button"
-                            className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
-                            onClick={clearPasswordForm}
-                            data-testid="sync-password-reset-cancel"
-                          >
-                            {t('common.cancel')}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                {renderPasswordSection()}
               </section>
 
               {/* Sync Controls */}

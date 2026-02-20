@@ -442,7 +442,11 @@
     "deleteUndecryptable": "選択を削除",
     "deleteUndecryptableConfirm": "選択したファイルが Google Drive から完全に削除されます。この操作は取り消せません。",
     "selectAll": "すべて選択",
-    "deselectAll": "すべて解除"
+    "deselectAll": "すべて解除",
+    "checkingRemotePassword": "同期状態を確認中...",
+    "existingPasswordHint": "同期パスワードが既に設定されています。他のデバイスで使用したパスワードを入力してください。",
+    "unavailable": "接続先またはネットワークに問題があります。同期機能は使用できません。",
+    "retry": "再試行"
   },
   "settings": {
     "title": "設定",

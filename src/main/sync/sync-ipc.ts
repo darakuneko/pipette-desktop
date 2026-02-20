@@ -7,7 +7,6 @@ import { join, resolve } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { loadAppConfig, getAppConfigStore, onAppConfigChange } from '../app-config'
 import {
-  storePassword,
   hasStoredPassword,
   checkPasswordStrength,
 } from './sync-crypto'
@@ -30,6 +29,8 @@ import {
   resetPasswordCheckCache,
   listUndecryptableFiles,
   changePassword,
+  checkPasswordCheckExists,
+  setPasswordAndValidate,
 } from './sync-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
@@ -147,9 +148,8 @@ export function setupSyncIpc(): void {
   secureHandle(
     IpcChannels.SYNC_SET_PASSWORD,
     (_event, password: string) =>
-      wrapIpc('Store password failed', async () => {
-        await storePassword(password)
-        resetPasswordCheckCache()
+      wrapIpc('Set password failed', async () => {
+        await setPasswordAndValidate(password)
       }),
   )
 
@@ -405,6 +405,9 @@ export function setupSyncIpc(): void {
       }
     }),
   )
+
+  // --- Password check existence ---
+  secureHandle(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS, () => checkPasswordCheckExists())
 
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
