@@ -432,7 +432,6 @@
     "resetKeyboardData": "キーボードデータリセット",
     "resetKeyboardDataConfirm": "{{name}} の保存済みレイアウトと設定が削除されます。\nGoogle Drive appDataFolder の同期データおよび Hub の投稿も削除されます。\nキーボード本体に保存されている設定には影響しません。",
     "resettingKeyboardData": "データを削除中...",
-    "cancelPending": "キャンセル",
     "resetDisabledWhileSyncing": "同期中はリセットできません",
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
     "undecryptable": "復号できないファイル",

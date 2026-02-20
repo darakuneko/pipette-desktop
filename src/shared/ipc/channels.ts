@@ -60,7 +60,6 @@ export const IpcChannels = {
   SYNC_NOTIFY_CHANGE: 'sync:notify-change',
   SYNC_PROGRESS: 'sync:progress',
   SYNC_PENDING_STATUS: 'sync:pending-status',
-  SYNC_CANCEL_PENDING: 'sync:cancel-pending',
   SYNC_LIST_UNDECRYPTABLE: 'sync:list-undecryptable',
   SYNC_DELETE_FILES: 'sync:delete-files',
 

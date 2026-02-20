@@ -14,7 +14,6 @@ interface Props {
   matrixMode: boolean
   typingTestMode?: boolean
   onDisconnect: () => void
-  onCancelPending?: () => void
 }
 
 export function StatusBar({
@@ -27,7 +26,6 @@ export function StatusBar({
   matrixMode,
   typingTestMode,
   onDisconnect,
-  onCancelPending,
 }: Props) {
   const { t } = useTranslation()
 
@@ -67,16 +65,6 @@ export function StatusBar({
             <span className={SYNC_STATUS_CLASS[syncStatus]} data-testid="sync-status">
               {t(`statusBar.sync.${syncStatus}`)}
             </span>
-            {syncStatus === 'pending' && onCancelPending && (
-              <button
-                type="button"
-                className="text-content-muted hover:text-content-secondary"
-                onClick={onCancelPending}
-                data-testid="sync-cancel-pending"
-              >
-                {t('sync.cancelPending')}
-              </button>
-            )}
           </>
         )}
         {hubConnected !== undefined && (

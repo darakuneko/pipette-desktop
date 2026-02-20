@@ -19,7 +19,6 @@ vi.mock('react-i18next', () => ({
       if (key === 'statusBar.sync.synced') return 'Synced'
       if (key === 'statusBar.sync.error') return 'Error'
       if (key === 'statusBar.sync.partial') return 'Partial'
-      if (key === 'sync.cancelPending') return 'Cancel'
       return key
     },
   }),
@@ -176,29 +175,4 @@ describe('StatusBar', () => {
     })
   })
 
-  describe('cancel pending button', () => {
-    it('shows Cancel button when syncStatus is pending and onCancelPending is provided', () => {
-      const onCancelPending = vi.fn()
-      render(<StatusBar {...defaultProps} syncStatus="pending" onCancelPending={onCancelPending} />)
-      expect(screen.getByTestId('sync-cancel-pending')).toHaveTextContent('Cancel')
-    })
-
-    it('does not show Cancel button when syncStatus is not pending', () => {
-      const onCancelPending = vi.fn()
-      render(<StatusBar {...defaultProps} syncStatus="syncing" onCancelPending={onCancelPending} />)
-      expect(screen.queryByTestId('sync-cancel-pending')).not.toBeInTheDocument()
-    })
-
-    it('does not show Cancel button when onCancelPending is not provided', () => {
-      render(<StatusBar {...defaultProps} syncStatus="pending" />)
-      expect(screen.queryByTestId('sync-cancel-pending')).not.toBeInTheDocument()
-    })
-
-    it('calls onCancelPending when Cancel button is clicked', () => {
-      const onCancelPending = vi.fn()
-      render(<StatusBar {...defaultProps} syncStatus="pending" onCancelPending={onCancelPending} />)
-      fireEvent.click(screen.getByTestId('sync-cancel-pending'))
-      expect(onCancelPending).toHaveBeenCalledOnce()
-    })
-  })
 })

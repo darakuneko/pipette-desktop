@@ -42,7 +42,6 @@ export interface UseSyncReturn {
   changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
   resetSyncTargets: (targets: SyncResetTargets) => Promise<{ success: boolean; error?: string }>
   validatePassword: (password: string) => Promise<PasswordStrength>
-  cancelPending: () => Promise<void>
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
   refreshStatus: () => Promise<void>
   listUndecryptable: () => Promise<UndecryptableFile[]>
@@ -162,10 +161,6 @@ export function useSync(): UseSyncReturn {
     [],
   )
 
-  const cancelPending = useCallback(async () => {
-    await window.vialAPI.syncCancelPending()
-  }, [])
-
   const syncNow = useCallback(async (direction: 'download' | 'upload', scope?: SyncScope) => {
     await window.vialAPI.syncExecute(direction, scope)
   }, [])
@@ -206,7 +201,6 @@ export function useSync(): UseSyncReturn {
     changePassword,
     resetSyncTargets,
     validatePassword,
-    cancelPending,
     syncNow,
     refreshStatus,
     listUndecryptable,

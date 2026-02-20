@@ -1103,7 +1103,6 @@ export function App() {
         matrixMode={matrixState.matrixMode}
         typingTestMode={typingTestMode}
         onDisconnect={handleDisconnect}
-        onCancelPending={sync.cancelPending}
       />
 
       {showUnlockDialog && !device.isDummy && (

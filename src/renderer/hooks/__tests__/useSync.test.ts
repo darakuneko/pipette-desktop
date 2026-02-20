@@ -18,7 +18,6 @@ const mockVialAPI = {
   syncValidatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
   syncExecute: vi.fn().mockResolvedValue({ success: true }),
   syncOnProgress: vi.fn().mockReturnValue(() => {}),
-  syncCancelPending: vi.fn().mockResolvedValue({ success: true }),
   syncOnPendingChange: vi.fn().mockReturnValue(() => {}),
 }
 
@@ -260,20 +259,6 @@ describe('useSync', () => {
     })
 
     expect(result.current.lastSyncResult).toBeNull()
-  })
-
-  it('calls syncCancelPending on cancelPending', async () => {
-    const { result } = renderHookWithConfig(() => useSync())
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false)
-    })
-
-    await act(async () => {
-      await result.current.cancelPending()
-    })
-
-    expect(mockVialAPI.syncCancelPending).toHaveBeenCalledOnce()
   })
 
   it('calls syncExecute on syncNow', async () => {

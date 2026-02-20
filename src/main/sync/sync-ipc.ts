@@ -409,12 +409,6 @@ export function setupSyncIpc(): void {
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
 
-  // --- Cancel pending changes ---
-  secureHandle(IpcChannels.SYNC_CANCEL_PENDING, () => {
-    cancelPendingChanges()
-    return { success: true } satisfies IpcResult
-  })
-
   // --- Change notification (from stores) ---
   secureOn(IpcChannels.SYNC_NOTIFY_CHANGE, (_event, syncUnit: string) => {
     notifyChange(syncUnit)

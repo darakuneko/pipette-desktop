@@ -218,8 +218,6 @@ const vialAPI = {
   },
   syncHasPendingChanges: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.SYNC_PENDING_STATUS),
-  syncCancelPending: (): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SYNC_CANCEL_PENDING),
   syncListUndecryptable: (): Promise<UndecryptableFile[]> =>
     ipcRenderer.invoke(IpcChannels.SYNC_LIST_UNDECRYPTABLE),
   syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>

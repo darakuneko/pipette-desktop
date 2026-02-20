@@ -134,7 +134,6 @@ export interface VialAPI {
   syncValidatePassword(password: string): Promise<PasswordStrength>
   syncOnProgress(callback: (progress: SyncProgress) => void): () => void
   syncHasPendingChanges(): Promise<boolean>
-  syncCancelPending(): Promise<{ success: boolean; error?: string }>
   syncListUndecryptable(): Promise<UndecryptableFile[]>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void

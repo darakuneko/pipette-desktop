@@ -432,7 +432,6 @@
     "resetKeyboardData": "Reset Keyboard Data",
     "resetKeyboardDataConfirm": "{{name}}'s saved layouts and settings will be deleted.\nSynced data in Google Drive appDataFolder and Hub posts for this keyboard will also be deleted.\nSettings stored on the keyboard itself are not affected.",
     "resettingKeyboardData": "Deleting data...",
-    "cancelPending": "Cancel",
     "resetDisabledWhileSyncing": "Cannot reset while sync is in progress",
     "passwordMismatch": "Sync password does not match. Please check your encryption password.",
     "undecryptable": "Undecryptable Files",
