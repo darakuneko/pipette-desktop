@@ -940,6 +940,11 @@ describe('sync-service', () => {
       await syncPromise
     })
 
+    it('throws when new password is the same as current', async () => {
+      await expect(changePassword('test-password')).rejects.toThrow('sync.samePassword')
+      expect(mockUploadFile).not.toHaveBeenCalled()
+    })
+
     it('throws when no password is stored', async () => {
       mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
 

@@ -840,7 +840,6 @@ export function SettingsModal({
   const [passwordFeedback, setPasswordFeedback] = useState<string[]>([])
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [changingPassword, setChangingPassword] = useState(false)
-  const [resettingPassword, setResettingPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [syncTargets, setSyncTargets] = useState<SyncResetTargets>({ keyboards: false, favorites: false })
   const [confirmingSyncReset, setConfirmingSyncReset] = useState(false)
@@ -941,7 +940,6 @@ export function SettingsModal({
     setPasswordFeedback([])
     setPasswordError(null)
     setChangingPassword(false)
-    setResettingPassword(false)
   }, [])
 
   const handleSetPassword = useCallback(async () => {
@@ -949,21 +947,21 @@ export function SettingsModal({
       setPasswordError(t('sync.passwordTooWeak'))
       return
     }
-    let result: { success: boolean; error?: string }
-    if (changingPassword) {
-      result = await sync.changePassword(password)
-    } else if (resettingPassword) {
-      result = await sync.resetPassword(password)
-    } else {
-      result = await sync.setPassword(password)
+    setBusy(true)
+    try {
+      const result = changingPassword
+        ? await sync.changePassword(password)
+        : await sync.setPassword(password)
+      if (result.success) {
+        clearPasswordForm()
+      } else {
+        const errorKey = result.error ?? t('sync.passwordSetFailed')
+        setPasswordError(t(errorKey, errorKey))
+      }
+    } finally {
+      setBusy(false)
     }
-    if (result.success) {
-      clearPasswordForm()
-    } else {
-      const errorKey = result.error ?? t('sync.passwordSetFailed')
-      setPasswordError(t(errorKey, errorKey))
-    }
-  }, [sync, password, passwordScore, changingPassword, resettingPassword, clearPasswordForm, t])
+  }, [sync, password, passwordScore, changingPassword, clearPasswordForm, t])
 
   const handleSyncNow = useCallback(async () => {
     setBusy(true)
@@ -1117,11 +1115,12 @@ export function SettingsModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="settings-backdrop"
-      onClick={onClose}
+      onClick={busy ? undefined : onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
+        aria-busy={busy}
         aria-labelledby="settings-title"
         className="w-[480px] max-w-[90vw] h-[min(840px,85vh)] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
@@ -1130,7 +1129,7 @@ export function SettingsModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
           <h2 id="settings-title" className="text-lg font-bold text-content">{t('settings.title')}</h2>
-          <ModalCloseButton testid="settings-close" onClick={onClose} />
+          {!busy && <ModalCloseButton testid="settings-close" onClick={onClose} />}
         </div>
 
         <ModalTabBar
@@ -1344,53 +1343,44 @@ export function SettingsModal({
                 <h4 className="mb-2 text-sm font-medium text-content-secondary">
                   {t('sync.encryptionPassword')}
                 </h4>
-                {sync.hasPassword && !resettingPassword && !changingPassword ? (
+                {sync.hasPassword && !changingPassword ? (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-accent" data-testid="sync-password-set">
                       {t('sync.passwordSet')}
                     </span>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className={BTN_SECONDARY}
-                        onClick={() => setChangingPassword(true)}
-                        disabled={!sync.authStatus.authenticated}
-                        data-testid="sync-password-change-btn"
-                      >
-                        {t('sync.changePassword')}
-                      </button>
-                      <button
-                        type="button"
-                        className={BTN_DANGER_OUTLINE}
-                        onClick={() => setResettingPassword(true)}
-                        disabled={!sync.authStatus.authenticated}
-                        data-testid="sync-password-reset-btn"
-                      >
-                        {t('sync.resetPassword')}
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      onClick={() => setChangingPassword(true)}
+                      disabled={busy || !sync.authStatus.authenticated}
+                      data-testid="sync-password-change-btn"
+                    >
+                      {t('sync.changePassword')}
+                    </button>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {changingPassword && (
+                    {busy && (
+                      <div className="flex items-center gap-2 rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-password-busy" role="status">
+                        <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-hidden="true" />
+                        {t(changingPassword ? 'sync.changingPassword' : 'sync.settingPassword')}
+                      </div>
+                    )}
+                    {!busy && changingPassword && (
                       <div className="rounded border border-accent/50 bg-accent/10 p-2 text-xs text-accent" data-testid="sync-change-password-info">
                         {t('sync.changePasswordInfo')}
                       </div>
                     )}
-                    {resettingPassword && (
-                      <div className="rounded border border-warning/50 bg-warning/10 p-2 text-xs text-warning" data-testid="sync-reset-warning">
-                        {t('sync.resetPasswordWarning')}
-                      </div>
-                    )}
                     <input
                       type="password"
-                      className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content"
+                      className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content disabled:opacity-50"
                       placeholder={t('sync.passwordPlaceholder')}
                       value={password}
                       onChange={(e) => handlePasswordChange(e.target.value)}
+                      disabled={busy}
                       data-testid="sync-password-input"
                     />
-                    {passwordScore !== null && (
+                    {passwordScore !== null && !busy && (
                       <div className="space-y-1">
                         <div className="flex gap-1">
                           {[0, 1, 2, 3, 4].map((i) => (
@@ -1410,27 +1400,29 @@ export function SettingsModal({
                     {passwordError && (
                       <div className="text-xs text-danger" data-testid="sync-password-error">{passwordError}</div>
                     )}
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
-                        onClick={handleSetPassword}
-                        disabled={!password || (passwordScore !== null && passwordScore < 4)}
-                        data-testid="sync-password-save"
-                      >
-                        {t('sync.setPassword')}
-                      </button>
-                      {(resettingPassword || changingPassword) && (
+                    {!busy && (
+                      <div className="flex gap-2">
                         <button
                           type="button"
-                          className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
-                          onClick={clearPasswordForm}
-                          data-testid="sync-password-reset-cancel"
+                          className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+                          onClick={handleSetPassword}
+                          disabled={!password || (passwordScore !== null && passwordScore < 4)}
+                          data-testid="sync-password-save"
                         >
-                          {t('common.cancel')}
+                          {t('sync.setPassword')}
                         </button>
-                      )}
-                    </div>
+                        {changingPassword && (
+                          <button
+                            type="button"
+                            className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+                            onClick={clearPasswordForm}
+                            data-testid="sync-password-reset-cancel"
+                          >
+                            {t('common.cancel')}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </section>

@@ -53,7 +53,6 @@ export const IpcChannels = {
   SYNC_AUTH_SIGN_OUT: 'sync:auth-sign-out',
   SYNC_EXECUTE: 'sync:execute',
   SYNC_SET_PASSWORD: 'sync:set-password',
-  SYNC_RESET_PASSWORD: 'sync:reset-password',
   SYNC_CHANGE_PASSWORD: 'sync:change-password',
   SYNC_HAS_PASSWORD: 'sync:has-password',
   SYNC_VALIDATE_PASSWORD: 'sync:validate-password',

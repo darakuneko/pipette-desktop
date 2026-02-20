@@ -14,7 +14,6 @@ const mockVialAPI = {
   syncAuthStart: vi.fn().mockResolvedValue({ success: true }),
   syncAuthSignOut: vi.fn().mockResolvedValue({ success: true }),
   syncSetPassword: vi.fn().mockResolvedValue({ success: true }),
-  syncResetPassword: vi.fn().mockResolvedValue({ success: true }),
   syncResetTargets: vi.fn().mockResolvedValue({ success: true }),
   syncValidatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
   syncExecute: vi.fn().mockResolvedValue({ success: true }),
