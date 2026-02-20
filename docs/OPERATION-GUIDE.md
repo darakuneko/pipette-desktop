@@ -257,6 +257,24 @@ Open from the Quantum tab Alt Repeat Key settings button. Configure alternative 
 - Specify allowed modifiers
 - Enable/disable individual entries
 
+### 5.5 Favorites
+
+Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includes a **Fav** button for saving and loading individual entry configurations.
+
+![Fav Button](screenshots/30-fav-button.png)
+
+- Click the **Fav** button (yellow) to open the Favorites modal
+- **Save Current State**: Enter a label and click Save to store the current entry configuration
+- **Synced Data**: Previously saved entries are listed with Load, Rename, and Delete actions
+
+![Favorites Modal](screenshots/31-fav-modal.png)
+
+- **Load**: Apply a saved configuration to the current entry
+- **Rename**: Change the label of a saved entry
+- **Delete**: Remove a saved entry
+
+> **Note**: Saved favorites are synced across devices when Cloud Sync is enabled (see §6.4).
+
 ---
 
 ## 6. Editor Settings Panel
