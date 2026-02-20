@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { EventEmitter } from 'node:events'
 
 // --- Mocks ---
 
@@ -22,11 +21,14 @@ vi.mock('../logger', () => ({
   log: vi.fn(),
 }))
 
-// Mock child_process.spawn
-const mockSpawn = vi.fn()
-vi.mock('node:child_process', () => ({
-  spawn: (...args: unknown[]) => mockSpawn(...args),
-}))
+// Mock xz-decompress — must use a regular function so it works with `new`
+const mockXzReadableStream = vi.fn()
+vi.mock('xz-decompress', () => {
+  const XzReadableStream = function XzReadableStream(...args: unknown[]) {
+    return mockXzReadableStream(...args)
+  }
+  return { default: { XzReadableStream }, XzReadableStream }
+})
 
 // Mock lzma package
 const mockLzmaDecompress = vi.fn()
@@ -40,31 +42,25 @@ import {
   setupLzmaIpc,
   MAX_COMPRESSED_SIZE,
   MAX_DECOMPRESSED_SIZE,
-  XZ_TIMEOUT_MS,
 } from '../lzma'
-
-interface MockChild extends EventEmitter {
-  stdin: { end: ReturnType<typeof vi.fn> }
-  stdout: EventEmitter
-  kill: ReturnType<typeof vi.fn>
-}
-
-function createMockChild(): MockChild {
-  const child = new EventEmitter() as MockChild
-  child.stdin = { end: vi.fn() }
-  child.stdout = new EventEmitter()
-  child.kill = vi.fn()
-  return child
-}
 
 // XZ magic bytes prefix
 const XZ_MAGIC = [0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00]
+
+/** Helper: create a ReadableStream that yields the given chunks */
+function mockStream(chunks: Uint8Array[]): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk)
+      controller.close()
+    },
+  })
+}
 
 describe('lzma', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockHandlers.clear()
-    vi.useFakeTimers()
     setupLzmaIpc()
   })
 
@@ -124,40 +120,21 @@ describe('lzma', () => {
 
   describe('XZ decompression', () => {
     it('decompresses valid XZ data', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
+      const decompressed = new TextEncoder().encode('decompressed result')
+      mockXzReadableStream.mockReturnValue(mockStream([decompressed]))
 
       const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      // Simulate xz output
-      child.stdout.emit('data', Buffer.from('decompressed result'))
-      child.emit('close', 0)
-
-      const result = await promise
+      const result = await getHandler()({}, data)
       expect(result).toBe('decompressed result')
-      expect(mockSpawn).toHaveBeenCalledWith(
-        'xz',
-        ['--decompress', '--stdout'],
-        expect.objectContaining({ stdio: ['pipe', 'pipe', 'ignore'] }),
-      )
     })
 
-    it('returns null and settles immediately when XZ output exceeds MAX_DECOMPRESSED_SIZE', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
+    it('returns null when XZ output exceeds MAX_DECOMPRESSED_SIZE', async () => {
+      const oversized = new Uint8Array(MAX_DECOMPRESSED_SIZE + 1)
+      mockXzReadableStream.mockReturnValue(mockStream([oversized]))
 
       const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      // Emit a chunk that exceeds the limit — should settle immediately
-      const oversizedChunk = Buffer.alloc(MAX_DECOMPRESSED_SIZE + 1)
-      child.stdout.emit('data', oversizedChunk)
-
-      // No close event needed — settle happens in data handler
-      const result = await promise
+      const result = await getHandler()({}, data)
       expect(result).toBeNull()
-      expect(child.kill).toHaveBeenCalled()
       expect(log).toHaveBeenCalledWith(
         'warn',
         expect.stringContaining('exceeded limit'),
@@ -165,76 +142,48 @@ describe('lzma', () => {
     })
 
     it('returns null when XZ output exceeds limit across multiple chunks', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
-
-      const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      // Emit chunks that collectively exceed the limit
       const halfSize = Math.ceil(MAX_DECOMPRESSED_SIZE / 2)
-      child.stdout.emit('data', Buffer.alloc(halfSize))
-      child.stdout.emit('data', Buffer.alloc(halfSize + 1))
-      child.emit('close', 0)
-
-      const result = await promise
-      expect(result).toBeNull()
-      expect(child.kill).toHaveBeenCalled()
-    })
-
-    it('returns null when XZ times out', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
+      mockXzReadableStream.mockReturnValue(
+        mockStream([new Uint8Array(halfSize), new Uint8Array(halfSize + 1)]),
+      )
 
       const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      // Advance time past the timeout
-      vi.advanceTimersByTime(XZ_TIMEOUT_MS + 1)
-
-      const result = await promise
+      const result = await getHandler()({}, data)
       expect(result).toBeNull()
-      expect(child.kill).toHaveBeenCalled()
       expect(log).toHaveBeenCalledWith(
         'warn',
-        expect.stringContaining('timed out'),
+        expect.stringContaining('exceeded limit'),
       )
     })
 
-    it('returns null when XZ process exits with non-zero code', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
+    it('returns null when XzReadableStream throws', async () => {
+      mockXzReadableStream.mockImplementation(() => {
+        throw new Error('corrupt XZ data')
+      })
 
       const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      child.emit('close', 1)
-
-      const result = await promise
+      const result = await getHandler()({}, data)
       expect(result).toBeNull()
       expect(log).toHaveBeenCalledWith(
         'warn',
-        expect.stringContaining('exited with code 1'),
+        expect.stringContaining('corrupt XZ data'),
       )
     })
 
-    it('returns null when XZ process emits error', async () => {
-      const child = createMockChild()
-      mockSpawn.mockReturnValue(child)
+    it('returns null when stream read rejects', async () => {
+      const errStream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.error(new Error('stream error'))
+        },
+      })
+      mockXzReadableStream.mockReturnValue(errStream)
 
       const data = [...XZ_MAGIC, 1, 2, 3]
-      const promise = getHandler()({}, data)
-
-      child.emit('error', new Error('spawn xz ENOENT'))
-
-      // Process also closes after error
-      child.emit('close', null)
-
-      const result = await promise
+      const result = await getHandler()({}, data)
       expect(result).toBeNull()
       expect(log).toHaveBeenCalledWith(
         'warn',
-        expect.stringContaining('spawn xz ENOENT'),
+        expect.stringContaining('stream error'),
       )
     })
   })
@@ -334,10 +283,6 @@ describe('lzma', () => {
 
     it('MAX_DECOMPRESSED_SIZE is 10 MB', () => {
       expect(MAX_DECOMPRESSED_SIZE).toBe(10 * 1024 * 1024)
-    })
-
-    it('XZ_TIMEOUT_MS is 10 seconds', () => {
-      expect(XZ_TIMEOUT_MS).toBe(10_000)
     })
   })
 })

@@ -41,7 +41,8 @@
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-i18next": "^16.5.4"
+    "react-i18next": "^16.5.4",
+    "xz-decompress": "^0.2.3"
   },
   "devDependencies": {
     "@playwright/mcp": "0.0.64",
