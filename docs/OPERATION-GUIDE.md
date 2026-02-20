@@ -393,8 +393,12 @@ The status bar at the bottom of the screen shows connection information and acti
 
 ![Status Bar](screenshots/29-status-bar.png)
 
-- **Connection status**: Shows the name of the connected keyboard
-- **Vial protocol version**: The Vial protocol version supported by the keyboard
-- **Auto Move**: Status of automatic key advancement after assigning a keycode
-- **Locked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
+- **Device name**: Shows the name of the connected keyboard
+- **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
+- **Auto Advance**: Status of automatic key advancement after assigning a keycode (shown only when enabled)
+- **Key Tester**: Matrix Tester mode status (shown only when enabled and Typing Test is not active)
+- **Typing Test**: Typing Test mode status (shown only when enabled)
+- **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
+- **Sync status**: Cloud sync status (shown only when sync is configured)
+- **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)
 - **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen
