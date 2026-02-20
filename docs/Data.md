@@ -135,8 +135,8 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **Is my data encrypted?** | **Yes.** All data is encrypted with AES-256-GCM using a key derived from your sync password (PBKDF2, 600,000 iterations) before it leaves your device. Google stores only encrypted blobs. |
 | **Can Pipette's developers read my synced data?** | **No.** Encryption happens on your device with your password. Without your sync password, the encrypted data is unreadable. |
 | **What happens if I sign out?** | Local data is preserved. Cloud data remains in Google Drive appDataFolder but is no longer synced. You can sign back in to resume syncing. |
-| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings. This removes all Pipette data from Google Drive appDataFolder. |
-| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`). File names contain keyboard UIDs but no personal information. |
+| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings and select both keyboard and favorite data. This removes selected Pipette data from Google Drive appDataFolder. |
+| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
 
 ### Google OAuth Scopes
@@ -206,7 +206,7 @@ Pipette can export keymap data in several formats. These are local file download
 |-----------|:---------:|:--------:|:---------:|:----------:|:--------:|:------------:|
 | Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | Deleted for that keyboard | - |
 | Reset Local Data | All deleted | All deleted | All deleted | - | - | Reset to defaults |
-| Reset Sync Data | - | - | - | All deleted | - | - |
-| Reset Password | - | - | - | All deleted | - | - |
+| Reset Sync Data | - | - | - | Selected targets deleted | - | - |
+| Change Password | - | - | - | All files re-encrypted | - | - |
 | Sign Out | - | - | - | - | - | - |
 | Export/Import Local Data | Included | Included | Included | - | - | - |
