@@ -374,25 +374,31 @@ export function useKeyboard() {
       })
 
       // Phase 8: QMK Settings discovery (matches Python reload_settings)
+      // Wrapped in a timeout so a hung HID call cannot block reload forever.
       progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
         try {
           const supported = new Set<number>()
-          let cur = 0
-          while (cur !== 0xffff) {
-            const result = await api.qmkSettingsQuery(cur)
-            const prevCur = cur
-            for (let i = 0; i + 1 < result.length; i += 2) {
-              const qsid = result[i] | (result[i + 1] << 8)
-              cur = Math.max(cur, qsid)
-              if (qsid !== 0xffff) {
-                supported.add(qsid)
+          await Promise.race([
+            (async () => {
+              let cur = 0
+              while (cur !== 0xffff) {
+                const result = await api.qmkSettingsQuery(cur)
+                const prevCur = cur
+                for (let i = 0; i + 1 < result.length; i += 2) {
+                  const qsid = result[i] | (result[i + 1] << 8)
+                  cur = Math.max(cur, qsid)
+                  if (qsid !== 0xffff) {
+                    supported.add(qsid)
+                  }
+                }
+                if (cur === prevCur) break
               }
-            }
-            // If cur didn't advance, the device isn't returning valid
-            // QMK settings data (e.g. all-zero response on Windows) — bail out
-            if (cur === prevCur) break
-          }
+            })(),
+            new Promise<void>((_, reject) =>
+              setTimeout(() => reject(new Error('QMK settings discovery timeout')), 5000),
+            ),
+          ])
           newState.supportedQsids = supported
         } catch (err) {
           if (isEchoDetected(err)) {
