@@ -80,8 +80,6 @@ function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
   ))
 }
 
-const COPY_ALL_RESET_MS = 5000
-
 const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
@@ -526,7 +524,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [isCopying, setIsCopying] = useState(false)
   const isCopyingRef = useRef(false)
   const [copyAllPending, setCopyAllPending] = useState(false)
-  const copyAllTimerRef = useRef<ReturnType<typeof setTimeout>>()
 
   const [pickerSelectedKeycodes, setPickerSelectedKeycodes] = useState<Keycode[]>([])
   const [pickerAnchor, setPickerAnchor] = useState<string | null>(null)
@@ -535,16 +532,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     () => new Set(pickerSelectedKeycodes.map((kc) => kc.qmkId)),
     [pickerSelectedKeycodes],
   )
-
-  /** Reset the two-step Copy All confirmation and cancel its auto-reset timer. */
-  const clearCopyAllPending = useCallback(() => {
-    setCopyAllPending(false)
-    clearTimeout(copyAllTimerRef.current)
-    copyAllTimerRef.current = undefined
-  }, [])
-
-  // Clean up the copy-all auto-reset timer on unmount
-  useEffect(() => () => clearCopyAllPending(), [clearCopyAllPending])
 
   /** Clear multi-selection only if non-empty (avoids unnecessary re-renders). */
   const clearMultiSelection = useCallback(() => {
@@ -1087,8 +1074,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       clearMultiSelection()
       clearPickerSelection()
     }
-    clearCopyAllPending()
-  }, [currentLayer, activePane, clearMultiSelection, clearPickerSelection, clearCopyAllPending])
+    setCopyAllPending(false)
+  }, [currentLayer, activePane, clearMultiSelection, clearPickerSelection])
 
   // Clear single selection when active pane changes; keep multi-selection for click-to-paste
   useEffect(() => {
@@ -1099,9 +1086,9 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   useEffect(() => {
     if (!dualMode) {
       clearMultiSelection()
-      clearCopyAllPending()
+      setCopyAllPending(false)
     }
-  }, [dualMode, clearMultiSelection, clearCopyAllPending])
+  }, [dualMode, clearMultiSelection])
 
   /** Run an async copy operation with a re-entrancy guard. */
   const runCopy = useCallback(async (fn: () => Promise<void>) => {
@@ -1329,6 +1316,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     clearSingleSelection()
     clearMultiSelection()
     clearPickerSelection()
+    setCopyAllPending(false)
   }, [clearMultiSelection, clearPickerSelection])
 
   const handleDeselectClick = useCallback((e: React.MouseEvent) => {
@@ -1420,14 +1408,12 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   const handleCopyAllClick = useCallback(async () => {
     if (!copyAllPending) {
-      // First click -- show confirmation with auto-reset
+      // First click -- show confirmation (stays until second click or deselect)
       setCopyAllPending(true)
-      clearTimeout(copyAllTimerRef.current)
-      copyAllTimerRef.current = setTimeout(() => setCopyAllPending(false), COPY_ALL_RESET_MS)
       return
     }
     // Second click -- execute copy
-    clearCopyAllPending()
+    setCopyAllPending(false)
     if (inactivePaneLayer == null) return
     const src = currentLayer
     const tgt = inactivePaneLayer
@@ -1445,7 +1431,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         }
       }
     })
-  }, [copyAllPending, clearCopyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
+  }, [copyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
 
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'

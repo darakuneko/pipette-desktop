@@ -357,24 +357,21 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 1, 0)
   })
 
-  it('Copy All confirmation resets after timeout', async () => {
-    vi.useFakeTimers()
+  it('Copy All confirmation resets on deselect (background click)', async () => {
     render(<KeymapEditor {...defaultProps} />)
     const btn = screen.getByTestId('copy-all-button')
 
-    // First click: pending
-    await act(async () => {
-      fireEvent.click(btn)
-    })
+    // First click: pending confirmation
+    await act(async () => { fireEvent.click(btn) })
     expect(btn).toHaveTextContent('Confirm Copy All?')
 
-    // Advance past 5s timeout
-    await act(async () => {
-      vi.advanceTimersByTime(5000)
-    })
-    expect(btn.textContent).toBe('Copy All')
+    // Click pane background to deselect
+    const pane = screen.getByTestId('primary-pane')
+    await act(async () => { fireEvent.click(pane) })
 
-    vi.useRealTimers()
+    // Confirmation should be reset
+    const btn2 = screen.getByTestId('copy-all-button')
+    expect(btn2).toHaveTextContent('Copy All')
   })
 
   it('copies from active layer to inactive layer (source/target correct)', async () => {
