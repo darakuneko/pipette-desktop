@@ -11,7 +11,7 @@ import type { DeviceInfo, KeyboardDefinition } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { SavedFavoriteMeta } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult } from '../shared/types/hub'
@@ -197,8 +197,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_AUTH_STATUS),
   syncAuthSignOut: (): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_AUTH_SIGN_OUT),
-  syncExecute: (direction: 'download' | 'upload'): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SYNC_EXECUTE, direction),
+  syncExecute: (direction: 'download' | 'upload', scope?: SyncScope): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_EXECUTE, direction, scope),
   syncSetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_SET_PASSWORD, password),
   syncResetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>

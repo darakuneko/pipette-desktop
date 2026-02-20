@@ -77,6 +77,7 @@ export function App() {
   const [dummyError, setDummyError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
   const hasSyncedRef = useRef(false)
+  const hasKeyboardSyncedRef = useRef<string | null>(null)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
@@ -94,15 +95,16 @@ export function App() {
   const [hubAuthConflict, setHubAuthConflict] = useState(false)
   const [hubAccountDeactivated, setHubAccountDeactivated] = useState(false)
 
-  // Device-triggered auto-sync: sync when Vial keyboard detected
+  // Phase 1: Device-triggered auto-sync — download favorites only
   const vialDeviceCount = useMemo(
     () => device.devices.filter((d) => d.type === 'vial').length,
     [device.devices],
   )
   useEffect(() => {
-    // No Vial devices and not syncing: reset flag so next connection triggers sync
+    // No Vial devices and not syncing: reset flags so next connection triggers sync
     if (vialDeviceCount === 0 && !deviceSyncing) {
       hasSyncedRef.current = false
+      hasKeyboardSyncedRef.current = null
       return
     }
 
@@ -111,14 +113,33 @@ export function App() {
 
     if (!sync.config.autoSync || !sync.authStatus.authenticated || !sync.hasPassword) return
 
-    // Vial device(s) detected - start sync
+    // Vial device(s) detected — download favorites only
     hasSyncedRef.current = true
     setDeviceSyncing(true)
-    sync.syncNow('download')
-      .catch(() => {})
+    sync.syncNow('download', 'favorites')
+      .catch(() => { hasSyncedRef.current = false })
       .finally(() => setDeviceSyncing(false))
   }, [vialDeviceCount, sync.loading, sync.config.autoSync, sync.authStatus.authenticated,
       sync.hasPassword, sync.syncNow, deviceSyncing])
+
+  // Phase 2: Keyboard UID confirmed — download keyboard-specific files
+  useEffect(() => {
+    if (!keyboard.uid) {
+      hasKeyboardSyncedRef.current = null
+      return
+    }
+    if (keyboard.loading) return
+    if (hasKeyboardSyncedRef.current === keyboard.uid) return
+    if (!sync.config.autoSync || !sync.authStatus.authenticated || !sync.hasPassword) return
+    if (sync.loading || deviceSyncing) return // Wait for Phase 1 to complete
+
+    hasKeyboardSyncedRef.current = keyboard.uid
+    setDeviceSyncing(true)
+    sync.syncNow('download', { keyboard: keyboard.uid })
+      .catch(() => { hasKeyboardSyncedRef.current = null })
+      .finally(() => setDeviceSyncing(false))
+  }, [keyboard.uid, keyboard.loading, sync.config.autoSync, sync.authStatus.authenticated,
+      sync.hasPassword, sync.syncNow, sync.loading, deviceSyncing])
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels

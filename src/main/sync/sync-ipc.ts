@@ -31,7 +31,7 @@ import {
   listUndecryptableFiles,
   changePassword,
 } from './sync-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -59,6 +59,20 @@ type EntryMeta = SavedFavoriteMeta | SnapshotMeta
 interface ImportBundle<T extends EntryMeta> {
   index: { entries: T[] }
   files: Record<string, string>
+}
+
+const SAFE_UID_RE = /^[\w-]+$/
+
+function validateSyncScope(raw: unknown): SyncScope | undefined {
+  if (raw == null) return undefined
+  if (raw === 'all' || raw === 'favorites') return raw
+  if (typeof raw === 'object' && 'keyboard' in raw) {
+    const { keyboard } = raw as Record<string, unknown>
+    if (typeof keyboard === 'string' && SAFE_UID_RE.test(keyboard)) {
+      return { keyboard }
+    }
+  }
+  return undefined
 }
 
 const SAFE_FILENAME_RE = /^[\w.()-]+$/
@@ -186,9 +200,13 @@ export function setupSyncIpc(): void {
   // --- Sync execution ---
   secureHandle(
     IpcChannels.SYNC_EXECUTE,
-    (_event, direction: 'download' | 'upload') =>
+    (_event, direction: 'download' | 'upload', scope?: unknown) =>
       wrapIpc('Sync failed', async () => {
-        await executeSync(direction)
+        if (scope != null && validateSyncScope(scope) === undefined) {
+          throw new Error('Invalid sync scope')
+        }
+        const validatedScope = validateSyncScope(scope) ?? 'all'
+        await executeSync(direction, validatedScope)
         if (direction === 'download') {
           const config = loadAppConfig()
           if (config.autoSync) {

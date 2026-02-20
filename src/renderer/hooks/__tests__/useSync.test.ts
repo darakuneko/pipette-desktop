@@ -288,7 +288,7 @@ describe('useSync', () => {
       await result.current.syncNow('download')
     })
 
-    expect(mockVialAPI.syncExecute).toHaveBeenCalledWith('download')
+    expect(mockVialAPI.syncExecute).toHaveBeenCalledWith('download', undefined)
   })
 
   describe('syncStatus', () => {

@@ -15,7 +15,7 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { SavedFavoriteMeta } from './favorite-store'
 import type { AppConfig } from './app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult } from './hub'
@@ -126,7 +126,7 @@ export interface VialAPI {
   syncAuthStart(): Promise<{ success: boolean; error?: string }>
   syncAuthStatus(): Promise<SyncAuthStatus>
   syncAuthSignOut(): Promise<{ success: boolean; error?: string }>
-  syncExecute(direction: 'download' | 'upload'): Promise<{ success: boolean; error?: string }>
+  syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<{ success: boolean; error?: string }>
   syncSetPassword(password: string): Promise<{ success: boolean; error?: string }>
   syncResetPassword(password: string): Promise<{ success: boolean; error?: string }>
   syncChangePassword(newPassword: string): Promise<{ success: boolean; error?: string }>

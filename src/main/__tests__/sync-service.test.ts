@@ -95,6 +95,7 @@ import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mo
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
+  matchesScope,
   notifyChange,
   setProgressCallback,
   startPolling,
@@ -1056,6 +1057,223 @@ describe('sync-service', () => {
 
       await expect(changePassword('new-password')).rejects.toThrow('Network timeout')
       expect(mockUploadFile).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('selective sync (SyncScope)', () => {
+    describe('matchesScope', () => {
+      it('matches all syncUnits with scope "all"', () => {
+        expect(matchesScope('favorites/tapDance', 'all')).toBe(true)
+        expect(matchesScope('favorites/macro', 'all')).toBe(true)
+        expect(matchesScope('keyboards/0x1234/settings', 'all')).toBe(true)
+        expect(matchesScope('keyboards/0x1234/snapshots', 'all')).toBe(true)
+      })
+
+      it('matches only favorites/* with scope "favorites"', () => {
+        expect(matchesScope('favorites/tapDance', 'favorites')).toBe(true)
+        expect(matchesScope('favorites/macro', 'favorites')).toBe(true)
+        expect(matchesScope('favorites/combo', 'favorites')).toBe(true)
+        expect(matchesScope('keyboards/0x1234/settings', 'favorites')).toBe(false)
+        expect(matchesScope('keyboards/0x1234/snapshots', 'favorites')).toBe(false)
+      })
+
+      it('matches only keyboards/{uid}/* with scope { keyboard: uid }', () => {
+        expect(matchesScope('keyboards/0x1234/settings', { keyboard: '0x1234' })).toBe(true)
+        expect(matchesScope('keyboards/0x1234/snapshots', { keyboard: '0x1234' })).toBe(true)
+        expect(matchesScope('keyboards/0x5678/settings', { keyboard: '0x1234' })).toBe(false)
+        expect(matchesScope('favorites/tapDance', { keyboard: '0x1234' })).toBe(false)
+      })
+
+      it('does not match a different uid', () => {
+        expect(matchesScope('keyboards/0xABCD/settings', { keyboard: '0x1234' })).toBe(false)
+        expect(matchesScope('keyboards/0xABCD/snapshots', { keyboard: '0x1234' })).toBe(false)
+      })
+
+      it('safely handles null syncUnit', () => {
+        expect(matchesScope(null, 'all')).toBe(true)
+        expect(matchesScope(null, 'favorites')).toBe(false)
+        expect(matchesScope(null, { keyboard: '0x1234' })).toBe(false)
+      })
+    })
+
+    describe('executeSync with scope', () => {
+      it('downloads only favorites files when scope is "favorites"', async () => {
+        mockListFiles.mockResolvedValue([
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f3', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+          .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+        await executeSync('download', 'favorites')
+
+        // Should download password-check + 2 favorites, NOT the keyboard file
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).toContain('pc-1') // password check
+        expect(downloadedIds).toContain('f1')   // favorites/tapDance
+        expect(downloadedIds).toContain('f2')   // favorites/macro
+        expect(downloadedIds).not.toContain('f3') // keyboards/0x1234/settings excluded
+      })
+
+      it('downloads only target keyboard files when scope is { keyboard: uid }', async () => {
+        mockListFiles.mockResolvedValue([
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f3', name: 'keyboards_0x1234_snapshots.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f4', name: 'keyboards_0x5678_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockResolvedValueOnce(makeSettingsEnvelope('0x1234', '2025-01-01T00:00:00.000Z'))
+          .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+        await executeSync('download', { keyboard: '0x1234' })
+
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).toContain('pc-1') // password check
+        expect(downloadedIds).toContain('f2')   // keyboards/0x1234/settings
+        expect(downloadedIds).toContain('f3')   // keyboards/0x1234/snapshots
+        expect(downloadedIds).not.toContain('f1') // favorites excluded
+        expect(downloadedIds).not.toContain('f4') // other keyboard excluded
+      })
+
+      it('downloads all files when scope is omitted (backward compat)', async () => {
+        mockListFiles.mockResolvedValue([
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+          .mockResolvedValueOnce(makeSettingsEnvelope('0x1234', '2025-01-01T00:00:00.000Z'))
+
+        await executeSync('download')
+
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).toContain('f1')
+        expect(downloadedIds).toContain('f2')
+      })
+
+      it('updates remote state for all files even with scoped download', async () => {
+        const allFiles = [
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ]
+        mockListFiles.mockResolvedValue(allFiles)
+        mockDownloadFile
+          .mockResolvedValueOnce(makePasswordCheckEnvelope())
+          .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+        await executeSync('download', 'favorites')
+
+        // Subsequent poll should detect changes to keyboard file
+        // because updateRemoteState was called with all files
+        const updatedFiles = [
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ]
+        mockListFiles.mockResolvedValue(updatedFiles)
+        mockDownloadFile.mockResolvedValue(makeSettingsEnvelope('0x1234', '2025-01-02T00:00:00.000Z'))
+
+        startPolling()
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushIO()
+
+        // Polling should detect the keyboard file changed
+        expect(mockDownloadFile).toHaveBeenCalledWith('f2')
+
+        stopPolling()
+      })
+
+      it('skips password re-validation with non-all scope when cached', async () => {
+        // First: validate password with scope 'all'
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+        await executeSync('download')
+
+        // Password is now cached
+        mockDownloadFile.mockClear()
+        mockListFiles.mockResolvedValue([
+          { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile.mockResolvedValue(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+        await executeSync('download', 'favorites')
+
+        // Should NOT download password-check again (cached)
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).not.toContain('pc-1')
+      })
+
+      it('forces password re-validation with scope "all"', async () => {
+        // First: validate password
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+        await executeSync('download')
+
+        // Second call with 'all' should re-validate
+        mockDownloadFile.mockClear()
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+
+        await executeSync('download', 'all')
+
+        const downloadedIds = mockDownloadFile.mock.calls.map((call) => call[0])
+        expect(downloadedIds).toContain('pc-1')
+      })
+
+      it('filters upload sync units with scoped upload', async () => {
+        // Set up both favorites and keyboard data
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{}' })
+        const kbDir = join(mockUserDataPath, 'sync', 'keyboards', '0x1234')
+        await mkdir(kbDir, { recursive: true })
+        await writeFile(join(kbDir, 'pipette_settings.json'), JSON.stringify({ theme: 'dark' }), 'utf-8')
+
+        // First validate password
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+        await executeSync('download')
+
+        // Now do scoped upload for favorites only
+        mockUploadFile.mockClear()
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
+        mockUploadFile.mockResolvedValue('id1')
+
+        await executeSync('upload', 'favorites')
+
+        // Should only upload favorites, not keyboard settings
+        const uploadedNames = mockUploadFile.mock.calls.map((call) => call[0])
+        const keyboardUploads = uploadedNames.filter((n: string) => n.startsWith('keyboards_'))
+        expect(keyboardUploads).toHaveLength(0)
+      })
+
+      it('clears only matching pending changes after scoped upload', async () => {
+        await setupLocalFavorite('2025-01-01T00:00:00.000Z', { name: 'data.json', content: '{}' })
+
+        notifyChange('favorites/tapDance')
+        notifyChange('keyboards/0x1234/settings')
+
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        mockDownloadFile.mockResolvedValue(makePasswordCheckEnvelope())
+        mockUploadFile.mockResolvedValue('id1')
+
+        await executeSync('upload', 'favorites')
+
+        // keyboards/0x1234/settings should still be pending
+        expect(hasPendingChanges()).toBe(true)
+      })
     })
   })
 

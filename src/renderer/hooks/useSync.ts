@@ -14,6 +14,7 @@ import type {
   LastSyncResult,
   SyncResetTargets,
   UndecryptableFile,
+  SyncScope,
 } from '../../shared/types/sync'
 
 /** Maps a SyncProgress status or LastSyncResult status to the UI SyncStatusType. */
@@ -43,7 +44,7 @@ export interface UseSyncReturn {
   resetSyncTargets: (targets: SyncResetTargets) => Promise<{ success: boolean; error?: string }>
   validatePassword: (password: string) => Promise<PasswordStrength>
   cancelPending: () => Promise<void>
-  syncNow: (direction: 'download' | 'upload') => Promise<void>
+  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
   refreshStatus: () => Promise<void>
   listUndecryptable: () => Promise<UndecryptableFile[]>
   deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
@@ -171,8 +172,8 @@ export function useSync(): UseSyncReturn {
     await window.vialAPI.syncCancelPending()
   }, [])
 
-  const syncNow = useCallback(async (direction: 'download' | 'upload') => {
-    await window.vialAPI.syncExecute(direction)
+  const syncNow = useCallback(async (direction: 'download' | 'upload', scope?: SyncScope) => {
+    await window.vialAPI.syncExecute(direction, scope)
   }, [])
 
   const listUndecryptable = useCallback(

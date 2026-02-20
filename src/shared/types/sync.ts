@@ -86,3 +86,8 @@ export interface UndecryptableFile {
   fileName: string
   syncUnit: string | null
 }
+
+export type SyncScope =
+  | 'all'           // manual sync, changePassword, listUndecryptable
+  | 'favorites'     // favorites/* only
+  | { keyboard: string }  // keyboards/{uid}/* only

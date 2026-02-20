@@ -19,7 +19,7 @@ import { IpcChannels } from '../../shared/ipc/channels'
 import { mergeEntries, gcTombstones } from './merge'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
-import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile } from '../../shared/types/sync'
+import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncScope } from '../../shared/types/sync'
 
 const FAVORITE_TYPES: FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
 const DEBOUNCE_MS = 10_000
@@ -84,6 +84,13 @@ function emitProgress(progress: SyncProgress): void {
 
 function errorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback
+}
+
+export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean {
+  if (scope === 'all') return true
+  if (syncUnit === null) return false
+  if (scope === 'favorites') return syncUnit.startsWith('favorites/')
+  return syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
 }
 
 async function requireSyncCredentials(): Promise<string | null> {
@@ -379,7 +386,10 @@ async function syncOrUpload(
   }
 }
 
-export async function executeSync(direction: 'download' | 'upload'): Promise<void> {
+export async function executeSync(
+  direction: 'download' | 'upload',
+  scope: SyncScope = 'all',
+): Promise<void> {
   if (isSyncing) return
   isSyncing = true
 
@@ -389,17 +399,23 @@ export async function executeSync(direction: 'download' | 'upload'): Promise<voi
 
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
-    // Always validate password on manual sync (ignore cache)
     const initialFiles = await listFiles()
-    await validatePasswordCheck(password, initialFiles)
+
+    // Only force password re-validation on scope 'all' (manual sync)
+    // Scoped syncs respect the cached validation
+    if (scope === 'all' || !passwordCheckValidated) {
+      await validatePasswordCheck(password, initialFiles)
+    }
 
     let failedUnits: string[]
     if (direction === 'download') {
-      failedUnits = await executeDownloadSync(password, initialFiles)
+      failedUnits = await executeDownloadSync(password, initialFiles, scope)
     } else {
-      failedUnits = await executeUploadSync(password, initialFiles)
-      // Manual upload covers all sync units — clear pending, but re-add failed units
-      pendingChanges.clear()
+      failedUnits = await executeUploadSync(password, initialFiles, scope)
+      // Clear pending changes matching the scope, then re-add failed units
+      for (const unit of pendingChanges) {
+        if (matchesScope(unit, scope)) pendingChanges.delete(unit)
+      }
       for (const unit of failedUnits) {
         pendingChanges.add(unit)
       }
@@ -428,14 +444,24 @@ export async function executeSync(direction: 'download' | 'upload'): Promise<voi
   }
 }
 
-async function executeDownloadSync(password: string, prefetchedFiles?: DriveFile[]): Promise<string[]> {
+async function executeDownloadSync(
+  password: string,
+  prefetchedFiles?: DriveFile[],
+  scope: SyncScope = 'all',
+): Promise<string[]> {
   const remoteFiles = prefetchedFiles ?? await listFiles()
-  updateRemoteState(remoteFiles)
-  const total = remoteFiles.length
+  updateRemoteState(remoteFiles) // Always record full remote state for polling
+
+  const filesToDownload = remoteFiles.filter((f) => {
+    const syncUnit = syncUnitFromFileName(f.name)
+    return matchesScope(syncUnit, scope)
+  })
+
+  const total = filesToDownload.length
   let current = 0
   const failedUnits: string[] = []
 
-  for (const remoteFile of remoteFiles) {
+  for (const remoteFile of filesToDownload) {
     current++
     const syncUnit = syncUnitFromFileName(remoteFile.name)
     if (!syncUnit) continue
@@ -464,8 +490,15 @@ async function executeDownloadSync(password: string, prefetchedFiles?: DriveFile
   return failedUnits
 }
 
-async function executeUploadSync(password: string, prefetchedFiles?: DriveFile[]): Promise<string[]> {
-  const syncUnits = await collectAllSyncUnits()
+async function executeUploadSync(
+  password: string,
+  prefetchedFiles?: DriveFile[],
+  scope: SyncScope = 'all',
+): Promise<string[]> {
+  let syncUnits = await collectAllSyncUnits()
+  if (scope !== 'all') {
+    syncUnits = syncUnits.filter((unit) => matchesScope(unit, scope))
+  }
   const remoteFiles = prefetchedFiles ?? await listFiles()
   updateRemoteState(remoteFiles)
   const total = syncUnits.length
