@@ -427,6 +427,44 @@ describe('useSync', () => {
 
       vi.useRealTimers()
     })
+
+    it('clears syncUnavailable when syncing progress event arrives', async () => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+
+      mockVialAPI.syncAuthStatus.mockResolvedValue({ authenticated: true })
+      mockVialAPI.syncCheckPasswordExists
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockRejectedValueOnce(new Error('fail'))
+
+      let progressCb: (p: unknown) => void = () => {}
+      mockVialAPI.syncOnProgress.mockImplementation((cb: (p: unknown) => void) => {
+        progressCb = cb
+        return () => {}
+      })
+
+      const { result } = renderHookWithConfig(() => useSync())
+
+      await waitFor(() => {
+        expect(result.current.loading).toBe(false)
+      })
+
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+      await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+
+      await waitFor(() => {
+        expect(result.current.syncUnavailable).toBe(true)
+      })
+
+      // Simulate backend polling success
+      act(() => {
+        progressCb({ status: 'syncing', direction: 'download' })
+      })
+
+      expect(result.current.syncUnavailable).toBe(false)
+
+      vi.useRealTimers()
+    })
   })
 
   describe('syncStatus', () => {
