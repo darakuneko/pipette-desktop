@@ -245,16 +245,29 @@ describe('SettingsModal', () => {
     expect(screen.getByTestId('sync-reset-data')).toBeDisabled()
   })
 
-  it('calls syncNow with download then upload when sync button clicked', async () => {
+  it('calls syncNow with favorites scope when sync button clicked (no keyboard)', async () => {
     const sync = makeSyncMock(FULLY_CONFIGURED)
     renderAndSwitchToData({ sync })
 
     fireEvent.click(screen.getByTestId('sync-now'))
     await waitFor(() => {
-      expect(sync.syncNow).toHaveBeenCalledWith('download')
+      expect(sync.syncNow).toHaveBeenCalledWith('download', 'favorites')
     })
     await waitFor(() => {
-      expect(sync.syncNow).toHaveBeenCalledWith('upload')
+      expect(sync.syncNow).toHaveBeenCalledWith('upload', 'favorites')
+    })
+  })
+
+  it('calls syncNow with favorites and keyboard scope when connected', async () => {
+    const sync = makeSyncMock(FULLY_CONFIGURED)
+    renderAndSwitchToData({ sync, connectedKeyboardUid: '0xABCD' })
+
+    fireEvent.click(screen.getByTestId('sync-now'))
+    await waitFor(() => {
+      expect(sync.syncNow).toHaveBeenCalledWith('download', 'favorites')
+      expect(sync.syncNow).toHaveBeenCalledWith('download', { keyboard: '0xABCD' })
+      expect(sync.syncNow).toHaveBeenCalledWith('upload', 'favorites')
+      expect(sync.syncNow).toHaveBeenCalledWith('upload', { keyboard: '0xABCD' })
     })
   })
 
@@ -355,7 +368,7 @@ describe('SettingsModal', () => {
       expect(sync.setConfig).toHaveBeenCalledWith({ autoSync: true })
     })
     await waitFor(() => {
-      expect(sync.syncNow).toHaveBeenCalledWith('download')
+      expect(sync.syncNow).toHaveBeenCalledWith('download', 'favorites')
     })
   })
 

@@ -88,6 +88,6 @@ export interface UndecryptableFile {
 }
 
 export type SyncScope =
-  | 'all'           // manual sync, changePassword, listUndecryptable
+  | 'all'           // changePassword, listUndecryptable
   | 'favorites'     // favorites/* only
   | { keyboard: string }  // keyboards/{uid}/* only

@@ -402,8 +402,9 @@ export async function executeSync(
 
     const initialFiles = await listFiles()
 
-    // Only force password re-validation on scope 'all' (manual sync)
-    // Scoped syncs respect the cached validation
+    // Force password re-validation on scope 'all' (changePassword, listUndecryptable)
+    // Scoped syncs (including manual sync) respect the cached validation;
+    // decryption errors during actual file processing serve as implicit validation
     if (scope === 'all' || !passwordCheckValidated) {
       await validatePasswordCheck(password, initialFiles)
     }

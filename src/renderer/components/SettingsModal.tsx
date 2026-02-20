@@ -646,6 +646,7 @@ function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowProps) {
 
 interface Props {
   sync: UseSyncReturn
+  connectedKeyboardUid?: string
   theme: ThemeMode
   onThemeChange: (mode: ThemeMode) => void
   defaultLayout: KeyboardLayoutId
@@ -804,6 +805,7 @@ function HubRefreshButton({ onRefresh }: { onRefresh: () => Promise<void> }) {
 
 export function SettingsModal({
   sync,
+  connectedKeyboardUid,
   theme,
   onThemeChange,
   defaultLayout,
@@ -966,12 +968,18 @@ export function SettingsModal({
   const handleSyncNow = useCallback(async () => {
     setBusy(true)
     try {
-      await sync.syncNow('download')
-      await sync.syncNow('upload')
+      await sync.syncNow('download', 'favorites')
+      if (connectedKeyboardUid) {
+        await sync.syncNow('download', { keyboard: connectedKeyboardUid })
+      }
+      await sync.syncNow('upload', 'favorites')
+      if (connectedKeyboardUid) {
+        await sync.syncNow('upload', { keyboard: connectedKeyboardUid })
+      }
     } finally {
       setBusy(false)
     }
-  }, [sync])
+  }, [sync, connectedKeyboardUid])
 
   const handleAutoSyncToggle = useCallback(async () => {
     const newValue = !sync.config.autoSync
