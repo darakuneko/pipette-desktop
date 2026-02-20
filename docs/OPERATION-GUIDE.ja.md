@@ -1,0 +1,380 @@
+# Pipette 操作ガイド
+
+[English version](OPERATION-GUIDE.md)
+
+このドキュメントでは Pipette デスクトップアプリの操作方法を説明します。
+スクリーンショットは GPK60-63R キーボードを使用して撮影しています。
+
+---
+
+## 1. デバイス接続
+
+### 1.1 デバイス選択画面
+
+アプリを起動すると、接続されている Vial 対応キーボードの一覧が表示されます。
+
+![デバイス選択画面](screenshots/01-device-selection.png)
+
+- USB 接続されたキーボードが自動的に検出されます
+- 複数のキーボードが接続されている場合は、一覧から選択できます
+- Linux で検出されない場合は、udev ルールの設定が必要です
+
+### 1.2 キーボードの接続
+
+一覧からキーボード名をクリックすると、キーマップエディタに遷移します。
+
+---
+
+## 2. キーマップエディタ
+
+### 2.1 画面構成
+
+キーマップエディタはキーボードレイアウト表示とキーコードパレットの 2 つの領域で構成されます。
+
+![キーマップエディタ全体](screenshots/02-keymap-editor-overview.png)
+
+- 画面上部: キーボードの物理レイアウト (各キーに現在のキーコードを表示)
+- 画面左側: ツールバー (デュアルモード、ズーム、タイピングテストなど)
+- 画面下部: キーコードパレット (タブ切替式)
+- 画面最下部: ステータスバー
+
+### 2.2 キーの変更方法
+
+1. キーボードレイアウト上のキーをクリックして選択
+2. キーコードパレットから割り当てたいキーコードをクリック
+3. キーの表示が更新されます
+4. 変更は自動的にキーボードに反映されます
+
+- Ctrl+クリックで複数のキーを選択できます
+- Shift+クリックで範囲選択ができます
+
+### 2.3 レイヤー切替
+
+キーボードレイアウトの左側にレイヤー切替ボタンがあります。
+
+![Layer 0](screenshots/03-layer-0.png)
+
+![Layer 1](screenshots/04-layer-1.png)
+
+![Layer 2](screenshots/05-layer-2.png)
+
+- レイヤー番号ボタンをクリックしてレイヤーを切り替えます
+- Layer 0 がデフォルトレイヤーです
+- 利用可能なレイヤー数はキーボードの設定に依存します
+
+---
+
+## 3. キーコードパレット
+
+画面下部のタブ付きパレットから、各カテゴリのキーコードを選択できます。
+
+### 3.1 Basic
+
+通常の文字キー、ファンクションキー、修飾キー、ナビゲーションキーなどの基本キーコードです。
+
+![Basic タブ](screenshots/06-tab-basic.png)
+
+- 文字キー (A-Z, 0-9, 記号)
+- ファンクションキー (F1-F24)
+- 編集キー (Enter, Tab, Backspace, Delete)
+- ナビゲーションキー (矢印, Home, End, PageUp/Down)
+- テンキー
+
+### 3.2 Layers
+
+レイヤー操作用のキーコードです。
+
+![Layers タブ](screenshots/07-tab-layers.png)
+
+- **MO(n)**: 押している間だけレイヤー n に切り替え
+- **DF(n)**: デフォルトレイヤーを n に変更
+- **TG(n)**: レイヤー n をトグル
+- **LT(n, kc)**: 長押しでレイヤー、タップでキーコード
+- **OSL(n)**: 次のキー入力のみレイヤー n を有効化
+- **TO(n)**: レイヤー n に切り替え
+
+### 3.3 Modifiers
+
+修飾キーの組み合わせやタップ時の動作を設定するキーコードです。
+
+![Modifiers タブ](screenshots/08-tab-modifiers.png)
+
+- **One-Shot Modifier (OSM)**: 次のキー入力のみ修飾キーを有効化
+- **Mod-Tap**: 長押しで修飾キー、タップで通常キー
+- **Mod Mask**: 修飾キーの組み合わせ
+
+### 3.4 Tap-Hold / Tap Dance
+
+タップとホールドで異なる動作を割り当てるキーコードです。
+
+![Tap-Hold / Tap Dance タブ](screenshots/09-tab-tapDance.png)
+
+- Tap Dance エントリをクリックすると編集モーダルが開きます
+- 各エントリにタップ・ホールド・ダブルタップなどの動作を設定できます
+
+### 3.5 Macro
+
+マクロキーコードです。
+
+![Macro タブ](screenshots/10-tab-macro.png)
+
+- マクロエントリをクリックすると編集モーダルが開きます
+- キー入力のシーケンスをマクロとして登録できます
+
+### 3.6 Quantum
+
+QMK の高度な機能用キーコードです。
+
+![Quantum タブ](screenshots/11-tab-quantum.png)
+
+- Boot (ブートローダーモード)
+- Caps Word
+- Magic キー
+- Auto Shift
+- Combo
+- Key Override
+- Alt Repeat Key
+- Swap Hands
+
+### 3.7 Media
+
+メディアキー、マウスキー、ジョイスティック操作のキーコードです。
+
+![Media タブ](screenshots/12-tab-media.png)
+
+- マウスボタン・移動・スクロール
+- メディア再生制御 (再生/停止/音量)
+- アプリケーション起動キー
+
+### 3.8 Lighting
+
+バックライトと RGB ライティング制御のキーコードです。
+
+![Lighting タブ](screenshots/13-tab-backlight.png)
+
+- RGB Matrix 制御
+- RGB Lighting 制御
+- バックライト制御
+- LED Matrix 制御
+
+### 3.9 User
+
+ユーザー定義キーコードです。
+
+![User タブ](screenshots/14-tab-user.png)
+
+- ファームウェアで定義されたカスタムキーコード
+
+> **Note**: MIDI タブは MIDI 対応キーボードでのみ表示されます。
+
+---
+
+## 4. ツールバー
+
+キーマップエディタ左側のツールバーには以下の機能があります。
+
+![ツールバー](screenshots/15-toolbar.png)
+
+### 4.1 デュアルモード (Split Edit)
+
+キーボードレイアウトを 2 つ並べて表示し、レイヤー間のキー比較やコピーが可能です。
+
+![デュアルモード](screenshots/16-dual-mode.png)
+
+- ボタンをクリックしてデュアルモードを切り替えます
+- レイヤー間でキー設定をコピーする際に便利です
+
+### 4.2 ズーム
+
+キーボードレイアウトの表示倍率を変更します。
+
+![ズームイン](screenshots/17-zoom-in.png)
+
+- (+) ボタンでズームイン
+- (-) ボタンでズームアウト
+- エディタ設定でも調整可能です
+
+### 4.3 タイピングテスト
+
+タイピング練習機能です。現在のキーマップでタイピングテストを行えます。
+
+![タイピングテスト](screenshots/18-typing-test.png)
+
+- WPM (Words Per Minute) と正確性を計測
+- 句読点・数字の有無を切り替え可能
+- テスト結果の履歴を確認できます
+
+---
+
+## 5. 詳細設定エディタ
+
+キーコードパレットの各タブ下部にある設定ボタンから、詳細設定モーダルを開けます。
+
+### 5.1 ライティング設定
+
+Lighting タブの設定ボタンから開きます。RGB ライティングの色やエフェクトを設定できます。
+
+![ライティング設定](screenshots/19-lighting-modal.png)
+
+- HSV カラーピッカーで色を選択
+- プリセットパレットから色を選択
+- エフェクトとスピードを調整
+- Save ボタンで保存
+
+### 5.2 コンボ
+
+Quantum タブのコンボ設定ボタンから開きます。複数キーの同時押しで別のキーを発動させる設定です。
+
+![コンボ一覧](screenshots/20-combo-modal.png)
+
+![コンボ詳細](screenshots/21-combo-detail.png)
+
+- グリッドタイルからコンボエントリを選択
+- トリガーキーの組み合わせと出力キーを設定
+- タイムアウト値を調整可能
+
+### 5.3 キーオーバーライド
+
+Quantum タブのキーオーバーライド設定ボタンから開きます。特定のキー入力を別のキーに置き換える設定です。
+
+![キーオーバーライド一覧](screenshots/22-key-override-modal.png)
+
+![キーオーバーライド詳細](screenshots/23-key-override-detail.png)
+
+- トリガーキーと置換キーを設定
+- レイヤー、修飾キー条件を指定
+- 個別に有効/無効を切り替え可能
+
+### 5.4 Alt Repeat Key
+
+Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key の代替動作を設定します。
+
+![Alt Repeat Key 一覧](screenshots/24-alt-repeat-key-modal.png)
+
+![Alt Repeat Key 詳細](screenshots/25-alt-repeat-key-detail.png)
+
+- 直前に押したキーに応じた代替キーを設定
+- 許可する修飾キーを指定
+- 個別に有効/無効を切り替え可能
+
+---
+
+## 6. エディタ設定パネル
+
+キーマップエディタの設定ボタン (歯車アイコン) からエディタ設定パネルを開けます。
+
+### 6.1 レイヤー設定 (Layers タブ)
+
+![レイヤー設定](screenshots/26-editor-settings-layers.png)
+
+- レイヤー一覧と各レイヤーの表示切替
+- キーボードレイアウトの選択
+- ズーム倍率の調整
+- Auto Advance (自動移動) の切替
+- Matrix Tester の切替
+- キーボードロック設定
+
+### 6.2 ツール設定 (Tools タブ)
+
+![ツール設定](screenshots/27-editor-settings-tools.png)
+
+- QMK Settings の設定 (対応キーボードのみ)
+- その他のツール設定
+
+### 6.3 データ管理 (Data タブ)
+
+![データ管理](screenshots/28-editor-settings-data.png)
+
+- **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード
+- **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF チートシートとしてダウンロード
+- **Save Current State**: 現在のキーボード状態をラベル付きで保存します。Label フィールドに名前を入力して Save をクリックします。Label が空の場合は Save ボタンが無効になります。保存したスナップショットは下の Synced Data リストに表示され、読み込みや削除ができます
+- **Synced Data**: 保存済みスナップショットの一覧。クリックで読み込み・名前変更・削除
+- **キーボードデータリセット**: キーボードを初期状態に戻す (要注意)
+
+### 6.4 クラウド同期 (Google Drive appDataFolder)
+
+Pipette は保存したスナップショット、お気に入り、キーボードごとの設定を Google Drive 経由で複数デバイス間で同期できます。
+
+同期はデバイス選択画面の **設定** モーダル (歯車アイコン) の **データと同期** タブで設定します:
+
+1. Google アカウントで**サインイン**
+2. データ暗号化用の**同期パスワードを設定** (セキュリティのため必須)
+3. **自動同期**: 自動同期を有効にするか、**今すぐ同期** で手動同期
+
+同期データは [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata) に保存されます。これは Pipette のみがアクセスできる非表示のアプリ専用フォルダです。個人の Drive ファイルには一切アクセスしません。
+
+詳細は [Data Guide](Data.md) を参照してください。
+
+---
+
+## 7. Pipette Hub
+
+[Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev/) は、キーマップをアップロードして共有できるコミュニティキーマップギャラリーです。
+
+### 7.1 Hub のセットアップ
+
+Hub 機能を使用するには Google アカウント認証が必要です。デバイス選択画面の **設定** モーダル (歯車アイコン) で設定します:
+
+1. **データと同期** タブで **Connect** をクリックして Google アカウントでサインイン
+2. **Hub** タブに切り替え — **Connected** と表示されていることを確認
+
+![Hub タブ](screenshots/hub-settings-hub-tab.png)
+
+3. **Display Name** を設定 — Hub の投稿に表示される名前です
+4. アップロードしたキーマップは **My Posts** リストに表示されます
+
+### 7.2 キーマップのアップロード
+
+キーマップを Hub にアップロードする手順:
+
+1. キーボードを接続し、キーマップエディタの設定ボタン (歯車アイコン) を開く
+2. **Data** タブに切り替える
+3. 現在の状態をラベル付きで保存 (例: "Default")
+
+![Upload ボタン](screenshots/hub-03-upload-button.png)
+
+4. 保存したスナップショットの **Upload** ボタンをクリック
+5. アップロード完了後、エントリに **Uploaded** ステータスと **Open in Browser**、**Update**、**Remove** ボタンが表示されます
+
+![アップロード完了](screenshots/hub-04-uploaded.png)
+
+- **Open in Browser**: このキーマップの Hub ページをブラウザで開く
+- **Update**: 現在のキーボード状態で Hub の投稿を更新
+- **Remove**: Hub からキーマップを削除
+
+### 7.3 Hub ウェブサイト
+
+[Pipette Hub ウェブサイト](https://pipette-hub-worker.keymaps.workers.dev/) では、アップロードされたキーマップがギャラリー形式で表示されます。
+
+![Hub トップページ](screenshots/hub-web-top.png)
+
+- コミュニティのキーマップを閲覧
+- キーボード名で検索
+- `.vil`、`.c`、`.pdf`、`.pippette` 形式でダウンロード
+
+#### 個別キーマップページ
+
+キーマップカードをクリックすると、キーボードレイアウトの詳細ページが開きます。
+
+![Hub 詳細ページ](screenshots/hub-web-detail.png)
+
+- アップロードされたキーマップの全レイヤー (Layer 0〜3) を表示
+- Tap Dance、Macro、Combo、Alt Repeat Key、Key Override の設定を確認
+- **Copy URL** や **Share on X** で他の人と共有
+- 各種形式 (`.pdf`、`.c`、`.vil`、`.pippette`) でダウンロード
+
+Hub 認証の詳細は [Data Guide](Data.md) を参照してください。
+
+---
+
+## 8. ステータスバー
+
+画面下部のステータスバーには接続情報と操作ボタンが表示されます。
+
+![ステータスバー](screenshots/29-status-bar.png)
+
+- **接続状態**: 接続中のキーボード名を表示
+- **Vial プロトコルバージョン**: キーボードが対応する Vial プロトコルのバージョン
+- **Auto Move**: キー割り当て後に次のキーに自動移動する機能の状態
+- **Locked**: キーボードのロック状態 (一部の危険なキーコードの誤設定を防止)
+- **Disconnect ボタン**: キーボードとの接続を切断し、デバイス選択画面に戻ります
