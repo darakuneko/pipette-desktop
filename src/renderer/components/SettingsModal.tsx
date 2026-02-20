@@ -41,14 +41,6 @@ const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white 
 const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
 const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10'
 
-function formatTimestamp(timestamp: number): string {
-  const d = new Date(timestamp)
-  const date = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`
-  const mm = String(d.getMinutes()).padStart(2, '0')
-  const ss = String(d.getSeconds()).padStart(2, '0')
-  return `${date} ${d.getHours()}:${mm}:${ss}`
-}
-
 interface SyncStatusSectionProps {
   syncStatus: SyncStatusType
   progress: SyncProgress | null
@@ -77,7 +69,7 @@ function SyncStatusSection({ syncStatus, progress, lastSyncResult }: SyncStatusS
             )}
             {lastSyncResult?.timestamp != null && syncStatus !== 'syncing' && (
               <span className="ml-auto text-xs text-content-muted" data-testid="sync-status-time">
-                {formatTimestamp(lastSyncResult.timestamp)}
+                {formatDate(lastSyncResult.timestamp)}
               </span>
             )}
           </div>

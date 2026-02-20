@@ -11,16 +11,16 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-export function formatDateShort(iso: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
+export function formatDateShort(value: string | number): string {
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return String(value)
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
 }
 
-export function formatDate(iso: string): string {
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return iso
-  return `${formatDateShort(iso)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+export function formatDate(value: string | number): string {
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return String(value)
+  return `${formatDateShort(value)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
 
 interface SectionHeaderProps {
