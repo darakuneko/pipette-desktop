@@ -48,7 +48,7 @@ export function ConnectingOverlay({
           </svg>
         </div>
 
-        <div className="flex max-w-xs flex-col items-center gap-2">
+        <div className="flex min-h-[7rem] max-w-xs flex-col items-center justify-center gap-2">
           <p className="text-sm text-content-secondary">
             {syncOnly
               ? t('sync.syncing')
@@ -59,11 +59,9 @@ export function ConnectingOverlay({
                   </>
                 )}
           </p>
-          {loadingProgress && (
-            <p className="text-xs text-content-muted">
-              {t(loadingProgress)}
-            </p>
-          )}
+          <p className="h-4 text-xs text-content-muted">
+            {loadingProgress ? t(loadingProgress) : syncProgress?.syncUnit ?? '\u00A0'}
+          </p>
           {deviceName && (
             <p className="max-w-full truncate font-mono text-sm font-semibold text-content">
               {deviceName}
@@ -74,33 +72,21 @@ export function ConnectingOverlay({
               {deviceId}
             </p>
           )}
+          <p className="h-4 text-xs text-content-muted">
+            {syncProgress?.total != null && syncProgress?.current != null
+              ? `${syncProgress.current} / ${syncProgress.total}`
+              : '\u00A0'}
+          </p>
+          {(syncProgress?.status === 'error' || syncProgress?.status === 'partial') && syncProgress?.message && (
+            <div className={`text-sm ${syncProgress.status === 'error' ? 'text-danger' : 'text-warning'}`}>
+              {t(syncProgress.message, syncProgress.message)}
+            </div>
+          )}
         </div>
 
-        {syncProgress && (
-          <div className="flex flex-col items-center gap-2">
-            {syncProgress.syncUnit && (
-              <div className="text-sm text-content-secondary">
-                {syncProgress.syncUnit}
-              </div>
-            )}
-            {syncProgress.total != null && syncProgress.current != null && (
-              <div className="text-xs text-content-muted">
-                {syncProgress.current} / {syncProgress.total}
-              </div>
-            )}
-            {(syncProgress.status === 'error' || syncProgress.status === 'partial') && syncProgress.message && (
-              <div className={`text-sm ${syncProgress.status === 'error' ? 'text-danger' : 'text-warning'}`}>
-                {t(syncProgress.message, syncProgress.message)}
-              </div>
-            )}
-          </div>
-        )}
-
-        {(syncOnly || syncProgress) && (
-          <div className="h-1 w-48 overflow-hidden rounded bg-surface-dim">
-            <div className="h-full w-3/5 animate-pulse rounded bg-accent" />
-          </div>
-        )}
+        <div className="h-1 w-48 overflow-hidden rounded bg-surface-dim">
+          <div className="h-full w-3/5 animate-pulse rounded bg-accent" />
+        </div>
 
         {onSyncSkip && (
           <button

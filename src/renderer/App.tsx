@@ -759,6 +759,13 @@ export function App() {
     }
   }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
 
+  // True when Phase 2 keyboard sync is about to trigger but useEffect hasn't fired yet.
+  // Bridges the 1-frame gap between keyboard.loading→false and Phase 2 setDeviceSyncing(true).
+  const phase2SyncPending = !keyboard.loading && !deviceSyncing &&
+    !!device.connectedDevice && !!keyboard.uid && keyboard.uid !== EMPTY_UID &&
+    hasKeyboardSyncedRef.current !== keyboard.uid &&
+    sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !sync.loading
+
   const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
   const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
   const keyOverrideSupported = !device.isDummy && keyboard.dynamicCounts.keyOverride > 0
@@ -990,13 +997,13 @@ export function App() {
         </>
       )}
 
-      {(keyboard.loading || deviceSyncing) && (
+      {(keyboard.loading || deviceSyncing || phase2SyncPending) && (
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
           loadingProgress={keyboard.loading ? keyboard.loadingProgress : undefined}
           syncProgress={deviceSyncing ? sync.progress : undefined}
-          syncOnly={!keyboard.loading && deviceSyncing}
+          syncOnly={!keyboard.loading}
         />
       )}
 

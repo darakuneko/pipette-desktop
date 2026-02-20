@@ -172,7 +172,7 @@ describe('ConnectingOverlay', () => {
     expect(screen.getByText('sync.syncing')).toBeInTheDocument()
   })
 
-  it('shows sync progress section alongside loading when both present', () => {
+  it('shows loading progress with sync counter when both present', () => {
     const progress: SyncProgress = {
       direction: 'download',
       status: 'syncing',
@@ -189,7 +189,28 @@ describe('ConnectingOverlay', () => {
       />,
     )
 
+    // loadingProgress takes priority over syncUnit in the status line
     expect(screen.getByText('keyboard.loadingKeymap')).toBeInTheDocument()
+    expect(screen.getByText('1 / 3')).toBeInTheDocument()
+  })
+
+  it('shows syncUnit when no loadingProgress', () => {
+    const progress: SyncProgress = {
+      direction: 'download',
+      status: 'syncing',
+      syncUnit: 'favorites/macro',
+      current: 1,
+      total: 3,
+    }
+    render(
+      <ConnectingOverlay
+        deviceName="TestKeyboard"
+        deviceId="1234:5678"
+        syncProgress={progress}
+        syncOnly
+      />,
+    )
+
     expect(screen.getByText('favorites/macro')).toBeInTheDocument()
     expect(screen.getByText('1 / 3')).toBeInTheDocument()
   })
