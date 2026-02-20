@@ -381,6 +381,7 @@ export function useKeyboard() {
           let cur = 0
           while (cur !== 0xffff) {
             const result = await api.qmkSettingsQuery(cur)
+            const prevCur = cur
             for (let i = 0; i + 1 < result.length; i += 2) {
               const qsid = result[i] | (result[i + 1] << 8)
               cur = Math.max(cur, qsid)
@@ -388,6 +389,9 @@ export function useKeyboard() {
                 supported.add(qsid)
               }
             }
+            // If cur didn't advance, the device isn't returning valid
+            // QMK settings data (e.g. all-zero response on Windows) — bail out
+            if (cur === prevCur) break
           }
           newState.supportedQsids = supported
         } catch (err) {
