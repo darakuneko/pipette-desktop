@@ -287,19 +287,19 @@ Open the editor settings panel from the settings button (gear icon) in the keyma
 
 ![Layer Settings](screenshots/26-editor-settings-layers.png)
 
-- Layer list with visibility toggle for each layer
-- Keyboard layout selection
-- Zoom level adjustment
-- Auto Advance toggle
-- Matrix Tester toggle
-- Keyboard lock settings
+- Layer list with the current layer highlighted
+- Click a layer to switch to it
+- Double-click a layer name to rename it (custom names are saved per keyboard)
 
 ### 6.2 Tool Settings (Tools Tab)
 
 ![Tool Settings](screenshots/27-editor-settings-tools.png)
 
-- QMK Settings configuration (supported keyboards only)
-- Other tool settings
+- **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
+- **Zoom**: Adjust the keyboard layout display scale
+- **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
+- **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
+- **Security**: Shows lock status (Locked/Unlocked) with a Lock button to re-lock the keyboard
 
 ### 6.3 Data Management (Data Tab)
 

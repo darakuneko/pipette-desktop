@@ -287,19 +287,19 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 ![レイヤー設定](screenshots/26-editor-settings-layers.png)
 
-- レイヤー一覧と各レイヤーの表示切替
-- キーボードレイアウトの選択
-- ズーム倍率の調整
-- Auto Advance (自動移動) の切替
-- Matrix Tester の切替
-- キーボードロック設定
+- レイヤー一覧（現在のレイヤーがハイライト表示）
+- レイヤーをクリックして切り替え
+- レイヤー名をダブルクリックしてリネーム（カスタム名はキーボードごとに保存）
 
 ### 6.2 ツール設定 (Tools タブ)
 
 ![ツール設定](screenshots/27-editor-settings-tools.png)
 
-- QMK Settings の設定 (対応キーボードのみ)
-- その他のツール設定
+- **Keyboard Layout**: キーラベルの表示レイアウトを選択（QWERTY、Dvorak など）
+- **Zoom**: キーボードレイアウトの表示倍率を調整
+- **Auto Advance**: キーコード割り当て後に次のキーへ自動移動する機能の切替
+- **Key Tester**: Matrix Tester モードの切替（対応キーボードのみ）
+- **Security**: ロック状態（Locked/Unlocked）の表示と、キーボードを再ロックする Lock ボタン
 
 ### 6.3 データ管理 (Data タブ)
 
