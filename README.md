@@ -30,7 +30,7 @@ Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, l
 ### Data Management
 
 - **Snapshots** — Save and restore complete keyboard states (keymap, macros, dynamic entries, QMK settings)
-- **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations across keyboards
+- **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard
 - **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, or PDF cheat sheet
 - **Import** — Load `.vil` files to restore keyboard state
 

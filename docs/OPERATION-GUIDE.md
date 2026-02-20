@@ -273,7 +273,7 @@ Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includ
 - **Rename**: Change the label of a saved entry
 - **Delete**: Remove a saved entry
 
-> **Note**: Saved favorites are synced across devices when Cloud Sync is enabled (see §6.4).
+> **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.4).
 
 ---
 
