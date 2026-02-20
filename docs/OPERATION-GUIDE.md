@@ -315,6 +315,8 @@ Pipette can sync your saved snapshots, favorites, and per-keyboard settings acro
 
 Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Data & Sync** tab:
 
+![Data & Sync Tab](screenshots/hub-settings-data-sync.png)
+
 1. **Sign in** with your Google account
 2. **Set a sync password** to encrypt your data (required for security)
 3. **Auto Sync**: Enable automatic sync, or use **Sync Now** for manual sync
@@ -331,7 +333,7 @@ See the [Data Guide](Data.md) for details on what is synced and how your data is
 
 ### 7.1 Hub Setup
 
-Hub features require Google account authentication. Configure Hub in the **Settings** modal (gear icon on the device selection screen):
+Hub features require Google account authentication. Please complete Google account authentication first. Configure Hub in the **Settings** modal (gear icon on the device selection screen):
 
 1. In the **Data & Sync** tab, click **Connect** to sign in with your Google account
 2. Switch to the **Hub** tab — it should show **Connected**
