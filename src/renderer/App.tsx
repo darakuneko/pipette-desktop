@@ -13,7 +13,6 @@ import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useAutoLock } from './hooks/useAutoLock'
 import { DeviceSelector } from './components/DeviceSelector'
 import { SettingsModal } from './components/SettingsModal'
-import { SyncOverlay } from './components/SyncOverlay'
 import { NotificationModal } from './components/NotificationModal'
 import { ConnectingOverlay } from './components/ConnectingOverlay'
 import { useSync } from './hooks/useSync'
@@ -902,7 +901,9 @@ export function App() {
     return (
       <>
         {deviceSyncing && (
-          <SyncOverlay progress={sync.progress} />
+          <div className="fixed inset-0 z-50">
+            <ConnectingOverlay deviceName="" deviceId="" syncProgress={sync.progress} syncOnly />
+          </div>
         )}
         <DeviceSelector
           devices={device.devices}
@@ -961,9 +962,6 @@ export function App() {
   // preserving state (e.g. pendingMatrix for deferred matrix mode entry after unlock).
   return (
     <div className="relative flex h-screen flex-col bg-surface text-content">
-      {deviceSyncing && (
-        <SyncOverlay progress={sync.progress} />
-      )}
       {!keyboard.loading && (
         <>
           {device.isDummy && (
@@ -992,11 +990,13 @@ export function App() {
         </>
       )}
 
-      {keyboard.loading && (
+      {(keyboard.loading || deviceSyncing) && (
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
-          loadingProgress={keyboard.loadingProgress}
+          loadingProgress={keyboard.loading ? keyboard.loadingProgress : undefined}
+          syncProgress={deviceSyncing ? sync.progress : undefined}
+          syncOnly={!keyboard.loading && deviceSyncing}
         />
       )}
 
