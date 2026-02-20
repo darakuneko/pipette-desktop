@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // LZMA/XZ decompression with bomb protection — runs in main process
 
-import { spawn } from 'node:child_process'
 import * as lzmaModule from 'lzma'
+import xzDecompress from 'xz-decompress'
+const { XzReadableStream } = xzDecompress
 import { IpcChannels } from '../shared/ipc/channels'
 import { secureHandle } from './ipc-guard'
 import { log } from './logger'
 
 export const MAX_COMPRESSED_SIZE = 1 * 1024 * 1024   // 1 MB
 export const MAX_DECOMPRESSED_SIZE = 10 * 1024 * 1024 // 10 MB
-export const XZ_TIMEOUT_MS = 10_000                   // 10 seconds
 
 const XZ_MAGIC = new Uint8Array([0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00])
 
@@ -38,63 +38,35 @@ export function setupLzmaIpc(): void {
   })
 }
 
-function decompressXz(buf: Buffer): Promise<string | null> {
-  return new Promise((resolve) => {
-    const child = spawn('xz', ['--decompress', '--stdout'], {
-      stdio: ['pipe', 'pipe', 'ignore'],
+async function decompressXz(buf: Buffer): Promise<string | null> {
+  try {
+    const input = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(buf))
+        controller.close()
+      },
     })
-    const chunks: Buffer[] = []
+    const stream = new XzReadableStream(input)
+    const reader = stream.getReader()
+    const chunks: Uint8Array[] = []
     let totalSize = 0
-    let settled = false
-
-    const settle = (value: string | null): void => {
-      if (settled) return
-      settled = true
-      clearTimeout(timer)
-      resolve(value)
-    }
-
-    const timer = setTimeout(() => {
-      log('warn', `XZ decompress timed out after ${XZ_TIMEOUT_MS}ms`)
-      child.kill()
-      settle(null)
-    }, XZ_TIMEOUT_MS)
-
-    child.stdout.on('data', (chunk: Buffer) => {
-      totalSize += chunk.length
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      totalSize += value.byteLength
       if (totalSize > MAX_DECOMPRESSED_SIZE) {
+        await reader.cancel()
         log('warn', `XZ output exceeded limit: ${totalSize} bytes`)
-        child.kill()
-        settle(null)
-        return
+        return null
       }
-      chunks.push(chunk)
-    })
-
-    child.on('close', (code: number | null) => {
-      if (totalSize > MAX_DECOMPRESSED_SIZE) {
-        settle(null)
-        return
-      }
-      if (code !== 0) {
-        log('warn', `XZ decompress exited with code ${code}`)
-        settle(null)
-        return
-      }
-      try {
-        settle(Buffer.concat(chunks).toString('utf-8'))
-      } catch {
-        settle(null)
-      }
-    })
-
-    child.on('error', (err: Error) => {
-      log('warn', `XZ decompress error: ${err.message}`)
-      settle(null)
-    })
-
-    child.stdin.end(buf)
-  })
+      chunks.push(value)
+    }
+    const merged = Buffer.concat(chunks)
+    return merged.toString('utf-8')
+  } catch (err) {
+    log('warn', `XZ decompress error: ${err instanceof Error ? err.message : err}`)
+    return null
+  }
 }
 
 function decompressLzma(data: number[]): Promise<string | null> {
