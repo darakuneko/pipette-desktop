@@ -257,6 +257,24 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 - 許可する修飾キーを指定
 - 個別に有効/無効を切り替え可能
 
+### 5.5 お気に入り (Favorites)
+
+各エディタモーダル (Tap Dance、Macro、Combo、Key Override、Alt Repeat Key) には、個別エントリの設定を保存・読み込みできる **Fav** ボタンがあります。
+
+![Fav ボタン](screenshots/30-fav-button.png)
+
+- **Fav** ボタン (黄色) をクリックしてお気に入りモーダルを開きます
+- **Save Current State**: ラベルを入力して Save をクリックすると、現在のエントリ設定が保存されます
+- **Synced Data**: 保存済みのエントリが一覧表示され、読み込み・リネーム・削除ができます
+
+![お気に入りモーダル](screenshots/31-fav-modal.png)
+
+- **Load**: 保存した設定を現在のエントリに適用
+- **Rename**: 保存したエントリのラベルを変更
+- **Delete**: 保存したエントリを削除
+
+> **Note**: 保存したお気に入りは、クラウド同期を有効にすると複数デバイス間で同期されます (§6.4 参照)。
+
 ---
 
 ## 6. エディタ設定パネル

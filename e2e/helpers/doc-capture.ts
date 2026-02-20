@@ -358,6 +358,68 @@ async function captureStatusBar(page: Page): Promise<void> {
   }
 }
 
+// --- Phase 9: Favorites ---
+
+async function captureFavorites(page: Page): Promise<void> {
+  console.log('\n--- Phase 9: Favorites ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+  const tdTabLabel = 'Tap-Hold / Tap Dance'
+
+  const tdTabBtn = editorContent.locator('button', { hasText: new RegExp(`^${escapeRegex(tdTabLabel)}$`) })
+  if (!(await isAvailable(tdTabBtn))) {
+    console.log(`  [skip] ${tdTabLabel} tab not found`)
+    return
+  }
+  await tdTabBtn.first().click()
+  await page.waitForTimeout(300)
+
+  const tdEntry = page.locator('button', { hasText: new RegExp(`^${escapeRegex('TD(0)')}$`) })
+  if (!(await isAvailable(tdEntry))) {
+    console.log('  [skip] TD(0) entry not found')
+    return
+  }
+  await tdEntry.first().click()
+  await page.waitForTimeout(500)
+
+  const tdBackdrop = page.locator('[data-testid="td-modal-backdrop"]')
+  try {
+    await tdBackdrop.waitFor({ state: 'visible', timeout: 3000 })
+  } catch {
+    console.log('  [skip] TD modal did not open')
+    return
+  }
+
+  await capture(page, 'fav-button', { fullPage: true })
+
+  const favBtn = page.locator('[data-testid="td-fav-btn"]')
+  if (!(await isAvailable(favBtn))) {
+    console.log('  [skip] Fav button not found')
+    await page.locator('[data-testid="td-modal-close"]').click()
+    await page.waitForTimeout(300)
+    return
+  }
+  await favBtn.click()
+  await page.waitForTimeout(500)
+
+  const favBackdrop = page.locator('[data-testid="favorite-store-modal-backdrop"]')
+  try {
+    await favBackdrop.waitFor({ state: 'visible', timeout: 3000 })
+  } catch {
+    console.log('  [skip] Favorite modal did not open')
+    await page.locator('[data-testid="td-modal-close"]').click()
+    await page.waitForTimeout(300)
+    return
+  }
+
+  await capture(page, 'fav-modal', { fullPage: true })
+
+  await page.locator('[data-testid="favorite-store-modal-close"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="td-modal-close"]').click()
+  await page.waitForTimeout(300)
+}
+
 // --- Main ---
 
 async function main(): Promise<void> {
@@ -395,6 +457,7 @@ async function main(): Promise<void> {
     await captureModalEditors(page)
     await captureEditorSettings(page)
     await captureStatusBar(page)
+    await captureFavorites(page)
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
