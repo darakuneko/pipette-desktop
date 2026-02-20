@@ -100,6 +100,9 @@ export function useSync(): UseSyncReturn {
         timeoutId = null
       }
       setProgress(p)
+      if (p.status === 'syncing') {
+        setSyncUnavailable(false)
+      }
       if (isSyncTerminalStatus(p.status)) {
         // Only update lastSyncResult on final events (no syncUnit = end of entire sync)
         if (!p.syncUnit) {
