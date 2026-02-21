@@ -88,7 +88,7 @@ export function setupFavoriteStore(): void {
 
         const now = new Date()
         const timestamp = now.toISOString().replace(/:/g, '-')
-        const filename = `${type}_${timestamp}.json`
+        const filename = `${type}_${timestamp}_${randomUUID().slice(0, 8)}.json`
         const filePath = getSafeFilePath(type, filename)
 
         await writeFile(filePath, json, 'utf-8')
