@@ -16,6 +16,7 @@ import {
   unpackLayoutOptions,
   packLayoutOptions,
 } from '../../../shared/layout-options'
+import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
@@ -562,25 +563,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [tdModalIndex, setTdModalIndex] = useState<number | null>(null)
   const [macroModalIndex, setMacroModalIndex] = useState<number | null>(null)
 
-  // Pre-compute the scaled min-height for the keyboard area container.
-  // Uses ALL keys (across all layout options) so the container stays stable
-  // when switching options. The SVG portion scales with scaleProp; the
-  // fixed UI chrome (pane padding + info row) does not.
-  const keyboardAreaMinHeight = useMemo(() => {
-    if (!layout || layout.keys.length === 0) return 0
-    let minY = Infinity
-    let maxY = -Infinity
-    for (const key of layout.keys) {
-      const ky0 = KEY_UNIT * key.y
-      const ky1 = KEY_UNIT * (key.y + key.height) - KEY_SPACING
-      if (ky0 < minY) minY = ky0
-      if (ky1 > maxY) maxY = ky1
-    }
-    const keySpan = (maxY - minY) * scaleProp
-    const fixedChrome = KEYBOARD_PADDING * 2 + 20 + 16 // SVG padding + pt-3+pb-2 (20px) + info row (~16px)
-    return keySpan + fixedChrome
-  }, [layout, scaleProp])
-
   // Close TD modal if entries shrink below the open index
   useEffect(() => {
     if (tdModalIndex !== null && (!tapDanceEntries || tdModalIndex >= tapDanceEntries.length)) {
@@ -642,6 +624,29 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   // Use local layout values for immediate feedback when available
   const effectiveLayoutOptions = hasLayoutOptions ? layoutValues : layoutOptions
+
+  // Pre-compute the scaled min-height for the keyboard area container.
+  // Uses only visible+repositioned keys so the container fits the actual content
+  // instead of reserving space for hidden layout alternatives.
+  const keyboardAreaMinHeight = useMemo(() => {
+    if (!layout || layout.keys.length === 0) return 0
+    const visible = filterVisibleKeys(
+      repositionLayoutKeys(layout.keys, effectiveLayoutOptions),
+      effectiveLayoutOptions,
+    )
+    if (visible.length === 0) return 0
+    let minY = Infinity
+    let maxY = -Infinity
+    for (const key of visible) {
+      const ky0 = KEY_UNIT * key.y
+      const ky1 = KEY_UNIT * (key.y + key.height) - KEY_SPACING
+      if (ky0 < minY) minY = ky0
+      if (ky1 > maxY) maxY = ky1
+    }
+    const keySpan = (maxY - minY) * scaleProp
+    const fixedChrome = KEYBOARD_PADDING * 2 + 20 + 16 // SVG padding + pt-3+pb-2 (20px) + info row (~16px)
+    return keySpan + fixedChrome
+  }, [layout, effectiveLayoutOptions, scaleProp])
 
   // Visible non-encoder, non-decal keys for Shift+click range selection
   const selectableKeys = useMemo(() => {

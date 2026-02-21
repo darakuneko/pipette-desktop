@@ -3,7 +3,7 @@
 
 import { jsPDF } from 'jspdf'
 import type { KleKey } from './kle/types'
-import { filterVisibleKeys } from './kle/filter-keys'
+import { filterVisibleKeys, repositionLayoutKeys } from './kle/filter-keys'
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
@@ -341,7 +341,10 @@ function drawEncoder(
 }
 
 export function generateKeymapPdf(input: PdfExportInput): string {
-  const visibleKeys = filterVisibleKeys(input.keys, input.layoutOptions)
+  const visibleKeys = filterVisibleKeys(
+    repositionLayoutKeys(input.keys, input.layoutOptions),
+    input.layoutOptions,
+  )
   const normalKeys = visibleKeys.filter((k) => k.encoderIdx === -1)
   const encoderKeys = visibleKeys.filter((k) => k.encoderIdx !== -1)
 
