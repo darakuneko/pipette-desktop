@@ -423,6 +423,7 @@
     "statusSuccess": "Success",
     "statusError": "Error",
     "noSyncYet": "Not synced yet",
+    "troubleshooting": "Troubleshooting",
     "localData": "Local Data",
     "import": "Import",
     "export": "Export",

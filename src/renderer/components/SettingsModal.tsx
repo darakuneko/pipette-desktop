@@ -1456,143 +1456,8 @@ export function SettingsModal({
                 </div>
               )}
 
-              {/* Encryption Password */}
-              <section className="mb-6">
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('sync.encryptionPassword')}
-                </h4>
-                {renderPasswordSection()}
-              </section>
-
-              {/* Sync Controls */}
-              <div className="mb-6 grid grid-cols-2 gap-3">
-                <div className={ROW_CLASS} data-testid="sync-auto-row">
-                  <span className="text-[13px] font-medium text-content">
-                    {t('sync.autoSync')}
-                  </span>
-                  <button
-                    type="button"
-                    className={sync.config.autoSync ? BTN_SECONDARY : BTN_PRIMARY}
-                    onClick={handleAutoSyncToggle}
-                    disabled={!sync.config.autoSync && syncDisabled}
-                    data-testid={sync.config.autoSync ? 'sync-auto-off' : 'sync-auto-on'}
-                  >
-                    {t(sync.config.autoSync ? 'sync.disable' : 'sync.enable')}
-                  </button>
-                </div>
-
-                <div className={ROW_CLASS} data-testid="sync-manual-row">
-                  <span className="text-[13px] font-medium text-content">
-                    {t('sync.manualSync')}
-                  </span>
-                  <button
-                    type="button"
-                    className={BTN_PRIMARY}
-                    onClick={handleSyncNow}
-                    disabled={syncDisabled}
-                    data-testid="sync-now"
-                  >
-                    {t('sync.sync')}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sync Status */}
-              <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
-
-              {/* Undecryptable Files */}
-              <UndecryptableFilesSection sync={sync} disabled={syncDisabled} />
-
-              {/* Reset Sync Data */}
-              <section className="mb-6">
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('sync.resetSyncData')}
-                </h4>
-                <DangerCheckboxGroup
-                  items={[
-                    { key: 'keyboards', checked: syncTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'sync-target-keyboards' },
-                    { key: 'favorites', checked: syncTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'sync-target-favorites' },
-                  ]}
-                  onToggle={(key, checked) => setSyncTargets((prev) => ({ ...prev, [key]: checked }))}
-                  disabled={busy || syncDisabled}
-                  confirming={confirmingSyncReset}
-                  onRequestConfirm={() => setConfirmingSyncReset(true)}
-                  onCancelConfirm={() => setConfirmingSyncReset(false)}
-                  onConfirm={handleResetSyncTargets}
-                  confirmWarningKey="sync.resetTargetsConfirm"
-                  deleteTestId="sync-reset-data"
-                  warningTestId="sync-reset-data-warning"
-                  cancelTestId="sync-reset-data-cancel"
-                  confirmTestId="sync-reset-data-confirm"
-                  busy={busy}
-                  confirmDisabled={busy || syncDisabled}
-                />
-              </section>
-
-              {/* Local Data */}
-              <section>
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('sync.localData')}
-                </h4>
-                <div className="flex items-center justify-between mb-3">
-                  {importResult ? (
-                    <span
-                      className={`text-sm ${importResult === 'success' ? 'text-accent' : 'text-danger'}`}
-                      data-testid="local-data-import-result"
-                    >
-                      {importResult === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
-                    </span>
-                  ) : (
-                    <span />
-                  )}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={handleImport}
-                      disabled={busy}
-                      data-testid="local-data-import"
-                    >
-                      {t('sync.import')}
-                    </button>
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={handleExport}
-                      disabled={busy}
-                      data-testid="local-data-export"
-                    >
-                      {t('sync.export')}
-                    </button>
-                  </div>
-                </div>
-                <DangerCheckboxGroup
-                  items={[
-                    { key: 'keyboards', checked: localTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'local-target-keyboards' },
-                    { key: 'favorites', checked: localTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'local-target-favorites' },
-                    { key: 'appSettings', checked: localTargets.appSettings, labelKey: 'sync.resetTarget.appSettings', testId: 'local-target-appSettings' },
-                  ]}
-                  onToggle={(key, checked) => setLocalTargets((prev) => ({ ...prev, [key]: checked }))}
-                  disabled={busy || isSyncing}
-                  confirming={confirmingLocalReset}
-                  onRequestConfirm={() => setConfirmingLocalReset(true)}
-                  onCancelConfirm={() => setConfirmingLocalReset(false)}
-                  onConfirm={handleResetLocalTargets}
-                  confirmWarningKey="sync.resetLocalTargetsConfirm"
-                  deleteTestId="reset-local-data"
-                  warningTestId="reset-local-data-warning"
-                  cancelTestId="reset-local-data-cancel"
-                  confirmTestId="reset-local-data-confirm"
-                  busy={busy}
-                  confirmDisabled={busy || isSyncing}
-                />
-              </section>
-            </div>
-          )}
-          {activeTab === 'hub' && (
-            <div className="pt-4 space-y-6">
               {/* Hub Enable/Disable */}
-              <section>
+              <section className="mb-6">
                 <h4 className="mb-2 text-sm font-medium text-content-secondary">
                   {t('hub.enableToggle')}
                 </h4>
@@ -1642,19 +1507,17 @@ export function SettingsModal({
 
               {/* Account Deactivated Warning */}
               {hubAccountDeactivated && hubAuthenticated && (
-                <section>
-                  <div
-                    className="rounded border border-danger/50 bg-danger/10 p-3 text-sm text-danger"
-                    data-testid="hub-account-deactivated-warning"
-                  >
-                    {t('hub.accountDeactivated')}
-                  </div>
-                </section>
+                <div
+                  className="mb-6 rounded border border-danger/50 bg-danger/10 p-3 text-sm text-danger"
+                  data-testid="hub-account-deactivated-warning"
+                >
+                  {t('hub.accountDeactivated')}
+                </div>
               )}
 
               {/* Auth Conflict Warning */}
               {hubAuthConflict && hubAuthenticated && (
-                <section>
+                <section className="mb-6">
                   <div
                     className="rounded border border-warning/50 bg-warning/10 p-3 text-sm text-warning"
                     data-testid="hub-auth-conflict-warning"
@@ -1672,7 +1535,7 @@ export function SettingsModal({
 
               {/* Display Name */}
               {hubEnabled && hubAuthenticated && !hubAuthConflict && (
-                <section>
+                <section className="mb-6">
                   <HubDisplayNameField
                     currentName={hubDisplayName}
                     onSave={onHubDisplayNameChange}
@@ -1680,6 +1543,149 @@ export function SettingsModal({
                 </section>
               )}
 
+              {/* Encryption Password */}
+              <section className="mb-6">
+                <h4 className="mb-2 text-sm font-medium text-content-secondary">
+                  {t('sync.encryptionPassword')}
+                </h4>
+                {renderPasswordSection()}
+              </section>
+
+              {/* Sync Controls */}
+              <div className="mb-6 grid grid-cols-2 gap-3">
+                <div className={ROW_CLASS} data-testid="sync-auto-row">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('sync.autoSync')}
+                  </span>
+                  <button
+                    type="button"
+                    className={sync.config.autoSync ? BTN_SECONDARY : BTN_PRIMARY}
+                    onClick={handleAutoSyncToggle}
+                    disabled={!sync.config.autoSync && syncDisabled}
+                    data-testid={sync.config.autoSync ? 'sync-auto-off' : 'sync-auto-on'}
+                  >
+                    {t(sync.config.autoSync ? 'sync.disable' : 'sync.enable')}
+                  </button>
+                </div>
+
+                <div className={ROW_CLASS} data-testid="sync-manual-row">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('sync.manualSync')}
+                  </span>
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    onClick={handleSyncNow}
+                    disabled={syncDisabled}
+                    data-testid="sync-now"
+                  >
+                    {t('sync.sync')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sync Status */}
+              <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
+
+              {/* Troubleshooting (collapsible) */}
+              <details className="mb-6" data-testid="troubleshooting-details">
+                <summary className="cursor-pointer text-sm font-medium text-content-secondary select-none">
+                  {t('sync.troubleshooting')}
+                </summary>
+                <div className="mt-4 space-y-6">
+                  {/* Undecryptable Files */}
+                  <UndecryptableFilesSection sync={sync} disabled={syncDisabled} />
+
+                  {/* Reset Sync Data */}
+                  <section>
+                    <h4 className="mb-2 text-sm font-medium text-content-secondary">
+                      {t('sync.resetSyncData')}
+                    </h4>
+                    <DangerCheckboxGroup
+                      items={[
+                        { key: 'keyboards', checked: syncTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'sync-target-keyboards' },
+                        { key: 'favorites', checked: syncTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'sync-target-favorites' },
+                      ]}
+                      onToggle={(key, checked) => setSyncTargets((prev) => ({ ...prev, [key]: checked }))}
+                      disabled={busy || syncDisabled}
+                      confirming={confirmingSyncReset}
+                      onRequestConfirm={() => setConfirmingSyncReset(true)}
+                      onCancelConfirm={() => setConfirmingSyncReset(false)}
+                      onConfirm={handleResetSyncTargets}
+                      confirmWarningKey="sync.resetTargetsConfirm"
+                      deleteTestId="sync-reset-data"
+                      warningTestId="sync-reset-data-warning"
+                      cancelTestId="sync-reset-data-cancel"
+                      confirmTestId="sync-reset-data-confirm"
+                      busy={busy}
+                      confirmDisabled={busy || syncDisabled}
+                    />
+                  </section>
+
+                  {/* Local Data */}
+                  <section>
+                    <h4 className="mb-2 text-sm font-medium text-content-secondary">
+                      {t('sync.localData')}
+                    </h4>
+                    <div className="flex items-center justify-between mb-3">
+                      {importResult ? (
+                        <span
+                          className={`text-sm ${importResult === 'success' ? 'text-accent' : 'text-danger'}`}
+                          data-testid="local-data-import-result"
+                        >
+                          {importResult === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
+                        </span>
+                      ) : (
+                        <span />
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          className={BTN_SECONDARY}
+                          onClick={handleImport}
+                          disabled={busy}
+                          data-testid="local-data-import"
+                        >
+                          {t('sync.import')}
+                        </button>
+                        <button
+                          type="button"
+                          className={BTN_SECONDARY}
+                          onClick={handleExport}
+                          disabled={busy}
+                          data-testid="local-data-export"
+                        >
+                          {t('sync.export')}
+                        </button>
+                      </div>
+                    </div>
+                    <DangerCheckboxGroup
+                      items={[
+                        { key: 'keyboards', checked: localTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'local-target-keyboards' },
+                        { key: 'favorites', checked: localTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'local-target-favorites' },
+                        { key: 'appSettings', checked: localTargets.appSettings, labelKey: 'sync.resetTarget.appSettings', testId: 'local-target-appSettings' },
+                      ]}
+                      onToggle={(key, checked) => setLocalTargets((prev) => ({ ...prev, [key]: checked }))}
+                      disabled={busy || isSyncing}
+                      confirming={confirmingLocalReset}
+                      onRequestConfirm={() => setConfirmingLocalReset(true)}
+                      onCancelConfirm={() => setConfirmingLocalReset(false)}
+                      onConfirm={handleResetLocalTargets}
+                      confirmWarningKey="sync.resetLocalTargetsConfirm"
+                      deleteTestId="reset-local-data"
+                      warningTestId="reset-local-data-warning"
+                      cancelTestId="reset-local-data-cancel"
+                      confirmTestId="reset-local-data-confirm"
+                      busy={busy}
+                      confirmDisabled={busy || isSyncing}
+                    />
+                  </section>
+                </div>
+              </details>
+            </div>
+          )}
+          {activeTab === 'hub' && (
+            <div className="pt-4 space-y-6">
               {/* My Posts */}
               {hubEnabled && hubAuthenticated && (
                 <section>

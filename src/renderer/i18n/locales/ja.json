@@ -423,6 +423,7 @@
     "statusSuccess": "成功",
     "statusError": "エラー",
     "noSyncYet": "未同期",
+    "troubleshooting": "トラブルシューティング",
     "localData": "ローカルデータ",
     "import": "インポート",
     "export": "エクスポート",

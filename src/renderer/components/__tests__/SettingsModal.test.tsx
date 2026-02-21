@@ -960,22 +960,22 @@ describe('SettingsModal', () => {
     })
   })
 
-  describe('Hub tab', () => {
-    it('switches to Hub tab and shows hub toggle', () => {
-      renderAndSwitchToHub()
+  describe('Hub settings (Data tab)', () => {
+    it('shows hub toggle on Data tab', () => {
+      renderAndSwitchToData()
 
       expect(screen.getByTestId('hub-enable-toggle')).toBeInTheDocument()
       expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
     })
 
     it('shows enabled status when hub is enabled', () => {
-      renderAndSwitchToHub({ hubEnabled: true })
+      renderAndSwitchToData({ hubEnabled: true })
       expect(screen.getByTestId('hub-enabled-status')).toBeInTheDocument()
     })
 
     it('shows confirmation when disconnect button is clicked', () => {
       const onHubEnabledChange = vi.fn()
-      renderAndSwitchToHub({ hubEnabled: true, onHubEnabledChange })
+      renderAndSwitchToData({ hubEnabled: true, onHubEnabledChange })
 
       fireEvent.click(screen.getByTestId('hub-enable-toggle'))
       expect(screen.getByTestId('hub-disconnect-confirm')).toBeInTheDocument()
@@ -985,7 +985,7 @@ describe('SettingsModal', () => {
 
     it('calls onHubEnabledChange with false when confirmation is accepted', () => {
       const onHubEnabledChange = vi.fn()
-      renderAndSwitchToHub({ hubEnabled: true, onHubEnabledChange })
+      renderAndSwitchToData({ hubEnabled: true, onHubEnabledChange })
 
       fireEvent.click(screen.getByTestId('hub-enable-toggle'))
       fireEvent.click(screen.getByTestId('hub-disconnect-confirm'))
@@ -994,7 +994,7 @@ describe('SettingsModal', () => {
 
     it('cancels hub disconnect when cancel is clicked', () => {
       const onHubEnabledChange = vi.fn()
-      renderAndSwitchToHub({ hubEnabled: true, onHubEnabledChange })
+      renderAndSwitchToData({ hubEnabled: true, onHubEnabledChange })
 
       fireEvent.click(screen.getByTestId('hub-enable-toggle'))
       fireEvent.click(screen.getByTestId('hub-disconnect-cancel'))
@@ -1004,31 +1004,186 @@ describe('SettingsModal', () => {
 
     it('calls onHubEnabledChange with true when enable button is clicked while authenticated', () => {
       const onHubEnabledChange = vi.fn()
-      renderAndSwitchToHub({ hubEnabled: false, hubAuthenticated: true, onHubEnabledChange })
+      renderAndSwitchToData({ hubEnabled: false, hubAuthenticated: true, onHubEnabledChange })
       fireEvent.click(screen.getByTestId('hub-enable-toggle'))
       expect(onHubEnabledChange).toHaveBeenCalledWith(true)
     })
 
     it('disables hub enable button when not authenticated', () => {
       const onHubEnabledChange = vi.fn()
-      renderAndSwitchToHub({ hubEnabled: false, hubAuthenticated: false, onHubEnabledChange })
+      renderAndSwitchToData({ hubEnabled: false, hubAuthenticated: false, onHubEnabledChange })
       const button = screen.getByTestId('hub-enable-toggle')
       expect(button).toBeDisabled()
       fireEvent.click(button)
       expect(onHubEnabledChange).not.toHaveBeenCalled()
     })
 
+    it('shows auth required message below connect button when not authenticated and disabled', () => {
+      renderAndSwitchToData({ hubEnabled: false, hubAuthenticated: false })
+
+      expect(screen.getByTestId('hub-requires-auth')).toBeInTheDocument()
+      expect(screen.queryByTestId('hub-post-list')).not.toBeInTheDocument()
+    })
+
+    it('clears saved indicator timeout on unmount', async () => {
+      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
+      const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+      const { unmount } = renderAndSwitchToData({
+        hubEnabled: true,
+        hubAuthenticated: true,
+        hubDisplayName: 'Alice',
+        onHubDisplayNameChange,
+      })
+
+      const input = screen.getByTestId('hub-display-name-input')
+      fireEvent.change(input, { target: { value: 'Bob' } })
+      fireEvent.click(screen.getByTestId('hub-display-name-save'))
+
+      await waitFor(() => {
+        expect(onHubDisplayNameChange).toHaveBeenCalledWith('Bob')
+      })
+
+      clearTimeoutSpy.mockClear()
+      unmount()
+
+      expect(clearTimeoutSpy).toHaveBeenCalled()
+      clearTimeoutSpy.mockRestore()
+    })
+
+    describe('display name empty save prevention', () => {
+      it('disables save button when input is cleared to empty', () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: '' } })
+
+        const saveBtn = screen.getByTestId('hub-display-name-save')
+        expect(saveBtn).toBeDisabled()
+      })
+
+      it('disables save button when input is whitespace only', () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: '   ' } })
+
+        const saveBtn = screen.getByTestId('hub-display-name-save')
+        expect(saveBtn).toBeDisabled()
+      })
+
+      it('does not call onSave on Enter when input is empty', () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: '' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        expect(onHubDisplayNameChange).not.toHaveBeenCalled()
+      })
+
+      it('does not call onSave on Enter when input is whitespace only', () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: '   ' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        expect(onHubDisplayNameChange).not.toHaveBeenCalled()
+      })
+
+      it('shows required hint when display name is empty', () => {
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: null,
+        })
+
+        expect(screen.getByTestId('hub-display-name-required')).toHaveTextContent('hub.displayNameRequired')
+      })
+
+      it('does not show required hint when display name is set', () => {
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+        })
+
+        expect(screen.queryByTestId('hub-display-name-required')).not.toBeInTheDocument()
+      })
+
+      it('shows duplicate error when save returns DISPLAY_NAME_CONFLICT', async () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({
+          success: false,
+          error: HUB_ERROR_DISPLAY_NAME_CONFLICT,
+        })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: 'Bob' } })
+        fireEvent.click(screen.getByTestId('hub-display-name-save'))
+
+        await waitFor(() => {
+          expect(screen.getByTestId('hub-display-name-error')).toHaveTextContent('hub.displayNameTaken')
+        })
+      })
+
+      it('shows generic error when save fails without 409', async () => {
+        const onHubDisplayNameChange = vi.fn().mockResolvedValue({
+          success: false,
+          error: 'Hub patch auth me failed: 500',
+        })
+        renderAndSwitchToData({
+          hubEnabled: true,
+          hubAuthenticated: true,
+          hubDisplayName: 'Alice',
+          onHubDisplayNameChange,
+        })
+
+        const input = screen.getByTestId('hub-display-name-input')
+        fireEvent.change(input, { target: { value: 'Bob' } })
+        fireEvent.click(screen.getByTestId('hub-display-name-save'))
+
+        await waitFor(() => {
+          expect(screen.getByTestId('hub-display-name-error')).toHaveTextContent('hub.displayNameSaveFailed')
+        })
+      })
+    })
+  })
+
+  describe('Hub posts (Hub tab)', () => {
     it('hides my posts when hub is disabled', () => {
       renderAndSwitchToHub({ hubEnabled: false })
       expect(screen.queryByTestId('hub-post-list')).not.toBeInTheDocument()
       expect(screen.queryByTestId('hub-no-posts')).not.toBeInTheDocument()
-    })
-
-    it('shows auth required message below connect button when not authenticated and disabled', () => {
-      renderAndSwitchToHub({ hubEnabled: false, hubAuthenticated: false })
-
-      expect(screen.getByTestId('hub-requires-auth')).toBeInTheDocument()
-      expect(screen.queryByTestId('hub-post-list')).not.toBeInTheDocument()
     })
 
     it('hides my posts when hub is enabled but not authenticated', () => {
@@ -1276,164 +1431,11 @@ describe('SettingsModal', () => {
         expect(mockOpenExternal).toHaveBeenCalledWith('https://hub.example.com/post/p1')
       })
     })
-
-    it('clears saved indicator timeout on unmount', async () => {
-      const clearTimeoutSpy = vi.spyOn(global, 'clearTimeout')
-      const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
-      const { unmount } = renderAndSwitchToHub({
-        hubEnabled: true,
-        hubAuthenticated: true,
-        hubDisplayName: 'Alice',
-        onHubDisplayNameChange,
-      })
-
-      const input = screen.getByTestId('hub-display-name-input')
-      fireEvent.change(input, { target: { value: 'Bob' } })
-      fireEvent.click(screen.getByTestId('hub-display-name-save'))
-
-      await waitFor(() => {
-        expect(onHubDisplayNameChange).toHaveBeenCalledWith('Bob')
-      })
-
-      clearTimeoutSpy.mockClear()
-      unmount()
-
-      expect(clearTimeoutSpy).toHaveBeenCalled()
-      clearTimeoutSpy.mockRestore()
-    })
-
-    describe('display name empty save prevention', () => {
-      it('disables save button when input is cleared to empty', () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: '' } })
-
-        const saveBtn = screen.getByTestId('hub-display-name-save')
-        expect(saveBtn).toBeDisabled()
-      })
-
-      it('disables save button when input is whitespace only', () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: '   ' } })
-
-        const saveBtn = screen.getByTestId('hub-display-name-save')
-        expect(saveBtn).toBeDisabled()
-      })
-
-      it('does not call onSave on Enter when input is empty', () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: '' } })
-        fireEvent.keyDown(input, { key: 'Enter' })
-
-        expect(onHubDisplayNameChange).not.toHaveBeenCalled()
-      })
-
-      it('does not call onSave on Enter when input is whitespace only', () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({ success: true })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: '   ' } })
-        fireEvent.keyDown(input, { key: 'Enter' })
-
-        expect(onHubDisplayNameChange).not.toHaveBeenCalled()
-      })
-
-      it('shows required hint when display name is empty', () => {
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: null,
-        })
-
-        expect(screen.getByTestId('hub-display-name-required')).toHaveTextContent('hub.displayNameRequired')
-      })
-
-      it('does not show required hint when display name is set', () => {
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-        })
-
-        expect(screen.queryByTestId('hub-display-name-required')).not.toBeInTheDocument()
-      })
-
-      it('shows duplicate error when save returns DISPLAY_NAME_CONFLICT', async () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({
-          success: false,
-          error: HUB_ERROR_DISPLAY_NAME_CONFLICT,
-        })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: 'Bob' } })
-        fireEvent.click(screen.getByTestId('hub-display-name-save'))
-
-        await waitFor(() => {
-          expect(screen.getByTestId('hub-display-name-error')).toHaveTextContent('hub.displayNameTaken')
-        })
-      })
-
-      it('shows generic error when save fails without 409', async () => {
-        const onHubDisplayNameChange = vi.fn().mockResolvedValue({
-          success: false,
-          error: 'Hub patch auth me failed: 500',
-        })
-        renderAndSwitchToHub({
-          hubEnabled: true,
-          hubAuthenticated: true,
-          hubDisplayName: 'Alice',
-          onHubDisplayNameChange,
-        })
-
-        const input = screen.getByTestId('hub-display-name-input')
-        fireEvent.change(input, { target: { value: 'Bob' } })
-        fireEvent.click(screen.getByTestId('hub-display-name-save'))
-
-        await waitFor(() => {
-          expect(screen.getByTestId('hub-display-name-error')).toHaveTextContent('hub.displayNameSaveFailed')
-        })
-      })
-    })
   })
 
   describe('input maxLength attributes', () => {
     it('display name input has maxLength=50', () => {
-      renderAndSwitchToHub({ hubEnabled: true, hubAuthenticated: true })
+      renderAndSwitchToData({ hubEnabled: true, hubAuthenticated: true })
       const input = screen.getByTestId('hub-display-name-input')
       expect(input).toHaveAttribute('maxLength', '50')
     })
