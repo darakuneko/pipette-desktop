@@ -130,7 +130,7 @@ export function setupFileIO(): void {
     if (!win) return { success: false, error: 'No window' }
 
     const result = await dialog.showOpenDialog(win, {
-      title: 'Sideload JSON',
+      title: 'Load from JSON file',
       filters: [
         { name: 'JSON Files', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },
