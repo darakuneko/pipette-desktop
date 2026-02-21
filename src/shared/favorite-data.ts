@@ -1,8 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { FavoriteType } from './types/favorite-store'
+import type { FavoriteType, FavoriteExportFile } from './types/favorite-store'
 
-const FAVORITE_TYPES: readonly FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
+export const FAVORITE_TYPES: readonly FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
+
+export const FAV_EXPORT_KEY_MAP: Record<string, FavoriteType> = {
+  macro: 'macro',
+  td: 'tapDance',
+  combo: 'combo',
+  ko: 'keyOverride',
+  ark: 'altRepeatKey',
+}
+
+export const FAV_TYPE_TO_EXPORT_KEY: Record<FavoriteType, string> = {
+  macro: 'macro',
+  tapDance: 'td',
+  combo: 'combo',
+  keyOverride: 'ko',
+  altRepeatKey: 'ark',
+}
 
 export function isValidFavoriteType(v: unknown): v is FavoriteType {
   return typeof v === 'string' && FAVORITE_TYPES.includes(v)
@@ -50,6 +66,26 @@ function isValidAltRepeatKeyData(data: unknown): boolean {
     hasNumberFields(data, ['lastKey', 'altKey', 'allowedMods', 'options']) &&
     typeof data.enabled === 'boolean'
   )
+}
+
+export function isValidFavExportFile(v: unknown): v is FavoriteExportFile {
+  if (!isRecord(v)) return false
+  if (v.app !== 'pipette' || v.version !== 1 || v.scope !== 'fav') return false
+  if (typeof v.exportedAt !== 'string') return false
+  const cats = v.categories
+  if (!isRecord(cats)) return false
+  for (const key of Object.keys(cats)) {
+    if (!(key in FAV_EXPORT_KEY_MAP)) return false
+    const entries = cats[key]
+    if (!Array.isArray(entries)) return false
+    for (const entry of entries) {
+      if (!isRecord(entry)) return false
+      if (typeof entry.label !== 'string') return false
+      if (typeof entry.savedAt !== 'string') return false
+      if (entry.data === undefined) return false
+    }
+  }
+  return true
 }
 
 export function isFavoriteDataFile(v: unknown, type: FavoriteType): boolean {

@@ -15,3 +15,24 @@ export interface FavoriteIndex {
   type: FavoriteType
   entries: SavedFavoriteMeta[]
 }
+
+export interface FavoriteExportEntry {
+  label: string
+  savedAt: string
+  data: unknown
+}
+
+export interface FavoriteExportFile {
+  app: 'pipette'
+  version: 1
+  scope: 'fav'
+  exportedAt: string
+  categories: Record<string, FavoriteExportEntry[]>
+}
+
+export interface FavoriteImportResult {
+  success: boolean
+  imported: number
+  skipped: number
+  error?: string
+}

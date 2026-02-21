@@ -16,12 +16,12 @@ import {
   type DriveFile,
 } from './google-drive'
 import { IpcChannels } from '../../shared/ipc/channels'
+import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import { mergeEntries, gcTombstones } from './merge'
-import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
+import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncScope } from '../../shared/types/sync'
 
-const FAVORITE_TYPES: FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
 const DEBOUNCE_MS = 10_000
 const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
 const PASSWORD_CHECK_UNIT = 'password-check'

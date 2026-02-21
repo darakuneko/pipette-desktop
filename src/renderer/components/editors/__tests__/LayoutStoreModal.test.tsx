@@ -437,9 +437,9 @@ describe('LayoutStoreModal', () => {
       expect(screen.getByTestId('layout-store-import-vil')).toBeInTheDocument()
       expect(screen.getByTestId('layout-store-sideload-json')).toBeInTheDocument()
 
-      // Import section should appear before save form in DOM
+      // Import section should appear after save form in DOM (below history)
       const importPos = importSection.compareDocumentPosition(saveInput)
-      expect(importPos & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(importPos & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
     })
 
     it('calls onImportVil when import button clicked', () => {

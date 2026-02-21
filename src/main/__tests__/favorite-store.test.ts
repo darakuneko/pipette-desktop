@@ -19,6 +19,13 @@ vi.mock('electron', () => ({
   ipcMain: {
     handle: vi.fn(),
   },
+  dialog: {
+    showSaveDialog: vi.fn(),
+    showOpenDialog: vi.fn(),
+  },
+  BrowserWindow: {
+    fromWebContents: vi.fn(),
+  },
 }))
 
 vi.mock('../sync/sync-service', () => ({
@@ -32,7 +39,8 @@ vi.mock('../ipc-guard', async () => {
 
 // --- Import after mocking ---
 
-import { ipcMain } from 'electron'
+import { ipcMain, dialog, BrowserWindow } from 'electron'
+import { notifyChange } from '../sync/sync-service'
 import { setupFavoriteStore } from '../favorite-store'
 import { IpcChannels } from '../../shared/ipc/channels'
 
@@ -45,12 +53,13 @@ function getHandler(channel: string): IpcHandler {
   return match[1] as IpcHandler
 }
 
-const fakeEvent = {} as Electron.IpcMainInvokeEvent
+const fakeEvent = { sender: {} } as Electron.IpcMainInvokeEvent
 
 describe('favorite-store', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'favorite-store-test-'))
+    vi.mocked(BrowserWindow.fromWebContents).mockReturnValue({} as Electron.BrowserWindow)
     setupFavoriteStore()
   })
 
@@ -313,6 +322,329 @@ describe('favorite-store', () => {
       const result = await listHandler(fakeEvent, 'tapDance') as { success: boolean; entries: unknown[] }
       expect(result.success).toBe(true)
       expect(result.entries).toEqual([])
+    })
+  })
+
+  describe('export', () => {
+    const validTapDanceJson = '{"type":"tapDance","data":{"onTap":4,"onHold":0,"onDoubleTap":0,"onTapHold":0,"tappingTerm":200}}'
+
+    it('exports single category with correct format', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'My TD')
+
+      const exportPath = join(mockUserDataPath, 'export-test.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
+      expect(exported.app).toBe('pipette')
+      expect(exported.version).toBe(1)
+      expect(exported.scope).toBe('fav')
+      expect(exported.exportedAt).toBeTruthy()
+      expect(exported.categories.td).toHaveLength(1)
+      expect(exported.categories.td[0].label).toBe('My TD')
+      expect(exported.categories.td[0].savedAt).toBeTruthy()
+      expect(exported.categories.td[0].data).toEqual({ onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 })
+    })
+
+    it('exports a single entry by entryId', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      const saved1 = await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'TD Entry 1') as {
+        entry: { id: string }
+      }
+      await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'TD Entry 2')
+
+      const exportPath = join(mockUserDataPath, 'export-single.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance', saved1.entry.id) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
+      expect(exported.categories.td).toHaveLength(1)
+      expect(exported.categories.td[0].label).toBe('TD Entry 1')
+    })
+
+    it('excludes tombstoned entries', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      const saved = await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'Deleted TD') as {
+        entry: { id: string }
+      }
+
+      const deleteHandler = getHandler(IpcChannels.FAVORITE_STORE_DELETE)
+      await deleteHandler(fakeEvent, 'tapDance', saved.entry.id)
+
+      const exportPath = join(mockUserDataPath, 'export-tombstone.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
+      // No active entries, so categories should be empty
+      expect(exported.categories.td).toBeUndefined()
+    })
+
+    it('returns cancelled when dialog is cancelled', async () => {
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: true, filePath: '' })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('cancelled')
+    })
+
+    it('returns error for invalid scope', async () => {
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'qmkSettings') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid scope')
+    })
+
+    it('calls showSaveDialog with JSON filter and generated filename', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'Test')
+
+      const exportPath = join(mockUserDataPath, 'export-dialog.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      await handler(fakeEvent, 'tapDance')
+
+      expect(dialog.showSaveDialog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({ extensions: ['json'] }),
+          ]),
+          defaultPath: expect.stringMatching(/^pipette-fav-td-.*\.json$/),
+        }),
+      )
+    })
+
+    it('returns error when BrowserWindow.fromWebContents returns null', async () => {
+      vi.mocked(BrowserWindow.fromWebContents).mockReturnValueOnce(null as unknown as Electron.BrowserWindow)
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('No window')
+    })
+
+    it('returns error for non-string entryId', async () => {
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance', 123) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid entryId')
+    })
+
+    it('returns error when single-entry export target does not exist', async () => {
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance', 'nonexistent-id') as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Entry not found')
+    })
+
+    it('returns error when single-entry export target is deleted', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      const saved = await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'Deleted TD') as {
+        entry: { id: string }
+      }
+
+      const deleteHandler = getHandler(IpcChannels.FAVORITE_STORE_DELETE)
+      await deleteHandler(fakeEvent, 'tapDance', saved.entry.id)
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance', saved.entry.id) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Entry not found')
+    })
+
+    it('skips entries with missing data field during export', async () => {
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      // Save a file with no `data` field
+      await saveHandler(fakeEvent, 'tapDance', JSON.stringify({ type: 'tapDance' }), 'No Data')
+      // Save a valid file
+      await saveHandler(fakeEvent, 'tapDance', validTapDanceJson, 'With Data')
+
+      const exportPath = join(mockUserDataPath, 'export-missing-data.json')
+      vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
+      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
+      // Only the valid entry should be exported
+      expect(exported.categories.td).toHaveLength(1)
+      expect(exported.categories.td[0].label).toBe('With Data')
+    })
+  })
+
+  describe('import', () => {
+    const validTapDanceData = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+    const validComboData = { key1: 4, key2: 5, key3: 0, key4: 0, output: 6 }
+
+    function makeExportFile(categories: Record<string, Array<{ label: string; savedAt: string; data: unknown }>>): string {
+      return JSON.stringify({
+        app: 'pipette',
+        version: 1,
+        scope: 'fav',
+        exportedAt: new Date().toISOString(),
+        categories,
+      })
+    }
+
+    it('imports valid entries and creates index entries', async () => {
+      const importFile = join(mockUserDataPath, 'import-test.json')
+      await writeFile(importFile, makeExportFile({
+        td: [{ label: 'Imported TD', savedAt: '2025-01-01T00:00:00.000Z', data: validTapDanceData }],
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number }
+      expect(result.success).toBe(true)
+      expect(result.imported).toBe(1)
+      expect(result.skipped).toBe(0)
+
+      const listHandler = getHandler(IpcChannels.FAVORITE_STORE_LIST)
+      const list = await listHandler(fakeEvent, 'tapDance') as { entries: Array<{ label: string }> }
+      expect(list.entries).toHaveLength(1)
+      expect(list.entries[0].label).toBe('Imported TD')
+    })
+
+    it('skips duplicate entries (matching label + savedAt)', async () => {
+      // First save an entry directly
+      const saveHandler = getHandler(IpcChannels.FAVORITE_STORE_SAVE)
+      const saved = await saveHandler(fakeEvent, 'tapDance', '{"type":"tapDance","data":{"onTap":4,"onHold":0,"onDoubleTap":0,"onTapHold":0,"tappingTerm":200}}', 'Dupe TD') as {
+        entry: { savedAt: string }
+      }
+
+      // Now import the same label + savedAt
+      const importFile = join(mockUserDataPath, 'import-dupe.json')
+      await writeFile(importFile, makeExportFile({
+        td: [{ label: 'Dupe TD', savedAt: saved.entry.savedAt, data: validTapDanceData }],
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number }
+      expect(result.success).toBe(true)
+      expect(result.imported).toBe(0)
+      expect(result.skipped).toBe(1)
+    })
+
+    it('skips entries with invalid data', async () => {
+      const importFile = join(mockUserDataPath, 'import-invalid.json')
+      await writeFile(importFile, makeExportFile({
+        td: [{ label: 'Bad TD', savedAt: '2025-01-01T00:00:00.000Z', data: { invalid: true } }],
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number }
+      expect(result.success).toBe(true)
+      expect(result.imported).toBe(0)
+      expect(result.skipped).toBe(1)
+    })
+
+    it('returns cancelled when dialog is cancelled', async () => {
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: true, filePaths: [] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number; error: string }
+      expect(result.success).toBe(false)
+      expect(result.imported).toBe(0)
+      expect(result.skipped).toBe(0)
+      expect(result.error).toBe('cancelled')
+    })
+
+    it('rejects invalid export file format', async () => {
+      const importFile = join(mockUserDataPath, 'import-bad-format.json')
+      await writeFile(importFile, JSON.stringify({ not: 'a valid export' }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number; error: string }
+      expect(result.success).toBe(false)
+      expect(result.imported).toBe(0)
+      expect(result.skipped).toBe(0)
+      expect(result.error).toBe('Invalid export file format')
+    })
+
+    it('calls notifyChange for imported types', async () => {
+      const importFile = join(mockUserDataPath, 'import-notify.json')
+      await writeFile(importFile, makeExportFile({
+        td: [{ label: 'TD1', savedAt: '2025-01-01T00:00:00.000Z', data: validTapDanceData }],
+        combo: [{ label: 'Combo1', savedAt: '2025-01-01T00:00:00.000Z', data: validComboData }],
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+      vi.mocked(notifyChange).mockClear()
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      await handler(fakeEvent)
+
+      expect(vi.mocked(notifyChange)).toHaveBeenCalledWith('favorites/tapDance')
+      expect(vi.mocked(notifyChange)).toHaveBeenCalledWith('favorites/combo')
+    })
+
+    it('calls showOpenDialog with JSON filter', async () => {
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: true, filePaths: [] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      await handler(fakeEvent)
+
+      expect(dialog.showOpenDialog).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          filters: expect.arrayContaining([
+            expect.objectContaining({ extensions: ['json'] }),
+          ]),
+          properties: ['openFile'],
+        }),
+      )
+    })
+
+    it('returns error when BrowserWindow.fromWebContents returns null', async () => {
+      vi.mocked(BrowserWindow.fromWebContents).mockReturnValueOnce(null as unknown as Electron.BrowserWindow)
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('No window')
+    })
+
+    it('reports correct imported/skipped counts', async () => {
+      const importFile = join(mockUserDataPath, 'import-counts.json')
+      await writeFile(importFile, makeExportFile({
+        td: [
+          { label: 'Valid TD', savedAt: '2025-01-01T00:00:00.000Z', data: validTapDanceData },
+          { label: 'Bad TD', savedAt: '2025-01-02T00:00:00.000Z', data: { invalid: true } },
+          { label: 'Valid TD 2', savedAt: '2025-01-03T00:00:00.000Z', data: validTapDanceData },
+        ],
+        combo: [
+          { label: 'Valid Combo', savedAt: '2025-01-01T00:00:00.000Z', data: validComboData },
+        ],
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number }
+      expect(result.success).toBe(true)
+      expect(result.imported).toBe(3)
+      expect(result.skipped).toBe(1)
     })
   })
 })

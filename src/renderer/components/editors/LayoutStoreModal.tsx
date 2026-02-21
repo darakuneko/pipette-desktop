@@ -349,63 +349,14 @@ export function LayoutStoreContent({
 
   return (
     <div className={isPanel ? 'flex flex-col h-full' : ''}>
-      {/* Import section */}
-      {hasImportSideload && (
-        <div className={`pt-4${fixedSection}`} data-testid="layout-store-import-section">
-          <SectionHeader label={t('layoutStore.import')} />
-          <div className="flex gap-2">
-            {onImportVil && (
-              <button
-                type="button"
-                className={IMPORT_BTN}
-                onClick={onImportVil}
-                disabled={fileDisabled}
-                data-testid="layout-store-import-vil"
-              >
-                {t('fileIO.loadLayout')}
-              </button>
-            )}
-            {onSideloadJson && (
-              <button
-                type="button"
-                className={IMPORT_BTN}
-                onClick={onSideloadJson}
-                disabled={fileDisabled}
-                data-testid="layout-store-sideload-json"
-              >
-                {t('fileIO.sideloadJson')}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* File status */}
       {fileStatus && fileStatus !== 'idle' && (
         <FileStatusDisplay fileStatus={fileStatus} />
       )}
 
-      {/* Export Current State section */}
-      {hasCurrentExport && (
-        <div className={`pt-5${fixedSection}`} data-testid="layout-store-current-section">
-          <SectionHeader label={t('layoutStore.exportCurrent')} />
-          <div className="flex gap-2">
-            <FormatButtons
-              className={EXPORT_BTN}
-              testIdPrefix="layout-store-current-export"
-              disabled={fileDisabled}
-              onVil={onExportVil}
-              onKeymapC={onExportKeymapC}
-              onPdf={onExportPdf}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Save Current State section */}
+      {/* Save section */}
       {!isDummy && (
         <div className={`pt-5${fixedSection}`}>
-          <SectionHeader label={t('layoutStore.saveCurrentState')} />
           <form onSubmit={handleSaveSubmit} className="flex gap-2">
             <input
               type="text"
@@ -446,6 +397,23 @@ export function LayoutStoreContent({
               </button>
             )}
           </form>
+        </div>
+      )}
+
+      {/* Export Current State section */}
+      {hasCurrentExport && (
+        <div className={`pt-5${fixedSection}`} data-testid="layout-store-current-section">
+          <SectionHeader label={t('layoutStore.export')} />
+          <div className="flex justify-end gap-2">
+            <FormatButtons
+              className={EXPORT_BTN}
+              testIdPrefix="layout-store-current-export"
+              disabled={fileDisabled}
+              onVil={onExportVil}
+              onKeymapC={onExportKeymapC}
+              onPdf={onExportPdf}
+            />
+          </div>
         </div>
       )}
 
@@ -664,6 +632,37 @@ export function LayoutStoreContent({
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Import section */}
+      {hasImportSideload && (
+        <div className={`pt-4${fixedSection}`} data-testid="layout-store-import-section">
+          <SectionHeader label={t('layoutStore.import')} />
+          <div className="flex gap-2">
+            {onImportVil && (
+              <button
+                type="button"
+                className={IMPORT_BTN}
+                onClick={onImportVil}
+                disabled={fileDisabled}
+                data-testid="layout-store-import-vil"
+              >
+                {t('fileIO.loadLayout')}
+              </button>
+            )}
+            {onSideloadJson && (
+              <button
+                type="button"
+                className={IMPORT_BTN}
+                onClick={onSideloadJson}
+                disabled={fileDisabled}
+                data-testid="layout-store-sideload-json"
+              >
+                {t('fileIO.sideloadJson')}
+              </button>
+            )}
+          </div>
         </div>
       )}
 
