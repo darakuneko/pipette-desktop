@@ -372,6 +372,7 @@
     "import": "Import",
     "saveCurrentState": "Save Current State",
     "history": "Synced Data",
+    "export": "Export",
     "exportCurrent": "Export Current State",
     "confirmOverwrite": "Overwrite?",
     "exportVil": ".vil",
@@ -541,7 +542,7 @@
     "save": "Save Fav",
     "loadFav": "Load Fav",
     "load": "Load",
-    "labelPlaceholder": "Label (optional)",
+    "labelPlaceholder": "Label",
     "noSaved": "No saved favorites",
     "saveFailed": "Failed to save favorite",
     "loadFailed": "Failed to load favorite",
@@ -550,6 +551,14 @@
     "rename": "Rename",
     "delete": "Delete",
     "saveCurrentState": "Save Current State",
-    "history": "Synced Data"
+    "history": "Synced Data",
+    "export": "Export",
+    "exportAll": "Export All",
+    "import": "Import",
+    "exportFailed": "Failed to export favorites",
+    "importFailed": "Failed to import favorites",
+    "importSuccess": "Imported {{imported}} entries",
+    "importPartial": "Imported {{imported}} entries ({{skipped}} skipped)",
+    "importEmpty": "No entries were imported"
   }
 }

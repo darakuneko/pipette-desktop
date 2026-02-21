@@ -372,6 +372,7 @@
     "import": "インポート",
     "saveCurrentState": "現在の状態を保存",
     "history": "同期データ",
+    "export": "エクスポート",
     "exportCurrent": "現在の状態をエクスポート",
     "confirmOverwrite": "上書きしますか？",
     "exportVil": ".vil",
@@ -541,7 +542,7 @@
     "save": "お気に入り保存",
     "loadFav": "お気に入り読込",
     "load": "読み込み",
-    "labelPlaceholder": "ラベル（任意）",
+    "labelPlaceholder": "ラベル",
     "noSaved": "保存済みのお気に入りはありません",
     "saveFailed": "お気に入りの保存に失敗しました",
     "loadFailed": "お気に入りの読み込みに失敗しました",
@@ -550,6 +551,14 @@
     "rename": "名前変更",
     "delete": "削除",
     "saveCurrentState": "現在の状態を保存",
-    "history": "同期データ"
+    "history": "同期データ",
+    "export": "エクスポート",
+    "exportAll": "すべてエクスポート",
+    "import": "インポート",
+    "exportFailed": "お気に入りのエクスポートに失敗しました",
+    "importFailed": "お気に入りのインポートに失敗しました",
+    "importSuccess": "{{imported}} 件インポートしました",
+    "importPartial": "{{imported}} 件インポートしました（{{skipped}} 件スキップ）",
+    "importEmpty": "インポートされたエントリはありません"
   }
 }

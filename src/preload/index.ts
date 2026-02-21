@@ -9,7 +9,7 @@ import * as protocol from './protocol'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, KeyboardDefinition } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
-import type { SavedFavoriteMeta } from '../shared/types/favorite-store'
+import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
@@ -167,6 +167,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_RENAME, type, entryId, newLabel),
   favoriteStoreDelete: (type: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_DELETE, type, entryId),
+  favoriteStoreExport: (scope: string, entryId?: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT, scope, entryId),
+  favoriteStoreImport: (): Promise<FavoriteImportResult> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT),
 
   // --- Pipette Settings Store (internal save/load via IPC) ---
   pipetteSettingsGet: (uid: string): Promise<PipetteSettings | null> =>

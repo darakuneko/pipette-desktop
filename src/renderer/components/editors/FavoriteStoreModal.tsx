@@ -5,18 +5,31 @@ import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
+import type { FavoriteImportResultState } from '../../hooks/useFavoriteStore'
 
 interface Props {
   favoriteType: FavoriteType
   entries: SavedFavoriteMeta[]
   loading?: boolean
   saving?: boolean
+  exporting?: boolean
+  importing?: boolean
+  importResult?: FavoriteImportResultState | null
   canSave?: boolean
   onSave: (label: string) => void
   onLoad: (entryId: string) => void
   onRename: (entryId: string, newLabel: string) => void
   onDelete: (entryId: string) => void
+  onExport: () => void
+  onExportEntry: (entryId: string) => void
+  onImport: () => void
   onClose: () => void
+}
+
+function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) => string, result: FavoriteImportResultState): string {
+  if (result.imported === 0) return t('favoriteStore.importEmpty')
+  if (result.skipped > 0) return t('favoriteStore.importPartial', { imported: result.imported, skipped: result.skipped })
+  return t('favoriteStore.importSuccess', { imported: result.imported })
 }
 
 const TYPE_LABEL_KEYS: Record<FavoriteType, string> = {
@@ -32,11 +45,17 @@ export function FavoriteStoreModal({
   entries,
   loading,
   saving,
+  exporting,
+  importing,
+  importResult,
   canSave = true,
   onSave,
   onLoad,
   onRename,
   onDelete,
+  onExport,
+  onExportEntry,
+  onImport,
   onClose,
 }: Props) {
   const { t } = useTranslation()
@@ -47,10 +66,13 @@ export function FavoriteStoreModal({
   const originalLabelRef = useRef('')
   const cancellingRef = useRef(false)
 
+  const trimmedSaveLabel = saveLabel.trim()
+  const canSubmitSave = canSave && !saving && trimmedSaveLabel.length > 0
+
   function handleSaveSubmit(e: React.FormEvent): void {
     e.preventDefault()
-    if (saving || !canSave) return
-    onSave(saveLabel.trim())
+    if (!canSubmitSave) return
+    onSave(trimmedSaveLabel)
     setSaveLabel('')
   }
 
@@ -90,7 +112,7 @@ export function FavoriteStoreModal({
       onClick={onClose}
     >
       <div
-        className="w-[440px] max-w-[90vw] max-h-[85vh] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-[440px] max-w-[90vw] h-[70vh] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -104,9 +126,8 @@ export function FavoriteStoreModal({
           <ModalCloseButton testid="favorite-store-modal-close" onClick={onClose} />
         </div>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-5 pb-5">
-
+        {/* Fixed top sections */}
+        <div className="shrink-0 px-5">
           {/* Save Current State section */}
           <div className="pt-4">
             <SectionHeader label={t('favoriteStore.saveCurrentState')} />
@@ -121,7 +142,7 @@ export function FavoriteStoreModal({
               />
               <button
                 type="submit"
-                disabled={saving || !canSave}
+                disabled={!canSubmitSave}
                 className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
                 data-testid="favorite-store-save-submit"
               >
@@ -130,9 +151,14 @@ export function FavoriteStoreModal({
             </form>
           </div>
 
-          {/* Synced Data section */}
+          {/* Synced Data header */}
           <div className="pt-5">
             <SectionHeader label={t('favoriteStore.history')} count={entries.length} />
+          </div>
+        </div>
+
+        {/* Scrollable Synced Data list */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
 
             {loading && (
               <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
@@ -229,14 +255,58 @@ export function FavoriteStoreModal({
                       </div>
                     </div>
 
-                    {/* Bottom row: date */}
-                    <span className="text-[11px] text-content-muted font-mono">
-                      {formatDate(entry.savedAt)}
-                    </span>
+                    {/* Bottom row: date + export */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-content-muted font-mono">
+                        {formatDate(entry.savedAt)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={exporting || importing}
+                        className={ACTION_BTN}
+                        onClick={() => onExportEntry(entry.id)}
+                        data-testid="favorite-store-export-entry-btn"
+                      >
+                        {t('favoriteStore.export')}
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+        </div>
+
+        {/* Fixed footer: Import / Export */}
+        <div className="shrink-0 border-t border-edge px-5 py-3">
+          <div className="flex items-center gap-2">
+            {importResult && (
+              <span
+                className="text-sm text-accent"
+                data-testid="favorite-store-import-result"
+              >
+                {formatImportMessage(t, importResult)}
+              </span>
+            )}
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                disabled={importing || exporting}
+                className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+                onClick={onImport}
+                data-testid="favorite-store-import-btn"
+              >
+                {t('favoriteStore.import')}
+              </button>
+              <button
+                type="button"
+                disabled={exporting || importing}
+                className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+                onClick={onExport}
+                data-testid="favorite-store-export-btn"
+              >
+                {t('favoriteStore.exportAll')}
+              </button>
+            </div>
           </div>
         </div>
       </div>

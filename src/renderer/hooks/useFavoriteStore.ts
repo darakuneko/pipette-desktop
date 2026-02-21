@@ -12,11 +12,19 @@ export interface UseFavoriteStoreOptions {
   enabled?: boolean
 }
 
+export interface FavoriteImportResultState {
+  imported: number
+  skipped: number
+}
+
 export interface UseFavoriteStoreReturn {
   entries: SavedFavoriteMeta[]
   error: string | null
   saving: boolean
   loading: boolean
+  exporting: boolean
+  importing: boolean
+  importResult: FavoriteImportResultState | null
   showModal: boolean
   refreshEntries: () => Promise<void>
   openModal: () => Promise<void>
@@ -25,6 +33,9 @@ export interface UseFavoriteStoreReturn {
   loadFavorite: (entryId: string) => Promise<boolean>
   renameEntry: (entryId: string, newLabel: string) => Promise<boolean>
   deleteEntry: (entryId: string) => Promise<boolean>
+  exportFavorites: () => Promise<boolean>
+  exportEntry: (entryId: string) => Promise<boolean>
+  importFavorites: () => Promise<boolean>
 }
 
 export function useFavoriteStore({ favoriteType, serialize, apply, enabled = true }: UseFavoriteStoreOptions): UseFavoriteStoreReturn {
@@ -33,6 +44,9 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<FavoriteImportResultState | null>(null)
   const [showModal, setShowModal] = useState(false)
 
   const refreshEntries = useCallback(async () => {
@@ -51,7 +65,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     setShowModal(true)
   }, [refreshEntries])
 
-  const closeModal = useCallback(() => {
+  const closeModal = useCallback((): void => {
     setShowModal(false)
   }, [])
 
@@ -132,11 +146,67 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     }
   }, [favoriteType, refreshEntries])
 
+  const doExport = useCallback(async (entryId?: string): Promise<boolean> => {
+    setError(null)
+    setExporting(true)
+    try {
+      const result = entryId !== undefined
+        ? await window.vialAPI.favoriteStoreExport(favoriteType, entryId)
+        : await window.vialAPI.favoriteStoreExport(favoriteType)
+      if (!result.success) {
+        if (result.error !== 'cancelled') {
+          setError(t('favoriteStore.exportFailed'))
+        }
+        return false
+      }
+      return true
+    } catch {
+      setError(t('favoriteStore.exportFailed'))
+      return false
+    } finally {
+      setExporting(false)
+    }
+  }, [favoriteType, t])
+
+  const exportFavorites = useCallback(async (): Promise<boolean> => {
+    return doExport()
+  }, [doExport])
+
+  const exportEntry = useCallback(async (entryId: string): Promise<boolean> => {
+    return doExport(entryId)
+  }, [doExport])
+
+  const importFavorites = useCallback(async (): Promise<boolean> => {
+    setError(null)
+    setImportResult(null)
+    setImporting(true)
+    try {
+      const result = await window.vialAPI.favoriteStoreImport()
+      if (!result.success) {
+        if (result.error !== 'cancelled') {
+          setError(t('favoriteStore.importFailed'))
+        }
+        return false
+      }
+      setImportResult({ imported: result.imported, skipped: result.skipped })
+      await refreshEntries()
+      return true
+    } catch {
+      setError(t('favoriteStore.importFailed'))
+      return false
+    } finally {
+      setImporting(false)
+    }
+  }, [refreshEntries, t])
+
   return {
     entries,
     error,
     saving,
     loading,
+    exporting,
+    importing,
+    importResult,
     showModal,
     refreshEntries,
     openModal,
@@ -145,5 +215,8 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     loadFavorite,
     renameEntry,
     deleteEntry,
+    exportFavorites,
+    exportEntry,
+    importFavorites,
   }
 }

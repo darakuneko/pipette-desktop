@@ -379,6 +379,12 @@ export function KeyOverridePanelModal({
             onLoad={favStore.loadFavorite}
             onRename={favStore.renameEntry}
             onDelete={favStore.deleteEntry}
+            onExport={favStore.exportFavorites}
+            onExportEntry={favStore.exportEntry}
+            onImport={favStore.importFavorites}
+            exporting={favStore.exporting}
+            importing={favStore.importing}
+            importResult={favStore.importResult}
             onClose={favStore.closeModal}
           />
         )}

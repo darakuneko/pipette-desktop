@@ -13,7 +13,7 @@ import type {
   UnlockStatus,
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
-import type { SavedFavoriteMeta } from './favorite-store'
+import type { SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from './sync'
 import type { PipetteSettings } from './pipette-settings'
@@ -113,6 +113,8 @@ export interface VialAPI {
   favoriteStoreLoad(type: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
   favoriteStoreRename(type: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   favoriteStoreDelete(type: string, entryId: string): Promise<{ success: boolean; error?: string }>
+  favoriteStoreExport(scope: string, entryId?: string): Promise<{ success: boolean; error?: string }>
+  favoriteStoreImport(): Promise<FavoriteImportResult>
 
   // Pipette Settings Store
   pipetteSettingsGet(uid: string): Promise<PipetteSettings | null>

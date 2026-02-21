@@ -42,6 +42,8 @@ export const IpcChannels = {
   FAVORITE_STORE_LOAD: 'favorite-store:load',
   FAVORITE_STORE_RENAME: 'favorite-store:rename',
   FAVORITE_STORE_DELETE: 'favorite-store:delete',
+  FAVORITE_STORE_EXPORT: 'favorite-store:export',
+  FAVORITE_STORE_IMPORT: 'favorite-store:import',
 
   // App Config (renderer ↔ main)
   APP_CONFIG_GET_ALL: 'app-config:get-all',

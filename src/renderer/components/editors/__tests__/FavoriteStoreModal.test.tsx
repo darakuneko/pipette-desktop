@@ -33,6 +33,9 @@ const DEFAULT_PROPS = {
   onLoad: vi.fn(),
   onRename: vi.fn(),
   onDelete: vi.fn(),
+  onExport: vi.fn(),
+  onExportEntry: vi.fn(),
+  onImport: vi.fn(),
   onClose: vi.fn(),
 }
 
@@ -346,7 +349,7 @@ describe('FavoriteStoreModal', () => {
     expect(onSave).not.toHaveBeenCalled()
   })
 
-  it('enables save button when canSave is true', () => {
+  it('enables save button when canSave is true and label is non-empty', () => {
     render(
       <FavoriteStoreModal
         entries={[]}
@@ -355,7 +358,48 @@ describe('FavoriteStoreModal', () => {
       />,
     )
 
+    const input = screen.getByTestId('favorite-store-save-input')
+    fireEvent.change(input, { target: { value: 'Test' } })
     expect(screen.getByTestId('favorite-store-save-submit')).not.toBeDisabled()
+  })
+
+  it('disables save button when label is empty', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-save-submit')).toBeDisabled()
+  })
+
+  it('disables save button when label is whitespace only', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    const input = screen.getByTestId('favorite-store-save-input')
+    fireEvent.change(input, { target: { value: '   ' } })
+    expect(screen.getByTestId('favorite-store-save-submit')).toBeDisabled()
+  })
+
+  it('does not call onSave when label is empty', () => {
+    const onSave = vi.fn()
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+        onSave={onSave}
+      />,
+    )
+
+    const input = screen.getByTestId('favorite-store-save-input')
+    fireEvent.submit(input.closest('form')!)
+    expect(onSave).not.toHaveBeenCalled()
   })
 
   it('does not call onRename when Escape is pressed after changing rename text', () => {
@@ -377,6 +421,227 @@ describe('FavoriteStoreModal', () => {
 
     expect(onRename).not.toHaveBeenCalled()
     expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
+  })
+
+  it('renders export and import buttons', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-export-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('favorite-store-import-btn')).toBeInTheDocument()
+  })
+
+  it('calls onExport when export button clicked', () => {
+    const onExport = vi.fn()
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+        onExport={onExport}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('favorite-store-export-btn'))
+    expect(onExport).toHaveBeenCalledOnce()
+  })
+
+  it('calls onImport when import button clicked', () => {
+    const onImport = vi.fn()
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+        onImport={onImport}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('favorite-store-import-btn'))
+    expect(onImport).toHaveBeenCalledOnce()
+  })
+
+  it('disables export button when exporting', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        exporting
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-export-btn')).toBeDisabled()
+  })
+
+  it('disables import button when importing', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        importing
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-import-btn')).toBeDisabled()
+  })
+
+  it('shows import success message', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        importResult={{ imported: 3, skipped: 0 }}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-import-result')).toHaveTextContent('favoriteStore.importSuccess')
+  })
+
+  it('shows import partial message when skipped > 0', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        importResult={{ imported: 2, skipped: 1 }}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-import-result')).toHaveTextContent('favoriteStore.importPartial')
+  })
+
+  it('shows import empty message when imported is 0', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        importResult={{ imported: 0, skipped: 3 }}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-import-result')).toHaveTextContent('favoriteStore.importEmpty')
+  })
+
+  it('does not show import result when importResult is null', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.queryByTestId('favorite-store-import-result')).not.toBeInTheDocument()
+  })
+
+  it('renders export all button with exportAll key', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-export-btn')).toHaveTextContent('favoriteStore.exportAll')
+  })
+
+  it('renders per-entry export buttons for each entry', () => {
+    render(
+      <FavoriteStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    const exportEntryBtns = screen.getAllByTestId('favorite-store-export-entry-btn')
+    expect(exportEntryBtns).toHaveLength(2)
+  })
+
+  it('calls onExportEntry with entry id when per-entry export clicked', () => {
+    const onExportEntry = vi.fn()
+    render(
+      <FavoriteStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onExportEntry={onExportEntry}
+      />,
+    )
+
+    const exportEntryBtns = screen.getAllByTestId('favorite-store-export-entry-btn')
+    fireEvent.click(exportEntryBtns[0])
+    expect(onExportEntry).toHaveBeenCalledWith('fav-1')
+
+    fireEvent.click(exportEntryBtns[1])
+    expect(onExportEntry).toHaveBeenCalledWith('fav-2')
+  })
+
+  it('places import button before export all button', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    const importBtn = screen.getByTestId('favorite-store-import-btn')
+    const exportBtn = screen.getByTestId('favorite-store-export-btn')
+    const parent = importBtn.parentElement!
+    const children = Array.from(parent.children)
+    expect(children.indexOf(importBtn)).toBeLessThan(children.indexOf(exportBtn))
+  })
+
+  it('disables per-entry export buttons when exporting', () => {
+    render(
+      <FavoriteStoreModal
+        entries={MOCK_ENTRIES}
+        exporting
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    const exportEntryBtns = screen.getAllByTestId('favorite-store-export-entry-btn')
+    for (const btn of exportEntryBtns) {
+      expect(btn).toBeDisabled()
+    }
+  })
+
+  it('disables per-entry export buttons when importing', () => {
+    render(
+      <FavoriteStoreModal
+        entries={MOCK_ENTRIES}
+        importing
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    const exportEntryBtns = screen.getAllByTestId('favorite-store-export-entry-btn')
+    for (const btn of exportEntryBtns) {
+      expect(btn).toBeDisabled()
+    }
+  })
+
+  it('disables import button when exporting', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        exporting
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-import-btn')).toBeDisabled()
+  })
+
+  it('disables export all button when importing', () => {
+    render(
+      <FavoriteStoreModal
+        entries={[]}
+        importing
+        {...DEFAULT_PROPS}
+      />,
+    )
+
+    expect(screen.getByTestId('favorite-store-export-btn')).toBeDisabled()
   })
 
 })

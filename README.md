@@ -1,16 +1,59 @@
 # Pipette
 
-<img width="2648" height="2008" alt="03-keymap-editor" src="https://github.com/user-attachments/assets/7515d6c2-463b-4e62-be68-151ebad630c0" />
-
-
 Refining the way you interact with your Vial-powered keyboards.
 
 Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
 Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, lighting, and more.
 
-## How to use
+[![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)](https://www.electronjs.org/)
+[![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
+[![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
+[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
+[![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
-- [Operation Guide](docs/OPERATION-GUIDE.md) — How to use Pipette (with screenshots)
+## Screenshot
+
+<p align="center">
+  <img width="1200" alt="03-keymap-editor" src="https://github.com/user-attachments/assets/7515d6c2-463b-4e62-be68-151ebad630c0" />
+</p>
+
+## Installation
+
+Download the latest release for your platform:
+
+- **Windows (x64)**  
+  https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-win-x64.exe
+
+- **macOS (Apple Silicon)**  
+  https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-mac-arm64.dmg
+
+- **Linux (x86_64 AppImage)**  
+  https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-linux-x86_64.AppImage
+
+> Linux users: make the AppImage executable before launching.
+> ```bash
+> chmod +x Pipette-linux-x86_64.AppImage
+> ```
+
+
+## Usage
+
+### Quick Start
+
+1.  Connect your Vial-compatible keyboard via USB.
+2.  Launch Pipette.
+3.  The keyboard will be detected automatically.
+4.  Select a layer and start editing key assignments.
+
+### Detailed Guide
+
+For complete instructions with screenshots:
+
+-   [Operation Guide](docs/OPERATION-GUIDE.md)
+
 
 ## Features
 
@@ -33,20 +76,6 @@ Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, l
 - **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard
 - **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, or PDF cheat sheet
 - **Import** — Load `.vil` files to restore keyboard state
-
-### Layer Names
-
-Pipette allows you to assign custom names to each layer. Layer names are stored per-keyboard and synced across devices.  \
-These names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
-
-| Default Name | Common Example |
-|-------------|----------------|
-| Layer 0 | Base layer (QWERTY, Dvorak, etc.) |
-| Layer 1 | Symbol / number layer |
-| Layer 2 | Navigation / function keys |
-| Layer 3 | Media / adjustment layer |
-
-You can rename layers freely in the editor settings to match your workflow.
 
 ### Cloud Sync (Google Drive appDataFolder)
 
@@ -117,17 +146,6 @@ Renderer            — React UI (Tailwind CSS)
 Shared              — Types, constants, IPC channels
 ```
 
-## Built With
-
-[![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
-[![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)](https://vitejs.dev/)
-[![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
-[![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
-[![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
-
 ## Data & Privacy
 
 See the [Data Guide](docs/Data.md) for a complete guide on what data Pipette stores, how cloud sync works, and the security measures in place for external services.
@@ -151,6 +169,9 @@ Contributions are welcome! In particular:
 Pipette is built upon the foundation laid by [Vial](https://get.vial.today/) and [Vial GUI](https://github.com/vial-kb/vial-gui).
 The VIA/Vial protocol implementation, keyboard definition format, and overall design philosophy originate from these projects.
 We are deeply grateful to the Vial team and contributors for making open-source keyboard configuration accessible to everyone.
+
+The Typing Test feature is based on [Monkeytype](https://github.com/monkeytypegame/monkeytype) (GPL-3.0).
+Thank you to the Monkeytype team for their excellent open-source typing test.
 
 ## License
 

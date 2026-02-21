@@ -291,6 +291,15 @@ Open the editor settings panel from the settings button (gear icon) in the keyma
 - Click a layer to switch to it
 - Double-click a layer name to rename it (custom names are saved per keyboard)
 
+Layer names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
+
+| Default Name | Common Example |
+|-------------|----------------|
+| Layer 0 | Base layer (QWERTY, Dvorak, etc.) |
+| Layer 1 | Symbol / number layer |
+| Layer 2 | Navigation / function keys |
+| Layer 3 | Media / adjustment layer |
+
 ### 6.2 Tool Settings (Tools Tab)
 
 ![Tool Settings](screenshots/27-editor-settings-tools.png)
