@@ -25,6 +25,20 @@
 
 クラウド同期が設定されている場合、接続時に同期進捗も表示されます（お気に入りを先に同期し、次にキーボード固有データを同期）。
 
+### 1.3 データモーダル
+
+デバイス選択画面の Data ボタンをクリックすると、お気に入りと Hub 投稿を一元管理するデータモーダルが開きます。
+
+![データモーダル — お気に入り](screenshots/02-data-modal.png)
+
+- **お気に入りタブ**: Tap Dance、Macro、Combo、Key Override、Alt Repeat Key — タイプごとにタブが分かれています
+- エントリごとの操作: クリックでリネーム、削除、または個別の **Export**
+- フッターの **Import** / **Export All** ボタンで一括操作
+
+![データモーダル — Hub Posts](screenshots/02-data-modal-hub-posts.png)
+
+- **Hub Posts** タブ: Pipette Hub のアップロードを管理 (Hub 接続時に表示)
+
 ---
 
 ## 2. キーマップエディタ
@@ -33,7 +47,7 @@
 
 キーマップエディタはキーボードレイアウト表示とキーコードパレットの 2 つの領域で構成されます。
 
-![キーマップエディタ全体](screenshots/02-keymap-editor-overview.png)
+![キーマップエディタ全体](screenshots/03-keymap-editor-overview.png)
 
 - 画面上部: キーボードの物理レイアウト (各キーに現在のキーコードを表示)
 - 画面左側: ツールバー (デュアルモード、ズーム、タイピングテストなど)
@@ -54,11 +68,11 @@
 
 キーボードレイアウトの左側にレイヤー切替ボタンがあります。
 
-![Layer 0](screenshots/03-layer-0.png)
+![Layer 0](screenshots/04-layer-0.png)
 
-![Layer 1](screenshots/04-layer-1.png)
+![Layer 1](screenshots/05-layer-1.png)
 
-![Layer 2](screenshots/05-layer-2.png)
+![Layer 2](screenshots/06-layer-2.png)
 
 - レイヤー番号ボタンをクリックしてレイヤーを切り替えます
 - Layer 0 がデフォルトレイヤーです
@@ -74,7 +88,7 @@
 
 通常の文字キー、ファンクションキー、修飾キー、ナビゲーションキーなどの基本キーコードです。
 
-![Basic タブ](screenshots/06-tab-basic.png)
+![Basic タブ](screenshots/07-tab-basic.png)
 
 - 文字キー (A-Z, 0-9, 記号)
 - ファンクションキー (F1-F24)
@@ -86,7 +100,7 @@
 
 レイヤー操作用のキーコードです。
 
-![Layers タブ](screenshots/07-tab-layers.png)
+![Layers タブ](screenshots/08-tab-layers.png)
 
 - **MO(n)**: 押している間だけレイヤー n に切り替え
 - **DF(n)**: デフォルトレイヤーを n に変更
@@ -99,7 +113,7 @@
 
 修飾キーの組み合わせやタップ時の動作を設定するキーコードです。
 
-![Modifiers タブ](screenshots/08-tab-modifiers.png)
+![Modifiers タブ](screenshots/09-tab-modifiers.png)
 
 - **One-Shot Modifier (OSM)**: 次のキー入力のみ修飾キーを有効化
 - **Mod-Tap**: 長押しで修飾キー、タップで通常キー
@@ -109,7 +123,7 @@
 
 タップとホールドで異なる動作を割り当てるキーコードです。
 
-![Tap-Hold / Tap Dance タブ](screenshots/09-tab-tapDance.png)
+![Tap-Hold / Tap Dance タブ](screenshots/10-tab-tapDance.png)
 
 - Tap Dance エントリをクリックすると編集モーダルが開きます
 - 各エントリにタップ・ホールド・ダブルタップなどの動作を設定できます
@@ -118,7 +132,7 @@
 
 マクロキーコードです。
 
-![Macro タブ](screenshots/10-tab-macro.png)
+![Macro タブ](screenshots/11-tab-macro.png)
 
 - マクロエントリをクリックすると編集モーダルが開きます
 - キー入力のシーケンスをマクロとして登録できます
@@ -127,7 +141,7 @@
 
 QMK の高度な機能用キーコードです。
 
-![Quantum タブ](screenshots/11-tab-quantum.png)
+![Quantum タブ](screenshots/12-tab-quantum.png)
 
 - Boot (ブートローダーモード)
 - Caps Word
@@ -142,7 +156,7 @@ QMK の高度な機能用キーコードです。
 
 メディアキー、マウスキー、ジョイスティック操作のキーコードです。
 
-![Media タブ](screenshots/12-tab-media.png)
+![Media タブ](screenshots/13-tab-media.png)
 
 - マウスボタン・移動・スクロール
 - メディア再生制御 (再生/停止/音量)
@@ -152,7 +166,7 @@ QMK の高度な機能用キーコードです。
 
 バックライトと RGB ライティング制御のキーコードです。
 
-![Lighting タブ](screenshots/13-tab-backlight.png)
+![Lighting タブ](screenshots/14-tab-backlight.png)
 
 - RGB Matrix 制御
 - RGB Lighting 制御
@@ -163,7 +177,7 @@ QMK の高度な機能用キーコードです。
 
 ユーザー定義キーコードです。
 
-![User タブ](screenshots/14-tab-user.png)
+![User タブ](screenshots/15-tab-user.png)
 
 - ファームウェアで定義されたカスタムキーコード
 
@@ -175,13 +189,13 @@ QMK の高度な機能用キーコードです。
 
 キーマップエディタ左側のツールバーには以下の機能があります。
 
-![ツールバー](screenshots/15-toolbar.png)
+![ツールバー](screenshots/16-toolbar.png)
 
 ### 4.1 デュアルモード (Split Edit)
 
 キーボードレイアウトを 2 つ並べて表示し、レイヤー間のキー比較やコピーが可能です。
 
-![デュアルモード](screenshots/16-dual-mode.png)
+![デュアルモード](screenshots/17-dual-mode.png)
 
 - ボタンをクリックしてデュアルモードを切り替えます
 - レイヤー間でキー設定をコピーする際に便利です
@@ -190,7 +204,7 @@ QMK の高度な機能用キーコードです。
 
 キーボードレイアウトの表示倍率を変更します。
 
-![ズームイン](screenshots/17-zoom-in.png)
+![ズームイン](screenshots/18-zoom-in.png)
 
 - (+) ボタンでズームイン
 - (-) ボタンでズームアウト
@@ -200,7 +214,7 @@ QMK の高度な機能用キーコードです。
 
 タイピング練習機能です。現在のキーマップでタイピングテストを行えます。
 
-![タイピングテスト](screenshots/18-typing-test.png)
+![タイピングテスト](screenshots/19-typing-test.png)
 
 - WPM (Words Per Minute) と正確性を計測
 - 句読点・数字の有無を切り替え可能
@@ -216,7 +230,7 @@ QMK の高度な機能用キーコードです。
 
 Lighting タブの設定ボタンから開きます。RGB ライティングの色やエフェクトを設定できます。
 
-![ライティング設定](screenshots/19-lighting-modal.png)
+![ライティング設定](screenshots/20-lighting-modal.png)
 
 - HSV カラーピッカーで色を選択
 - プリセットパレットから色を選択
@@ -227,9 +241,9 @@ Lighting タブの設定ボタンから開きます。RGB ライティングの�
 
 Quantum タブのコンボ設定ボタンから開きます。複数キーの同時押しで別のキーを発動させる設定です。
 
-![コンボ一覧](screenshots/20-combo-modal.png)
+![コンボ一覧](screenshots/21-combo-modal.png)
 
-![コンボ詳細](screenshots/21-combo-detail.png)
+![コンボ詳細](screenshots/22-combo-detail.png)
 
 - グリッドタイルからコンボエントリを選択
 - トリガーキーの組み合わせと出力キーを設定
@@ -239,9 +253,9 @@ Quantum タブのコンボ設定ボタンから開きます。複数キーの同
 
 Quantum タブのキーオーバーライド設定ボタンから開きます。特定のキー入力を別のキーに置き換える設定です。
 
-![キーオーバーライド一覧](screenshots/22-key-override-modal.png)
+![キーオーバーライド一覧](screenshots/23-key-override-modal.png)
 
-![キーオーバーライド詳細](screenshots/23-key-override-detail.png)
+![キーオーバーライド詳細](screenshots/24-key-override-detail.png)
 
 - トリガーキーと置換キーを設定
 - レイヤー、修飾キー条件を指定
@@ -251,9 +265,9 @@ Quantum タブのキーオーバーライド設定ボタンから開きます。
 
 Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key の代替動作を設定します。
 
-![Alt Repeat Key 一覧](screenshots/24-alt-repeat-key-modal.png)
+![Alt Repeat Key 一覧](screenshots/25-alt-repeat-key-modal.png)
 
-![Alt Repeat Key 詳細](screenshots/25-alt-repeat-key-detail.png)
+![Alt Repeat Key 詳細](screenshots/26-alt-repeat-key-detail.png)
 
 - 直前に押したキーに応じた代替キーを設定
 - 許可する修飾キーを指定
@@ -263,19 +277,21 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 各エディタモーダル (Tap Dance、Macro、Combo、Key Override、Alt Repeat Key) には、個別エントリの設定を保存・読み込みできる **Fav** ボタンがあります。
 
-![Fav ボタン](screenshots/30-fav-button.png)
+![Fav ボタン](screenshots/31-fav-button.png)
 
 - **Fav** ボタン (黄色) をクリックしてお気に入りモーダルを開きます
 - **Save Current State**: ラベルを入力して Save をクリックすると、現在のエントリ設定が保存されます
-- **Synced Data**: 保存済みのエントリが一覧表示され、読み込み・リネーム・削除ができます
+- **Synced Data**: 保存済みのエントリが一覧表示され、読み込み・リネーム・削除・**Export** ができます
 
-![お気に入りモーダル](screenshots/31-fav-modal.png)
+![お気に入りモーダル](screenshots/32-fav-modal.png)
 
 - **Load**: 保存した設定を現在のエントリに適用
 - **Rename**: 保存したエントリのラベルを変更
 - **Delete**: 保存したエントリを削除
+- **Export**: 個別の保存エントリをファイルとしてダウンロード
+- **Import** / **Export All**: フッターのボタンでファイルからのインポートや全エントリの一括エクスポートが可能
 
-> **Note**: お気に入りは特定のキーボードに依存しません。保存したエントリは互換性のある別のキーボードでも読み込めます。クラウド同期を有効にすると、複数デバイス間でも同期されます (§6.4 参照)。
+> **Note**: お気に入りは特定のキーボードに依存しません。保存したエントリは互換性のある別のキーボードでも読み込めます。クラウド同期を有効にすると、複数デバイス間でも同期されます (§6.4 参照)。お気に入りはデバイス選択画面のデータモーダルからも管理できます (§1.3 参照)。
 
 ---
 
@@ -285,11 +301,11 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 ### 6.1 レイヤー設定 (Layers タブ)
 
-![レイヤー設定](screenshots/26-editor-settings-layers.png)
+![レイヤー設定](screenshots/27-editor-settings-layers.png)
 
 - レイヤー一覧（現在のレイヤーがハイライト表示）
 - レイヤーをクリックして切り替え
-- レイヤー名をダブルクリックしてリネーム（カスタム名はキーボードごとに保存）
+- レイヤー名をクリックしてリネーム（カスタム名はキーボードごとに保存）
 
 レイヤー名は Pipette 固有の機能です。キーボードファームウェアには書き込まれず、Vial や他のキーマップエディタでは表示されません。
 
@@ -302,7 +318,7 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 ### 6.2 ツール設定 (Tools タブ)
 
-![ツール設定](screenshots/27-editor-settings-tools.png)
+![ツール設定](screenshots/28-editor-settings-tools.png)
 
 - **Keyboard Layout**: キーラベルの表示レイアウトを選択（QWERTY、Dvorak など）
 - **Zoom**: キーボードレイアウトの表示倍率を調整
@@ -312,7 +328,7 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 ### 6.3 データ管理 (Data タブ)
 
-![データ管理](screenshots/28-editor-settings-data.png)
+![データ管理](screenshots/29-editor-settings-data.png)
 
 - **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード
 - **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF チートシートとしてダウンロード
@@ -324,9 +340,11 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 
 Pipette は保存したスナップショット、お気に入り、キーボードごとの設定を Google Drive 経由で複数デバイス間で同期できます。
 
-同期はデバイス選択画面の **設定** モーダル (歯車アイコン) の **データと同期** タブで設定します:
+同期はデバイス選択画面の **設定** モーダル (歯車アイコン) の **データ** タブで設定します:
 
-![データと同期タブ](screenshots/hub-settings-data-sync.png)
+![データタブ](screenshots/hub-settings-data-sync.png)
+
+データタブには Google アカウント、データ同期、Pipette Hub、トラブルシューティングの各セクションがあります。
 
 #### Google アカウント
 
@@ -379,11 +397,8 @@ Pipette は保存したスナップショット、お気に入り、キーボー
 
 Hub 機能を使用するには Google アカウント認証が必要です。先に Google アカウントの認証を済ませてください。デバイス選択画面の **設定** モーダル (歯車アイコン) で設定します:
 
-1. **データと同期** タブで **Connect** をクリックして Google アカウントでサインイン
-2. **Hub** タブに切り替え — **Connected** と表示されていることを確認
-
-![Hub タブ](screenshots/hub-settings-hub-tab.png)
-
+1. **データ** タブで Google アカウントセクションの **Connect** をクリックして Google アカウントでサインイン
+2. 同じデータタブ内の **Pipette Hub** セクションまでスクロール — **Connected** と表示されていることを確認
 3. **Display Name** を設定 — Hub の投稿に表示される名前です
 4. アップロードしたキーマップは **My Posts** リストに表示されます
 
@@ -435,7 +450,7 @@ Hub 認証の詳細は [Data Guide](Data.md) を参照してください。
 
 画面下部のステータスバーには接続情報と操作ボタンが表示されます。
 
-![ステータスバー](screenshots/29-status-bar.png)
+![ステータスバー](screenshots/30-status-bar.png)
 
 - **デバイス名**: 接続中のキーボード名を表示
 - **ロードラベル**: 読み込んだスナップショットのラベル名 (スナップショット読み込み時のみ表示)

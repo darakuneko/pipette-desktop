@@ -73,7 +73,8 @@ For complete instructions with screenshots:
 ### Data Management
 
 - **Snapshots** — Save and restore complete keyboard states (keymap, macros, dynamic entries, QMK settings)
-- **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard
+- **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard. Per-entry export, bulk import/export supported
+- **Data Modal** — Centralized favorite and Hub post management from the device selection screen
 - **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, or PDF cheat sheet
 - **Import** — Load `.vil` files to restore keyboard state
 

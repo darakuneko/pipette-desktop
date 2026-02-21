@@ -107,10 +107,10 @@ async function waitForDebugPort(port: number, timeoutMs = 15_000): Promise<void>
   throw new Error(`Debug port ${port} not available after ${timeoutMs}ms`)
 }
 
-// --- Phase 1 & 2: Global Settings (Data & Sync, Hub) ---
+// --- Phase 1: Global Settings (Data tab) ---
 
 async function captureGlobalSettings(page: Page): Promise<void> {
-  console.log('\n--- Phase 1: Settings -> Data & Sync tab ---')
+  console.log('\n--- Phase 1: Settings -> Data tab ---')
   const settingsBtn = page.locator('[data-testid="settings-button"]')
   if (!(await isAvailable(settingsBtn))) return
 
@@ -125,23 +125,7 @@ async function captureGlobalSettings(page: Page): Promise<void> {
     await dataTab.click()
     await page.waitForTimeout(500)
     await capture(page, 'hub-settings-data-sync', { fullPage: true })
-    console.log('  Data & Sync tab captured')
-  }
-
-  console.log('\n--- Phase 2: Settings -> Hub tab ---')
-  const hubTab = page.locator('[data-testid="settings-tab-hub"]')
-  if (await isAvailable(hubTab)) {
-    await hubTab.click()
-    await page.waitForTimeout(1000)
-    await capture(page, 'hub-settings-hub-tab', { fullPage: true })
-    console.log('  Hub tab captured')
-
-    if (await isAvailable(page.locator('[data-testid="hub-display-name-input"]'))) {
-      console.log('  Hub: display name input available')
-    }
-    if (await isAvailable(page.locator('[data-testid="hub-requires-auth"]'))) {
-      console.log('  Hub: requires authentication')
-    }
+    console.log('  Data tab captured')
   }
 
   await page.locator('[data-testid="settings-close"]').click()

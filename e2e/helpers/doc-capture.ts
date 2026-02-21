@@ -98,6 +98,34 @@ async function captureDeviceSelection(page: Page): Promise<void> {
   await capture(page, 'device-selection', { fullPage: true })
 }
 
+// --- Phase 1.5: Data Modal (from device selector) ---
+
+async function captureDataModal(page: Page): Promise<void> {
+  console.log('\n--- Phase 1.5: Data Modal ---')
+
+  const dataBtn = page.locator('[data-testid="data-button"]')
+  if (!(await isAvailable(dataBtn))) {
+    console.log('  [skip] data-button not found')
+    return
+  }
+
+  await dataBtn.click()
+  await page.waitForTimeout(500)
+
+  const backdrop = page.locator('[data-testid="data-modal-backdrop"]')
+  try {
+    await backdrop.waitFor({ state: 'visible', timeout: 3000 })
+  } catch {
+    console.log('  [skip] Data modal did not open')
+    return
+  }
+
+  await capture(page, 'data-modal', { fullPage: true })
+
+  await page.locator('[data-testid="data-modal-close"]').click()
+  await page.waitForTimeout(300)
+}
+
 // --- Phase 2: Keymap Editor Overview ---
 
 async function captureKeymapEditor(page: Page): Promise<void> {
@@ -207,6 +235,7 @@ async function captureSidebarTools(page: Page): Promise<void> {
     await typingTestBtn.click()
     await page.waitForTimeout(1000)
     await capture(page, 'typing-test', { fullPage: true })
+    await dismissNotificationModal(page)
     await typingTestBtn.click()
     await page.waitForTimeout(500)
   } else {
@@ -443,6 +472,7 @@ async function main(): Promise<void> {
   try {
     await dismissNotificationModal(page)
     await captureDeviceSelection(page)
+    await captureDataModal(page)
 
     const connected = await connectDevice(page)
     if (!connected) {

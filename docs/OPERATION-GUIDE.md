@@ -25,6 +25,20 @@ Click a keyboard name in the list to open the keymap editor. A connecting overla
 
 If Cloud Sync is configured, sync progress is also displayed during connection (favorites first, then keyboard-specific data).
 
+### 1.3 Data Modal
+
+The Data button on the device selection screen opens the Data modal for centralized management of favorites and Hub posts.
+
+![Data Modal — Favorites](screenshots/02-data-modal.png)
+
+- **Favorites tabs**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type has its own tab
+- Per-entry actions: click to rename, delete, or **Export** individual entries
+- **Import** / **Export All** buttons at the footer for bulk operations
+
+![Data Modal — Hub Posts](screenshots/02-data-modal-hub-posts.png)
+
+- **Hub Posts** tab: Manage your Pipette Hub uploads (visible when Hub is connected)
+
 ---
 
 ## 2. Keymap Editor
@@ -33,7 +47,7 @@ If Cloud Sync is configured, sync progress is also displayed during connection (
 
 The keymap editor consists of two main areas: the keyboard layout display and the keycode palette.
 
-![Keymap Editor Overview](screenshots/02-keymap-editor-overview.png)
+![Keymap Editor Overview](screenshots/03-keymap-editor-overview.png)
 
 - Top area: Physical keyboard layout (shows the current keycode assigned to each key)
 - Left side: Toolbar (dual mode, zoom, typing test, etc.)
@@ -54,11 +68,11 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 
 Layer switching buttons are located on the left side of the keyboard layout.
 
-![Layer 0](screenshots/03-layer-0.png)
+![Layer 0](screenshots/04-layer-0.png)
 
-![Layer 1](screenshots/04-layer-1.png)
+![Layer 1](screenshots/05-layer-1.png)
 
-![Layer 2](screenshots/05-layer-2.png)
+![Layer 2](screenshots/06-layer-2.png)
 
 - Click layer number buttons to switch between layers
 - Layer 0 is the default layer
@@ -74,7 +88,7 @@ Select keycodes from different categories using the tabbed palette at the bottom
 
 Standard character keys, function keys, modifier keys, and navigation keys.
 
-![Basic Tab](screenshots/06-tab-basic.png)
+![Basic Tab](screenshots/07-tab-basic.png)
 
 - Character keys (A-Z, 0-9, symbols)
 - Function keys (F1-F24)
@@ -86,7 +100,7 @@ Standard character keys, function keys, modifier keys, and navigation keys.
 
 Keycodes for layer operations.
 
-![Layers Tab](screenshots/07-tab-layers.png)
+![Layers Tab](screenshots/08-tab-layers.png)
 
 - **MO(n)**: Momentarily activate layer n while held
 - **DF(n)**: Set default layer to n
@@ -99,7 +113,7 @@ Keycodes for layer operations.
 
 Keycodes for modifier key combinations and tap behavior settings.
 
-![Modifiers Tab](screenshots/08-tab-modifiers.png)
+![Modifiers Tab](screenshots/09-tab-modifiers.png)
 
 - **One-Shot Modifier (OSM)**: Activate modifier for the next keypress only
 - **Mod-Tap**: Modifier on hold, regular key on tap
@@ -109,7 +123,7 @@ Keycodes for modifier key combinations and tap behavior settings.
 
 Keycodes that assign different actions to tap and hold.
 
-![Tap-Hold / Tap Dance Tab](screenshots/09-tab-tapDance.png)
+![Tap-Hold / Tap Dance Tab](screenshots/10-tab-tapDance.png)
 
 - Click a Tap Dance entry to open the edit modal
 - Configure tap, hold, double-tap, and other actions for each entry
@@ -118,7 +132,7 @@ Keycodes that assign different actions to tap and hold.
 
 Macro keycodes.
 
-![Macro Tab](screenshots/10-tab-macro.png)
+![Macro Tab](screenshots/11-tab-macro.png)
 
 - Click a macro entry to open the edit modal
 - Record sequences of key inputs as macros
@@ -127,7 +141,7 @@ Macro keycodes.
 
 Keycodes for advanced QMK features.
 
-![Quantum Tab](screenshots/11-tab-quantum.png)
+![Quantum Tab](screenshots/12-tab-quantum.png)
 
 - Boot (bootloader mode)
 - Caps Word
@@ -142,7 +156,7 @@ Keycodes for advanced QMK features.
 
 Keycodes for media keys, mouse keys, and joystick operations.
 
-![Media Tab](screenshots/12-tab-media.png)
+![Media Tab](screenshots/13-tab-media.png)
 
 - Mouse buttons, movement, and scrolling
 - Media playback controls (play/stop/volume)
@@ -152,7 +166,7 @@ Keycodes for media keys, mouse keys, and joystick operations.
 
 Keycodes for backlight and RGB lighting controls.
 
-![Lighting Tab](screenshots/13-tab-backlight.png)
+![Lighting Tab](screenshots/14-tab-backlight.png)
 
 - RGB Matrix controls
 - RGB Lighting controls
@@ -163,7 +177,7 @@ Keycodes for backlight and RGB lighting controls.
 
 User-defined keycodes.
 
-![User Tab](screenshots/14-tab-user.png)
+![User Tab](screenshots/15-tab-user.png)
 
 - Custom keycodes defined in firmware
 
@@ -175,13 +189,13 @@ User-defined keycodes.
 
 The toolbar on the left side of the keymap editor provides the following features.
 
-![Toolbar](screenshots/15-toolbar.png)
+![Toolbar](screenshots/16-toolbar.png)
 
 ### 4.1 Dual Mode (Split Edit)
 
 Displays two keyboard layouts side by side for comparing and copying keys between layers.
 
-![Dual Mode](screenshots/16-dual-mode.png)
+![Dual Mode](screenshots/17-dual-mode.png)
 
 - Click the button to toggle dual mode
 - Useful for copying key settings between layers
@@ -190,7 +204,7 @@ Displays two keyboard layouts side by side for comparing and copying keys betwee
 
 Adjusts the keyboard layout display scale.
 
-![Zoom In](screenshots/17-zoom-in.png)
+![Zoom In](screenshots/18-zoom-in.png)
 
 - (+) button to zoom in
 - (-) button to zoom out
@@ -200,7 +214,7 @@ Adjusts the keyboard layout display scale.
 
 A typing practice feature. Test your typing with the current keymap.
 
-![Typing Test](screenshots/18-typing-test.png)
+![Typing Test](screenshots/19-typing-test.png)
 
 - Measures WPM (Words Per Minute) and accuracy
 - Toggle punctuation and numbers on/off
@@ -216,7 +230,7 @@ Open detail setting modals from the settings buttons at the bottom of each keyco
 
 Open from the Lighting tab settings button. Configure RGB lighting colors and effects.
 
-![Lighting Settings](screenshots/19-lighting-modal.png)
+![Lighting Settings](screenshots/20-lighting-modal.png)
 
 - Select colors with the HSV color picker
 - Choose colors from preset palette
@@ -227,9 +241,9 @@ Open from the Lighting tab settings button. Configure RGB lighting colors and ef
 
 Open from the Quantum tab combo settings button. Configure simultaneous key press combinations to trigger different keys.
 
-![Combo List](screenshots/20-combo-modal.png)
+![Combo List](screenshots/21-combo-modal.png)
 
-![Combo Detail](screenshots/21-combo-detail.png)
+![Combo Detail](screenshots/22-combo-detail.png)
 
 - Select combo entries from the grid tiles
 - Configure trigger key combinations and output keys
@@ -239,9 +253,9 @@ Open from the Quantum tab combo settings button. Configure simultaneous key pres
 
 Open from the Quantum tab key override settings button. Replace specific key inputs with different keys.
 
-![Key Override List](screenshots/22-key-override-modal.png)
+![Key Override List](screenshots/23-key-override-modal.png)
 
-![Key Override Detail](screenshots/23-key-override-detail.png)
+![Key Override Detail](screenshots/24-key-override-detail.png)
 
 - Configure trigger and replacement keys
 - Specify layer and modifier conditions
@@ -251,9 +265,9 @@ Open from the Quantum tab key override settings button. Replace specific key inp
 
 Open from the Quantum tab Alt Repeat Key settings button. Configure alternative actions for the Repeat Key.
 
-![Alt Repeat Key List](screenshots/24-alt-repeat-key-modal.png)
+![Alt Repeat Key List](screenshots/25-alt-repeat-key-modal.png)
 
-![Alt Repeat Key Detail](screenshots/25-alt-repeat-key-detail.png)
+![Alt Repeat Key Detail](screenshots/26-alt-repeat-key-detail.png)
 
 - Set alternative keys based on the last key pressed
 - Specify allowed modifiers
@@ -263,19 +277,21 @@ Open from the Quantum tab Alt Repeat Key settings button. Configure alternative 
 
 Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includes a **Fav** button for saving and loading individual entry configurations.
 
-![Fav Button](screenshots/30-fav-button.png)
+![Fav Button](screenshots/31-fav-button.png)
 
 - Click the **Fav** button (yellow) to open the Favorites modal
 - **Save Current State**: Enter a label and click Save to store the current entry configuration
-- **Synced Data**: Previously saved entries are listed with Load, Rename, and Delete actions
+- **Synced Data**: Previously saved entries are listed with Load, Rename, Delete, and **Export** actions
 
-![Favorites Modal](screenshots/31-fav-modal.png)
+![Favorites Modal](screenshots/32-fav-modal.png)
 
 - **Load**: Apply a saved configuration to the current entry
 - **Rename**: Change the label of a saved entry
 - **Delete**: Remove a saved entry
+- **Export**: Download an individual saved entry as a file
+- **Import** / **Export All**: Use the footer buttons to import entries from a file or export all entries at once
 
-> **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.4).
+> **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.4). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
 
 ---
 
@@ -285,11 +301,11 @@ Open the editor settings panel from the settings button (gear icon) in the keyma
 
 ### 6.1 Layer Settings (Layers Tab)
 
-![Layer Settings](screenshots/26-editor-settings-layers.png)
+![Layer Settings](screenshots/27-editor-settings-layers.png)
 
 - Layer list with the current layer highlighted
 - Click a layer to switch to it
-- Double-click a layer name to rename it (custom names are saved per keyboard)
+- Click a layer name to rename it (custom names are saved per keyboard)
 
 Layer names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
 
@@ -302,7 +318,7 @@ Layer names are Pipette-specific — they are not written to the keyboard firmwa
 
 ### 6.2 Tool Settings (Tools Tab)
 
-![Tool Settings](screenshots/27-editor-settings-tools.png)
+![Tool Settings](screenshots/28-editor-settings-tools.png)
 
 - **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
 - **Zoom**: Adjust the keyboard layout display scale
@@ -312,7 +328,7 @@ Layer names are Pipette-specific — they are not written to the keyboard firmwa
 
 ### 6.3 Data Management (Data Tab)
 
-![Data Management](screenshots/28-editor-settings-data.png)
+![Data Management](screenshots/29-editor-settings-data.png)
 
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, or PDF cheat sheet
@@ -324,9 +340,11 @@ Layer names are Pipette-specific — they are not written to the keyboard firmwa
 
 Pipette can sync your saved snapshots, favorites, and per-keyboard settings across multiple devices via Google Drive.
 
-Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Data & Sync** tab:
+Sync is configured in the **Settings** modal (gear icon on the device selection screen), under the **Data** tab:
 
-![Data & Sync Tab](screenshots/hub-settings-data-sync.png)
+![Data Tab](screenshots/hub-settings-data-sync.png)
+
+The Data tab contains the following sections: Google Account, Data Sync, Pipette Hub, and Troubleshooting.
 
 #### Google Account
 
@@ -379,11 +397,8 @@ See the [Data Guide](Data.md) for details on what is synced and how your data is
 
 Hub features require Google account authentication. Please complete Google account authentication first. Configure Hub in the **Settings** modal (gear icon on the device selection screen):
 
-1. In the **Data & Sync** tab, click **Connect** to sign in with your Google account
-2. Switch to the **Hub** tab — it should show **Connected**
-
-![Hub Tab](screenshots/hub-settings-hub-tab.png)
-
+1. In the **Data** tab, click **Connect** under the Google Account section to sign in with your Google account
+2. Scroll down to the **Pipette Hub** section in the same Data tab — it should show **Connected**
 3. Set your **Display Name** — this name is shown on your Hub posts
 4. Your uploaded keymaps appear in the **My Posts** list
 
@@ -435,7 +450,7 @@ See the [Data Guide](Data.md) for details on how Hub authentication works.
 
 The status bar at the bottom of the screen shows connection information and action buttons.
 
-![Status Bar](screenshots/29-status-bar.png)
+![Status Bar](screenshots/30-status-bar.png)
 
 - **Device name**: Shows the name of the connected keyboard
 - **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
