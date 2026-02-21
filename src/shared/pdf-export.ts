@@ -76,6 +76,53 @@ function pdfKeyLabel(rawLabel: string, qmkId: string): string {
   return QMK_ALIAS_FALLBACK[qmkId] ?? qmkId.replace(/^KC_/, '')
 }
 
+function degreesToRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180
+}
+
+/** Rotate point (px,py) by `angle` degrees around center (cx,cy). */
+function rotatePoint(
+  px: number,
+  py: number,
+  angle: number,
+  cx: number,
+  cy: number,
+): [number, number] {
+  const rad = degreesToRadians(angle)
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const dx = px - cx
+  const dy = py - cy
+  return [cx + dx * cos - dy * sin, cy + dx * sin + dy * cos]
+}
+
+/** Compute bounding-box corners of a key, accounting for rotation. */
+function keyCorners(key: KleKey): [number, number][] {
+  const corners: [number, number][] = [
+    [key.x, key.y],
+    [key.x + key.width, key.y],
+    [key.x + key.width, key.y + key.height],
+    [key.x, key.y + key.height],
+  ]
+  const has2 =
+    key.width2 !== key.width ||
+    key.height2 !== key.height ||
+    key.x2 !== 0 ||
+    key.y2 !== 0
+  if (has2) {
+    corners.push(
+      [key.x + key.x2, key.y + key.y2],
+      [key.x + key.x2 + key.width2, key.y + key.y2],
+      [key.x + key.x2 + key.width2, key.y + key.y2 + key.height2],
+      [key.x + key.x2, key.y + key.y2 + key.height2],
+    )
+  }
+  if (key.rotation === 0) return corners
+  return corners.map(([x, y]) =>
+    rotatePoint(x, y, key.rotation, key.rotationX, key.rotationY),
+  )
+}
+
 function computeBounds(keys: KleKey[]): Bounds {
   if (keys.length === 0) {
     return { minX: 0, minY: 0, width: 0, height: 0 }
@@ -86,10 +133,12 @@ function computeBounds(keys: KleKey[]): Bounds {
   let maxX = -Infinity
   let maxY = -Infinity
   for (const key of keys) {
-    if (key.x < minX) minX = key.x
-    if (key.y < minY) minY = key.y
-    if (key.x + key.width > maxX) maxX = key.x + key.width
-    if (key.y + key.height > maxY) maxY = key.y + key.height
+    for (const [x, y] of keyCorners(key)) {
+      if (x < minX) minX = x
+      if (y < minY) minY = y
+      if (x > maxX) maxX = x
+      if (y > maxY) maxY = y
+    }
   }
   return { minX, minY, width: maxX - minX, height: maxY - minY }
 }
@@ -111,6 +160,50 @@ function formatTimestamp(date: Date): string {
   return `${d} ${t}`
 }
 
+type PdfMatrix = { toString(): string }
+type PdfMatrixCtor = new (
+  sx: number, shy: number, shx: number, sy: number, tx: number, ty: number,
+) => PdfMatrix
+
+/**
+ * Apply rotation transform for a key in jsPDF's coordinate system.
+ * jsPDF converts mm to PDF points internally (Y-flipped), so we compute
+ * the rotation matrix in PDF point space and apply via `cm` operator.
+ */
+function applyKeyRotation(
+  doc: jsPDF,
+  key: KleKey,
+  offsetX: number,
+  offsetY: number,
+  scale: number,
+): void {
+  if (key.rotation === 0) return
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const MatrixCtor = (doc as any).Matrix as PdfMatrixCtor
+  const k = doc.internal.scaleFactor
+  const H = doc.internal.pageSize.getHeight() * k
+
+  // Rotation center in mm -> PDF points (Y-up)
+  const rcx = (offsetX + key.rotationX * scale) * k
+  const rcy = H - (offsetY + key.rotationY * scale) * k
+
+  // Negate: CW in visual Y-down = CW in PDF Y-up = negative angle in math convention
+  const rad = degreesToRadians(-key.rotation)
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+
+  const matrix = new MatrixCtor(
+    cos,
+    sin,
+    -sin,
+    cos,
+    rcx * (1 - cos) + rcy * sin,
+    rcy * (1 - cos) - rcx * sin,
+  )
+  doc.setCurrentTransformationMatrix(matrix)
+}
+
 function drawKey(
   doc: jsPDF,
   key: KleKey,
@@ -120,6 +213,12 @@ function drawKey(
   scale: number,
   input: PdfExportInput,
 ): void {
+  const hasRotation = key.rotation !== 0
+  if (hasRotation) {
+    doc.saveGraphicsState()
+    applyKeyRotation(doc, key, offsetX, offsetY, scale)
+  }
+
   const spacing = scale * SPACING_RATIO
   const x = offsetX + key.x * scale
   const y = offsetY + key.y * scale
@@ -188,6 +287,10 @@ function drawKey(
       })
     }
   }
+
+  if (hasRotation) {
+    doc.restoreGraphicsState()
+  }
 }
 
 function drawEncoder(
@@ -199,6 +302,12 @@ function drawEncoder(
   scale: number,
   input: PdfExportInput,
 ): void {
+  const hasRotation = key.rotation !== 0
+  if (hasRotation) {
+    doc.saveGraphicsState()
+    applyKeyRotation(doc, key, offsetX, offsetY, scale)
+  }
+
   const spacing = scale * SPACING_RATIO
   const cx = offsetX + key.x * scale + (key.width * scale - spacing) / 2
   const cy = offsetY + key.y * scale + (key.height * scale - spacing) / 2
@@ -225,6 +334,10 @@ function drawEncoder(
   const labelSize = fitText(doc, label, r * 1.6, Math.min(ENCODER_LABEL_MAX, scale * ENCODER_LABEL_SCALE))
   doc.setFontSize(labelSize)
   doc.text(label, cx, cy + r * 0.3, { align: 'center', baseline: 'middle' })
+
+  if (hasRotation) {
+    doc.restoreGraphicsState()
+  }
 }
 
 export function generateKeymapPdf(input: PdfExportInput): string {
