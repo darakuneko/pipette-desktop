@@ -583,7 +583,6 @@ export function App() {
       title: entry.label || deviceName,
       keyboardName: deviceName,
       vilJson: vilToVialGuiJson(vilData, buildVilExportContext(vilData)),
-      pippetteJson: JSON.stringify(vilData),
       keymapC: generateKeymapC(params),
       pdfBase64,
       thumbnailBase64,

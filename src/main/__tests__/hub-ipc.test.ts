@@ -103,7 +103,6 @@ describe('hub-ipc', () => {
     title: 'My Keymap',
     keyboardName: 'TestBoard',
     vilJson: '{"keymap":{}}',
-    pippetteJson: '{"uid":"0x1"}',
     keymapC: 'const uint16_t keymaps[]',
     pdfBase64: 'cGRmLWRhdGE=',
     thumbnailBase64: Buffer.from('fake-jpeg').toString('base64'),
@@ -156,7 +155,6 @@ describe('hub-ipc', () => {
       'TestBoard',
       expect.objectContaining({
         vil: expect.objectContaining({ name: 'TestBoard.vil' }),
-        pippette: expect.objectContaining({ name: 'TestBoard.pippette' }),
         c: expect.objectContaining({ name: 'TestBoard.c' }),
         pdf: expect.objectContaining({ name: 'TestBoard.pdf' }),
         thumbnail: expect.objectContaining({ name: 'TestBoard.jpg' }),
@@ -211,7 +209,6 @@ describe('hub-ipc', () => {
 
     it.each([
       ['vilJson', 'vil'],
-      ['pippetteJson', 'pippette'],
       ['keymapC', 'keymap C'],
     ] as const)('rejects %s exceeding 10 MB', async (paramKey, errorLabel) => {
       const handler = getHandler()
