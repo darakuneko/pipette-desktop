@@ -37,12 +37,19 @@ const mockLayerKeycodes = [
   { qmkId: 'MO(1)', label: 'MO(1)', hidden: false, alias: ['MO(1)'], masked: false },
 ]
 
+const mockLMMods = [
+  { qmkId: 'MOD_LSFT', label: 'LSft', tooltip: 'Left Shift', hidden: false, alias: ['MOD_LSFT'], masked: false },
+  { qmkId: 'MOD_LCTL', label: 'LCtl', tooltip: 'Left Control', hidden: false, alias: ['MOD_LCTL'], masked: false },
+]
+
 vi.mock('../categories', () => ({
   KEYCODE_CATEGORIES: [
     { id: 'basic', labelKey: 'keycodes.basic', getKeycodes: () => mockKeycodes },
     { id: 'layers', labelKey: 'keycodes.layers', getKeycodes: () => mockLayerKeycodes },
   ],
 }))
+
+const allMockKeycodes = [...mockKeycodes, ...mockLMMods]
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => {
@@ -59,6 +66,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     if (code === 0x0204) return 'LSFT(KC_A)'
     // C_S_T(KC_A) = 0x2304 — masked keycode with underscores in prefix
     if (code === 0x2304) return 'C_S_T(KC_A)'
+    // LM0 with mod=0 (empty inner)
+    if (code === 0x7000) return 'LM0(0x0)'
+    // LM0 with MOD_LSFT
+    if (code === 0x7002) return 'LM0(MOD_LSFT)'
     return `0x${code.toString(16).padStart(4, '0')}`
   },
   deserialize: (val: string) => {
@@ -75,11 +86,11 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     // Extract inner keycode from e.g. "LT0(KC_A)" -> "KC_A"
     const match = /\(([^)]+)\)/.exec(qmkId)
     if (match) {
-      return mockKeycodes.find((kc) => kc.qmkId === match[1])
+      return allMockKeycodes.find((kc) => kc.qmkId === match[1])
     }
     return mockKeycodes.find((kc) => kc.qmkId === qmkId)
   },
-  isLMKeycode: () => false,
+  isLMKeycode: (code: number) => code === 0x7000 || code === 0x7002,
   resolve: (name: string) => {
     if (name === 'QMK_LM_MASK') return 0x1f
     if (name === 'KC_A') return 4
@@ -88,7 +99,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     if (name === 'KC_ENTER') return 0x28
     return 0
   },
-  getAvailableLMMods: () => [],
+  getAvailableLMMods: () => mockLMMods,
   getKeycodeRevision: () => 0,
   isModMaskKeycode: (code: number) => code >= 0x0100 && code <= 0x1fff,
   isModTapKeycode: (code: number) => code >= 0x6000 && code < 0x8000,
@@ -446,5 +457,27 @@ describe('PopoverTabKey — modMask transition preserves query', () => {
     expect(input.value).toBe('MO')
     expect(screen.queryByTestId('popover-result-MO(1)')).not.toBeInTheDocument()
     expect(screen.getByText('No keycodes found')).toBeInTheDocument()
+  })
+})
+
+describe('PopoverTabKey — LM maskOnly initialQuery', () => {
+  const onSelect = vi.fn()
+
+  it('shows empty search input when LM key has no modifier (mod=0)', () => {
+    // LM0 with mod=0 serializes as "LM0(0x0)" — inner is not a real keycode
+    render(
+      <PopoverTabKey currentKeycode={0x7000} maskOnly onKeycodeSelect={onSelect} />,
+    )
+    const input = screen.getByTestId('popover-search-input') as HTMLInputElement
+    expect(input.value).toBe('')
+  })
+
+  it('shows stripped modifier name when LM key has a modifier set', () => {
+    // LM0 with MOD_LSFT serializes as "LM0(MOD_LSFT)" — inner is MOD_LSFT
+    render(
+      <PopoverTabKey currentKeycode={0x7002} maskOnly onKeycodeSelect={onSelect} />,
+    )
+    const input = screen.getByTestId('popover-search-input') as HTMLInputElement
+    expect(input.value).toBe('LSFT')
   })
 })

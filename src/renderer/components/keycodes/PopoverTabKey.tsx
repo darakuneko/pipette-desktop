@@ -44,6 +44,13 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycode
       if (basicCode === 0) return ''
       return stripPrefix(serialize(basicCode))
     }
+    // LM keycodes need special handling: when mod=0, serialize returns "LM0(0x0)"
+    // and findInnerKeycode returns null, so the generic mask fallback would show
+    // "LM0(0x0)" stripped instead of an empty search box.
+    if (maskOnly && isLMKeycode(currentKeycode)) {
+      const inner = findInnerKeycode(serialize(currentKeycode))
+      return inner ? stripPrefix(inner.qmkId) : ''
+    }
     const serialized = serialize(currentKeycode)
     if (isMask(serialized)) {
       if (maskOnly) {
