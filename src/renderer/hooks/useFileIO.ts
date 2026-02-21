@@ -71,7 +71,7 @@ export function useFileIO({
     setError(null)
     setLoading(true)
     try {
-      const result = await window.vialAPI.loadLayout()
+      const result = await window.vialAPI.loadLayout(t('fileIO.loadLayout'))
       if (!result.success) {
         if (result.error !== 'cancelled') {
           setError(t('error.loadFailed'))

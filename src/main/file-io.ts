@@ -100,12 +100,12 @@ export function setupFileIO(): void {
     })
   })
 
-  secureHandle(IpcChannels.FILE_LOAD_LAYOUT, async (event) => {
+  secureHandle(IpcChannels.FILE_LOAD_LAYOUT, async (event, title?: unknown) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'No window' }
 
     const result = await dialog.showOpenDialog(win, {
-      title: 'Import Layout',
+      title: typeof title === 'string' ? title : 'Import Layout',
       filters: [
         { name: 'Vial Layout', extensions: ['vil'] },
         { name: 'All Files', extensions: ['*'] },
@@ -125,12 +125,12 @@ export function setupFileIO(): void {
     }
   })
 
-  secureHandle(IpcChannels.SIDELOAD_JSON, async (event) => {
+  secureHandle(IpcChannels.SIDELOAD_JSON, async (event, title?: unknown) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'No window' }
 
     const result = await dialog.showOpenDialog(win, {
-      title: 'Load from JSON file',
+      title: typeof title === 'string' ? title : 'Load from JSON file',
       filters: [
         { name: 'JSON Files', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },

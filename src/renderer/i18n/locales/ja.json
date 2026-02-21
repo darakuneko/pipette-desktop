@@ -319,7 +319,7 @@
   },
   "fileIO": {
     "saveLayout": ".vilファイルをエクスポート",
-    "loadLayout": ".vil",
+    "loadLayout": ".vilをインポート",
     "sideloadJson": "JSONサイドロード",
     "exportKeymapC": "keymap.c をエクスポート",
     "exportPdf": "キーマップPDFをエクスポート",

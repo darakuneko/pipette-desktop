@@ -133,16 +133,16 @@ const vialAPI = {
   // --- File I/O (IPC to main for native file dialogs) ---
   saveLayout: (json: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_SAVE_LAYOUT, json, deviceName),
-  loadLayout: (): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.FILE_LOAD_LAYOUT),
+  loadLayout: (title?: string): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FILE_LOAD_LAYOUT, title),
   exportKeymapC: (content: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_KEYMAP_C, content, deviceName),
   exportPdf: (base64Data: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_PDF, base64Data, deviceName),
   exportCsv: (content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_CSV, content, defaultName),
-  sideloadJson: (): Promise<{ success: boolean; data?: unknown; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SIDELOAD_JSON),
+  sideloadJson: (title?: string): Promise<{ success: boolean; data?: unknown; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SIDELOAD_JSON, title),
 
   // --- Snapshot Store (internal save/load via IPC) ---
   snapshotStoreList: (uid: string): Promise<{ success: boolean; entries?: SnapshotMeta[]; error?: string }> =>

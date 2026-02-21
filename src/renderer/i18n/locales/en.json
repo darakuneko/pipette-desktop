@@ -319,7 +319,7 @@
   },
   "fileIO": {
     "saveLayout": "Export .vil file",
-    "loadLayout": ".vil",
+    "loadLayout": "Import .vil",
     "sideloadJson": "Sideload JSON",
     "exportKeymapC": "Export keymap.c file",
     "exportPdf": "Export keymap PDF",

@@ -898,7 +898,7 @@ export function App() {
   const handleLoadDummy = useCallback(async () => {
     setDummyError(null)
     try {
-      const result = await window.vialAPI.sideloadJson()
+      const result = await window.vialAPI.sideloadJson(t('app.loadDummy'))
       if (!result.success) {
         if (result.error !== 'cancelled') setDummyError(t('error.sideloadFailed'))
         return
