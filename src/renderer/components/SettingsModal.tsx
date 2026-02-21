@@ -1398,10 +1398,10 @@ export function SettingsModal({
           {activeTab === 'data' && (
             <div className="pt-4">
               {/* Google Account */}
-              <section className="mb-6">
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
+              <section className="mb-4">
+                <h3 className="mb-3 text-[15px] font-bold text-content">
                   {t('sync.googleAccount')}
-                </h4>
+                </h3>
                 {sync.authStatus.authenticated ? (
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-accent" data-testid="sync-auth-status">
@@ -1441,9 +1441,16 @@ export function SettingsModal({
                 )}
               </section>
 
+              <hr className="my-4 border-edge" />
+
+              {/* Data Sync */}
+              <h3 className="mb-3 text-[15px] font-bold text-content" data-testid="data-sync-title">
+                {t('settings.dataSync')}
+              </h3>
+
               {/* Sync Unavailable */}
               {sync.syncUnavailable && (
-                <div className="mb-6 flex items-center justify-between rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger" data-testid="sync-unavailable">
+                <div className="mb-4 flex items-center justify-between rounded border border-danger/30 bg-danger/10 p-3 text-sm text-danger" data-testid="sync-unavailable">
                   <span>{t('sync.unavailable')}</span>
                   <button
                     type="button"
@@ -1456,11 +1463,58 @@ export function SettingsModal({
                 </div>
               )}
 
-              {/* Hub Enable/Disable */}
-              <section className="mb-6">
+              {/* Encryption Password */}
+              <section className="mb-4">
                 <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('hub.enableToggle')}
+                  {t('sync.encryptionPassword')}
                 </h4>
+                {renderPasswordSection()}
+              </section>
+
+              {/* Sync Controls */}
+              <div className="mb-2 grid grid-cols-2 gap-3">
+                <div className={ROW_CLASS} data-testid="sync-auto-row">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('sync.autoSync')}
+                  </span>
+                  <button
+                    type="button"
+                    className={sync.config.autoSync ? BTN_SECONDARY : BTN_PRIMARY}
+                    onClick={handleAutoSyncToggle}
+                    disabled={!sync.config.autoSync && syncDisabled}
+                    data-testid={sync.config.autoSync ? 'sync-auto-off' : 'sync-auto-on'}
+                  >
+                    {t(sync.config.autoSync ? 'sync.disable' : 'sync.enable')}
+                  </button>
+                </div>
+
+                <div className={ROW_CLASS} data-testid="sync-manual-row">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('sync.manualSync')}
+                  </span>
+                  <button
+                    type="button"
+                    className={BTN_PRIMARY}
+                    onClick={handleSyncNow}
+                    disabled={syncDisabled}
+                    data-testid="sync-now"
+                  >
+                    {t('sync.sync')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Sync Status */}
+              <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
+
+              <hr className="my-4 border-edge" />
+
+              {/* Pipette Hub */}
+              <h3 className="mb-3 text-[15px] font-bold text-content" data-testid="pipette-hub-title">
+                {t('hub.pipetteHub')}
+              </h3>
+
+              <section className="mb-4">
                 {hubEnabled ? (
                   <div data-testid="hub-enable-row">
                     <div className="flex items-center justify-between">
@@ -1508,7 +1562,7 @@ export function SettingsModal({
               {/* Account Deactivated Warning */}
               {hubAccountDeactivated && hubAuthenticated && (
                 <div
-                  className="mb-6 rounded border border-danger/50 bg-danger/10 p-3 text-sm text-danger"
+                  className="mb-4 rounded border border-danger/50 bg-danger/10 p-3 text-sm text-danger"
                   data-testid="hub-account-deactivated-warning"
                 >
                   {t('hub.accountDeactivated')}
@@ -1517,7 +1571,7 @@ export function SettingsModal({
 
               {/* Auth Conflict Warning */}
               {hubAuthConflict && hubAuthenticated && (
-                <section className="mb-6">
+                <section className="mb-4">
                   <div
                     className="rounded border border-warning/50 bg-warning/10 p-3 text-sm text-warning"
                     data-testid="hub-auth-conflict-warning"
@@ -1535,7 +1589,7 @@ export function SettingsModal({
 
               {/* Display Name */}
               {hubEnabled && hubAuthenticated && !hubAuthConflict && (
-                <section className="mb-6">
+                <section className="mb-4">
                   <HubDisplayNameField
                     currentName={hubDisplayName}
                     onSave={onHubDisplayNameChange}
@@ -1543,53 +1597,11 @@ export function SettingsModal({
                 </section>
               )}
 
-              {/* Encryption Password */}
-              <section className="mb-6">
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('sync.encryptionPassword')}
-                </h4>
-                {renderPasswordSection()}
-              </section>
-
-              {/* Sync Controls */}
-              <div className="mb-6 grid grid-cols-2 gap-3">
-                <div className={ROW_CLASS} data-testid="sync-auto-row">
-                  <span className="text-[13px] font-medium text-content">
-                    {t('sync.autoSync')}
-                  </span>
-                  <button
-                    type="button"
-                    className={sync.config.autoSync ? BTN_SECONDARY : BTN_PRIMARY}
-                    onClick={handleAutoSyncToggle}
-                    disabled={!sync.config.autoSync && syncDisabled}
-                    data-testid={sync.config.autoSync ? 'sync-auto-off' : 'sync-auto-on'}
-                  >
-                    {t(sync.config.autoSync ? 'sync.disable' : 'sync.enable')}
-                  </button>
-                </div>
-
-                <div className={ROW_CLASS} data-testid="sync-manual-row">
-                  <span className="text-[13px] font-medium text-content">
-                    {t('sync.manualSync')}
-                  </span>
-                  <button
-                    type="button"
-                    className={BTN_PRIMARY}
-                    onClick={handleSyncNow}
-                    disabled={syncDisabled}
-                    data-testid="sync-now"
-                  >
-                    {t('sync.sync')}
-                  </button>
-                </div>
-              </div>
-
-              {/* Sync Status */}
-              <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
+              <hr className="my-4 border-edge" />
 
               {/* Troubleshooting (collapsible) */}
-              <details className="mb-6" data-testid="troubleshooting-details">
-                <summary className="cursor-pointer text-sm font-medium text-content-secondary select-none">
+              <details className="mb-4" data-testid="troubleshooting-details">
+                <summary className="cursor-pointer text-[15px] font-bold text-content select-none">
                   {t('sync.troubleshooting')}
                 </summary>
                 <div className="mt-4 space-y-6">
