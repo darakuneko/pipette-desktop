@@ -15,6 +15,7 @@ import {
   syncUnitFromFileName,
   type DriveFile,
 } from './google-drive'
+import { pLimit } from '../../shared/concurrency'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import { mergeEntries, gcTombstones } from './merge'
@@ -22,6 +23,7 @@ import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncScope } from '../../shared/types/sync'
 
+const SYNC_CONCURRENCY = 5
 const DEBOUNCE_MS = 10_000
 const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
 const PASSWORD_CHECK_UNIT = 'password-check'
@@ -112,19 +114,24 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
   const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
   const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
 
+  const limit = pLimit(SYNC_CONCURRENCY)
   const result: UndecryptableFile[] = []
-  for (const file of dataFiles) {
-    try {
-      const envelope = await downloadFile(file.id)
-      await decrypt(envelope, password)
-    } catch {
-      result.push({
-        fileId: file.id,
-        fileName: file.name,
-        syncUnit: syncUnitFromFileName(file.name),
-      })
-    }
-  }
+  await Promise.allSettled(
+    dataFiles.map((file) =>
+      limit(async () => {
+        try {
+          const envelope = await downloadFile(file.id)
+          await decrypt(envelope, password)
+        } catch {
+          result.push({
+            fileId: file.id,
+            fileName: file.name,
+            syncUnit: syncUnitFromFileName(file.name),
+          })
+        }
+      }),
+    ),
+  )
   return result
 }
 
@@ -145,24 +152,31 @@ export async function changePassword(newPassword: string): Promise<void> {
     const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
     const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
 
-    // Phase 1: Download + decrypt all files (fail-fast)
-    // Only catch decryption errors; let network/download errors propagate
-    const decrypted: Array<{ file: DriveFile; plaintext: string; syncUnit: string }> = []
-    for (const file of dataFiles) {
-      const envelope = await downloadFile(file.id)
-      try {
-        const plaintext = await decrypt(envelope, oldPassword)
-        decrypted.push({ file, plaintext, syncUnit: envelope.syncUnit })
-      } catch {
-        throw new Error('sync.changePasswordUndecryptable')
-      }
-    }
+    // Phase 1: Download + decrypt all files (fail-fast on any error)
+    const limit = pLimit(SYNC_CONCURRENCY)
+    const decrypted = await Promise.all(
+      dataFiles.map((file) =>
+        limit(async () => {
+          const envelope = await downloadFile(file.id)
+          try {
+            const plaintext = await decrypt(envelope, oldPassword)
+            return { file, plaintext, syncUnit: envelope.syncUnit }
+          } catch {
+            throw new Error('sync.changePasswordUndecryptable')
+          }
+        }),
+      ),
+    )
 
     // Phase 2: Re-encrypt + upload with new password (overwrite)
-    for (const { file, plaintext, syncUnit } of decrypted) {
-      const newEnvelope = await encrypt(plaintext, newPassword, syncUnit)
-      await uploadFile(file.name, newEnvelope, file.id)
-    }
+    await Promise.all(
+      decrypted.map(({ file, plaintext, syncUnit }) =>
+        limit(async () => {
+          const newEnvelope = await encrypt(plaintext, newPassword, syncUnit)
+          await uploadFile(file.name, newEnvelope, file.id)
+        }),
+      ),
+    )
 
     // Phase 3: Recreate password-check with new password
     const existingPc = remoteFiles.find((f) => f.name === passwordCheckFileName)
@@ -478,34 +492,39 @@ async function executeDownloadSync(
   })
 
   const total = filesToDownload.length
-  let current = 0
+  let completed = 0
   const failedUnits: string[] = []
+  const limit = pLimit(SYNC_CONCURRENCY)
 
-  for (const remoteFile of filesToDownload) {
-    current++
-    const syncUnit = syncUnitFromFileName(remoteFile.name)
-    if (!syncUnit) continue
+  await Promise.allSettled(
+    filesToDownload.map((remoteFile) =>
+      limit(async () => {
+        completed++
+        const syncUnit = syncUnitFromFileName(remoteFile.name)
+        if (!syncUnit) return
 
-    emitProgress({
-      direction: 'download',
-      status: 'syncing',
-      syncUnit,
-      current,
-      total,
-    })
+        emitProgress({
+          direction: 'download',
+          status: 'syncing',
+          syncUnit,
+          current: completed,
+          total,
+        })
 
-    try {
-      await mergeWithRemote(remoteFile.id, syncUnit, password, remoteFiles)
-    } catch (err) {
-      failedUnits.push(syncUnit)
-      emitProgress({
-        direction: 'download',
-        status: 'error',
-        syncUnit,
-        message: errorMessage(err, 'Download failed'),
-      })
-    }
-  }
+        try {
+          await mergeWithRemote(remoteFile.id, syncUnit, password, remoteFiles)
+        } catch (err) {
+          failedUnits.push(syncUnit)
+          emitProgress({
+            direction: 'download',
+            status: 'error',
+            syncUnit,
+            message: errorMessage(err, 'Download failed'),
+          })
+        }
+      }),
+    ),
+  )
 
   return failedUnits
 }
@@ -522,31 +541,36 @@ async function executeUploadSync(
   const remoteFiles = prefetchedFiles ?? await listFiles()
   updateRemoteState(remoteFiles)
   const total = syncUnits.length
-  let current = 0
+  let completed = 0
   const failedUnits: string[] = []
+  const limit = pLimit(SYNC_CONCURRENCY)
 
-  for (const syncUnit of syncUnits) {
-    current++
-    emitProgress({
-      direction: 'upload',
-      status: 'syncing',
-      syncUnit,
-      current,
-      total,
-    })
+  await Promise.allSettled(
+    syncUnits.map((syncUnit) =>
+      limit(async () => {
+        completed++
+        emitProgress({
+          direction: 'upload',
+          status: 'syncing',
+          syncUnit,
+          current: completed,
+          total,
+        })
 
-    try {
-      await syncOrUpload(syncUnit, password, remoteFiles)
-    } catch (err) {
-      failedUnits.push(syncUnit)
-      emitProgress({
-        direction: 'upload',
-        status: 'error',
-        syncUnit,
-        message: errorMessage(err, 'Upload failed'),
-      })
-    }
-  }
+        try {
+          await syncOrUpload(syncUnit, password, remoteFiles)
+        } catch (err) {
+          failedUnits.push(syncUnit)
+          emitProgress({
+            direction: 'upload',
+            status: 'error',
+            syncUnit,
+            message: errorMessage(err, 'Upload failed'),
+          })
+        }
+      }),
+    ),
+  )
 
   // Refresh remote state once after all uploads to prevent polling re-downloads
   const updatedFiles = await listFiles()
@@ -620,22 +644,27 @@ async function pollForRemoteChanges(): Promise<void> {
 
     updateRemoteState(remoteFiles)
 
-    for (const remoteFile of changedFiles) {
-      const syncUnit = syncUnitFromFileName(remoteFile.name)
-      if (!syncUnit) continue
+    const limit = pLimit(SYNC_CONCURRENCY)
+    await Promise.allSettled(
+      changedFiles.map((remoteFile) =>
+        limit(async () => {
+          const syncUnit = syncUnitFromFileName(remoteFile.name)
+          if (!syncUnit) return
 
-      try {
-        await mergeWithRemote(remoteFile.id, syncUnit, password, remoteFiles)
-        emitProgress({
-          direction: 'download',
-          status: 'success',
-          syncUnit,
-          message: 'Sync complete',
-        })
-      } catch {
-        // Polling merge failed — will retry next poll
-      }
-    }
+          try {
+            await mergeWithRemote(remoteFile.id, syncUnit, password, remoteFiles)
+            emitProgress({
+              direction: 'download',
+              status: 'success',
+              syncUnit,
+              message: 'Sync complete',
+            })
+          } catch {
+            // Polling merge failed — will retry next poll
+          }
+        }),
+      ),
+    )
   } catch {
     // Polling failed — will retry next interval
   } finally {
@@ -724,14 +753,19 @@ async function flushPendingChanges(): Promise<void> {
       }
     }
 
-    for (const syncUnit of changes) {
-      try {
-        await syncOrUpload(syncUnit, password, remoteFiles)
-      } catch {
-        // Re-add failed unit so pending stays true
-        pendingChanges.add(syncUnit)
-      }
-    }
+    const limit = pLimit(SYNC_CONCURRENCY)
+    await Promise.allSettled(
+      [...changes].map((syncUnit) =>
+        limit(async () => {
+          try {
+            await syncOrUpload(syncUnit, password, remoteFiles)
+          } catch {
+            // Re-add failed unit so pending stays true
+            pendingChanges.add(syncUnit)
+          }
+        }),
+      ),
+    )
 
     broadcastPendingStatus()
 

@@ -2,10 +2,12 @@
 // Google Drive API client for appDataFolder
 
 import { getAccessToken } from './google-auth'
+import { pLimit } from '../../shared/concurrency'
 import type { SyncEnvelope } from '../../shared/types/sync'
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
 const UPLOAD_API = 'https://www.googleapis.com/upload/drive/v3'
+const DELETE_CONCURRENCY = 5
 
 export interface DriveFile {
   id: string
@@ -127,9 +129,8 @@ export async function deleteFile(fileId: string): Promise<void> {
 
 export async function deleteAllFiles(): Promise<void> {
   const files = await listFiles()
-  for (const file of files) {
-    await deleteFile(file.id)
-  }
+  const limit = pLimit(DELETE_CONCURRENCY)
+  await Promise.allSettled(files.map((file) => limit(() => deleteFile(file.id))))
 }
 
 export function driveFileName(syncUnit: string): string {
@@ -154,9 +155,10 @@ export function syncUnitFromFileName(fileName: string): string | null {
 
 export async function deleteFilesByPrefix(prefix: string): Promise<void> {
   const files = await listFiles()
-  for (const file of files) {
-    if (file.name.startsWith(prefix)) {
-      await deleteFile(file.id)
-    }
-  }
+  const limit = pLimit(DELETE_CONCURRENCY)
+  await Promise.allSettled(
+    files
+      .filter((file) => file.name.startsWith(prefix))
+      .map((file) => limit(() => deleteFile(file.id))),
+  )
 }
