@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useInlineRename } from '../../hooks/useInlineRename'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
@@ -271,13 +272,10 @@ export function LayoutStoreContent({
 }: LayoutStoreContentProps) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState(defaultSaveLabel ?? '')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editLabel, setEditLabel] = useState('')
+  const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
   const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
-  const originalLabelRef = useRef('')
-  const cancellingRef = useRef(false)
 
   function handleSaveSubmit(e: React.FormEvent): void {
     e.preventDefault()
@@ -307,33 +305,9 @@ export function LayoutStoreContent({
     setSaveLabel('')
   }
 
-  function handleRenameSubmit(entryId: string): void {
-    if (cancellingRef.current) {
-      cancellingRef.current = false
-      return
-    }
-    const trimmed = editLabel.trim()
-    if (trimmed && trimmed !== originalLabelRef.current) {
-      onRename(entryId, trimmed)
-    }
-    setEditingId(null)
-  }
-
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
-    if (e.key === 'Enter') {
-      handleRenameSubmit(entryId)
-    } else if (e.key === 'Escape') {
-      e.stopPropagation()
-      cancellingRef.current = true
-      setEditingId(null)
-    }
-  }
-
-  function startRename(entry: SnapshotMeta): void {
-    cancellingRef.current = false
-    setEditingId(entry.id)
-    setEditLabel(entry.label)
-    originalLabelRef.current = entry.label
+    const newLabel = rename.handleKeyDown(e, entryId)
+    if (newLabel) onRename(entryId, newLabel)
   }
 
   function getEntryHubPostId(entry: SnapshotMeta): string | undefined {
@@ -438,30 +412,30 @@ export function LayoutStoreContent({
                 const entryHubPostId = getEntryHubPostId(entry)
                 return (<div
                   key={entry.id}
-                  className="rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30"
+                  className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename.confirmedId === entry.id ? 'confirm-flash' : ''}`}
                   data-testid="layout-store-entry"
+                  onMouseDown={(e) => rename.handleCardMouseDown(e, entry.id)}
                 >
                   {/* Top row: label + action buttons */}
                   <div className="flex items-center justify-between mb-1">
                     <div className="min-w-0 flex-1">
-                      {editingId === entry.id ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="text"
-                            value={editLabel}
-                            onChange={(e) => setEditLabel(e.target.value)}
-                            onBlur={() => handleRenameSubmit(entry.id)}
-                            onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                            maxLength={200}
-                            className="flex-1 rounded-md border border-accent bg-surface px-2 py-0.5 text-sm font-semibold text-content focus:outline-none"
-                            data-testid="layout-store-rename-input"
-                            autoFocus
-                          />
-                        </div>
+                      {rename.editingId === entry.id ? (
+                        <input
+                          type="text"
+                          value={rename.editLabel}
+                          onChange={(e) => rename.setEditLabel(e.target.value)}
+                          onBlur={rename.cancelRename}
+                          onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
+                          maxLength={200}
+                          className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
+                          data-testid="layout-store-rename-input"
+                          autoFocus
+                        />
                       ) : (
                         <div
-                          className="truncate text-sm font-semibold text-content"
+                          className="truncate text-sm font-semibold text-content cursor-pointer"
                           data-testid="layout-store-entry-label"
+                          onClick={() => rename.startRename(entry.id, entry.label)}
                         >
                           {entry.label || t('layoutStore.noLabel')}
                         </div>
@@ -497,14 +471,6 @@ export function LayoutStoreContent({
                             data-testid="layout-store-load-btn"
                           >
                             {t('layoutStore.load')}
-                          </button>
-                          <button
-                            type="button"
-                            className={ACTION_BTN}
-                            onClick={() => startRename(entry)}
-                            data-testid="layout-store-rename-btn"
-                          >
-                            {t('layoutStore.rename')}
                           </button>
                           <button
                             type="button"

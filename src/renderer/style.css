@@ -188,3 +188,12 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-picker-item-text: var(--picker-item-text);
   --color-picker-item-border: var(--picker-item-border);
 }
+
+@keyframes confirm-flash {
+  0% { border-color: oklch(0.623 0.214 259.1); }
+  100% { border-color: var(--color-edge); }
+}
+
+.confirm-flash {
+  animation: confirm-flash 1.2s ease-out;
+}

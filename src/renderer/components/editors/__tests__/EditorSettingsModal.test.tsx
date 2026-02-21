@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { EditorSettingsModal } from '../EditorSettingsModal'
 import { KEYBOARD_LAYOUTS } from '../../../data/keyboard-layouts'
 
@@ -201,15 +201,15 @@ describe('EditorSettingsModal', () => {
     const onLayerChange = vi.fn()
     render(<EditorSettingsModal {...DEFAULT_PROPS} onLayerChange={onLayerChange} />)
 
-    fireEvent.click(screen.getByTestId('editor-settings-layer-2'))
+    fireEvent.click(screen.getByTestId('editor-settings-layer-num-2'))
     expect(onLayerChange).toHaveBeenCalledWith(2)
   })
 
   it('highlights the current layer row', () => {
     render(<EditorSettingsModal {...DEFAULT_PROPS} currentLayer={1} />)
 
-    const layer1 = screen.getByTestId('editor-settings-layer-1')
-    expect(layer1.className).toContain('border-accent')
+    const layerNum = screen.getByTestId('editor-settings-layer-num-1')
+    expect(layerNum.className).toContain('border-accent')
   })
 
   it('displays custom layer names when provided', () => {
@@ -311,6 +311,125 @@ describe('EditorSettingsModal', () => {
 
       expect(screen.queryByTestId('layout-store-save-input')).not.toBeInTheDocument()
       expect(screen.queryByTestId('layout-store-empty')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('layer rename inline editing', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('cancels layer rename on blur (clicking outside)', () => {
+      const onSetLayerName = vi.fn()
+      render(
+        <EditorSettingsModal
+          {...DEFAULT_PROPS}
+          layerNames={['Base', '', '', '']}
+          onSetLayerName={onSetLayerName}
+        />,
+      )
+
+      // Click label to enter edit mode
+      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
+
+      const input = screen.getByTestId('editor-settings-layer-name-input-0')
+      fireEvent.change(input, { target: { value: 'NewName' } })
+
+      // Blur (clicking outside) should cancel, not save
+      fireEvent.blur(input)
+
+      expect(onSetLayerName).not.toHaveBeenCalled()
+      expect(screen.queryByTestId('editor-settings-layer-name-input-0')).not.toBeInTheDocument()
+    })
+
+    it('saves layer rename only on Enter', () => {
+      const onSetLayerName = vi.fn()
+      render(
+        <EditorSettingsModal
+          {...DEFAULT_PROPS}
+          layerNames={['Base', '', '', '']}
+          onSetLayerName={onSetLayerName}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
+
+      const input = screen.getByTestId('editor-settings-layer-name-input-0')
+      fireEvent.change(input, { target: { value: 'NewName' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      expect(onSetLayerName).toHaveBeenCalledWith(0, 'NewName')
+    })
+
+    it('clicking row selects layer without entering edit mode', () => {
+      const onLayerChange = vi.fn()
+      const onSetLayerName = vi.fn()
+      render(
+        <EditorSettingsModal
+          {...DEFAULT_PROPS}
+          layerNames={['Base', '', '', '']}
+          onSetLayerName={onSetLayerName}
+          onLayerChange={onLayerChange}
+        />,
+      )
+
+      // Click on the number box (not the name box)
+      fireEvent.click(screen.getByTestId('editor-settings-layer-num-1'))
+
+      expect(onLayerChange).toHaveBeenCalledWith(1)
+      expect(screen.queryByTestId('editor-settings-layer-name-input-1')).not.toBeInTheDocument()
+    })
+
+    it('shows confirm flash on row after Enter rename', () => {
+      vi.useFakeTimers()
+      const onSetLayerName = vi.fn()
+      render(
+        <EditorSettingsModal
+          {...DEFAULT_PROPS}
+          layerNames={['Base', '', '', '']}
+          onSetLayerName={onSetLayerName}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
+
+      const input = screen.getByTestId('editor-settings-layer-name-input-0')
+      fireEvent.change(input, { target: { value: 'NewName' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Flash is deferred via setTimeout(0) so the class is added after the label mounts
+      act(() => { vi.advanceTimersByTime(0) })
+
+      // After Enter, name box should have confirm flash animation
+      const nameBox = screen.getByTestId('editor-settings-layer-name-box-0')
+      expect(nameBox.className).toContain('confirm-flash')
+
+      // After 1200ms, animation class should be removed
+      act(() => { vi.advanceTimersByTime(1200) })
+      expect(nameBox.className).not.toContain('confirm-flash')
+
+      vi.useRealTimers()
+    })
+
+    it('does not flash when Enter is pressed without changes', () => {
+      const onSetLayerName = vi.fn()
+      render(
+        <EditorSettingsModal
+          {...DEFAULT_PROPS}
+          layerNames={['Base', '', '', '']}
+          onSetLayerName={onSetLayerName}
+        />,
+      )
+
+      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
+
+      const input = screen.getByTestId('editor-settings-layer-name-input-0')
+      // Press Enter without changing the value
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      expect(onSetLayerName).not.toHaveBeenCalled()
+      const nameBox = screen.getByTestId('editor-settings-layer-name-box-0')
+      expect(nameBox.className).not.toContain('confirm-flash')
     })
   })
 

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useInlineRename } from '../../hooks/useInlineRename'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
@@ -60,11 +61,8 @@ export function FavoriteStoreModal({
 }: Props) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState('')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editLabel, setEditLabel] = useState('')
+  const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const originalLabelRef = useRef('')
-  const cancellingRef = useRef(false)
 
   const trimmedSaveLabel = saveLabel.trim()
   const canSubmitSave = canSave && !saving && trimmedSaveLabel.length > 0
@@ -76,33 +74,9 @@ export function FavoriteStoreModal({
     setSaveLabel('')
   }
 
-  function handleRenameSubmit(entryId: string): void {
-    if (cancellingRef.current) {
-      cancellingRef.current = false
-      return
-    }
-    const trimmed = editLabel.trim()
-    if (trimmed && trimmed !== originalLabelRef.current) {
-      onRename(entryId, trimmed)
-    }
-    setEditingId(null)
-  }
-
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
-    if (e.key === 'Enter') {
-      handleRenameSubmit(entryId)
-    } else if (e.key === 'Escape') {
-      e.stopPropagation()
-      cancellingRef.current = true
-      setEditingId(null)
-    }
-  }
-
-  function startRename(entry: SavedFavoriteMeta): void {
-    cancellingRef.current = false
-    setEditingId(entry.id)
-    setEditLabel(entry.label)
-    originalLabelRef.current = entry.label
+    const newLabel = rename.handleKeyDown(e, entryId)
+    if (newLabel) onRename(entryId, newLabel)
   }
 
   return (
@@ -137,6 +111,7 @@ export function FavoriteStoreModal({
                 value={saveLabel}
                 onChange={(e) => setSaveLabel(e.target.value)}
                 placeholder={t('favoriteStore.labelPlaceholder')}
+                maxLength={200}
                 className="flex-1 rounded-lg border border-edge bg-surface px-3.5 py-2 text-[13px] text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
                 data-testid="favorite-store-save-input"
               />
@@ -175,29 +150,30 @@ export function FavoriteStoreModal({
                 {entries.map((entry) => (
                   <div
                     key={entry.id}
-                    className="rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30"
+                    className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename.confirmedId === entry.id ? 'confirm-flash' : ''}`}
                     data-testid="favorite-store-entry"
+                    onMouseDown={(e) => rename.handleCardMouseDown(e, entry.id)}
                   >
                     {/* Top row: label + action buttons */}
                     <div className="flex items-center justify-between mb-1">
                       <div className="min-w-0 flex-1">
-                        {editingId === entry.id ? (
-                          <div className="flex items-center gap-1">
-                            <input
-                              type="text"
-                              value={editLabel}
-                              onChange={(e) => setEditLabel(e.target.value)}
-                              onBlur={() => handleRenameSubmit(entry.id)}
-                              onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                              className="flex-1 rounded-md border border-accent bg-surface px-2 py-0.5 text-sm font-semibold text-content focus:outline-none"
-                              data-testid="favorite-store-rename-input"
-                              autoFocus
-                            />
-                          </div>
+                        {rename.editingId === entry.id ? (
+                          <input
+                            type="text"
+                            value={rename.editLabel}
+                            onChange={(e) => rename.setEditLabel(e.target.value)}
+                            onBlur={rename.cancelRename}
+                            onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
+                            maxLength={200}
+                            className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
+                            data-testid="favorite-store-rename-input"
+                            autoFocus
+                          />
                         ) : (
                           <div
-                            className="truncate text-sm font-semibold text-content"
+                            className="truncate text-sm font-semibold text-content cursor-pointer"
                             data-testid="favorite-store-entry-label"
+                            onClick={() => rename.startRename(entry.id, entry.label)}
                           >
                             {entry.label || t('favoriteStore.noLabel')}
                           </div>
@@ -233,14 +209,6 @@ export function FavoriteStoreModal({
                               data-testid="favorite-store-load-btn"
                             >
                               {t('favoriteStore.load')}
-                            </button>
-                            <button
-                              type="button"
-                              className={ACTION_BTN}
-                              onClick={() => startRename(entry)}
-                              data-testid="favorite-store-rename-btn"
-                            >
-                              {t('favoriteStore.rename')}
                             </button>
                             <button
                               type="button"
