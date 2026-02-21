@@ -81,6 +81,14 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   getMacroIndex: (code: number) => (code === MACRO_0 ? 0 : -1),
   keycodeLabel: (qmkId: string) => qmkId,
   keycodeTooltip: (qmkId: string) => qmkId,
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+}))
+
+vi.mock('../../keycodes/ModifierCheckboxStrip', () => ({
+  ModifierCheckboxStrip: () => null,
 }))
 
 vi.mock('../../../../preload/macro', () => ({

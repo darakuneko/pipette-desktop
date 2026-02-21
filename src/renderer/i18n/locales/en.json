@@ -71,7 +71,10 @@
         "noResults": "No keycodes found",
         "hexLabel": "HexCode",
         "hexManual": "Manually assign keycode in hex",
-        "qmkLabel": "KeyCode: {{value}}"
+        "qmkLabel": "KeyCode: {{value}}",
+        "modMask": "Mod Mask",
+        "modTap": "Mod-Tap",
+        "keySelected": "Selected: {{key}}"
       }
     },
     "layout": {

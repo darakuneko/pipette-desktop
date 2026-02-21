@@ -350,21 +350,45 @@ export const KEYCODES_BOOT: Keycode[] = [
   ),
 ]
 
-export const KEYCODES_MOD_OSM: Keycode[] = [
+const KEYCODES_MOD_OSM_LEFT: Keycode[] = [
   K('OSM(MOD_LSFT)', 'OSM\nLSft', 'Enable Left Shift for one keypress'),
   K('OSM(MOD_LCTL)', 'OSM\nLCtl', 'Enable Left Control for one keypress'),
   K('OSM(MOD_LALT)', 'OSM\nLAlt', 'Enable Left Alt for one keypress'),
   K('OSM(MOD_LGUI)', 'OSM\nLGUI', 'Enable Left GUI for one keypress'),
+  K('OSM(MOD_LCTL|MOD_LSFT)', 'OSM\nLCS', 'Enable Left Control and Shift for one keypress'),
+  K('OSM(MOD_LCTL|MOD_LALT)', 'OSM\nLCA', 'Enable Left Control and Alt for one keypress'),
+  K('OSM(MOD_LCTL|MOD_LGUI)', 'OSM\nLCG', 'Enable Left Control and GUI for one keypress'),
+  K('OSM(MOD_LSFT|MOD_LALT)', 'OSM\nLSA', 'Enable Left Shift and Alt for one keypress'),
+  K('OSM(MOD_LALT|MOD_LGUI)', 'OSM\nLAG', 'Enable Left Alt and GUI for one keypress'),
+  K('OSM(MOD_LSFT|MOD_LGUI)', 'OSM\nLSG', 'Enable Left Shift and GUI for one keypress'),
+  K('OSM(MOD_MEH)', 'OSM\nMeh', 'Enable Left Control, Shift, and Alt for one keypress'),
+  K(
+    'OSM(MOD_LCTL|MOD_LSFT|MOD_LGUI)',
+    'OSM\nLCSG',
+    'Enable Left Control, Shift, and GUI for one keypress',
+  ),
+  K(
+    'OSM(MOD_LCTL|MOD_LALT|MOD_LGUI)',
+    'OSM\nLCAG',
+    'Enable Left Control, Alt, and GUI for one keypress',
+  ),
+  K(
+    'OSM(MOD_LSFT|MOD_LALT|MOD_LGUI)',
+    'OSM\nLSAG',
+    'Enable Left Shift, Alt, and GUI for one keypress',
+  ),
+  K(
+    'OSM(MOD_HYPR)',
+    'OSM\nHyper',
+    'Enable Left Control, Shift, Alt, and GUI for one keypress',
+  ),
+]
+
+const KEYCODES_MOD_OSM_RIGHT: Keycode[] = [
   K('OSM(MOD_RSFT)', 'OSM\nRSft', 'Enable Right Shift for one keypress'),
   K('OSM(MOD_RCTL)', 'OSM\nRCtl', 'Enable Right Control for one keypress'),
   K('OSM(MOD_RALT)', 'OSM\nRAlt', 'Enable Right Alt for one keypress'),
   K('OSM(MOD_RGUI)', 'OSM\nRGUI', 'Enable Right GUI for one keypress'),
-  K('OSM(MOD_LCTL|MOD_LSFT)', 'OSM\nCS', 'Enable Left Control and Shift for one keypress'),
-  K('OSM(MOD_LCTL|MOD_LALT)', 'OSM\nCA', 'Enable Left Control and Alt for one keypress'),
-  K('OSM(MOD_LCTL|MOD_LGUI)', 'OSM\nCG', 'Enable Left Control and GUI for one keypress'),
-  K('OSM(MOD_LSFT|MOD_LALT)', 'OSM\nSA', 'Enable Left Shift and Alt for one keypress'),
-  K('OSM(MOD_LSFT|MOD_LGUI)', 'OSM\nSG', 'Enable Left Shift and GUI for one keypress'),
-  K('OSM(MOD_LALT|MOD_LGUI)', 'OSM\nAG', 'Enable Left Alt and GUI for one keypress'),
   K(
     'OSM(MOD_RCTL|MOD_RSFT)',
     'OSM\nRCS',
@@ -373,22 +397,12 @@ export const KEYCODES_MOD_OSM: Keycode[] = [
   K('OSM(MOD_RCTL|MOD_RALT)', 'OSM\nRCA', 'Enable Right Control and Alt for one keypress'),
   K('OSM(MOD_RCTL|MOD_RGUI)', 'OSM\nRCG', 'Enable Right Control and GUI for one keypress'),
   K('OSM(MOD_RSFT|MOD_RALT)', 'OSM\nRSA', 'Enable Right Shift and Alt for one keypress'),
-  K('OSM(MOD_RSFT|MOD_RGUI)', 'OSM\nRSG', 'Enable Right Shift and GUI for one keypress'),
   K('OSM(MOD_RALT|MOD_RGUI)', 'OSM\nRAG', 'Enable Right Alt and GUI for one keypress'),
+  K('OSM(MOD_RSFT|MOD_RGUI)', 'OSM\nRSG', 'Enable Right Shift and GUI for one keypress'),
   K(
-    'OSM(MOD_LCTL|MOD_LSFT|MOD_LGUI)',
-    'OSM\nCSG',
-    'Enable Left Control, Shift, and GUI for one keypress',
-  ),
-  K(
-    'OSM(MOD_LCTL|MOD_LALT|MOD_LGUI)',
-    'OSM\nCAG',
-    'Enable Left Control, Alt, and GUI for one keypress',
-  ),
-  K(
-    'OSM(MOD_LSFT|MOD_LALT|MOD_LGUI)',
-    'OSM\nSAG',
-    'Enable Left Shift, Alt, and GUI for one keypress',
+    'OSM(MOD_RCTL|MOD_RSFT|MOD_RALT)',
+    'OSM\nRMeh',
+    'Enable Right Control, Shift, and Alt for one keypress',
   ),
   K(
     'OSM(MOD_RCTL|MOD_RSFT|MOD_RGUI)',
@@ -405,58 +419,66 @@ export const KEYCODES_MOD_OSM: Keycode[] = [
     'OSM\nRSAG',
     'Enable Right Shift, Alt, and GUI for one keypress',
   ),
-  K('OSM(MOD_MEH)', 'OSM\nMeh', 'Enable Left Control, Shift, and Alt for one keypress'),
-  K(
-    'OSM(MOD_HYPR)',
-    'OSM\nHyper',
-    'Enable Left Control, Shift, Alt, and GUI for one keypress',
-  ),
-  K(
-    'OSM(MOD_RCTL|MOD_RSFT|MOD_RALT)',
-    'OSM\nRMeh',
-    'Enable Right Control, Shift, and Alt for one keypress',
-  ),
   K(
     'OSM(MOD_RCTL|MOD_RSFT|MOD_RALT|MOD_RGUI)',
-    'OSM\nRHyp',
+    'OSM\nRHyper',
     'Enable Right Control, Shift, Alt, and GUI for one keypress',
   ),
 ]
 
-export const KEYCODES_MOD_MASK: Keycode[] = [
+export const KEYCODES_MOD_OSM: Keycode[] = [
+  ...KEYCODES_MOD_OSM_LEFT,
+  ...KEYCODES_MOD_OSM_RIGHT,
+]
+
+const KEYCODES_MOD_MASK_LEFT: Keycode[] = [
   K('LSFT(kc)', 'LSft\n(kc)', { masked: true }),
   K('LCTL(kc)', 'LCtl\n(kc)', { masked: true }),
   K('LALT(kc)', 'LAlt\n(kc)', { masked: true }),
   K('LGUI(kc)', 'LGui\n(kc)', { masked: true }),
-  K('RSFT(kc)', 'RSft\n(kc)', { masked: true }),
-  K('RCTL(kc)', 'RCtl\n(kc)', { masked: true }),
-  K('RALT(kc)', 'RAlt\n(kc)', { masked: true }),
-  K('RGUI(kc)', 'RGui\n(kc)', { masked: true }),
   K('C_S(kc)', 'LCS\n(kc)', 'LCTL + LSFT', { masked: true, alias: ['LCS(kc)'] }),
   K('LCA(kc)', 'LCA\n(kc)', 'LCTL + LALT', { masked: true }),
   K('LCG(kc)', 'LCG\n(kc)', 'LCTL + LGUI', { masked: true }),
   K('LSA(kc)', 'LSA\n(kc)', 'LSFT + LALT', { masked: true }),
   K('LAG(kc)', 'LAG\n(kc)', 'LALT + LGUI', { masked: true }),
   K('SGUI(kc)', 'LSG\n(kc)', 'LGUI + LSFT', { masked: true, alias: ['LSG(kc)'] }),
-  K('LCAG(kc)', 'LCAG\n(kc)', 'LCTL + LALT + LGUI', { masked: true }),
-  K('RCG(kc)', 'RCG\n(kc)', 'RCTL + RGUI', { masked: true }),
   K('MEH(kc)', 'Meh\n(kc)', 'LCTL + LSFT + LALT', { masked: true }),
+  K('LCSG(kc)', 'LCSG\n(kc)', 'LCTL + LSFT + LGUI', { masked: true }),
+  K('LCAG(kc)', 'LCAG\n(kc)', 'LCTL + LALT + LGUI', { masked: true }),
+  K('LSAG(kc)', 'LSAG\n(kc)', 'LSFT + LALT + LGUI', { masked: true }),
   K('HYPR(kc)', 'Hyper\n(kc)', 'LCTL + LSFT + LALT + LGUI', { masked: true }),
 ]
 
-export const KEYCODES_MOD_TAP: Keycode[] = [
+const KEYCODES_MOD_MASK_RIGHT: Keycode[] = [
+  K('RSFT(kc)', 'RSft\n(kc)', { masked: true }),
+  K('RCTL(kc)', 'RCtl\n(kc)', { masked: true }),
+  K('RALT(kc)', 'RAlt\n(kc)', { masked: true }),
+  K('RGUI(kc)', 'RGui\n(kc)', { masked: true }),
+  K('RCS(kc)', 'RCS\n(kc)', 'RCTL + RSFT', { masked: true }),
+  K('RCA(kc)', 'RCA\n(kc)', 'RCTL + RALT', { masked: true }),
+  K('RSA(kc)', 'RSA\n(kc)', 'RSFT + RALT', { masked: true }),
+  K('RCG(kc)', 'RCG\n(kc)', 'RCTL + RGUI', { masked: true }),
+  K('RSG(kc)', 'RSG\n(kc)', 'RSFT + RGUI', { masked: true }),
+  K('RAG(kc)', 'RAG\n(kc)', 'RALT + RGUI', { masked: true }),
+  K('RMEH(kc)', 'RMeh\n(kc)', 'RCTL + RSFT + RALT', { masked: true }),
+  K('RCSG(kc)', 'RCSG\n(kc)', 'RCTL + RSFT + RGUI', { masked: true }),
+  K('RCAG(kc)', 'RCAG\n(kc)', 'RCTL + RALT + RGUI', { masked: true }),
+  K('RSAG(kc)', 'RSAG\n(kc)', 'RSFT + RALT + RGUI', { masked: true }),
+  K('RHYPR(kc)', 'RHyper\n(kc)', 'RCTL + RSFT + RALT + RGUI', { masked: true }),
+]
+
+export const KEYCODES_MOD_MASK: Keycode[] = [
+  ...KEYCODES_MOD_MASK_LEFT,
+  ...KEYCODES_MOD_MASK_RIGHT,
+]
+
+const KEYCODES_MOD_TAP_LEFT: Keycode[] = [
   K('LSFT_T(kc)', 'LSft_T\n(kc)', 'Left Shift when held, kc when tapped', { masked: true }),
   K('LCTL_T(kc)', 'LCtl_T\n(kc)', 'Left Control when held, kc when tapped', {
     masked: true,
   }),
   K('LALT_T(kc)', 'LAlt_T\n(kc)', 'Left Alt when held, kc when tapped', { masked: true }),
   K('LGUI_T(kc)', 'LGui_T\n(kc)', 'Left GUI when held, kc when tapped', { masked: true }),
-  K('RSFT_T(kc)', 'RSft_T\n(kc)', 'Right Shift when held, kc when tapped', { masked: true }),
-  K('RCTL_T(kc)', 'RCtl_T\n(kc)', 'Right Control when held, kc when tapped', {
-    masked: true,
-  }),
-  K('RALT_T(kc)', 'RAlt_T\n(kc)', 'Right Alt when held, kc when tapped', { masked: true }),
-  K('RGUI_T(kc)', 'RGui_T\n(kc)', 'Right GUI when held, kc when tapped', { masked: true }),
   K('C_S_T(kc)', 'LCS_T\n(kc)', 'Left Control + Left Shift when held, kc when tapped', {
     masked: true,
     alias: ['LCS_T(kc)'],
@@ -469,19 +491,57 @@ export const KEYCODES_MOD_TAP: Keycode[] = [
     masked: true,
     alias: ['LSG_T(kc)'],
   }),
+  K('MEH_T(kc)', 'Meh_T\n(kc)', 'LCTL + LSFT + LALT when held, kc when tapped', {
+    masked: true,
+  }),
+  K('LCSG_T(kc)', 'LCSG_T\n(kc)', 'LCTL + LSFT + LGUI when held, kc when tapped', {
+    masked: true,
+  }),
   K('LCAG_T(kc)', 'LCAG_T\n(kc)', 'LCTL + LALT + LGUI when held, kc when tapped', {
     masked: true,
   }),
-  K('RCG_T(kc)', 'RCG_T\n(kc)', 'RCTL + RGUI when held, kc when tapped', { masked: true }),
-  K('RCAG_T(kc)', 'RCAG_T\n(kc)', 'RCTL + RALT + RGUI when held, kc when tapped', {
-    masked: true,
-  }),
-  K('MEH_T(kc)', 'Meh_T\n(kc)', 'LCTL + LSFT + LALT when held, kc when tapped', {
+  K('LSAG_T(kc)', 'LSAG_T\n(kc)', 'LSFT + LALT + LGUI when held, kc when tapped', {
     masked: true,
   }),
   K('ALL_T(kc)', 'ALL_T\n(kc)', 'LCTL + LSFT + LALT + LGUI when held, kc when tapped', {
     masked: true,
+    alias: ['HYPR_T(kc)'],
   }),
+]
+
+const KEYCODES_MOD_TAP_RIGHT: Keycode[] = [
+  K('RSFT_T(kc)', 'RSft_T\n(kc)', 'Right Shift when held, kc when tapped', { masked: true }),
+  K('RCTL_T(kc)', 'RCtl_T\n(kc)', 'Right Control when held, kc when tapped', {
+    masked: true,
+  }),
+  K('RALT_T(kc)', 'RAlt_T\n(kc)', 'Right Alt when held, kc when tapped', { masked: true }),
+  K('RGUI_T(kc)', 'RGui_T\n(kc)', 'Right GUI when held, kc when tapped', { masked: true }),
+  K('RCS_T(kc)', 'RCS_T\n(kc)', 'RCTL + RSFT when held, kc when tapped', { masked: true }),
+  K('RCA_T(kc)', 'RCA_T\n(kc)', 'RCTL + RALT when held, kc when tapped', { masked: true }),
+  K('RCG_T(kc)', 'RCG_T\n(kc)', 'RCTL + RGUI when held, kc when tapped', { masked: true }),
+  K('RSA_T(kc)', 'RSA_T\n(kc)', 'RSFT + RALT when held, kc when tapped', { masked: true }),
+  K('RAG_T(kc)', 'RAG_T\n(kc)', 'RALT + RGUI when held, kc when tapped', { masked: true }),
+  K('RSG_T(kc)', 'RSG_T\n(kc)', 'RSFT + RGUI when held, kc when tapped', { masked: true }),
+  K('RCSG_T(kc)', 'RCSG_T\n(kc)', 'RCTL + RSFT + RGUI when held, kc when tapped', {
+    masked: true,
+  }),
+  K('RCAG_T(kc)', 'RCAG_T\n(kc)', 'RCTL + RALT + RGUI when held, kc when tapped', {
+    masked: true,
+  }),
+  K('RSAG_T(kc)', 'RSAG_T\n(kc)', 'RSFT + RALT + RGUI when held, kc when tapped', {
+    masked: true,
+  }),
+  K('RMEH_T(kc)', 'RMeh_T\n(kc)', 'RCTL + RSFT + RALT when held, kc when tapped', {
+    masked: true,
+  }),
+  K('RALL_T(kc)', 'RALL_T\n(kc)', 'RCTL + RSFT + RALT + RGUI when held, kc when tapped', {
+    masked: true,
+  }),
+]
+
+export const KEYCODES_MOD_TAP: Keycode[] = [
+  ...KEYCODES_MOD_TAP_LEFT,
+  ...KEYCODES_MOD_TAP_RIGHT,
 ]
 
 export const KEYCODES_MOD_SPECIAL: Keycode[] = [
@@ -1158,6 +1218,49 @@ export function isBasic(qmkId: string): boolean {
   return deserialize(qmkId) < 0x00ff
 }
 
+// --- Modifier mask helpers ---
+
+/** Returns true when the keycode is in the modifier-mask+basic range (0x0100-0x1FFF). */
+export function isModMaskKeycode(code: number): boolean {
+  return code >= 0x0100 && code <= 0x1fff
+}
+
+/** Returns true when the keycode is a basic key (0x0000-0x00FF) or modifier-mask+basic (0x0100-0x1FFF). */
+export function isModifiableKeycode(code: number): boolean {
+  return code >= 0 && code <= 0x1fff
+}
+
+/** Extracts the 5-bit modifier mask from bits 8-12. */
+export function extractModMask(code: number): number {
+  return (code >> 8) & 0x1f
+}
+
+/** Extracts the basic key portion (bits 0-7). */
+export function extractBasicKey(code: number): number {
+  return code & 0xff
+}
+
+/** Combines a 5-bit modifier mask with a basic keycode. Returns the basic key if mask is 0. */
+export function buildModMaskKeycode(modMask: number, basicKey: number): number {
+  if (modMask === 0) return basicKey & 0xff
+  return ((modMask & 0x1f) << 8) | (basicKey & 0xff)
+}
+
+// --- Mod-Tap helpers ---
+
+/** Returns true when the keycode is in the Mod-Tap range. */
+export function isModTapKeycode(code: number): boolean {
+  const base = resolve('QK_MOD_TAP')
+  return code >= base && code < base + 0x2000
+}
+
+/** Combines a 5-bit modifier mask with a basic keycode into a Mod-Tap keycode. Returns the basic key if mask is 0. */
+export function buildModTapKeycode(modMask: number, basicKey: number): number {
+  if (modMask === 0) return basicKey & 0xff
+  const base = resolve('QK_MOD_TAP')
+  return base | ((modMask & 0x1f) << 8) | (basicKey & 0xff)
+}
+
 // --- Tap Dance helpers ---
 
 export function isTapDanceKeycode(code: number): boolean {
@@ -1285,11 +1388,24 @@ function buildAnyKeycodeFunctions(): Map<string, AnyFn1 | AnyFn2> {
   fns.set('LCA', (kc: number) => r('QK_LCTL') | r('QK_LALT') | kc)
   fns.set('LSA', (kc: number) => r('QK_LSFT') | r('QK_LALT') | kc)
   fns.set('LAG', (kc: number) => r('QK_LALT') | r('QK_LGUI') | kc)
+  fns.set('LCSG', (kc: number) => r('QK_LCTL') | r('QK_LSFT') | r('QK_LGUI') | kc)
+  fns.set('LSAG', (kc: number) => r('QK_LSFT') | r('QK_LALT') | r('QK_LGUI') | kc)
   fns.set('RSA', (kc: number) => r('QK_RSFT') | r('QK_RALT') | kc)
   fns.set('RCS', (kc: number) => r('QK_RCTL') | r('QK_RSFT') | kc)
+  fns.set('RCA', (kc: number) => r('QK_RCTL') | r('QK_RALT') | kc)
   fns.set('SAGR', fns.get('RSA')!)
   fns.set('LCG', (kc: number) => r('QK_LCTL') | r('QK_LGUI') | kc)
   fns.set('RCG', (kc: number) => r('QK_RCTL') | r('QK_RGUI') | kc)
+  fns.set('RSG', (kc: number) => r('QK_RSFT') | r('QK_RGUI') | kc)
+  fns.set('RAG', (kc: number) => r('QK_RALT') | r('QK_RGUI') | kc)
+  fns.set('RMEH', (kc: number) => r('QK_RCTL') | r('QK_RSFT') | r('QK_RALT') | kc)
+  fns.set('RCSG', (kc: number) => r('QK_RCTL') | r('QK_RSFT') | r('QK_RGUI') | kc)
+  fns.set('RCAG', (kc: number) => r('QK_RCTL') | r('QK_RALT') | r('QK_RGUI') | kc)
+  fns.set('RSAG', (kc: number) => r('QK_RSFT') | r('QK_RALT') | r('QK_RGUI') | kc)
+  fns.set(
+    'RHYPR',
+    (kc: number) => r('QK_RCTL') | r('QK_RSFT') | r('QK_RALT') | r('QK_RGUI') | kc,
+  )
 
   // Layer functions (1 or 2 arg)
   fns.set(
@@ -1384,7 +1500,35 @@ function buildAnyKeycodeFunctions(): Map<string, AnyFn1 | AnyFn2> {
   fns.set('RCS_T', (kc: number) => MT_fn(r('MOD_RCTL') | r('MOD_RSFT'), kc))
   fns.set('SAGR_T', fns.get('RSA_T')!)
   fns.set('LCG_T', (kc: number) => MT_fn(r('MOD_LCTL') | r('MOD_LGUI'), kc))
+  fns.set(
+    'LCSG_T',
+    (kc: number) => MT_fn(r('MOD_LCTL') | r('MOD_LSFT') | r('MOD_LGUI'), kc),
+  )
+  fns.set(
+    'LSAG_T',
+    (kc: number) => MT_fn(r('MOD_LSFT') | r('MOD_LALT') | r('MOD_LGUI'), kc),
+  )
+  fns.set('RCA_T', (kc: number) => MT_fn(r('MOD_RCTL') | r('MOD_RALT'), kc))
   fns.set('RCG_T', (kc: number) => MT_fn(r('MOD_RCTL') | r('MOD_RGUI'), kc))
+  fns.set('RSG_T', (kc: number) => MT_fn(r('MOD_RSFT') | r('MOD_RGUI'), kc))
+  fns.set('RAG_T', (kc: number) => MT_fn(r('MOD_RALT') | r('MOD_RGUI'), kc))
+  fns.set(
+    'RCSG_T',
+    (kc: number) => MT_fn(r('MOD_RCTL') | r('MOD_RSFT') | r('MOD_RGUI'), kc),
+  )
+  fns.set(
+    'RSAG_T',
+    (kc: number) => MT_fn(r('MOD_RSFT') | r('MOD_RALT') | r('MOD_RGUI'), kc),
+  )
+  fns.set(
+    'RMEH_T',
+    (kc: number) => MT_fn(r('MOD_RCTL') | r('MOD_RSFT') | r('MOD_RALT'), kc),
+  )
+  fns.set(
+    'RALL_T',
+    (kc: number) =>
+      MT_fn(r('MOD_RCTL') | r('MOD_RSFT') | r('MOD_RALT') | r('MOD_RGUI'), kc),
+  )
 
   // LT0-LT15 shortcuts
   for (let x = 0; x < 16; x++) {

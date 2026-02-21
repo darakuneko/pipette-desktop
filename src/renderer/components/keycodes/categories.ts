@@ -132,9 +132,21 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
     labelKey: 'keycodes.modifiers',
     getKeycodes: () => KEYCODES_MODIFIERS,
     getGroups: () => [
-      { labelKey: 'keycodes.group.osm', keycodes: KEYCODES_MOD_OSM },
-      { labelKey: 'keycodes.group.modMask', keycodes: KEYCODES_MOD_MASK },
-      { labelKey: 'keycodes.group.modTap', keycodes: KEYCODES_MOD_TAP },
+      {
+        labelKey: 'keycodes.group.osm',
+        keycodes: KEYCODES_MOD_OSM,
+        sections: [KEYCODES_MOD_OSM.slice(0, 15), KEYCODES_MOD_OSM.slice(15)],
+      },
+      {
+        labelKey: 'keycodes.group.modMask',
+        keycodes: KEYCODES_MOD_MASK,
+        sections: [KEYCODES_MOD_MASK.slice(0, 15), KEYCODES_MOD_MASK.slice(15)],
+      },
+      {
+        labelKey: 'keycodes.group.modTap',
+        keycodes: KEYCODES_MOD_TAP,
+        sections: [KEYCODES_MOD_TAP.slice(0, 15), KEYCODES_MOD_TAP.slice(15)],
+      },
       { labelKey: 'keycodes.group.modSpecial', keycodes: KEYCODES_MOD_SPECIAL },
     ],
   },

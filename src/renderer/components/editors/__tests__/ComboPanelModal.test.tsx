@@ -32,6 +32,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   keycodeLabel: (qmkId: string) => qmkId,
   keycodeTooltip: (qmkId: string) => qmkId,
   isResetKeycode: () => false,
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({

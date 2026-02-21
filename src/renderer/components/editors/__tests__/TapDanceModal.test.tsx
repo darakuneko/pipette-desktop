@@ -29,6 +29,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   deserialize: (val: string) => Number(val.replace('KC_', '')),
   keycodeLabel: (qmkId: string) => qmkId,
   keycodeTooltip: (qmkId: string) => qmkId,
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({

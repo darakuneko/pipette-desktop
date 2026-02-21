@@ -15,6 +15,9 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.keyPopover.hexLabel': 'HexCode',
         'editor.keymap.keyPopover.hexManual': 'Manually assign keycode in hex',
         'editor.keymap.keyPopover.qmkLabel': `KeyCode: ${opts?.value ?? ''}`,
+        'editor.keymap.keyPopover.modMask': 'Mod Mask',
+        'editor.keymap.keyPopover.modTap': 'Mod-Tap',
+        'editor.keymap.keyPopover.keySelected': `Selected: ${opts?.key ?? ''}`,
         'common.apply': 'Apply',
       }
       return map[key] ?? key
@@ -79,13 +82,28 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   isLMKeycode: () => false,
   resolve: (name: string) => {
     if (name === 'QMK_LM_MASK') return 0x1f
+    if (name === 'KC_A') return 4
+    if (name === 'KC_B') return 5
+    if (name === 'KC_SPACE') return 0x2c
+    if (name === 'KC_ENTER') return 0x28
     return 0
   },
   getAvailableLMMods: () => [],
   getKeycodeRevision: () => 0,
+  isModMaskKeycode: (code: number) => code >= 0x0100 && code <= 0x1fff,
+  isModTapKeycode: (code: number) => code >= 0x6000 && code < 0x8000,
+  extractModMask: (code: number) => (code >> 8) & 0x1f,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask === 0 ? key & 0xff : ((mask & 0x1f) << 8) | (key & 0xff)),
+  buildModTapKeycode: (mask: number, key: number) => (mask === 0 ? key & 0xff : 0x6000 | ((mask & 0x1f) << 8) | (key & 0xff)),
+}))
+
+vi.mock('../ModifierCheckboxStrip', () => ({
+  ModifierCheckboxStrip: () => null,
 }))
 
 import { KeyPopover } from '../KeyPopover'
+import { PopoverTabKey } from '../PopoverTabKey'
 
 function makeAnchorRect(): DOMRect {
   return {
@@ -200,11 +218,11 @@ describe('PopoverTabKey — search', () => {
     expect(screen.getByText('No keycodes found')).toBeInTheDocument()
   })
 
-  it('calls onKeycodeSelect and closes when result is clicked', () => {
+  it('calls onKeycodeSelect when result is clicked (basic key, no mode)', () => {
+    // currentKeycode=4 (KC_A) is basic, so mode is 'none'
     renderAndSearch('A')
     fireEvent.click(screen.getByTestId('popover-result-KC_A'))
     expect(onKeycodeSelect).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'KC_A' }))
-    expect(onClose).toHaveBeenCalled()
   })
 
   it('matches stripped alias — "ent" finds KC_ENTER via KC_ENT alias', () => {
@@ -223,6 +241,29 @@ describe('PopoverTabKey — search', () => {
   it('does not match by prefix — "KC_" alone does not find KC_A', () => {
     renderAndSearch('KC_')
     expect(screen.queryByTestId('popover-result-KC_A')).not.toBeInTheDocument()
+  })
+
+  it('shows "Selected" message instead of "No keycodes found" after selecting a result', () => {
+    renderAndSearch('enter')
+    fireEvent.click(screen.getByTestId('popover-result-KC_ENTER'))
+    // After selection, results are suppressed but input shows the selected label
+    const input = screen.getByTestId('popover-search-input') as HTMLInputElement
+    expect(input.value).toBe('Enter')
+    // Should show "Selected: Enter" instead of "No keycodes found"
+    expect(screen.getByText('Selected: Enter')).toBeInTheDocument()
+    expect(screen.queryByText('No keycodes found')).not.toBeInTheDocument()
+  })
+
+  it('clears "Selected" message when user types again', () => {
+    renderAndSearch('enter')
+    fireEvent.click(screen.getByTestId('popover-result-KC_ENTER'))
+    expect(screen.getByText('Selected: Enter')).toBeInTheDocument()
+    // Typing again should show search results, not "Selected" message
+    fireEvent.change(screen.getByTestId('popover-search-input'), {
+      target: { value: 'space' },
+    })
+    expect(screen.queryByText(/Selected:/)).not.toBeInTheDocument()
+    expect(screen.getByTestId('popover-result-KC_SPACE')).toBeInTheDocument()
   })
 
   it('ranks exact matches first — "a" shows KC_A before KC_TRNS', () => {
@@ -254,11 +295,11 @@ describe('PopoverTabCode — hex input', () => {
     expect(screen.getByText('KeyCode: KC_B')).toBeInTheDocument()
   })
 
-  it('calls onRawKeycodeSelect and closes when apply is clicked', () => {
+  it('calls onRawKeycodeSelect when apply is clicked (popover stays open)', () => {
     renderCodeTab('0005')
     fireEvent.click(screen.getByTestId('popover-code-apply'))
     expect(onRawKeycodeSelect).toHaveBeenCalledWith(5)
-    expect(onClose).toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('disables apply button when value equals current keycode', () => {
@@ -320,7 +361,7 @@ describe('KeyPopover — maskOnly mode', () => {
     fireEvent.click(screen.getByTestId('popover-code-apply'))
     // Should apply full code: 0x5100 | 0x2C = 0x512C (LT0(KC_SPACE))
     expect(onRawKeycodeSelect).toHaveBeenCalledWith(0x512c)
-    expect(onClose).toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
   })
 
   it('rejects hex input exceeding 2 digits in maskOnly Code tab', () => {
@@ -345,30 +386,65 @@ describe('KeyPopover — maskOnly mode', () => {
 })
 
 describe('KeyPopover — masked keycode without underscore prefix', () => {
-  // LSFT(KC_A) = 0x0204 — has no underscore before '('
+  // LSFT(KC_A) = 0x0204 — modifier mask keycode
   const lsftProps = {
     ...defaultProps,
     currentKeycode: 0x0204,
   }
 
-  it('prefills search with outer keycode name, not broken suffix', () => {
+  it('prefills search with inner keycode when modMask mode is active', () => {
     render(<KeyPopover {...lsftProps} />)
     const input = screen.getByTestId('popover-search-input') as HTMLInputElement
-    // Should show "LSFT" (outer name), NOT "A)" (broken stripPrefix result)
-    expect(input.value).toBe('LSFT')
+    // LSFT(KC_A) in modMask mode: should show "A" (inner basic key)
+    expect(input.value).toBe('A')
   })
 
   it('prefills search with outer name for LT0 masked keycode (non-maskOnly)', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x5104} />)
     const input = screen.getByTestId('popover-search-input') as HTMLInputElement
-    // LT0(KC_A) in non-maskOnly: should show "LT0"
+    // LT0(KC_A) in non-maskOnly: not modifiable, mode is 'none', shows outer name "LT0"
     expect(input.value).toBe('LT0')
   })
 
   it('prefills search with outer name for masked keycode with underscores in prefix', () => {
     render(<KeyPopover {...defaultProps} currentKeycode={0x2304} />)
     const input = screen.getByTestId('popover-search-input') as HTMLInputElement
-    // C_S_T(KC_A) in non-maskOnly: should show "C_S_T"
+    // C_S_T(KC_A) in non-maskOnly: not modifiable (> 0x1FFF), mode is 'none', shows outer name "C_S_T"
     expect(input.value).toBe('C_S_T')
+  })
+})
+
+describe('PopoverTabKey — modMask transition preserves query', () => {
+  const onSelect = vi.fn()
+
+  it('keeps basic key results when modMask transitions from 0 to >0', () => {
+    // Start with modMask=0, type "A" which matches basic key KC_A
+    const { rerender } = render(
+      <PopoverTabKey currentKeycode={4} modMask={0} onKeycodeSelect={onSelect} />,
+    )
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'A' } })
+    expect(screen.getByTestId('popover-result-KC_A')).toBeInTheDocument()
+
+    // Transition modMask from 0 to 2 (LSft) — basic key "A" should still be visible
+    rerender(<PopoverTabKey currentKeycode={0x0204} modMask={2} onKeycodeSelect={onSelect} />)
+    const input = screen.getByTestId('popover-search-input') as HTMLInputElement
+    expect(input.value).toBe('A')
+    expect(screen.getByTestId('popover-result-KC_A')).toBeInTheDocument()
+  })
+
+  it('shows no results when modMask transition filters out non-basic query', () => {
+    // Start with modMask=0, type "MO" which matches non-basic MO(1)
+    const { rerender } = render(
+      <PopoverTabKey currentKeycode={4} modMask={0} onKeycodeSelect={onSelect} />,
+    )
+    fireEvent.change(screen.getByTestId('popover-search-input'), { target: { value: 'MO' } })
+    expect(screen.getByTestId('popover-result-MO(1)')).toBeInTheDocument()
+
+    // Transition modMask from 0 to 2 — MO(1) is non-basic, should be filtered out
+    rerender(<PopoverTabKey currentKeycode={0x0204} modMask={2} onKeycodeSelect={onSelect} />)
+    const input = screen.getByTestId('popover-search-input') as HTMLInputElement
+    expect(input.value).toBe('MO')
+    expect(screen.queryByTestId('popover-result-MO(1)')).not.toBeInTheDocument()
+    expect(screen.getByText('No keycodes found')).toBeInTheDocument()
   })
 })

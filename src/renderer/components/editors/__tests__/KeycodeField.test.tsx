@@ -13,6 +13,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     return qmkId
   },
   keycodeTooltip: (qmkId: string) => (qmkId === 'KC_NO' ? undefined : `Tooltip: ${qmkId}`),
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
 }))
 
 describe('KeycodeField', () => {

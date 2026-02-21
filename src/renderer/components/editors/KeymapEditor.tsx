@@ -7,7 +7,7 @@ import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
-import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve } from '../../../shared/keycodes/keycodes'
+import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserializeAllMacros } from '../../../preload/macro'
@@ -326,6 +326,7 @@ interface PopoverForStateProps {
   currentLayer: number
   onKeycodeSelect: (kc: Keycode) => void
   onRawKeycodeSelect: (code: number) => void
+  onModMaskChange?: (newMask: number) => void
   onClose: () => void
 }
 
@@ -336,6 +337,7 @@ function PopoverForState({
   currentLayer,
   onKeycodeSelect,
   onRawKeycodeSelect,
+  onModMaskChange,
   onClose,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
@@ -352,6 +354,7 @@ function PopoverForState({
       maskOnly={maskOnly}
       onKeycodeSelect={onKeycodeSelect}
       onRawKeycodeSelect={onRawKeycodeSelect}
+      onModMaskChange={onModMaskChange}
       onClose={onClose}
     />
   )
@@ -1388,7 +1391,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
         })
       }
-      setPopoverState(null)
     },
     [popoverState, currentLayer, keymap, onSetKey, onSetEncoder, guard, clearPending],
   )
@@ -1406,9 +1408,21 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
         })
       }
-      setPopoverState(null)
     },
     [popoverState, currentLayer, onSetKey, onSetEncoder, guard, clearPending],
+  )
+
+  const handlePopoverModMaskChange = useCallback(
+    async (newMask: number) => {
+      if (!popoverState || popoverState.kind !== 'key') return
+      const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
+      const basicKey = extractBasicKey(currentCode)
+      const newCode = buildModMaskKeycode(newMask, basicKey)
+      await guard([newCode], async () => {
+        await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode)
+      })
+    },
+    [popoverState, currentLayer, keymap, onSetKey, guard],
   )
 
   const handleCopyAllClick = useCallback(async () => {
@@ -1813,6 +1827,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           currentLayer={currentLayer}
           onKeycodeSelect={handlePopoverKeycodeSelect}
           onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+          onModMaskChange={popoverState.kind === 'key' ? handlePopoverModMaskChange : undefined}
           onClose={() => setPopoverState(null)}
         />
       )}

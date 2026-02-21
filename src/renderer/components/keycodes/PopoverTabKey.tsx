@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type Keycode, getKeycodeRevision, serialize, isMask, findInnerKeycode, isBasic, isLMKeycode, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
+import { type Keycode, getKeycodeRevision, serialize, isMask, findInnerKeycode, isBasic, isLMKeycode, getAvailableLMMods, extractBasicKey } from '../../../shared/keycodes/keycodes'
 import { KEYCODE_CATEGORIES } from './categories'
 
 interface SearchEntry {
@@ -29,14 +29,21 @@ function stripPrefix(id: string): string {
 interface Props {
   currentKeycode: number
   maskOnly?: boolean
+  modMask?: number
   onKeycodeSelect: (kc: Keycode) => void
 }
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Props) {
+export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycodeSelect }: Props) {
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
+    // When modifier strip is active, show the inner basic key
+    if (modMask > 0) {
+      const basicCode = extractBasicKey(currentKeycode)
+      if (basicCode === 0) return ''
+      return stripPrefix(serialize(basicCode))
+    }
     const serialized = serialize(currentKeycode)
     if (isMask(serialized)) {
       if (maskOnly) {
@@ -46,8 +53,9 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
       return serialized.substring(0, serialized.indexOf('('))
     }
     return stripPrefix(serialized)
-  }, [currentKeycode, maskOnly])
+  }, [currentKeycode, maskOnly, modMask])
   const [query, setQuery] = useState(initialQuery)
+  const [suppressResults, setSuppressResults] = useState(false)
 
   const lmMode = maskOnly && isLMKeycode(currentKeycode)
 
@@ -73,7 +81,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
     for (const cat of KEYCODE_CATEGORIES) {
       for (const kc of cat.getKeycodes()) {
         if (kc.hidden) continue
-        if (maskOnly && !isBasic(kc.qmkId)) continue
+        if ((maskOnly || modMask > 0) && !isBasic(kc.qmkId)) continue
         const extraAliases = kc.alias.slice(1)
         const searchParts = [
           stripPrefix(kc.qmkId),
@@ -93,9 +101,10 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
       }
     }
     return entries
-  }, [lmMode, maskOnly, getKeycodeRevision()])
+  }, [lmMode, maskOnly, modMask > 0, getKeycodeRevision()])
 
   const results = useMemo(() => {
+    if (suppressResults) return []
     const q = query.trim().toLowerCase()
     if (!q) return []
     const exact: SearchEntry[] = []
@@ -106,14 +115,14 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
       else partial.push(e)
     }
     return [...exact, ...partial].slice(0, MAX_RESULTS)
-  }, [query, searchIndex])
+  }, [query, searchIndex, suppressResults])
 
   return (
     <div className="flex flex-col gap-2">
       <input
         type="text"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => { setSuppressResults(false); setQuery(e.target.value) }}
         placeholder={t('editor.keymap.keyPopover.searchPlaceholder')}
         className="w-full rounded border border-edge bg-surface px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
         autoFocus
@@ -122,7 +131,9 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
       <div className="max-h-[240px] overflow-y-auto">
         {query.trim() && results.length === 0 && (
           <div className="px-2 py-3 text-center text-xs text-content-muted">
-            {t('editor.keymap.keyPopover.noResults')}
+            {suppressResults
+              ? t('editor.keymap.keyPopover.keySelected', { key: query })
+              : t('editor.keymap.keyPopover.noResults')}
           </div>
         )}
         {results.map((entry) => (
@@ -130,7 +141,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, onKeycodeSelect }: Pro
             key={`${entry.categoryId}-${entry.keycode.qmkId}`}
             type="button"
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-surface-dim"
-            onClick={() => onKeycodeSelect(entry.keycode)}
+            onClick={() => { onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label) }}
             data-testid={`popover-result-${entry.keycode.qmkId}`}
           >
             <span className="min-w-[60px] font-mono text-xs font-medium">

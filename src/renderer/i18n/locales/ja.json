@@ -71,7 +71,10 @@
         "noResults": "キーコードが見つかりません",
         "hexLabel": "HexCode",
         "hexManual": "キーコード(16進数)を手動で割り当てることができます",
-        "qmkLabel": "KeyCode: {{value}}"
+        "qmkLabel": "KeyCode: {{value}}",
+        "modMask": "Mod Mask",
+        "modTap": "Mod-Tap",
+        "keySelected": "選択済み: {{key}}"
       }
     },
     "layout": {

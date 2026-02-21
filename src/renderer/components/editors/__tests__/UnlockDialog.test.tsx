@@ -27,6 +27,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   isMask: () => false,
   findOuterKeycode: () => null,
   findInnerKeycode: () => null,
+  isModifiableKeycode: () => false,
+  extractModMask: () => 0,
+  extractBasicKey: (code: number) => code & 0xff,
+  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
 }))
 
 function makeKey(row: number, col: number): KleKey {

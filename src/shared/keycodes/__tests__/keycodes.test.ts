@@ -51,6 +51,12 @@ import {
   KEYCODES_MIDI_SEQUENCER,
   KEYCODES_MEDIA_JOYSTICK,
   KEYCODES_LIGHTING_LED_MATRIX,
+  KEYCODES_MOD_MASK,
+  isModMaskKeycode,
+  isModifiableKeycode,
+  extractModMask,
+  extractBasicKey,
+  buildModMaskKeycode,
   type KeyboardKeycodeContext,
   type CustomKeycodeDefinition,
 } from '../keycodes'
@@ -1130,5 +1136,197 @@ describe('LED Matrix keycodes', () => {
     recreateKeycodes()
     expect(serialize(0x7810)).toBe('LM_ON')
     expect(serialize(0x7818)).toBe('LM_SPDD')
+  })
+})
+
+describe('isModMaskKeycode()', () => {
+  it('returns false for basic keycodes (0x0000-0x00FF)', () => {
+    expect(isModMaskKeycode(0x0000)).toBe(false) // KC_NO
+    expect(isModMaskKeycode(0x0004)).toBe(false) // KC_A
+    expect(isModMaskKeycode(0x00ff)).toBe(false) // max basic
+  })
+
+  it('returns true for mod+basic range (0x0100-0x1FFF)', () => {
+    expect(isModMaskKeycode(0x0100)).toBe(true) // lower bound: LCTL
+    expect(isModMaskKeycode(0x0204)).toBe(true) // LSFT(KC_A)
+    expect(isModMaskKeycode(0x1fff)).toBe(true) // upper bound
+  })
+
+  it('returns false for keycodes above mod+basic range', () => {
+    expect(isModMaskKeycode(0x2000)).toBe(false)
+    expect(isModMaskKeycode(0x4000)).toBe(false) // LT range
+    expect(isModMaskKeycode(0x6000)).toBe(false) // MT range
+  })
+})
+
+describe('isModifiableKeycode()', () => {
+  it('returns true for basic keycodes', () => {
+    expect(isModifiableKeycode(0x0000)).toBe(true)
+    expect(isModifiableKeycode(0x0004)).toBe(true) // KC_A
+    expect(isModifiableKeycode(0x00ff)).toBe(true)
+  })
+
+  it('returns true for mod+basic keycodes', () => {
+    expect(isModifiableKeycode(0x0100)).toBe(true)
+    expect(isModifiableKeycode(0x0204)).toBe(true)
+    expect(isModifiableKeycode(0x1fff)).toBe(true)
+  })
+
+  it('returns false for LT, MT, and other ranges', () => {
+    expect(isModifiableKeycode(0x2000)).toBe(false)
+    expect(isModifiableKeycode(0x4000)).toBe(false) // LT
+    expect(isModifiableKeycode(0x6000)).toBe(false) // MT
+  })
+
+  it('returns false for negative values', () => {
+    expect(isModifiableKeycode(-1)).toBe(false)
+    expect(isModifiableKeycode(-100)).toBe(false)
+  })
+})
+
+describe('extractModMask()', () => {
+  it('returns 0 for basic keycodes', () => {
+    expect(extractModMask(0x0004)).toBe(0)
+    expect(extractModMask(0x0000)).toBe(0)
+  })
+
+  it('extracts left modifier bits', () => {
+    expect(extractModMask(0x0100)).toBe(0x01) // CTL
+    expect(extractModMask(0x0200)).toBe(0x02) // SFT
+    expect(extractModMask(0x0400)).toBe(0x04) // ALT
+    expect(extractModMask(0x0800)).toBe(0x08) // GUI
+  })
+
+  it('extracts right modifier flag', () => {
+    expect(extractModMask(0x1100)).toBe(0x11) // RCTL
+    expect(extractModMask(0x1200)).toBe(0x12) // RSFT
+    expect(extractModMask(0x1400)).toBe(0x14) // RALT
+    expect(extractModMask(0x1800)).toBe(0x18) // RGUI
+  })
+
+  it('extracts combined modifiers', () => {
+    expect(extractModMask(0x0300)).toBe(0x03) // CTL+SFT
+    expect(extractModMask(0x0f00)).toBe(0x0f) // all left mods
+  })
+})
+
+describe('extractBasicKey()', () => {
+  it('extracts the lower byte', () => {
+    expect(extractBasicKey(0x0004)).toBe(0x04) // KC_A
+    expect(extractBasicKey(0x0204)).toBe(0x04) // LSFT(KC_A)
+    expect(extractBasicKey(0x1204)).toBe(0x04) // RSFT(KC_A)
+    expect(extractBasicKey(0x0000)).toBe(0x00) // KC_NO
+    expect(extractBasicKey(0x00ff)).toBe(0xff)
+  })
+})
+
+describe('buildModMaskKeycode()', () => {
+  it('returns basic key when mask is 0', () => {
+    expect(buildModMaskKeycode(0, 0x04)).toBe(0x04) // KC_A
+    expect(buildModMaskKeycode(0, 0x00)).toBe(0x00)
+  })
+
+  it('combines modifier mask with basic key', () => {
+    expect(buildModMaskKeycode(0x02, 0x04)).toBe(0x0204) // LSFT(KC_A)
+    expect(buildModMaskKeycode(0x01, 0x04)).toBe(0x0104) // LCTL(KC_A)
+    expect(buildModMaskKeycode(0x12, 0x04)).toBe(0x1204) // RSFT(KC_A)
+  })
+
+  it('round-trips with extract functions', () => {
+    const testCodes = [0x0204, 0x0304, 0x0f04, 0x1204, 0x1f04]
+    for (const code of testCodes) {
+      const mask = extractModMask(code)
+      const basic = extractBasicKey(code)
+      expect(buildModMaskKeycode(mask, basic)).toBe(code)
+    }
+  })
+
+  it('masks input values to valid ranges', () => {
+    expect(buildModMaskKeycode(0xff, 0x04)).toBe(0x1f04) // mask clamped to 5 bits
+    expect(buildModMaskKeycode(0x02, 0x1ff)).toBe(0x02ff) // basic clamped to 8 bits
+  })
+})
+
+// --- KEYCODES_MOD_MASK completeness ---
+
+describe('KEYCODES_MOD_MASK', () => {
+  it('has 30 entries (all modifier combinations)', () => {
+    expect(KEYCODES_MOD_MASK).toHaveLength(30)
+  })
+
+  it.each([
+    ['LCSG(kc)', 0xb00],
+    ['LSAG(kc)', 0xe00],
+    ['RCS(kc)', 0x1300],
+    ['RCA(kc)', 0x1500],
+    ['RSA(kc)', 0x1600],
+    ['RMEH(kc)', 0x1700],
+    ['RSG(kc)', 0x1a00],
+    ['RCSG(kc)', 0x1b00],
+    ['RAG(kc)', 0x1c00],
+    ['RCAG(kc)', 0x1d00],
+    ['RSAG(kc)', 0x1e00],
+    ['RHYPR(kc)', 0x1f00],
+  ])('maps %s to 0x%s (v6)', (qmkId, expectedHex) => {
+    expect(keycodesV6.kc[qmkId]).toBe(expectedHex)
+  })
+
+  it.each([
+    ['LCSG(kc)', 0xb00],
+    ['LSAG(kc)', 0xe00],
+    ['RCS(kc)', 0x1300],
+    ['RCA(kc)', 0x1500],
+    ['RSA(kc)', 0x1600],
+    ['RMEH(kc)', 0x1700],
+    ['RSG(kc)', 0x1a00],
+    ['RCSG(kc)', 0x1b00],
+    ['RAG(kc)', 0x1c00],
+    ['RCAG(kc)', 0x1d00],
+    ['RSAG(kc)', 0x1e00],
+    ['RHYPR(kc)', 0x1f00],
+  ])('maps %s to 0x%s (v5)', (qmkId, expectedHex) => {
+    expect(keycodesV5.kc[qmkId]).toBe(expectedHex)
+  })
+
+  it('has unique qmkIds', () => {
+    const ids = KEYCODES_MOD_MASK.map((kc) => kc.qmkId)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
+
+  const newEntries: [string, number][] = [
+    ['LCSG(kc)', 0xb00],
+    ['LSAG(kc)', 0xe00],
+    ['RCS(kc)', 0x1300],
+    ['RCA(kc)', 0x1500],
+    ['RSA(kc)', 0x1600],
+    ['RMEH(kc)', 0x1700],
+    ['RSG(kc)', 0x1a00],
+    ['RCSG(kc)', 0x1b00],
+    ['RAG(kc)', 0x1c00],
+    ['RCAG(kc)', 0x1d00],
+    ['RSAG(kc)', 0x1e00],
+    ['RHYPR(kc)', 0x1f00],
+  ]
+
+  it('round-trips new entries through serialize/deserialize (v6)', () => {
+    setProtocol(6)
+    recreateKeycodes()
+    for (const [qmkId, hex] of newEntries) {
+      const withA = hex | 0x04 // combine with KC_A
+      const outerName = qmkId.replace('(kc)', '')
+      expect(serialize(withA)).toBe(`${outerName}(KC_A)`)
+      expect(deserialize(`${outerName}(KC_A)`)).toBe(withA)
+    }
+  })
+
+  it('round-trips new entries through serialize/deserialize (v5)', () => {
+    setProtocol(0)
+    recreateKeycodes()
+    for (const [qmkId, hex] of newEntries) {
+      const withA = hex | 0x04 // combine with KC_A
+      const outerName = qmkId.replace('(kc)', '')
+      expect(serialize(withA)).toBe(`${outerName}(KC_A)`)
+      expect(deserialize(`${outerName}(KC_A)`)).toBe(withA)
+    }
   })
 })
