@@ -38,6 +38,7 @@ import { vilToVialGuiJson } from '../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson } from '../preload/macro'
 import {
   serialize as serializeKeycode,
+  serializeForCExport,
   keycodeLabel,
   isMask,
   findOuterKeycode,
@@ -160,7 +161,7 @@ export function App() {
       encoderLayout: keyboard.encoderLayout,
       encoderCount: keyboard.encoderCount,
       layoutOptions: decodedLayoutOptions,
-      serializeKeycode,
+      serializeKeycode: serializeForCExport,
     }),
     [
       keyboard.layers,
@@ -545,7 +546,7 @@ export function App() {
     try {
       const vilData = await loadEntryVilData(entryId)
       if (!vilData) return
-      const content = generateKeymapC(buildEntryParams(vilData))
+      const content = generateKeymapC({ ...buildEntryParams(vilData), serializeKeycode: serializeForCExport })
       await window.vialAPI.exportKeymapC(content, entryExportName(entryId))
     } catch {
       // Export errors are non-critical; file dialog handles user feedback
@@ -586,7 +587,7 @@ export function App() {
       title: entry.label || deviceName,
       keyboardName: deviceName,
       vilJson: vilToVialGuiJson(vilData, buildVilExportContext(vilData)),
-      keymapC: generateKeymapC(params),
+      keymapC: generateKeymapC({ ...params, serializeKeycode: serializeForCExport }),
       pdfBase64,
       thumbnailBase64,
     }

@@ -57,6 +57,7 @@ import {
   extractModMask,
   extractBasicKey,
   buildModMaskKeycode,
+  serializeForCExport,
   type KeyboardKeycodeContext,
   type CustomKeycodeDefinition,
 } from '../keycodes'
@@ -1328,5 +1329,131 @@ describe('KEYCODES_MOD_MASK', () => {
       expect(serialize(withA)).toBe(`${outerName}(KC_A)`)
       expect(deserialize(`${outerName}(KC_A)`)).toBe(withA)
     }
+  })
+})
+
+// --- serializeForCExport ---
+
+describe('serializeForCExport', () => {
+  function toHex(code: number): string {
+    return '0x' + code.toString(16)
+  }
+
+  describe.each([
+    ['v6', 6],
+    ['v5', 0],
+  ] as const)('%s', (_label, proto) => {
+    let kc: Record<string, number>
+
+    beforeEach(() => {
+      setProtocol(proto)
+      recreateKeycodes()
+      kc = proto === 6 ? keycodesV6.kc : keycodesV5.kc
+    })
+
+    it('LM keycodes return hex', () => {
+      const lmCode = kc.QK_LAYER_MOD | (0 << kc.QMK_LM_SHIFT) | kc.MOD_LSFT
+      expect(serializeForCExport(lmCode)).toMatch(/^0x[0-9a-f]+$/)
+    })
+
+    it('Pipette-only Modifier Mask keycodes return hex', () => {
+      const pipetteOnlyMasks: [string, number][] = [
+        ['LCSG(kc)', 0xb00],
+        ['LSAG(kc)', 0xe00],
+        ['RCS(kc)', 0x1300],
+        ['RCA(kc)', 0x1500],
+        ['RSA(kc)', 0x1600],
+        ['RMEH(kc)', 0x1700],
+        ['RSG(kc)', 0x1a00],
+        ['RCSG(kc)', 0x1b00],
+        ['RAG(kc)', 0x1c00],
+        ['RCAG(kc)', 0x1d00],
+        ['RSAG(kc)', 0x1e00],
+        ['RHYPR(kc)', 0x1f00],
+      ]
+      for (const [, hex] of pipetteOnlyMasks) {
+        const withA = hex | 0x04
+        expect(serializeForCExport(withA)).toBe(toHex(withA))
+      }
+    })
+
+    it('Pipette-only Mod-Tap keycodes return hex', () => {
+      const pipetteOnlyModTaps = [
+        'LCSG_T(kc)', 'LSAG_T(kc)',
+        'RCS_T(kc)', 'RCA_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
+        'RCSG_T(kc)', 'RSAG_T(kc)', 'RMEH_T(kc)', 'RALL_T(kc)',
+      ]
+      for (const qmkId of pipetteOnlyModTaps) {
+        const outerCode = kc[qmkId]
+        if (outerCode === undefined) continue
+        const withA = outerCode | 0x04
+        expect(serializeForCExport(withA)).toBe(toHex(withA))
+      }
+    })
+
+    it('Swap Hands non-masked keycodes return hex', () => {
+      for (const qmkId of ['SH_TOGG', 'SH_TT', 'SH_MON', 'SH_MOFF', 'SH_OFF', 'SH_ON', 'SH_OS']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(toHex(code))
+      }
+    })
+
+    it('Swap Hands Tap masked keycode returns hex', () => {
+      const shTBase = kc['SH_T(kc)']
+      if (shTBase === undefined) return
+      const withA = shTBase | 0x04
+      expect(serializeForCExport(withA)).toBe(toHex(withA))
+    })
+
+    it('Sequencer keycodes return hex', () => {
+      for (const qmkId of ['SQ_ON', 'SQ_OFF', 'SQ_TOGG']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(toHex(code))
+      }
+    })
+
+    it('LED Matrix keycodes return hex', () => {
+      for (const qmkId of ['LM_ON', 'LM_OFF', 'LM_TOGG']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(toHex(code))
+      }
+    })
+
+    it('Joystick keycodes return hex', () => {
+      const code = kc['JS_0']
+      if (code === undefined) return
+      expect(serializeForCExport(code)).toBe(toHex(code))
+    })
+
+    it('Key Override keycodes return hex', () => {
+      for (const qmkId of ['QK_KEY_OVERRIDE_TOGGLE', 'QK_KEY_OVERRIDE_ON', 'QK_KEY_OVERRIDE_OFF']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(toHex(code))
+      }
+    })
+
+    it('vial-gui defined masked keycodes return alias names', () => {
+      const lsftA = kc['LSFT(kc)'] | kc.KC_A
+      expect(serializeForCExport(lsftA)).toBe('LSFT(KC_A)')
+      const lctlTa = kc['LCTL_T(kc)'] | kc.KC_A
+      expect(serializeForCExport(lctlTa)).toBe('LCTL_T(KC_A)')
+    })
+
+    it('normal keycodes match serialize()', () => {
+      expect(serializeForCExport(kc.KC_A)).toBe(serialize(kc.KC_A))
+      expect(serializeForCExport(kc.KC_NO)).toBe(serialize(kc.KC_NO))
+      expect(serializeForCExport(kc.KC_ENTER)).toBe(serialize(kc.KC_ENTER))
+    })
+
+    it('MO/TG/LT layer keycodes match serialize()', () => {
+      expect(serializeForCExport(kc['MO(1)'])).toBe(serialize(kc['MO(1)']))
+      expect(serializeForCExport(kc['TG(2)'])).toBe(serialize(kc['TG(2)']))
+      const lt1a = kc['LT1(kc)'] | kc.KC_A
+      expect(serializeForCExport(lt1a)).toBe(serialize(lt1a))
+    })
   })
 })
