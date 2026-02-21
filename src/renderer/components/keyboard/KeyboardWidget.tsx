@@ -2,6 +2,7 @@
 
 import { useMemo, memo } from 'react'
 import type { KleKey } from '../../../shared/kle/types'
+import { repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
@@ -100,10 +101,11 @@ function KeyboardWidgetInner({
   readOnly = false,
   scale = 1,
 }: Props) {
-  // Filter keys based on layout options
+  // Reposition selected layout alternatives to align with option 0, then filter
   const visibleKeys = useMemo(() => {
     if (!layoutOptions || layoutOptions.size === 0) return keys
-    return keys.filter((key) => {
+    const repositioned = repositionLayoutKeys(keys, layoutOptions)
+    return repositioned.filter((key) => {
       if (key.layoutIndex < 0) return true
       const selectedOption = layoutOptions.get(key.layoutIndex)
       if (selectedOption === undefined) return key.layoutOption === 0
