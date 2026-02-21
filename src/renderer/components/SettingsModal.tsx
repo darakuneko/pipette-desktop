@@ -6,7 +6,7 @@ import { Monitor, Sun, Moon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './editors/modal-controls'
-import { ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, formatDate, formatDateShort } from './editors/store-modal-shared'
+import { formatDate, formatDateShort } from './editors/store-modal-shared'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { ModalTabId } from './editors/modal-tabs'
@@ -15,7 +15,6 @@ import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes, PanelSide } from '../hooks/useDevicePrefs'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
-import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
 import { AboutTabContent } from './AboutTabContent'
@@ -25,7 +24,6 @@ import type { AppNotification } from '../../shared/types/notification'
 const TABS = [
   { id: 'tools' as const, labelKey: 'settings.tabTools' },
   { id: 'data' as const, labelKey: 'settings.tabData' },
-  { id: 'hub' as const, labelKey: 'settings.tabHub' },
   { id: 'notification' as const, labelKey: 'settings.tabNotification' },
   { id: 'about' as const, labelKey: 'settings.tabAbout' },
 ]
@@ -476,165 +474,6 @@ const PANEL_SIDE_OPTIONS: { side: PanelSide; labelKey: string }[] = [
 ]
 
 const TIME_STEPS = [10, 20, 30, 40, 50, 60] as const
-const DEFAULT_PER_PAGE = 10
-
-interface HubPostRowProps {
-  post: HubMyPost
-  onRename: (postId: string, newTitle: string) => Promise<void>
-  onDelete: (postId: string) => Promise<void>
-  hubOrigin?: string
-}
-
-function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowProps) {
-  const { t } = useTranslation()
-  const [editing, setEditing] = useState(false)
-  const [editLabel, setEditLabel] = useState('')
-  const [confirmingDelete, setConfirmingDelete] = useState(false)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const handleStartEdit = useCallback(() => {
-    setEditLabel(post.title)
-    setEditing(true)
-    setConfirmingDelete(false)
-    setError(null)
-  }, [post.title])
-
-  const handleCancelEdit = useCallback(() => {
-    setEditing(false)
-  }, [])
-
-  const handleSubmitRename = useCallback(async () => {
-    if (!editLabel.trim()) return
-    setBusy(true)
-    setError(null)
-    try {
-      await onRename(post.id, editLabel.trim())
-      setEditing(false)
-    } catch {
-      setError(t('hub.renameFailed'))
-    } finally {
-      setBusy(false)
-    }
-  }, [post.id, editLabel, onRename, t])
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      void handleSubmitRename()
-    } else if (e.key === 'Escape') {
-      e.stopPropagation()
-      handleCancelEdit()
-    }
-  }, [handleSubmitRename, handleCancelEdit])
-
-  const handleConfirmDelete = useCallback(async () => {
-    setBusy(true)
-    setError(null)
-    try {
-      await onDelete(post.id)
-      setConfirmingDelete(false)
-    } catch {
-      setError(t('hub.deleteFailed'))
-    } finally {
-      setBusy(false)
-    }
-  }, [post.id, onDelete, t])
-
-  const handleStartDelete = useCallback(() => {
-    setConfirmingDelete(true)
-    setEditing(false)
-    setError(null)
-  }, [])
-
-  return (
-    <div data-testid={`hub-post-${post.id}`}>
-      <div className="flex items-center justify-between rounded-lg border border-edge bg-surface/20 px-3 py-2">
-        {editing ? (
-          <input
-            type="text"
-            className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm text-content focus:border-accent focus:outline-none"
-            value={editLabel}
-            onChange={(e) => setEditLabel(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={busy}
-            maxLength={200}
-            autoFocus
-            data-testid={`hub-rename-input-${post.id}`}
-          />
-        ) : (
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm text-content truncate">{post.title}</span>
-            <span className="text-[11px] text-content-muted truncate">
-              {post.keyboard_name} · {formatDate(post.created_at)}
-            </span>
-          </div>
-        )}
-        <div className="flex items-center gap-1 shrink-0 ml-2">
-          {confirmingDelete && (
-            <>
-              <button
-                type="button"
-                className={CONFIRM_DELETE_BTN}
-                onClick={handleConfirmDelete}
-                disabled={busy}
-                data-testid={`hub-confirm-delete-${post.id}`}
-              >
-                {t('layoutStore.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className={ACTION_BTN}
-                onClick={() => setConfirmingDelete(false)}
-                disabled={busy}
-                data-testid={`hub-cancel-delete-${post.id}`}
-              >
-                {t('common.cancel')}
-              </button>
-            </>
-          )}
-          {!confirmingDelete && !editing && (
-            <>
-              {hubOrigin && (
-                <button
-                  type="button"
-                  className={ACTION_BTN}
-                  onClick={() => window.vialAPI.openExternal(`${hubOrigin}/post/${encodeURIComponent(post.id)}`)}
-                  disabled={busy}
-                  data-testid={`hub-open-${post.id}`}
-                >
-                  {t('hub.openInBrowser')}
-                </button>
-              )}
-              <button
-                type="button"
-                className={ACTION_BTN}
-                onClick={handleStartEdit}
-                disabled={busy}
-                data-testid={`hub-rename-${post.id}`}
-              >
-                {t('layoutStore.rename')}
-              </button>
-              <button
-                type="button"
-                className={DELETE_BTN}
-                onClick={handleStartDelete}
-                disabled={busy}
-                data-testid={`hub-delete-${post.id}`}
-              >
-                {t('layoutStore.delete')}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-      {error && (
-        <p className="mt-1 text-xs text-danger" data-testid={`hub-error-${post.id}`}>
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
 
 interface Props {
   sync: UseSyncReturn
@@ -654,15 +493,9 @@ interface Props {
   onClose: () => void
   hubEnabled: boolean
   onHubEnabledChange: (enabled: boolean) => void
-  hubPosts: HubMyPost[]
-  hubPostsPagination?: HubPaginationMeta
   hubAuthenticated: boolean
-  onHubRefresh?: (params?: HubFetchMyPostsParams) => Promise<void>
-  onHubRename: (postId: string, newTitle: string) => Promise<void>
-  onHubDelete: (postId: string) => Promise<void>
   hubDisplayName: string | null
   onHubDisplayNameChange: (name: string) => Promise<{ success: boolean; error?: string }>
-  hubOrigin?: string
   hubAuthConflict?: boolean
   onResolveAuthConflict?: (name: string) => Promise<{ success: boolean; error?: string }>
   hubAccountDeactivated?: boolean
@@ -769,32 +602,6 @@ function HubDisplayNameField({ currentName, onSave }: HubDisplayNameFieldProps) 
   )
 }
 
-function HubRefreshButton({ onRefresh }: { onRefresh: () => Promise<void> }) {
-  const { t } = useTranslation()
-  const [refreshing, setRefreshing] = useState(false)
-
-  const handleClick = useCallback(async () => {
-    setRefreshing(true)
-    try {
-      await onRefresh()
-    } finally {
-      setRefreshing(false)
-    }
-  }, [onRefresh])
-
-  return (
-    <button
-      type="button"
-      className="text-xs text-content-muted hover:text-content disabled:opacity-50"
-      onClick={handleClick}
-      disabled={refreshing}
-      data-testid="hub-refresh-posts"
-    >
-      {refreshing ? t('common.refreshing') : t('common.refresh')}
-    </button>
-  )
-}
-
 export function SettingsModal({
   sync,
   connectedKeyboardUid,
@@ -813,15 +620,9 @@ export function SettingsModal({
   onClose,
   hubEnabled,
   onHubEnabledChange,
-  hubPosts,
-  hubPostsPagination,
   hubAuthenticated,
-  onHubRefresh,
-  onHubRename,
-  onHubDelete,
   hubDisplayName,
   onHubDisplayNameChange,
-  hubOrigin,
   hubAuthConflict,
   onResolveAuthConflict,
   hubAccountDeactivated,
@@ -844,15 +645,9 @@ export function SettingsModal({
   const [confirmingGoogleDisconnect, setConfirmingGoogleDisconnect] = useState(false)
   const [confirmingHubDisconnect, setConfirmingHubDisconnect] = useState(false)
   const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
-  const [hubPage, setHubPage] = useState(1)
   const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
   const [notificationLoading, setNotificationLoading] = useState(false)
   const notificationFetchedRef = useRef(false)
-
-  // Keep local page in sync when parent provides updated pagination (e.g. after refresh)
-  useEffect(() => {
-    if (hubPostsPagination?.page != null) setHubPage(hubPostsPagination.page)
-  }, [hubPostsPagination?.page])
 
   useEffect(() => {
     if (activeTab !== 'notification' || notificationFetchedRef.current) return
@@ -1033,29 +828,6 @@ export function SettingsModal({
   const isSyncing = sync.syncStatus === 'syncing'
   const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || isSyncing || sync.syncUnavailable
 
-  const refreshHubPage = useCallback(async (page: number) => {
-    await onHubRefresh?.({ page, per_page: DEFAULT_PER_PAGE })
-  }, [onHubRefresh])
-
-  const handleHubPageChange = useCallback((newPage: number) => {
-    setHubPage(newPage)
-    void refreshHubPage(newPage)
-  }, [refreshHubPage])
-
-  const handleHubRenameWithPageRefresh = useCallback(async (postId: string, newTitle: string) => {
-    await onHubRename(postId, newTitle)
-    void refreshHubPage(hubPage)
-  }, [onHubRename, hubPage, refreshHubPage])
-
-  const handleHubDeleteWithPageAdjust = useCallback(async (postId: string) => {
-    await onHubDelete(postId)
-    if (hubPosts.length <= 1 && hubPage > 1) {
-      handleHubPageChange(hubPage - 1)
-    } else {
-      void refreshHubPage(hubPage)
-    }
-  }, [onHubDelete, hubPosts.length, hubPage, handleHubPageChange, refreshHubPage])
-
   function renderPasswordSection(): React.ReactNode {
     if (sync.checkingRemotePassword) {
       return (
@@ -1153,61 +925,6 @@ export function SettingsModal({
                 {t('common.cancel')}
               </button>
             )}
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  function renderHubPostList(): React.ReactNode {
-    const totalPages = hubPostsPagination?.total_pages ?? 1
-    const hasPosts = hubPosts.length > 0
-    const showPagination = totalPages > 1
-
-    if (!hasPosts && !showPagination) {
-      return (
-        <p className="text-sm text-content-muted" data-testid="hub-no-posts">
-          {t('hub.noPosts')}
-        </p>
-      )
-    }
-
-    return (
-      <div data-testid="hub-post-list">
-        {hasPosts ? (
-          <div className="space-y-1">
-            {hubPosts.map((post) => (
-              <HubPostRow key={post.id} post={post} onRename={handleHubRenameWithPageRefresh} onDelete={handleHubDeleteWithPageAdjust} hubOrigin={hubOrigin} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-content-muted" data-testid="hub-no-posts">
-            {t('hub.noPosts')}
-          </p>
-        )}
-        {showPagination && (
-          <div className="mt-2 flex items-center justify-center gap-3" data-testid="hub-pagination">
-            <button
-              type="button"
-              className={BTN_SECONDARY}
-              onClick={() => handleHubPageChange(hubPage - 1)}
-              disabled={hubPage <= 1}
-              data-testid="hub-page-prev"
-            >
-              {t('hub.pagePrev')}
-            </button>
-            <span className="text-xs text-content-muted" data-testid="hub-page-info">
-              {t('hub.pageInfo', { current: hubPage, total: totalPages })}
-            </span>
-            <button
-              type="button"
-              className={BTN_SECONDARY}
-              onClick={() => handleHubPageChange(hubPage + 1)}
-              disabled={hubPage >= totalPages}
-              data-testid="hub-page-next"
-            >
-              {t('hub.pageNext')}
-            </button>
           </div>
         )}
       </div>
@@ -1694,24 +1411,6 @@ export function SettingsModal({
                   </section>
                 </div>
               </details>
-            </div>
-          )}
-          {activeTab === 'hub' && (
-            <div className="pt-4 space-y-6">
-              {/* My Posts */}
-              {hubEnabled && hubAuthenticated && (
-                <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h4 className="text-sm font-medium text-content-secondary">
-                      {t('hub.myPosts')}
-                    </h4>
-                    {onHubRefresh && (
-                      <HubRefreshButton onRefresh={() => refreshHubPage(hubPage)} />
-                    )}
-                  </div>
-                  {renderHubPostList()}
-                </section>
-              )}
             </div>
           )}
           {activeTab === 'notification' && (

@@ -452,7 +452,7 @@
   },
   "settings": {
     "title": "設定",
-    "tabData": "データ",
+    "tabData": "接続",
     "tabTools": "ツール",
     "appearance": "外観",
     "dataSync": "データ同期",
@@ -468,7 +468,6 @@
     "panelSide": "パネル位置",
     "panelLeft": "左",
     "panelRight": "右",
-    "tabHub": "Hub",
     "tabNotification": "お知らせ",
     "tabAbout": "情報",
     "about": {
@@ -476,6 +475,9 @@
       "license": "ライセンス: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
     }
+  },
+  "dataModal": {
+    "title": "データ"
   },
   "editorSettings": {
     "title": "設定",
@@ -507,6 +509,7 @@
     "disable": "切断",
     "confirmDisconnect": "切断しますか？",
     "myPosts": "マイ投稿",
+    "hubPosts": "Hub 投稿",
     "noPosts": "投稿はまだありません",
     "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください。",
     "renameFailed": "名前変更に失敗しました",

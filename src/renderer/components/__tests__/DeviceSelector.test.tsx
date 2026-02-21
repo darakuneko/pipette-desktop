@@ -148,4 +148,24 @@ describe('DeviceSelector', () => {
     render(<DeviceSelector {...defaultProps} />)
     expect(screen.queryByTestId('settings-button')).not.toBeInTheDocument()
   })
+
+  it('renders data button when onOpenData is provided', () => {
+    const onOpenData = vi.fn()
+    render(<DeviceSelector {...defaultProps} onOpenData={onOpenData} />)
+    const btn = screen.getByTestId('data-button')
+    expect(btn).toBeInTheDocument()
+    fireEvent.click(btn)
+    expect(onOpenData).toHaveBeenCalledOnce()
+  })
+
+  it('does not render data button when onOpenData is not provided', () => {
+    render(<DeviceSelector {...defaultProps} />)
+    expect(screen.queryByTestId('data-button')).not.toBeInTheDocument()
+  })
+
+  it('disables data button when connecting', () => {
+    render(<DeviceSelector {...defaultProps} devices={[mockDevice]} connecting={true} onOpenData={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.getByTestId('data-button')).toBeDisabled()
+    expect(screen.getByTestId('settings-button')).toBeDisabled()
+  })
 })

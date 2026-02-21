@@ -109,16 +109,14 @@ const defaultProps = {
   onPanelSideChange: vi.fn(),
   hubEnabled: true,
   onHubEnabledChange: vi.fn(),
-  hubPosts: [] as { id: string; title: string; keyboard_name: string; created_at: string }[],
   hubAuthenticated: false,
-  onHubRename: vi.fn().mockResolvedValue(undefined),
-  onHubDelete: vi.fn().mockResolvedValue(undefined),
 }
 
 describe('SettingsModal', () => {
   let onClose: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
+    vi.clearAllMocks()
     onClose = vi.fn()
     defaultProps.onThemeChange = vi.fn()
     defaultProps.onDefaultLayoutChange = vi.fn()
@@ -126,15 +124,7 @@ describe('SettingsModal', () => {
     defaultProps.onAutoLockTimeChange = vi.fn()
     defaultProps.onPanelSideChange = vi.fn()
     defaultProps.onHubEnabledChange = vi.fn()
-    defaultProps.onHubRename = vi.fn().mockResolvedValue(undefined)
-    defaultProps.onHubDelete = vi.fn().mockResolvedValue(undefined)
-    defaultProps.hubPosts = []
     defaultProps.hubAuthenticated = false
-    mockResetLocalTargets.mockClear()
-    mockExportLocalData.mockClear()
-    mockImportLocalData.mockClear()
-    mockOpenExternal.mockClear()
-    mockNotificationFetch.mockClear()
   })
 
   function renderAndSwitchToTools(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
@@ -794,19 +784,13 @@ describe('SettingsModal', () => {
     })
   })
 
-  function renderAndSwitchToHub(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
-    const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)
-    fireEvent.click(screen.getByTestId('settings-tab-hub'))
-    return result
-  }
-
   describe('tabs', () => {
-    it('renders Tools, Data, Hub, and About tabs', () => {
+    it('renders Tools, Data, Notification, and About tabs', () => {
       render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
 
       expect(screen.getByTestId('settings-tab-tools')).toBeInTheDocument()
       expect(screen.getByTestId('settings-tab-data')).toBeInTheDocument()
-      expect(screen.getByTestId('settings-tab-hub')).toBeInTheDocument()
+      expect(screen.getByTestId('settings-tab-notification')).toBeInTheDocument()
       expect(screen.getByTestId('settings-tab-about')).toBeInTheDocument()
     })
 
@@ -1179,273 +1163,11 @@ describe('SettingsModal', () => {
     })
   })
 
-  describe('Hub posts (Hub tab)', () => {
-    it('hides my posts when hub is disabled', () => {
-      renderAndSwitchToHub({ hubEnabled: false })
-      expect(screen.queryByTestId('hub-post-list')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('hub-no-posts')).not.toBeInTheDocument()
-    })
-
-    it('hides my posts when hub is enabled but not authenticated', () => {
-      renderAndSwitchToHub({ hubEnabled: true, hubAuthenticated: false })
-
-      expect(screen.queryByTestId('hub-post-list')).not.toBeInTheDocument()
-      expect(screen.queryByTestId('hub-no-posts')).not.toBeInTheDocument()
-    })
-
-    it('shows empty post list when authenticated with no posts', () => {
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: [] })
-
-      expect(screen.queryByTestId('hub-requires-auth')).not.toBeInTheDocument()
-      expect(screen.getByTestId('hub-no-posts')).toBeInTheDocument()
-    })
-
-    it('renders post list when authenticated with posts', () => {
-      const posts = [
-        { id: 'p1', title: 'My Layout 1', keyboard_name: 'BoardA', created_at: '2025-01-15T10:30:00Z' },
-        { id: 'p2', title: 'My Layout 2', keyboard_name: 'BoardB', created_at: '2025-02-20T14:00:00Z' },
-      ]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-
-      expect(screen.getByTestId('hub-post-p1')).toBeInTheDocument()
-      expect(screen.getByTestId('hub-post-p2')).toBeInTheDocument()
-      expect(screen.getByTestId('hub-post-p1')).toHaveTextContent('My Layout 1')
-      expect(screen.getByTestId('hub-post-p1')).toHaveTextContent('BoardA')
-      expect(screen.getByTestId('hub-post-p2')).toHaveTextContent('My Layout 2')
-      expect(screen.getByTestId('hub-post-p2')).toHaveTextContent('BoardB')
-    })
-
-    it('enters rename mode when rename button is clicked', () => {
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-
-      expect(screen.getByTestId('hub-rename-input-p1')).toBeInTheDocument()
-      expect(screen.getByTestId('hub-rename-input-p1')).toHaveValue('My Layout')
-    })
-
-    it('submits rename on Enter key', async () => {
-      const onHubRename = vi.fn().mockResolvedValue(undefined)
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, onHubRename })
-
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-      const input = screen.getByTestId('hub-rename-input-p1')
-      fireEvent.change(input, { target: { value: 'New Name' } })
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      await waitFor(() => {
-        expect(onHubRename).toHaveBeenCalledWith('p1', 'New Name')
-      })
-    })
-
-    it('refreshes current page after rename completes', async () => {
-      const onHubRename = vi.fn().mockResolvedValue(undefined)
-      const onHubRefresh = vi.fn().mockResolvedValue(undefined)
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({
-        hubAuthenticated: true,
-        hubPosts: posts,
-        hubPostsPagination: { total: 25, page: 2, per_page: 10, total_pages: 3 },
-        onHubRename,
-        onHubRefresh,
-      })
-
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-      const input = screen.getByTestId('hub-rename-input-p1')
-      fireEvent.change(input, { target: { value: 'New Name' } })
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      await waitFor(() => {
-        expect(onHubRefresh).toHaveBeenCalledWith({ page: 2, per_page: 10 })
-      })
-    })
-
-    it('cancels rename on Escape key', () => {
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-      expect(screen.getByTestId('hub-rename-input-p1')).toBeInTheDocument()
-
-      fireEvent.keyDown(screen.getByTestId('hub-rename-input-p1'), { key: 'Escape' })
-      expect(screen.queryByTestId('hub-rename-input-p1')).not.toBeInTheDocument()
-      expect(screen.getByTestId('hub-post-p1')).toHaveTextContent('My Layout')
-    })
-
-    it('shows delete confirmation when delete button is clicked', () => {
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-
-      fireEvent.click(screen.getByTestId('hub-delete-p1'))
-
-      expect(screen.getByTestId('hub-confirm-delete-p1')).toBeInTheDocument()
-      expect(screen.getByTestId('hub-cancel-delete-p1')).toBeInTheDocument()
-    })
-
-    it('calls onHubDelete when delete is confirmed', async () => {
-      const onHubDelete = vi.fn().mockResolvedValue(undefined)
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, onHubDelete })
-
-      fireEvent.click(screen.getByTestId('hub-delete-p1'))
-      fireEvent.click(screen.getByTestId('hub-confirm-delete-p1'))
-
-      await waitFor(() => {
-        expect(onHubDelete).toHaveBeenCalledWith('p1')
-      })
-    })
-
-    it('cancels delete confirmation', () => {
-      const onHubDelete = vi.fn()
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, onHubDelete })
-
-      fireEvent.click(screen.getByTestId('hub-delete-p1'))
-      expect(screen.getByTestId('hub-confirm-delete-p1')).toBeInTheDocument()
-
-      fireEvent.click(screen.getByTestId('hub-cancel-delete-p1'))
-      expect(screen.queryByTestId('hub-confirm-delete-p1')).not.toBeInTheDocument()
-      expect(onHubDelete).not.toHaveBeenCalled()
-    })
-
-    it('shows error and stays in edit mode when rename fails', async () => {
-      const onHubRename = vi.fn().mockRejectedValue(new Error('Rename failed'))
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, onHubRename })
-
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-      const input = screen.getByTestId('hub-rename-input-p1')
-      fireEvent.change(input, { target: { value: 'New Name' } })
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      await waitFor(() => {
-        expect(screen.getByTestId('hub-error-p1')).toHaveTextContent('hub.renameFailed')
-      })
-      expect(screen.getByTestId('hub-rename-input-p1')).toBeInTheDocument()
-    })
-
-    it('shows error when delete fails', async () => {
-      const onHubDelete = vi.fn().mockRejectedValue(new Error('Delete failed'))
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, onHubDelete })
-
-      fireEvent.click(screen.getByTestId('hub-delete-p1'))
-      fireEvent.click(screen.getByTestId('hub-confirm-delete-p1'))
-
-      await waitFor(() => {
-        expect(screen.getByTestId('hub-error-p1')).toHaveTextContent('hub.deleteFailed')
-      })
-    })
-
-    describe('pagination', () => {
-      it('does not show pagination controls when total_pages is 1', () => {
-        const posts = [{ id: 'p1', title: 'Layout 1', keyboard_name: 'Board', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({
-          hubAuthenticated: true,
-          hubPosts: posts,
-          hubPostsPagination: { total: 1, page: 1, per_page: 10, total_pages: 1 },
-        })
-
-        expect(screen.getByTestId('hub-post-list')).toBeInTheDocument()
-        expect(screen.queryByTestId('hub-pagination')).not.toBeInTheDocument()
-      })
-
-      it('shows pagination controls when total_pages > 1', () => {
-        const posts = [{ id: 'p1', title: 'Layout 1', keyboard_name: 'Board', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({
-          hubAuthenticated: true,
-          hubPosts: posts,
-          hubPostsPagination: { total: 25, page: 1, per_page: 10, total_pages: 3 },
-        })
-
-        expect(screen.getByTestId('hub-pagination')).toBeInTheDocument()
-        expect(screen.getByTestId('hub-page-prev')).toBeDisabled()
-        expect(screen.getByTestId('hub-page-next')).not.toBeDisabled()
-        expect(screen.getByTestId('hub-page-info')).toHaveTextContent('hub.pageInfo')
-      })
-
-      it('calls onHubRefresh with next page when Next is clicked', () => {
-        const onHubRefresh = vi.fn().mockResolvedValue(undefined)
-        const posts = [{ id: 'p1', title: 'Layout 1', keyboard_name: 'Board', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({
-          hubAuthenticated: true,
-          hubPosts: posts,
-          hubPostsPagination: { total: 25, page: 1, per_page: 10, total_pages: 3 },
-          onHubRefresh,
-        })
-
-        fireEvent.click(screen.getByTestId('hub-page-next'))
-
-        expect(onHubRefresh).toHaveBeenCalledWith({ page: 2, per_page: 10 })
-      })
-
-      it('syncs hubPage from pagination props and disables Next on last page', () => {
-        const posts = [{ id: 'p1', title: 'Layout 1', keyboard_name: 'Board', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({
-          hubAuthenticated: true,
-          hubPosts: posts,
-          hubPostsPagination: { total: 25, page: 3, per_page: 10, total_pages: 3 },
-        })
-
-        // hubPage syncs from hubPostsPagination.page=3, so Next is disabled on last page
-        expect(screen.getByTestId('hub-page-next')).toBeDisabled()
-        expect(screen.getByTestId('hub-page-prev')).not.toBeDisabled()
-      })
-
-      it('shows pagination controls on empty page when total_pages > 1', () => {
-        renderAndSwitchToHub({
-          hubAuthenticated: true,
-          hubPosts: [],
-          hubPostsPagination: { total: 15, page: 2, per_page: 10, total_pages: 2 },
-        })
-
-        expect(screen.getByTestId('hub-no-posts')).toBeInTheDocument()
-        expect(screen.getByTestId('hub-pagination')).toBeInTheDocument()
-        expect(screen.getByTestId('hub-page-prev')).not.toBeDisabled()
-      })
-    })
-
-    describe('open in browser', () => {
-      it('shows open in browser button when hubOrigin is provided', () => {
-        const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, hubOrigin: 'https://hub.example.com' })
-
-        expect(screen.getByTestId('hub-open-p1')).toBeInTheDocument()
-      })
-
-      it('does not show open in browser button when hubOrigin is undefined', () => {
-        const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-
-        expect(screen.queryByTestId('hub-open-p1')).not.toBeInTheDocument()
-      })
-
-      it('calls openExternal with correct URL when clicked', () => {
-        const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-        renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts, hubOrigin: 'https://hub.example.com' })
-
-        fireEvent.click(screen.getByTestId('hub-open-p1'))
-
-        expect(mockOpenExternal).toHaveBeenCalledWith('https://hub.example.com/post/p1')
-      })
-    })
-  })
-
   describe('input maxLength attributes', () => {
     it('display name input has maxLength=50', () => {
       renderAndSwitchToData({ hubEnabled: true, hubAuthenticated: true })
       const input = screen.getByTestId('hub-display-name-input')
       expect(input).toHaveAttribute('maxLength', '50')
-    })
-
-    it('hub post rename input has maxLength=200', () => {
-      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
-      renderAndSwitchToHub({ hubAuthenticated: true, hubPosts: posts })
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
-      const input = screen.getByTestId('hub-rename-input-p1')
-      expect(input).toHaveAttribute('maxLength', '200')
     })
   })
 

@@ -2,7 +2,9 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ModalTabId = 'layers' | 'tools' | 'data' | 'hub' | 'notification' | 'about'
+export type ModalTabId = 'layers' | 'tools' | 'data' | 'notification' | 'about'
+
+export type DataModalTabId = 'tapDance' | 'macro' | 'combo' | 'keyOverride' | 'altRepeatKey' | 'hubPost'
 
 const TAB_BASE = 'px-4 py-2 text-[13px] font-medium transition-colors border-b-2'
 
@@ -11,20 +13,20 @@ function tabClass(active: boolean): string {
   return `${TAB_BASE} border-b-transparent text-content-muted hover:text-content`
 }
 
-interface TabDef {
-  id: ModalTabId
+export interface TabDef<T extends string = string> {
+  id: T
   labelKey: string
 }
 
-interface ModalTabBarProps {
-  tabs: readonly TabDef[]
-  activeTab: ModalTabId
-  onTabChange: (id: ModalTabId) => void
+interface ModalTabBarProps<T extends string = string> {
+  tabs: readonly TabDef<T>[]
+  activeTab: T
+  onTabChange: (id: T) => void
   idPrefix: string
   testIdPrefix: string
 }
 
-export function ModalTabBar({ tabs, activeTab, onTabChange, idPrefix, testIdPrefix }: ModalTabBarProps) {
+export function ModalTabBar<T extends string = string>({ tabs, activeTab, onTabChange, idPrefix, testIdPrefix }: ModalTabBarProps<T>) {
   const { t } = useTranslation()
 
   return (
@@ -48,13 +50,13 @@ export function ModalTabBar({ tabs, activeTab, onTabChange, idPrefix, testIdPref
   )
 }
 
-interface ModalTabPanelProps {
-  activeTab: ModalTabId
+interface ModalTabPanelProps<T extends string = string> {
+  activeTab: T
   idPrefix: string
   children: React.ReactNode
 }
 
-export function ModalTabPanel({ activeTab, idPrefix, children }: ModalTabPanelProps) {
+export function ModalTabPanel<T extends string = string>({ activeTab, idPrefix, children }: ModalTabPanelProps<T>) {
   return (
     <div
       role="tabpanel"

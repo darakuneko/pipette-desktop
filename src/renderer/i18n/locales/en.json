@@ -452,7 +452,7 @@
   },
   "settings": {
     "title": "Settings",
-    "tabData": "Data",
+    "tabData": "Connect",
     "tabTools": "Tools",
     "appearance": "Appearance",
     "dataSync": "Data Sync",
@@ -468,7 +468,6 @@
     "panelSide": "Panel Side",
     "panelLeft": "Left",
     "panelRight": "Right",
-    "tabHub": "Hub",
     "tabNotification": "Notification",
     "tabAbout": "About",
     "about": {
@@ -476,6 +475,9 @@
       "license": "License: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
     }
+  },
+  "dataModal": {
+    "title": "Data"
   },
   "editorSettings": {
     "title": "Settings",
@@ -507,6 +509,7 @@
     "disable": "Disconnect",
     "confirmDisconnect": "Disconnect?",
     "myPosts": "My Posts",
+    "hubPosts": "Hub Posts",
     "noPosts": "No posts yet",
     "requiresAuth": "Connect your Google account in the Data tab to use Hub features.",
     "renameFailed": "Rename failed",

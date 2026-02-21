@@ -13,6 +13,7 @@ import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useAutoLock } from './hooks/useAutoLock'
 import { DeviceSelector } from './components/DeviceSelector'
 import { SettingsModal } from './components/SettingsModal'
+import { DataModal } from './components/DataModal'
 import { NotificationModal } from './components/NotificationModal'
 import { ConnectingOverlay } from './components/ConnectingOverlay'
 import { useSync } from './hooks/useSync'
@@ -74,9 +75,11 @@ export function App() {
   }, [keyboard.setSaveLayerNamesCallback, devicePrefs.setLayerNames])
 
   const [showSettings, setShowSettings] = useState(false)
+  const [showDataModal, setShowDataModal] = useState(false)
   const [dummyError, setDummyError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
   const hasSyncedRef = useRef(false)
+  const hasFavSyncedForDataRef = useRef(false)
   const hasKeyboardSyncedRef = useRef<string | null>(null)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
@@ -883,6 +886,15 @@ export function App() {
     onLock: handleLock,
   })
 
+  const handleOpenDataModal = useCallback(() => {
+    setShowDataModal(true)
+    if (!hasFavSyncedForDataRef.current &&
+        sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !deviceSyncing) {
+      hasFavSyncedForDataRef.current = true
+      void sync.syncNow('download', 'favorites').catch(() => { hasFavSyncedForDataRef.current = false })
+    }
+  }, [sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, deviceSyncing])
+
   const handleLoadDummy = useCallback(async () => {
     setDummyError(null)
     try {
@@ -918,6 +930,8 @@ export function App() {
           onConnect={handleConnect}
           onLoadDummy={handleLoadDummy}
           onOpenSettings={() => setShowSettings(true)}
+          onOpenData={handleOpenDataModal}
+          syncStatus={sync.syncStatus}
         />
         {showSettings && (
           <SettingsModal
@@ -937,18 +951,25 @@ export function App() {
             onClose={() => setShowSettings(false)}
             hubEnabled={appConfig.config.hubEnabled}
             onHubEnabledChange={(enabled) => appConfig.set('hubEnabled', enabled)}
-            hubPosts={hubMyPosts}
-            hubPostsPagination={hubMyPostsPagination}
             hubAuthenticated={sync.authStatus.authenticated}
-            onHubRefresh={refreshHubMyPosts}
-            onHubRename={handleHubRenamePost}
-            onHubDelete={handleHubDeletePost}
             hubDisplayName={hubDisplayName}
             onHubDisplayNameChange={handleUpdateHubDisplayName}
-            hubOrigin={hubOrigin}
             hubAuthConflict={hubAuthConflict}
             onResolveAuthConflict={handleResolveAuthConflict}
             hubAccountDeactivated={hubAccountDeactivated}
+          />
+        )}
+        {showDataModal && (
+          <DataModal
+            onClose={() => setShowDataModal(false)}
+            hubEnabled={appConfig.config.hubEnabled}
+            hubAuthenticated={sync.authStatus.authenticated}
+            hubPosts={hubMyPosts}
+            hubPostsPagination={hubMyPostsPagination}
+            onHubRefresh={refreshHubMyPosts}
+            onHubRename={handleHubRenamePost}
+            onHubDelete={handleHubDeletePost}
+            hubOrigin={hubOrigin}
           />
         )}
         {startupNotification.visible && (

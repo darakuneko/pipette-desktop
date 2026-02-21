@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { Settings, ChevronRight } from 'lucide-react'
+import { Settings, Database, ChevronRight } from 'lucide-react'
+import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { DeviceInfo } from '../../shared/types/protocol'
+import type { SyncStatusType } from '../../shared/types/sync'
 
 const DEVICE_ENTRY_CLASS =
   'flex w-full items-center gap-3.5 rounded-lg border border-edge p-3.5 text-left transition-colors hover:border-accent hover:bg-accent/10 disabled:opacity-50'
+
+const HEADER_BTN =
+  'flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-[13px] font-medium text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content-secondary disabled:opacity-50'
 
 interface Props {
   devices: DeviceInfo[]
@@ -14,6 +19,8 @@ interface Props {
   onConnect: (device: DeviceInfo) => void
   onLoadDummy: () => void
   onOpenSettings?: () => void
+  onOpenData?: () => void
+  syncStatus?: SyncStatusType
 }
 
 export function DeviceSelector({
@@ -23,6 +30,8 @@ export function DeviceSelector({
   onConnect,
   onLoadDummy,
   onOpenSettings,
+  onOpenData,
+  syncStatus,
 }: Props) {
   const { t } = useTranslation()
 
@@ -33,18 +42,32 @@ export function DeviceSelector({
           <h1 className="text-xl font-bold text-content">
             {t('app.title')}
           </h1>
-          {onOpenSettings && (
-            <button
-              type="button"
-              onClick={onOpenSettings}
-              disabled={connecting}
-              aria-label={t('settings.title')}
-              data-testid="settings-button"
-              className="rounded-lg border border-transparent p-2 text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content-secondary disabled:opacity-50"
-            >
-              <Settings size={18} aria-hidden="true" />
-            </button>
-          )}
+          <div className="flex items-center gap-1">
+            {onOpenData && (
+              <button
+                type="button"
+                onClick={onOpenData}
+                disabled={connecting}
+                data-testid="data-button"
+                className={HEADER_BTN}
+              >
+                <Database size={14} aria-hidden="true" />
+                {t('dataModal.title')}
+              </button>
+            )}
+            {onOpenSettings && (
+              <button
+                type="button"
+                onClick={onOpenSettings}
+                disabled={connecting}
+                data-testid="settings-button"
+                className={HEADER_BTN}
+              >
+                <Settings size={14} aria-hidden="true" />
+                {t('settings.title')}
+              </button>
+            )}
+          </div>
         </div>
 
         {error && (
@@ -107,6 +130,14 @@ export function DeviceSelector({
         >
           {t('app.loadDummy')}
         </button>
+
+        {syncStatus && syncStatus !== 'none' && (
+          <div className="mt-3 text-center text-xs" data-testid="device-sync-status">
+            <span className={SYNC_STATUS_CLASS[syncStatus]}>
+              {t(`statusBar.sync.${syncStatus}`)}
+            </span>
+          </div>
+        )}
 
         {devices.length === 0 && (
           <div className="mt-4 text-xs text-content-muted">
