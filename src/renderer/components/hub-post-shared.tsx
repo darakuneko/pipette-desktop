@@ -2,15 +2,14 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useInlineRename } from '../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './editors/store-modal-shared'
 import type { HubMyPost } from '../../shared/types/hub'
 
 export const DEFAULT_PER_PAGE = 10
 
-const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
-const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
-
-export { BTN_PRIMARY, BTN_SECONDARY }
+export const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
+export const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
 
 interface HubPostRowProps {
   post: HubMyPost
@@ -21,45 +20,44 @@ interface HubPostRowProps {
 
 export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowProps) {
   const { t } = useTranslation()
-  const [editing, setEditing] = useState(false)
-  const [editLabel, setEditLabel] = useState('')
+  const rename = useInlineRename<string>()
   const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const handleStartEdit = useCallback(() => {
-    setEditLabel(post.title)
-    setEditing(true)
+    rename.startRename(post.id, post.title)
     setConfirmingDelete(false)
     setError(null)
-  }, [post.title])
-
-  const handleCancelEdit = useCallback(() => {
-    setEditing(false)
-  }, [])
+  }, [post.id, post.title, rename.startRename])
 
   const handleSubmitRename = useCallback(async () => {
-    if (!editLabel.trim()) return
+    const trimmed = rename.editLabel.trim()
+    if (!trimmed || trimmed === rename.originalLabel) {
+      rename.cancelRename()
+      return
+    }
     setBusy(true)
     setError(null)
     try {
-      await onRename(post.id, editLabel.trim())
-      setEditing(false)
+      await onRename(post.id, trimmed)
+      rename.cancelRename()
+      rename.scheduleFlash(post.id)
     } catch {
       setError(t('hub.renameFailed'))
     } finally {
       setBusy(false)
     }
-  }, [post.id, editLabel, onRename, t])
+  }, [post.id, rename.editLabel, rename.originalLabel, rename.cancelRename, rename.scheduleFlash, onRename, t])
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       void handleSubmitRename()
     } else if (e.key === 'Escape') {
       e.stopPropagation()
-      handleCancelEdit()
+      rename.cancelRename()
     }
-  }, [handleSubmitRename, handleCancelEdit])
+  }, [handleSubmitRename, rename.cancelRename])
 
   const handleConfirmDelete = useCallback(async () => {
     setBusy(true)
@@ -76,33 +74,43 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
 
   const handleStartDelete = useCallback(() => {
     setConfirmingDelete(true)
-    setEditing(false)
+    rename.cancelRename()
     setError(null)
-  }, [])
+  }, [rename.cancelRename])
 
   return (
     <div data-testid={`hub-post-${post.id}`}>
-      <div className="flex items-center justify-between rounded-lg border border-edge bg-surface/20 px-3 py-2">
-        {editing ? (
-          <input
-            type="text"
-            className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm text-content focus:border-accent focus:outline-none"
-            value={editLabel}
-            onChange={(e) => setEditLabel(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={busy}
-            maxLength={200}
-            autoFocus
-            data-testid={`hub-rename-input-${post.id}`}
-          />
-        ) : (
-          <div className="flex flex-col min-w-0">
-            <span className="text-sm text-content truncate">{post.title}</span>
-            <span className="text-[11px] text-content-muted truncate">
-              {post.keyboard_name} · {formatDate(post.created_at)}
+      <div
+        className={`flex items-center justify-between rounded-lg border border-edge bg-surface/20 px-3 py-2 ${rename.confirmedId === post.id ? 'confirm-flash' : ''}`}
+        onMouseDown={(e) => rename.handleCardMouseDown(e, post.id)}
+      >
+        <div className="flex-1 flex flex-col min-w-0">
+          {rename.editingId === post.id ? (
+            <input
+              type="text"
+              className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+              value={rename.editLabel}
+              onChange={(e) => rename.setEditLabel(e.target.value)}
+              onBlur={rename.cancelRename}
+              onKeyDown={handleKeyDown}
+              disabled={busy}
+              maxLength={200}
+              autoFocus
+              data-testid={`hub-rename-input-${post.id}`}
+            />
+          ) : (
+            <span
+              className="text-sm text-content truncate cursor-pointer"
+              data-testid={`hub-title-${post.id}`}
+              onClick={handleStartEdit}
+            >
+              {post.title}
             </span>
-          </div>
-        )}
+          )}
+          <span className="text-[11px] text-content-muted truncate">
+            {post.keyboard_name} · {formatDate(post.created_at)}
+          </span>
+        </div>
         <div className="flex items-center gap-1 shrink-0 ml-2">
           {confirmingDelete && (
             <>
@@ -126,7 +134,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
               </button>
             </>
           )}
-          {!confirmingDelete && !editing && (
+          {!confirmingDelete && (
             <>
               {hubOrigin && (
                 <button
@@ -139,15 +147,6 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
                   {t('hub.openInBrowser')}
                 </button>
               )}
-              <button
-                type="button"
-                className={ACTION_BTN}
-                onClick={handleStartEdit}
-                disabled={busy}
-                data-testid={`hub-rename-${post.id}`}
-              >
-                {t('layoutStore.rename')}
-              </button>
               <button
                 type="button"
                 className={DELETE_BTN}

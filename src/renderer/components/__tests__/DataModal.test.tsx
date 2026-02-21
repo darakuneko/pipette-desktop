@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { DataModal } from '../DataModal'
 
 vi.mock('react-i18next', () => ({
@@ -140,7 +140,7 @@ describe('DataModal', () => {
       })
     })
 
-    it('enters rename mode when rename button is clicked', async () => {
+    it('enters rename mode when label is clicked', async () => {
       mockFavoriteStoreList.mockResolvedValueOnce({
         success: true,
         entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
@@ -152,8 +152,105 @@ describe('DataModal', () => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
       })
 
-      fireEvent.click(screen.getByTestId('data-modal-fav-rename-btn'))
+      fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
       expect(screen.getByTestId('data-modal-fav-rename-input')).toBeInTheDocument()
+    })
+
+    it('cancels rename on blur (clicking outside)', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
+      })
+
+      render(<DataModal {...makeProps()} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+      const input = screen.getByTestId('data-modal-fav-rename-input')
+      fireEvent.change(input, { target: { value: 'Changed' } })
+      fireEvent.blur(input)
+
+      expect(screen.queryByTestId('data-modal-fav-rename-input')).not.toBeInTheDocument()
+      expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
+    })
+
+    it('cancels rename on Escape', async () => {
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
+      })
+
+      render(<DataModal {...makeProps()} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+      const input = screen.getByTestId('data-modal-fav-rename-input')
+      fireEvent.change(input, { target: { value: 'Changed' } })
+      fireEvent.keyDown(input, { key: 'Escape' })
+
+      expect(screen.queryByTestId('data-modal-fav-rename-input')).not.toBeInTheDocument()
+      expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
+    })
+
+    describe('confirm flash', () => {
+      afterEach(() => {
+        vi.useRealTimers()
+        vi.restoreAllMocks()
+      })
+
+      it('shows confirm flash on card after Enter rename', async () => {
+        vi.useFakeTimers()
+        mockFavoriteStoreList.mockResolvedValueOnce({
+          success: true,
+          entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
+        })
+        mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
+
+        render(<DataModal {...makeProps()} />)
+        await vi.waitFor(() => {
+          expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+        const input = screen.getByTestId('data-modal-fav-rename-input')
+        fireEvent.change(input, { target: { value: 'New Name' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        act(() => { vi.advanceTimersByTime(0) })
+
+        const card = screen.getByTestId('data-modal-fav-entry')
+        expect(card.className).toContain('confirm-flash')
+
+        act(() => { vi.advanceTimersByTime(1200) })
+        expect(card.className).not.toContain('confirm-flash')
+      })
+
+      it('does not flash when Enter is pressed without changes', async () => {
+        vi.useFakeTimers()
+        mockFavoriteStoreList.mockResolvedValueOnce({
+          success: true,
+          entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
+        })
+
+        render(<DataModal {...makeProps()} />)
+        await vi.waitFor(() => {
+          expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+        })
+
+        fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+        const input = screen.getByTestId('data-modal-fav-rename-input')
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        act(() => { vi.advanceTimersByTime(0) })
+
+        expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
+        const card = screen.getByTestId('data-modal-fav-entry')
+        expect(card.className).not.toContain('confirm-flash')
+      })
     })
 
     it('shows delete confirmation when delete button is clicked', async () => {
@@ -229,7 +326,7 @@ describe('DataModal', () => {
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
       fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
+      fireEvent.click(screen.getByTestId('hub-title-p1'))
 
       const input = screen.getByTestId('hub-rename-input-p1')
       expect(input).toHaveValue('My Layout')
@@ -246,11 +343,79 @@ describe('DataModal', () => {
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts })} />)
 
       fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
+      fireEvent.click(screen.getByTestId('hub-title-p1'))
       expect(screen.getByTestId('hub-rename-input-p1')).toBeInTheDocument()
 
       fireEvent.keyDown(screen.getByTestId('hub-rename-input-p1'), { key: 'Escape' })
       expect(screen.queryByTestId('hub-rename-input-p1')).not.toBeInTheDocument()
+    })
+
+    it('cancels hub post rename on blur', () => {
+      const onHubRename = vi.fn().mockResolvedValue(undefined)
+      const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
+      render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
+
+      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      fireEvent.click(screen.getByTestId('hub-title-p1'))
+      const input = screen.getByTestId('hub-rename-input-p1')
+      fireEvent.change(input, { target: { value: 'Changed Title' } })
+      fireEvent.blur(input)
+
+      expect(screen.queryByTestId('hub-rename-input-p1')).not.toBeInTheDocument()
+      expect(onHubRename).not.toHaveBeenCalled()
+    })
+
+    describe('hub post confirm flash', () => {
+      afterEach(() => {
+        vi.useRealTimers()
+        vi.restoreAllMocks()
+      })
+
+      it('shows confirm flash after hub post Enter rename', async () => {
+        vi.useFakeTimers()
+        const onHubRename = vi.fn().mockResolvedValue(undefined)
+        const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
+        render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
+
+        fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+        fireEvent.click(screen.getByTestId('hub-title-p1'))
+        const input = screen.getByTestId('hub-rename-input-p1')
+        fireEvent.change(input, { target: { value: 'New Title' } })
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        // Flush the async handleSubmitRename (awaits onRename)
+        await act(async () => {})
+
+        // Flash class should NOT be present before deferred tick fires
+        const postEl = screen.getByTestId('hub-post-p1')
+        expect(postEl.querySelector('.confirm-flash')).toBeNull()
+
+        act(() => { vi.advanceTimersByTime(0) })
+
+        const titleSpan = postEl.querySelector('.confirm-flash')
+        expect(titleSpan).not.toBeNull()
+
+        act(() => { vi.advanceTimersByTime(1200) })
+        expect(postEl.querySelector('.confirm-flash')).toBeNull()
+      })
+
+      it('does not flash hub post when Enter is pressed without changes', () => {
+        vi.useFakeTimers()
+        const onHubRename = vi.fn().mockResolvedValue(undefined)
+        const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
+        render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
+
+        fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+        fireEvent.click(screen.getByTestId('hub-title-p1'))
+        const input = screen.getByTestId('hub-rename-input-p1')
+        fireEvent.keyDown(input, { key: 'Enter' })
+
+        act(() => { vi.advanceTimersByTime(0) })
+
+        expect(onHubRename).not.toHaveBeenCalled()
+        const postEl = screen.getByTestId('hub-post-p1')
+        expect(postEl.querySelector('.confirm-flash')).toBeNull()
+      })
     })
 
     it('shows error when rename fails', async () => {
@@ -259,7 +424,7 @@ describe('DataModal', () => {
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
       fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
-      fireEvent.click(screen.getByTestId('hub-rename-p1'))
+      fireEvent.click(screen.getByTestId('hub-title-p1'))
       const input = screen.getByTestId('hub-rename-input-p1')
       fireEvent.change(input, { target: { value: 'New Name' } })
       fireEvent.keyDown(input, { key: 'Enter' })

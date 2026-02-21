@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { FavoriteStoreModal } from '../FavoriteStoreModal'
 import type { SavedFavoriteMeta } from '../../../../shared/types/favorite-store'
 
@@ -116,8 +116,8 @@ describe('FavoriteStoreModal', () => {
       />,
     )
 
-    const renameButtons = screen.getAllByTestId('favorite-store-rename-btn')
-    fireEvent.click(renameButtons[0])
+    const labels = screen.getAllByTestId('favorite-store-entry-label')
+    fireEvent.click(labels[0])
 
     const input = screen.getByTestId('favorite-store-rename-input')
     expect(input).toBeInTheDocument()
@@ -138,14 +138,95 @@ describe('FavoriteStoreModal', () => {
       />,
     )
 
-    const renameButtons = screen.getAllByTestId('favorite-store-rename-btn')
-    fireEvent.click(renameButtons[0])
+    const labels = screen.getAllByTestId('favorite-store-entry-label')
+    fireEvent.click(labels[0])
 
     const input = screen.getByTestId('favorite-store-rename-input')
     fireEvent.keyDown(input, { key: 'Escape' })
 
     expect(onRename).not.toHaveBeenCalled()
     expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
+  })
+
+  it('cancels rename on blur (clicking outside)', () => {
+    const onRename = vi.fn()
+    render(
+      <FavoriteStoreModal
+        entries={MOCK_ENTRIES}
+        {...DEFAULT_PROPS}
+        onRename={onRename}
+      />,
+    )
+
+    const labels = screen.getAllByTestId('favorite-store-entry-label')
+    fireEvent.click(labels[0])
+
+    const input = screen.getByTestId('favorite-store-rename-input')
+    fireEvent.change(input, { target: { value: 'Changed Name' } })
+    fireEvent.blur(input)
+
+    expect(onRename).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
+  })
+
+  describe('confirm flash', () => {
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('shows confirm flash on card after Enter rename', () => {
+      vi.useFakeTimers()
+      const onRename = vi.fn()
+      render(
+        <FavoriteStoreModal
+          entries={MOCK_ENTRIES}
+          {...DEFAULT_PROPS}
+          onRename={onRename}
+        />,
+      )
+
+      const labels = screen.getAllByTestId('favorite-store-entry-label')
+      fireEvent.click(labels[0])
+
+      const input = screen.getByTestId('favorite-store-rename-input')
+      fireEvent.change(input, { target: { value: 'New Name' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      // Flash is deferred via setTimeout(0) so the class is added after the label mounts
+      act(() => { vi.advanceTimersByTime(0) })
+
+      // Card should have confirm flash animation
+      const cards = screen.getAllByTestId('favorite-store-entry')
+      expect(cards[0].className).toContain('confirm-flash')
+
+      // After 1200ms, animation class should be removed
+      act(() => { vi.advanceTimersByTime(1200) })
+      expect(cards[0].className).not.toContain('confirm-flash')
+
+      vi.useRealTimers()
+    })
+
+    it('does not flash when Enter is pressed without changes', () => {
+      const onRename = vi.fn()
+      render(
+        <FavoriteStoreModal
+          entries={MOCK_ENTRIES}
+          {...DEFAULT_PROPS}
+          onRename={onRename}
+        />,
+      )
+
+      const labels = screen.getAllByTestId('favorite-store-entry-label')
+      fireEvent.click(labels[0])
+
+      const input = screen.getByTestId('favorite-store-rename-input')
+      // Press Enter without changing the value
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      expect(onRename).not.toHaveBeenCalled()
+      const cards = screen.getAllByTestId('favorite-store-entry')
+      expect(cards[0].className).not.toContain('confirm-flash')
+    })
   })
 
   it('shows delete confirmation and calls onDelete', () => {
@@ -412,8 +493,8 @@ describe('FavoriteStoreModal', () => {
       />,
     )
 
-    const renameButtons = screen.getAllByTestId('favorite-store-rename-btn')
-    fireEvent.click(renameButtons[0])
+    const labels = screen.getAllByTestId('favorite-store-entry-label')
+    fireEvent.click(labels[0])
 
     const input = screen.getByTestId('favorite-store-rename-input')
     fireEvent.change(input, { target: { value: 'Changed Name' } })

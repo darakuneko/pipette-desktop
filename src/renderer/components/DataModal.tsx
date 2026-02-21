@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useFavoriteManage } from '../hooks/useFavoriteManage'
+import { useInlineRename } from '../hooks/useInlineRename'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './editors/store-modal-shared'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from './hub-post-shared'
-import { useFavoriteManage } from '../hooks/useFavoriteManage'
 import type { DataModalTabId, TabDef } from './editors/modal-tabs'
-import type { FavoriteType, SavedFavoriteMeta } from '../../shared/types/favorite-store'
+import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { FavoriteImportResultState } from '../hooks/useFavoriteStore'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 
@@ -49,11 +50,8 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
   const { t } = useTranslation()
   const manage = useFavoriteManage(favoriteType)
   const hasInitialized = useRef(false)
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editLabel, setEditLabel] = useState('')
+  const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
-  const originalLabelRef = useRef('')
-  const cancellingRef = useRef(false)
 
   useEffect(() => {
     if (active && !hasInitialized.current) {
@@ -62,33 +60,9 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
     }
   }, [active, manage.refreshEntries])
 
-  function handleRenameSubmit(entryId: string): void {
-    if (cancellingRef.current) {
-      cancellingRef.current = false
-      return
-    }
-    const trimmed = editLabel.trim()
-    if (trimmed && trimmed !== originalLabelRef.current) {
-      void manage.renameEntry(entryId, trimmed)
-    }
-    setEditingId(null)
-  }
-
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
-    if (e.key === 'Enter') {
-      handleRenameSubmit(entryId)
-    } else if (e.key === 'Escape') {
-      e.stopPropagation()
-      cancellingRef.current = true
-      setEditingId(null)
-    }
-  }
-
-  function startRename(entry: SavedFavoriteMeta): void {
-    cancellingRef.current = false
-    setEditingId(entry.id)
-    setEditLabel(entry.label)
-    originalLabelRef.current = entry.label
+    const newLabel = rename.handleKeyDown(e, entryId)
+    if (newLabel) void manage.renameEntry(entryId, newLabel)
   }
 
   return (
@@ -104,26 +78,29 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
             {manage.entries.map((entry) => (
               <div
                 key={entry.id}
-                className="rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30"
+                className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename.confirmedId === entry.id ? 'confirm-flash' : ''}`}
                 data-testid="data-modal-fav-entry"
+                onMouseDown={(e) => rename.handleCardMouseDown(e, entry.id)}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="min-w-0 flex-1">
-                    {editingId === entry.id ? (
+                    {rename.editingId === entry.id ? (
                       <input
                         type="text"
-                        value={editLabel}
-                        onChange={(e) => setEditLabel(e.target.value)}
-                        onBlur={() => handleRenameSubmit(entry.id)}
+                        value={rename.editLabel}
+                        onChange={(e) => rename.setEditLabel(e.target.value)}
+                        onBlur={rename.cancelRename}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
-                        className="flex-1 w-full rounded-md border border-accent bg-surface px-2 py-0.5 text-sm font-semibold text-content focus:outline-none"
+                        maxLength={200}
+                        className="flex-1 w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
                         data-testid="data-modal-fav-rename-input"
                         autoFocus
                       />
                     ) : (
                       <div
-                        className="truncate text-sm font-semibold text-content"
+                        className="truncate text-sm font-semibold text-content cursor-pointer"
                         data-testid="data-modal-fav-entry-label"
+                        onClick={() => rename.startRename(entry.id, entry.label)}
                       >
                         {entry.label || t('favoriteStore.noLabel')}
                       </div>
@@ -150,24 +127,14 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
                         </button>
                       </>
                     ) : (
-                      <>
-                        <button
-                          type="button"
-                          className={ACTION_BTN}
-                          onClick={() => startRename(entry)}
-                          data-testid="data-modal-fav-rename-btn"
-                        >
-                          {t('favoriteStore.rename')}
-                        </button>
-                        <button
-                          type="button"
-                          className={DELETE_BTN}
-                          onClick={() => setConfirmDeleteId(entry.id)}
-                          data-testid="data-modal-fav-delete-btn"
-                        >
-                          {t('favoriteStore.delete')}
-                        </button>
-                      </>
+                      <button
+                        type="button"
+                        className={DELETE_BTN}
+                        onClick={() => setConfirmDeleteId(entry.id)}
+                        data-testid="data-modal-fav-delete-btn"
+                      >
+                        {t('favoriteStore.delete')}
+                      </button>
                     )}
                   </div>
                 </div>
