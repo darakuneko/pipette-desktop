@@ -205,7 +205,6 @@ describe('hub-client', () => {
   describe('uploadPostToHub', () => {
     const testFiles: HubUploadFiles = {
       vil: { name: 'test.vil', data: Buffer.from('{"keymap":{}}') },
-      pippette: { name: 'test.pippette', data: Buffer.from('{"uid":"0x1234"}') },
       c: { name: 'test.c', data: Buffer.from('const uint16_t PROGMEM keymaps[]') },
       pdf: { name: 'test.pdf', data: Buffer.from('pdf-content') },
       thumbnail: { name: 'test.jpg', data: Buffer.from('jpeg-data') },
@@ -232,7 +231,6 @@ describe('hub-client', () => {
       expect(bodyStr).toContain('name="title"')
       expect(bodyStr).toContain('name="keyboard_name"')
       expect(bodyStr).toContain('name="vil"')
-      expect(bodyStr).toContain('name="pippette"')
       expect(bodyStr).toContain('name="c"')
       expect(bodyStr).toContain('name="pdf"')
       expect(bodyStr).toContain('name="thumbnail"')
@@ -429,7 +427,6 @@ describe('hub-client', () => {
   describe('updatePostOnHub', () => {
     const testFiles: HubUploadFiles = {
       vil: { name: 'test.vil', data: Buffer.from('{"keymap":{}}') },
-      pippette: { name: 'test.pippette', data: Buffer.from('{"uid":"0x1234"}') },
       c: { name: 'test.c', data: Buffer.from('const uint16_t PROGMEM keymaps[]') },
       pdf: { name: 'test.pdf', data: Buffer.from('pdf-content') },
       thumbnail: { name: 'test.jpg', data: Buffer.from('jpeg-data') },
