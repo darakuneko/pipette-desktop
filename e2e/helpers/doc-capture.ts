@@ -448,6 +448,75 @@ async function captureFavorites(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 }
 
+// --- Phase 10: Key Popover ---
+
+async function captureKeyPopover(page: Page): Promise<void> {
+  console.log('\n--- Phase 10: Key Popover ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+
+  // Switch to layer 0 and Basic tab
+  const layer0Btn = editorContent.locator('button', { hasText: /^0$/ })
+  if (await isAvailable(layer0Btn)) {
+    await layer0Btn.first().click()
+    await page.waitForTimeout(300)
+  }
+  const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
+  if (await isAvailable(basicBtn)) {
+    await basicBtn.first().click()
+    await page.waitForTimeout(300)
+  }
+
+  // Double-click a key to open the popover. Target the first SVG <text>
+  // element (key label) inside the layout, which is more stable than
+  // matching inline style strings that may vary across environments.
+  const keyLabel = editorContent.locator('svg text').first()
+  if (!(await isAvailable(keyLabel))) {
+    console.log('  [skip] No key label found in layout')
+    return
+  }
+
+  await keyLabel.dblclick()
+  await page.waitForTimeout(500)
+
+  const popover = page.locator('[data-testid="key-popover"]')
+  if (!(await isAvailable(popover))) {
+    console.log('  [skip] Key popover did not open')
+    return
+  }
+
+  // Capture Key tab (default view with search results)
+  await capture(page, 'key-popover-key', { fullPage: true })
+
+  // Switch to Code tab and capture
+  await page.locator('[data-testid="popover-tab-code"]').click()
+  await page.waitForTimeout(300)
+  await capture(page, 'key-popover-code', { fullPage: true })
+
+  // Switch back to Key tab and enable Mod Mask mode
+  await page.locator('[data-testid="popover-tab-key"]').click()
+  await page.waitForTimeout(200)
+
+  await page.locator('[data-testid="popover-mode-mod-mask"]').click()
+  await page.waitForTimeout(300)
+
+  // Check a modifier to show the strip in action
+  const lSftBtn = page.locator('[data-testid="mod-LSft"]')
+  if (await isAvailable(lSftBtn)) {
+    await lSftBtn.click()
+    await page.waitForTimeout(200)
+  }
+
+  await capture(page, 'key-popover-modifier', { fullPage: true })
+
+  // Close the popover
+  const closeBtn = page.locator('[data-testid="popover-close"]')
+  if (await isAvailable(closeBtn)) {
+    await closeBtn.click()
+    await page.waitForTimeout(300)
+  }
+}
+
 // --- Main ---
 
 async function main(): Promise<void> {
@@ -487,6 +556,7 @@ async function main(): Promise<void> {
     await captureEditorSettings(page)
     await captureStatusBar(page)
     await captureFavorites(page)
+    await captureKeyPopover(page)
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {

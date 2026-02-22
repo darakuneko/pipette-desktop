@@ -78,6 +78,38 @@ Layer switching buttons are located on the left side of the keyboard layout.
 - Layer 0 is the default layer
 - The number of available layers depends on the keyboard configuration
 
+### 2.4 Key Popover
+
+Double-click a key on the keyboard layout to open the Key Popover — a quick way to search and assign keycodes without scrolling through the palette.
+
+**Key Tab**
+
+![Key Popover — Key Tab](screenshots/32-key-popover-key.png)
+
+- The search input is pre-filled with the current keycode name
+- Type to search by name, QMK ID, or alias — results are ranked by relevance
+- Click a result to assign it immediately
+- The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.)
+
+**Code Tab**
+
+![Key Popover — Code Tab](screenshots/33-key-popover-code.png)
+
+- Enter a keycode value directly in hexadecimal (e.g., `0x0029` for Escape)
+- The resolved keycode name is displayed below the hex input
+- Click **Apply** to assign the entered keycode
+
+**Mod Mask / Mod-Tap Mode**
+
+![Key Popover — Modifier Mode](screenshots/34-key-popover-modifier.png)
+
+- **Mod Mask**: Click to combine a modifier with a key (e.g., `LSFT(KC_ESCAPE)`)
+- **Mod-Tap**: Click to set modifier on hold, key on tap
+- Use the modifier checkbox strip to select Left/Right Ctrl, Shift, Alt, or GUI
+- Left and Right modifiers cannot be mixed — selecting one side disables the other
+
+Press Escape or click outside the popover to close it.
+
 ---
 
 ## 3. Keycode Palette
