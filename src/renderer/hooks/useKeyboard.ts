@@ -197,8 +197,15 @@ export function useKeyboard() {
         console.error('[KB] definition fetch failed:', err)
       }
 
+      // Phase 2.5 guard: definition is required to continue
+      if (!newState.definition) {
+        console.error('[KB] definition load failed — aborting reload')
+        setState((s) => ({ ...s, loading: false }))
+        return null
+      }
+
       // Phase 2.6: Lighting data load
-      const lt = newState.definition?.lighting
+      const lt = newState.definition.lighting
       try {
         if (lt === 'vialrgb') {
           const info = await api.getVialRGBInfo()
@@ -369,8 +376,8 @@ export function useKeyboard() {
         layers: newState.layers,
         macroCount: newState.macroCount,
         tapDanceCount: newState.dynamicCounts.tapDance,
-        customKeycodes: newState.definition?.customKeycodes ?? null,
-        midi: newState.definition?.vial?.midi ?? '',
+        customKeycodes: newState.definition.customKeycodes ?? null,
+        midi: newState.definition.vial?.midi ?? '',
         supportedFeatures,
       })
 

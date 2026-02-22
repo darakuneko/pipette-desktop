@@ -78,6 +78,7 @@ export function App() {
   const [showSettings, setShowSettings] = useState(false)
   const [showDataModal, setShowDataModal] = useState(false)
   const [dummyError, setDummyError] = useState<string | null>(null)
+  const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
   const hasSyncedRef = useRef(false)
   const hasFavSyncedForDataRef = useRef(false)
@@ -815,17 +816,7 @@ export function App() {
     if (!keyOverrideSupported) setShowKeyOverrideModal(false)
   }, [lightingSupported, comboSupported, altRepeatKeySupported, keyOverrideSupported])
 
-  const handleConnect = useCallback(
-    async (dev: DeviceInfo) => {
-      setDummyError(null)
-      const success = await device.connectDevice(dev)
-      if (success) {
-        const uid = await keyboard.reload()
-        if (uid) await devicePrefs.applyDevicePrefs(uid)
-      }
-    },
-    [device, keyboard, devicePrefs],
-  )
+  const [resettingKeyboard, setResettingKeyboard] = useState(false)
 
   const handleDisconnect = useCallback(async () => {
     try {
@@ -847,13 +838,30 @@ export function App() {
       setLastLoadedLabel('')
       setMatrixState({ matrixMode: false, hasMatrixTester: false })
       setResettingKeyboard(false)
+      setDeviceLoadError(null)
       setHubConnected(false)
       setHubMyPosts([])
       setHubKeyboardPosts([])
     }
   }, [device.disconnectDevice, keyboard.reset])
 
-  const [resettingKeyboard, setResettingKeyboard] = useState(false)
+  const handleConnect = useCallback(
+    async (dev: DeviceInfo) => {
+      setDummyError(null)
+      setDeviceLoadError(null)
+      const success = await device.connectDevice(dev)
+      if (success) {
+        const uid = await keyboard.reload()
+        if (uid) {
+          await devicePrefs.applyDevicePrefs(uid)
+        } else {
+          try { await handleDisconnect() } catch { /* cleanup best-effort */ }
+          setDeviceLoadError(t('error.notVialCompatible'))
+        }
+      }
+    },
+    [device, keyboard, devicePrefs, handleDisconnect, t],
+  )
 
   const handleResetKeyboardData = useCallback(async () => {
     setShowEditorSettings(false)
@@ -933,6 +941,7 @@ export function App() {
           onOpenSettings={() => setShowSettings(true)}
           onOpenData={handleOpenDataModal}
           syncStatus={sync.syncStatus}
+          deviceWarning={deviceLoadError}
         />
         {showSettings && (
           <SettingsModal

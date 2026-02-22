@@ -21,6 +21,7 @@ interface Props {
   onOpenSettings?: () => void
   onOpenData?: () => void
   syncStatus?: SyncStatusType
+  deviceWarning?: string | null
 }
 
 export function DeviceSelector({
@@ -32,6 +33,7 @@ export function DeviceSelector({
   onOpenSettings,
   onOpenData,
   syncStatus,
+  deviceWarning,
 }: Props) {
   const { t } = useTranslation()
 
@@ -130,6 +132,12 @@ export function DeviceSelector({
         >
           {t('app.loadDummy')}
         </button>
+
+        {deviceWarning && (
+          <div className="mt-3 text-center text-xs text-warning" data-testid="device-warning">
+            {deviceWarning}
+          </div>
+        )}
 
         {syncStatus && syncStatus !== 'none' && (
           <div className="mt-3 text-center text-xs" data-testid="device-sync-status">
