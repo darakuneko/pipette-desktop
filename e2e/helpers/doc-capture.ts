@@ -476,7 +476,7 @@ async function captureKeyPopover(page: Page): Promise<void> {
     return
   }
 
-  await keyLabel.dblclick()
+  await keyLabel.dblclick({ force: true })
   await page.waitForTimeout(500)
 
   const popover = page.locator('[data-testid="key-popover"]')
@@ -508,6 +508,13 @@ async function captureKeyPopover(page: Page): Promise<void> {
   }
 
   await capture(page, 'key-popover-modifier', { fullPage: true })
+
+  // Switch to LT mode to show layer selector
+  await page.locator('[data-testid="popover-mode-mod-mask"]').click()
+  await page.waitForTimeout(200)
+  await page.locator('[data-testid="popover-mode-lt"]').click()
+  await page.waitForTimeout(300)
+  await capture(page, 'key-popover-lt', { fullPage: true })
 
   // Close the popover
   const closeBtn = page.locator('[data-testid="popover-close"]')

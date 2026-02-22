@@ -3,7 +3,7 @@
 [日本語版はこちら](OPERATION-GUIDE.ja.md)
 
 This document explains how to use the Pipette desktop application.
-Screenshots were taken using a GPK60-63R keyboard.
+Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
 
 ---
 
@@ -99,16 +99,45 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 - The resolved keycode name is displayed below the hex input
 - Click **Apply** to assign the entered keycode
 
-**Mod Mask / Mod-Tap Mode**
+**Wrapper Modes**
+
+The mode buttons at the top of the popover let you build composite keycodes:
 
 ![Key Popover — Modifier Mode](screenshots/34-key-popover-modifier.png)
 
-- **Mod Mask**: Click to combine a modifier with a key (e.g., `LSFT(KC_ESCAPE)`)
-- **Mod-Tap**: Click to set modifier on hold, key on tap
-- Use the modifier checkbox strip to select Left/Right Ctrl, Shift, Alt, or GUI
-- Left and Right modifiers cannot be mixed — selecting one side disables the other
+- **Mod Mask**: Combine a modifier with a key (e.g., `LSFT(KC_ESCAPE)`)
+- **Mod-Tap**: Modifier on hold, key on tap (e.g., `LSFT_T(KC_ESCAPE)`)
+
+Both modes show the modifier checkbox strip to select Left/Right Ctrl, Shift, Alt, or GUI. Left and Right modifiers cannot be mixed — selecting one side disables the other.
+
+![Key Popover — LT Mode](screenshots/35-key-popover-lt.png)
+
+- **LT**: Layer-Tap — activate a layer on hold, send a key on tap (e.g., `LT0(KC_ESCAPE)`). A layer selector appears to choose the target layer.
+- **SH_T**: Swap Hands Tap — swap hands on hold, send a key on tap (e.g., `SH_T(KC_ESCAPE)`)
+- **LM**: Layer-Mod — activate a layer with modifiers (e.g., `LM(0, MOD_LSFT)`). Shows both the layer selector and the modifier checkbox strip.
+
+Click an active mode button to toggle it off and revert to a basic keycode.
 
 Press Escape or click outside the popover to close it.
+
+### 2.5 Layout Options
+
+Some keyboards support multiple physical layouts (e.g., split backspace, ISO enter, different bottom row configurations). When a keyboard has layout options, a Layout Options button (grid icon) appears at the right end of the keycode palette tab bar.
+
+![Layout Options Panel](screenshots/layout-options-open.png)
+
+- Click the grid icon to open the Layout Options panel
+- **Checkbox options**: Toggle a layout variant on or off (e.g., "Macro Pad", "Split Backspace", "ISO Enter")
+- **Dropdown options**: Select from multiple layout variants (e.g., "Bottom Section" with Full Grid / Macro Pad / Arrow Keys choices)
+- Changes are applied immediately — the keyboard layout display updates in real time to reflect the selected options
+
+![Layout Options Changed](screenshots/layout-options-changed.png)
+
+- Selecting a different option updates the visible keys on the keyboard layout
+- Layout options are saved to the keyboard and persist across sessions
+- Click outside the panel or press Escape to close it
+
+> **Note**: The Layout Options button only appears for keyboards that define multiple layout variants. Most keyboards with a single fixed layout do not show this button. Screenshots in this section were taken using a dummy JSON definition loaded via "Load from JSON file".
 
 ---
 
