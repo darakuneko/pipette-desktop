@@ -644,10 +644,11 @@ describe('sync-service', () => {
 
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-      // tapDance upload succeeds, macro upload fails
-      mockUploadFile
-        .mockResolvedValueOnce('id1')
-        .mockRejectedValueOnce(new Error('upload failed'))
+      // tapDance upload succeeds, macro upload fails (argument-based to avoid order dependency)
+      mockUploadFile.mockImplementation((name: string) => {
+        if (name === 'favorites_macro.enc') return Promise.reject(new Error('upload failed'))
+        return Promise.resolve('id1')
+      })
 
       await executeSync('upload')
 
@@ -669,10 +670,11 @@ describe('sync-service', () => {
 
       mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
       mockDownloadFile.mockResolvedValueOnce(makePasswordCheckEnvelope())
-      // tapDance succeeds, macro fails
-      mockUploadFile
-        .mockResolvedValueOnce('id1')
-        .mockRejectedValueOnce(new Error('upload failed'))
+      // tapDance succeeds, macro fails (argument-based to avoid order dependency)
+      mockUploadFile.mockImplementation((name: string) => {
+        if (name === 'favorites_macro.enc') return Promise.reject(new Error('upload failed'))
+        return Promise.resolve('id1')
+      })
 
       await executeSync('upload')
 
