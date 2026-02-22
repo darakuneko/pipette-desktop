@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useMemo } from 'react'
+import { useState, useRef, useCallback, useLayoutEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type Keycode, getKeycodeRevision, serialize, isMask, findInnerKeycode, isBasic, isLMKeycode, getAvailableLMMods, extractBasicKey } from '../../../shared/keycodes/keycodes'
 import { KEYCODE_CATEGORIES } from './categories'
@@ -13,6 +13,15 @@ interface SearchEntry {
   tokens: string[]
   detail: string
 }
+
+interface DetailTooltipState {
+  text: string
+  top: number
+  left: number
+  containerWidth: number
+}
+
+const TOOLTIP_VERTICAL_GAP = 4
 
 /**
  * Strip text before and including the first underscore.
@@ -127,8 +136,38 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: l
     return [...exact, ...partial].slice(0, MAX_RESULTS)
   }, [query, searchIndex, suppressResults])
 
+  // Tooltip for truncated detail text (styled like key picker tooltip in TabbedKeycodes)
+  const [tooltip, setTooltip] = useState<DetailTooltipState | null>(null)
+  const tooltipRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Clamp tooltip horizontally after render so it never overflows the container
+  useLayoutEffect(() => {
+    const el = tooltipRef.current
+    if (!el || !tooltip) return
+    const w = el.offsetWidth
+    const clampedLeft = Math.max(0, Math.min(tooltip.left, tooltip.containerWidth - w))
+    el.style.left = `${clampedLeft}px`
+  }, [tooltip])
+
+  const handleDetailMouseEnter = useCallback((e: React.MouseEvent<HTMLSpanElement>) => {
+    const span = e.currentTarget
+    if (span.scrollWidth <= span.clientWidth) return
+    const containerRect = containerRef.current?.getBoundingClientRect()
+    if (!containerRect) return
+    const spanRect = span.getBoundingClientRect()
+    setTooltip({
+      text: span.textContent ?? '',
+      top: spanRect.top - containerRect.top,
+      left: spanRect.left - containerRect.left,
+      containerWidth: containerRect.width,
+    })
+  }, [])
+
+  const handleDetailMouseLeave = useCallback(() => setTooltip(null), [])
+
   return (
-    <div className="flex flex-col gap-2">
+    <div ref={containerRef} className="relative flex flex-col gap-2">
       <input
         type="text"
         value={query}
@@ -138,7 +177,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: l
         autoFocus
         data-testid="popover-search-input"
       />
-      <div className="max-h-[240px] overflow-y-auto">
+      <div className="max-h-[240px] overflow-y-auto" onScroll={handleDetailMouseLeave}>
         {query.trim() && results.length === 0 && (
           <div className="px-2 py-3 text-center text-xs text-content-muted">
             {suppressResults
@@ -151,18 +190,33 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: l
             key={`${entry.categoryId}-${entry.keycode.qmkId}`}
             type="button"
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-surface-dim"
-            onClick={() => { onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label) }}
+            onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label) }}
             data-testid={`popover-result-${entry.keycode.qmkId}`}
           >
             <span className="min-w-[60px] font-mono text-xs font-medium">
               {entry.keycode.label}
             </span>
-            <span className="truncate text-content-secondary text-xs">
+            <span
+              className="truncate text-content-secondary text-xs"
+              onMouseEnter={handleDetailMouseEnter}
+              onMouseLeave={handleDetailMouseLeave}
+            >
               {entry.detail}
             </span>
           </button>
         ))}
       </div>
+      {tooltip && (
+        <div
+          ref={tooltipRef}
+          className="pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg"
+          style={{ top: tooltip.top - TOOLTIP_VERTICAL_GAP, transform: 'translateY(-100%)' }}
+        >
+          <div className="text-xs font-medium text-content whitespace-nowrap">
+            {tooltip.text}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
