@@ -6,6 +6,9 @@
     "reset": "リセット",
     "undo": "元に戻す",
     "revert": "復元",
+    "confirmRevert": "復元？",
+    "clear": "クリア",
+    "confirmClear": "クリア？",
     "refresh": "更新",
     "refreshing": "更新中...",
     "disconnect": "切断",
@@ -14,7 +17,8 @@
     "noEntries": "このデバイスにはエントリが設定されていません",
     "notConfigured": "未設定",
     "settingsLabel": "設定:",
-    "saving": "保存中..."
+    "saving": "保存中...",
+    "back": "戻る"
   },
   "app": {
     "title": "Pipette",

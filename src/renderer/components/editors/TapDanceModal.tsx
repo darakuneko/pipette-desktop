@@ -5,7 +5,9 @@ import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
@@ -48,10 +50,24 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     enabled: !isDummy,
   })
 
+  const clearAction = useConfirmAction(useCallback(() => {
+    setEditedEntry({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 })
+    setSelectedField(null)
+    setPopoverState(null)
+  }, []))
+
+  const revertAction = useConfirmAction(useCallback(() => {
+    setEditedEntry(entry)
+    setSelectedField(null)
+    setPopoverState(null)
+  }, [entry]))
+
   useEffect(() => {
     setEditedEntry(entry)
     setSelectedField(null)
     setPopoverState(null)
+    clearAction.reset()
+    revertAction.reset()
   }, [entry])
 
   useEffect(() => {
@@ -194,6 +210,20 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
 
             {!selectedField && (
               <div className="flex justify-end gap-2 pt-4">
+                <ConfirmButton
+                  testId="td-modal-clear"
+                  confirming={clearAction.confirming}
+                  onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                  labelKey="common.clear"
+                  confirmLabelKey="common.confirmClear"
+                />
+                <ConfirmButton
+                  testId="td-modal-revert"
+                  confirming={revertAction.confirming}
+                  onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                  labelKey="common.revert"
+                  confirmLabelKey="common.confirmRevert"
+                />
                 <button
                   type="button"
                   data-testid="td-modal-save"
@@ -210,7 +240,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
           {/* Right panel: favorites */}
           {!isDummy && (
             <div
-              className={`w-[456px] shrink-0 border-l border-edge flex flex-col ${selectedField ? 'hidden' : ''}`}
+              className={`w-[456px] shrink-0 flex flex-col ${selectedField ? 'hidden' : ''}`}
               data-testid="td-favorites-panel"
             >
               <FavoriteStoreContent

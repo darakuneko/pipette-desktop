@@ -19,7 +19,9 @@ import {
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { ConfirmButton } from './ConfirmButton'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
@@ -87,19 +89,13 @@ export function MacroEditor({
     setActiveMacro(initialMacro ?? 0)
   }, [initialMacro])
 
-  // Clear selection state when switching macros to avoid stale indices
-  useEffect(() => {
-    setSelectedKey(null)
-    setPopoverState(null)
-  }, [activeMacro])
+  const [dirty, setDirty] = useState(false)
 
   useEffect(() => {
     if (!isDummy) {
       favStore.refreshEntries()
     }
   }, [isDummy, favStore.refreshEntries])
-
-  const [dirty, setDirty] = useState(false)
 
   const [macros, setMacros] = useState<MacroAction[][]>(() =>
     parseMacroBuffer(macroBuffer, vialProtocol, macroCount),
@@ -188,13 +184,25 @@ export function MacroEditor({
     })
   }, [vialProtocol, onSaveMacros, guardAll, onClose])
 
-  const handleRevert = useCallback(() => {
+  const clearAction = useConfirmAction(useCallback(() => {
+    updateActions([])
+  }, [updateActions]))
+
+  const revertAction = useConfirmAction(useCallback(() => {
     clearPending()
     setSelectedKey(null)
     setPopoverState(null)
     setMacros(parseMacroBuffer(macroBuffer, vialProtocol, macroCount))
     setDirty(false)
-  }, [macroBuffer, vialProtocol, macroCount, clearPending])
+  }, [macroBuffer, vialProtocol, macroCount, clearPending]))
+
+  // Clear selection state when switching macros to avoid stale indices
+  useEffect(() => {
+    setSelectedKey(null)
+    setPopoverState(null)
+    clearAction.reset()
+    revertAction.reset()
+  }, [activeMacro])
 
   const memoryUsed = useMemo(() => {
     let total = 0
@@ -348,48 +356,20 @@ export function MacroEditor({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-3" data-testid="editor-macro">
-        <div className="text-xs text-content-muted" data-testid="macro-memory">
-          {t('editor.macro.memoryUsage', {
-            used: memoryUsed,
-            total: macroBufferSize,
-          })}
-        </div>
-
-        <div className="space-y-1" data-testid="macro-action-list">
-          {currentActions.map((action, i) => (
-            <MacroActionItem
-              key={i}
-              action={action}
-              index={i}
-              onChange={handleChange}
-              onDelete={handleDelete}
-              onMoveUp={handleMoveUp}
-              onMoveDown={handleMoveDown}
-              isFirst={i === 0}
-              isLast={i === currentActions.length - 1}
-              selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
-              onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
-              onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
-              onKeycodeAdd={() => handleKeycodeAdd(i)}
-            />
-          ))}
-        </div>
-
-        {selectedKey !== null && (
-          <div ref={pickerRef}>
-            <TabbedKeycodes
-              onKeycodeSelect={handleKeycodeSelect}
-              onClose={() => setSelectedKey(null)}
-            />
-          </div>
-        )}
-
-        <div className="flex gap-2">
+      <div className="flex-1 flex flex-col min-h-0" data-testid="editor-macro">
+        {/* Fixed header: memory + action buttons */}
+        <div className="shrink-0 px-6 pt-2 pb-3 flex items-center gap-2">
+          <span className="text-xs text-content-muted" data-testid="macro-memory">
+            {t('editor.macro.memoryUsage', {
+              used: memoryUsed,
+              total: macroBufferSize,
+            })}
+          </span>
+          <div className="flex-1" />
           <button
             type="button"
             data-testid="macro-add-action"
-            className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
+            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
             onClick={handleAddAction}
           >
             {t('editor.macro.addAction')}
@@ -398,30 +378,74 @@ export function MacroEditor({
           <button
             type="button"
             data-testid="macro-text-editor-btn"
-            className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
+            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
             onClick={() => setShowTextEditor(true)}
           >
             {t('editor.macro.textEditor')}
           </button>
-          <div className="flex-1" />
-          <button
-            type="button"
-            data-testid="macro-revert"
-            className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim disabled:opacity-50"
-            onClick={handleRevert}
-            disabled={!dirty}
-          >
-            {t('common.revert')}
-          </button>
-          <button
-            type="button"
-            data-testid="macro-save"
-            className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-            onClick={handleSave}
-            disabled={!dirty || hasInvalidText}
-          >
-            {t('common.save')}
-          </button>
+        </div>
+
+        {/* Scrollable content: action list + picker */}
+        <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="space-y-1" data-testid="macro-action-list">
+            {currentActions.map((action, i) => (
+              <MacroActionItem
+                key={i}
+                action={action}
+                index={i}
+                onChange={handleChange}
+                onDelete={handleDelete}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                isFirst={i === 0}
+                isLast={i === currentActions.length - 1}
+                selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
+                onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
+                onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
+                onKeycodeAdd={() => handleKeycodeAdd(i)}
+              />
+            ))}
+          </div>
+
+          {selectedKey !== null && (
+            <div ref={pickerRef} className="mt-3">
+              <TabbedKeycodes
+                onKeycodeSelect={handleKeycodeSelect}
+                onClose={() => setSelectedKey(null)}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Fixed footer: Clear / Revert / Save — aligned with favorites Import / Export */}
+        <div className="shrink-0 px-6 py-3">
+          <div className="flex justify-end gap-2">
+            <ConfirmButton
+              testId="macro-clear"
+              confirming={clearAction.confirming}
+              onClick={() => { revertAction.reset(); clearAction.trigger() }}
+              labelKey="common.clear"
+              confirmLabelKey="common.confirmClear"
+              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+            />
+            <ConfirmButton
+              testId="macro-revert"
+              confirming={revertAction.confirming}
+              onClick={() => { clearAction.reset(); revertAction.trigger() }}
+              labelKey="common.revert"
+              confirmLabelKey="common.confirmRevert"
+              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+            />
+            <button
+              type="button"
+              data-testid="macro-save"
+              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+              onClick={handleSave}
+              disabled={!dirty || hasInvalidText}
+            >
+              {t('common.save')}
+            </button>
+          </div>
         </div>
 
         {popoverState !== null && (
@@ -445,14 +469,14 @@ export function MacroEditor({
 
       {!isDummy && (
         <div
-          className="w-[456px] shrink-0 border-l border-edge flex flex-col"
+          className="w-[456px] shrink-0 flex flex-col"
           data-testid="macro-favorites-panel"
         >
           <FavoriteStoreContent
             entries={favStore.entries}
             loading={favStore.loading}
             saving={favStore.saving}
-            canSave={currentActions.length > 0}
+            canSave={currentActions.length > 0 && !hasInvalidText}
             onSave={favStore.saveFavorite}
             onLoad={favStore.loadFavorite}
             onRename={favStore.renameEntry}
