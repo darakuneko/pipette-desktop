@@ -59,13 +59,13 @@ For complete instructions with screenshots:
 
 ### Keyboard Configuration
 
-- **Keymap Editor** — Layer-based key assignment with drag & drop, auto-advance, and a searchable keycode palette
-- **Layout Editor** — Physical layout switching (split backspace, bottom row variants, etc.)
-- **Tap Dance** — Multi-tap key behaviors (tap, hold, double-tap, tap+hold, custom tapping term)
-- **Combo** — Simultaneous key-press to trigger output keys
-- **Key Override** — Replace key output when specific modifiers are held
-- **Alternate Repeat Key** — Context-aware alternate repeat key bindings
-- **Macro Editor** — Create and record macros with text, tap, hold, release, and delay actions (v1/v2 protocol)
+- **Keymap Editor** — Layer-based key assignment with drag & drop, auto-advance, and a searchable keycode palette with Mod Mask/Mod-Tap wrapper modes
+- **Layout Editor** — Physical layout switching via slide-out panel (split backspace, bottom row variants, etc.)
+- **Tap Dance** — Multi-tap key behaviors (tap, hold, double-tap, tap+hold, custom tapping term) with inline favorites
+- **Combo** — Simultaneous key-press to trigger output keys; 2-screen flow (tile grid → detail editor with inline favorites)
+- **Key Override** — Replace key output when specific modifiers are held; 2-screen flow with inline favorites
+- **Alternate Repeat Key** — Context-aware alternate repeat key bindings; 2-screen flow with inline favorites
+- **Macro Editor** — Create and record macros with text, tap, hold, release, and delay actions (v1/v2 protocol) with inline favorites
 - **RGB Lighting** — QMK Backlight, RGBLight, and VialRGB configuration
 - **QMK Settings** — Dynamic firmware settings with boolean/integer fields
 - **Matrix Tester** — Real-time key switch verification (20 ms polling)
@@ -73,7 +73,7 @@ For complete instructions with screenshots:
 ### Data Management
 
 - **Snapshots** — Save and restore complete keyboard states (keymap, macros, dynamic entries, QMK settings)
-- **Favorites** — Save reusable tap dance, macro, combo, key override, and alternate repeat key configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard. Per-entry export, bulk import/export supported
+- **Favorites** — Inline favorites panel in every editor for saving/loading reusable configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard. Per-entry export, bulk import/export supported
 - **Data Modal** — Centralized favorite and Hub post management from the device selection screen
 - **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, or PDF cheat sheet
 - **Import** — Load `.vil` files to restore keyboard state

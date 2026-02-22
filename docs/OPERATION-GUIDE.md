@@ -239,57 +239,82 @@ Open from the Lighting tab settings button. Configure RGB lighting colors and ef
 
 ### 5.2 Combo
 
-Open from the Quantum tab combo settings button. Configure simultaneous key press combinations to trigger different keys.
+Open from the Quantum tab combo settings button. Configure simultaneous key press combinations to trigger different keys. The combo editor uses a **2-screen flow**: a tile grid overview followed by a detail editor.
+
+**Screen 1 — Tile Grid Overview**
 
 ![Combo List](screenshots/21-combo-modal.png)
 
+Shows a grid of numbered tiles (0--31). Configured entries display a summary (e.g., "A + B -> C"). Click a tile to open the detail editor. Timeout (ms) and Save button are shown on this screen.
+
+**Screen 2 — Detail Editor**
+
 ![Combo Detail](screenshots/22-combo-detail.png)
 
-- Select combo entries from the grid tiles
-- Configure trigger key combinations and output keys
-- Adjust timeout values
+- Left panel: Combo editor with Key 1--4 and Output fields
+- Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
+- **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
+- **Save** writes changes to the keyboard
+- **Back** returns to the tile grid overview
 
 ### 5.3 Key Override
 
-Open from the Quantum tab key override settings button. Replace specific key inputs with different keys.
+Open from the Quantum tab key override settings button. Replace specific key inputs with different keys. The key override editor uses the same **2-screen flow** as Combo.
+
+**Screen 1 — Tile Grid Overview**
 
 ![Key Override List](screenshots/23-key-override-modal.png)
 
+Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
+
+**Screen 2 — Detail Editor**
+
 ![Key Override Detail](screenshots/24-key-override-detail.png)
 
-- Configure trigger and replacement keys
-- Specify layer and modifier conditions
-- Enable/disable individual entries
+- Left panel: Trigger Key, Replacement Key, enabled toggle, layer and modifier options
+- Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
+- **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
+- **Save** writes changes to the keyboard
+- **Back** returns to the tile grid overview
 
 ### 5.4 Alt Repeat Key
 
-Open from the Quantum tab Alt Repeat Key settings button. Configure alternative actions for the Repeat Key.
+Open from the Quantum tab Alt Repeat Key settings button. Configure alternative actions for the Repeat Key. The Alt Repeat Key editor uses the same **2-screen flow** as Combo.
+
+**Screen 1 — Tile Grid Overview**
 
 ![Alt Repeat Key List](screenshots/25-alt-repeat-key-modal.png)
 
+Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
+
+**Screen 2 — Detail Editor**
+
 ![Alt Repeat Key Detail](screenshots/26-alt-repeat-key-detail.png)
 
-- Set alternative keys based on the last key pressed
-- Specify allowed modifiers
-- Enable/disable individual entries
+- Left panel: Trigger Key, Replacement Key, enabled toggle, modifier options
+- Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
+- **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
+- **Save** writes changes to the keyboard
+- **Back** returns to the tile grid overview
 
 ### 5.5 Favorites
 
-Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includes a **Fav** button for saving and loading individual entry configurations.
+Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includes an inline **Favorites panel** on the right side of the editor.
 
-![Fav Button](screenshots/31-fav-button.png)
+![Inline Favorites Panel](screenshots/31-inline-favorites.png)
 
-- Click the **Fav** button (yellow) to open the Favorites modal
+The inline favorites panel provides:
+
 - **Save Current State**: Enter a label and click Save to store the current entry configuration
-- **Synced Data**: Previously saved entries are listed with Load, Rename, Delete, and **Export** actions
+- **Synced Data**: Previously saved entries are listed with Load, Rename, Delete, and Export actions
+- **Import** / **Export All**: Footer buttons for bulk import/export of favorites
 
-![Favorites Modal](screenshots/32-fav-modal.png)
+Within the Synced Data list:
 
 - **Load**: Apply a saved configuration to the current entry
 - **Rename**: Change the label of a saved entry
 - **Delete**: Remove a saved entry
 - **Export**: Download an individual saved entry as a file
-- **Import** / **Export All**: Use the footer buttons to import entries from a file or export all entries at once
 
 > **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.4). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
 

@@ -56,6 +56,22 @@ async function dismissNotificationModal(page: Page): Promise<void> {
   }
 }
 
+async function waitForUnlockDialog(page: Page): Promise<void> {
+  // The unlock dialog has no close button — it requires physical key presses.
+  // Wait up to 60 seconds for the dialog to disappear (user unlocks).
+  const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
+  if (!(await isAvailable(unlockHeading))) return
+
+  console.log('  Unlock dialog detected — waiting for physical unlock (up to 60s)...')
+  try {
+    await unlockHeading.waitFor({ state: 'detached', timeout: 60_000 })
+    console.log('  Keyboard unlocked!')
+    await page.waitForTimeout(500)
+  } catch {
+    console.log('  [warn] Unlock timed out')
+  }
+}
+
 async function connectDevice(page: Page): Promise<boolean> {
   const deviceList = page.locator('[data-testid="device-list"]')
   const noDeviceMsg = page.locator('[data-testid="no-device-message"]')
@@ -233,10 +249,16 @@ async function captureSidebarTools(page: Page): Promise<void> {
   const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
   if (await isAvailable(typingTestBtn)) {
     await typingTestBtn.click()
+    await waitForUnlockDialog(page)
     await page.waitForTimeout(1000)
     await capture(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
-    await typingTestBtn.click()
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(500)
+    await dismissNotificationModal(page)
+    await typingTestBtn.click({ timeout: 5000 }).catch(() => {
+      console.log('  [warn] Could not toggle typing test off')
+    })
     await page.waitForTimeout(500)
   } else {
     console.log('  [skip] typing-test-button not found')
@@ -387,10 +409,10 @@ async function captureStatusBar(page: Page): Promise<void> {
   }
 }
 
-// --- Phase 9: Favorites ---
+// --- Phase 9: Inline Favorites ---
 
 async function captureFavorites(page: Page): Promise<void> {
-  console.log('\n--- Phase 9: Favorites ---')
+  console.log('\n--- Phase 9: Inline Favorites ---')
 
   const editorContent = page.locator('[data-testid="editor-content"]')
   const tdTabLabel = 'Tap-Hold / Tap Dance'
@@ -419,32 +441,9 @@ async function captureFavorites(page: Page): Promise<void> {
     return
   }
 
-  await capture(page, 'fav-button', { fullPage: true })
+  // TapDance modal now shows editor on the left and inline favorites panel on the right
+  await capture(page, 'inline-favorites', { fullPage: true })
 
-  const favBtn = page.locator('[data-testid="td-fav-btn"]')
-  if (!(await isAvailable(favBtn))) {
-    console.log('  [skip] Fav button not found')
-    await page.locator('[data-testid="td-modal-close"]').click()
-    await page.waitForTimeout(300)
-    return
-  }
-  await favBtn.click()
-  await page.waitForTimeout(500)
-
-  const favBackdrop = page.locator('[data-testid="favorite-store-modal-backdrop"]')
-  try {
-    await favBackdrop.waitFor({ state: 'visible', timeout: 3000 })
-  } catch {
-    console.log('  [skip] Favorite modal did not open')
-    await page.locator('[data-testid="td-modal-close"]').click()
-    await page.waitForTimeout(300)
-    return
-  }
-
-  await capture(page, 'fav-modal', { fullPage: true })
-
-  await page.locator('[data-testid="favorite-store-modal-close"]').click()
-  await page.waitForTimeout(300)
   await page.locator('[data-testid="td-modal-close"]').click()
   await page.waitForTimeout(300)
 }
