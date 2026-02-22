@@ -273,13 +273,62 @@ Adjusts the keyboard layout display scale.
 
 ### 4.3 Typing Test
 
-A typing practice feature. Test your typing with the current keymap.
+A typing practice feature. Test your typing with the current keymap while viewing the keyboard layout below. The layout highlights key presses in real time, so you can verify that your physical keymap matches the on-screen display.
 
-![Typing Test](screenshots/19-typing-test.png)
+Click the typing test button in the toolbar to enter typing test mode.
 
-- Measures WPM (Words Per Minute) and accuracy
-- Toggle punctuation and numbers on/off
-- View test result history
+#### Modes
+
+Three test modes are available, selectable from the mode tabs at the top:
+
+**Words Mode**
+
+![Typing Test — Words Mode](screenshots/typing-test-words-waiting.png)
+
+- Type a fixed number of random words (15 / 30 / 60 / 120)
+- The test ends when all words are completed
+
+**Time Mode**
+
+![Typing Test — Time Mode](screenshots/typing-test-time-mode.png)
+
+- Type as many words as possible within a time limit (15 / 30 / 60 / 120 seconds)
+- A countdown timer shows remaining time
+
+**Quote Mode**
+
+![Typing Test — Quote Mode](screenshots/typing-test-quote-mode.png)
+
+- Type a real-world quote (short / medium / long / all)
+- The quote source is shown after completion
+
+#### Options
+
+![Typing Test — With Options](screenshots/typing-test-words-options.png)
+
+In Words and Time modes, you can toggle additional options:
+
+- **Punctuation**: Adds punctuation marks (commas, periods, etc.) to the word list
+- **Numbers**: Adds numbers to the word list
+
+These toggles are not available in Quote mode, which uses the original text as-is.
+
+#### During a Test
+
+![Typing Test — Running](screenshots/typing-test-running.png)
+
+While typing, the following stats are displayed in real time:
+
+- **WPM**: Words Per Minute (current typing speed)
+- **Accuracy**: Percentage of correctly typed characters
+- **Time**: Elapsed time (or remaining time in Time mode)
+- **Words**: Current word / total words
+
+Correctly typed words turn green. Incorrect characters are highlighted in red with an underline. The cursor advances as you type, and words scroll automatically.
+
+- Press the restart button (↺) to restart the test at any time
+- Press Escape to exit typing test mode
+- The keyboard layout below the test area shows key presses in real time via the Vial matrix tester protocol
 
 ---
 
