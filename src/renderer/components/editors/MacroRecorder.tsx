@@ -99,7 +99,7 @@ export function MacroRecorder({ onRecordComplete }: Props) {
   return (
     <button
       type="button"
-      className={`rounded px-3 py-1.5 text-sm ${
+      className={`rounded px-2.5 py-1 text-xs ${
         recording
           ? 'bg-danger text-content-inverse hover:bg-danger'
           : 'bg-surface-dim hover:bg-surface-raised'

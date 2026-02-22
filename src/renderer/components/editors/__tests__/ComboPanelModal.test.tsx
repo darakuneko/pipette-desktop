@@ -18,6 +18,7 @@ vi.mock('react-i18next', () => ({
         'common.notConfigured': 'N/C',
         'common.save': 'Save',
         'common.close': 'Close',
+        'common.back': 'Back',
       }
       if (key === 'editor.combo.key') return `Key ${opts?.number}`
       if (key === 'editor.combo.editTitle') return `Combo - ${opts?.index}`
@@ -48,6 +49,10 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
   ),
 }))
 
+vi.mock('../FavoriteStoreContent', () => ({
+  FavoriteStoreContent: () => <div data-testid="favorite-store-content" />,
+}))
+
 const makeEntry = (overrides?: Partial<ComboEntry>): ComboEntry => ({
   key1: 0,
   key2: 0,
@@ -64,6 +69,10 @@ describe('ComboPanelModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    window.vialAPI = {
+      ...window.vialAPI,
+      favoriteStoreList: vi.fn().mockResolvedValue([]),
+    } as unknown as typeof window.vialAPI
   })
 
   afterEach(() => {
@@ -118,29 +127,35 @@ describe('ComboPanelModal', () => {
     expect(tile.className).toContain('font-semibold')
   })
 
-  it('shows placeholder text when no tile is selected', () => {
+  it('shows tile screen initially with no editor visible', () => {
     render(
       <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
-    expect(screen.getByText('Select an entry to edit')).toBeInTheDocument()
+    expect(screen.getByTestId('combo-tile-0')).toBeInTheDocument()
+    expect(screen.queryByText('Combo - 0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('combo-favorites-panel')).not.toBeInTheDocument()
   })
 
-  it('shows detail editor when tile is clicked', () => {
+  it('shows editor and favorites panel when tile is clicked', () => {
     render(
       <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.click(screen.getByTestId('combo-tile-0'))
     expect(screen.getByText('Combo - 0')).toBeInTheDocument()
     expect(screen.getAllByTestId('keycode-field')).toHaveLength(5)
+    expect(screen.getByTestId('combo-favorites-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('favorite-store-content')).toBeInTheDocument()
   })
 
-  it('highlights selected tile with ring', () => {
+  it('navigates back to tile screen when Back button is clicked', () => {
     render(
-      <ComboPanelModal entries={[makeEntry(), makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+      <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.click(screen.getByTestId('combo-tile-0'))
-    expect(screen.getByTestId('combo-tile-0').className).toContain('ring-2')
-    expect(screen.getByTestId('combo-tile-1').className).not.toContain('ring-2')
+    expect(screen.getByText('Combo - 0')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('combo-back-btn'))
+    expect(screen.queryByText('Combo - 0')).not.toBeInTheDocument()
+    expect(screen.getByTestId('combo-tile-0')).toBeInTheDocument()
   })
 
   it('shows TabbedKeycodes when a keycode field is clicked', () => {
@@ -173,7 +188,7 @@ describe('ComboPanelModal', () => {
     expect(screen.getByTestId('combo-modal-save')).toBeEnabled()
   })
 
-  it('calls onSetEntry with edited entry on Save', async () => {
+  it('calls onSetEntry and returns to tile screen on Save', async () => {
     render(
       <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
@@ -186,6 +201,9 @@ describe('ComboPanelModal', () => {
     await waitFor(() => {
       expect(onSetEntry).toHaveBeenCalledWith(0, expect.objectContaining({ key1: 7 }))
     })
+    // After save, should return to tile screen
+    expect(screen.getByTestId('combo-tile-0')).toBeInTheDocument()
+    expect(screen.queryByText('Combo - 0')).not.toBeInTheDocument()
   })
 
   it('calls onClose when close button is clicked', () => {
@@ -210,5 +228,38 @@ describe('ComboPanelModal', () => {
     )
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('returns to tile screen when entries shrink and selected index is out of bounds', () => {
+    const { rerender } = render(
+      <ComboPanelModal entries={[makeEntry(), makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('combo-tile-1'))
+    expect(screen.getByText('Combo - 1')).toBeInTheDocument()
+    // Rerender with fewer entries — selected index 1 no longer exists
+    rerender(<ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />)
+    expect(screen.queryByText('Combo - 1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('combo-tile-0')).toBeInTheDocument()
+  })
+
+  it('shows close button in editor view when picker is closed', () => {
+    render(
+      <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('combo-tile-0'))
+    expect(screen.getByTestId('combo-modal-close')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('combo-modal-close'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides favorites panel when picker is open', () => {
+    render(
+      <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('combo-tile-0'))
+    expect(screen.getByTestId('combo-favorites-panel').className).not.toContain('hidden')
+    fireEvent.click(screen.getAllByTestId('keycode-field')[0])
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.getByTestId('combo-favorites-panel').className).toContain('hidden')
   })
 })

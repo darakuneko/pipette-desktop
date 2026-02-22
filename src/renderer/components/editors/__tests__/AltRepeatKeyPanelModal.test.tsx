@@ -21,6 +21,7 @@ vi.mock('react-i18next', () => ({
         'common.notConfigured': 'N/C',
         'common.save': 'Save',
         'common.close': 'Close',
+        'common.back': 'Back',
       }
       if (key === 'editor.altRepeatKey.editTitle') return `Alt Repeat Key - ${opts?.index}`
       return map[key] ?? key
@@ -50,6 +51,10 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
   ),
 }))
 
+vi.mock('../FavoriteStoreContent', () => ({
+  FavoriteStoreContent: () => <div data-testid="favorite-store-content" />,
+}))
+
 const makeEntry = (overrides?: Partial<AltRepeatKeyEntry>): AltRepeatKeyEntry => ({
   lastKey: 0,
   altKey: 0,
@@ -66,6 +71,10 @@ describe('AltRepeatKeyPanelModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    window.vialAPI = {
+      ...window.vialAPI,
+      favoriteStoreList: vi.fn().mockResolvedValue([]),
+    } as unknown as typeof window.vialAPI
   })
 
   afterEach(() => {
@@ -119,29 +128,35 @@ describe('AltRepeatKeyPanelModal', () => {
     expect(tile.className).toContain('bg-accent/5')
   })
 
-  it('shows placeholder text when no tile is selected', () => {
+  it('shows tile screen initially with no editor visible', () => {
     render(
       <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
-    expect(screen.getByText('Select an entry to edit')).toBeInTheDocument()
+    expect(screen.getByTestId('ar-tile-0')).toBeInTheDocument()
+    expect(screen.queryByText('Alt Repeat Key - 0')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ar-favorites-panel')).not.toBeInTheDocument()
   })
 
-  it('shows detail editor when tile is clicked', () => {
+  it('shows editor and favorites panel when tile is clicked', () => {
     render(
       <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.click(screen.getByTestId('ar-tile-0'))
     expect(screen.getByText('Alt Repeat Key - 0')).toBeInTheDocument()
     expect(screen.getAllByTestId('keycode-field')).toHaveLength(2)
+    expect(screen.getByTestId('ar-favorites-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('favorite-store-content')).toBeInTheDocument()
   })
 
-  it('highlights selected tile with ring', () => {
+  it('navigates back to tile screen when Back button is clicked', () => {
     render(
-      <AltRepeatKeyPanelModal entries={[makeEntry(), makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
     fireEvent.click(screen.getByTestId('ar-tile-0'))
-    expect(screen.getByTestId('ar-tile-0').className).toContain('ring-2')
-    expect(screen.getByTestId('ar-tile-1').className).not.toContain('ring-2')
+    expect(screen.getByText('Alt Repeat Key - 0')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('ar-back-btn'))
+    expect(screen.queryByText('Alt Repeat Key - 0')).not.toBeInTheDocument()
+    expect(screen.getByTestId('ar-tile-0')).toBeInTheDocument()
   })
 
   it('shows enabled checkbox disabled when lastKey is 0', () => {
@@ -201,7 +216,7 @@ describe('AltRepeatKeyPanelModal', () => {
     expect(screen.getByTestId('ar-modal-save')).toBeEnabled()
   })
 
-  it('calls onSetEntry with edited entry on Save', async () => {
+  it('calls onSetEntry and returns to tile screen on Save', async () => {
     render(
       <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
     )
@@ -214,6 +229,9 @@ describe('AltRepeatKeyPanelModal', () => {
     await waitFor(() => {
       expect(onSetEntry).toHaveBeenCalledWith(0, expect.objectContaining({ lastKey: 7 }))
     })
+    // After save, should return to tile screen
+    expect(screen.getByTestId('ar-tile-0')).toBeInTheDocument()
+    expect(screen.queryByText('Alt Repeat Key - 0')).not.toBeInTheDocument()
   })
 
   it('calls onClose when close button is clicked', () => {
@@ -238,5 +256,38 @@ describe('AltRepeatKeyPanelModal', () => {
     )
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it('returns to tile screen when entries shrink and selected index is out of bounds', () => {
+    const { rerender } = render(
+      <AltRepeatKeyPanelModal entries={[makeEntry(), makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('ar-tile-1'))
+    expect(screen.getByText('Alt Repeat Key - 1')).toBeInTheDocument()
+    // Rerender with fewer entries — selected index 1 no longer exists
+    rerender(<AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />)
+    expect(screen.queryByText('Alt Repeat Key - 1')).not.toBeInTheDocument()
+    expect(screen.getByTestId('ar-tile-0')).toBeInTheDocument()
+  })
+
+  it('shows close button in editor view when picker is closed', () => {
+    render(
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('ar-tile-0'))
+    expect(screen.getByTestId('ar-modal-close')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('ar-modal-close'))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides favorites panel when picker is open', () => {
+    render(
+      <AltRepeatKeyPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+    )
+    fireEvent.click(screen.getByTestId('ar-tile-0'))
+    expect(screen.getByTestId('ar-favorites-panel').className).not.toContain('hidden')
+    fireEvent.click(screen.getAllByTestId('keycode-field')[0])
+    act(() => { vi.advanceTimersByTime(300) })
+    expect(screen.getByTestId('ar-favorites-panel').className).toContain('hidden')
   })
 })

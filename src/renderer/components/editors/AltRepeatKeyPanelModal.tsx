@@ -7,13 +7,15 @@ import { AltRepeatKeyOptions } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ModifierPicker } from './ModifierPicker'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import { FavoriteStoreModal } from './FavoriteStoreModal'
+import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
   entries: AltRepeatKeyEntry[]
@@ -66,38 +68,65 @@ export function AltRepeatKeyPanelModal({
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [editedEntry, setEditedEntry] = useState<AltRepeatKeyEntry | null>(null)
+  const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
+  const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+
   const favStore = useFavoriteStore({
     favoriteType: 'altRepeatKey',
     serialize: () => editedEntry,
     apply: (data) => setEditedEntry(data as AltRepeatKeyEntry),
   })
 
-  // Detail editor state
-  const [editedEntry, setEditedEntry] = useState<AltRepeatKeyEntry | null>(null)
-  const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
-  const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+  const clearAction = useConfirmAction(useCallback(() => {
+    setEditedEntry((prev) => prev ? {
+      lastKey: 0, altKey: 0, allowedMods: 0, options: 0, enabled: false,
+    } : prev)
+    setSelectedField(null)
+    setPopoverState(null)
+  }, []))
+
+  const revertAction = useConfirmAction(useCallback(() => {
+    if (selectedIndex === null || !entries[selectedIndex]) return
+    clearPending()
+    setEditedEntry(entries[selectedIndex])
+    setSelectedField(null)
+    setPopoverState(null)
+  }, [selectedIndex, entries, clearPending]))
 
   // Sync edited entry when selection changes
   useEffect(() => {
     setSelectedField(null)
     setPopoverState(null)
+    clearAction.reset()
+    revertAction.reset()
     if (selectedIndex !== null && entries[selectedIndex]) {
       setEditedEntry(entries[selectedIndex])
     } else {
       setEditedEntry(null)
+      if (selectedIndex !== null) setSelectedIndex(null)
     }
   }, [selectedIndex, entries])
+
+  useEffect(() => {
+    favStore.refreshEntries()
+  }, [favStore.refreshEntries])
 
   const handleClose = useCallback(() => {
     clearPending()
     onClose()
   }, [clearPending, onClose])
 
+  const handleBack = useCallback(() => {
+    setSelectedIndex(null)
+  }, [])
+
   const handleEntrySave = useCallback(async () => {
     if (selectedIndex === null || !editedEntry) return
     const codes = [editedEntry.lastKey, editedEntry.altKey]
     await guard(codes, async () => {
       await onSetEntry(selectedIndex, editedEntry)
+      setSelectedIndex(null)
     })
   }, [selectedIndex, editedEntry, onSetEntry, guard])
 
@@ -106,7 +135,7 @@ export function AltRepeatKeyPanelModal({
     setEditedEntry((prev) => {
       if (!prev) return prev
       const next = { ...prev, [field]: code }
-      if (next.lastKey === 0) next.enabled = false
+      if (!isConfigured(next)) next.enabled = false
       return next
     })
     setPopoverState(null)
@@ -129,20 +158,22 @@ export function AltRepeatKeyPanelModal({
     [selectedField],
   )
 
+  const popoverField = popoverState?.field ?? null
+
   const handlePopoverKeycodeSelect = useCallback(
     (kc: Keycode) => {
-      if (!popoverState) return
-      updateField(popoverState.field, deserialize(kc.qmkId))
+      if (!popoverField) return
+      updateField(popoverField, deserialize(kc.qmkId))
     },
-    [popoverState, updateField],
+    [popoverField, updateField],
   )
 
   const handlePopoverRawKeycodeSelect = useCallback(
     (code: number) => {
-      if (!popoverState) return
-      updateField(popoverState.field, code)
+      if (!popoverField) return
+      updateField(popoverField, code)
     },
-    [popoverState, updateField],
+    [popoverField, updateField],
   )
 
   const handleToggleEnabled = useCallback(() => {
@@ -153,194 +184,206 @@ export function AltRepeatKeyPanelModal({
     setEditedEntry((prev) => prev ? { ...prev, options: prev.options ^ flag } : prev)
   }, [])
 
-  const canEnable = editedEntry !== null && editedEntry.lastKey !== 0
+  const canEnable = editedEntry !== null && isConfigured(editedEntry)
 
-  const hasChanges = selectedIndex !== null && editedEntry !== null
-    && JSON.stringify(entries[selectedIndex]) !== JSON.stringify(editedEntry)
+  const hasChanges =
+    selectedIndex !== null &&
+    editedEntry !== null &&
+    JSON.stringify(entries[selectedIndex]) !== JSON.stringify(editedEntry)
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      data-testid="ar-modal-backdrop"
-      onClick={handleClose}
-    >
-      <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${entries.length > 0 ? 'w-[950px] max-w-[95vw] max-h-[90vh] flex flex-col' : 'p-6'}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header (hidden when picker is open) */}
-        {!selectedField && (
-          <div className={`flex items-center justify-between ${entries.length > 0 ? 'px-6 pt-6 pb-4' : 'mb-4'}`}>
-            <h3 className="text-lg font-semibold">{t('editor.altRepeatKey.title')}</h3>
-            <ModalCloseButton testid="ar-modal-close" onClick={handleClose} />
+  const hasEntries = entries.length > 0
+  const isEditing = selectedIndex !== null
+
+  const headerTitle = isEditing
+    ? t('editor.altRepeatKey.editTitle', { index: selectedIndex })
+    : t('editor.altRepeatKey.title')
+
+  function renderBody(): React.ReactNode {
+    if (!hasEntries) {
+      return (
+        <div className="text-sm text-content-muted" data-testid="editor-alt-repeat-key">
+          {t('common.noEntries')}
+        </div>
+      )
+    }
+
+    if (!isEditing) {
+      return (
+        <div className="flex-1 min-h-0 px-6 pb-6" data-testid="editor-alt-repeat-key">
+          <div className="mt-1 grid h-full grid-cols-6 auto-rows-fr gap-2">
+            {entries.map((entry, i) => {
+              const configured = isConfigured(entry)
+              let leftLabel: string | null = null
+              let rightLabel: string | null = null
+              if (configured) {
+                leftLabel = codeToLabel(entry.lastKey)
+                rightLabel = entry.altKey !== 0 ? codeToLabel(entry.altKey) : null
+              }
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  data-testid={`ar-tile-${i}`}
+                  className={`relative flex min-h-0 flex-col items-center justify-center rounded-md border p-1.5 text-xs leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
+                  onClick={() => setSelectedIndex(i)}
+                >
+                  <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
+                  {configured ? (
+                    <span className="flex w-full flex-col items-center truncate">
+                      <span className="max-w-full truncate">{leftLabel}</span>
+                      <span className="text-content-secondary/60">&darr;</span>
+                      <span className="max-w-full truncate">{rightLabel ?? '\u00A0'}</span>
+                    </span>
+                  ) : (
+                    <span className="w-full text-center text-content-secondary/60">
+                      {t('common.notConfigured')}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
-        )}
+        </div>
+      )
+    }
 
-        {entries.length === 0 ? (
-          <div className="text-sm text-content-muted" data-testid="editor-alt-repeat-key">
-            {t('common.noEntries')}
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="editor-alt-repeat-key">
-            {/* Left panel: grid (hidden when picker is open) */}
-            <div className={`w-[456px] shrink-0 overflow-y-auto border-r border-edge px-6 pb-6 ${selectedField ? 'hidden' : ''}`}>
-              <div className="mt-1 grid grid-cols-6 gap-2">
-                {entries.map((entry, i) => {
-                  const configured = isConfigured(entry)
-                  const isSelected = selectedIndex === i
-                  let leftLabel: string | null = null
-                  let rightLabel: string | null = null
-                  if (configured) {
-                    leftLabel = codeToLabel(entry.lastKey)
-                    rightLabel = entry.altKey !== 0 ? codeToLabel(entry.altKey) : null
-                  }
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      data-testid={`ar-tile-${i}`}
-                      className={`flex aspect-square flex-col items-start rounded-md border p-1.5 text-[10px] leading-tight transition-colors ${tileStyle(configured, entry.enabled)} ${isSelected ? 'ring-2 ring-accent' : ''}`}
-                      onClick={() => setSelectedIndex(i)}
-                    >
-                      <span className="text-content-secondary/60">{i}</span>
-                      {configured ? (
-                        <span className="mt-auto flex w-full flex-col items-center truncate">
-                          <span className="max-w-full truncate">{leftLabel}</span>
-                          <span className="text-content-secondary/60">&darr;</span>
-                          <span className="max-w-full truncate">{rightLabel ?? '\u00A0'}</span>
-                        </span>
-                      ) : (
-                        <span className="mt-auto mb-auto w-full text-center text-content-secondary/60">
-                          {t('common.notConfigured')}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Right panel: detail editor */}
-            <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : ''}`}>
-              {selectedIndex !== null && editedEntry ? (
-                <>
-                  <div className={`${selectedField ? 'mb-4' : 'mb-3'}`}>
-                    <h4 className={`font-semibold ${selectedField ? 'text-lg' : 'text-sm'}`}>
-                      {t('editor.altRepeatKey.editTitle', { index: selectedIndex })}
-                    </h4>
-                  </div>
-
-                  <div className="space-y-2">
-                    {!selectedField && (
-                      <div className="flex items-center gap-3">
-                        <label className="min-w-[140px] text-sm text-content">
-                          {t('editor.altRepeatKey.enabled')}
-                        </label>
-                        <input
-                          type="checkbox"
-                          data-testid="ar-enabled"
-                          checked={editedEntry.enabled}
-                          onChange={handleToggleEnabled}
-                          disabled={!canEnable}
-                          className="h-4 w-4"
-                        />
-                      </div>
-                    )}
-                    {keycodeFields.map(({ key, labelKey }) => {
-                      if (selectedField && selectedField !== key) return null
-                      return (
-                        <div key={key} className="flex items-center gap-3">
-                          <label className="min-w-[140px] text-sm text-content">{t(labelKey)}</label>
-                          <KeycodeField
-                            value={editedEntry[key]}
-                            selected={selectedField === key}
-                            onSelect={() => { if (!selectedField) setSelectedField(key) }}
-                            onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
-                            label={t(labelKey)}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {selectedField && (
-                    <div className="mt-3">
-                      <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+    return (
+      <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="editor-alt-repeat-key">
+        {/* Left panel: detail editor */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : ''}`}>
+            {editedEntry && (
+              <>
+                <div className="space-y-2">
+                  {!selectedField && (
+                    <div className="flex items-center gap-3">
+                      <label className="min-w-[140px] text-sm text-content">
+                        {t('editor.altRepeatKey.enabled')}
+                      </label>
+                      <input
+                        type="checkbox"
+                        data-testid="ar-enabled"
+                        checked={editedEntry.enabled}
+                        onChange={handleToggleEnabled}
+                        disabled={!canEnable}
+                        className="h-4 w-4"
+                      />
                     </div>
                   )}
-
-                  {popoverState && (
-                    <KeyPopover
-                      anchorRect={popoverState.anchorRect}
-                      currentKeycode={editedEntry[popoverState.field]}
-                      onKeycodeSelect={handlePopoverKeycodeSelect}
-                      onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-                      onClose={() => setPopoverState(null)}
-                    />
-                  )}
-
-                  {!selectedField && (
-                    <>
-                      <div className="mt-2 space-y-2" data-testid="ar-advanced-fields">
-                        <ModifierPicker
-                          value={editedEntry.allowedMods}
-                          onChange={(v) => setEditedEntry((prev) => prev ? { ...prev, allowedMods: v } : prev)}
-                          label={t('editor.altRepeatKey.allowedMods')}
-                          horizontal
+                  {keycodeFields.map(({ key, labelKey }) => {
+                    if (selectedField && selectedField !== key) return null
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <label className="min-w-[140px] text-sm text-content">{t(labelKey)}</label>
+                        <KeycodeField
+                          value={editedEntry[key]}
+                          selected={selectedField === key}
+                          onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                          onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
+                          label={t(labelKey)}
                         />
-                        <div className="flex items-start gap-3">
-                          <label className="min-w-[140px] pt-0.5 text-sm font-medium">
-                            {t('editor.altRepeatKey.options')}
-                          </label>
-                          <div className="space-y-1">
-                            {optionEntries.map(([name, flag]) => (
-                              <label key={name} className="flex items-center gap-2">
-                                <input
-                                  type="checkbox"
-                                  checked={(editedEntry.options & flag) !== 0}
-                                  onChange={() => handleToggleOption(flag)}
-                                  className="h-4 w-4"
-                                />
-                                <span className="text-sm">{name}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </div>
                       </div>
-                      <div className="flex justify-end gap-2 pt-4">
-                        <button
-                          type="button"
-                          data-testid="ar-fav-btn"
-                          className="rounded bg-warning px-3 py-2 text-sm text-black hover:bg-warning/80"
-                          onClick={favStore.openModal}
-                        >
-                          {t('favoriteStore.button')}
-                        </button>
-                        <button
-                          type="button"
-                          data-testid="ar-modal-save"
-                          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                          disabled={!hasChanges}
-                          onClick={handleEntrySave}
-                        >
-                          {t('common.save')}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-content-muted">
-                  {t('editor.altRepeatKey.selectEntry')}
+                    )
+                  })}
                 </div>
-              )}
-            </div>
-          </div>
-        )}
 
-        {favStore.showModal && (
-          <FavoriteStoreModal
-            favoriteType="altRepeatKey"
+                {selectedField && (
+                  <div className="mt-3">
+                    <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+                  </div>
+                )}
+
+                {popoverState && (
+                  <KeyPopover
+                    anchorRect={popoverState.anchorRect}
+                    currentKeycode={editedEntry[popoverState.field]}
+                    onKeycodeSelect={handlePopoverKeycodeSelect}
+                    onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+                    onClose={() => setPopoverState(null)}
+                  />
+                )}
+
+                {!selectedField && (
+                  <div className="mt-2 space-y-2" data-testid="ar-advanced-fields">
+                    <ModifierPicker
+                      value={editedEntry.allowedMods}
+                      onChange={(v) => setEditedEntry((prev) => prev ? { ...prev, allowedMods: v } : prev)}
+                      label={t('editor.altRepeatKey.allowedMods')}
+                      horizontal
+                    />
+                    <div className="flex items-start gap-3">
+                      <label className="min-w-[140px] pt-0.5 text-sm font-medium">
+                        {t('editor.altRepeatKey.options')}
+                      </label>
+                      <div className="space-y-1">
+                        {optionEntries.map(([name, flag]) => (
+                          <label key={name} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={(editedEntry.options & flag) !== 0}
+                              onChange={() => handleToggleOption(flag)}
+                              className="h-4 w-4"
+                            />
+                            <span className="text-sm">{name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!selectedField && (
+                  <div className="flex justify-end gap-2 pt-4">
+                    <ConfirmButton
+                      testId="ar-modal-clear"
+                      confirming={clearAction.confirming}
+                      onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                      labelKey="common.clear"
+                      confirmLabelKey="common.confirmClear"
+                    />
+                    <ConfirmButton
+                      testId="ar-modal-revert"
+                      confirming={revertAction.confirming}
+                      onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                      labelKey="common.revert"
+                      confirmLabelKey="common.confirmRevert"
+                    />
+                    <button
+                      type="button"
+                      data-testid="ar-modal-save"
+                      className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                      disabled={!hasChanges}
+                      onClick={handleEntrySave}
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          {/* Fixed footer: Back */}
+          {!selectedField && editedEntry && (
+            <div className="shrink-0 px-6 py-3">
+              <button
+                type="button"
+                data-testid="ar-back-btn"
+                className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt"
+                onClick={handleBack}
+              >
+                {t('common.back')}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right panel: favorites (hidden when picker is open) */}
+        <div
+          className={`w-[456px] shrink-0 flex flex-col ${selectedField ? 'hidden' : ''}`}
+          data-testid="ar-favorites-panel"
+        >
+          <FavoriteStoreContent
             entries={favStore.entries}
             loading={favStore.loading}
             saving={favStore.saving}
@@ -355,9 +398,30 @@ export function AltRepeatKeyPanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
-            onClose={favStore.closeModal}
           />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      data-testid="ar-modal-backdrop"
+      onClick={handleClose}
+    >
+      <div
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[950px] max-w-[95vw] h-[70vh] flex flex-col' : 'p-6'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {!selectedField && (
+          <div className={`flex items-center justify-between shrink-0 ${hasEntries ? 'px-6 pt-6 pb-4' : 'mb-4'}`}>
+            <h3 className="text-lg font-semibold">{headerTitle}</h3>
+            <ModalCloseButton testid="ar-modal-close" onClick={handleClose} />
+          </div>
         )}
+
+        {renderBody()}
       </div>
     </div>
   )

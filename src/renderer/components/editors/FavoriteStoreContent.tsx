@@ -77,7 +77,7 @@ export function FavoriteStoreContent({
   return (
     <div className="flex flex-col h-full" data-testid="favorite-store-content">
       {/* Fixed top sections */}
-      <div className="shrink-0 px-5">
+      <div className="shrink-0 border-l border-edge px-5">
         {/* Save Current State section */}
         <div className="pt-4">
           <SectionHeader label={t('favoriteStore.saveCurrentState')} />
@@ -109,7 +109,7 @@ export function FavoriteStoreContent({
       </div>
 
       {/* Scrollable Synced Data list */}
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 pb-5">
+      <div className="flex-1 min-h-0 overflow-y-auto border-l border-edge px-5 pb-5">
         {loading && (
           <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
         )}
@@ -218,7 +218,8 @@ export function FavoriteStoreContent({
       </div>
 
       {/* Fixed footer: Import / Export */}
-      <div className="shrink-0 px-5 py-3">
+      <div className="relative shrink-0 px-5 py-3">
+        <div className="absolute left-0 top-0 h-1/2 border-l border-edge" />
         <div className="flex items-center gap-2">
           {importResult && (
             <span

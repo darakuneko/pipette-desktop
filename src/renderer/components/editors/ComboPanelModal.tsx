@@ -6,12 +6,14 @@ import type { ComboEntry } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import { FavoriteStoreModal } from './FavoriteStoreModal'
+import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 const COMBO_TIMEOUT_QSID = 2
 const COMBO_TIMEOUT_WIDTH = 2
@@ -79,16 +81,15 @@ export function ComboPanelModal({
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [comboTimeout, setComboTimeout] = useState<number | null>(null)
   const [savedTimeout, setSavedTimeout] = useState<number | null>(null)
+  const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)
+  const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
+  const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+
   const favStore = useFavoriteStore({
     favoriteType: 'combo',
     serialize: () => editedEntry,
     apply: (data) => setEditedEntry(data as ComboEntry),
   })
-
-  // Detail editor state
-  const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)
-  const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
-  const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
 
   // Load combo timeout
   useEffect(() => {
@@ -108,21 +109,46 @@ export function ComboPanelModal({
     return () => { cancelled = true }
   }, [qmkSettingsGet])
 
+  const clearAction = useConfirmAction(useCallback(() => {
+    setEditedEntry((prev) => prev ? { key1: 0, key2: 0, key3: 0, key4: 0, output: 0 } : prev)
+    setSelectedField(null)
+    setPopoverState(null)
+  }, []))
+
+  const revertAction = useConfirmAction(useCallback(() => {
+    if (selectedIndex === null || !entries[selectedIndex]) return
+    clearPending()
+    setEditedEntry(entries[selectedIndex])
+    setSelectedField(null)
+    setPopoverState(null)
+  }, [selectedIndex, entries, clearPending]))
+
   // Sync edited entry when selection changes
   useEffect(() => {
     setSelectedField(null)
     setPopoverState(null)
+    clearAction.reset()
+    revertAction.reset()
     if (selectedIndex !== null && entries[selectedIndex]) {
       setEditedEntry(entries[selectedIndex])
     } else {
       setEditedEntry(null)
+      if (selectedIndex !== null) setSelectedIndex(null)
     }
   }, [selectedIndex, entries])
+
+  useEffect(() => {
+    favStore.refreshEntries()
+  }, [favStore.refreshEntries])
 
   const handleClose = useCallback(() => {
     clearPending()
     onClose()
   }, [clearPending, onClose])
+
+  const handleBack = useCallback(() => {
+    setSelectedIndex(null)
+  }, [])
 
   const handleTimeoutSave = useCallback(async () => {
     if (comboTimeout === null || !qmkSettingsSet) return
@@ -140,17 +166,22 @@ export function ComboPanelModal({
     const codes = [editedEntry.key1, editedEntry.key2, editedEntry.key3, editedEntry.key4, editedEntry.output]
     await guard(codes, async () => {
       await onSetEntry(selectedIndex, editedEntry)
+      setSelectedIndex(null)
     })
   }, [selectedIndex, editedEntry, onSetEntry, guard])
+
+  const updateField = useCallback((field: KeycodeFieldName, code: number) => {
+    setEditedEntry((prev) => prev ? { ...prev, [field]: code } : prev)
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
 
   const handleKeycodeSelect = useCallback(
     (kc: Keycode) => {
       if (!selectedField) return
-      const code = deserialize(kc.qmkId)
-      setEditedEntry((prev) => prev ? { ...prev, [selectedField]: code } : prev)
-      setSelectedField(null)
+      updateField(selectedField, deserialize(kc.qmkId))
     },
-    [selectedField],
+    [selectedField, updateField],
   )
 
   const handleFieldDoubleClick = useCallback(
@@ -161,195 +192,200 @@ export function ComboPanelModal({
     [selectedField],
   )
 
-  const closePopover = useCallback(() => {
-    setPopoverState(null)
-  }, [])
+  const popoverField = popoverState?.field ?? null
 
   const handlePopoverKeycodeSelect = useCallback(
     (kc: Keycode) => {
-      if (!popoverState) return
-      const code = deserialize(kc.qmkId)
-      setEditedEntry((prev) => prev ? { ...prev, [popoverState.field]: code } : prev)
-      closePopover()
-      setSelectedField(null)
+      if (!popoverField) return
+      updateField(popoverField, deserialize(kc.qmkId))
     },
-    [popoverState, closePopover],
+    [popoverField, updateField],
   )
 
   const handlePopoverRawKeycodeSelect = useCallback(
     (code: number) => {
-      if (!popoverState) return
-      setEditedEntry((prev) => prev ? { ...prev, [popoverState.field]: code } : prev)
-      closePopover()
-      setSelectedField(null)
+      if (!popoverField) return
+      updateField(popoverField, code)
     },
-    [popoverState, closePopover],
+    [popoverField, updateField],
   )
 
-  const hasChanges = selectedIndex !== null && editedEntry !== null
-    && JSON.stringify(entries[selectedIndex]) !== JSON.stringify(editedEntry)
+  const hasChanges =
+    selectedIndex !== null &&
+    editedEntry !== null &&
+    JSON.stringify(entries[selectedIndex]) !== JSON.stringify(editedEntry)
 
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      data-testid="combo-modal-backdrop"
-      onClick={handleClose}
-    >
-      <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${entries.length > 0 ? 'w-[950px] max-w-[95vw] max-h-[90vh] flex flex-col' : 'p-6'}`}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header (hidden when picker is open) */}
-        {!selectedField && (
-          <div className={`flex items-center justify-between ${entries.length > 0 ? 'px-6 pt-6 pb-4' : 'mb-4'}`}>
-            <h3 className="text-lg font-semibold">{t('editor.combo.title')}</h3>
-            <ModalCloseButton testid="combo-modal-close" onClick={handleClose} />
-          </div>
-        )}
+  const hasEntries = entries.length > 0
+  const isEditing = selectedIndex !== null
 
-        {entries.length === 0 ? (
-          <div className="text-sm text-content-muted" data-testid="editor-combo">
-            {t('common.noEntries')}
+  const headerTitle = isEditing
+    ? t('editor.combo.editTitle', { index: selectedIndex })
+    : t('editor.combo.title')
+
+  function renderBody(): React.ReactNode {
+    if (!hasEntries) {
+      return (
+        <div className="text-sm text-content-muted" data-testid="editor-combo">
+          {t('common.noEntries')}
+        </div>
+      )
+    }
+
+    if (!isEditing) {
+      return (
+        <div className="flex-1 min-h-0 flex flex-col px-6 pb-6" data-testid="editor-combo">
+          <div className="mt-1 flex-1 min-h-0 grid grid-cols-6 auto-rows-fr gap-2">
+            {entries.map((entry, i) => {
+              const configured = isConfigured(entry)
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  data-testid={`combo-tile-${i}`}
+                  className={`relative flex min-h-0 flex-col items-center justify-center rounded-md border p-1.5 text-xs leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY}`}
+                  onClick={() => setSelectedIndex(i)}
+                >
+                  <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
+                  {configured ? (
+                    <span className="flex w-full flex-col items-center truncate">
+                      <span className="max-w-full truncate">{comboInputLabel(entry)}</span>
+                      <span className="text-content-secondary/60">&darr;</span>
+                      <span className="max-w-full truncate">
+                        {entry.output !== 0 ? codeToLabel(entry.output) : '\u00A0'}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="w-full text-center text-content-secondary/60">
+                      {t('common.notConfigured')}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
           </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="editor-combo">
-            {/* Left panel: grid + timeout (hidden when picker is open) */}
-            <div className={`w-[456px] shrink-0 overflow-y-auto border-r border-edge px-6 pb-6 ${selectedField ? 'hidden' : ''}`}>
-              <div className="mt-1 grid grid-cols-6 gap-2">
-                {entries.map((entry, i) => {
-                  const configured = isConfigured(entry)
-                  const isSelected = selectedIndex === i
-                  return (
-                    <button
-                      key={i}
-                      type="button"
-                      data-testid={`combo-tile-${i}`}
-                      className={`flex aspect-square flex-col items-start rounded-md border p-1.5 text-[10px] leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY} ${isSelected ? 'ring-2 ring-accent' : ''}`}
-                      onClick={() => setSelectedIndex(i)}
-                    >
-                      <span className="text-content-secondary/60">{i}</span>
-                      {configured ? (
-                        <span className="mt-auto flex w-full flex-col items-center truncate">
-                          <span className="max-w-full truncate">{comboInputLabel(entry)}</span>
-                          <span className="text-content-secondary/60">&darr;</span>
-                          <span className="max-w-full truncate">
-                            {entry.output !== 0 ? codeToLabel(entry.output) : '\u00A0'}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="mt-auto mb-auto w-full text-center text-content-secondary/60">
-                          {t('common.notConfigured')}
-                        </span>
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-              {qmkSettingsGet && comboTimeout !== null && (
-                <div className="mt-4 flex items-center gap-3">
-                  <label className="text-sm">{t('editor.combo.timeout')}</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={COMBO_TIMEOUT_MAX}
-                    value={comboTimeout}
-                    onChange={(e) => {
-                      const v = parseInt(e.target.value, 10) || 0
-                      setComboTimeout(Math.max(0, Math.min(COMBO_TIMEOUT_MAX, v)))
-                    }}
-                    className="w-28 rounded border border-edge px-2 py-1 text-sm"
-                    data-testid="combo-timeout-input"
+          {qmkSettingsGet && comboTimeout !== null && (
+            <div className="shrink-0 mt-4 flex items-center gap-3">
+              <label className="text-sm">{t('editor.combo.timeout')}</label>
+              <input
+                type="number"
+                min={0}
+                max={COMBO_TIMEOUT_MAX}
+                value={comboTimeout}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10) || 0
+                  setComboTimeout(Math.max(0, Math.min(COMBO_TIMEOUT_MAX, v)))
+                }}
+                className="w-28 rounded border border-edge px-2 py-1 text-sm"
+                data-testid="combo-timeout-input"
+              />
+              <button
+                type="button"
+                data-testid="combo-timeout-save"
+                className="rounded bg-accent px-3 py-1 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                disabled={comboTimeout === savedTimeout}
+                onClick={handleTimeoutSave}
+              >
+                {t('common.save')}
+              </button>
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    return (
+      <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="editor-combo">
+        {/* Left panel: detail editor */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : ''}`}>
+            {editedEntry && (
+              <>
+                <div className="space-y-2">
+                  {keycodeFields.map(({ key, labelKey, labelOpts }) => {
+                    if (selectedField && selectedField !== key) return null
+                    return (
+                      <div key={key} className="flex items-center gap-3">
+                        <label className="min-w-[140px] text-sm text-content">{t(labelKey, labelOpts)}</label>
+                        <KeycodeField
+                          value={editedEntry[key]}
+                          selected={selectedField === key}
+                          onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                          onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
+                          label={t(labelKey, labelOpts)}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {selectedField && (
+                  <div className="mt-3">
+                    <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+                  </div>
+                )}
+
+                {popoverState && (
+                  <KeyPopover
+                    anchorRect={popoverState.anchorRect}
+                    currentKeycode={editedEntry[popoverState.field]}
+                    onKeycodeSelect={handlePopoverKeycodeSelect}
+                    onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+                    onClose={() => setPopoverState(null)}
                   />
-                  <button
-                    type="button"
-                    data-testid="combo-timeout-save"
-                    className="rounded bg-accent px-3 py-1 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                    disabled={comboTimeout === savedTimeout}
-                    onClick={handleTimeoutSave}
-                  >
-                    {t('common.save')}
-                  </button>
-                </div>
-              )}
-            </div>
+                )}
 
-            {/* Right panel: detail editor */}
-            <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : ''}`}>
-              {selectedIndex !== null && editedEntry ? (
-                <>
-                  <div className={`${selectedField ? 'mb-4' : 'mb-3'}`}>
-                    <h4 className={`font-semibold ${selectedField ? 'text-lg' : 'text-sm'}`}>
-                      {t('editor.combo.editTitle', { index: selectedIndex })}
-                    </h4>
-                  </div>
-                  <div className="space-y-2">
-                    {keycodeFields.map(({ key, labelKey, labelOpts }) => {
-                      if (selectedField && selectedField !== key) return null
-                      return (
-                        <div key={key} className="flex items-center gap-3">
-                          <label className="min-w-[140px] text-sm text-content">{t(labelKey, labelOpts)}</label>
-                          <KeycodeField
-                            value={editedEntry[key]}
-                            selected={selectedField === key}
-                            onSelect={() => { if (!selectedField) setSelectedField(key) }}
-                            onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
-                            label={t(labelKey, labelOpts)}
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {selectedField && (
-                    <div className="mt-3">
-                      <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
-                    </div>
-                  )}
-
-                  {popoverState && editedEntry && (
-                    <KeyPopover
-                      anchorRect={popoverState.anchorRect}
-                      currentKeycode={editedEntry[popoverState.field]}
-                      onKeycodeSelect={handlePopoverKeycodeSelect}
-                      onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-                      onClose={closePopover}
+                {!selectedField && (
+                  <div className="flex justify-end gap-2 pt-4">
+                    <ConfirmButton
+                      testId="combo-modal-clear"
+                      confirming={clearAction.confirming}
+                      onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                      labelKey="common.clear"
+                      confirmLabelKey="common.confirmClear"
                     />
-                  )}
-
-                  {!selectedField && (
-                    <div className="flex justify-end gap-2 pt-4">
-                      <button
-                        type="button"
-                        data-testid="combo-fav-btn"
-                        className="rounded bg-warning px-3 py-2 text-sm text-black hover:bg-warning/80"
-                        onClick={favStore.openModal}
-                      >
-                        {t('favoriteStore.button')}
-                      </button>
-                      <button
-                        type="button"
-                        data-testid="combo-modal-save"
-                        className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                        disabled={!hasChanges}
-                        onClick={handleEntrySave}
-                      >
-                        {t('common.save')}
-                      </button>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-full items-center justify-center text-sm text-content-muted">
-                  {t('editor.combo.selectEntry')}
-                </div>
-              )}
-            </div>
+                    <ConfirmButton
+                      testId="combo-modal-revert"
+                      confirming={revertAction.confirming}
+                      onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                      labelKey="common.revert"
+                      confirmLabelKey="common.confirmRevert"
+                    />
+                    <button
+                      type="button"
+                      data-testid="combo-modal-save"
+                      className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                      disabled={!hasChanges}
+                      onClick={handleEntrySave}
+                    >
+                      {t('common.save')}
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        )}
 
-        {favStore.showModal && (
-          <FavoriteStoreModal
-            favoriteType="combo"
+          {/* Fixed footer: Back */}
+          {!selectedField && editedEntry && (
+            <div className="shrink-0 px-6 py-3">
+              <button
+                type="button"
+                data-testid="combo-back-btn"
+                className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt"
+                onClick={handleBack}
+              >
+                {t('common.back')}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right panel: favorites (hidden when picker is open) */}
+        <div
+          className={`w-[456px] shrink-0 flex flex-col ${selectedField ? 'hidden' : ''}`}
+          data-testid="combo-favorites-panel"
+        >
+          <FavoriteStoreContent
             entries={favStore.entries}
             loading={favStore.loading}
             saving={favStore.saving}
@@ -364,9 +400,30 @@ export function ComboPanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
-            onClose={favStore.closeModal}
           />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      data-testid="combo-modal-backdrop"
+      onClick={handleClose}
+    >
+      <div
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[950px] max-w-[95vw] h-[70vh] flex flex-col' : 'p-6'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {!selectedField && (
+          <div className={`flex items-center justify-between shrink-0 ${hasEntries ? 'px-6 pt-6 pb-4' : 'mb-4'}`}>
+            <h3 className="text-lg font-semibold">{headerTitle}</h3>
+            <ModalCloseButton testid="combo-modal-close" onClick={handleClose} />
+          </div>
         )}
+
+        {renderBody()}
       </div>
     </div>
   )

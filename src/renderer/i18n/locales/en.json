@@ -6,6 +6,9 @@
     "reset": "Reset",
     "undo": "Undo",
     "revert": "Revert",
+    "confirmRevert": "Revert?",
+    "clear": "Clear",
+    "confirmClear": "Clear?",
     "refresh": "Refresh",
     "refreshing": "Refreshing...",
     "disconnect": "Disconnect",
@@ -14,7 +17,8 @@
     "noEntries": "No entries configured on this device",
     "notConfigured": "N/C",
     "settingsLabel": "Settings:",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "back": "Back"
   },
   "app": {
     "title": "Pipette",
