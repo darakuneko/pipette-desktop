@@ -320,17 +320,17 @@ export function KeyPopover({
           </button>
           <button
             type="button"
-            className={modeButtonClass('lm')}
-            onClick={() => handleModeSwitch('lm')}
-            data-testid="popover-mode-lm"
-          >
-            {t('editor.keymap.keyPopover.lm')}
-          </button>
-          <button
-            type="button"
             className={modeButtonClass('shT')}
             onClick={() => handleModeSwitch('shT')}
             data-testid="popover-mode-sh-t"
+          >
+            {t('editor.keymap.keyPopover.shT')}
+          </button>
+          <button
+            type="button"
+            className={modeButtonClass('lm')}
+            onClick={() => handleModeSwitch('lm')}
+            data-testid="popover-mode-lm"
           >
             {t('editor.keymap.keyPopover.shT')}
           </button>
