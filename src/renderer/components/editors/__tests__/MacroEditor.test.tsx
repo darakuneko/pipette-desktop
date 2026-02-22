@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
 vi.mock('react-i18next', () => ({
@@ -40,6 +40,10 @@ vi.mock('../../keycodes/KeyPopover', () => ({
   KeyPopover: () => <div data-testid="key-popover" />,
 }))
 
+vi.mock('../FavoriteStoreContent', () => ({
+  FavoriteStoreContent: () => <div data-testid="favorite-store-content">Favorites</div>,
+}))
+
 vi.mock('../../../../preload/macro', () => ({
   deserializeAllMacros: (_buf: number[], _proto: number, count: number) =>
     Array.from({ length: count }, () => []),
@@ -57,6 +61,15 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
 }))
 
+const mockFavoriteStoreList = vi.fn().mockResolvedValue({ success: true, entries: [] })
+
+Object.defineProperty(window, 'vialAPI', {
+  value: {
+    favoriteStoreList: mockFavoriteStoreList,
+  },
+  writable: true,
+})
+
 import { MacroEditor } from '../MacroEditor'
 
 describe('MacroEditor', () => {
@@ -67,6 +80,10 @@ describe('MacroEditor', () => {
     vialProtocol: 9,
     onSaveMacros: vi.fn().mockResolvedValue(undefined),
   }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
 
   it('renders the editor', () => {
     render(<MacroEditor {...defaultProps} />)
@@ -99,13 +116,14 @@ describe('MacroEditor', () => {
     expect(screen.queryByTestId('macro-text-editor')).not.toBeInTheDocument()
   })
 
-  it('renders fav button when isDummy is false', () => {
+  it('shows inline favorites panel when isDummy is false', () => {
     render(<MacroEditor {...defaultProps} isDummy={false} />)
-    expect(screen.getByTestId('macro-fav-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('macro-favorites-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('favorite-store-content')).toBeInTheDocument()
   })
 
-  it('hides fav button when isDummy is true', () => {
+  it('hides favorites panel when isDummy is true', () => {
     render(<MacroEditor {...defaultProps} isDummy={true} />)
-    expect(screen.queryByTestId('macro-fav-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('macro-favorites-panel')).not.toBeInTheDocument()
   })
 })

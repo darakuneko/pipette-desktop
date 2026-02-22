@@ -15,8 +15,10 @@ vi.mock('react-i18next', () => ({
         'editor.tapDance.onDoubleTap': 'On Double Tap',
         'editor.tapDance.onTapHold': 'On Tap Hold',
         'editor.tapDance.tappingTerm': 'Tapping Term (ms)',
+        'editor.tapDance.title': 'Tap Dance',
         'common.save': 'Save',
         'common.close': 'Close',
+        'favoriteStore.title': 'Favorites',
       }
       if (key === 'editor.tapDance.editTitle') return `TD(${opts?.index})`
       return map[key] ?? key
@@ -73,6 +75,19 @@ vi.mock('../../keycodes/KeyPopover', () => ({
     </div>
   ),
 }))
+
+vi.mock('../FavoriteStoreContent', () => ({
+  FavoriteStoreContent: () => <div data-testid="favorite-store-content">Favorites</div>,
+}))
+
+const mockFavoriteStoreList = vi.fn().mockResolvedValue({ success: true, entries: [] })
+
+Object.defineProperty(window, 'vialAPI', {
+  value: {
+    favoriteStoreList: mockFavoriteStoreList,
+  },
+  writable: true,
+})
 
 const makeEntry = (overrides?: Partial<TapDanceEntry>): TapDanceEntry => ({
   onTap: 0,
@@ -245,18 +260,30 @@ describe('TapDanceModal', () => {
     expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
   })
 
-  it('renders fav button when isDummy is false', () => {
+  it('shows inline favorites panel when isDummy is false', () => {
     render(
       <TapDanceModal index={0} entry={makeEntry()} onSave={onSave} onClose={onClose} isDummy={false} />,
     )
-    expect(screen.getByTestId('td-fav-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('td-favorites-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('favorite-store-content')).toBeInTheDocument()
   })
 
-  it('hides fav button when isDummy is true', () => {
+  it('hides favorites panel when isDummy is true', () => {
     render(
       <TapDanceModal index={0} entry={makeEntry()} onSave={onSave} onClose={onClose} isDummy={true} />,
     )
-    expect(screen.queryByTestId('td-fav-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('td-favorites-panel')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('favorite-store-content')).not.toBeInTheDocument()
+  })
+
+  it('hides favorites panel when picker is open', () => {
+    render(
+      <TapDanceModal index={0} entry={makeEntry()} onSave={onSave} onClose={onClose} isDummy={false} />,
+    )
+    const panel = screen.getByTestId('td-favorites-panel')
+    expect(panel.className).not.toContain('hidden')
+    fireEvent.click(screen.getAllByTestId('keycode-field')[0])
+    expect(panel.className).toContain('hidden')
   })
 
   it('uses guard-based selection (clicking another field while picker closed selects it)', () => {

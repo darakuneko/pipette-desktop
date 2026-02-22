@@ -20,7 +20,7 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
-import { FavoriteStoreModal } from './FavoriteStoreModal'
+import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
   macroCount: number
@@ -92,6 +92,12 @@ export function MacroEditor({
     setSelectedKey(null)
     setPopoverState(null)
   }, [activeMacro])
+
+  useEffect(() => {
+    if (!isDummy) {
+      favStore.refreshEntries()
+    }
+  }, [isDummy, favStore.refreshEntries])
 
   const [dirty, setDirty] = useState(false)
 
@@ -341,130 +347,125 @@ export function MacroEditor({
   })()
 
   return (
-    <div className="flex flex-col gap-3" data-testid="editor-macro">
-      <div className="text-xs text-content-muted" data-testid="macro-memory">
-        {t('editor.macro.memoryUsage', {
-          used: memoryUsed,
-          total: macroBufferSize,
-        })}
-      </div>
+    <>
+      <div className="flex-1 overflow-y-auto px-6 pb-6 flex flex-col gap-3" data-testid="editor-macro">
+        <div className="text-xs text-content-muted" data-testid="macro-memory">
+          {t('editor.macro.memoryUsage', {
+            used: memoryUsed,
+            total: macroBufferSize,
+          })}
+        </div>
 
-      <div className="space-y-1" data-testid="macro-action-list">
-        {currentActions.map((action, i) => (
-          <MacroActionItem
-            key={i}
-            action={action}
-            index={i}
-            onChange={handleChange}
-            onDelete={handleDelete}
-            onMoveUp={handleMoveUp}
-            onMoveDown={handleMoveDown}
-            isFirst={i === 0}
-            isLast={i === currentActions.length - 1}
-            selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
-            onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
-            onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
-            onKeycodeAdd={() => handleKeycodeAdd(i)}
+        <div className="space-y-1" data-testid="macro-action-list">
+          {currentActions.map((action, i) => (
+            <MacroActionItem
+              key={i}
+              action={action}
+              index={i}
+              onChange={handleChange}
+              onDelete={handleDelete}
+              onMoveUp={handleMoveUp}
+              onMoveDown={handleMoveDown}
+              isFirst={i === 0}
+              isLast={i === currentActions.length - 1}
+              selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
+              onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
+              onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
+              onKeycodeAdd={() => handleKeycodeAdd(i)}
+            />
+          ))}
+        </div>
+
+        {selectedKey !== null && (
+          <div ref={pickerRef}>
+            <TabbedKeycodes
+              onKeycodeSelect={handleKeycodeSelect}
+              onClose={() => setSelectedKey(null)}
+            />
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            data-testid="macro-add-action"
+            className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
+            onClick={handleAddAction}
+          >
+            {t('editor.macro.addAction')}
+          </button>
+          <MacroRecorder onRecordComplete={handleRecordComplete} />
+          <button
+            type="button"
+            data-testid="macro-text-editor-btn"
+            className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
+            onClick={() => setShowTextEditor(true)}
+          >
+            {t('editor.macro.textEditor')}
+          </button>
+          <div className="flex-1" />
+          <button
+            type="button"
+            data-testid="macro-revert"
+            className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim disabled:opacity-50"
+            onClick={handleRevert}
+            disabled={!dirty}
+          >
+            {t('common.revert')}
+          </button>
+          <button
+            type="button"
+            data-testid="macro-save"
+            className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+            onClick={handleSave}
+            disabled={!dirty || hasInvalidText}
+          >
+            {t('common.save')}
+          </button>
+        </div>
+
+        {popoverState !== null && (
+          <KeyPopover
+            anchorRect={popoverState.anchorRect}
+            currentKeycode={popoverKeycode}
+            onKeycodeSelect={handlePopoverKeycodeSelect}
+            onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+            onClose={closePopover}
           />
-        ))}
+        )}
+
+        {showTextEditor && (
+          <MacroTextEditor
+            initialJson={macroActionsToJson(currentActions)}
+            onApply={handleTextEditorApply}
+            onClose={() => setShowTextEditor(false)}
+          />
+        )}
       </div>
 
-      {selectedKey !== null && (
-        <div ref={pickerRef}>
-          <TabbedKeycodes
-            onKeycodeSelect={handleKeycodeSelect}
-            onClose={() => setSelectedKey(null)}
+      {!isDummy && (
+        <div
+          className="w-[456px] shrink-0 border-l border-edge flex flex-col"
+          data-testid="macro-favorites-panel"
+        >
+          <FavoriteStoreContent
+            entries={favStore.entries}
+            loading={favStore.loading}
+            saving={favStore.saving}
+            canSave={currentActions.length > 0}
+            onSave={favStore.saveFavorite}
+            onLoad={favStore.loadFavorite}
+            onRename={favStore.renameEntry}
+            onDelete={favStore.deleteEntry}
+            onExport={favStore.exportFavorites}
+            onExportEntry={favStore.exportEntry}
+            onImport={favStore.importFavorites}
+            exporting={favStore.exporting}
+            importing={favStore.importing}
+            importResult={favStore.importResult}
           />
         </div>
       )}
-
-      <div className="flex gap-2">
-        <button
-          type="button"
-          data-testid="macro-add-action"
-          className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
-          onClick={handleAddAction}
-        >
-          {t('editor.macro.addAction')}
-        </button>
-        <MacroRecorder onRecordComplete={handleRecordComplete} />
-        <button
-          type="button"
-          data-testid="macro-text-editor-btn"
-          className="rounded bg-surface-dim px-3 py-1.5 text-sm hover:bg-surface-raised"
-          onClick={() => setShowTextEditor(true)}
-        >
-          {t('editor.macro.textEditor')}
-        </button>
-        {!isDummy && (
-          <button
-            type="button"
-            data-testid="macro-fav-btn"
-            className="rounded bg-warning px-3 py-1.5 text-sm text-black hover:bg-warning/80"
-            onClick={favStore.openModal}
-          >
-            {t('favoriteStore.button')}
-          </button>
-        )}
-        <div className="flex-1" />
-        <button
-          type="button"
-          data-testid="macro-revert"
-          className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim disabled:opacity-50"
-          onClick={handleRevert}
-          disabled={!dirty}
-        >
-          {t('common.revert')}
-        </button>
-        <button
-          type="button"
-          data-testid="macro-save"
-          className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-          onClick={handleSave}
-          disabled={!dirty || hasInvalidText}
-        >
-          {t('common.save')}
-        </button>
-      </div>
-
-      {popoverState !== null && (
-        <KeyPopover
-          anchorRect={popoverState.anchorRect}
-          currentKeycode={popoverKeycode}
-          onKeycodeSelect={handlePopoverKeycodeSelect}
-          onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-          onClose={closePopover}
-        />
-      )}
-
-      {showTextEditor && (
-        <MacroTextEditor
-          initialJson={macroActionsToJson(currentActions)}
-          onApply={handleTextEditorApply}
-          onClose={() => setShowTextEditor(false)}
-        />
-      )}
-
-      {favStore.showModal && (
-        <FavoriteStoreModal
-          favoriteType="macro"
-          entries={favStore.entries}
-          loading={favStore.loading}
-          saving={favStore.saving}
-          canSave={currentActions.length > 0}
-          onSave={favStore.saveFavorite}
-          onLoad={favStore.loadFavorite}
-          onRename={favStore.renameEntry}
-          onDelete={favStore.deleteEntry}
-          onExport={favStore.exportFavorites}
-          onExportEntry={favStore.exportEntry}
-          onImport={favStore.importFavorites}
-          exporting={favStore.exporting}
-          importing={favStore.importing}
-          importResult={favStore.importResult}
-          onClose={favStore.closeModal}
-        />
-      )}
-    </div>
+    </>
   )
 }
