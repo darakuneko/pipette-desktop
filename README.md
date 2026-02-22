@@ -3,7 +3,7 @@
 Refining the way you interact with your Vial-powered keyboards.
 
 Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
-Communicates with VIA/Vial keyboards via USB HID to configure keymaps, macros, lighting, and more.
+Communicates with Vial keyboards via USB HID to configure keymaps, macros, lighting, and more.
 
 [![Electron](https://img.shields.io/badge/Electron-47848F?style=flat&logo=electron&logoColor=white)](https://www.electronjs.org/)
 [![React](https://img.shields.io/badge/React_19-61DAFB?style=flat&logo=react&logoColor=black)](https://react.dev/)
