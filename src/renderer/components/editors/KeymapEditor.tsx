@@ -1617,6 +1617,22 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
+  const layerPagerRef = useRef<HTMLDivElement>(null)
+  const layerRef = useRef(currentLayer)
+  layerRef.current = currentLayer
+  useEffect(() => {
+    const el = layerPagerRef.current
+    if (!el || !onLayerChange) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const cur = layerRef.current
+      if (e.deltaY > 0 && cur < layers - 1) onLayerChange(cur + 1)
+      else if (e.deltaY < 0 && cur > 0) onLayerChange(cur - 1)
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [layers, onLayerChange])
+
   const toolbar = (
     <div className="flex shrink-0 flex-col gap-1 self-start">
       {!typingTestMode && onOpenEditorSettings && (
@@ -1689,6 +1705,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       {!typingTestMode && onLayerChange && layers > 1 && (
         <div className="flex flex-col items-center" role="group" aria-label={t('editor.keymap.layerLabel')}>
           <div
+            ref={layerPagerRef}
             className="relative overflow-hidden"
             style={{
               width: `${PAGER_CELL_REM}rem`,
@@ -1700,7 +1717,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               style={{ top: `${PAGER_CENTER * PAGER_STRIDE}rem` }}
             />
             <div
-              className="absolute left-0 flex flex-col transition-transform duration-200 ease-out"
+              className="absolute left-0 flex flex-col transition-transform duration-100 ease-out"
               style={{
                 gap: `${PAGER_GAP_REM}rem`,
                 transform: `translateY(${-currentLayer * PAGER_STRIDE}rem)`,
