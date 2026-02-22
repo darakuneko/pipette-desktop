@@ -10,7 +10,7 @@ import { KeycodeField } from './KeycodeField'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import { FavoriteStoreModal } from './FavoriteStoreModal'
+import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
   index: number
@@ -53,6 +53,12 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     setSelectedField(null)
     setPopoverState(null)
   }, [entry])
+
+  useEffect(() => {
+    if (!isDummy) {
+      favStore.refreshEntries()
+    }
+  }, [isDummy, favStore.refreshEntries])
 
   const hasChanges = JSON.stringify(entry) !== JSON.stringify(editedEntry)
 
@@ -106,6 +112,8 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     [popoverState, closePopover],
   )
 
+  const modalWidth = isDummy ? 'w-[800px]' : 'w-[950px]'
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -113,113 +121,117 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
       onClick={onClose}
     >
       <div
-        className="rounded-lg bg-surface-alt p-6 shadow-xl w-[800px] max-w-[90vw] max-h-[90vh] overflow-y-auto"
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[70vh] flex flex-col overflow-hidden`}
         data-testid="td-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">
-            {t('editor.tapDance.editTitle', { index })}
-          </h3>
-          {!selectedField && (
+        {!selectedField && (
+          <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
+            <h3 className="text-lg font-semibold">
+              {t('editor.tapDance.editTitle', { index })}
+            </h3>
             <ModalCloseButton testid="td-modal-close" onClick={onClose} />
-          )}
-        </div>
+          </div>
+        )}
 
-        <div className="space-y-2">
-          {keycodeFields.map(({ key, labelKey }) => {
-            if (selectedField && selectedField !== key) return null
-            return (
-              <div key={key} className="flex items-center gap-3">
-                <label className="min-w-[140px] text-sm text-content">{t(labelKey)}</label>
-                <KeycodeField
-                  value={editedEntry[key]}
-                  selected={selectedField === key}
-                  onSelect={() => { if (!selectedField) setSelectedField(key) }}
-                  onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
-                  label={t(labelKey)}
-                />
+        {/* Split container */}
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          {/* Left panel: editor */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            {selectedField && (
+              <div className="pt-6" />
+            )}
+
+            <div className="space-y-2">
+              {keycodeFields.map(({ key, labelKey }) => {
+                if (selectedField && selectedField !== key) return null
+                return (
+                  <div key={key} className="flex items-center gap-3">
+                    <label className="min-w-[140px] text-sm text-content">{t(labelKey)}</label>
+                    <KeycodeField
+                      value={editedEntry[key]}
+                      selected={selectedField === key}
+                      onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                      onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
+                      label={t(labelKey)}
+                    />
+                  </div>
+                )
+              })}
+              {!selectedField && (
+                <div className="flex items-center gap-3">
+                  <label className="min-w-[140px] text-sm text-content">
+                    {t('editor.tapDance.tappingTerm')}
+                  </label>
+                  <input
+                    type="number"
+                    min={TAPPING_TERM_MIN}
+                    max={TAPPING_TERM_MAX}
+                    value={editedEntry.tappingTerm}
+                    onChange={(e) => handleTappingTermChange(e.target.value)}
+                    className="flex-1 rounded border border-edge px-2 py-1 text-sm"
+                  />
+                </div>
+              )}
+            </div>
+
+            {selectedField && (
+              <div className="mt-3">
+                <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
               </div>
-            )
-          })}
-          {!selectedField && (
-            <div className="flex items-center gap-3">
-              <label className="min-w-[140px] text-sm text-content">
-                {t('editor.tapDance.tappingTerm')}
-              </label>
-              <input
-                type="number"
-                min={TAPPING_TERM_MIN}
-                max={TAPPING_TERM_MAX}
-                value={editedEntry.tappingTerm}
-                onChange={(e) => handleTappingTermChange(e.target.value)}
-                className="flex-1 rounded border border-edge px-2 py-1 text-sm"
+            )}
+
+            {popoverState && (
+              <KeyPopover
+                anchorRect={popoverState.anchorRect}
+                currentKeycode={editedEntry[popoverState.field]}
+                onKeycodeSelect={handlePopoverKeycodeSelect}
+                onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+                onClose={closePopover}
+              />
+            )}
+
+            {!selectedField && (
+              <div className="flex justify-end gap-2 pt-4">
+                <button
+                  type="button"
+                  data-testid="td-modal-save"
+                  className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                  disabled={!hasChanges}
+                  onClick={() => onSave(index, editedEntry)}
+                >
+                  {t('common.save')}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Right panel: favorites */}
+          {!isDummy && (
+            <div
+              className={`w-[456px] shrink-0 border-l border-edge flex flex-col ${selectedField ? 'hidden' : ''}`}
+              data-testid="td-favorites-panel"
+            >
+              <FavoriteStoreContent
+                entries={favStore.entries}
+                loading={favStore.loading}
+                saving={favStore.saving}
+                canSave={isConfigured(editedEntry)}
+                onSave={favStore.saveFavorite}
+                onLoad={favStore.loadFavorite}
+                onRename={favStore.renameEntry}
+                onDelete={favStore.deleteEntry}
+                onExport={favStore.exportFavorites}
+                onExportEntry={favStore.exportEntry}
+                onImport={favStore.importFavorites}
+                exporting={favStore.exporting}
+                importing={favStore.importing}
+                importResult={favStore.importResult}
               />
             </div>
           )}
         </div>
-
-        {selectedField && (
-          <div className="mt-3">
-            <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
-          </div>
-        )}
-
-        {popoverState && (
-          <KeyPopover
-            anchorRect={popoverState.anchorRect}
-            currentKeycode={editedEntry[popoverState.field]}
-            onKeycodeSelect={handlePopoverKeycodeSelect}
-            onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-            onClose={closePopover}
-          />
-        )}
-
-        {!selectedField && (
-          <div className="flex justify-end gap-2 pt-4">
-            {!isDummy && (
-              <button
-                type="button"
-                data-testid="td-fav-btn"
-                className="rounded bg-warning px-3 py-2 text-sm text-black hover:bg-warning/80"
-                onClick={favStore.openModal}
-              >
-                {t('favoriteStore.button')}
-              </button>
-            )}
-            <button
-              type="button"
-              data-testid="td-modal-save"
-              className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-              disabled={!hasChanges}
-              onClick={() => onSave(index, editedEntry)}
-            >
-              {t('common.save')}
-            </button>
-          </div>
-        )}
-
-        {favStore.showModal && (
-          <FavoriteStoreModal
-            favoriteType="tapDance"
-            entries={favStore.entries}
-            loading={favStore.loading}
-            saving={favStore.saving}
-            canSave={isConfigured(editedEntry)}
-            onSave={favStore.saveFavorite}
-            onLoad={favStore.loadFavorite}
-            onRename={favStore.renameEntry}
-            onDelete={favStore.deleteEntry}
-            onExport={favStore.exportFavorites}
-            onExportEntry={favStore.exportEntry}
-            onImport={favStore.importFavorites}
-            exporting={favStore.exporting}
-            importing={favStore.importing}
-            importResult={favStore.importResult}
-            onClose={favStore.closeModal}
-          />
-        )}
       </div>
     </div>
   )

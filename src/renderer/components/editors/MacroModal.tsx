@@ -30,6 +30,7 @@ export function MacroModal({
   isDummy,
 }: Props) {
   const { t } = useTranslation()
+  const modalWidth = isDummy ? 'w-[900px]' : 'w-[950px]'
 
   return (
     <div
@@ -38,29 +39,31 @@ export function MacroModal({
       onClick={onClose}
     >
       <div
-        className="rounded-lg bg-surface-alt p-6 shadow-xl w-[900px] max-w-[90vw] max-h-[90vh] overflow-y-auto"
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[70vh] flex flex-col overflow-hidden`}
         data-testid="macro-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
           <h3 className="text-lg font-semibold">
             {t('editor.macro.editTitle', { index })}
           </h3>
           <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
         </div>
 
-        <MacroEditor
-          macroCount={macroCount}
-          macroBufferSize={macroBufferSize}
-          macroBuffer={macroBuffer}
-          vialProtocol={vialProtocol}
-          onSaveMacros={onSaveMacros}
-          onClose={onClose}
-          initialMacro={index}
-          unlocked={unlocked}
-          onUnlock={onUnlock}
-          isDummy={isDummy}
-        />
+        <div className="flex min-h-0 flex-1 overflow-hidden">
+          <MacroEditor
+            macroCount={macroCount}
+            macroBufferSize={macroBufferSize}
+            macroBuffer={macroBuffer}
+            vialProtocol={vialProtocol}
+            onSaveMacros={onSaveMacros}
+            onClose={onClose}
+            initialMacro={index}
+            unlocked={unlocked}
+            onUnlock={onUnlock}
+            isDummy={isDummy}
+          />
+        </div>
       </div>
     </div>
   )
