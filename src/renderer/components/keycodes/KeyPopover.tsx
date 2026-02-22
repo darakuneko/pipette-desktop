@@ -332,7 +332,7 @@ export function KeyPopover({
             onClick={() => handleModeSwitch('lm')}
             data-testid="popover-mode-lm"
           >
-            {t('editor.keymap.keyPopover.shT')}
+            {t('editor.keymap.keyPopover.lm')}
           </button>
         </div>
       )}
