@@ -30,8 +30,6 @@ export function UnlockDialog({
   const { t } = useTranslation()
   const [counter, setCounter] = useState(0)
   const totalRef = useRef(0)
-  const pollingRef = useRef(true)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>()
   const startedRef = useRef(false)
 
   // Highlight unlock keys in the keyboard widget
