@@ -30,16 +30,19 @@ interface Props {
   currentKeycode: number
   maskOnly?: boolean
   modMask?: number
+  lmMode?: boolean
+  basicKeyOnly?: boolean
   onKeycodeSelect: (kc: Keycode) => void
 }
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycodeSelect }: Props) {
+export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect }: Props) {
+  const hasModMask = modMask > 0
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
-    // When modifier strip is active, show the inner basic key
-    if (modMask > 0) {
+    // When modifier strip is active or in LT/SH_T mode, show the inner basic key
+    if (modMask > 0 || basicKeyOnly) {
       const basicCode = extractBasicKey(currentKeycode)
       if (basicCode === 0) return ''
       return stripPrefix(serialize(basicCode))
@@ -60,11 +63,11 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycode
       return serialized.substring(0, serialized.indexOf('('))
     }
     return stripPrefix(serialized)
-  }, [currentKeycode, maskOnly, modMask])
+  }, [currentKeycode, maskOnly, modMask, basicKeyOnly])
   const [query, setQuery] = useState(initialQuery)
   const [suppressResults, setSuppressResults] = useState(false)
 
-  const lmMode = maskOnly && isLMKeycode(currentKeycode)
+  const lmMode = lmModeProp || (maskOnly && isLMKeycode(currentKeycode))
 
   const searchIndex = useMemo(() => {
     const entries: SearchEntry[] = []
@@ -88,7 +91,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycode
     for (const cat of KEYCODE_CATEGORIES) {
       for (const kc of cat.getKeycodes()) {
         if (kc.hidden) continue
-        if ((maskOnly || modMask > 0) && !isBasic(kc.qmkId)) continue
+        if ((maskOnly || hasModMask || basicKeyOnly) && !isBasic(kc.qmkId)) continue
         const extraAliases = kc.alias.slice(1)
         const searchParts = [
           stripPrefix(kc.qmkId),
@@ -108,7 +111,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, onKeycode
       }
     }
     return entries
-  }, [lmMode, maskOnly, modMask > 0, getKeycodeRevision()])
+  }, [lmMode, maskOnly, hasModMask, basicKeyOnly, getKeycodeRevision()])
 
   const results = useMemo(() => {
     if (suppressResults) return []

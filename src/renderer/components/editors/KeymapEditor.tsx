@@ -381,6 +381,7 @@ interface PopoverForStateProps {
   keymap: Map<string, number>
   encoderLayout: Map<string, number>
   currentLayer: number
+  layers: number
   onKeycodeSelect: (kc: Keycode) => void
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
@@ -392,6 +393,7 @@ function PopoverForState({
   keymap,
   encoderLayout,
   currentLayer,
+  layers,
   onKeycodeSelect,
   onRawKeycodeSelect,
   onModMaskChange,
@@ -409,6 +411,7 @@ function PopoverForState({
       anchorRect={popoverState.anchorRect}
       currentKeycode={currentKeycode}
       maskOnly={maskOnly}
+      layers={layers}
       onKeycodeSelect={onKeycodeSelect}
       onRawKeycodeSelect={onRawKeycodeSelect}
       onModMaskChange={onModMaskChange}
@@ -1912,6 +1915,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           keymap={keymap}
           encoderLayout={encoderLayout}
           currentLayer={currentLayer}
+          layers={layers}
           onKeycodeSelect={handlePopoverKeycodeSelect}
           onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
           onModMaskChange={popoverState.kind === 'key' ? handlePopoverModMaskChange : undefined}

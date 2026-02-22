@@ -1305,6 +1305,57 @@ export function buildModTapKeycode(modMask: number, basicKey: number): number {
   return base | ((modMask & 0x1f) << 8) | (basicKey & 0xff)
 }
 
+// --- LT (Layer-Tap) helpers ---
+
+/** Returns true when the keycode is in the Layer-Tap range (QK_LAYER_TAP to QK_LAYER_TAP + 0x0FFF). */
+export function isLTKeycode(code: number): boolean {
+  const base = resolve('QK_LAYER_TAP')
+  return code >= base && code < base + 0x1000
+}
+
+/** Extracts the layer number (0-15) from a Layer-Tap keycode. */
+export function extractLTLayer(code: number): number {
+  return (code >> 8) & 0x0f
+}
+
+/** Combines a layer number (0-15) with a basic keycode into a Layer-Tap keycode. */
+export function buildLTKeycode(layer: number, basicKey: number): number {
+  return resolve('QK_LAYER_TAP') | ((layer & 0x0f) << 8) | (basicKey & 0xff)
+}
+
+// --- SH_T (Swap Hands Tap) helpers ---
+
+/** Returns true when the keycode is in the Swap Hands Tap range. */
+export function isSHTKeycode(code: number): boolean {
+  const base = resolve('SH_T(kc)')
+  return code >= base && code <= base + 0xef
+}
+
+/** Combines a basic keycode into a Swap Hands Tap keycode. */
+export function buildSHTKeycode(basicKey: number): number {
+  return resolve('SH_T(kc)') | (basicKey & 0xff)
+}
+
+// --- LM additional helpers (isLMKeycode is already exported) ---
+
+/** Extracts the layer number (0-15) from a Layer-Mod keycode. */
+export function extractLMLayer(code: number): number {
+  const { shift } = getLMConfig()
+  return (code >> shift) & 0x0f
+}
+
+/** Extracts the modifier mask from a Layer-Mod keycode. */
+export function extractLMMod(code: number): number {
+  const { modMask } = getLMConfig()
+  return code & modMask
+}
+
+/** Combines a layer number (0-15) with a modifier mask into a Layer-Mod keycode. */
+export function buildLMKeycode(layer: number, mod: number): number {
+  const { base, shift, modMask } = getLMConfig()
+  return base | ((layer & 0x0f) << shift) | (mod & modMask)
+}
+
 // --- Tap Dance helpers ---
 
 export function isTapDanceKeycode(code: number): boolean {

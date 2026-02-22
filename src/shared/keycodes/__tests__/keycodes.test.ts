@@ -58,6 +58,14 @@ import {
   extractBasicKey,
   buildModMaskKeycode,
   serializeForCExport,
+  isLTKeycode,
+  extractLTLayer,
+  buildLTKeycode,
+  isSHTKeycode,
+  buildSHTKeycode,
+  extractLMLayer,
+  extractLMMod,
+  buildLMKeycode,
   type KeyboardKeycodeContext,
   type CustomKeycodeDefinition,
 } from '../keycodes'
@@ -1455,5 +1463,109 @@ describe('serializeForCExport', () => {
       const lt1a = kc['LT1(kc)'] | kc.KC_A
       expect(serializeForCExport(lt1a)).toBe(serialize(lt1a))
     })
+  })
+})
+
+// --- LT (Layer-Tap) helpers ---
+
+describe('isLTKeycode()', () => {
+  beforeEach(() => { setProtocol(5); recreateKeycodes() })
+
+  it('returns true for Layer-Tap range keycodes', () => {
+    expect(isLTKeycode(0x4000)).toBe(true) // LT0(KC_NO)
+    expect(isLTKeycode(0x4004)).toBe(true) // LT0(KC_A)
+    expect(isLTKeycode(0x4f04)).toBe(true) // LT15(KC_A)
+    expect(isLTKeycode(0x4fff)).toBe(true) // upper bound
+  })
+
+  it('returns false for non-LT keycodes', () => {
+    expect(isLTKeycode(0x0004)).toBe(false) // KC_A
+    expect(isLTKeycode(0x5000)).toBe(false) // above LT range
+    expect(isLTKeycode(0x6004)).toBe(false) // Mod-Tap range
+    expect(isLTKeycode(0x3fff)).toBe(false) // below LT range
+  })
+})
+
+describe('extractLTLayer() / buildLTKeycode()', () => {
+  beforeEach(() => { setProtocol(5); recreateKeycodes() })
+
+  it('extracts correct layer from LT keycode', () => {
+    expect(extractLTLayer(0x4004)).toBe(0) // LT0(KC_A)
+    expect(extractLTLayer(0x4104)).toBe(1) // LT1(KC_A)
+    expect(extractLTLayer(0x4f04)).toBe(15) // LT15(KC_A)
+  })
+
+  it('builds correct LT keycode from layer and basic key', () => {
+    expect(buildLTKeycode(0, 4)).toBe(0x4004) // LT0(KC_A)
+    expect(buildLTKeycode(1, 4)).toBe(0x4104) // LT1(KC_A)
+    expect(buildLTKeycode(15, 4)).toBe(0x4f04) // LT15(KC_A)
+    expect(buildLTKeycode(0, 0x2c)).toBe(0x402c) // LT0(KC_SPACE)
+  })
+
+  it('roundtrips: extractLTLayer(buildLTKeycode(l, k)) === l', () => {
+    for (let layer = 0; layer < 16; layer++) {
+      const code = buildLTKeycode(layer, 4)
+      expect(extractLTLayer(code)).toBe(layer)
+      expect(extractBasicKey(code)).toBe(4)
+    }
+  })
+})
+
+describe('isSHTKeycode()', () => {
+  beforeEach(() => { setProtocol(5); recreateKeycodes() })
+
+  it('returns true for Swap Hands Tap range keycodes', () => {
+    const base = resolve('SH_T(kc)')
+    expect(isSHTKeycode(base)).toBe(true) // SH_T(KC_NO)
+    expect(isSHTKeycode(base + 4)).toBe(true) // SH_T(KC_A)
+    expect(isSHTKeycode(base + 0xef)).toBe(true) // upper bound
+  })
+
+  it('returns false for non-SH_T keycodes', () => {
+    expect(isSHTKeycode(0x0004)).toBe(false)
+    expect(isSHTKeycode(0x4004)).toBe(false) // LT range
+    expect(isSHTKeycode(0x6004)).toBe(false) // MT range
+  })
+})
+
+describe('buildSHTKeycode()', () => {
+  beforeEach(() => { setProtocol(5); recreateKeycodes() })
+
+  it('builds correct SH_T keycode', () => {
+    const base = resolve('SH_T(kc)')
+    expect(buildSHTKeycode(4)).toBe(base + 4) // SH_T(KC_A)
+    expect(buildSHTKeycode(0x2c)).toBe(base + 0x2c) // SH_T(KC_SPACE)
+  })
+})
+
+describe('extractLMLayer() / extractLMMod() / buildLMKeycode()', () => {
+  it('works for protocol v5', () => {
+    setProtocol(5)
+    recreateKeycodes()
+    const code = buildLMKeycode(1, 0x01) // LM1(MOD_LCTL)
+    expect(extractLMLayer(code)).toBe(1)
+    expect(extractLMMod(code)).toBe(0x01)
+    expect(isLMKeycode(code)).toBe(true)
+  })
+
+  it('works for protocol v6', () => {
+    setProtocol(6)
+    recreateKeycodes()
+    const code = buildLMKeycode(2, 0x03) // LM2(MOD_LCTL | MOD_LSFT)
+    expect(extractLMLayer(code)).toBe(2)
+    expect(extractLMMod(code)).toBe(0x03)
+    expect(isLMKeycode(code)).toBe(true)
+  })
+
+  it('roundtrips for all layers', () => {
+    for (const proto of [5, 6]) {
+      setProtocol(proto)
+      recreateKeycodes()
+      for (let layer = 0; layer < 16; layer++) {
+        const code = buildLMKeycode(layer, 0x05)
+        expect(extractLMLayer(code)).toBe(layer)
+        expect(extractLMMod(code)).toBe(0x05)
+      }
+    }
   })
 })

@@ -78,6 +78,10 @@
         "qmkLabel": "KeyCode: {{value}}",
         "modMask": "Mod Mask",
         "modTap": "Mod-Tap",
+        "lt": "LT",
+        "shT": "SH_T",
+        "lm": "LM",
+        "layerLabel": "レイヤー",
         "keySelected": "選択済み: {{key}}"
       }
     },

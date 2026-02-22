@@ -6,23 +6,34 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 import {
   isModMaskKeycode,
   isModTapKeycode,
+  isLTKeycode,
+  isSHTKeycode,
+  isLMKeycode,
   extractModMask,
   extractBasicKey,
+  extractLTLayer,
+  extractLMLayer,
+  extractLMMod,
   resolve,
   buildModMaskKeycode,
   buildModTapKeycode,
+  buildLTKeycode,
+  buildSHTKeycode,
+  buildLMKeycode,
 } from '../../../shared/keycodes/keycodes'
 import { PopoverTabKey } from './PopoverTabKey'
 import { PopoverTabCode } from './PopoverTabCode'
 import { ModifierCheckboxStrip } from './ModifierCheckboxStrip'
+import { LayerSelector } from './LayerSelector'
 
 type Tab = 'key' | 'code'
-type WrapperMode = 'none' | 'modMask' | 'modTap'
+type WrapperMode = 'none' | 'modMask' | 'modTap' | 'lt' | 'shT' | 'lm'
 
 interface KeyPopoverProps {
   anchorRect: DOMRect
   currentKeycode: number
   maskOnly?: boolean
+  layers?: number
   onKeycodeSelect: (kc: Keycode) => void
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
@@ -36,6 +47,7 @@ export function KeyPopover({
   anchorRect,
   currentKeycode,
   maskOnly,
+  layers = 16,
   onKeycodeSelect,
   onRawKeycodeSelect,
   onModMaskChange,
@@ -43,21 +55,37 @@ export function KeyPopover({
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
+  // Incremented when leaving LM mode to force PopoverTabKey remount (clears search)
+  const [searchResetKey, setSearchResetKey] = useState(0)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
 
   // Wrapper mode: determines how modifier + basic key are combined
   const [wrapperMode, setWrapperMode] = useState<WrapperMode>(() => {
     if (maskOnly) return 'none'
+    if (isLTKeycode(currentKeycode)) return 'lt'
+    if (isSHTKeycode(currentKeycode)) return 'shT'
+    if (isLMKeycode(currentKeycode)) return 'lm'
     if (isModTapKeycode(currentKeycode)) return 'modTap'
     if (isModMaskKeycode(currentKeycode)) return 'modMask'
     return 'none'
   })
 
+  // Layer selection for LT / LM modes
+  const [selectedLayer, setSelectedLayer] = useState<number>(() => {
+    if (isLTKeycode(currentKeycode)) return extractLTLayer(currentKeycode)
+    if (isLMKeycode(currentKeycode)) return extractLMLayer(currentKeycode)
+    return 0
+  })
+
   const showModeButtons = !maskOnly
-  const showModStrip = wrapperMode !== 'none'
-  // extractModMask works for both modifier-mask and mod-tap keycodes (bits 8-12)
-  const currentModMask = showModStrip ? extractModMask(currentKeycode) : 0
+  const showModStrip = wrapperMode === 'modMask' || wrapperMode === 'modTap' || wrapperMode === 'lm'
+  const showLayerSelector = wrapperMode === 'lt' || wrapperMode === 'lm'
+  const currentModMask = (() => {
+    if (wrapperMode === 'lm') return extractLMMod(currentKeycode)
+    if (wrapperMode === 'modMask' || wrapperMode === 'modTap') return extractModMask(currentKeycode)
+    return 0
+  })()
 
   useLayoutEffect(() => {
     const el = popoverRef.current
@@ -114,11 +142,13 @@ export function KeyPopover({
     return () => window.removeEventListener('resize', onClose)
   }, [onClose])
 
-  // Handle modifier strip changes — immediate keymap update for both modes
+  // Handle modifier strip changes — immediate keymap update
   const handleModStripChange = useCallback(
     (newMask: number) => {
       const basicKey = extractBasicKey(currentKeycode)
-      if (wrapperMode === 'modTap') {
+      if (wrapperMode === 'lm') {
+        onRawKeycodeSelect(buildLMKeycode(selectedLayer, newMask))
+      } else if (wrapperMode === 'modTap') {
         onRawKeycodeSelect(buildModTapKeycode(newMask, basicKey))
       } else if (onModMaskChange) {
         onModMaskChange(newMask)
@@ -126,52 +156,96 @@ export function KeyPopover({
         onRawKeycodeSelect(buildModMaskKeycode(newMask, basicKey))
       }
     },
-    [wrapperMode, currentKeycode, onRawKeycodeSelect, onModMaskChange],
+    [wrapperMode, currentKeycode, selectedLayer, onRawKeycodeSelect, onModMaskChange],
   )
 
   const handleKeycodeSelect = useCallback(
     (kc: Keycode) => {
-      const basicCode = resolve(kc.qmkId)
-      if (wrapperMode !== 'none') {
-        if (wrapperMode === 'modTap') {
-          onRawKeycodeSelect(buildModTapKeycode(currentModMask, basicCode))
-        } else {
-          onRawKeycodeSelect(buildModMaskKeycode(currentModMask, basicCode))
-        }
-      } else {
-        onKeycodeSelect(kc)
+      const code = resolve(kc.qmkId)
+      switch (wrapperMode) {
+        case 'lt':
+          onRawKeycodeSelect(buildLTKeycode(selectedLayer, code))
+          break
+        case 'shT':
+          onRawKeycodeSelect(buildSHTKeycode(code))
+          break
+        case 'lm':
+          onRawKeycodeSelect(buildLMKeycode(selectedLayer, code))
+          break
+        case 'modTap':
+          onRawKeycodeSelect(buildModTapKeycode(currentModMask, code))
+          break
+        case 'modMask':
+          onRawKeycodeSelect(buildModMaskKeycode(currentModMask, code))
+          break
+        default:
+          onKeycodeSelect(kc)
       }
     },
-    [currentModMask, wrapperMode, onKeycodeSelect, onRawKeycodeSelect],
+    [currentModMask, selectedLayer, wrapperMode, onKeycodeSelect, onRawKeycodeSelect],
   )
 
-  const handleRawKeycodeSelect = useCallback(
-    (code: number) => {
-      onRawKeycodeSelect(code)
+  // Handle layer selector changes — immediate keycode rebuild
+  const handleLayerChange = useCallback(
+    (layer: number) => {
+      setSelectedLayer(layer)
+      const basicKey = extractBasicKey(currentKeycode)
+      if (wrapperMode === 'lt') {
+        onRawKeycodeSelect(buildLTKeycode(layer, basicKey))
+      } else if (wrapperMode === 'lm') {
+        onRawKeycodeSelect(buildLMKeycode(layer, currentModMask))
+      }
     },
-    [onRawKeycodeSelect],
+    [wrapperMode, currentKeycode, currentModMask, onRawKeycodeSelect],
   )
 
-  // Switching modes converts the keycode format (preserving modifier + basic key)
+  // Switching modes converts the keycode format (preserving basic key)
   const handleModeSwitch = useCallback(
     (newMode: WrapperMode) => {
       // Toggle off if clicking the active mode
       const target = newMode === wrapperMode ? 'none' : newMode
+      // LM keycodes store modifiers (not a basic key) in the lower bits,
+      // so extractBasicKey would return the modifier value (e.g. MOD_LGUI=0x08=KC_E).
+      const basicKey = wrapperMode === 'lm' ? 0 : extractBasicKey(currentKeycode)
 
-      // Convert keycode when switching between modMask/modTap with modifiers set
-      const mask = extractModMask(currentKeycode)
-      const basicKey = extractBasicKey(currentKeycode)
-      if (mask > 0 && target !== 'none' && target !== wrapperMode) {
-        if (target === 'modTap') {
-          onRawKeycodeSelect(buildModTapKeycode(mask, basicKey))
-        } else {
-          onRawKeycodeSelect(buildModMaskKeycode(mask, basicKey))
+      if (target === 'none') {
+        // Turning off: revert to basic key
+        if (basicKey !== currentKeycode) {
+          onRawKeycodeSelect(basicKey)
+        }
+      } else {
+        // Switching to a new mode: rebuild keycode
+        switch (target) {
+          case 'lt':
+            onRawKeycodeSelect(buildLTKeycode(selectedLayer, basicKey))
+            break
+          case 'shT':
+            onRawKeycodeSelect(buildSHTKeycode(basicKey))
+            break
+          case 'lm':
+            onRawKeycodeSelect(buildLMKeycode(selectedLayer, 0))
+            break
+          case 'modTap': {
+            // Only preserve mod mask when switching from another mod-based mode
+            const mask = (wrapperMode === 'modMask' || wrapperMode === 'modTap') ? extractModMask(currentKeycode) : 0
+            onRawKeycodeSelect(buildModTapKeycode(mask, basicKey))
+            break
+          }
+          case 'modMask': {
+            const mask = (wrapperMode === 'modMask' || wrapperMode === 'modTap') ? extractModMask(currentKeycode) : 0
+            onRawKeycodeSelect(buildModMaskKeycode(mask, basicKey))
+            break
+          }
         }
       }
 
+      // Force PopoverTabKey remount to clear search when leaving LM mode
+      if (wrapperMode === 'lm' && target !== 'lm') {
+        setSearchResetKey((k) => k + 1)
+      }
       setWrapperMode(target)
     },
-    [wrapperMode, currentKeycode, onRawKeycodeSelect],
+    [wrapperMode, currentKeycode, selectedLayer, onRawKeycodeSelect],
   )
 
   const tabClass = (tab: Tab) => {
@@ -236,6 +310,40 @@ export function KeyPopover({
           >
             {t('editor.keymap.keyPopover.modTap')}
           </button>
+          <button
+            type="button"
+            className={modeButtonClass('lt')}
+            onClick={() => handleModeSwitch('lt')}
+            data-testid="popover-mode-lt"
+          >
+            {t('editor.keymap.keyPopover.lt')}
+          </button>
+          <button
+            type="button"
+            className={modeButtonClass('lm')}
+            onClick={() => handleModeSwitch('lm')}
+            data-testid="popover-mode-lm"
+          >
+            {t('editor.keymap.keyPopover.lm')}
+          </button>
+          <button
+            type="button"
+            className={modeButtonClass('shT')}
+            onClick={() => handleModeSwitch('shT')}
+            data-testid="popover-mode-sh-t"
+          >
+            {t('editor.keymap.keyPopover.shT')}
+          </button>
+        </div>
+      )}
+
+      {activeTab === 'key' && showLayerSelector && (
+        <div className="border-b border-edge-subtle px-3 py-2">
+          <LayerSelector
+            layers={layers}
+            selectedLayer={selectedLayer}
+            onChange={handleLayerChange}
+          />
         </div>
       )}
 
@@ -249,11 +357,16 @@ export function KeyPopover({
       )}
 
       <div className="p-3">
-        {activeTab === 'key' && (
+        {activeTab === 'key' && wrapperMode !== 'lm' && (
           <PopoverTabKey
-            currentKeycode={currentKeycode}
+            key={searchResetKey}
+            // LM keycodes store modifier bits where the basic key normally lives (see line 209).
+            // After a mode switch away from LM, currentKeycode may still hold the stale LM value
+            // for one render frame before the parent propagates the rebuilt keycode.
+            currentKeycode={isLMKeycode(currentKeycode) ? 0 : currentKeycode}
             maskOnly={maskOnly}
             modMask={currentModMask}
+            basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}
             onKeycodeSelect={handleKeycodeSelect}
           />
         )}
@@ -261,7 +374,7 @@ export function KeyPopover({
           <PopoverTabCode
             currentKeycode={currentKeycode}
             maskOnly={maskOnly}
-            onRawKeycodeSelect={handleRawKeycodeSelect}
+            onRawKeycodeSelect={onRawKeycodeSelect}
           />
         )}
       </div>
