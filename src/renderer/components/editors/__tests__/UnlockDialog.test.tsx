@@ -93,6 +93,9 @@ describe('UnlockDialog', () => {
     // First poll: counter=50 (total captured as 50)
     unlockPoll.mockResolvedValueOnce([0, 0, 50])
     await act(async () => { renderDialog() })
+    // setInterval fires first poll at t=200ms
+    await act(async () => { vi.advanceTimersByTime(200) })
+    await act(async () => {})
 
     // After first poll, total=50, counter=50, progress=0
     expect(screen.getByText('0/50')).toBeInTheDocument()
@@ -118,8 +121,11 @@ describe('UnlockDialog', () => {
       .mockResolvedValueOnce([1, 0, 0])
 
     await act(async () => { renderDialog() })
-    // First poll ran (counter=50)
+    // First poll at t=200ms (counter=50)
+    await act(async () => { vi.advanceTimersByTime(200) })
+    await act(async () => {})
 
+    // Second poll at t=400ms (unlocked=1)
     await act(async () => { vi.advanceTimersByTime(200) })
     await act(async () => {})
 

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KleKey } from '../../../shared/kle/types'
 import { KeyboardWidget } from '../keyboard'
@@ -40,52 +40,68 @@ export function UnlockDialog({
     highlightedKeys.add(`${row},${col}`)
   }
 
-  const poll = useCallback(async () => {
-    if (!pollingRef.current) return
-    try {
-      const data = await unlockPoll()
-      if (!pollingRef.current) return
-      if (data.length < 3) return // unexpected data
+  // Store callbacks in refs so the interval handler always sees the
+  // latest versions without re-triggering the useEffect.
+  const unlockPollRef = useRef(unlockPoll)
+  unlockPollRef.current = unlockPoll
+  const onCompleteRef = useRef(onComplete)
+  onCompleteRef.current = onComplete
+  const busyRef = useRef(false)
 
-      const unlocked = data[0]
-      const cnt = data[2]
+  // Single useEffect: send unlockStart once, then poll via setInterval.
+  // setInterval (like Python's QTimer) guarantees exactly one poll loop.
+  useEffect(() => {
+    let intervalId: ReturnType<typeof setInterval> | undefined
+    let cancelled = false
 
-      // Capture the max counter as total on first meaningful value
-      if (cnt > totalRef.current) totalRef.current = cnt
-      setCounter(cnt)
+    const pollOnce = async () => {
+      if (cancelled || busyRef.current) return
+      busyRef.current = true
+      try {
+        const data = await unlockPollRef.current()
+        if (cancelled) return
+        if (data.length < 3) return
 
-      if (unlocked === 1) {
-        pollingRef.current = false
-        onComplete()
+        const unlocked = data[0]
+        const cnt = data[2]
+
+        if (cnt > totalRef.current) totalRef.current = cnt
+        setCounter(cnt)
+
+        if (unlocked === 1) {
+          if (intervalId) clearInterval(intervalId)
+          onCompleteRef.current()
+          return
+        }
+      } catch {
+        // device error — next interval tick will retry
+      } finally {
+        busyRef.current = false
+      }
+    }
+
+    const start = async () => {
+      if (startedRef.current) {
+        intervalId = setInterval(() => void pollOnce(), UNLOCK_POLL_INTERVAL)
         return
       }
-    } catch {
-      // device error
-    }
-
-    if (pollingRef.current) {
-      timerRef.current = setTimeout(poll, UNLOCK_POLL_INTERVAL)
-    }
-  }, [unlockPoll, onComplete])
-
-  useEffect(() => {
-    pollingRef.current = true
-    const start = async () => {
-      if (startedRef.current) return
       startedRef.current = true
       try {
         await unlockStart()
-        poll()
+        if (cancelled) return
+        intervalId = setInterval(() => void pollOnce(), UNLOCK_POLL_INTERVAL)
       } catch {
-        // failed to start
+        // failed to start unlock
       }
     }
+
     start()
+
     return () => {
-      pollingRef.current = false
-      if (timerRef.current) clearTimeout(timerRef.current)
+      cancelled = true
+      if (intervalId) clearInterval(intervalId)
     }
-  }, [unlockStart, poll])
+  }, [unlockStart])
 
   // Derive progress from firmware counter
   const total = totalRef.current
