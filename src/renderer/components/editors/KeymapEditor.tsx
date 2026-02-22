@@ -26,7 +26,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import type { PanelSide } from '../../hooks/useDevicePrefs'
-import { PanelLeftOpen, PanelRightOpen, Columns2, ZoomIn, ZoomOut, Keyboard, Globe } from 'lucide-react'
+import { PanelLeftOpen, PanelRightOpen, Columns2, ZoomIn, ZoomOut, Keyboard, LayoutList, Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -50,6 +50,26 @@ const PROCESS_CODE_TO_KEY = new Map<string, string>([
 const EMPTY_KEYCODES = new Map<string, string>()
 const EMPTY_REMAPPED = new Set<string>()
 const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
+
+const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-nowrap opacity-0 transition-opacity delay-300'
+
+function IconTooltip({ label, side = 'right', children }: {
+  label: string
+  side?: 'right' | 'top-end'
+  children: React.ReactNode
+}) {
+  const posClass = side === 'right'
+    ? 'left-full top-1/2 -translate-y-1/2 ml-2'
+    : 'bottom-full right-0 mb-2'
+  return (
+    <div className="group/tip relative">
+      {children}
+      <div className={`${TOOLTIP_STYLE} ${posClass} group-hover/tip:opacity-100`}>
+        {label}
+      </div>
+    </div>
+  )
+}
 
 const CONTROL_BASE = 'rounded-md border px-3 py-1.5 text-[13px]'
 
@@ -283,36 +303,73 @@ function SettingsModal({
   )
 }
 
-interface LayoutOptionControlProps {
-  option: LayoutOption
-  value: number
+interface LayoutOptionsPanelProps {
+  options: LayoutOption[]
+  values: Map<number, number>
   onChange: (index: number, value: number) => void
 }
 
-function LayoutOptionControl({ option, value, onChange }: LayoutOptionControlProps) {
-  if (option.labels.length <= 2) {
-    return (
-      <input
-        type="checkbox"
-        title={option.labels[0]}
-        checked={value === 1}
-        onChange={(e) => onChange(option.index, e.target.checked ? 1 : 0)}
-        className="h-3.5 w-3.5 rounded border-edge"
-      />
-    )
-  }
+function LayoutOptionsPanel({ options, values, onChange }: LayoutOptionsPanelProps) {
+  // Compute the widest select option label to align all selects
+  const hasSelect = options.some((opt) => opt.labels.length > 2)
+  const selectRef = useRef<HTMLSelectElement>(null)
+  const [selectWidth, setSelectWidth] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (!hasSelect || !selectRef.current) return
+    // Measure the natural width of the hidden sizer select
+    setSelectWidth(selectRef.current.offsetWidth)
+  }, [hasSelect, options])
+
+  // All choice labels across all selects (for the sizer)
+  const allChoiceLabels = useMemo(
+    () => options.filter((o) => o.labels.length > 2).flatMap((o) => o.labels.slice(1)),
+    [options],
+  )
 
   return (
-    <select
-      title={option.labels[0]}
-      value={value}
-      onChange={(e) => onChange(option.index, Number(e.target.value))}
-      className="rounded-md border border-edge bg-surface-alt px-3 py-1 text-xs text-content-secondary"
-    >
-      {option.labels.slice(1).map((label, i) => (
-        <option key={i} value={i}>{label}</option>
-      ))}
-    </select>
+    <div className="px-4 py-3 space-y-2">
+      {/* Hidden sizer select to measure the widest option */}
+      {hasSelect && (
+        <select
+          ref={selectRef}
+          className="invisible absolute rounded-md border border-edge px-3 py-1 text-xs"
+          tabIndex={-1}
+          aria-hidden="true"
+        >
+          {allChoiceLabels.map((label, i) => (
+            <option key={i}>{label}</option>
+          ))}
+        </select>
+      )}
+      {options.map((opt) => {
+        const val = values.get(opt.index) ?? 0
+        const isBoolean = opt.labels.length <= 2
+        return (
+          <label key={opt.index} className="flex items-center justify-between gap-4 cursor-pointer">
+            <span className="text-xs text-content-secondary">{opt.labels[0]}</span>
+            {isBoolean ? (
+              <input
+                type="checkbox"
+                checked={val === 1}
+                onChange={() => onChange(opt.index, val === 1 ? 0 : 1)}
+              />
+            ) : (
+              <select
+                value={val}
+                onChange={(e) => onChange(opt.index, Number(e.target.value))}
+                className="rounded-md border border-edge bg-surface-alt px-3 py-1 text-xs text-content-secondary"
+                style={selectWidth ? { width: selectWidth } : undefined}
+              >
+                {opt.labels.slice(1).map((label, i) => (
+                  <option key={i} value={i}>{label}</option>
+                ))}
+              </select>
+            )}
+          </label>
+        )
+      })}
+    </div>
   )
 }
 
@@ -521,6 +578,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const timerRef = useRef<ReturnType<typeof setTimeout>>()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
 
+  const [layoutPanelOpen, setLayoutPanelOpen] = useState(false)
+  const layoutPanelRef = useRef<HTMLDivElement>(null)
+  const layoutButtonRef = useRef<HTMLButtonElement>(null)
+
   const [multiSelectedKeys, setMultiSelectedKeys] = useState<Set<string>>(new Set())
   const [selectionAnchor, setSelectionAnchor] = useState<{ row: number; col: number } | null>(null)
   const [selectionSourcePane, setSelectionSourcePane] = useState<'primary' | 'secondary' | null>(null)
@@ -677,6 +738,27 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     },
     [layoutValues, parsedOptions, onSetLayoutOptions],
   )
+
+  // Close layout panel on click-outside or Escape
+  useEffect(() => {
+    if (!layoutPanelOpen) return
+    function onMouseDown(e: MouseEvent) {
+      if (
+        layoutPanelRef.current?.contains(e.target as Node) ||
+        layoutButtonRef.current?.contains(e.target as Node)
+      ) return
+      setLayoutPanelOpen(false)
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') setLayoutPanelOpen(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [layoutPanelOpen])
 
   // --- Matrix tester polling ---
   const poll = useCallback(async () => {
@@ -1535,65 +1617,70 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const toolbar = (
     <div className="flex shrink-0 flex-col gap-1 self-start">
       {!typingTestMode && onOpenEditorSettings && (
-        <button
-          type="button"
-          data-testid="editor-settings-button"
-          aria-label={t('editorSettings.title')}
-          title={t('editorSettings.title')}
-          className={toggleButtonClass(false)}
-          onClick={onOpenEditorSettings}
-        >
-          {panelSide === 'left' ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-        </button>
+        <IconTooltip label={t('editorSettings.title')}>
+          <button
+            type="button"
+            data-testid="editor-settings-button"
+            aria-label={t('editorSettings.title')}
+            className={toggleButtonClass(false)}
+            onClick={onOpenEditorSettings}
+          >
+            {panelSide === 'left' ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
+          </button>
+        </IconTooltip>
       )}
       {!typingTestMode && onDualModeChange && (
-        <button
-          type="button"
-          data-testid="dual-mode-button"
-          aria-label={t('editor.keymap.dualMode')}
-          title={t('editor.keymap.dualMode')}
-          className={toggleButtonClass(dualMode ?? false)}
-          onClick={() => onDualModeChange(!dualMode)}
-        >
-          <Columns2 size={16} aria-hidden="true" />
-        </button>
+        <IconTooltip label={t('editor.keymap.dualMode')}>
+          <button
+            type="button"
+            data-testid="dual-mode-button"
+            aria-label={t('editor.keymap.dualMode')}
+            className={toggleButtonClass(dualMode ?? false)}
+            onClick={() => onDualModeChange(!dualMode)}
+          >
+            <Columns2 size={16} aria-hidden="true" />
+          </button>
+        </IconTooltip>
       )}
       {onTypingTestModeChange && hasMatrixTester && (
-        <button
-          type="button"
-          data-testid="typing-test-button"
-          aria-label={t('editor.typingTest.title')}
-          title={t('editor.typingTest.title')}
-          className={toggleButtonClass(typingTestMode ?? false)}
-          onClick={handleTypingTestToggle}
-        >
-          <Keyboard size={16} aria-hidden="true" />
-        </button>
+        <IconTooltip label={t('editor.typingTest.title')}>
+          <button
+            type="button"
+            data-testid="typing-test-button"
+            aria-label={t('editor.typingTest.title')}
+            className={toggleButtonClass(typingTestMode ?? false)}
+            onClick={handleTypingTestToggle}
+          >
+            <Keyboard size={16} aria-hidden="true" />
+          </button>
+        </IconTooltip>
       )}
       {!typingTestMode && onScaleChange && (
         <>
-          <button
-            type="button"
-            data-testid="zoom-in-button"
-            aria-label={t('editor.keymap.zoomIn')}
-            title={t('editor.keymap.zoomIn')}
-            className={zoomButtonClass}
-            disabled={scaleProp >= MAX_SCALE}
-            onClick={() => onScaleChange(0.1)}
-          >
-            <ZoomIn size={16} aria-hidden="true" />
-          </button>
-          <button
-            type="button"
-            data-testid="zoom-out-button"
-            aria-label={t('editor.keymap.zoomOut')}
-            title={t('editor.keymap.zoomOut')}
-            className={zoomButtonClass}
-            disabled={scaleProp <= MIN_SCALE}
-            onClick={() => onScaleChange(-0.1)}
-          >
-            <ZoomOut size={16} aria-hidden="true" />
-          </button>
+          <IconTooltip label={t('editor.keymap.zoomIn')}>
+            <button
+              type="button"
+              data-testid="zoom-in-button"
+              aria-label={t('editor.keymap.zoomIn')}
+              className={zoomButtonClass}
+              disabled={scaleProp >= MAX_SCALE}
+              onClick={() => onScaleChange(0.1)}
+            >
+              <ZoomIn size={16} aria-hidden="true" />
+            </button>
+          </IconTooltip>
+          <IconTooltip label={t('editor.keymap.zoomOut')}>
+            <button
+              type="button"
+              data-testid="zoom-out-button"
+              aria-label={t('editor.keymap.zoomOut')}
+              className={zoomButtonClass}
+              disabled={scaleProp <= MIN_SCALE}
+              onClick={() => onScaleChange(-0.1)}
+            >
+              <ZoomOut size={16} aria-hidden="true" />
+            </button>
+          </IconTooltip>
         </>
       )}
       {!typingTestMode && onLayerChange && layers > 1 && (
@@ -1843,16 +1930,39 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         lmMode={isLMMask}
         showHint={!isMaskKey}
         tabFooterContent={tabFooterContent}
-        tabBarRight={parsedOptions.length > 0 ? (
-          <div className="flex items-center gap-1.5">
-            {parsedOptions.map((opt) => (
-              <LayoutOptionControl
-                key={opt.index}
-                option={opt}
-                value={layoutValues.get(opt.index) ?? 0}
-                onChange={handleLayoutOptionChange}
-              />
-            ))}
+        tabBarRight={hasLayoutOptions ? (
+          <IconTooltip label={t('editor.layout.options')} side="top-end">
+            <button
+              ref={layoutButtonRef}
+              type="button"
+              aria-label={t('editor.layout.options')}
+              aria-expanded={layoutPanelOpen}
+              aria-controls="layout-options-panel"
+              className={`rounded p-1 transition-colors ${
+                layoutPanelOpen
+                  ? 'bg-surface-dim text-accent'
+                  : 'text-content-secondary hover:bg-surface-dim hover:text-content'
+              }`}
+              onClick={() => setLayoutPanelOpen((prev) => !prev)}
+            >
+              <LayoutList size={16} aria-hidden="true" />
+            </button>
+          </IconTooltip>
+        ) : undefined}
+        panelOverlay={hasLayoutOptions ? (
+          <div
+            id="layout-options-panel"
+            ref={layoutPanelRef}
+            className={`absolute inset-y-0 right-0 z-10 w-fit overflow-y-auto rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${
+              layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
+            inert={!layoutPanelOpen || undefined}
+          >
+            <LayoutOptionsPanel
+              options={parsedOptions}
+              values={layoutValues}
+              onChange={handleLayoutOptionChange}
+            />
           </div>
         ) : undefined}
       />}

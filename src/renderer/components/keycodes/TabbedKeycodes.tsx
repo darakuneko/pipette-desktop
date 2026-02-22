@@ -33,10 +33,24 @@ interface Props {
   lmMode?: boolean  // When true, show MOD_* keycodes for LM inner editing
   tabFooterContent?: Record<string, React.ReactNode> // Tab-specific footer content keyed by tab ID
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
+  panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
 }
 
-export function TabbedKeycodes({ onKeycodeSelect, onKeycodeMultiSelect, pickerSelectedKeycodes, onBackgroundClick, onClose, highlightedKeycodes, maskOnly = false, lmMode = false, tabFooterContent, tabBarRight, showHint = false }: Props) {
+export function TabbedKeycodes({
+  onKeycodeSelect,
+  onKeycodeMultiSelect,
+  pickerSelectedKeycodes,
+  onBackgroundClick,
+  onClose,
+  highlightedKeycodes,
+  maskOnly = false,
+  lmMode = false,
+  tabFooterContent,
+  tabBarRight,
+  panelOverlay,
+  showHint = false,
+}: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
@@ -215,7 +229,7 @@ export function TabbedKeycodes({ onKeycodeSelect, onKeycodeMultiSelect, pickerSe
           ))}
         </div>
         {(tabBarRight || onClose) && (
-          <div className="ml-auto mb-1.5 flex shrink-0 items-center gap-2 self-center">
+          <div className="ml-auto flex shrink-0 items-center gap-2 border-b-2 border-b-transparent py-1.5">
             {tabBarRight}
             {onClose && (
               <button
@@ -232,18 +246,35 @@ export function TabbedKeycodes({ onKeycodeSelect, onKeycodeMultiSelect, pickerSe
         )}
       </div>
 
-      {/* Keycodes — all tabs rendered in a single grid cell; inactive tabs are
-          invisible but still contribute to layout, keeping the height stable.
-          Each tab scrolls independently so only overflowing tabs show a scrollbar. */}
-      <div className="grid grid-rows-1 min-h-0 flex-1 overflow-hidden p-2">
-        {categories.map((cat) => (
-          <div
-            key={cat.id}
-            className={`col-start-1 row-start-1 overflow-y-auto ${cat.id === activeTab ? '' : 'invisible'}`}
-          >
-            {renderCategoryContent(cat)}
+      {/* Content area below tab bar — relative container for panel overlay */}
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {/* Keycodes — all tabs rendered in a single grid cell; inactive tabs are
+            invisible but still contribute to layout, keeping the height stable.
+            Each tab scrolls independently so only overflowing tabs show a scrollbar. */}
+        <div className="grid grid-rows-1 min-h-0 flex-1 overflow-hidden p-2">
+          {categories.map((cat) => (
+            <div
+              key={cat.id}
+              className={`col-start-1 row-start-1 overflow-y-auto ${cat.id === activeTab ? '' : 'invisible'}`}
+            >
+              {renderCategoryContent(cat)}
+            </div>
+          ))}
+        </div>
+
+        {tabFooterContent?.[activeTab] && (
+          <div className="border-t border-edge-subtle px-3 py-2">
+            {tabFooterContent[activeTab]}
           </div>
-        ))}
+        )}
+
+        {showHint && (
+          <p className="px-3 pb-1.5 text-[11px] text-content-muted">
+            {t('editor.keymap.pickerHint')}
+          </p>
+        )}
+
+        {panelOverlay}
       </div>
 
       {/* Tooltip — rendered outside the scroll container to avoid clipping */}
@@ -266,18 +297,6 @@ export function TabbedKeycodes({ onKeycodeSelect, onKeycodeMultiSelect, pickerSe
             </div>
           )}
         </div>
-      )}
-
-      {tabFooterContent?.[activeTab] && (
-        <div className="border-t border-edge-subtle px-3 py-2">
-          {tabFooterContent[activeTab]}
-        </div>
-      )}
-
-      {showHint && (
-        <p className="px-3 pb-1.5 text-[11px] text-content-muted">
-          {t('editor.keymap.pickerHint')}
-        </p>
       )}
     </div>
   )
