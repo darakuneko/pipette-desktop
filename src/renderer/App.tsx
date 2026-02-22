@@ -100,14 +100,10 @@ export function App() {
   const [hubAuthConflict, setHubAuthConflict] = useState(false)
   const [hubAccountDeactivated, setHubAccountDeactivated] = useState(false)
 
-  // Phase 1: Device-triggered auto-sync — download favorites only
-  const vialDeviceCount = useMemo(
-    () => device.devices.filter((d) => d.type === 'vial').length,
-    [device.devices],
-  )
+  // Device-triggered auto-sync — download favorites + keyboard files in one call
   useEffect(() => {
-    // Not connected or no Vial devices: reset flags so next connection triggers sync
-    if (!device.connectedDevice || vialDeviceCount === 0) {
+    // Not connected: reset flags so next connection triggers sync
+    if (!device.connectedDevice) {
       if (!deviceSyncing) {
         hasSyncedRef.current = false
         hasKeyboardSyncedRef.current = null
@@ -115,38 +111,25 @@ export function App() {
       return
     }
 
-    // Skip if sync module loading, already syncing, or already synced this connection
-    if (sync.loading || deviceSyncing || hasSyncedRef.current) return
-
-    if (!sync.config.autoSync || !sync.authStatus.authenticated || !sync.hasPassword) return
-
-    // Vial device(s) detected — download favorites only
-    hasSyncedRef.current = true
-    setDeviceSyncing(true)
-    sync.syncNow('download', 'favorites')
-      .catch(() => { hasSyncedRef.current = false })
-      .finally(() => setDeviceSyncing(false))
-  }, [device.connectedDevice, vialDeviceCount, sync.loading, sync.config.autoSync,
-      sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, deviceSyncing])
-
-  // Phase 2: Keyboard UID confirmed — download keyboard-specific files
-  useEffect(() => {
-    if (!device.connectedDevice || !keyboard.uid || keyboard.uid === EMPTY_UID) {
+    // Wait for UID (available ~22ms into reload)
+    if (!keyboard.uid || keyboard.uid === EMPTY_UID) {
       hasKeyboardSyncedRef.current = null
       return
     }
-    if (keyboard.loading) return
+
     if (hasKeyboardSyncedRef.current === keyboard.uid) return
     if (!sync.config.autoSync || !sync.authStatus.authenticated || !sync.hasPassword) return
-    if (sync.loading || deviceSyncing) return // Wait for Phase 1 to complete
+    if (sync.loading || deviceSyncing) return
 
+    hasSyncedRef.current = true
     hasKeyboardSyncedRef.current = keyboard.uid
     setDeviceSyncing(true)
-    sync.syncNow('download', { keyboard: keyboard.uid })
-      .catch(() => { hasKeyboardSyncedRef.current = null })
+    sync.syncNow('download', { favorites: true as const, keyboard: keyboard.uid })
+      .catch(() => { hasSyncedRef.current = false; hasKeyboardSyncedRef.current = null })
       .finally(() => setDeviceSyncing(false))
-  }, [device.connectedDevice, keyboard.uid, keyboard.loading, sync.config.autoSync,
-      sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, sync.loading, deviceSyncing])
+  }, [device.connectedDevice, keyboard.uid, keyboard.loading,
+      sync.loading, sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword,
+      sync.syncNow, deviceSyncing])
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels
@@ -763,9 +746,9 @@ export function App() {
     }
   }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
 
-  // True when Phase 2 keyboard sync is about to trigger but useEffect hasn't fired yet.
-  // Bridges the 1-frame gap between keyboard.loading→false and Phase 2 setDeviceSyncing(true).
-  const phase2SyncPending = !keyboard.loading && !deviceSyncing &&
+  // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
+  // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
+  const phase2SyncPending = !deviceSyncing &&
     !!device.connectedDevice && !!keyboard.uid && keyboard.uid !== EMPTY_UID &&
     hasKeyboardSyncedRef.current !== keyboard.uid &&
     sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !sync.loading

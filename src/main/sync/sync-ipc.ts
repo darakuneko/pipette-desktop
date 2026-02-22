@@ -70,6 +70,9 @@ function validateSyncScope(raw: unknown): SyncScope | undefined {
   if (typeof raw === 'object' && 'keyboard' in raw) {
     const { keyboard } = raw as Record<string, unknown>
     if (typeof keyboard === 'string' && SAFE_UID_RE.test(keyboard)) {
+      if ('favorites' in raw && raw.favorites === true) {
+        return { favorites: true, keyboard }
+      }
       return { keyboard }
     }
   }

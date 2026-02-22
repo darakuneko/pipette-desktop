@@ -91,3 +91,4 @@ export type SyncScope =
   | 'all'           // changePassword, listUndecryptable
   | 'favorites'     // favorites/* only
   | { keyboard: string }  // keyboards/{uid}/* only
+  | { favorites: true; keyboard: string }  // favorites/* + keyboards/{uid}/*

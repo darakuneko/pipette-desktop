@@ -23,7 +23,7 @@ import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncScope } from '../../shared/types/sync'
 
-const SYNC_CONCURRENCY = 5
+const SYNC_CONCURRENCY = 10
 const DEBOUNCE_MS = 10_000
 const POLL_INTERVAL_MS = 3 * 60 * 1000 // 3 minutes
 const PASSWORD_CHECK_UNIT = 'password-check'
@@ -92,6 +92,9 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (scope === 'all') return true
   if (syncUnit === null) return false
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
+  if (typeof scope === 'object' && 'favorites' in scope) {
+    return syncUnit.startsWith('favorites/') || syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
+  }
   return syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
 }
 

@@ -167,6 +167,9 @@ export function useKeyboard() {
       newState.vialProtocol = kbId.vialProtocol
       newState.uid = kbId.uid
 
+      // Publish UID early so cloud sync can start in parallel with reload
+      setState((s) => ({ ...s, uid: newState.uid, loading: true }))
+
       // Phase 2: Layer count + macros metadata
       progress('loading.definition')
       newState.layers = await api.getLayerCount()
