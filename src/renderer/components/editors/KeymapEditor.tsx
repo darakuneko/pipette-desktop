@@ -776,17 +776,45 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       effectiveLayoutOptions,
     )
     if (visible.length === 0) return 0
+    const s = KEY_UNIT * scaleProp
+    const spacing = KEY_SPACING * scaleProp
     let minY = Infinity
     let maxY = -Infinity
     for (const key of visible) {
-      const ky0 = KEY_UNIT * key.y
-      const ky1 = KEY_UNIT * (key.y + key.height) - KEY_SPACING
-      if (ky0 < minY) minY = ky0
-      if (ky1 > maxY) maxY = ky1
+      // Collect actual corners (4 per rect, not the Cartesian product)
+      const x0 = s * key.x
+      const y0 = s * key.y
+      const x1 = s * (key.x + key.width) - spacing
+      const y1 = s * (key.y + key.height) - spacing
+      const corners: [number, number][] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+      const has2 = key.width2 !== key.width || key.height2 !== key.height || key.x2 !== 0 || key.y2 !== 0
+      if (has2) {
+        const sx0 = x0 + s * key.x2
+        const sy0 = y0 + s * key.y2
+        const sx1 = s * (key.x + key.x2 + key.width2) - spacing
+        const sy1 = s * (key.y + key.y2 + key.height2) - spacing
+        corners.push([sx0, sy0], [sx1, sy0], [sx1, sy1], [sx0, sy1])
+      }
+      if (key.rotation !== 0) {
+        const cx = s * key.rotationX
+        const cy = s * key.rotationY
+        const rad = (key.rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        for (const [px, py] of corners) {
+          const ry = cy + (px - cx) * sin + (py - cy) * cos
+          if (ry < minY) minY = ry
+          if (ry > maxY) maxY = ry
+        }
+      } else {
+        for (const [, py] of corners) {
+          if (py < minY) minY = py
+          if (py > maxY) maxY = py
+        }
+      }
     }
-    const keySpan = (maxY - minY) * scaleProp
     const fixedChrome = KEYBOARD_PADDING * 2 + 20 + 16 // SVG padding + pt-3+pb-2 (20px) + info row (~16px)
-    return keySpan + fixedChrome
+    return maxY - minY + fixedChrome
   }, [layout, effectiveLayoutOptions, scaleProp])
 
   // Visible non-encoder, non-decal keys for Shift+click range selection
@@ -1760,7 +1788,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   )
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Keyboard area with toolbar */}
       <div
         className="flex items-start gap-2 overflow-auto"

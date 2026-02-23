@@ -144,20 +144,21 @@ describe('repositionLayoutKeys', () => {
     expect(result[3].y).toBe(0)
   })
 
-  it('shifts rotationX and rotationY equally', () => {
+  it('shifts rotationX and rotationY using visual bounding box (180° rotation)', () => {
     const keys = [
-      // Option 0 at (0, 1)
-      makeKey({ x: 0, y: 1, rotationX: 0.5, rotationY: 1.5, layoutIndex: 0, layoutOption: 0 }),
-      // Option 1 at (2, 5), rotated
-      makeKey({ x: 2, y: 5, rotation: 15, rotationX: 3, rotationY: 6, row: 1, col: 0, layoutIndex: 0, layoutOption: 1 }),
+      // Option 0 at visual (0, 1), no rotation
+      makeKey({ x: 0, y: 1, layoutIndex: 0, layoutOption: 0 }),
+      // Option 1 at raw (0.5, 3), 180° around (0.5, 3.5)
+      // Visual bbox: corners rotated → min = (-0.5, 3)
+      makeKey({ x: 0.5, y: 3, rotation: 180, rotationX: 0.5, rotationY: 3.5, row: 1, col: 0, layoutIndex: 0, layoutOption: 1 }),
     ]
     const result = repositionLayoutKeys(keys, new Map([[0, 1]]))
-    // Shift = opt0_min - opt1_min = (0, 1) - (2, 5) = (-2, -4)
-    expect(result[1].x).toBe(0)   // 2 + (-2)
-    expect(result[1].y).toBe(1)   // 5 + (-4)
-    expect(result[1].rotationX).toBe(1) // 3 + (-2)
-    expect(result[1].rotationY).toBe(2) // 6 + (-4)
-    expect(result[1].rotation).toBe(15) // unchanged
+    // Visual shift = opt0_visual(0,1) - opt1_visual(-0.5,3) = (0.5, -2)
+    expect(result[1].x).toBe(1)           // 0.5 + 0.5
+    expect(result[1].y).toBe(1)           // 3 + (-2)
+    expect(result[1].rotationX).toBe(1)   // 0.5 + 0.5
+    expect(result[1].rotationY).toBe(1.5) // 3.5 + (-2)
+    expect(result[1].rotation).toBe(180)  // unchanged
   })
 
   it('passes non-layout keys through unchanged', () => {
