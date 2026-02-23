@@ -163,87 +163,78 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
     }
   }
 
-  if (collapsed) {
-    return (
-      <div
-        className="flex shrink-0 flex-col items-center rounded-[10px] border border-edge bg-picker-bg p-1"
-        data-testid="layer-list-panel-collapsed"
-      >
-        <button
-          type="button"
-          className={LAYER_TOGGLE_BTN}
-          onClick={onToggleCollapse}
-          aria-label={t('editor.keymap.expandLayers')}
-          data-testid="layer-panel-expand-btn"
-        >
-          <ChevronsRight size={14} aria-hidden="true" />
-        </button>
-        {Array.from({ length: layers }, (_, i) => (
-          <LayerNumButton key={i} index={i} active={i === currentLayer} onLayerChange={onLayerChange} />
-        ))}
-      </div>
-    )
-  }
-
+  // Outer container clips content and transitions width.
+  // Inner content is always full-width (w-44); collapsing just shrinks the
+  // visible area so names slide out horizontally.
   return (
     <div
-      className="flex w-44 shrink-0 flex-col gap-1 overflow-y-auto rounded-[10px] border border-edge bg-picker-bg p-2"
-      data-testid="layer-list-panel"
+      className="shrink-0 overflow-hidden rounded-[10px] border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
+      style={{ width: collapsed ? '3.125rem' : '11rem' }}
+      data-testid={collapsed ? 'layer-list-panel-collapsed' : 'layer-list-panel'}
     >
-      <div className="flex justify-end">
-        <button
-          type="button"
-          className={LAYER_TOGGLE_BTN}
-          onClick={onToggleCollapse}
-          aria-label={t('editor.keymap.collapseLayers')}
-          data-testid="layer-panel-collapse-btn"
-        >
-          <ChevronsLeft size={14} aria-hidden="true" />
-        </button>
-      </div>
-      {Array.from({ length: layers }, (_, i) => {
-        const name = layerNames?.[i] ?? ''
-        const defaultLabel = t('editor.keymap.layerN', { n: i })
-        const isActive = i === currentLayer
-        const isEditing = layerRename.editingId === i
+      <div className="flex h-full w-44 flex-col p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-1 pb-1">
+            {Array.from({ length: layers }, (_, i) => {
+              const name = layerNames?.[i] ?? ''
+              const defaultLabel = t('editor.keymap.layerN', { n: i })
+              const isActive = i === currentLayer
+              const isEditing = !collapsed && layerRename.editingId === i
 
-        return (
-          <div
-            key={i}
-            className="flex items-center gap-1.5"
-            data-testid={`layer-panel-layer-${i}`}
-          >
-            <LayerNumButton index={i} active={isActive} onLayerChange={onLayerChange} />
-            <div
-              className={`${layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
-              data-testid={`layer-panel-layer-name-box-${i}`}
-              onClick={onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
-              onMouseDown={(e) => layerRename.handleCardMouseDown(e, i)}
-            >
-              {isEditing && onSetLayerName ? (
-                <input
-                  data-testid={`layer-panel-layer-name-input-${i}`}
-                  className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
-                  value={layerRename.editLabel}
-                  onChange={(e) => layerRename.setEditLabel(e.target.value)}
-                  placeholder={defaultLabel}
-                  autoFocus
-                  maxLength={32}
-                  onBlur={layerRename.cancelRename}
-                  onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
-                />
-              ) : (
-                <span
-                  className={`block truncate text-[12px] ${isActive ? 'text-content' : 'text-content-secondary'}`}
-                  data-testid={`layer-panel-layer-name-${i}`}
+              return (
+                <div
+                  key={i}
+                  className="flex shrink-0 items-center gap-1.5"
+                  data-testid={`layer-panel-layer-${i}`}
                 >
-                  {name || defaultLabel}
-                </span>
-              )}
-            </div>
+                  <LayerNumButton index={i} active={isActive} onLayerChange={onLayerChange} />
+                  <div
+                    className={`${collapsed ? 'hidden' : layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
+                    data-testid={`layer-panel-layer-name-box-${i}`}
+                    onClick={!collapsed && onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
+                    onMouseDown={!collapsed ? (e: React.MouseEvent) => layerRename.handleCardMouseDown(e, i) : undefined}
+                  >
+                    {isEditing && onSetLayerName ? (
+                      <input
+                        data-testid={`layer-panel-layer-name-input-${i}`}
+                        className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
+                        value={layerRename.editLabel}
+                        onChange={(e) => layerRename.setEditLabel(e.target.value)}
+                        placeholder={defaultLabel}
+                        autoFocus
+                        maxLength={32}
+                        onBlur={layerRename.cancelRename}
+                        onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
+                      />
+                    ) : (
+                      <span
+                        className={`block truncate text-[12px] ${isActive ? 'text-content' : 'text-content-secondary'}`}
+                        data-testid={`layer-panel-layer-name-${i}`}
+                      >
+                        {name || defaultLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
           </div>
-        )
-      })}
+        </div>
+        <div className="shrink-0">
+          <div className="border-t border-edge" style={collapsed ? { maxWidth: '2rem' } : undefined} />
+          <div className="flex pt-2">
+            <button
+              type="button"
+              className={LAYER_TOGGLE_BTN}
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}
+              data-testid={collapsed ? 'layer-panel-expand-btn' : 'layer-panel-collapse-btn'}
+            >
+              {collapsed ? <ChevronsRight size={14} aria-hidden="true" /> : <ChevronsLeft size={14} aria-hidden="true" />}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -2083,7 +2074,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       {/* Keycode palette */}
       {!typingTestMode && (
         <div className="flex min-h-0 flex-1 gap-2">
-          {!isDummy && onLayerChange && layers > 1 && (
+          {onLayerChange && layers > 1 && (
             <LayerListPanel
               layers={layers}
               currentLayer={currentLayer}

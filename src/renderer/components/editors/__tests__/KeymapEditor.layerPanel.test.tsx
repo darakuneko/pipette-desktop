@@ -122,10 +122,10 @@ describe('KeymapEditor — LayerListPanel', () => {
     expect(onLayerChange).toHaveBeenCalledWith(2)
   })
 
-  it('does not render layer panel when isDummy', () => {
+  it('renders layer panel even when isDummy', () => {
     render(<KeymapEditor {...defaultProps} isDummy />)
 
-    expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
   })
 
   it('does not render layer panel when layers is 1', () => {
@@ -160,8 +160,8 @@ describe('KeymapEditor — LayerListPanel', () => {
       expect(screen.getByTestId('layer-panel-expand-btn')).toBeInTheDocument()
       // Layer numbers still visible
       expect(screen.getByTestId('layer-panel-layer-num-0')).toBeInTheDocument()
-      // Layer names not visible
-      expect(screen.queryByTestId('layer-panel-layer-name-0')).not.toBeInTheDocument()
+      // Layer names in DOM but visually clipped by overflow-hidden
+      expect(screen.getByTestId('layer-panel-layer-name-0')).toBeInTheDocument()
     })
 
     it('calls onLayerPanelOpenChange(true) when expand button clicked', () => {
