@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Screenshot capture script for Layout Options documentation.
-// Loads a dummy JSON definition (vial003.json) that has layout options
+// Loads a dummy JSON definition (e2e_test_001.json) that has layout options
 // and captures screenshots of the Layout Options panel.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-layout-options.ts
@@ -13,7 +13,7 @@ import { resolve } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const FIXTURE_PATH = resolve(PROJECT_ROOT, 'e2e/fixtures/vial003.json')
+const FIXTURE_PATH = resolve(PROJECT_ROOT, 'e2e/fixtures/e2e_test_001.json')
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
