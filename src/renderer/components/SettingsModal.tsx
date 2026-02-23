@@ -484,6 +484,8 @@ interface Props {
   onDefaultLayoutChange: (layout: KeyboardLayoutId) => void
   defaultAutoAdvance: boolean
   onDefaultAutoAdvanceChange: (enabled: boolean) => void
+  defaultLayerPanelOpen: boolean
+  onDefaultLayerPanelOpenChange: (open: boolean) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   panelSide: PanelSide
@@ -611,6 +613,8 @@ export function SettingsModal({
   onDefaultLayoutChange,
   defaultAutoAdvance,
   onDefaultAutoAdvanceChange,
+  defaultLayerPanelOpen,
+  onDefaultLayerPanelOpenChange,
   autoLockTime,
   onAutoLockTimeChange,
   panelSide,
@@ -1075,6 +1079,23 @@ export function SettingsModal({
                       data-testid="settings-default-auto-advance-toggle"
                     >
                       <span className={toggleKnobClass(defaultAutoAdvance)} />
+                    </button>
+                  </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-layer-panel-open-row">
+                    <span className="text-[13px] font-medium text-content">
+                      {t('settings.defaultLayerPanelOpen')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={defaultLayerPanelOpen}
+                      aria-label={t('settings.defaultLayerPanelOpen')}
+                      className={toggleTrackClass(defaultLayerPanelOpen)}
+                      onClick={() => onDefaultLayerPanelOpenChange(!defaultLayerPanelOpen)}
+                      data-testid="settings-default-layer-panel-open-toggle"
+                    >
+                      <span className={toggleKnobClass(defaultLayerPanelOpen)} />
                     </button>
                   </div>
                 </div>

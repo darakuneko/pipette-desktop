@@ -135,17 +135,25 @@ describe('KeymapEditor — LayerListPanel', () => {
   })
 
   describe('accordion collapse/expand', () => {
-    it('shows collapse button when expanded', () => {
-      render(<KeymapEditor {...defaultProps} />)
+    const onLayerPanelOpenChange = vi.fn()
+
+    it('shows collapse button when expanded (layerPanelOpen=true)', () => {
+      render(<KeymapEditor {...defaultProps} layerPanelOpen={true} onLayerPanelOpenChange={onLayerPanelOpenChange} />)
 
       expect(screen.getByTestId('layer-panel-collapse-btn')).toBeInTheDocument()
       expect(screen.queryByTestId('layer-panel-expand-btn')).not.toBeInTheDocument()
     })
 
-    it('collapses to number-only view when collapse button clicked', () => {
-      render(<KeymapEditor {...defaultProps} />)
+    it('calls onLayerPanelOpenChange(false) when collapse button clicked', () => {
+      render(<KeymapEditor {...defaultProps} layerPanelOpen={true} onLayerPanelOpenChange={onLayerPanelOpenChange} />)
 
       fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
+
+      expect(onLayerPanelOpenChange).toHaveBeenCalledWith(false)
+    })
+
+    it('renders collapsed view when layerPanelOpen=false', () => {
+      render(<KeymapEditor {...defaultProps} layerPanelOpen={false} onLayerPanelOpenChange={onLayerPanelOpenChange} />)
 
       expect(screen.getByTestId('layer-list-panel-collapsed')).toBeInTheDocument()
       expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
@@ -156,20 +164,17 @@ describe('KeymapEditor — LayerListPanel', () => {
       expect(screen.queryByTestId('layer-panel-layer-name-0')).not.toBeInTheDocument()
     })
 
-    it('expands back when expand button clicked', () => {
-      render(<KeymapEditor {...defaultProps} />)
+    it('calls onLayerPanelOpenChange(true) when expand button clicked', () => {
+      render(<KeymapEditor {...defaultProps} layerPanelOpen={false} onLayerPanelOpenChange={onLayerPanelOpenChange} />)
 
-      fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
       fireEvent.click(screen.getByTestId('layer-panel-expand-btn'))
 
-      expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
-      expect(screen.queryByTestId('layer-list-panel-collapsed')).not.toBeInTheDocument()
+      expect(onLayerPanelOpenChange).toHaveBeenCalledWith(true)
     })
 
     it('still allows layer switching when collapsed', () => {
-      render(<KeymapEditor {...defaultProps} />)
+      render(<KeymapEditor {...defaultProps} layerPanelOpen={false} onLayerPanelOpenChange={onLayerPanelOpenChange} />)
 
-      fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
       fireEvent.click(screen.getByTestId('layer-panel-layer-num-2'))
 
       expect(onLayerChange).toHaveBeenCalledWith(2)

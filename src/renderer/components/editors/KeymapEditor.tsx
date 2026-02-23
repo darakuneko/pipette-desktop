@@ -128,19 +128,33 @@ interface LayerListPanelProps {
   onToggleCollapse?: () => void
 }
 
+function LayerNumButton({ index, active, onLayerChange }: {
+  index: number
+  active: boolean
+  onLayerChange: (layer: number) => void
+}) {
+  return (
+    <div
+      className={layerNumClass(active)}
+      data-testid={`layer-panel-layer-num-${index}`}
+      onClick={() => onLayerChange(index)}
+    >
+      {index}
+    </div>
+  )
+}
+
 function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName, collapsed, onToggleCollapse }: LayerListPanelProps) {
   const { t } = useTranslation()
   const layerRename = useInlineRename<number>()
 
   function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
     if (e.key === 'Enter') {
-      const trimmed = e.currentTarget.value.trim()
+      const trimmed = layerRename.editLabel.trim()
       const changed = trimmed !== (layerNames?.[layerIndex] ?? '')
+      layerRename.cancelRename()
       if (changed && onSetLayerName) {
         onSetLayerName(layerIndex, trimmed)
-      }
-      layerRename.cancelRename()
-      if (changed) {
         layerRename.scheduleFlash(layerIndex)
       }
     } else if (e.key === 'Escape') {
@@ -164,19 +178,9 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
         >
           <ChevronsRight size={14} aria-hidden="true" />
         </button>
-        {Array.from({ length: layers }, (_, i) => {
-          const isActive = i === currentLayer
-          return (
-            <div
-              key={i}
-              className={layerNumClass(isActive)}
-              data-testid={`layer-panel-layer-num-${i}`}
-              onClick={() => onLayerChange(i)}
-            >
-              {i}
-            </div>
-          )
-        })}
+        {Array.from({ length: layers }, (_, i) => (
+          <LayerNumButton key={i} index={i} active={i === currentLayer} onLayerChange={onLayerChange} />
+        ))}
       </div>
     )
   }
@@ -209,13 +213,7 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
             className="flex items-center gap-1.5"
             data-testid={`layer-panel-layer-${i}`}
           >
-            <div
-              className={layerNumClass(isActive)}
-              data-testid={`layer-panel-layer-num-${i}`}
-              onClick={() => onLayerChange(i)}
-            >
-              {i}
-            </div>
+            <LayerNumButton index={i} active={isActive} onLayerChange={onLayerChange} />
             <div
               className={`${layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
               data-testid={`layer-panel-layer-name-box-${i}`}
@@ -226,7 +224,8 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
                 <input
                   data-testid={`layer-panel-layer-name-input-${i}`}
                   className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
-                  defaultValue={name}
+                  value={layerRename.editLabel}
+                  onChange={(e) => layerRename.setEditLabel(e.target.value)}
                   placeholder={defaultLabel}
                   autoFocus
                   maxLength={32}
@@ -235,7 +234,7 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
                 />
               ) : (
                 <span
-                  className={`text-[12px] truncate block ${isActive ? 'text-content' : 'text-content-secondary'}`}
+                  className={`block truncate text-[12px] ${isActive ? 'text-content' : 'text-content-secondary'}`}
                   data-testid={`layer-panel-layer-name-${i}`}
                 >
                   {name || defaultLabel}
@@ -624,6 +623,8 @@ interface Props {
   panelSide?: PanelSide
   layerNames?: string[]
   onSetLayerName?: (layer: number, name: string) => void
+  layerPanelOpen?: boolean
+  onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
   dualMode?: boolean
@@ -694,6 +695,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   panelSide = 'left',
   layerNames,
   onSetLayerName,
+  layerPanelOpen: layerPanelOpenProp,
+  onLayerPanelOpenChange,
   scale: scaleProp = 1,
   onScaleChange,
   dualMode,
@@ -724,7 +727,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [showAutoShiftSettings, setShowAutoShiftSettings] = useState(false)
   const [showOneShotKeysSettings, setShowOneShotKeysSettings] = useState(false)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
-  const [layerPanelCollapsed, setLayerPanelCollapsed] = useState(false)
+  const layerPanelCollapsed = layerPanelOpenProp === false
+  const toggleLayerPanel = useCallback(() => {
+    onLayerPanelOpenChange?.(!layerPanelOpenProp)
+  }, [onLayerPanelOpenChange, layerPanelOpenProp])
   const [matrixMode, setMatrixMode] = useState(false)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [everPressedKeys, setEverPressedKeys] = useState<Set<string>>(new Set())
@@ -2085,7 +2091,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               layerNames={layerNames}
               onSetLayerName={onSetLayerName}
               collapsed={layerPanelCollapsed}
-              onToggleCollapse={() => setLayerPanelCollapsed((prev) => !prev)}
+              onToggleCollapse={toggleLayerPanel}
             />
           )}
           <TabbedKeycodes

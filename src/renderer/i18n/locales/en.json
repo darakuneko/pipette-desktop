@@ -474,6 +474,7 @@
     "defaultsDescription": "Applied when a new keyboard connects.",
     "defaultLayout": "Default Layout",
     "defaultAutoAdvance": "Default Auto Move",
+    "defaultLayerPanelOpen": "Default Layer List Open",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",

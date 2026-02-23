@@ -18,6 +18,7 @@ export interface AppConfig {
   currentKeyboardLayout: string
   defaultKeyboardLayout: string
   defaultAutoAdvance: boolean
+  defaultLayerPanelOpen: boolean
   autoLockTime: AutoLockMinutes
   panelSide: PanelSide
   language?: string
@@ -31,6 +32,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'currentKeyboardLayout',
   'defaultKeyboardLayout',
   'defaultAutoAdvance',
+  'defaultLayerPanelOpen',
   'autoLockTime',
   'panelSide',
   'language',
@@ -44,6 +46,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   currentKeyboardLayout: 'qwerty',
   defaultKeyboardLayout: 'qwerty',
   defaultAutoAdvance: true,
+  defaultLayerPanelOpen: true,
   autoLockTime: 10,
   panelSide: 'left',
   language: 'en',

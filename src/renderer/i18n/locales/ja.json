@@ -474,6 +474,7 @@
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
     "defaultLayout": "デフォルトレイアウト",
     "defaultAutoAdvance": "デフォルト自動移動",
+    "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",

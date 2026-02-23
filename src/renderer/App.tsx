@@ -933,6 +933,8 @@ export function App() {
             onDefaultLayoutChange={devicePrefs.setDefaultLayout}
             defaultAutoAdvance={devicePrefs.defaultAutoAdvance}
             onDefaultAutoAdvanceChange={devicePrefs.setDefaultAutoAdvance}
+            defaultLayerPanelOpen={devicePrefs.defaultLayerPanelOpen}
+            onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
             panelSide={devicePrefs.panelSide}
@@ -1086,6 +1088,8 @@ export function App() {
             layerNames={!device.isDummy ? keyboard.layerNames : undefined}
             onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
             onOpenEditorSettings={handleOpenEditorSettings}
+            layerPanelOpen={devicePrefs.layerPanelOpen}
+            onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             panelSide={devicePrefs.panelSide}
             scale={keymapScale}
             onScaleChange={adjustKeymapScale}
