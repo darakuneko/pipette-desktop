@@ -238,6 +238,5 @@ export function computeUnionPath(
 ): string {
   const verts = computeUnionPolygon(ax, ay, aw, ah, bx, by, bw, bh)
   if (verts.length === 0) return ''
-  const insetVerts = inset > 0 ? insetAxisAlignedPolygon(verts, inset) : verts
-  return polygonToSvgPath(insetVerts, cornerRadius)
+  return polygonToSvgPath(insetAxisAlignedPolygon(verts, inset), cornerRadius)
 }

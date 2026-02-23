@@ -110,18 +110,19 @@ function KeyWidgetInner({
   const rotX = s * kleKey.rotationX
   const rotY = s * kleKey.rotationY
 
-  // Second rect (for stepped/ISO keys)
-  const has2 =
+  // Union path for stepped/ISO keys (two overlapping rects merged into one outline)
+  const hasSecondRect =
     kleKey.width2 !== kleKey.width ||
     kleKey.height2 !== kleKey.height ||
     kleKey.x2 !== 0 ||
     kleKey.y2 !== 0
-  // Union path: compute on grid rects (without face inset), then inset the polygon
   const gx2 = gx + s * kleKey.x2
   const gy2 = gy + s * kleKey.y2
   const gw2 = s * kleKey.width2 - spacing
   const gh2 = s * kleKey.height2 - spacing
-  const unionPath = has2 ? computeUnionPath(gx, gy, gw, gh, gx2, gy2, gw2, gh2, corner, inset) : ''
+  const unionPath = hasSecondRect
+    ? computeUnionPath(gx, gy, gw, gh, gx2, gy2, gw2, gh2, corner, inset)
+    : ''
 
   // Inner rect geometry for masked keys (inset on all sides)
   const innerPad = 2 * scale
@@ -188,7 +189,7 @@ function KeyWidgetInner({
       onDoubleClick={handleDoubleClick}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
-      {/* Key shape: single unified path for ISO/stepped keys, rect for normal */}
+      {/* Key shape: unified path for ISO/stepped keys, simple rect for normal */}
       {unionPath ? (
         <path
           d={unionPath}
@@ -197,32 +198,17 @@ function KeyWidgetInner({
           strokeWidth={outerStrokeWidth}
         />
       ) : (
-        <>
-          <rect
-            x={x}
-            y={y}
-            width={w}
-            height={h}
-            rx={corner}
-            ry={corner}
-            fill={fillColor}
-            stroke={outerStroke}
-            strokeWidth={outerStrokeWidth}
-          />
-          {has2 && (
-            <rect
-              x={x2}
-              y={y2}
-              width={w2}
-              height={h2}
-              rx={corner}
-              ry={corner}
-              fill={fillColor}
-              stroke={outerStroke}
-              strokeWidth={outerStrokeWidth}
-            />
-          )}
-        </>
+        <rect
+          x={x}
+          y={y}
+          width={w}
+          height={h}
+          rx={corner}
+          ry={corner}
+          fill={fillColor}
+          stroke={outerStroke}
+          strokeWidth={outerStrokeWidth}
+        />
       )}
 
       {/* Inner rect for masked keys */}
