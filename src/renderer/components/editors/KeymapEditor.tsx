@@ -80,27 +80,6 @@ function toggleButtonClass(active: boolean): string {
   return `${base} border-edge text-content-secondary hover:text-content`
 }
 
-const PAGER_PAGE_SIZE = 5
-const PAGER_CENTER = Math.floor(PAGER_PAGE_SIZE / 2)
-const PAGER_CELL_REM = 1.75
-const PAGER_GAP_REM = 0.125
-const PAGER_STRIDE = PAGER_CELL_REM + PAGER_GAP_REM
-const PAGER_VIEWPORT_REM = PAGER_PAGE_SIZE * PAGER_STRIDE - PAGER_GAP_REM
-
-const PAGER_CELL = 'h-7 w-7 shrink-0'
-const PAGER_BTN_BASE = `flex ${PAGER_CELL} items-center justify-center rounded-full text-[13px] leading-none transition-colors`
-
-function layerButtonClass(active: boolean): string {
-  if (active) return `${PAGER_BTN_BASE} font-semibold text-tab-text-active`
-  return `${PAGER_BTN_BASE} text-tab-text hover:text-content`
-}
-
-
-function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
-  return Array.from({ length: count }, (_, i) => (
-    <div key={`${prefix}-${i}`} className={PAGER_CELL} />
-  ))
-}
 
 const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-[12px] font-semibold tabular-nums transition-colors'
 const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-md border px-3 py-1.5 transition-colors'
@@ -1833,44 +1812,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             </button>
           </IconTooltip>
         </>
-      )}
-      {!typingTestMode && onLayerChange && layers > 1 && (
-        <div className="flex flex-col items-center" role="group" aria-label={t('editor.keymap.layerLabel')}>
-          <div
-            className="relative overflow-hidden"
-            style={{
-              width: `${PAGER_CELL_REM}rem`,
-              height: `${PAGER_VIEWPORT_REM}rem`,
-            }}
-          >
-            <div
-              className={`pointer-events-none absolute left-0 rounded-full bg-tab-bg-active ${PAGER_CELL}`}
-              style={{ top: `${PAGER_CENTER * PAGER_STRIDE}rem` }}
-            />
-            <div
-              className="absolute left-0 flex flex-col transition-transform duration-200 ease-out"
-              style={{
-                gap: `${PAGER_GAP_REM}rem`,
-                transform: `translateY(${-currentLayer * PAGER_STRIDE}rem)`,
-              }}
-            >
-              <PagerSpacers count={PAGER_CENTER} prefix="pre" />
-              {Array.from({ length: layers }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={layerButtonClass(i === currentLayer)}
-                  aria-current={i === currentLayer ? 'true' : undefined}
-                  onClick={() => { if (i !== currentLayer) onLayerChange(i) }}
-                  aria-label={t('editor.keymap.layerN', { n: i })}
-                >
-                  {i}
-                </button>
-              ))}
-              <PagerSpacers count={PAGER_CENTER} prefix="post" />
-            </div>
-          </div>
-        </div>
       )}
     </div>
   )
