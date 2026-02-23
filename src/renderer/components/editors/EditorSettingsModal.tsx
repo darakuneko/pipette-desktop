@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
-import { useInlineRename } from '../../hooks/useInlineRename'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { PanelSide } from '../../hooks/useDevicePrefs'
 import type { SyncStatusType } from '../../../shared/types/sync'
@@ -16,26 +15,9 @@ import type { ModalTabId } from './modal-tabs'
 const ZOOM_BTN = 'rounded border border-edge px-2 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim disabled:opacity-30 disabled:pointer-events-none'
 
 const ALL_TABS = [
-  { id: 'layers' as const, labelKey: 'editorSettings.tabLayers' },
   { id: 'tools' as const, labelKey: 'editorSettings.tabTools' },
   { id: 'data' as const, labelKey: 'editorSettings.tabData' },
 ]
-
-const DUMMY_TABS = ALL_TABS.filter((tab) => tab.id !== 'layers')
-
-const LAYER_NUM_BASE = 'w-10 shrink-0 rounded-lg border flex items-center justify-center py-2.5 cursor-pointer text-[13px] font-semibold tabular-nums transition-colors'
-const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-lg border px-4 py-2.5 transition-colors'
-
-function layerNumClass(active: boolean): string {
-  if (active) return `${LAYER_NUM_BASE} border-accent bg-accent text-content-inverse`
-  return `${LAYER_NUM_BASE} border-edge bg-surface/20 text-content-muted hover:bg-surface-dim`
-}
-
-function layerNameClass(active: boolean, editable: boolean): string {
-  const base = editable ? `${LAYER_NAME_BASE} cursor-pointer` : LAYER_NAME_BASE
-  if (active) return `${base} border-accent/50 bg-accent/5`
-  return `${base} border-edge bg-surface/20 hover:border-content-muted/30`
-}
 
 const CANCEL_BTN = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim'
 const DANGER_BTN = 'rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90'
@@ -127,11 +109,6 @@ interface Props extends Omit<LayoutStoreContentProps, 'keyboardName'> {
   onClose: () => void
   activeTab: ModalTabId
   onTabChange: (tab: ModalTabId) => void
-  layers: number
-  currentLayer: number
-  onLayerChange: (layer: number) => void
-  layerNames?: string[]
-  onSetLayerName?: (layer: number, name: string) => void
   keyboardLayout: KeyboardLayoutId
   onKeyboardLayoutChange: (layout: KeyboardLayoutId) => void
   autoAdvance: boolean
@@ -153,11 +130,6 @@ export function EditorSettingsModal({
   onClose,
   activeTab,
   onTabChange,
-  layers,
-  currentLayer,
-  onLayerChange,
-  layerNames,
-  onSetLayerName,
   keyboardLayout,
   onKeyboardLayoutChange,
   autoAdvance,
@@ -179,7 +151,6 @@ export function EditorSettingsModal({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const layerRename = useInlineRename<number>()
   const [confirmingResetKeyboard, setConfirmingResetKeyboard] = useState(false)
   const [resetBusy, setResetBusy] = useState(false)
 
@@ -193,23 +164,6 @@ export function EditorSettingsModal({
       setConfirmingResetKeyboard(false)
     }
   }, [onResetKeyboardData])
-
-  function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
-    if (e.key === 'Enter') {
-      const trimmed = e.currentTarget.value.trim()
-      const changed = trimmed !== (layerNames?.[layerIndex] ?? '')
-      if (changed && onSetLayerName) {
-        onSetLayerName(layerIndex, trimmed)
-      }
-      layerRename.cancelRename()
-      if (changed) {
-        layerRename.scheduleFlash(layerIndex)
-      }
-    } else if (e.key === 'Escape') {
-      e.stopPropagation()
-      layerRename.cancelRename()
-    }
-  }
 
   useEffect(() => {
     // Trigger slide-in on next frame so the transition plays
@@ -238,7 +192,7 @@ export function EditorSettingsModal({
         </div>
 
         <ModalTabBar
-          tabs={isDummy ? DUMMY_TABS : ALL_TABS}
+          tabs={ALL_TABS}
           activeTab={activeTab}
           onTabChange={onTabChange}
           idPrefix="editor-settings"
@@ -246,59 +200,6 @@ export function EditorSettingsModal({
         />
 
         <ModalTabPanel activeTab={activeTab} idPrefix="editor-settings">
-          {activeTab === 'layers' && !isDummy && (
-            <div className="flex flex-col gap-1.5 pt-4" data-testid="editor-settings-layers-list">
-              {Array.from({ length: layers }, (_, i) => {
-                const name = layerNames?.[i] ?? ''
-                const defaultLabel = t('editor.keymap.layerN', { n: i })
-                const isActive = i === currentLayer
-                const isEditing = layerRename.editingId === i
-
-                return (
-                  <div
-                    key={i}
-                    className="flex items-center gap-2"
-                    data-testid={`editor-settings-layer-${i}`}
-                  >
-                    <div
-                      className={layerNumClass(isActive)}
-                      data-testid={`editor-settings-layer-num-${i}`}
-                      onClick={() => onLayerChange(i)}
-                    >
-                      {i}
-                    </div>
-                    <div
-                      className={`${layerNameClass(isActive, !!onSetLayerName)} ${layerRename.confirmedId === i ? 'confirm-flash' : ''}`}
-                      data-testid={`editor-settings-layer-name-box-${i}`}
-                      onClick={onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
-                      onMouseDown={(e) => layerRename.handleCardMouseDown(e, i)}
-                    >
-                      {isEditing && onSetLayerName ? (
-                        <input
-                          data-testid={`editor-settings-layer-name-input-${i}`}
-                          className="w-full border-b border-edge bg-transparent text-[13px] text-content outline-none focus:border-accent"
-                          defaultValue={name}
-                          placeholder={defaultLabel}
-                          autoFocus
-                          maxLength={32}
-                          onBlur={layerRename.cancelRename}
-                          onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
-                        />
-                      ) : (
-                        <span
-                          className={`text-[13px] truncate block ${isActive ? 'text-content' : 'text-content-secondary'}`}
-                          data-testid={`editor-settings-layer-name-${i}`}
-                        >
-                          {name || defaultLabel}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
           {activeTab === 'data' && (
             <LayoutStoreContent
               {...dataProps}

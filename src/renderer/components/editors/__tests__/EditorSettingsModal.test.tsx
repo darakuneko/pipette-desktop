@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { EditorSettingsModal } from '../EditorSettingsModal'
 import { KEYBOARD_LAYOUTS } from '../../../data/keyboard-layouts'
 
@@ -11,7 +11,6 @@ vi.mock('react-i18next', () => ({
     t: (key: string, params?: Record<string, unknown>) => {
       const map: Record<string, string> = {
         'editorSettings.title': 'Settings',
-        'editorSettings.tabLayers': 'Layers',
         'editorSettings.tabData': 'Data',
         'editorSettings.tabTools': 'Tools',
         'editor.autoAdvance': 'Auto Move',
@@ -42,11 +41,8 @@ const DEFAULT_PROPS = {
   onRename: vi.fn(),
   onDelete: vi.fn(),
   onClose: vi.fn(),
-  activeTab: 'layers' as const,
+  activeTab: 'tools' as const,
   onTabChange: vi.fn(),
-  layers: 4,
-  currentLayer: 0,
-  onLayerChange: vi.fn(),
   keyboardLayout: 'qwerty',
   onKeyboardLayoutChange: vi.fn(),
   autoAdvance: true,
@@ -56,11 +52,10 @@ const DEFAULT_PROPS = {
 }
 
 describe('EditorSettingsModal', () => {
-  it('renders with title and three tabs', () => {
+  it('renders with title and two tabs', () => {
     render(<EditorSettingsModal {...DEFAULT_PROPS} />)
 
     expect(screen.getByText('Settings')).toBeInTheDocument()
-    expect(screen.getByTestId('editor-settings-tab-layers')).toHaveTextContent('Layers')
     expect(screen.getByTestId('editor-settings-tab-tools')).toHaveTextContent('Tools')
     expect(screen.getByTestId('editor-settings-tab-data')).toHaveTextContent('Data')
   })
@@ -80,18 +75,9 @@ describe('EditorSettingsModal', () => {
     expect(tablist).toBeInTheDocument()
 
     const tabs = screen.getAllByRole('tab')
-    expect(tabs).toHaveLength(3)
+    expect(tabs).toHaveLength(2)
     expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
     expect(tabs[1]).toHaveAttribute('aria-selected', 'false')
-    expect(tabs[2]).toHaveAttribute('aria-selected', 'false')
-  })
-
-  it('shows Layers tab content by default', () => {
-    render(<EditorSettingsModal {...DEFAULT_PROPS} />)
-
-    expect(screen.getByTestId('editor-settings-layers-list')).toBeInTheDocument()
-    expect(screen.getByTestId('editor-settings-layer-0')).toBeInTheDocument()
-    expect(screen.getByTestId('editor-settings-layer-3')).toBeInTheDocument()
   })
 
   it('shows Data tab content when data tab active', () => {
@@ -110,7 +96,7 @@ describe('EditorSettingsModal', () => {
   })
 
   it('shows layout selector and auto-advance toggle on Tools tab', () => {
-    render(<EditorSettingsModal {...DEFAULT_PROPS} activeTab="tools" />)
+    render(<EditorSettingsModal {...DEFAULT_PROPS} />)
 
     const selector = screen.getByTestId('editor-settings-layout-selector')
     expect(selector).toBeInTheDocument()
@@ -197,30 +183,6 @@ describe('EditorSettingsModal', () => {
     expect(screen.getByTestId('editor-settings-auto-advance-toggle')).toHaveAttribute('aria-checked', 'false')
   })
 
-  it('calls onLayerChange when a layer row is clicked', () => {
-    const onLayerChange = vi.fn()
-    render(<EditorSettingsModal {...DEFAULT_PROPS} onLayerChange={onLayerChange} />)
-
-    fireEvent.click(screen.getByTestId('editor-settings-layer-num-2'))
-    expect(onLayerChange).toHaveBeenCalledWith(2)
-  })
-
-  it('highlights the current layer row', () => {
-    render(<EditorSettingsModal {...DEFAULT_PROPS} currentLayer={1} />)
-
-    const layerNum = screen.getByTestId('editor-settings-layer-num-1')
-    expect(layerNum.className).toContain('border-accent')
-  })
-
-  it('displays custom layer names when provided', () => {
-    render(<EditorSettingsModal {...DEFAULT_PROPS} layerNames={['Base', 'Nav', '', 'Num']} />)
-
-    expect(screen.getByTestId('editor-settings-layer-0')).toHaveTextContent('Base')
-    expect(screen.getByTestId('editor-settings-layer-1')).toHaveTextContent('Nav')
-    expect(screen.getByTestId('editor-settings-layer-2')).toHaveTextContent('Layer 2')
-    expect(screen.getByTestId('editor-settings-layer-3')).toHaveTextContent('Num')
-  })
-
   it('shows zoom controls on Tools tab with percentage display', () => {
     render(<EditorSettingsModal {...DEFAULT_PROPS} activeTab="tools" scale={1.0} />)
 
@@ -286,20 +248,6 @@ describe('EditorSettingsModal', () => {
   })
 
   describe('isDummy mode', () => {
-    it('hides Layers tab when isDummy is true', () => {
-      render(<EditorSettingsModal {...DEFAULT_PROPS} activeTab="tools" isDummy />)
-
-      expect(screen.queryByTestId('editor-settings-tab-layers')).not.toBeInTheDocument()
-      expect(screen.getByTestId('editor-settings-tab-tools')).toBeInTheDocument()
-      expect(screen.getByTestId('editor-settings-tab-data')).toBeInTheDocument()
-    })
-
-    it('does not render Layers content even if activeTab is stale as layers', () => {
-      render(<EditorSettingsModal {...DEFAULT_PROPS} activeTab="layers" isDummy />)
-
-      expect(screen.queryByTestId('editor-settings-layers-list')).not.toBeInTheDocument()
-    })
-
     it('hides lock row in Tools tab when isDummy is true', () => {
       render(<EditorSettingsModal {...DEFAULT_PROPS} activeTab="tools" isDummy />)
 
@@ -311,125 +259,6 @@ describe('EditorSettingsModal', () => {
 
       expect(screen.queryByTestId('layout-store-save-input')).not.toBeInTheDocument()
       expect(screen.queryByTestId('layout-store-empty')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('layer rename inline editing', () => {
-    afterEach(() => {
-      vi.restoreAllMocks()
-    })
-
-    it('cancels layer rename on blur (clicking outside)', () => {
-      const onSetLayerName = vi.fn()
-      render(
-        <EditorSettingsModal
-          {...DEFAULT_PROPS}
-          layerNames={['Base', '', '', '']}
-          onSetLayerName={onSetLayerName}
-        />,
-      )
-
-      // Click label to enter edit mode
-      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
-
-      const input = screen.getByTestId('editor-settings-layer-name-input-0')
-      fireEvent.change(input, { target: { value: 'NewName' } })
-
-      // Blur (clicking outside) should cancel, not save
-      fireEvent.blur(input)
-
-      expect(onSetLayerName).not.toHaveBeenCalled()
-      expect(screen.queryByTestId('editor-settings-layer-name-input-0')).not.toBeInTheDocument()
-    })
-
-    it('saves layer rename only on Enter', () => {
-      const onSetLayerName = vi.fn()
-      render(
-        <EditorSettingsModal
-          {...DEFAULT_PROPS}
-          layerNames={['Base', '', '', '']}
-          onSetLayerName={onSetLayerName}
-        />,
-      )
-
-      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
-
-      const input = screen.getByTestId('editor-settings-layer-name-input-0')
-      fireEvent.change(input, { target: { value: 'NewName' } })
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      expect(onSetLayerName).toHaveBeenCalledWith(0, 'NewName')
-    })
-
-    it('clicking row selects layer without entering edit mode', () => {
-      const onLayerChange = vi.fn()
-      const onSetLayerName = vi.fn()
-      render(
-        <EditorSettingsModal
-          {...DEFAULT_PROPS}
-          layerNames={['Base', '', '', '']}
-          onSetLayerName={onSetLayerName}
-          onLayerChange={onLayerChange}
-        />,
-      )
-
-      // Click on the number box (not the name box)
-      fireEvent.click(screen.getByTestId('editor-settings-layer-num-1'))
-
-      expect(onLayerChange).toHaveBeenCalledWith(1)
-      expect(screen.queryByTestId('editor-settings-layer-name-input-1')).not.toBeInTheDocument()
-    })
-
-    it('shows confirm flash on row after Enter rename', () => {
-      vi.useFakeTimers()
-      const onSetLayerName = vi.fn()
-      render(
-        <EditorSettingsModal
-          {...DEFAULT_PROPS}
-          layerNames={['Base', '', '', '']}
-          onSetLayerName={onSetLayerName}
-        />,
-      )
-
-      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
-
-      const input = screen.getByTestId('editor-settings-layer-name-input-0')
-      fireEvent.change(input, { target: { value: 'NewName' } })
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      // Flash is deferred via setTimeout(0) so the class is added after the label mounts
-      act(() => { vi.advanceTimersByTime(0) })
-
-      // After Enter, name box should have confirm flash animation
-      const nameBox = screen.getByTestId('editor-settings-layer-name-box-0')
-      expect(nameBox.className).toContain('confirm-flash')
-
-      // After 1200ms, animation class should be removed
-      act(() => { vi.advanceTimersByTime(1200) })
-      expect(nameBox.className).not.toContain('confirm-flash')
-
-      vi.useRealTimers()
-    })
-
-    it('does not flash when Enter is pressed without changes', () => {
-      const onSetLayerName = vi.fn()
-      render(
-        <EditorSettingsModal
-          {...DEFAULT_PROPS}
-          layerNames={['Base', '', '', '']}
-          onSetLayerName={onSetLayerName}
-        />,
-      )
-
-      fireEvent.click(screen.getByTestId('editor-settings-layer-name-0'))
-
-      const input = screen.getByTestId('editor-settings-layer-name-input-0')
-      // Press Enter without changing the value
-      fireEvent.keyDown(input, { key: 'Enter' })
-
-      expect(onSetLayerName).not.toHaveBeenCalled()
-      const nameBox = screen.getByTestId('editor-settings-layer-name-box-0')
-      expect(nameBox.className).not.toContain('confirm-flash')
     })
   })
 

@@ -18,6 +18,7 @@ import {
 } from '../../../shared/layout-options'
 import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { useInlineRename } from '../../hooks/useInlineRename'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
 import { QmkSettings } from './QmkSettings'
@@ -99,6 +100,106 @@ function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
   return Array.from({ length: count }, (_, i) => (
     <div key={`${prefix}-${i}`} className={PAGER_CELL} />
   ))
+}
+
+const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-[12px] font-semibold tabular-nums transition-colors'
+const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-md border px-3 py-1.5 transition-colors'
+
+function layerNumClass(active: boolean): string {
+  if (active) return `${LAYER_NUM_BASE} border-accent bg-accent text-content-inverse`
+  return `${LAYER_NUM_BASE} border-edge bg-surface/20 text-content-muted hover:bg-surface-dim`
+}
+
+function layerNameClass(active: boolean, editable: boolean): string {
+  const base = editable ? `${LAYER_NAME_BASE} cursor-pointer` : LAYER_NAME_BASE
+  if (active) return `${base} border-accent/50 bg-accent/5`
+  return `${base} border-edge bg-surface/20 hover:border-content-muted/30`
+}
+
+interface LayerListPanelProps {
+  layers: number
+  currentLayer: number
+  onLayerChange: (layer: number) => void
+  layerNames?: string[]
+  onSetLayerName?: (layer: number, name: string) => void
+}
+
+function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName }: LayerListPanelProps) {
+  const { t } = useTranslation()
+  const layerRename = useInlineRename<number>()
+
+  function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
+    if (e.key === 'Enter') {
+      const trimmed = e.currentTarget.value.trim()
+      const changed = trimmed !== (layerNames?.[layerIndex] ?? '')
+      if (changed && onSetLayerName) {
+        onSetLayerName(layerIndex, trimmed)
+      }
+      layerRename.cancelRename()
+      if (changed) {
+        layerRename.scheduleFlash(layerIndex)
+      }
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      layerRename.cancelRename()
+    }
+  }
+
+  return (
+    <div
+      className="flex w-44 shrink-0 flex-col gap-1 overflow-y-auto rounded-[10px] border border-edge bg-picker-bg p-2"
+      data-testid="layer-list-panel"
+    >
+      {Array.from({ length: layers }, (_, i) => {
+        const name = layerNames?.[i] ?? ''
+        const defaultLabel = t('editor.keymap.layerN', { n: i })
+        const isActive = i === currentLayer
+        const isEditing = layerRename.editingId === i
+
+        return (
+          <div
+            key={i}
+            className="flex items-center gap-1.5"
+            data-testid={`layer-panel-layer-${i}`}
+          >
+            <div
+              className={layerNumClass(isActive)}
+              data-testid={`layer-panel-layer-num-${i}`}
+              onClick={() => onLayerChange(i)}
+            >
+              {i}
+            </div>
+            <div
+              className={`${layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
+              data-testid={`layer-panel-layer-name-box-${i}`}
+              onClick={onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
+              onMouseDown={(e) => layerRename.handleCardMouseDown(e, i)}
+            >
+              {isEditing && onSetLayerName ? (
+                <input
+                  data-testid={`layer-panel-layer-name-input-${i}`}
+                  className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
+                  defaultValue={name}
+                  placeholder={defaultLabel}
+                  autoFocus
+                  maxLength={32}
+                  onBlur={layerRename.cancelRename}
+                  onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
+                />
+              ) : (
+                <span
+                  className={`text-[12px] truncate block ${isActive ? 'text-content' : 'text-content-secondary'}`}
+                  data-testid={`layer-panel-layer-name-${i}`}
+                >
+                  {name || defaultLabel}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
 }
 
 const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
@@ -475,6 +576,7 @@ interface Props {
   onOpenEditorSettings?: () => void
   panelSide?: PanelSide
   layerNames?: string[]
+  onSetLayerName?: (layer: number, name: string) => void
   scale?: number
   onScaleChange?: (delta: number) => void
   dualMode?: boolean
@@ -544,6 +646,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onOpenEditorSettings,
   panelSide = 'left',
   layerNames,
+  onSetLayerName,
   scale: scaleProp = 1,
   onScaleChange,
   dualMode,
@@ -1924,52 +2027,65 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       )}
 
       {/* Keycode palette */}
-      {!typingTestMode && <TabbedKeycodes
-        onKeycodeSelect={handleKeycodeSelect}
-        onKeycodeMultiSelect={handlePickerMultiSelect}
-        pickerSelectedKeycodes={pickerSelectedSet}
-        onBackgroundClick={handleDeselect}
-        highlightedKeycodes={configuredKeycodes}
-        maskOnly={isMaskKey}
-        lmMode={isLMMask}
-        showHint={!isMaskKey}
-        tabFooterContent={tabFooterContent}
-        tabBarRight={hasLayoutOptions ? (
-          <IconTooltip label={t('editor.layout.options')} side="top-end">
-            <button
-              ref={layoutButtonRef}
-              type="button"
-              aria-label={t('editor.layout.options')}
-              aria-expanded={layoutPanelOpen}
-              aria-controls="layout-options-panel"
-              className={`rounded p-1 transition-colors ${
-                layoutPanelOpen
-                  ? 'bg-surface-dim text-accent'
-                  : 'text-content-secondary hover:bg-surface-dim hover:text-content'
-              }`}
-              onClick={() => setLayoutPanelOpen((prev) => !prev)}
-            >
-              <LayoutList size={16} aria-hidden="true" />
-            </button>
-          </IconTooltip>
-        ) : undefined}
-        panelOverlay={hasLayoutOptions ? (
-          <div
-            id="layout-options-panel"
-            ref={layoutPanelRef}
-            className={`absolute inset-y-0 right-0 z-10 w-fit overflow-y-auto rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${
-              layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}
-            inert={!layoutPanelOpen || undefined}
-          >
-            <LayoutOptionsPanel
-              options={parsedOptions}
-              values={layoutValues}
-              onChange={handleLayoutOptionChange}
+      {!typingTestMode && (
+        <div className="flex min-h-0 flex-1 gap-2">
+          {!isDummy && onLayerChange && layers > 1 && (
+            <LayerListPanel
+              layers={layers}
+              currentLayer={currentLayer}
+              onLayerChange={onLayerChange}
+              layerNames={layerNames}
+              onSetLayerName={onSetLayerName}
             />
-          </div>
-        ) : undefined}
-      />}
+          )}
+          <TabbedKeycodes
+            onKeycodeSelect={handleKeycodeSelect}
+            onKeycodeMultiSelect={handlePickerMultiSelect}
+            pickerSelectedKeycodes={pickerSelectedSet}
+            onBackgroundClick={handleDeselect}
+            highlightedKeycodes={configuredKeycodes}
+            maskOnly={isMaskKey}
+            lmMode={isLMMask}
+            showHint={!isMaskKey}
+            tabFooterContent={tabFooterContent}
+            tabBarRight={hasLayoutOptions ? (
+              <IconTooltip label={t('editor.layout.options')} side="top-end">
+                <button
+                  ref={layoutButtonRef}
+                  type="button"
+                  aria-label={t('editor.layout.options')}
+                  aria-expanded={layoutPanelOpen}
+                  aria-controls="layout-options-panel"
+                  className={`rounded p-1 transition-colors ${
+                    layoutPanelOpen
+                      ? 'bg-surface-dim text-accent'
+                      : 'text-content-secondary hover:bg-surface-dim hover:text-content'
+                  }`}
+                  onClick={() => setLayoutPanelOpen((prev) => !prev)}
+                >
+                  <LayoutList size={16} aria-hidden="true" />
+                </button>
+              </IconTooltip>
+            ) : undefined}
+            panelOverlay={hasLayoutOptions ? (
+              <div
+                id="layout-options-panel"
+                ref={layoutPanelRef}
+                className={`absolute inset-y-0 right-0 z-10 w-fit overflow-y-auto rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${
+                  layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}
+                inert={!layoutPanelOpen || undefined}
+              >
+                <LayoutOptionsPanel
+                  options={parsedOptions}
+                  values={layoutValues}
+                  onChange={handleLayoutOptionChange}
+                />
+              </div>
+            ) : undefined}
+          />
+        </div>
+      )}
 
       {tdModalIndex !== null && tapDanceEntries && onSetTapDanceEntry && (
         <TapDanceModal

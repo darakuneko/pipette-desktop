@@ -271,7 +271,7 @@ export function App() {
   }, [dualMode, activePane])
 
   const [showEditorSettings, setShowEditorSettings] = useState(false)
-  const [editorSettingsTab, setEditorSettingsTab] = useState<ModalTabId>('layers')
+  const [editorSettingsTab, setEditorSettingsTab] = useState<ModalTabId>('tools')
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
   const [showLightingModal, setShowLightingModal] = useState(false)
   const [showComboModal, setShowComboModal] = useState(false)
@@ -414,9 +414,7 @@ export function App() {
   }, [refreshHubPosts, fetchHubUser])
 
   const handleOpenEditorSettings = useCallback(async () => {
-    if (device.isDummy) {
-      setEditorSettingsTab('tools')
-    } else {
+    if (!device.isDummy) {
       await layoutStore.refreshEntries()
     }
     setShowEditorSettings(true)
@@ -813,7 +811,7 @@ export function App() {
       setDualMode(false)
       setActivePane('primary')
       setKeymapScale(1)
-      setEditorSettingsTab('layers')
+      setEditorSettingsTab('tools')
       setShowEditorSettings(false)
       setShowUnlockDialog(false)
       setUnlockMacroWarning(false)
@@ -1086,6 +1084,7 @@ export function App() {
             onOpenAltRepeatKey={altRepeatKeySupported ? () => setShowAltRepeatKeyModal(true) : undefined}
             onOpenKeyOverride={keyOverrideSupported ? () => setShowKeyOverrideModal(true) : undefined}
             layerNames={!device.isDummy ? keyboard.layerNames : undefined}
+            onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
             onOpenEditorSettings={handleOpenEditorSettings}
             panelSide={devicePrefs.panelSide}
             scale={keymapScale}
@@ -1240,11 +1239,6 @@ export function App() {
           onClose={handleCloseEditorSettings}
           activeTab={editorSettingsTab}
           onTabChange={setEditorSettingsTab}
-          layers={keyboard.layers}
-          currentLayer={currentLayer}
-          onLayerChange={setCurrentLayer}
-          layerNames={!device.isDummy ? keyboard.layerNames : undefined}
-          onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
           onImportVil={handleImportVil}
           onExportVil={handleExportVil}
           onExportKeymapC={handleExportKeymapC}
