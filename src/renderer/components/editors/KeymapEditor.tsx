@@ -1938,6 +1938,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             </>
           )}
         </div>
+        {/* Counterbalance toolbar width so keyboard centers in full width (single pane only) */}
+        {!dualMode && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (
