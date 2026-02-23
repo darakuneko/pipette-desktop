@@ -97,6 +97,21 @@ describe('pipette-settings-store', () => {
       expect(prefs.layerNames).toEqual(['Default', 'Lower', 'Raise', 'Adjust'])
     })
 
+    it('round-trips layerPanelOpen field', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerPanelOpen: false,
+        layerNames: [],
+      })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { layerPanelOpen: boolean }
+      expect(prefs.layerPanelOpen).toBe(false)
+    })
+
     it('defaults layerNames to [] when not present', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
       await setter(fakeEvent, 'uid-1', {
