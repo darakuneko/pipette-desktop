@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
+import { ROW_CLASS } from './modal-controls'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import type { HubMyPost } from '../../../shared/types/hub'
 
@@ -26,10 +27,10 @@ interface Props extends LayoutStoreContentProps {
 }
 
 const FORMAT_BTN = 'text-[11px] font-medium text-content-muted bg-surface/50 border border-edge px-2 py-0.5 rounded hover:text-content hover:border-content-muted disabled:opacity-50'
-const IMPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3.5 py-2 text-[13px] font-medium text-content-muted hover:text-content hover:border-content-muted'
+const IMPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted'
 const EXPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted disabled:opacity-50'
 const HUB_BTN = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50 disabled:opacity-50'
-const SHARE_LINK_BTN = 'ml-1 text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-1.5 py-0 rounded hover:bg-accent/20 hover:border-accent/50'
+const SHARE_LINK_BTN = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
 
 interface FormatButtonsProps {
   className: string
@@ -320,6 +321,8 @@ export function LayoutStoreContent({
   const hasHubActions = onUploadToHub || onUpdateOnHub || onRemoveFromHub || onReuploadToHub || onDeleteOrphanedHubPost || hubNeedsDisplayName
   const isPanel = !!listClassName
   const fixedSection = isPanel ? ' shrink-0' : ''
+  const sectionGap = isPanel ? 'pt-3' : 'pt-5'
+  const importGap = isPanel ? 'pt-3' : 'pt-4'
 
   return (
     <div className={isPanel ? 'flex flex-col h-full' : ''}>
@@ -328,72 +331,138 @@ export function LayoutStoreContent({
         <FileStatusDisplay fileStatus={fileStatus} />
       )}
 
-      {/* Save section */}
-      {!isDummy && (
-        <div className={`pt-5${fixedSection}`}>
-          <form onSubmit={handleSaveSubmit} className="flex gap-2">
-            <input
-              type="text"
-              value={saveLabel}
-              onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
-              placeholder={t('layoutStore.labelPlaceholder')}
-              maxLength={200}
-              className="flex-1 rounded-lg border border-edge bg-surface px-3.5 py-2 text-[13px] text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
-              data-testid="layout-store-save-input"
-            />
-            {confirmOverwriteId ? (
-              <>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="shrink-0 rounded-lg bg-danger px-4 py-2 text-[13px] font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
-                  data-testid="layout-store-overwrite-confirm"
-                >
-                  {t('layoutStore.confirmOverwrite')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmOverwriteId(null)}
-                  className="shrink-0 rounded-lg border border-edge px-3 py-2 text-[13px] font-medium text-content-muted hover:text-content"
-                  data-testid="layout-store-overwrite-cancel"
-                >
-                  {t('common.cancel')}
-                </button>
-              </>
-            ) : (
-              <button
-                type="submit"
-                disabled={saving || !saveLabel.trim()}
-                className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
-                data-testid="layout-store-save-submit"
-              >
-                {t('common.save')}
-              </button>
-            )}
-          </form>
-        </div>
-      )}
-
-      {/* Export Current State section */}
-      {hasCurrentExport && (
-        <div className={`pt-5${fixedSection}`} data-testid="layout-store-current-section">
-          <SectionHeader label={t('layoutStore.export')} />
-          <div className="flex justify-end gap-2">
-            <FormatButtons
-              className={EXPORT_BTN}
-              testIdPrefix="layout-store-current-export"
-              disabled={fileDisabled}
-              onVil={onExportVil}
-              onKeymapC={onExportKeymapC}
-              onPdf={onExportPdf}
-            />
+      {/* Save & Export section (unified card in panel mode) */}
+      {isPanel ? (
+        (!isDummy || hasCurrentExport) && (
+          <div className={`${sectionGap}${fixedSection}`} data-testid="layout-store-current-section">
+            <div className="rounded-lg border border-edge bg-surface/20 p-3">
+              {!isDummy && (
+                <form onSubmit={handleSaveSubmit} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={saveLabel}
+                    onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
+                    placeholder={t('layoutStore.labelPlaceholder')}
+                    maxLength={200}
+                    className="flex-1 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
+                    data-testid="layout-store-save-input"
+                  />
+                  {confirmOverwriteId ? (
+                    <>
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+                        data-testid="layout-store-overwrite-confirm"
+                      >
+                        {t('layoutStore.confirmOverwrite')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmOverwriteId(null)}
+                        className="shrink-0 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-content-muted hover:text-content"
+                        data-testid="layout-store-overwrite-cancel"
+                      >
+                        {t('common.cancel')}
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="submit"
+                      disabled={saving || !saveLabel.trim()}
+                      className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+                      data-testid="layout-store-save-submit"
+                    >
+                      {t('common.save')}
+                    </button>
+                  )}
+                </form>
+              )}
+              {hasCurrentExport && (
+                <div className={`flex justify-end gap-1${!isDummy ? ' mt-2' : ''}`}>
+                  <FormatButtons
+                    className={FORMAT_BTN}
+                    testIdPrefix="layout-store-current-export"
+                    disabled={fileDisabled}
+                    onVil={onExportVil}
+                    onKeymapC={onExportKeymapC}
+                    onPdf={onExportPdf}
+                  />
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )
+      ) : (
+        <>
+          {/* Save section */}
+          {!isDummy && (
+            <div className={`${sectionGap}${fixedSection}`}>
+              <form onSubmit={handleSaveSubmit} className="flex gap-2">
+                <input
+                  type="text"
+                  value={saveLabel}
+                  onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
+                  placeholder={t('layoutStore.labelPlaceholder')}
+                  maxLength={200}
+                  className="flex-1 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
+                  data-testid="layout-store-save-input"
+                />
+                {confirmOverwriteId ? (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+                      data-testid="layout-store-overwrite-confirm"
+                    >
+                      {t('layoutStore.confirmOverwrite')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmOverwriteId(null)}
+                      className="shrink-0 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-content-muted hover:text-content"
+                      data-testid="layout-store-overwrite-cancel"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={saving || !saveLabel.trim()}
+                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+                    data-testid="layout-store-save-submit"
+                  >
+                    {t('common.save')}
+                  </button>
+                )}
+              </form>
+            </div>
+          )}
+
+          {/* Export Current State section */}
+          {hasCurrentExport && (
+            <div className={`${sectionGap}${fixedSection}`} data-testid="layout-store-current-section">
+              <SectionHeader label={t('layoutStore.export')} />
+              <div className="flex justify-end gap-2">
+                <FormatButtons
+                  className={EXPORT_BTN}
+                  testIdPrefix="layout-store-current-export"
+                  disabled={fileDisabled}
+                  onVil={onExportVil}
+                  onKeymapC={onExportKeymapC}
+                  onPdf={onExportPdf}
+                />
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* History section */}
       {!isDummy && (
-        <div className={`pt-5${isPanel ? ' flex-1 min-h-0 flex flex-col' : ''}`}>
+        <div className={`${sectionGap}${isPanel ? ' flex-1 min-h-0 flex flex-col' : ''}`}>
           <SectionHeader label={t('layoutStore.history')} count={entries.length} />
 
           {loading && (
@@ -508,13 +577,11 @@ export function LayoutStoreContent({
                   {hasHubActions && (
                     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="layout-store-hub-row">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1">
-                          <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+                        <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+                        <div className="flex gap-1">
                           {entryHubPostId && hubOrigin && (
                             <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entryHubPostId)}`} />
                           )}
-                        </div>
-                        <div className="flex gap-1">
                           {entryHubPostId && confirmHubRemoveId === entry.id && (
                             <>
                               <button
@@ -603,32 +670,64 @@ export function LayoutStoreContent({
 
       {/* Import section */}
       {hasImportSideload && (
-        <div className={`pt-4${fixedSection}`} data-testid="layout-store-import-section">
-          <SectionHeader label={t('layoutStore.import')} />
-          <div className="flex gap-2">
-            {onImportVil && (
-              <button
-                type="button"
-                className={IMPORT_BTN}
-                onClick={onImportVil}
-                disabled={fileDisabled}
-                data-testid="layout-store-import-vil"
-              >
-                {t('fileIO.loadLayout')}
-              </button>
-            )}
-            {onSideloadJson && (
-              <button
-                type="button"
-                className={IMPORT_BTN}
-                onClick={onSideloadJson}
-                disabled={fileDisabled}
-                data-testid="layout-store-sideload-json"
-              >
-                {t('fileIO.sideloadJson')}
-              </button>
-            )}
-          </div>
+        <div className={`${importGap}${fixedSection}`} data-testid="layout-store-import-section">
+          {isPanel ? (
+            <div className={ROW_CLASS}>
+              <span className="text-[13px] font-medium text-content">{t('layoutStore.import')}</span>
+              <div className="flex gap-2">
+                {onImportVil && (
+                  <button
+                    type="button"
+                    className={IMPORT_BTN}
+                    onClick={onImportVil}
+                    disabled={fileDisabled}
+                    data-testid="layout-store-import-vil"
+                  >
+                    {t('fileIO.loadLayout')}
+                  </button>
+                )}
+                {onSideloadJson && (
+                  <button
+                    type="button"
+                    className={IMPORT_BTN}
+                    onClick={onSideloadJson}
+                    disabled={fileDisabled}
+                    data-testid="layout-store-sideload-json"
+                  >
+                    {t('fileIO.sideloadJson')}
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              <SectionHeader label={t('layoutStore.import')} />
+              <div className="flex gap-2">
+                {onImportVil && (
+                  <button
+                    type="button"
+                    className={IMPORT_BTN}
+                    onClick={onImportVil}
+                    disabled={fileDisabled}
+                    data-testid="layout-store-import-vil"
+                  >
+                    {t('fileIO.loadLayout')}
+                  </button>
+                )}
+                {onSideloadJson && (
+                  <button
+                    type="button"
+                    className={IMPORT_BTN}
+                    onClick={onSideloadJson}
+                    disabled={fileDisabled}
+                    data-testid="layout-store-sideload-json"
+                  >
+                    {t('fileIO.sideloadJson')}
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

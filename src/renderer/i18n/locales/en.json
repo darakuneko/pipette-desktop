@@ -495,9 +495,11 @@
     "title": "Data"
   },
   "editorSettings": {
-    "title": "Settings",
+    "title": "Menu",
     "tabData": "Data",
-    "tabTools": "Tools"
+    "tabSave": "Save",
+    "tabTools": "Settings",
+    "tabLayout": "Layout"
   },
   "hub": {
     "uploadToHub": "Upload",

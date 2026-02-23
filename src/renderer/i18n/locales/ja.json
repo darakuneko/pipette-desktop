@@ -495,9 +495,11 @@
     "title": "データ"
   },
   "editorSettings": {
-    "title": "設定",
+    "title": "メニュー",
     "tabData": "データ",
-    "tabTools": "ツール"
+    "tabSave": "保存",
+    "tabTools": "設定",
+    "tabLayout": "レイアウト"
   },
   "hub": {
     "uploadToHub": "アップロード",
