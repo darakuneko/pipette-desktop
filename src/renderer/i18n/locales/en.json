@@ -43,6 +43,8 @@
       "title": "Keymap",
       "layer": "Layer {{number}}",
       "layerLabel": "Layer",
+      "collapseLayers": "Collapse layers",
+      "expandLayers": "Expand layers",
       "selectKey": "Click a key to edit",
       "tapHoldSettings": "Tap-Hold Settings",
       "tapHoldLabel": "Tap-Hold",

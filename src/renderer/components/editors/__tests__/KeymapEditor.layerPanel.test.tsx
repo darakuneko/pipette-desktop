@@ -134,6 +134,48 @@ describe('KeymapEditor — LayerListPanel', () => {
     expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
   })
 
+  describe('accordion collapse/expand', () => {
+    it('shows collapse button when expanded', () => {
+      render(<KeymapEditor {...defaultProps} />)
+
+      expect(screen.getByTestId('layer-panel-collapse-btn')).toBeInTheDocument()
+      expect(screen.queryByTestId('layer-panel-expand-btn')).not.toBeInTheDocument()
+    })
+
+    it('collapses to number-only view when collapse button clicked', () => {
+      render(<KeymapEditor {...defaultProps} />)
+
+      fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
+
+      expect(screen.getByTestId('layer-list-panel-collapsed')).toBeInTheDocument()
+      expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
+      expect(screen.getByTestId('layer-panel-expand-btn')).toBeInTheDocument()
+      // Layer numbers still visible
+      expect(screen.getByTestId('layer-panel-layer-num-0')).toBeInTheDocument()
+      // Layer names not visible
+      expect(screen.queryByTestId('layer-panel-layer-name-0')).not.toBeInTheDocument()
+    })
+
+    it('expands back when expand button clicked', () => {
+      render(<KeymapEditor {...defaultProps} />)
+
+      fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
+      fireEvent.click(screen.getByTestId('layer-panel-expand-btn'))
+
+      expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+      expect(screen.queryByTestId('layer-list-panel-collapsed')).not.toBeInTheDocument()
+    })
+
+    it('still allows layer switching when collapsed', () => {
+      render(<KeymapEditor {...defaultProps} />)
+
+      fireEvent.click(screen.getByTestId('layer-panel-collapse-btn'))
+      fireEvent.click(screen.getByTestId('layer-panel-layer-num-2'))
+
+      expect(onLayerChange).toHaveBeenCalledWith(2)
+    })
+  })
+
   describe('layer rename inline editing', () => {
     afterEach(() => {
       vi.restoreAllMocks()

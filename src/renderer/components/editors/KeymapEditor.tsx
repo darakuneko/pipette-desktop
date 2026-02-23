@@ -27,7 +27,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import type { PanelSide } from '../../hooks/useDevicePrefs'
-import { PanelLeftOpen, PanelRightOpen, Columns2, ZoomIn, ZoomOut, Keyboard, LayoutList, Globe } from 'lucide-react'
+import { PanelLeftOpen, PanelRightOpen, Columns2, ZoomIn, ZoomOut, Keyboard, LayoutList, Globe, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -116,15 +116,19 @@ function layerNameClass(active: boolean, editable: boolean): string {
   return `${base} border-edge bg-surface/20 hover:border-content-muted/30`
 }
 
+const LAYER_TOGGLE_BTN = 'flex items-center justify-center rounded-md p-0.5 text-content-muted hover:text-content hover:bg-surface-dim transition-colors'
+
 interface LayerListPanelProps {
   layers: number
   currentLayer: number
   onLayerChange: (layer: number) => void
   layerNames?: string[]
   onSetLayerName?: (layer: number, name: string) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
-function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName }: LayerListPanelProps) {
+function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName, collapsed, onToggleCollapse }: LayerListPanelProps) {
   const { t } = useTranslation()
   const layerRename = useInlineRename<number>()
 
@@ -145,11 +149,54 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
     }
   }
 
+  if (collapsed) {
+    return (
+      <div
+        className="flex shrink-0 flex-col items-center rounded-[10px] border border-edge bg-picker-bg p-1"
+        data-testid="layer-list-panel-collapsed"
+      >
+        <button
+          type="button"
+          className={LAYER_TOGGLE_BTN}
+          onClick={onToggleCollapse}
+          aria-label={t('editor.keymap.expandLayers')}
+          data-testid="layer-panel-expand-btn"
+        >
+          <ChevronsRight size={14} aria-hidden="true" />
+        </button>
+        {Array.from({ length: layers }, (_, i) => {
+          const isActive = i === currentLayer
+          return (
+            <div
+              key={i}
+              className={layerNumClass(isActive)}
+              data-testid={`layer-panel-layer-num-${i}`}
+              onClick={() => onLayerChange(i)}
+            >
+              {i}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div
       className="flex w-44 shrink-0 flex-col gap-1 overflow-y-auto rounded-[10px] border border-edge bg-picker-bg p-2"
       data-testid="layer-list-panel"
     >
+      <div className="flex justify-end">
+        <button
+          type="button"
+          className={LAYER_TOGGLE_BTN}
+          onClick={onToggleCollapse}
+          aria-label={t('editor.keymap.collapseLayers')}
+          data-testid="layer-panel-collapse-btn"
+        >
+          <ChevronsLeft size={14} aria-hidden="true" />
+        </button>
+      </div>
       {Array.from({ length: layers }, (_, i) => {
         const name = layerNames?.[i] ?? ''
         const defaultLabel = t('editor.keymap.layerN', { n: i })
@@ -677,6 +724,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [showAutoShiftSettings, setShowAutoShiftSettings] = useState(false)
   const [showOneShotKeysSettings, setShowOneShotKeysSettings] = useState(false)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const [layerPanelCollapsed, setLayerPanelCollapsed] = useState(false)
   const [matrixMode, setMatrixMode] = useState(false)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [everPressedKeys, setEverPressedKeys] = useState<Set<string>>(new Set())
@@ -2036,6 +2084,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               onLayerChange={onLayerChange}
               layerNames={layerNames}
               onSetLayerName={onSetLayerName}
+              collapsed={layerPanelCollapsed}
+              onToggleCollapse={() => setLayerPanelCollapsed((prev) => !prev)}
             />
           )}
           <TabbedKeycodes

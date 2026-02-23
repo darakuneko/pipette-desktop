@@ -43,6 +43,8 @@
       "title": "キーマップ",
       "layer": "Layer {{number}}",
       "layerLabel": "Layer",
+      "collapseLayers": "レイヤーを折りたたむ",
+      "expandLayers": "レイヤーを展開",
       "selectKey": "キーをクリックして編集",
       "tapHoldSettings": "Tap-Hold Settings",
       "tapHoldLabel": "Tap-Hold",
