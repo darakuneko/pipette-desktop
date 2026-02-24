@@ -31,6 +31,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => `KC_${code}`,
   deserialize: (val: string) => Number(val.replace('KC_', '')),
   keycodeLabel: (qmkId: string) => qmkId,
+  codeToLabel: (code: number) => `KC_${code}`,
   keycodeTooltip: (qmkId: string) => qmkId,
   isResetKeycode: () => false,
   isModifiableKeycode: () => false,
@@ -105,7 +106,11 @@ describe('ComboPanelModal', () => {
       />,
     )
     const tile = screen.getByTestId('combo-tile-0')
-    expect(tile).toHaveTextContent('KC_4 KC_5')
+    expect(tile).toHaveTextContent('K1')
+    expect(tile).toHaveTextContent('KC_4')
+    expect(tile).toHaveTextContent('K2')
+    expect(tile).toHaveTextContent('KC_5')
+    expect(tile).toHaveTextContent('O')
     expect(tile).toHaveTextContent('KC_6')
   })
 

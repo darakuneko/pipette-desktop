@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
-import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
+import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode, codeToLabel, findKeycode } from '../../../shared/keycodes/keycodes'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserializeAllMacros } from '../../../preload/macro'
+import { deserializeAllMacros, type MacroAction } from '../../../preload/macro'
 import {
   parseLayoutLabels,
   unpackLayoutOptions,
@@ -54,6 +54,32 @@ const PROCESS_CODE_TO_KEY = new Map<string, string>([
 const EMPTY_KEYCODES = new Map<string, string>()
 const EMPTY_REMAPPED = new Set<string>()
 const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
+
+const TILE_CONFIGURED = 'border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
+const TILE_EMPTY = 'border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
+
+const TD_FIELDS = [
+  { key: 'onTap', prefix: 'T' },
+  { key: 'onHold', prefix: 'H' },
+  { key: 'onDoubleTap', prefix: 'DT' },
+  { key: 'onTapHold', prefix: 'TH' },
+] as const
+
+const MACRO_PREFIX: Record<MacroAction['type'], string> = {
+  tap: 'T',
+  down: 'D',
+  up: 'U',
+  text: 'Tx',
+  delay: 'W',
+}
+
+function macroActionLabel(action: MacroAction): string {
+  switch (action.type) {
+    case 'text': return action.text
+    case 'delay': return `${action.delay}ms`
+    default: return action.keycodes.map(codeToLabel).join(' ')
+  }
+}
 
 const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-nowrap opacity-0 transition-opacity delay-300'
 
@@ -721,6 +747,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
   }, [macroModalIndex, macroCount])
 
+  // Deserialize macros once; shared between configuredKeycodes and tabContentOverride
+  const deserializedMacros = useMemo(
+    () => macroBuffer && macroCount
+      ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
+      : undefined,
+    [macroBuffer, macroCount, vialProtocol],
+  )
+
   // Build a set of TD/Macro qmkIds that have at least one action configured
   const configuredKeycodes = useMemo(() => {
     const set = new Set<string>()
@@ -732,16 +766,15 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         }
       }
     }
-    if (macroBuffer && macroCount) {
-      const macros = deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
-      for (let i = 0; i < macros.length; i++) {
-        if (macros[i].length > 0) {
+    if (deserializedMacros) {
+      for (let i = 0; i < deserializedMacros.length; i++) {
+        if (deserializedMacros[i].length > 0) {
           set.add(`M${i}`)
         }
       }
     }
     return set.size > 0 ? set : undefined
-  }, [tapDanceEntries, macroBuffer, macroCount, vialProtocol])
+  }, [tapDanceEntries, deserializedMacros])
 
   const remap = remapLabel ?? ((id: string) => id)
 
@@ -1688,6 +1721,88 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     return content
   }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, onOpenCombo, onOpenAltRepeatKey, onOpenKeyOverride, t])
 
+  const tabContentOverride = useMemo(() => {
+    const content: Record<string, React.ReactNode> = {}
+
+    if (tapDanceEntries && tapDanceEntries.length > 0) {
+      content['tapDance'] = (
+        <div className="grid grid-cols-12 auto-rows-fr gap-1">
+          {tapDanceEntries.map((entry, i) => {
+            const configured = entry.onTap !== 0 || entry.onHold !== 0 || entry.onDoubleTap !== 0 || entry.onTapHold !== 0
+            return (
+              <button
+                key={i}
+                type="button"
+                data-testid={`td-tile-${i}`}
+                className={`relative flex aspect-square min-h-0 flex-col items-start justify-center rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
+                onClick={() => { const kc = findKeycode(`TD(${i})`); if (kc) handleKeycodeSelect(kc) }}
+              >
+                <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">TD({i})</span>
+                {configured ? (
+                  <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px">
+                    {TD_FIELDS.map(({ key, prefix }) => (
+                      <Fragment key={key}>
+                        <span className="text-left text-content-secondary/60">{prefix}</span>
+                        <span className="truncate text-left">{entry[key] !== 0 ? codeToLabel(entry[key]) : ''}</span>
+                      </Fragment>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="w-full text-center text-content-secondary/60">
+                    {t('common.notConfigured')}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )
+    }
+
+    if (deserializedMacros) {
+      content['macro'] = (
+        <div className="grid grid-cols-12 auto-rows-fr gap-1">
+          {deserializedMacros.map((actions, i) => {
+            const configured = actions.length > 0
+            return (
+              <button
+                key={i}
+                type="button"
+                data-testid={`macro-tile-${i}`}
+                className={`relative flex aspect-square min-h-0 flex-col items-start justify-center rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
+                onClick={() => { const kc = findKeycode(`M${i}`); if (kc) handleKeycodeSelect(kc) }}
+              >
+                <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
+                {configured ? (
+                  <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px overflow-hidden">
+                    {actions.slice(0, 4).map((action, j) => (
+                      <Fragment key={j}>
+                        <span className="text-left text-content-secondary/60">{MACRO_PREFIX[action.type]}</span>
+                        <span className="truncate text-left">{macroActionLabel(action)}</span>
+                      </Fragment>
+                    ))}
+                    {actions.length > 4 && (
+                      <>
+                        <span />
+                        <span className="text-content-secondary/60">+{actions.length - 4}</span>
+                      </>
+                    )}
+                  </span>
+                ) : (
+                  <span className="w-full text-center text-content-secondary/60">
+                    {t('common.notConfigured')}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )
+    }
+
+    return Object.keys(content).length > 0 ? content : undefined
+  }, [tapDanceEntries, deserializedMacros, handleKeycodeSelect, t])
+
   if (!layout) {
     return <div className="p-4 text-content-muted">{t('common.loading')}</div>
   }
@@ -2012,6 +2127,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             lmMode={isLMMask}
             showHint={!isMaskKey}
             tabFooterContent={tabFooterContent}
+            tabContentOverride={tabContentOverride}
             tabBarRight={
               <button
                 ref={layoutButtonRef}

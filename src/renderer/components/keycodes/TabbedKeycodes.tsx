@@ -35,6 +35,7 @@ interface Props {
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
+  tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
 }
 
 export function TabbedKeycodes({
@@ -50,6 +51,7 @@ export function TabbedKeycodes({
   tabBarRight,
   panelOverlay,
   showHint = false,
+  tabContentOverride,
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
@@ -177,6 +179,7 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+    if (tabContentOverride && Object.hasOwn(tabContentOverride, category.id)) return tabContentOverride[category.id]
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
     if (!groups) {
       return renderKeycodeGrid(category.getKeycodes().filter(isVisible))

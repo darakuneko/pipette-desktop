@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ComboEntry } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
+import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
@@ -48,20 +48,18 @@ const keycodeFields: FieldDescriptor[] = [
   { key: 'output', labelKey: 'editor.combo.output' },
 ]
 
-function codeToLabel(code: number): string {
-  return keycodeLabel(serialize(code)).replaceAll('\n', ' ')
-}
 
 function isConfigured(entry: ComboEntry): boolean {
   return entry.key1 !== 0 || entry.key2 !== 0
 }
 
-function comboInputLabel(entry: ComboEntry): string {
-  return [entry.key1, entry.key2, entry.key3, entry.key4]
-    .filter((k) => k !== 0)
-    .map(codeToLabel)
-    .join(' ')
-}
+const COMBO_FIELDS = [
+  { key: 'key1', prefix: 'K1' },
+  { key: 'key2', prefix: 'K2' },
+  { key: 'key3', prefix: 'K3' },
+  { key: 'key4', prefix: 'K4' },
+  { key: 'output', prefix: 'O' },
+] as const
 
 const TILE_STYLE_CONFIGURED =
   'border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
@@ -250,17 +248,18 @@ export function ComboPanelModal({
                   key={i}
                   type="button"
                   data-testid={`combo-tile-${i}`}
-                  className={`relative flex min-h-0 flex-col items-center justify-center rounded-md border p-1.5 text-xs leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY}`}
+                  className={`relative flex min-h-0 flex-col items-start justify-center rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY}`}
                   onClick={() => setSelectedIndex(i)}
                 >
                   <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
                   {configured ? (
-                    <span className="flex w-full flex-col items-center truncate">
-                      <span className="max-w-full truncate">{comboInputLabel(entry)}</span>
-                      <span className="text-content-secondary/60">&darr;</span>
-                      <span className="max-w-full truncate">
-                        {entry.output !== 0 ? codeToLabel(entry.output) : '\u00A0'}
-                      </span>
+                    <span className="mt-3 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0.5 overflow-hidden">
+                      {COMBO_FIELDS.map(({ key, prefix }) => (
+                        <Fragment key={key}>
+                          <span className="text-left text-content-secondary/60">{prefix}</span>
+                          <span className="truncate text-left">{entry[key] !== 0 ? codeToLabel(entry[key]) : ''}</span>
+                        </Fragment>
+                      ))}
                     </span>
                   ) : (
                     <span className="w-full text-center text-content-secondary/60">

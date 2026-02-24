@@ -37,6 +37,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => `KC_${code}`,
   deserialize: (val: string) => Number(val.replace('KC_', '')),
   keycodeLabel: (qmkId: string) => qmkId,
+  codeToLabel: (code: number) => `KC_${code}`,
   keycodeTooltip: (qmkId: string) => qmkId,
   isResetKeycode: () => false,
   isModifiableKeycode: () => false,

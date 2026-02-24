@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import { AltRepeatKeyOptions } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
+import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
@@ -39,9 +39,11 @@ const optionEntries = Object.entries(AltRepeatKeyOptions).filter(
   (pair): pair is [string, number] => typeof pair[1] === 'number',
 )
 
-function codeToLabel(code: number): string {
-  return keycodeLabel(serialize(code)).replaceAll('\n', ' ')
-}
+
+const AR_FIELDS = [
+  { key: 'lastKey', prefix: 'LK' },
+  { key: 'altKey', prefix: 'AK' },
+] as const
 
 function isConfigured(entry: AltRepeatKeyEntry): boolean {
   return entry.lastKey !== 0
@@ -224,26 +226,23 @@ export function AltRepeatKeyPanelModal({
           <div className="mt-1 grid h-full grid-cols-6 auto-rows-fr gap-2">
             {entries.map((entry, i) => {
               const configured = isConfigured(entry)
-              let leftLabel: string | null = null
-              let rightLabel: string | null = null
-              if (configured) {
-                leftLabel = codeToLabel(entry.lastKey)
-                rightLabel = entry.altKey !== 0 ? codeToLabel(entry.altKey) : null
-              }
               return (
                 <button
                   key={i}
                   type="button"
                   data-testid={`ar-tile-${i}`}
-                  className={`relative flex min-h-0 flex-col items-center justify-center rounded-md border p-1.5 text-xs leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
+                  className={`relative flex min-h-0 flex-col items-start justify-center rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
                   onClick={() => setSelectedIndex(i)}
                 >
                   <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
                   {configured ? (
-                    <span className="flex w-full flex-col items-center truncate">
-                      <span className="max-w-full truncate">{leftLabel}</span>
-                      <span className="text-content-secondary/60">&darr;</span>
-                      <span className="max-w-full truncate">{rightLabel ?? '\u00A0'}</span>
+                    <span className="mt-3 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0.5 overflow-hidden">
+                      {AR_FIELDS.map(({ key, prefix }) => (
+                        <Fragment key={key}>
+                          <span className="text-left text-content-secondary/60">{prefix}</span>
+                          <span className="truncate text-left">{entry[key] !== 0 ? codeToLabel(entry[key]) : ''}</span>
+                        </Fragment>
+                      ))}
                     </span>
                   ) : (
                     <span className="w-full text-center text-content-secondary/60">
