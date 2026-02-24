@@ -131,15 +131,19 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
   const { t } = useTranslation()
   const layerRename = useInlineRename<number>()
 
-  function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
-    if (e.key === 'Enter') {
-      const trimmed = layerRename.editLabel.trim()
+  function commitLayerRename(layerIndex: number): void {
+    const trimmed = layerRename.commitRename(layerIndex)
+    if (trimmed !== null) {
       const changed = trimmed !== (layerNames?.[layerIndex] ?? '')
-      layerRename.cancelRename()
       if (changed && onSetLayerName) {
         onSetLayerName(layerIndex, trimmed)
-        layerRename.scheduleFlash(layerIndex)
       }
+    }
+  }
+
+  function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
+    if (e.key === 'Enter') {
+      commitLayerRename(layerIndex)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
       layerRename.cancelRename()
@@ -175,7 +179,6 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
                     className={`${collapsed ? 'hidden' : layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
                     data-testid={`layer-panel-layer-name-box-${i}`}
                     onClick={!collapsed && onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
-                    onMouseDown={!collapsed ? (e: React.MouseEvent) => layerRename.handleCardMouseDown(e, i) : undefined}
                   >
                     {isEditing && onSetLayerName ? (
                       <input
@@ -186,7 +189,7 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
                         placeholder={defaultLabel}
                         autoFocus
                         maxLength={32}
-                        onBlur={layerRename.cancelRename}
+                        onBlur={() => commitLayerRename(i)}
                         onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
                       />
                     ) : (

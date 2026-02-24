@@ -18,20 +18,16 @@ interface InlineRenameState<TId extends string | number> {
 interface InlineRenameActions<TId extends string | number> {
   /** Begin editing an entry. */
   startRename: (id: TId, currentLabel: string) => void
-  /** Cancel editing (used as onBlur handler). */
+  /** Cancel editing without committing (used for Escape). */
   cancelRename: () => void
   /** Update the edit label (used as onChange handler). */
   setEditLabel: (value: string) => void
   /**
-   * Commit the rename on Enter, cancel on Escape.
+   * Commit the current edit and close.
    * Returns the trimmed new label if a rename was committed, or null.
+   * Safe to call from onBlur — guarded against double-fire after Enter/Escape.
    */
-  handleKeyDown: (e: React.KeyboardEvent, id: TId) => string | null
-  /**
-   * Prevent blur when clicking non-interactive areas of the editing card.
-   * Attach as onMouseDown on the card container.
-   */
-  handleCardMouseDown: (e: React.MouseEvent, id: TId) => void
+  commitRename: (id: TId) => string | null
   /**
    * Trigger the confirm-flash animation for a given entry.
    * Useful when the rename is async and the flash should happen after success.
@@ -46,7 +42,7 @@ export type InlineRename<TId extends string | number> = InlineRenameState<TId> &
  * LayoutStoreContent, FavoriteStoreModal, FavoriteTabContent, and HubPostRow.
  *
  * The caller is responsible for actually performing the rename (sync or async)
- * when `handleKeyDown` returns a non-null trimmed label.
+ * when `commitRename` returns a non-null trimmed label.
  */
 export function useInlineRename<TId extends string | number>(): InlineRename<TId> {
   const [editingId, setEditingId] = useState<TId | null>(null)
@@ -55,6 +51,8 @@ export function useInlineRename<TId extends string | number>(): InlineRename<TId
   const originalLabelRef = useRef('')
   const flashTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const deferTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
+  // Guards against blur firing after Enter/Escape already closed the editor.
+  const closingRef = useRef(false)
 
   useEffect(() => () => {
     clearTimeout(flashTimerRef.current)
@@ -71,38 +69,31 @@ export function useInlineRename<TId extends string | number>(): InlineRename<TId
   }
 
   const startRename = useCallback((id: TId, currentLabel: string) => {
+    closingRef.current = false
     setEditingId(id)
     setEditLabel(currentLabel)
     originalLabelRef.current = currentLabel
   }, [])
 
   const cancelRename = useCallback(() => {
+    closingRef.current = true
     setEditingId(null)
   }, [])
 
-  function handleKeyDown(e: React.KeyboardEvent, id: TId): string | null {
-    if (e.key === 'Enter') {
-      const trimmed = editLabel.trim()
-      const changed = !!(trimmed && trimmed !== originalLabelRef.current)
-      setEditingId(null)
-      if (changed) {
-        scheduleFlash(id)
-        return trimmed
-      }
+  function commitRename(id: TId): string | null {
+    if (closingRef.current) {
+      closingRef.current = false
       return null
     }
-    if (e.key === 'Escape') {
-      e.stopPropagation()
-      setEditingId(null)
-      return null
+    const trimmed = editLabel.trim()
+    const changed = !!(trimmed && trimmed !== originalLabelRef.current)
+    closingRef.current = true
+    setEditingId(null)
+    if (changed) {
+      scheduleFlash(id)
+      return trimmed
     }
     return null
-  }
-
-  function handleCardMouseDown(e: React.MouseEvent, id: TId): void {
-    if (editingId === id && !(e.target as HTMLElement).closest('button, input')) {
-      e.preventDefault()
-    }
   }
 
   return {
@@ -112,9 +103,8 @@ export function useInlineRename<TId extends string | number>(): InlineRename<TId
     originalLabel: originalLabelRef.current,
     startRename,
     cancelRename,
+    commitRename,
     setEditLabel,
-    handleKeyDown,
-    handleCardMouseDown,
     scheduleFlash,
   }
 }

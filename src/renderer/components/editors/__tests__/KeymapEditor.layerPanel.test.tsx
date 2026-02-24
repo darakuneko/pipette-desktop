@@ -206,7 +206,7 @@ describe('KeymapEditor — LayerListPanel', () => {
       expect(onSetLayerName).toHaveBeenCalledWith(0, 'NewName')
     })
 
-    it('cancels layer rename on blur', () => {
+    it('commits layer rename on blur', () => {
       render(<KeymapEditor {...defaultProps} />)
 
       fireEvent.click(screen.getByTestId('layer-panel-layer-name-box-0'))
@@ -215,7 +215,7 @@ describe('KeymapEditor — LayerListPanel', () => {
       fireEvent.change(input, { target: { value: 'NewName' } })
       fireEvent.blur(input)
 
-      expect(onSetLayerName).not.toHaveBeenCalled()
+      expect(onSetLayerName).toHaveBeenCalledWith(0, 'NewName')
       expect(screen.queryByTestId('layer-panel-layer-name-input-0')).not.toBeInTheDocument()
     })
 
