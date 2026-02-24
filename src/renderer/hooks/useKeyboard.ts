@@ -27,7 +27,7 @@ import {
 } from '../../shared/constants/protocol'
 import { mapToRecord, recordToMap } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, macroActionsToJson, type MacroAction } from '../../preload/macro'
+import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions, type MacroAction } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
@@ -756,11 +756,14 @@ export function useKeyboard() {
 
   const serialize = useCallback((): VilFile => {
     const s = stateRef.current
+    const macrosSrc = s.parsedMacros
+      ?? splitMacroBuffer(s.macroBuffer, s.macroCount).map((m) => deserializeMacro(m, s.vialProtocol))
     return {
       uid: s.uid,
       keymap: mapToRecord(s.keymap),
       encoderLayout: mapToRecord(s.encoderLayout),
       macros: s.macroBuffer,
+      macroJson: macrosSrc.map((m) => JSON.parse(macroActionsToJson(m)) as unknown[]),
       layoutOptions: s.layoutOptions,
       tapDance: s.tapDanceEntries,
       combo: s.comboEntries,
@@ -774,8 +777,9 @@ export function useKeyboard() {
   const serializeVialGui = useCallback((): string => {
     const s = stateRef.current
     const vil = serialize()
-    const macroActions = splitMacroBuffer(s.macroBuffer, s.macroCount)
-      .map((m) => JSON.parse(macroActionsToJson(deserializeMacro(m, s.vialProtocol))) as unknown[])
+    const macrosSrc = s.parsedMacros
+      ?? splitMacroBuffer(s.macroBuffer, s.macroCount).map((m) => deserializeMacro(m, s.vialProtocol))
+    const macroActions = macrosSrc.map((m) => JSON.parse(macroActionsToJson(m)) as unknown[])
     return vilToVialGuiJson(vil, {
       rows: s.rows,
       cols: s.cols,
@@ -869,7 +873,9 @@ export function useKeyboard() {
       keymap,
       encoderLayout,
       macroBuffer: vil.macros,
-      parsedMacros: null,
+      parsedMacros: vil.macroJson
+        ? vil.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
+        : null,
       layoutOptions: vil.layoutOptions,
       tapDanceEntries: vil.tapDance,
       comboEntries: vil.combo,

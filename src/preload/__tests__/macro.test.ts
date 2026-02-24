@@ -327,6 +327,67 @@ describe('macro', () => {
       // "A" is parsed as text, lone trailing prefix is skipped
       expect(actions).toEqual([{ type: 'text', text: 'A' }])
     })
+
+    it('merges consecutive same-type 1-byte keycode actions', () => {
+      // Two consecutive tap actions: should merge into one
+      const data = [
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x04,
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x05,
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x06,
+      ]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([{ type: 'tap', keycodes: [0x04, 0x05, 0x06] }])
+    })
+
+    it('does not merge different action types', () => {
+      const data = [
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x04,
+        SS_QMK_PREFIX, SS_DOWN_CODE, 0x05,
+      ]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([
+        { type: 'tap', keycodes: [0x04] },
+        { type: 'down', keycodes: [0x05] },
+      ])
+    })
+
+    it('merges mixed 1-byte and 2-byte keycodes of the same type', () => {
+      // 1-byte tap then 2-byte tap (ext) — same type, should merge
+      const data = [
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x04,
+        SS_QMK_PREFIX, VIAL_MACRO_EXT_TAP, 0x04, 0x51,
+      ]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([{ type: 'tap', keycodes: [0x04, 0x5104] }])
+    })
+
+    it('does not merge keycodes across text or delay boundaries', () => {
+      const data = [
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x04,
+        0x41, // text "A"
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x05,
+      ]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([
+        { type: 'tap', keycodes: [0x04] },
+        { type: 'text', text: 'A' },
+        { type: 'tap', keycodes: [0x05] },
+      ])
+    })
+
+    it('does not merge keycodes across delay boundaries', () => {
+      const data = [
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x04,
+        SS_QMK_PREFIX, SS_DELAY_CODE, 101, 1, // delay 100ms
+        SS_QMK_PREFIX, SS_TAP_CODE, 0x05,
+      ]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([
+        { type: 'tap', keycodes: [0x04] },
+        { type: 'delay', delay: 100 },
+        { type: 'tap', keycodes: [0x05] },
+      ])
+    })
   })
 
   // ----------------------------------------------------------------
@@ -493,16 +554,34 @@ describe('macro', () => {
       expect(result).toEqual(actions)
     })
 
-    it('v2: multi-keycode tap flattens into individual actions on round-trip', () => {
-      // v2 binary format is lossy for group boundaries — each keycode
-      // becomes its own action. The UI preserves grouping in-memory.
+    it('v2: multi-keycode tap merges back into single action on round-trip', () => {
       const actions: MacroAction[] = [{ type: 'tap', keycodes: [0x04, 0x05] }]
       const bytes = serializeMacro(actions, V2)
       const result = deserializeMacro(bytes, V2)
-      expect(result).toEqual([
-        { type: 'tap', keycodes: [0x04] },
-        { type: 'tap', keycodes: [0x05] },
-      ])
+      expect(result).toEqual([{ type: 'tap', keycodes: [0x04, 0x05] }])
+    })
+
+    it('v2: JSON round-trip preserves action grouping without binary', () => {
+      // M keycodes (M0-M15) require keyboard init, so use LSFT(KC_A) as stand-in
+      const input = '[["text","aaa"],["tap","KC_3"],["tap","LCTL_T(KC_3)","KC_BSLASH","KC_Y","KC_X"],["down","KC_TAB","KC_6"],["up","KC_LCTRL","TD(3)","LSFT(KC_A)"]]'
+      const actions = jsonToMacroActions(input)!
+      expect(actions).not.toBeNull()
+      const output = macroActionsToJson(actions)
+      expect(output).toBe(input)
+    })
+
+    it('v2: binary round-trip merges consecutive same-type keycodes (matches Python)', () => {
+      // Binary format merges consecutive same-type keycodes on deserialization,
+      // matching Python vial-gui behavior.
+      const input = '[["text","aaa"],["tap","KC_3"],["tap","LCTL_T(KC_3)","KC_BSLASH","KC_Y","KC_X"],["down","KC_TAB","KC_6"],["up","KC_LCTRL","TD(3)","LSFT(KC_A)"]]'
+      const actions = jsonToMacroActions(input)!
+      const bytes = serializeMacro(actions, V2)
+      const result = deserializeMacro(bytes, V2)
+      const output = macroActionsToJson(result)
+      // KC_3 merges with LCTL_T group (same logical type through binary)
+      expect(output).toBe(
+        '[["text","aaa"],["tap","KC_3","LCTL_T(KC_3)","KC_BSLASH","KC_Y","KC_X"],["down","KC_TAB","KC_6"],["up","KC_LCTRL","TD(3)","LSFT(KC_A)"]]',
+      )
     })
 
     it('v2: complex macro with mixed actions round-trips correctly', () => {

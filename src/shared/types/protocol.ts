@@ -127,6 +127,7 @@ export interface VilFile {
   keymap: Record<string, number>
   encoderLayout: Record<string, number>
   macros: number[]
+  macroJson?: unknown[][]
   layoutOptions: number
   tapDance: TapDanceEntry[]
   combo: ComboEntry[]
