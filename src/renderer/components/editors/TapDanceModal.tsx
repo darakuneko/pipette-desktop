@@ -210,15 +210,6 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
               )}
             </div>
 
-            {maskedSelection.activeMask !== null && selectedField && (
-              <div className="mt-2">
-                <MaskKeyPreview
-                  keycode={editedEntry[selectedField]}
-                  lmMode={maskedSelection.lmMode}
-                />
-              </div>
-            )}
-
             {selectedField && (
               <div className="mt-3">
                 <TabbedKeycodes
