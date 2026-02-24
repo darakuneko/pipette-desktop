@@ -96,18 +96,22 @@ export function MacroActionItem({
       case 'up':
         return (
           <div className="flex flex-wrap items-center gap-1 flex-1">
-            {action.keycodes.map((kc, ki) => (
-              <KeycodeField
-                key={ki}
-                value={kc}
-                selected={selectedKeycodeIndex === ki}
-                selectedMaskPart={selectedKeycodeIndex === ki && selectedMaskPart}
-                onSelect={() => onKeycodeClick(ki)}
-                onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
-                onDoubleClick={selectedKeycodeIndex === ki ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
-              />
-            ))}
-            {selectButton}
+            {action.keycodes.map((kc, ki) => {
+              const isSelected = selectedKeycodeIndex === ki
+              return (
+                <div key={ki} className={`flex items-center ${isSelected && selectButton ? 'rounded-lg border border-accent' : ''}`}>
+                  <KeycodeField
+                    value={kc}
+                    selected={isSelected}
+                    selectedMaskPart={isSelected && selectedMaskPart}
+                    onSelect={() => onKeycodeClick(ki)}
+                    onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
+                    onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
+                  />
+                  {isSelected && selectButton}
+                </div>
+              )
+            })}
             <button
               type="button"
               data-testid="macro-add-keycode"

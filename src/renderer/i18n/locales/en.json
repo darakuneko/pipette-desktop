@@ -2,6 +2,7 @@
   "common": {
     "save": "Save",
     "select": "Select",
+    "clickToSelect": "Click to select",
     "cancel": "Cancel",
     "close": "Close",
     "reset": "Reset",
