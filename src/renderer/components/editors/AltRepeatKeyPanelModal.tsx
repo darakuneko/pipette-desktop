@@ -446,7 +446,7 @@ export function AltRepeatKeyPanelModal({
       onClick={handleClose}
     >
       <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[950px] max-w-[95vw] h-[70vh] flex flex-col' : 'p-6'}`}
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[1050px] max-w-[95vw] h-[80vh] flex flex-col' : 'p-6'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {!selectedField && (

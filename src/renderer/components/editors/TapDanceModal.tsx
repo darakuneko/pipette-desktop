@@ -133,7 +133,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     [popoverField, updateField],
   )
 
-  const modalWidth = isDummy ? 'w-[800px]' : 'w-[950px]'
+  const modalWidth = isDummy ? 'w-[900px]' : 'w-[1050px]'
 
   return (
     <div
@@ -142,7 +142,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
       onClick={onClose}
     >
       <div
-        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[70vh] flex flex-col overflow-hidden`}
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[80vh] flex flex-col overflow-hidden`}
         data-testid="td-modal"
         onClick={(e) => e.stopPropagation()}
       >

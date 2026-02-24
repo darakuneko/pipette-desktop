@@ -30,7 +30,7 @@ export function MacroModal({
   isDummy,
 }: Props) {
   const { t } = useTranslation()
-  const modalWidth = isDummy ? 'w-[900px]' : 'w-[950px]'
+  const modalWidth = isDummy ? 'w-[1000px]' : 'w-[1050px]'
 
   return (
     <div
@@ -39,7 +39,7 @@ export function MacroModal({
       onClick={onClose}
     >
       <div
-        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[70vh] flex flex-col overflow-hidden`}
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[90vw] h-[80vh] flex flex-col overflow-hidden`}
         data-testid="macro-modal"
         onClick={(e) => e.stopPropagation()}
       >
