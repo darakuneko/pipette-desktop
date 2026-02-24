@@ -95,6 +95,18 @@ describe('isVilFile', () => {
     expect(isVilFile({ ...validVil, layerNames: [123, null] })).toBe(false)
   })
 
+  it('returns false when macroJson is a truthy non-array value', () => {
+    expect(isVilFile({ ...validVil, macroJson: 'bad' })).toBe(false)
+    expect(isVilFile({ ...validVil, macroJson: 42 })).toBe(false)
+    expect(isVilFile({ ...validVil, macroJson: {} })).toBe(false)
+  })
+
+  it('returns true when macroJson is undefined, null, or an array', () => {
+    expect(isVilFile({ ...validVil })).toBe(true) // undefined
+    expect(isVilFile({ ...validVil, macroJson: null })).toBe(true)
+    expect(isVilFile({ ...validVil, macroJson: [['text', 'hi']] })).toBe(true)
+  })
+
   it('returns false for Python vial-gui format (layout array, numeric uid)', () => {
     const pythonFormat = {
       version: 1,

@@ -137,23 +137,21 @@ function deserializeV2(data: number[]): MacroAction[] {
         // 2-byte keycode action (little-endian)
         const type = actionTypeFromCode(VIAL_MACRO_EXT_TAP, VIAL_MACRO_EXT_DOWN, actionCode)
         i += 2
-        if (i + 1 < data.length) {
-          let kc = data[i] | (data[i + 1] << 8)
-          // Reverse QMK encoding: 0xFFxx → (xx << 8)
-          if (kc >= 0xff00) {
-            kc = (kc & 0xff) << 8
-          }
-          pushOrMergeKeycode(actions, type, kc)
-          i += 2
+        if (i + 1 >= data.length) break
+        let kc = data[i] | (data[i + 1] << 8)
+        // Reverse QMK encoding: 0xFFxx → (xx << 8)
+        if (kc > 0xff00) {
+          kc = (kc & 0xff) << 8
         }
+        pushOrMergeKeycode(actions, type, kc)
+        i += 2
       } else if (actionCode === SS_DELAY_CODE) {
         // Delay
         i += 2
-        if (i + 1 < data.length) {
-          const delay = (data[i] - 1) + (data[i + 1] - 1) * 255
-          actions.push({ type: 'delay', delay })
-          i += 2
-        }
+        if (i + 1 >= data.length) break
+        const delay = (data[i] - 1) + (data[i + 1] - 1) * 255
+        actions.push({ type: 'delay', delay })
+        i += 2
       } else {
         // Unknown prefix action, skip prefix + action code
         i += 2

@@ -299,13 +299,39 @@ describe('macro', () => {
       expect(actions).toEqual([])
     })
 
-    it('handles truncated v2 2-byte keycode (only 1 byte present)', () => {
+    it('handles truncated v2 2-byte keycode (only 1 byte present) — breaks', () => {
       // SS_QMK_PREFIX + VIAL_MACRO_EXT_TAP + only 1 byte instead of 2
       const data = [SS_QMK_PREFIX, VIAL_MACRO_EXT_TAP, 0x04]
       const actions = deserializeMacro(data, V2)
-      // v2: 2-byte keycode needs 2 data bytes but only 1 present, so keycode action is dropped.
-      // The orphaned byte 0x04 is then parsed as a text character.
-      expect(actions).toEqual([{ type: 'text', text: '\x04' }])
+      // v2: 2-byte keycode needs 2 data bytes but only 1 present → break (Python compat)
+      expect(actions).toEqual([])
+    })
+
+    it('breaks on truncated delay (only 1 byte present)', () => {
+      const data = [SS_QMK_PREFIX, SS_DELAY_CODE, 0x65]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([])
+    })
+
+    it('preserves text before truncated ext keycode', () => {
+      const data = [0x41, SS_QMK_PREFIX, VIAL_MACRO_EXT_TAP, 0x04]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([{ type: 'text', text: 'A' }])
+    })
+
+    it('preserves text before truncated delay', () => {
+      const data = [0x41, SS_QMK_PREFIX, SS_DELAY_CODE, 0x65]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([{ type: 'text', text: 'A' }])
+    })
+
+    it('does not decode 0xFF00 — treats it as literal keycode (Python compat)', () => {
+      // 0xFF00 stored as little-endian: [0x00, 0xFF]
+      // kc = 0x00 | (0xFF << 8) = 0xFF00 — exactly 0xFF00, not > 0xFF00
+      // Python uses strict '>' so 0xFF00 is NOT decoded
+      const data = [SS_QMK_PREFIX, VIAL_MACRO_EXT_TAP, 0x00, 0xff]
+      const actions = deserializeMacro(data, V2)
+      expect(actions).toEqual([{ type: 'tap', keycodes: [0xff00] }])
     })
 
     it('skips unknown prefix action codes without corrupting text', () => {

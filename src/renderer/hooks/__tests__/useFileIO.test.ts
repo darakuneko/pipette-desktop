@@ -379,6 +379,8 @@ describe('useFileIO – loadLayout', () => {
     expect(Array.isArray(applied.combo)).toBe(true)
     expect(Array.isArray(applied.keyOverride)).toBe(true)
     expect(Array.isArray(applied.altRepeatKey)).toBe(true)
+    // macroJson should be preserved from the vial-gui source
+    expect(applied.macroJson).toEqual(parsed.macro)
   })
 
   it('rejects empty JSON object', async () => {

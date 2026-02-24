@@ -93,6 +93,7 @@ export function useFileIO({
         const macroJsonArrays = (data.macro as unknown[][]) ?? []
         const macroBuffer = convertVialGuiMacros(macroJsonArrays, vialProtocol)
         vil = vialGuiToVil(data, rawJson, macroBuffer)
+        vil.macroJson = macroJsonArrays
       } else {
         setError(t('error.loadFailed'))
         return false
