@@ -186,6 +186,8 @@
     },
     "typingTest": {
       "title": "Typing Test",
+      "switchToTypingMode": "Switch to Typing Mode",
+      "exitTypingMode": "Exit Typing Mode",
       "restart": "Restart",
       "wpm": "WPM",
       "accuracy": "Accuracy",

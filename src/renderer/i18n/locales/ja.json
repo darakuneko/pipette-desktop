@@ -186,6 +186,8 @@
     },
     "typingTest": {
       "title": "タイピングテスト",
+      "switchToTypingMode": "タイピングモードに切替",
+      "exitTypingMode": "タイピングモードを終了",
       "restart": "やり直す",
       "wpm": "WPM",
       "accuracy": "正確性",

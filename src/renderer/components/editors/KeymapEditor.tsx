@@ -27,7 +27,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import { Columns2, ZoomIn, ZoomOut, Keyboard, SquareMenu, Globe, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Columns2, ZoomIn, ZoomOut, SquareMenu, Globe, ChevronsLeft, ChevronsRight, Unplug } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -476,6 +476,7 @@ function PopoverForState({
 
 export interface KeymapEditorHandle {
   toggleMatrix: () => void
+  toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
 }
@@ -555,6 +556,7 @@ interface Props {
   onTypingTestLanguageChange?: (lang: string) => void
   deviceName?: string
   isDummy?: boolean
+  onDisconnect?: () => void
 }
 
 export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function KeymapEditor({
@@ -632,6 +634,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onTypingTestLanguageChange,
   deviceName,
   isDummy,
+  onDisconnect,
 }, ref) {
   const { t } = useTranslation()
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
@@ -1098,9 +1101,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   useImperativeHandle(ref, () => ({
     toggleMatrix: handleMatrixToggle,
+    toggleTypingTest: handleTypingTestToggle,
     matrixMode,
     hasMatrixTester,
-  }), [handleMatrixToggle, matrixMode, hasMatrixTester])
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester])
 
   // Build keycodes map for a given layer: "row,col" -> serialized QMK ID
   // Also build a set of position keys whose keycode is remapped in the current layout
@@ -1721,21 +1725,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   const toolbar = (
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
-      {/* Keyboard icon — top */}
-      {onTypingTestModeChange && hasMatrixTester && (
-        <IconTooltip label={t('editor.typingTest.title')}>
-          <button
-            type="button"
-            data-testid="typing-test-button"
-            aria-label={t('editor.typingTest.title')}
-            className={toggleButtonClass(typingTestMode ?? false)}
-            onClick={handleTypingTestToggle}
-          >
-            <Keyboard size={16} aria-hidden="true" />
-          </button>
-        </IconTooltip>
-      )}
-
       {/* Spacer to push dual/zoom to vertical center */}
       <div className="flex-1" />
 
@@ -1796,6 +1785,21 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
         {toolbar}
+        {onDisconnect && !typingTestMode && (
+          <div className="order-last shrink-0 pt-0.5">
+            <IconTooltip label={t('common.disconnect')} side="left">
+              <button
+                type="button"
+                data-testid="disconnect-button"
+                aria-label={t('common.disconnect')}
+                className={toggleButtonClass(false)}
+                onClick={onDisconnect}
+              >
+                <Unplug size={16} aria-hidden="true" />
+              </button>
+            </IconTooltip>
+          </div>
+        )}
         <div className={typingTestMode
           ? 'flex min-w-0 flex-1 flex-col gap-3'
           : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'

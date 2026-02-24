@@ -1,8 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { Keyboard } from 'lucide-react'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { SyncStatusType } from '../../shared/types/sync'
+
+const TYPING_TEST_BASE = 'flex items-center gap-1 rounded border px-1.5 text-xs transition-colors'
+const TYPING_TEST_ACTIVE = `${TYPING_TEST_BASE} border-accent bg-accent/10 text-accent`
+const TYPING_TEST_INACTIVE = `${TYPING_TEST_BASE} border-edge text-content-secondary hover:text-content`
 
 interface Props {
   deviceName: string
@@ -13,7 +18,8 @@ interface Props {
   hubConnected?: boolean
   matrixMode: boolean
   typingTestMode?: boolean
-  onDisconnect: () => void
+  hasMatrixTester?: boolean
+  onTypingTestModeChange?: () => void
 }
 
 export function StatusBar({
@@ -25,7 +31,8 @@ export function StatusBar({
   hubConnected,
   matrixMode,
   typingTestMode,
-  onDisconnect,
+  hasMatrixTester,
+  onTypingTestModeChange,
 }: Props) {
   const { t } = useTranslation()
 
@@ -77,13 +84,18 @@ export function StatusBar({
         )}
       </div>
       <div className="flex items-center gap-3">
-        <button
-          type="button"
-          className="rounded border border-edge px-1.5 py-0.5 text-xs text-danger transition-colors"
-          onClick={onDisconnect}
-        >
-          {t('common.disconnect')}
-        </button>
+        {onTypingTestModeChange && hasMatrixTester && (
+          <button
+            type="button"
+            data-testid="typing-test-button"
+            aria-label={typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
+            className={typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            onClick={onTypingTestModeChange}
+          >
+            <Keyboard size={12} aria-hidden="true" />
+            {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
+          </button>
+        )}
       </div>
     </div>
   )
