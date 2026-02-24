@@ -327,7 +327,7 @@ export function KeyOverridePanelModal({
                   })}
                 </div>
 
-                {maskedSelection.activeMask !== null && selectedField && editedEntry && (
+                {maskedSelection.activeMask !== null && selectedField && (
                   <div className="mt-2">
                     <MaskKeyPreview
                       keycode={editedEntry[selectedField]}
