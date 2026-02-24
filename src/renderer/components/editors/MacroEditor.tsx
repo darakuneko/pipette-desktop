@@ -277,6 +277,7 @@ export function MacroEditor({
     return isKeycodeAction(action) ? action.keycodes[selectedKey.keycodeIndex] : undefined
   })()
 
+
   const maskedSelection = useMaskedKeycodeSelection({
     onUpdate(code: number) {
       if (!selectedKey) return false
