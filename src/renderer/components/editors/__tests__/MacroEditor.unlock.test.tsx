@@ -28,6 +28,7 @@ vi.mock('../../../../preload/macro', () => ({
     Array.from({ length: count }, () => [{ type: 'text', text: 'a' }]),
   serializeAllMacros: () => [0x61, 0],
   serializeMacro: () => [0x61],
+  macroActionsToJson: () => '[]',
   isValidMacroText: (text: string) => /^[\x20-\x7e]*$/.test(text),
 }))
 
@@ -47,6 +48,7 @@ describe('MacroEditor unlock', () => {
     macroBufferSize: 512,
     macroBuffer: [0x61, 0],
     vialProtocol: 9,
+    isDummy: true,
   }
 
   it('triggers unlock when saving while locked', async () => {
@@ -60,7 +62,7 @@ describe('MacroEditor unlock', () => {
     )
     // Mark dirty by adding an action
     await act(async () => {
-      fireEvent.click(screen.getByTestId('macro-add-action'))
+      fireEvent.change(screen.getByTestId('macro-add-action'), { target: { value: 'text' } })
     })
     // Try to save
     await act(async () => {
@@ -80,7 +82,7 @@ describe('MacroEditor unlock', () => {
       />,
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('macro-add-action'))
+      fireEvent.change(screen.getByTestId('macro-add-action'), { target: { value: 'text' } })
     })
     await act(async () => {
       fireEvent.click(screen.getByTestId('macro-save'))
@@ -99,7 +101,7 @@ describe('MacroEditor unlock', () => {
       />,
     )
     await act(async () => {
-      fireEvent.click(screen.getByTestId('macro-add-action'))
+      fireEvent.change(screen.getByTestId('macro-add-action'), { target: { value: 'text' } })
     })
     await act(async () => {
       fireEvent.click(screen.getByTestId('macro-save'))
@@ -123,7 +125,7 @@ describe('MacroEditor unlock', () => {
   it('saves without unlock props (backwards compatibility)', async () => {
     render(<MacroEditor {...baseProps} onSaveMacros={onSaveMacros} />)
     await act(async () => {
-      fireEvent.click(screen.getByTestId('macro-add-action'))
+      fireEvent.change(screen.getByTestId('macro-add-action'), { target: { value: 'text' } })
     })
     await act(async () => {
       fireEvent.click(screen.getByTestId('macro-save'))

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MacroActionItem } from './MacroActionItem'
+import { MacroActionItem, defaultAction, type ActionType } from './MacroActionItem'
 import { MacroRecorder } from './MacroRecorder'
 import { MacroTextEditor } from './MacroTextEditor'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
@@ -145,10 +145,12 @@ export function MacroEditor({
     [currentActions, updateActions],
   )
 
-  const handleAddAction = useCallback(() => {
-    const newAction: MacroAction = { type: 'text', text: '' }
-    updateActions([...currentActions, newAction])
-  }, [currentActions, updateActions])
+  const handleAddActionType = useCallback(
+    (type: ActionType) => {
+      updateActions([...currentActions, defaultAction(type)])
+    },
+    [currentActions, updateActions],
+  )
 
   const handleChange = useCallback(
     (index: number, action: MacroAction) => {
@@ -417,14 +419,22 @@ export function MacroEditor({
               })}
             </span>
             <div className="flex-1" />
-            <button
-              type="button"
+            <select
               data-testid="macro-add-action"
               className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
-              onClick={handleAddAction}
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleAddActionType(e.target.value as ActionType)
+                e.target.value = ''
+              }}
             >
-              {t('editor.macro.addAction')}
-            </button>
+              <option value="" disabled>{t('editor.macro.addAction')}</option>
+              <option value="text">{t('editor.macro.text')}</option>
+              <option value="tap">{t('editor.macro.tap')}</option>
+              <option value="down">{t('editor.macro.down')}</option>
+              <option value="up">{t('editor.macro.up')}</option>
+              <option value="delay">{t('editor.macro.delay')}</option>
+            </select>
             <MacroRecorder onRecordComplete={handleRecordComplete} />
             <button
               type="button"

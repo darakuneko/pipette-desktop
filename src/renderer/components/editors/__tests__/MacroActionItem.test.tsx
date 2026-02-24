@@ -215,48 +215,12 @@ describe('MacroActionItem', () => {
     })
   })
 
-  describe('type switching', () => {
-    it('renders select with current type', () => {
+  describe('type label', () => {
+    it('displays the action type as a text label', () => {
       render(
         <MacroActionItem action={{ type: 'tap', keycodes: [0] }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
       )
-      expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('tap')
-    })
-
-    it('calls onChange with default action when type changes to text', () => {
-      const onChange = vi.fn()
-      render(
-        <MacroActionItem action={{ type: 'tap', keycodes: [0] }} index={3} isFirst={false} isLast={false} {...defaultCallbacks} onChange={onChange} />,
-      )
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'text' } })
-      expect(onChange).toHaveBeenCalledWith(3, { type: 'text', text: '' })
-    })
-
-    it('calls onChange with default action when type changes to delay', () => {
-      const onChange = vi.fn()
-      render(
-        <MacroActionItem action={{ type: 'text', text: 'hi' }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} onChange={onChange} />,
-      )
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'delay' } })
-      expect(onChange).toHaveBeenCalledWith(0, { type: 'delay', delay: 100 })
-    })
-
-    it('does not call onChange when same type selected', () => {
-      const onChange = vi.fn()
-      render(
-        <MacroActionItem action={{ type: 'tap', keycodes: [0x41] }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} onChange={onChange} />,
-      )
-      fireEvent.change(screen.getByRole('combobox'), { target: { value: 'tap' } })
-      expect(onChange).not.toHaveBeenCalled()
-    })
-
-    it('has all five action types in select', () => {
-      render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
-      )
-      const options = Array.from(screen.getByRole('combobox').querySelectorAll('option'))
-      expect(options).toHaveLength(5)
-      expect(options.map((o) => o.value)).toEqual(['text', 'tap', 'down', 'up', 'delay'])
+      expect(screen.getByText('Tap')).toBeInTheDocument()
     })
   })
 

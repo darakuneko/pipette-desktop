@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
 import { KeycodeField } from './KeycodeField'
 
-type ActionType = MacroAction['type']
+export type ActionType = MacroAction['type']
 
 interface Props {
   action: MacroAction
@@ -25,9 +25,7 @@ interface Props {
   focusMode?: boolean
 }
 
-const ACTION_TYPES: ActionType[] = ['text', 'tap', 'down', 'up', 'delay']
-
-function defaultAction(type: ActionType): MacroAction {
+export function defaultAction(type: ActionType): MacroAction {
   switch (type) {
     case 'text':
       return { type: 'text', text: '' }
@@ -66,12 +64,6 @@ export function MacroActionItem({
     down: t('editor.macro.down'),
     up: t('editor.macro.up'),
     delay: t('editor.macro.delay'),
-  }
-
-  const handleTypeChange = (newType: ActionType) => {
-    if (newType !== action.type) {
-      onChange(index, defaultAction(newType))
-    }
   }
 
   const renderContent = () => {
@@ -146,7 +138,9 @@ export function MacroActionItem({
     }
   }
 
-  if (focusMode && (action.type === 'tap' || action.type === 'down' || action.type === 'up') && selectedKeycodeIndex !== null) {
+  const isKeycodeType = action.type === 'tap' || action.type === 'down' || action.type === 'up'
+
+  if (focusMode && isKeycodeType && selectedKeycodeIndex !== null) {
     const kc = action.keycodes[selectedKeycodeIndex]
     return (
       <div className="flex items-center gap-3">
@@ -186,18 +180,10 @@ export function MacroActionItem({
         </button>
       </div>
 
-      {/* Type selector */}
-      <select
-        value={action.type}
-        onChange={(e) => handleTypeChange(e.target.value as ActionType)}
-        className="rounded border border-edge bg-surface px-1.5 py-1 text-sm"
-      >
-        {ACTION_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {typeLabels[type]}
-          </option>
-        ))}
-      </select>
+      {/* Type label */}
+      <span className="min-w-[50px] text-center text-sm text-content-secondary">
+        {typeLabels[action.type]}
+      </span>
 
       {/* Content */}
       {renderContent()}
