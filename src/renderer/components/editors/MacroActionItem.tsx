@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
-import { KeycodeField } from './KeycodeField'
+import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 
 export type ActionType = MacroAction['type']
 
@@ -108,7 +108,8 @@ export function MacroActionItem({
             <button
               type="button"
               data-testid="macro-add-keycode"
-              className="flex items-center justify-center w-[44px] h-[44px] rounded border border-dashed border-edge text-content-muted hover:border-accent hover:text-accent"
+              style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
+              className="flex items-center justify-center rounded border border-dashed border-edge text-content-muted hover:border-accent hover:text-accent"
               onClick={onKeycodeAdd}
               title={t('editor.macro.addKeycode')}
             >
@@ -161,12 +162,12 @@ export function MacroActionItem({
   return (
     <div className="flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5">
       {/* Move up/down */}
-      <div className="flex flex-col">
+      <div className="flex flex-col items-center">
         <button
           type="button"
           disabled={isFirst}
           onClick={() => onMoveUp(index)}
-          className="px-1 text-xs text-content-muted hover:text-content disabled:opacity-30"
+          className="px-1 text-xs leading-none text-content-muted hover:text-content disabled:opacity-30"
         >
           &#9650;
         </button>
@@ -174,7 +175,7 @@ export function MacroActionItem({
           type="button"
           disabled={isLast}
           onClick={() => onMoveDown(index)}
-          className="px-1 text-xs text-content-muted hover:text-content disabled:opacity-30"
+          className="px-1 text-xs leading-none text-content-muted hover:text-content disabled:opacity-30"
         >
           &#9660;
         </button>

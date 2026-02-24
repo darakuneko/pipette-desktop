@@ -4,7 +4,7 @@ import { useRef, useCallback } from 'react'
 import { serialize, keycodeTooltip, isMask } from '../../../shared/keycodes/keycodes'
 import { KeyWidget } from '../keyboard/KeyWidget'
 import type { KleKey } from '../../../shared/kle/types'
-import { KEY_UNIT } from '../keyboard/constants'
+import { KEY_UNIT, KEY_SPACING, KEY_FACE_INSET } from '../keyboard/constants'
 
 interface Props {
   value: number
@@ -47,6 +47,11 @@ const FIELD_KEY: KleKey = {
 }
 
 const SVG_SIZE = KEY_UNIT
+// Crop viewBox to tightly frame the visible key face
+// Face rect starts at (INSET, INSET) with size (UNIT - SPACING - 2*INSET)
+const FACE_ORIGIN = KEY_FACE_INSET
+const FACE_SIZE = KEY_UNIT - KEY_SPACING - 2 * KEY_FACE_INSET
+export const KEYCODE_FIELD_SIZE = Math.round(FACE_SIZE)
 
 export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, label }: Props) {
   const qmkId = serialize(value)
@@ -93,14 +98,14 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       aria-pressed={selected}
       title={tooltip}
       data-testid="keycode-field"
-      className="shrink-0"
+      className="flex shrink-0"
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
       <svg
-        width={SVG_SIZE}
-        height={SVG_SIZE}
-        viewBox={`0 0 ${SVG_SIZE} ${SVG_SIZE}`}
+        width={KEYCODE_FIELD_SIZE}
+        height={KEYCODE_FIELD_SIZE}
+        viewBox={`${FACE_ORIGIN} ${FACE_ORIGIN} ${FACE_SIZE} ${FACE_SIZE}`}
       >
         <KeyWidget
           kleKey={FIELD_KEY}
