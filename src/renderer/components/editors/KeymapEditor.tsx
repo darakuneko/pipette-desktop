@@ -55,8 +55,8 @@ const EMPTY_KEYCODES = new Map<string, string>()
 const EMPTY_REMAPPED = new Set<string>()
 const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
 
-const TILE_CONFIGURED = 'border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
-const TILE_EMPTY = 'border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
+const TILE_CONFIGURED = 'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
+const TILE_EMPTY = 'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
 
 const TD_FIELDS = [
   { key: 'onTap', prefix: 'T' },
@@ -1737,7 +1737,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 key={i}
                 type="button"
                 data-testid={`td-tile-${i}`}
-                className={`relative flex aspect-square min-h-0 flex-col items-start justify-center rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
+                className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
                 onClick={() => { const kc = findKeycode(`TD(${i})`); if (kc) handleKeycodeSelect(kc) }}
               >
                 <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">TD({i})</span>
@@ -1772,7 +1772,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 key={i}
                 type="button"
                 data-testid={`macro-tile-${i}`}
-                className={`relative flex aspect-square min-h-0 flex-col items-start justify-center rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
+                className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_CONFIGURED : TILE_EMPTY}`}
                 onClick={() => { const kc = findKeycode(`M${i}`); if (kc) handleKeycodeSelect(kc) }}
               >
                 <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>

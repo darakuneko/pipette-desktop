@@ -59,11 +59,11 @@ function isConfigured(entry: KeyOverrideEntry): boolean {
 }
 
 const TILE_STYLE_ACTIVE =
-  'border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
+  'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
 const TILE_STYLE_DISABLED =
-  'border-picker-item-border bg-picker-item-bg text-picker-item-text hover:bg-picker-item-hover'
+  'justify-start border-picker-item-border bg-picker-item-bg text-picker-item-text hover:bg-picker-item-hover'
 const TILE_STYLE_EMPTY =
-  'border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
+  'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
 
 function tileStyle(configured: boolean, enabled: boolean): string {
   if (configured && enabled) return TILE_STYLE_ACTIVE
@@ -241,7 +241,7 @@ export function KeyOverridePanelModal({
                   key={i}
                   type="button"
                   data-testid={`ko-tile-${i}`}
-                  className={`relative flex min-h-0 flex-col items-start justify-center rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
+                  className={`relative flex min-h-0 flex-col items-start rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
                   onClick={() => setSelectedIndex(i)}
                 >
                   <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
