@@ -61,12 +61,14 @@ const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border borde
 
 function IconTooltip({ label, side = 'right', children }: {
   label: string
-  side?: 'right' | 'top-end'
+  side?: 'right' | 'left' | 'top-end'
   children: React.ReactNode
 }) {
-  const posClass = side === 'right'
-    ? 'left-full top-1/2 -translate-y-1/2 ml-2'
-    : 'bottom-full right-0 mb-2'
+  const posClass = side === 'left'
+    ? 'right-full top-1/2 -translate-y-1/2 mr-2'
+    : side === 'right'
+      ? 'left-full top-1/2 -translate-y-1/2 ml-2'
+      : 'bottom-full right-0 mb-2'
   return (
     <div className="group/tip relative">
       {children}
@@ -77,7 +79,7 @@ function IconTooltip({ label, side = 'right', children }: {
   )
 }
 
-const CONTROL_BASE = 'rounded-md border px-3 py-1.5 text-[13px]'
+const CONTROL_BASE = 'rounded-md border p-2'
 
 function toggleButtonClass(active: boolean): string {
   const base = `${CONTROL_BASE} transition-colors`
@@ -1799,21 +1801,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
         {toolbar}
-        {onDisconnect && !typingTestMode && (
-          <div className="order-last shrink-0 pt-0.5">
-            <IconTooltip label={t('common.disconnect')} side="left">
-              <button
-                type="button"
-                data-testid="disconnect-button"
-                aria-label={t('common.disconnect')}
-                className={toggleButtonClass(false)}
-                onClick={onDisconnect}
-              >
-                <Unplug size={16} aria-hidden="true" />
-              </button>
-            </IconTooltip>
-          </div>
-        )}
         <div className={typingTestMode
           ? 'flex min-w-0 flex-1 flex-col gap-3'
           : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'
@@ -1985,7 +1972,23 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           )}
         </div>
         {/* Counterbalance toolbar width so keyboard centers in full width (single pane only) */}
-        {!dualMode && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
+        {!typingTestMode && (
+          <div className="flex shrink-0 flex-col items-center self-stretch" style={!dualMode ? { width: PANEL_COLLAPSED_WIDTH } : undefined}>
+            {onDisconnect && (
+              <IconTooltip label={t('common.disconnect')} side="left">
+                <button
+                  type="button"
+                  data-testid="disconnect-button"
+                  aria-label={t('common.disconnect')}
+                  className={`${CONTROL_BASE} transition-colors border-2 border-red-400 text-content-secondary hover:text-content`}
+                  onClick={onDisconnect}
+                >
+                  <Unplug size={16} aria-hidden="true" />
+                </button>
+              </IconTooltip>
+            )}
+          </div>
+        )}
       </div>
 
       {!typingTestMode && popoverState && (

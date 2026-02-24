@@ -54,11 +54,14 @@ export function MacroModal({
         onClick={(e) => e.stopPropagation()}
       >
         {!isEditing && (
-          <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
-            <h3 className="text-lg font-semibold">
-              {t('editor.macro.editTitle', { index })}
-            </h3>
-            <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
+          <div className="px-6 pt-6 pb-4 shrink-0">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold">
+                {t('editor.macro.editTitle', { index })}
+              </h3>
+              <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
+            </div>
+            <p className="mt-1 text-xs text-warning">{t('editor.macro.unlockWarning')}</p>
           </div>
         )}
 

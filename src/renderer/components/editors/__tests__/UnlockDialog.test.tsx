@@ -146,7 +146,7 @@ describe('UnlockDialog', () => {
     expect(screen.queryByTestId('macro-unlock-warning')).not.toBeInTheDocument()
   })
 
-  it('shows macro warning when macroWarning is true', async () => {
+  it('shows macro click-again hint when macroWarning is true', async () => {
     unlockPoll.mockResolvedValue([0, 0, 50])
     await act(async () => {
       render(
@@ -164,6 +164,5 @@ describe('UnlockDialog', () => {
     const warning = screen.getByTestId('macro-unlock-warning')
     expect(warning).toBeInTheDocument()
     expect(screen.getByText('Click the macro key again after unlocking.')).toBeInTheDocument()
-    expect(screen.getByText('Do not store passwords or sensitive information in macros.')).toBeInTheDocument()
   })
 })
