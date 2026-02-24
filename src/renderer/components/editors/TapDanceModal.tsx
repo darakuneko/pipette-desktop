@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
+import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -43,6 +45,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+  const preEditValueRef = useRef<number>(0)
   const favStore = useFavoriteStore({
     favoriteType: 'tapDance',
     serialize: () => editedEntry,
@@ -85,15 +88,24 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     setEditedEntry((prev) => ({ ...prev, tappingTerm: numValue }))
   }
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!selectedField) return
-      const code = deserialize(kc.qmkId)
+  const maskedSelection = useMaskedKeycodeSelection({
+    onUpdate(code: number) {
+      if (!selectedField) return false
       setEditedEntry((prev) => ({ ...prev, [selectedField]: code }))
+    },
+    onCommit() {
+      setPopoverState(null)
       setSelectedField(null)
     },
-    [selectedField],
-  )
+    resetKey: selectedField,
+    initialValue: selectedField ? editedEntry[selectedField] : undefined,
+  })
+
+  const updateField = useCallback((field: KeycodeFieldName, code: number) => {
+    setEditedEntry((prev) => ({ ...prev, [field]: code }))
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
 
   const handleFieldDoubleClick = useCallback(
     (field: KeycodeFieldName, rect: DOMRect) => {
@@ -103,29 +115,22 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     [selectedField],
   )
 
-  const closePopover = useCallback(() => {
-    setPopoverState(null)
-  }, [])
+  const popoverField = popoverState?.field ?? null
 
   const handlePopoverKeycodeSelect = useCallback(
     (kc: Keycode) => {
-      if (!popoverState) return
-      const code = deserialize(kc.qmkId)
-      setEditedEntry((prev) => ({ ...prev, [popoverState.field]: code }))
-      closePopover()
-      setSelectedField(null)
+      if (!popoverField) return
+      updateField(popoverField, deserialize(kc.qmkId))
     },
-    [popoverState, closePopover],
+    [popoverField, updateField],
   )
 
   const handlePopoverRawKeycodeSelect = useCallback(
     (code: number) => {
-      if (!popoverState) return
-      setEditedEntry((prev) => ({ ...prev, [popoverState.field]: code }))
-      closePopover()
-      setSelectedField(null)
+      if (!popoverField) return
+      updateField(popoverField, code)
     },
-    [popoverState, closePopover],
+    [popoverField, updateField],
   )
 
   const modalWidth = isDummy ? 'w-[800px]' : 'w-[950px]'
@@ -168,10 +173,23 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
                     <KeycodeField
                       value={editedEntry[key]}
                       selected={selectedField === key}
-                      onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                      selectedMaskPart={selectedField === key && maskedSelection.editingPart === 'inner'}
+                      onSelect={() => { if (!selectedField) { preEditValueRef.current = editedEntry[key]; setSelectedField(key) } }}
+                      onMaskPartClick={(part) => {
+                        if (selectedField === key) {
+                          maskedSelection.setEditingPart(part)
+                        } else if (!selectedField) {
+                          preEditValueRef.current = editedEntry[key]
+                          maskedSelection.enterMaskMode(editedEntry[key], part)
+                          setSelectedField(key)
+                        }
+                      }}
                       onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                       label={t(labelKey)}
                     />
+                    {selectedField === key && (
+                      <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                    )}
                   </div>
                 )
               })}
@@ -194,7 +212,18 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
 
             {selectedField && (
               <div className="mt-3">
-                <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+                <TabbedKeycodes
+                  onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                  maskOnly={maskedSelection.maskOnly}
+                  lmMode={maskedSelection.lmMode}
+                  onClose={() => {
+                    if (selectedField) {
+                      setEditedEntry((prev) => ({ ...prev, [selectedField]: preEditValueRef.current }))
+                    }
+                    maskedSelection.clearMask()
+                    setSelectedField(null)
+                  }}
+                />
               </div>
             )}
 
@@ -204,7 +233,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
                 currentKeycode={editedEntry[popoverState.field]}
                 onKeycodeSelect={handlePopoverKeycodeSelect}
                 onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-                onClose={closePopover}
+                onClose={() => setPopoverState(null)}
               />
             )}
 

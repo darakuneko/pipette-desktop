@@ -35,6 +35,9 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   extractModMask: () => 0,
   extractBasicKey: (code: number) => code & 0xff,
   buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+  isMask: () => false,
+  findOuterKeycode: () => undefined,
+  findInnerKeycode: () => undefined,
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
@@ -156,6 +159,7 @@ describe('TapDanceModal', () => {
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     expect(screen.getByTestId('td-modal-save')).toBeEnabled()
   })
 
@@ -166,6 +170,7 @@ describe('TapDanceModal', () => {
     // Edit onTap
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     // Save
     fireEvent.click(screen.getByTestId('td-modal-save'))
     expect(onSave).toHaveBeenCalledWith(2, expect.objectContaining({ onTap: 4 }))

@@ -39,6 +39,9 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   extractModMask: () => 0,
   extractBasicKey: (code: number) => code & 0xff,
   buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+  isMask: () => false,
+  findOuterKeycode: () => undefined,
+  findInnerKeycode: () => undefined,
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
@@ -213,6 +216,7 @@ describe('AltRepeatKeyPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     expect(screen.getByTestId('ar-modal-save')).toBeEnabled()
   })
 
@@ -224,6 +228,7 @@ describe('AltRepeatKeyPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     fireEvent.click(screen.getByTestId('ar-modal-save'))
     vi.useRealTimers()
     await waitFor(() => {

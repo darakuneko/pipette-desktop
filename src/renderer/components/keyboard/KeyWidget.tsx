@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import {
   keycodeLabel,
   isMask,
@@ -23,6 +23,7 @@ import {
   KEY_TEXT_COLOR,
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
+  KEY_HOVER_COLOR,
 } from './constants'
 import { computeUnionPath } from '../../../shared/kle/rect-union'
 
@@ -39,6 +40,8 @@ interface Props {
   remapped?: boolean
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
+  hoverMaskParts?: boolean
+  selectedFill?: boolean
   scale?: number
 }
 
@@ -55,8 +58,11 @@ function KeyWidgetInner({
   remapped,
   onClick,
   onDoubleClick,
+  hoverMaskParts,
+  selectedFill = true,
   scale = 1,
 }: Props) {
+  const [hoveredPart, setHoveredPart] = useState<'outer' | 'inner' | null>(null)
   const s = KEY_UNIT * scale
   const spacing = KEY_SPACING * scale
   const inset = KEY_FACE_INSET * scale
@@ -82,10 +88,11 @@ function KeyWidgetInner({
   let fillColor = KEY_BG_COLOR
   let invertText = false
   if (pressed) fillColor = KEY_PRESSED_COLOR
-  else if (selected && !innerSelected) { fillColor = KEY_SELECTED_COLOR; invertText = true }
+  else if (selected && !innerSelected && selectedFill) { fillColor = KEY_SELECTED_COLOR; invertText = true }
   else if (multiSelected) fillColor = KEY_MULTI_SELECTED_COLOR
   else if (highlighted) { fillColor = KEY_HIGHLIGHT_COLOR; invertText = true }
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
+  else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
 
   // Label text color: inverted when key is selected/highlighted, remap color
   // for remapped keys in non-mask mode, default otherwise
@@ -187,6 +194,8 @@ function KeyWidgetInner({
       transform={groupTransform}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      onMouseEnter={hoverMaskParts && masked ? () => setHoveredPart('outer') : undefined}
+      onMouseLeave={hoverMaskParts && masked ? () => setHoveredPart(null) : undefined}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
       {/* Key shape: unified path for ISO/stepped keys, simple rect for normal */}
@@ -221,11 +230,13 @@ function KeyWidgetInner({
           height={innerH}
           rx={innerCorner}
           ry={innerCorner}
-          fill={KEY_MASK_RECT_COLOR}
+          fill={hoverMaskParts && hoveredPart === 'inner' ? KEY_HOVER_COLOR : KEY_MASK_RECT_COLOR}
           stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
           strokeWidth={innerBorderActive ? 2 : 1}
           onClick={handleInnerClick}
           onDoubleClick={handleInnerDoubleClick}
+          onMouseEnter={hoverMaskParts ? () => setHoveredPart('inner') : undefined}
+          onMouseLeave={hoverMaskParts ? () => setHoveredPart('outer') : undefined}
         />
       )}
 

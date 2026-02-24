@@ -16,9 +16,12 @@ interface Props {
   onMoveUp: (index: number) => void
   onMoveDown: (index: number) => void
   selectedKeycodeIndex: number | null
+  selectedMaskPart?: boolean
   onKeycodeClick: (keycodeIndex: number) => void
   onKeycodeDoubleClick: (keycodeIndex: number, rect: DOMRect) => void
   onKeycodeAdd: () => void
+  onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
+  selectButton?: React.ReactNode
 }
 
 const ACTION_TYPES: ActionType[] = ['text', 'tap', 'down', 'up', 'delay']
@@ -46,9 +49,12 @@ export function MacroActionItem({
   onMoveUp,
   onMoveDown,
   selectedKeycodeIndex,
+  selectedMaskPart,
   onKeycodeClick,
   onKeycodeDoubleClick,
   onKeycodeAdd,
+  onMaskPartClick,
+  selectButton,
 }: Props) {
   const { t } = useTranslation()
 
@@ -95,10 +101,13 @@ export function MacroActionItem({
                 key={ki}
                 value={kc}
                 selected={selectedKeycodeIndex === ki}
+                selectedMaskPart={selectedKeycodeIndex === ki && selectedMaskPart}
                 onSelect={() => onKeycodeClick(ki)}
+                onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
                 onDoubleClick={selectedKeycodeIndex === ki ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
               />
             ))}
+            {selectButton}
             <button
               type="button"
               data-testid="macro-add-keycode"

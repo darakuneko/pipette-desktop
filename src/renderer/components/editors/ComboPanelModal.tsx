@@ -1,15 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ComboEntry } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
+import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -84,6 +86,7 @@ export function ComboPanelModal({
   const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+  const preEditValueRef = useRef<number>(0)
 
   const favStore = useFavoriteStore({
     favoriteType: 'combo',
@@ -176,13 +179,18 @@ export function ComboPanelModal({
     setSelectedField(null)
   }, [])
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!selectedField) return
-      updateField(selectedField, deserialize(kc.qmkId))
+  const maskedSelection = useMaskedKeycodeSelection({
+    onUpdate(code: number) {
+      if (!selectedField) return false
+      setEditedEntry((prev) => prev ? { ...prev, [selectedField]: code } : prev)
     },
-    [selectedField, updateField],
-  )
+    onCommit() {
+      setPopoverState(null)
+      setSelectedField(null)
+    },
+    resetKey: selectedField,
+    initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
+  })
 
   const handleFieldDoubleClick = useCallback(
     (field: KeycodeFieldName, rect: DOMRect) => {
@@ -309,10 +317,23 @@ export function ComboPanelModal({
                         <KeycodeField
                           value={editedEntry[key]}
                           selected={selectedField === key}
-                          onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                          selectedMaskPart={selectedField === key && maskedSelection.editingPart === 'inner'}
+                          onSelect={() => { if (!selectedField) { preEditValueRef.current = editedEntry[key]; setSelectedField(key) } }}
+                          onMaskPartClick={(part) => {
+                            if (selectedField === key) {
+                              maskedSelection.setEditingPart(part)
+                            } else if (!selectedField) {
+                              preEditValueRef.current = editedEntry[key]
+                              maskedSelection.enterMaskMode(editedEntry[key], part)
+                              setSelectedField(key)
+                            }
+                          }}
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey, labelOpts)}
                         />
+                        {selectedField === key && (
+                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                        )}
                       </div>
                     )
                   })}
@@ -320,7 +341,18 @@ export function ComboPanelModal({
 
                 {selectedField && (
                   <div className="mt-3">
-                    <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+                    <TabbedKeycodes
+                      onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                      maskOnly={maskedSelection.maskOnly}
+                      lmMode={maskedSelection.lmMode}
+                      onClose={() => {
+                        if (selectedField) {
+                          setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)
+                        }
+                        maskedSelection.clearMask()
+                        setSelectedField(null)
+                      }}
+                    />
                   </div>
                 )}
 

@@ -20,8 +20,10 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { ConfirmButton } from './ConfirmButton'
+import { MaskKeyPreview } from './MaskKeyPreview'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
@@ -109,6 +111,7 @@ export function MacroEditor({
   const [selectedKey, setSelectedKey] = useState<{ actionIndex: number; keycodeIndex: number } | null>(null)
   const [popoverState, setPopoverState] = useState<{ actionIndex: number; keycodeIndex: number; anchorRect: DOMRect } | null>(null)
   const [showTextEditor, setShowTextEditor] = useState(false)
+  const preEditValueRef = useRef<number>(0)
 
   const updateActions = useCallback(
     (newActions: MacroAction[]) => {
@@ -242,9 +245,13 @@ export function MacroEditor({
 
   const handleKeycodeClick = useCallback(
     (actionIndex: number, keycodeIndex: number) => {
+      const action = currentActions[actionIndex]
+      if (isKeycodeAction(action)) {
+        preEditValueRef.current = action.keycodes[keycodeIndex] ?? 0
+      }
       setSelectedKey({ actionIndex, keycodeIndex })
     },
-    [],
+    [currentActions],
   )
 
   const handleKeycodeDoubleClick = useCallback(
@@ -264,25 +271,46 @@ export function MacroEditor({
     [currentActions, setKeycodeAt],
   )
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!selectedKey) return
-      const code = deserialize(kc.qmkId)
+  const macroInitialValue = (() => {
+    if (!selectedKey) return undefined
+    const action = currentActions[selectedKey.actionIndex]
+    return isKeycodeAction(action) ? action.keycodes[selectedKey.keycodeIndex] : undefined
+  })()
+
+  const maskedSelection = useMaskedKeycodeSelection({
+    onUpdate(code: number) {
+      if (!selectedKey) return false
       const action = currentActions[selectedKey.actionIndex]
-      if (!isKeycodeAction(action)) return
+      if (!isKeycodeAction(action)) return false
 
       if (code === KC_NO) {
         // Delete this keycode, but keep at least one
-        if (action.keycodes.length <= 1) return
+        if (action.keycodes.length <= 1) return false
         setKeycodeAt(selectedKey.actionIndex, action.keycodes.filter((_, i) => i !== selectedKey.keycodeIndex))
       } else {
         const newKeycodes = [...action.keycodes]
         newKeycodes[selectedKey.keycodeIndex] = code
         setKeycodeAt(selectedKey.actionIndex, newKeycodes)
       }
+    },
+    onCommit() {
       setSelectedKey(null)
     },
-    [selectedKey, currentActions, setKeycodeAt],
+    resetKey: selectedKey,
+    initialValue: macroInitialValue,
+  })
+
+  const handleMaskPartClick = useCallback(
+    (actionIndex: number, keycodeIndex: number, part: 'outer' | 'inner') => {
+      const action = currentActions[actionIndex]
+      if (!isKeycodeAction(action)) return
+      const code = action.keycodes[keycodeIndex]
+      if (code == null) return
+      preEditValueRef.current = code
+      maskedSelection.enterMaskMode(code, part)
+      setSelectedKey({ actionIndex, keycodeIndex })
+    },
+    [currentActions, maskedSelection.enterMaskMode],
   )
 
   const handlePopoverKeycodeSelect = useCallback(
@@ -329,6 +357,19 @@ export function MacroEditor({
 
   const pickerRef = useRef<HTMLDivElement>(null)
 
+  const revertAndDeselect = useCallback(() => {
+    if (selectedKey) {
+      const action = currentActions[selectedKey.actionIndex]
+      if (isKeycodeAction(action) && action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current) {
+        const newKeycodes = [...action.keycodes]
+        newKeycodes[selectedKey.keycodeIndex] = preEditValueRef.current
+        setKeycodeAt(selectedKey.actionIndex, newKeycodes)
+      }
+    }
+    maskedSelection.clearMask()
+    setSelectedKey(null)
+  }, [selectedKey, currentActions, setKeycodeAt, maskedSelection.clearMask])
+
   // Close picker when clicking outside of it.
   // Uses click (not mousedown) so the DOM hasn't re-rendered yet when the
   // event processes — the modal's stopPropagation still covers the area and
@@ -342,11 +383,12 @@ export function MacroEditor({
       // Resolve to Element for text node targets (e.g. spans inside buttons)
       const el = target instanceof Element ? target : target.parentElement
       if (el?.closest('[data-testid="keycode-field"]')) return
-      setSelectedKey(null)
+      if (el?.closest('[data-testid="mask-confirm-btn"]')) return
+      revertAndDeselect()
     }
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
-  }, [selectedKey])
+  }, [selectedKey, revertAndDeselect])
 
   const popoverKeycode = (() => {
     if (!popoverState) return 0
@@ -400,9 +442,12 @@ export function MacroEditor({
                 isFirst={i === 0}
                 isLast={i === currentActions.length - 1}
                 selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
+                selectedMaskPart={selectedKey?.actionIndex === i && maskedSelection.editingPart === 'inner'}
                 onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
                 onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
                 onKeycodeAdd={() => handleKeycodeAdd(i)}
+                onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
+                selectButton={selectedKey?.actionIndex === i ? <MaskKeyPreview onConfirm={maskedSelection.confirm} /> : undefined}
               />
             ))}
           </div>
@@ -410,8 +455,10 @@ export function MacroEditor({
           {selectedKey !== null && (
             <div ref={pickerRef} className="mt-3">
               <TabbedKeycodes
-                onKeycodeSelect={handleKeycodeSelect}
-                onClose={() => setSelectedKey(null)}
+                onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                maskOnly={maskedSelection.maskOnly}
+                lmMode={maskedSelection.lmMode}
+                onClose={revertAndDeselect}
               />
             </div>
           )}
