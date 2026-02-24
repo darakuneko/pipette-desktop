@@ -165,9 +165,9 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy, tapDance
         {/* Split container */}
         <div className="flex min-h-0 flex-1 overflow-hidden">
           {/* Left panel: editor */}
-          <div className="flex-1 overflow-y-auto px-6 pb-6">
+          <div className="flex-1 overflow-y-auto px-6 pt-1 pb-6">
             {selectedField && (
-              <div className="pt-6" />
+              <div className="pt-5" />
             )}
 
             <div className="space-y-2">
