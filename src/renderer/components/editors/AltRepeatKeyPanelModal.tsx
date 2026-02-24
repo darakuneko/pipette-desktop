@@ -311,6 +311,15 @@ export function AltRepeatKeyPanelModal({
                   })}
                 </div>
 
+                {maskedSelection.activeMask !== null && selectedField && editedEntry && (
+                  <div className="mt-2">
+                    <MaskKeyPreview
+                      keycode={editedEntry[selectedField]}
+                      lmMode={maskedSelection.lmMode}
+                    />
+                  </div>
+                )}
+
                 {selectedField && (
                   <div className="mt-3">
                     <TabbedKeycodes

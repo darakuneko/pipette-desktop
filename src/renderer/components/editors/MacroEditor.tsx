@@ -453,6 +453,16 @@ export function MacroEditor({
             ))}
           </div>
 
+          {maskedSelection.activeMask !== null && selectedKey !== null && (() => {
+            const action = currentActions[selectedKey.actionIndex]
+            const code = isKeycodeAction(action) ? (action.keycodes[selectedKey.keycodeIndex] ?? 0) : 0
+            return (
+              <div className="mt-2">
+                <MaskKeyPreview keycode={code} lmMode={maskedSelection.lmMode} />
+              </div>
+            )
+          })()}
+
           {selectedKey !== null && (
             <div ref={pickerRef} className="mt-3">
               <TabbedKeycodes

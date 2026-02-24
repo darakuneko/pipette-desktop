@@ -180,6 +180,10 @@
       "settings": "Alt Repeat Key Settings",
       "selectEntry": "Select an entry to edit"
     },
+    "mask": {
+      "selectInnerKey": "Select inner key",
+      "selectModifier": "Select modifier"
+    },
     "matrixTester": {
       "title": "Key Tester"
     },

@@ -180,6 +180,10 @@
       "settings": "Alt Repeat Key Settings",
       "selectEntry": "編集するエントリを選択"
     },
+    "mask": {
+      "selectInnerKey": "インナーキーを選択",
+      "selectModifier": "モディファイアを選択"
+    },
     "matrixTester": {
       "title": "キーテスター"
     },
