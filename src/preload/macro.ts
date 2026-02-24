@@ -101,11 +101,17 @@ function actionTypeFromCode(
   return 'up'
 }
 
-/** Deserialize a single macro from bytes (v2 format).
- *
- *  Each keycode becomes its own action. The v2 binary format is lossy for
- *  group boundaries, so no merging is attempted. The UI preserves grouping
- *  in-memory; re-parsing only happens on initial load or revert. */
+/** Append a keycode to the last action if it has the same type, otherwise create a new action. */
+function pushOrMergeKeycode(actions: MacroAction[], type: 'tap' | 'down' | 'up', kc: number): void {
+  const last = actions[actions.length - 1]
+  if (last && last.type === type) {
+    last.keycodes.push(kc)
+  } else {
+    actions.push({ type, keycodes: [kc] })
+  }
+}
+
+/** Deserialize a single macro from bytes (v2 format). */
 function deserializeV2(data: number[]): MacroAction[] {
   const actions: MacroAction[] = []
   let i = 0
@@ -124,7 +130,7 @@ function deserializeV2(data: number[]): MacroAction[] {
         const type = actionTypeFromCode(SS_TAP_CODE, SS_DOWN_CODE, actionCode)
         i += 2
         if (i < data.length) {
-          actions.push({ type, keycodes: [data[i]] })
+          pushOrMergeKeycode(actions, type, data[i])
           i++
         }
       } else if (actionCode === VIAL_MACRO_EXT_TAP || actionCode === VIAL_MACRO_EXT_DOWN || actionCode === VIAL_MACRO_EXT_UP) {
@@ -137,7 +143,7 @@ function deserializeV2(data: number[]): MacroAction[] {
           if (kc >= 0xff00) {
             kc = (kc & 0xff) << 8
           }
-          actions.push({ type, keycodes: [kc] })
+          pushOrMergeKeycode(actions, type, kc)
           i += 2
         }
       } else if (actionCode === SS_DELAY_CODE) {
