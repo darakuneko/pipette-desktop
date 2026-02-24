@@ -253,6 +253,54 @@ describe('generateKeymapPdf', () => {
     expect(pdfSignature(bytes)).toBe('%PDF-')
   })
 
+  it('handles ISO/stepped keys with union polygon', () => {
+    const keys: KleKey[] = [
+      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
+      // ISO Enter: 1.25u wide, 2u tall, secondary rect wider on top
+      makeKey({
+        x: 1, y: 0, row: 0, col: 1,
+        width: 1.25, height: 2,
+        x2: -0.25, y2: 0, width2: 1.5, height2: 1,
+      }),
+      makeKey({ x: 2.5, y: 0, row: 0, col: 2 }),
+    ]
+
+    const keymap = new Map<string, number>([
+      ['0,0,0', 0x29],
+      ['0,0,1', 0x04],
+      ['0,0,2', 0x05],
+    ])
+
+    const base64 = generateKeymapPdf(createBasicInput({ keys, keymap }))
+    expect(typeof base64).toBe('string')
+    const bytes = decodePdf(base64)
+    expect(pdfSignature(bytes)).toBe('%PDF-')
+    expect(bytes.length).toBeGreaterThan(1000)
+  })
+
+  it('handles rotated ISO keys', () => {
+    const keys: KleKey[] = [
+      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
+      // Reversed ISO: rotated 180° around (0.6, 3.95)
+      makeKey({
+        x: 0.6, y: 3.95, row: 0, col: 1,
+        width: 1.25, height: 2,
+        x2: -0.25, y2: 0, width2: 1.5, height2: 1,
+        rotation: 180, rotationX: 0.6, rotationY: 3.95,
+      }),
+    ]
+
+    const keymap = new Map<string, number>([
+      ['0,0,0', 0x29],
+      ['0,0,1', 0x04],
+    ])
+
+    const base64 = generateKeymapPdf(createBasicInput({ keys, keymap }))
+    expect(typeof base64).toBe('string')
+    const bytes = decodePdf(base64)
+    expect(pdfSignature(bytes)).toBe('%PDF-')
+  })
+
   it('handles masked keycodes', () => {
     const keymap = new Map<string, number>([
       ['0,0,0', 0x29],

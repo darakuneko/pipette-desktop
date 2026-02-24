@@ -13,7 +13,7 @@ import type { ModalTabId } from './editors/modal-tabs'
 import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, LocalResetTargets, UndecryptableFile } from '../../shared/types/sync'
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
-import type { KeyboardLayoutId, AutoLockMinutes, PanelSide } from '../hooks/useDevicePrefs'
+import type { KeyboardLayoutId, AutoLockMinutes } from '../hooks/useDevicePrefs'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
@@ -468,11 +468,6 @@ const THEME_OPTIONS: ThemeOption[] = [
   { mode: 'dark', icon: Moon },
 ]
 
-const PANEL_SIDE_OPTIONS: { side: PanelSide; labelKey: string }[] = [
-  { side: 'left', labelKey: 'settings.panelLeft' },
-  { side: 'right', labelKey: 'settings.panelRight' },
-]
-
 const TIME_STEPS = [10, 20, 30, 40, 50, 60] as const
 
 interface Props {
@@ -484,10 +479,10 @@ interface Props {
   onDefaultLayoutChange: (layout: KeyboardLayoutId) => void
   defaultAutoAdvance: boolean
   onDefaultAutoAdvanceChange: (enabled: boolean) => void
+  defaultLayerPanelOpen: boolean
+  onDefaultLayerPanelOpenChange: (open: boolean) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
-  panelSide: PanelSide
-  onPanelSideChange: (side: PanelSide) => void
   onResetStart?: () => void
   onResetEnd?: () => void
   onClose: () => void
@@ -611,10 +606,10 @@ export function SettingsModal({
   onDefaultLayoutChange,
   defaultAutoAdvance,
   onDefaultAutoAdvanceChange,
+  defaultLayerPanelOpen,
+  onDefaultLayerPanelOpenChange,
   autoLockTime,
   onAutoLockTimeChange,
-  panelSide,
-  onPanelSideChange,
   onResetStart,
   onResetEnd,
   onClose,
@@ -988,29 +983,6 @@ export function SettingsModal({
               </section>
 
               <section>
-                <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                  {t('settings.panelSide')}
-                </h4>
-                <div className="flex rounded-lg border border-edge bg-surface p-1 gap-0.5">
-                  {PANEL_SIDE_OPTIONS.map(({ side, labelKey }) => (
-                    <button
-                      key={side}
-                      type="button"
-                      className={`flex flex-1 items-center justify-center rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                        panelSide === side
-                          ? 'bg-accent/15 text-accent'
-                          : 'text-content-secondary hover:text-content'
-                      }`}
-                      onClick={() => onPanelSideChange(side)}
-                      data-testid={`panel-side-option-${side}`}
-                    >
-                      {t(labelKey)}
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section>
                 <div className={ROW_CLASS} data-testid="settings-language-row">
                   <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
                     {t('settings.language')}
@@ -1075,6 +1047,23 @@ export function SettingsModal({
                       data-testid="settings-default-auto-advance-toggle"
                     >
                       <span className={toggleKnobClass(defaultAutoAdvance)} />
+                    </button>
+                  </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-layer-panel-open-row">
+                    <span className="text-[13px] font-medium text-content">
+                      {t('settings.defaultLayerPanelOpen')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={defaultLayerPanelOpen}
+                      aria-label={t('settings.defaultLayerPanelOpen')}
+                      className={toggleTrackClass(defaultLayerPanelOpen)}
+                      onClick={() => onDefaultLayerPanelOpenChange(!defaultLayerPanelOpen)}
+                      data-testid="settings-default-layer-panel-open-toggle"
+                    >
+                      <span className={toggleKnobClass(defaultLayerPanelOpen)} />
                     </button>
                   </div>
                 </div>

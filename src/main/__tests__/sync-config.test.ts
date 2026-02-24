@@ -160,14 +160,12 @@ describe('app-config (electron-store)', () => {
       expect(loaded.defaultKeyboardLayout).toBe('colemak')
     })
 
-    it('persists panelSide and autoLockTime', () => {
+    it('persists autoLockTime', () => {
       saveAppConfig({
         ...DEFAULT_APP_CONFIG,
-        panelSide: 'right',
         autoLockTime: 30,
       })
       const loaded = loadAppConfig()
-      expect(loaded.panelSide).toBe('right')
       expect(loaded.autoLockTime).toBe(30)
     })
   })

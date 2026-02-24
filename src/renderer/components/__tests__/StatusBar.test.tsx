@@ -5,21 +5,24 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { StatusBar } from '../StatusBar'
 
+const TRANSLATIONS: Record<string, string> = {
+  'editor.typingTest.switchToTypingMode': 'Switch to Typing Mode',
+  'statusBar.autoAdvance': 'Auto Move',
+  'statusBar.locked': 'Locked',
+  'statusBar.unlocked': 'Unlocked',
+  'statusBar.keyTester': 'Key Tester',
+  'statusBar.sync.pending': 'Pending',
+  'statusBar.sync.syncing': 'Syncing...',
+  'statusBar.sync.synced': 'Synced',
+  'statusBar.sync.error': 'Error',
+  'statusBar.sync.partial': 'Partial',
+}
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       if (key === 'app.connectedTo' && opts?.name) return `Connected to ${opts.name}`
-      if (key === 'common.disconnect') return 'Disconnect'
-      if (key === 'statusBar.autoAdvance') return 'Auto Move'
-      if (key === 'statusBar.locked') return 'Locked'
-      if (key === 'statusBar.unlocked') return 'Unlocked'
-      if (key === 'statusBar.keyTester') return 'Key Tester'
-      if (key === 'statusBar.sync.pending') return 'Pending'
-      if (key === 'statusBar.sync.syncing') return 'Syncing...'
-      if (key === 'statusBar.sync.synced') return 'Synced'
-      if (key === 'statusBar.sync.error') return 'Error'
-      if (key === 'statusBar.sync.partial') return 'Partial'
-      return key
+      return TRANSLATIONS[key] ?? key
     },
   }),
 }))
@@ -31,7 +34,6 @@ describe('StatusBar', () => {
     unlocked: false,
     syncStatus: 'none' as const,
     matrixMode: false,
-    onDisconnect: vi.fn(),
   }
 
   it('renders device name without "Connected to" prefix', () => {
@@ -40,16 +42,17 @@ describe('StatusBar', () => {
     expect(screen.queryByText('Connected to My Keyboard')).not.toBeInTheDocument()
   })
 
-  it('renders disconnect button', () => {
-    render(<StatusBar {...defaultProps} />)
-    expect(screen.getByText('Disconnect')).toBeInTheDocument()
+  it('renders typing mode button when hasMatrixTester and onTypingTestModeChange', () => {
+    render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingTestModeChange={vi.fn()} />)
+    expect(screen.getByTestId('typing-test-button')).toBeInTheDocument()
+    expect(screen.getByText('Switch to Typing Mode')).toBeInTheDocument()
   })
 
-  it('calls onDisconnect when button clicked', () => {
-    const onDisconnect = vi.fn()
-    render(<StatusBar {...defaultProps} onDisconnect={onDisconnect} />)
-    fireEvent.click(screen.getByText('Disconnect'))
-    expect(onDisconnect).toHaveBeenCalledOnce()
+  it('calls onTypingTestModeChange when typing mode button clicked', () => {
+    const onTypingTestModeChange = vi.fn()
+    render(<StatusBar {...defaultProps} hasMatrixTester={true} onTypingTestModeChange={onTypingTestModeChange} />)
+    fireEvent.click(screen.getByTestId('typing-test-button'))
+    expect(onTypingTestModeChange).toHaveBeenCalledOnce()
   })
 
   it('renders different device names', () => {

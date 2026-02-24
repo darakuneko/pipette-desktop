@@ -1,26 +1,65 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useRef, useCallback } from 'react'
-import { serialize, keycodeLabel, keycodeTooltip } from '../../../shared/keycodes/keycodes'
+import { serialize, keycodeTooltip, isMask } from '../../../shared/keycodes/keycodes'
+import { KeyWidget } from '../keyboard/KeyWidget'
+import type { KleKey } from '../../../shared/kle/types'
+import { KEY_UNIT, KEY_SPACING, KEY_FACE_INSET } from '../keyboard/constants'
 
 interface Props {
   value: number
   selected: boolean
+  selectedMaskPart?: boolean
   onSelect: () => void
+  onMaskPartClick?: (part: 'outer' | 'inner') => void
   onDoubleClick?: (rect: DOMRect) => void
   label?: string
 }
 
 const DOUBLE_CLICK_DELAY = 250
 
-export function KeycodeField({ value, selected, onSelect, onDoubleClick, label }: Props) {
+const FIELD_KEY: KleKey = {
+  x: 0,
+  y: 0,
+  width: 1,
+  height: 1,
+  x2: 0,
+  y2: 0,
+  width2: 1,
+  height2: 1,
+  rotation: 0,
+  rotationX: 0,
+  rotationY: 0,
+  color: '',
+  labels: Array(12).fill(null) as (string | null)[],
+  textColor: Array(12).fill(null) as (string | null)[],
+  textSize: Array(12).fill(null) as (number | null)[],
+  row: 0,
+  col: 0,
+  encoderIdx: -1,
+  encoderDir: -1,
+  layoutIndex: -1,
+  layoutOption: -1,
+  decal: false,
+  nub: false,
+  stepped: false,
+  ghost: false,
+}
+
+// Crop viewBox to tightly frame the visible key face
+// Face rect starts at (INSET, INSET) with size (UNIT - SPACING - 2*INSET)
+const FACE_ORIGIN = KEY_FACE_INSET
+const FACE_SIZE = KEY_UNIT - KEY_SPACING - 2 * KEY_FACE_INSET
+export const KEYCODE_FIELD_SIZE = Math.round(FACE_SIZE)
+
+export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, label }: Props) {
   const qmkId = serialize(value)
-  const display = keycodeLabel(qmkId)
   const tooltip = keycodeTooltip(qmkId)
-  const lines = display.split('\n')
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isMasked = onMaskPartClick != null && isMask(qmkId)
 
   const handleClick = useCallback(() => {
+    if (isMasked) return // handled by KeyWidget onClick
     if (onDoubleClick) {
       if (clickTimer.current) clearTimeout(clickTimer.current)
       clickTimer.current = setTimeout(() => {
@@ -30,17 +69,25 @@ export function KeycodeField({ value, selected, onSelect, onDoubleClick, label }
     } else {
       onSelect()
     }
-  }, [onSelect, onDoubleClick])
+  }, [onSelect, onDoubleClick, isMasked])
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (isMasked) return
       if (clickTimer.current) {
         clearTimeout(clickTimer.current)
         clickTimer.current = null
       }
       onDoubleClick?.(e.currentTarget.getBoundingClientRect())
     },
-    [onDoubleClick],
+    [onDoubleClick, isMasked],
+  )
+
+  const handleKeyWidgetClick = useCallback(
+    (_key: KleKey, maskClicked: boolean) => {
+      onMaskPartClick?.(maskClicked ? 'inner' : 'outer')
+    },
+    [onMaskPartClick],
   )
 
   return (
@@ -50,19 +97,25 @@ export function KeycodeField({ value, selected, onSelect, onDoubleClick, label }
       aria-pressed={selected}
       title={tooltip}
       data-testid="keycode-field"
-      className={`flex flex-col items-center justify-center w-[44px] h-[44px] rounded border p-1 text-xs overflow-hidden transition-colors ${
-        selected
-          ? 'border-accent bg-accent/10 ring-2 ring-accent/30 text-accent'
-          : 'border-picker-item-border bg-picker-item-bg text-picker-item-text hover:bg-picker-item-hover hover:border-accent'
-      }`}
+      className={`flex shrink-0 rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border'}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >
-      {lines.map((line, i) => (
-        <span key={i} className="leading-tight whitespace-nowrap text-[10px]">
-          {line}
-        </span>
-      ))}
+      <svg
+        width={KEYCODE_FIELD_SIZE}
+        height={KEYCODE_FIELD_SIZE}
+        viewBox={`${FACE_ORIGIN} ${FACE_ORIGIN} ${FACE_SIZE} ${FACE_SIZE}`}
+      >
+        <KeyWidget
+          kleKey={FIELD_KEY}
+          keycode={qmkId}
+          selected={selected}
+          selectedMaskPart={selectedMaskPart}
+          selectedFill={false}
+          onClick={isMasked ? handleKeyWidgetClick : undefined}
+          hoverMaskParts={isMasked}
+        />
+      </svg>
     </button>
   )
 }

@@ -1,6 +1,8 @@
 {
   "common": {
     "save": "Save",
+    "select": "Select",
+    "clickToSelect": "Click to select",
     "cancel": "Cancel",
     "close": "Close",
     "reset": "Reset",
@@ -43,6 +45,8 @@
       "title": "Keymap",
       "layer": "Layer {{number}}",
       "layerLabel": "Layer",
+      "collapseLayers": "Collapse layers",
+      "expandLayers": "Expand layers",
       "selectKey": "Click a key to edit",
       "tapHoldSettings": "Tap-Hold Settings",
       "tapHoldLabel": "Tap-Hold",
@@ -182,6 +186,8 @@
     },
     "typingTest": {
       "title": "Typing Test",
+      "switchToTypingMode": "Switch to Typing Mode",
+      "exitTypingMode": "Exit Typing Mode",
       "restart": "Restart",
       "wpm": "WPM",
       "accuracy": "Accuracy",
@@ -262,9 +268,6 @@
     "macro": "Macro",
     "user": "User",
     "midi": "MIDI",
-    "hint": {
-      "clickToEdit": "Click a key to open its editor"
-    },
     "group": {
       "characters": "Characters",
       "editing": "Editing",
@@ -307,8 +310,6 @@
       "layerTO": "TO – Turn On Layer",
       "layerLT": "LT – Layer Tap",
       "layerLM": "LM – Layer Mod",
-      "tapDance": "TD",
-      "macroM": "Macro",
       "macroDM": "Dynamic Macro",
       "midiNotes": "Notes",
       "midiOctave": "Octave",
@@ -331,7 +332,7 @@
   },
   "fileIO": {
     "saveLayout": "Export .vil file",
-    "loadLayout": "Import .vil",
+    "loadLayout": ".vil",
     "sideloadJson": "Sideload JSON",
     "exportKeymapC": "Export keymap.c file",
     "exportPdf": "Export keymap PDF",
@@ -472,14 +473,12 @@
     "defaultsDescription": "Applied when a new keyboard connects.",
     "defaultLayout": "Default Layout",
     "defaultAutoAdvance": "Default Auto Move",
+    "defaultLayerPanelOpen": "Default Layer List Open",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",
     "autoLockMinutes": "{{minutes}} min",
     "language": "Language",
-    "panelSide": "Panel Side",
-    "panelLeft": "Left",
-    "panelRight": "Right",
     "tabNotification": "Notification",
     "tabAbout": "About",
     "about": {
@@ -492,10 +491,11 @@
     "title": "Data"
   },
   "editorSettings": {
-    "title": "Settings",
-    "tabLayers": "Layers",
+    "title": "Menu",
     "tabData": "Data",
-    "tabTools": "Tools"
+    "tabSave": "Save",
+    "tabTools": "Settings",
+    "tabLayout": "Layout"
   },
   "hub": {
     "uploadToHub": "Upload",
@@ -511,7 +511,7 @@
     "removeSuccess": "Removed",
     "removeFailed": "Remove failed",
     "confirmRemove": "Remove?",
-    "pipetteHub": "Pipette Hub",
+    "pipetteHub": "Hub",
     "uploadQuestion": "Upload?",
     "deleteFromHub": "Delete",
     "hubConnected": "Hub Connect",
@@ -532,7 +532,7 @@
     "displayNameSaved": "Display name saved",
     "displayNameSaveFailed": "Failed to save display name",
     "displayNameTaken": "This display name is already taken",
-    "openInBrowser": "Open in Browser",
+    "openInBrowser": "Open",
     "pagePrev": "Prev",
     "pageNext": "Next",
     "pageInfo": "{{current}} / {{total}}",

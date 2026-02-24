@@ -1,6 +1,8 @@
 {
   "common": {
     "save": "保存",
+    "select": "選択",
+    "clickToSelect": "クリックして選択",
     "cancel": "キャンセル",
     "close": "閉じる",
     "reset": "リセット",
@@ -43,6 +45,8 @@
       "title": "キーマップ",
       "layer": "Layer {{number}}",
       "layerLabel": "Layer",
+      "collapseLayers": "レイヤーを折りたたむ",
+      "expandLayers": "レイヤーを展開",
       "selectKey": "キーをクリックして編集",
       "tapHoldSettings": "Tap-Hold Settings",
       "tapHoldLabel": "Tap-Hold",
@@ -182,6 +186,8 @@
     },
     "typingTest": {
       "title": "タイピングテスト",
+      "switchToTypingMode": "タイピングモードに切替",
+      "exitTypingMode": "タイピングモードを終了",
       "restart": "やり直す",
       "wpm": "WPM",
       "accuracy": "正確性",
@@ -262,9 +268,6 @@
     "macro": "Macro",
     "user": "User",
     "midi": "MIDI",
-    "hint": {
-      "clickToEdit": "クリックで編集画面を開きます"
-    },
     "group": {
       "characters": "Characters",
       "editing": "Editing",
@@ -307,8 +310,6 @@
       "layerTO": "TO – Turn On Layer",
       "layerLT": "LT – Layer Tap",
       "layerLM": "LM – Layer Mod",
-      "tapDance": "TD",
-      "macroM": "Macro",
       "macroDM": "Dynamic Macro",
       "midiNotes": "Notes",
       "midiOctave": "Octave",
@@ -331,7 +332,7 @@
   },
   "fileIO": {
     "saveLayout": ".vilファイルをエクスポート",
-    "loadLayout": ".vilをインポート",
+    "loadLayout": ".vil",
     "sideloadJson": "JSONサイドロード",
     "exportKeymapC": "keymap.c をエクスポート",
     "exportPdf": "キーマップPDFをエクスポート",
@@ -472,14 +473,12 @@
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
     "defaultLayout": "デフォルトレイアウト",
     "defaultAutoAdvance": "デフォルト自動移動",
+    "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",
     "autoLockMinutes": "{{minutes}}分",
     "language": "言語",
-    "panelSide": "パネル位置",
-    "panelLeft": "左",
-    "panelRight": "右",
     "tabNotification": "お知らせ",
     "tabAbout": "情報",
     "about": {
@@ -492,10 +491,11 @@
     "title": "データ"
   },
   "editorSettings": {
-    "title": "設定",
-    "tabLayers": "Layers",
+    "title": "メニュー",
     "tabData": "データ",
-    "tabTools": "ツール"
+    "tabSave": "保存",
+    "tabTools": "設定",
+    "tabLayout": "レイアウト"
   },
   "hub": {
     "uploadToHub": "アップロード",
@@ -511,7 +511,7 @@
     "removeSuccess": "削除しました",
     "removeFailed": "削除に失敗しました",
     "confirmRemove": "削除しますか？",
-    "pipetteHub": "Pipette Hub",
+    "pipetteHub": "Hub",
     "uploadQuestion": "アップロード？",
     "deleteFromHub": "削除",
     "hubConnected": "Hub 接続",
@@ -532,7 +532,7 @@
     "displayNameSaved": "投稿者名を保存しました",
     "displayNameSaveFailed": "投稿者名の保存に失敗しました",
     "displayNameTaken": "この投稿者名は既に使用されています",
-    "openInBrowser": "ブラウザで開く",
+    "openInBrowser": "開く",
     "pagePrev": "前へ",
     "pageNext": "次へ",
     "pageInfo": "{{current}} / {{total}}",

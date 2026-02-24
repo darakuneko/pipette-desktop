@@ -31,12 +31,16 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   serialize: (code: number) => `KC_${code}`,
   deserialize: (val: string) => Number(val.replace('KC_', '')),
   keycodeLabel: (qmkId: string) => qmkId,
+  codeToLabel: (code: number) => `KC_${code}`,
   keycodeTooltip: (qmkId: string) => qmkId,
   isResetKeycode: () => false,
   isModifiableKeycode: () => false,
   extractModMask: () => 0,
   extractBasicKey: (code: number) => code & 0xff,
   buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+  isMask: () => false,
+  findOuterKeycode: () => undefined,
+  findInnerKeycode: () => undefined,
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
@@ -102,7 +106,11 @@ describe('ComboPanelModal', () => {
       />,
     )
     const tile = screen.getByTestId('combo-tile-0')
-    expect(tile).toHaveTextContent('KC_4 KC_5')
+    expect(tile).toHaveTextContent('K1')
+    expect(tile).toHaveTextContent('KC_4')
+    expect(tile).toHaveTextContent('K2')
+    expect(tile).toHaveTextContent('KC_5')
+    expect(tile).toHaveTextContent('O')
     expect(tile).toHaveTextContent('KC_6')
   })
 
@@ -185,6 +193,7 @@ describe('ComboPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     expect(screen.getByTestId('combo-modal-save')).toBeEnabled()
   })
 
@@ -196,6 +205,7 @@ describe('ComboPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
+    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
     fireEvent.click(screen.getByTestId('combo-modal-save'))
     vi.useRealTimers()
     await waitFor(() => {

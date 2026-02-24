@@ -25,9 +25,9 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
-import { EditorSettingsModal } from './components/editors/EditorSettingsModal'
-import type { ModalTabId } from './components/editors/modal-tabs'
-import type { FileStatus, HubEntryResult } from './components/editors/LayoutStoreModal'
+import { LayoutStoreContent, type FileStatus, type HubEntryResult } from './components/editors/LayoutStoreModal'
+import { ResetKeyboardDataSection } from './components/editors/EditorSettingsModal'
+import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { generateKeymapC } from '../shared/keymap-export'
@@ -35,7 +35,7 @@ import { generateKeymapPdf } from '../shared/pdf-export'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, macroActionsToJson } from '../preload/macro'
+import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson } from '../preload/macro'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -69,6 +69,14 @@ export function App() {
   const keyboard = useKeyboard()
   const sync = useSync()
   const startupNotification = useStartupNotification()
+
+  const deserializedMacros = useMemo(
+    () => keyboard.parsedMacros
+      ?? (keyboard.macroBuffer && keyboard.macroCount
+        ? deserializeAllMacros(keyboard.macroBuffer, keyboard.vialProtocol, keyboard.macroCount)
+        : undefined),
+    [keyboard.parsedMacros, keyboard.macroBuffer, keyboard.macroCount, keyboard.vialProtocol],
+  )
 
   // Wire keyboard's layer name persistence through devicePrefs
   useEffect(() => {
@@ -270,9 +278,9 @@ export function App() {
     else setPrimaryLayer(l)
   }, [dualMode, activePane])
 
-  const [showEditorSettings, setShowEditorSettings] = useState(false)
-  const [editorSettingsTab, setEditorSettingsTab] = useState<ModalTabId>('layers')
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
+  const [confirmingResetKeyboard, setConfirmingResetKeyboard] = useState(false)
+  const [resetBusy, setResetBusy] = useState(false)
   const [showLightingModal, setShowLightingModal] = useState(false)
   const [showComboModal, setShowComboModal] = useState(false)
   const [showAltRepeatKeyModal, setShowAltRepeatKeyModal] = useState(false)
@@ -413,21 +421,6 @@ export function App() {
     void fetchHubUser()
   }, [refreshHubPosts, fetchHubUser])
 
-  const handleOpenEditorSettings = useCallback(async () => {
-    if (device.isDummy) {
-      setEditorSettingsTab('tools')
-    } else {
-      await layoutStore.refreshEntries()
-    }
-    setShowEditorSettings(true)
-  }, [layoutStore, device.isDummy])
-
-  const handleCloseEditorSettings = useCallback(() => {
-    setShowEditorSettings(false)
-    clearFileStatus()
-    setHubUploadResult(null)
-  }, [clearFileStatus])
-
   const handleImportVil = useCallback(async () => {
     const ok = await fileIO.loadLayout()
     if (ok) showFileSuccess('import')
@@ -462,7 +455,6 @@ export function App() {
     const ok = await layoutStore.loadLayout(entryId)
     if (ok) {
       setLastLoadedLabel(entry?.label ?? '')
-      setShowEditorSettings(false)
       clearFileStatus()
     }
   }, [layoutStore, clearFileStatus])
@@ -813,14 +805,14 @@ export function App() {
       setDualMode(false)
       setActivePane('primary')
       setKeymapScale(1)
-      setEditorSettingsTab('layers')
-      setShowEditorSettings(false)
       setShowUnlockDialog(false)
       setUnlockMacroWarning(false)
       setFileSuccessKind(null)
       setLastLoadedLabel('')
       setMatrixState({ matrixMode: false, hasMatrixTester: false })
       setResettingKeyboard(false)
+      setConfirmingResetKeyboard(false)
+      setResetBusy(false)
       setDeviceLoadError(null)
       setHubConnected(false)
       setHubMyPosts([])
@@ -847,7 +839,6 @@ export function App() {
   )
 
   const handleResetKeyboardData = useCallback(async () => {
-    setShowEditorSettings(false)
     setResettingKeyboard(true)
     try {
       const result = await window.vialAPI.resetKeyboardData(keyboard.uid)
@@ -864,6 +855,16 @@ export function App() {
       setResettingKeyboard(false)
     }
   }, [keyboard.uid, handleDisconnect, hubKeyboardPosts])
+
+  const handleConfirmResetKeyboard = useCallback(async () => {
+    setResetBusy(true)
+    try {
+      await handleResetKeyboardData()
+    } finally {
+      setResetBusy(false)
+      setConfirmingResetKeyboard(false)
+    }
+  }, [handleResetKeyboardData])
 
   const handleLock = useCallback(async () => {
     await window.vialAPI.lock()
@@ -935,10 +936,10 @@ export function App() {
             onDefaultLayoutChange={devicePrefs.setDefaultLayout}
             defaultAutoAdvance={devicePrefs.defaultAutoAdvance}
             onDefaultAutoAdvanceChange={devicePrefs.setDefaultAutoAdvance}
+            defaultLayerPanelOpen={devicePrefs.defaultLayerPanelOpen}
+            onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
-            panelSide={devicePrefs.panelSide}
-            onPanelSideChange={devicePrefs.setPanelSide}
             onResetStart={() => setResettingData(true)}
             onResetEnd={() => setResettingData(false)}
             onClose={() => setShowSettings(false)}
@@ -976,6 +977,93 @@ export function App() {
   }
 
   const api = window.vialAPI
+
+  const importBtnClass = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted'
+
+  const toolsExtra = (
+    <>
+      {/* Import */}
+      {(handleImportVil || (!device.isDummy && sideload.sideloadJson)) && (
+        <div className={ROW_CLASS} data-testid="overlay-import-row">
+          <span className="text-[13px] font-medium text-content">{t('layoutStore.import')}</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={importBtnClass}
+              onClick={handleImportVil}
+              disabled={fileIO.saving || fileIO.loading}
+              data-testid="overlay-import-vil"
+            >
+              {t('fileIO.loadLayout')}
+            </button>
+            {!device.isDummy && sideload.sideloadJson && (
+              <button
+                type="button"
+                className={importBtnClass}
+                onClick={sideload.sideloadJson}
+                disabled={fileIO.saving || fileIO.loading}
+                data-testid="overlay-sideload-json"
+              >
+                {t('fileIO.sideloadJson')}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Reset Keyboard Data */}
+      {!device.isDummy && (
+        <ResetKeyboardDataSection
+          confirming={confirmingResetKeyboard}
+          busy={resetBusy}
+          disabled={sync.syncStatus === 'syncing'}
+          disabledTitle={t('sync.resetDisabledWhileSyncing')}
+          deviceName={deviceName}
+          onStartConfirm={() => setConfirmingResetKeyboard(true)}
+          onCancel={() => setConfirmingResetKeyboard(false)}
+          onConfirm={handleConfirmResetKeyboard}
+        />
+      )}
+    </>
+  )
+
+  const dataPanel = (
+    <div className="px-4 pb-3">
+      <LayoutStoreContent
+        entries={layoutStore.entries}
+        loading={layoutStore.loading}
+        saving={layoutStore.saving}
+        fileStatus={fileStatus}
+        isDummy={device.isDummy}
+        defaultSaveLabel={lastLoadedLabel}
+        onSave={layoutStore.saveLayout}
+        onLoad={handleLoadEntry}
+        onRename={handleRenameEntry}
+        onDelete={handleDeleteEntry}
+        onExportVil={handleExportVil}
+        onExportKeymapC={handleExportKeymapC}
+        onExportPdf={handleExportPdf}
+        onExportEntryVil={!device.isDummy ? handleExportEntryVil : undefined}
+        onExportEntryKeymapC={!device.isDummy ? handleExportEntryKeymapC : undefined}
+        onExportEntryPdf={!device.isDummy ? handleExportEntryPdf : undefined}
+        onOverwriteSave={handleOverwriteSave}
+        onUploadToHub={hubCanUpload ? handleUploadToHub : undefined}
+        onUpdateOnHub={hubCanUpload ? handleUpdateOnHub : undefined}
+        onRemoveFromHub={hubReady ? handleRemoveFromHub : undefined}
+        onReuploadToHub={hubCanUpload ? handleReuploadToHub : undefined}
+        onDeleteOrphanedHubPost={hubReady ? handleDeleteOrphanedHubPost : undefined}
+        keyboardName={deviceName}
+        hubOrigin={hubReady ? hubOrigin : undefined}
+        hubMyPosts={hubReady ? hubMyPosts : undefined}
+        hubKeyboardPosts={hubReady ? hubKeyboardPosts : undefined}
+        hubNeedsDisplayName={hubReady && !hubCanUpload}
+        hubUploading={hubUploading}
+        hubUploadResult={hubUploadResult}
+        fileDisabled={fileIO.saving || fileIO.loading}
+        listClassName="overflow-y-auto"
+      />
+    </div>
+  )
 
   // Connected: show editor shell
   // KeymapEditor stays mounted (even during loading) across keyboard.reload(),
@@ -1034,7 +1122,7 @@ export function App() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex-1 overflow-auto p-4" data-testid="editor-content">
+        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-4" data-testid="editor-content">
           <KeymapEditor
             ref={keymapEditorRef}
             layout={keyboard.layout}
@@ -1067,6 +1155,7 @@ export function App() {
             macroBufferSize={keyboard.macroBufferSize}
             macroBuffer={keyboard.macroBuffer}
             vialProtocol={keyboard.vialProtocol}
+            parsedMacros={keyboard.parsedMacros}
             onSaveMacros={keyboard.setMacroBuffer}
             tapHoldSupported={tapHoldSupported}
             mouseKeysSupported={mouseKeysSupported}
@@ -1080,14 +1169,22 @@ export function App() {
             qmkSettingsReset={hasIntegratedSettings ? api.qmkSettingsReset : undefined}
             onSettingsUpdate={hasIntegratedSettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
+            onAutoAdvanceChange={devicePrefs.setAutoAdvance}
+            keyboardLayout={devicePrefs.layout}
+            onKeyboardLayoutChange={devicePrefs.setLayout}
+            onLock={handleLock}
             onMatrixModeChange={handleMatrixModeChange}
             onOpenLighting={lightingSupported ? () => setShowLightingModal(true) : undefined}
             onOpenCombo={comboSupported ? () => setShowComboModal(true) : undefined}
             onOpenAltRepeatKey={altRepeatKeySupported ? () => setShowAltRepeatKeyModal(true) : undefined}
             onOpenKeyOverride={keyOverrideSupported ? () => setShowKeyOverrideModal(true) : undefined}
             layerNames={!device.isDummy ? keyboard.layerNames : undefined}
-            onOpenEditorSettings={handleOpenEditorSettings}
-            panelSide={devicePrefs.panelSide}
+            onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
+            toolsExtra={toolsExtra}
+            dataPanel={dataPanel}
+            onOverlayOpen={!device.isDummy ? layoutStore.refreshEntries : undefined}
+            layerPanelOpen={devicePrefs.layerPanelOpen}
+            onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             scale={keymapScale}
             onScaleChange={adjustKeymapScale}
             dualMode={dualMode}
@@ -1125,6 +1222,8 @@ export function App() {
         hubConnected={sync.authStatus.authenticated ? hubConnected : undefined}
         matrixMode={matrixState.matrixMode}
         typingTestMode={typingTestMode}
+        hasMatrixTester={matrixState.hasMatrixTester}
+        onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
         onDisconnect={handleDisconnect}
       />
 
@@ -1201,6 +1300,8 @@ export function App() {
           qmkSettingsGet={comboTimeoutSupported ? api.qmkSettingsGet : undefined}
           qmkSettingsSet={comboTimeoutSupported ? api.qmkSettingsSet : undefined}
           onSettingsUpdate={comboTimeoutSupported ? keyboard.updateQmkSettingsValue : undefined}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowComboModal(false)}
         />
       )}
@@ -1211,6 +1312,8 @@ export function App() {
           onSetEntry={keyboard.setAltRepeatKeyEntry}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowAltRepeatKeyModal(false)}
         />
       )}
@@ -1221,71 +1324,9 @@ export function App() {
           onSetEntry={keyboard.setKeyOverrideEntry}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowKeyOverrideModal(false)}
-        />
-      )}
-
-      {showEditorSettings && (
-        <EditorSettingsModal
-          entries={layoutStore.entries}
-          loading={layoutStore.loading}
-          saving={layoutStore.saving}
-          fileStatus={fileStatus}
-          isDummy={device.isDummy}
-          defaultSaveLabel={lastLoadedLabel}
-          onSave={layoutStore.saveLayout}
-          onLoad={handleLoadEntry}
-          onRename={handleRenameEntry}
-          onDelete={handleDeleteEntry}
-          onClose={handleCloseEditorSettings}
-          activeTab={editorSettingsTab}
-          onTabChange={setEditorSettingsTab}
-          layers={keyboard.layers}
-          currentLayer={currentLayer}
-          onLayerChange={setCurrentLayer}
-          layerNames={!device.isDummy ? keyboard.layerNames : undefined}
-          onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
-          onImportVil={handleImportVil}
-          onExportVil={handleExportVil}
-          onExportKeymapC={handleExportKeymapC}
-          onExportPdf={handleExportPdf}
-          onSideloadJson={!device.isDummy ? sideload.sideloadJson : undefined}
-          onExportEntryVil={!device.isDummy ? handleExportEntryVil : undefined}
-          onExportEntryKeymapC={!device.isDummy ? handleExportEntryKeymapC : undefined}
-          onExportEntryPdf={!device.isDummy ? handleExportEntryPdf : undefined}
-          onOverwriteSave={handleOverwriteSave}
-          onUploadToHub={hubCanUpload ? handleUploadToHub : undefined}
-          onUpdateOnHub={hubCanUpload ? handleUpdateOnHub : undefined}
-          onRemoveFromHub={hubReady ? handleRemoveFromHub : undefined}
-          onReuploadToHub={hubCanUpload ? handleReuploadToHub : undefined}
-          onDeleteOrphanedHubPost={hubReady ? handleDeleteOrphanedHubPost : undefined}
-          hubOrigin={hubReady ? hubOrigin : undefined}
-          hubMyPosts={hubReady ? hubMyPosts : undefined}
-          hubKeyboardPosts={hubReady ? hubKeyboardPosts : undefined}
-          hubNeedsDisplayName={hubReady && !hubCanUpload}
-          hubUploading={hubUploading}
-          hubUploadResult={hubUploadResult}
-          fileDisabled={fileIO.saving || fileIO.loading}
-          keyboardLayout={devicePrefs.layout}
-          onKeyboardLayoutChange={devicePrefs.setLayout}
-          autoAdvance={devicePrefs.autoAdvance}
-          onAutoAdvanceChange={devicePrefs.setAutoAdvance}
-          unlocked={keyboard.unlockStatus.unlocked}
-          onLock={handleLock}
-          matrixMode={matrixState.matrixMode}
-          hasMatrixTester={matrixState.hasMatrixTester}
-          scale={keymapScale}
-          onScaleChange={adjustKeymapScale}
-          panelSide={devicePrefs.panelSide}
-          syncStatus={sync.syncStatus}
-          onResetKeyboardData={!device.isDummy ? handleResetKeyboardData : undefined}
-          deviceName={deviceName}
-          onToggleMatrix={() => {
-            if (!matrixState.matrixMode && !keyboard.unlockStatus.unlocked) {
-              handleCloseEditorSettings()
-            }
-            keymapEditorRef.current?.toggleMatrix()
-          }}
         />
       )}
 

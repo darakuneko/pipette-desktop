@@ -377,7 +377,7 @@ async function captureEditorSettings(page: Page): Promise<void> {
   const backdrop = page.locator('[data-testid="editor-settings-backdrop"]')
   if (!(await isAvailable(backdrop))) return
 
-  await capture(page, 'editor-settings-layers', { fullPage: true })
+  await capture(page, 'editor-settings-tools', { fullPage: true })
 
   for (const tab of EDITOR_SETTINGS_TABS) {
     // Try English first, then Japanese — handles both locales

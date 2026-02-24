@@ -8,9 +8,10 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserializeAllMacros } from '../../../preload/macro'
+import { deserializeAllMacros, type MacroAction } from '../../../preload/macro'
 import {
   parseLayoutLabels,
   unpackLayoutOptions,
@@ -18,15 +19,16 @@ import {
 } from '../../../shared/layout-options'
 import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { useInlineRename } from '../../hooks/useInlineRename'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
 import { QmkSettings } from './QmkSettings'
 import { ModalCloseButton } from './ModalCloseButton'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
-import type { LayoutOption } from '../../../shared/layout-options'
+import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
-import type { PanelSide } from '../../hooks/useDevicePrefs'
-import { PanelLeftOpen, PanelRightOpen, Columns2, ZoomIn, ZoomOut, Keyboard, LayoutList, Globe } from 'lucide-react'
+import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
+import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, Globe, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -39,6 +41,9 @@ import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 const MIN_SCALE = 0.3
 const MAX_SCALE = 2.0
 
+/** Collapsed width of the layer list panel / toolbar column (3.125rem). */
+const PANEL_COLLAPSED_WIDTH = '3.125rem'
+
 /** Maps KeyboardEvent.code to a resolved key when e.key is 'Process' (IME active). */
 const PROCESS_CODE_TO_KEY = new Map<string, string>([
   ['Space', ' '],
@@ -50,6 +55,7 @@ const PROCESS_CODE_TO_KEY = new Map<string, string>([
 const EMPTY_KEYCODES = new Map<string, string>()
 const EMPTY_REMAPPED = new Set<string>()
 const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
+
 
 const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-nowrap opacity-0 transition-opacity delay-300'
 
@@ -71,7 +77,7 @@ function IconTooltip({ label, side = 'right', children }: {
   )
 }
 
-const CONTROL_BASE = 'rounded-md border px-3 py-1.5 text-[13px]'
+const CONTROL_BASE = 'rounded-md border p-2'
 
 function toggleButtonClass(active: boolean): string {
   const base = `${CONTROL_BASE} transition-colors`
@@ -79,29 +85,148 @@ function toggleButtonClass(active: boolean): string {
   return `${base} border-edge text-content-secondary hover:text-content`
 }
 
-const PAGER_PAGE_SIZE = 5
-const PAGER_CENTER = Math.floor(PAGER_PAGE_SIZE / 2)
-const PAGER_CELL_REM = 1.75
-const PAGER_GAP_REM = 0.125
-const PAGER_STRIDE = PAGER_CELL_REM + PAGER_GAP_REM
-const PAGER_VIEWPORT_REM = PAGER_PAGE_SIZE * PAGER_STRIDE - PAGER_GAP_REM
 
-const PAGER_CELL = 'h-7 w-7 shrink-0'
-const PAGER_BTN_BASE = `flex ${PAGER_CELL} items-center justify-center rounded-full text-[13px] leading-none transition-colors`
+const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-[12px] font-semibold tabular-nums transition-colors'
+const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-md border px-3 py-1.5 transition-colors'
 
-function layerButtonClass(active: boolean): string {
-  if (active) return `${PAGER_BTN_BASE} font-semibold text-tab-text-active`
-  return `${PAGER_BTN_BASE} text-tab-text hover:text-content`
+function layerNumClass(active: boolean): string {
+  if (active) return `${LAYER_NUM_BASE} border-accent bg-accent text-content-inverse`
+  return `${LAYER_NUM_BASE} border-edge bg-surface/20 text-content-muted hover:bg-surface-dim`
 }
 
-
-function PagerSpacers({ count, prefix }: { count: number; prefix: string }) {
-  return Array.from({ length: count }, (_, i) => (
-    <div key={`${prefix}-${i}`} className={PAGER_CELL} />
-  ))
+function layerNameClass(active: boolean, editable: boolean): string {
+  const base = editable ? `${LAYER_NAME_BASE} cursor-pointer` : LAYER_NAME_BASE
+  if (active) return `${base} border-accent/50 bg-accent/5`
+  return `${base} border-edge bg-surface/20 hover:border-content-muted/30`
 }
 
-const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
+const LAYER_TOGGLE_BTN = 'flex items-center justify-center rounded-md p-0.5 text-content-muted hover:text-content hover:bg-surface-dim transition-colors'
+
+interface LayerListPanelProps {
+  layers: number
+  currentLayer: number
+  onLayerChange: (layer: number) => void
+  layerNames?: string[]
+  onSetLayerName?: (layer: number, name: string) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
+}
+
+function LayerNumButton({ index, active, onLayerChange }: {
+  index: number
+  active: boolean
+  onLayerChange: (layer: number) => void
+}) {
+  return (
+    <div
+      className={layerNumClass(active)}
+      data-testid={`layer-panel-layer-num-${index}`}
+      onClick={() => onLayerChange(index)}
+    >
+      {index}
+    </div>
+  )
+}
+
+function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSetLayerName, collapsed, onToggleCollapse }: LayerListPanelProps) {
+  const { t } = useTranslation()
+  const layerRename = useInlineRename<number>()
+
+  function commitLayerRename(layerIndex: number): void {
+    const trimmed = layerRename.commitRename(layerIndex)
+    if (trimmed !== null) {
+      const changed = trimmed !== (layerNames?.[layerIndex] ?? '')
+      if (changed && onSetLayerName) {
+        onSetLayerName(layerIndex, trimmed)
+      }
+    }
+  }
+
+  function handleLayerRenameKeyDown(e: React.KeyboardEvent<HTMLInputElement>, layerIndex: number): void {
+    if (e.key === 'Enter') {
+      commitLayerRename(layerIndex)
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      layerRename.cancelRename()
+    }
+  }
+
+  // Outer container clips content and transitions width.
+  // Inner content is always full-width (w-44); collapsing just shrinks the
+  // visible area so names slide out horizontally.
+  return (
+    <div
+      className="shrink-0 overflow-hidden rounded-[10px] border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
+      style={{ width: collapsed ? PANEL_COLLAPSED_WIDTH : '11rem' }}
+      data-testid={collapsed ? 'layer-list-panel-collapsed' : 'layer-list-panel'}
+    >
+      <div className="flex h-full w-44 flex-col p-2">
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-1 pb-1">
+            {Array.from({ length: layers }, (_, i) => {
+              const name = layerNames?.[i] ?? ''
+              const defaultLabel = t('editor.keymap.layerN', { n: i })
+              const isActive = i === currentLayer
+              const isEditing = !collapsed && layerRename.editingId === i
+
+              return (
+                <div
+                  key={i}
+                  className="flex shrink-0 items-center gap-1.5"
+                  data-testid={`layer-panel-layer-${i}`}
+                >
+                  <LayerNumButton index={i} active={isActive} onLayerChange={onLayerChange} />
+                  <div
+                    className={`${collapsed ? 'hidden' : layerNameClass(isActive, !!onSetLayerName)}${layerRename.confirmedId === i ? ' confirm-flash' : ''}`}
+                    data-testid={`layer-panel-layer-name-box-${i}`}
+                    onClick={!collapsed && onSetLayerName ? () => { if (!isEditing) layerRename.startRename(i, name) } : undefined}
+                  >
+                    {isEditing && onSetLayerName ? (
+                      <input
+                        data-testid={`layer-panel-layer-name-input-${i}`}
+                        className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
+                        value={layerRename.editLabel}
+                        onChange={(e) => layerRename.setEditLabel(e.target.value)}
+                        placeholder={defaultLabel}
+                        autoFocus
+                        maxLength={32}
+                        onBlur={() => commitLayerRename(i)}
+                        onKeyDown={(e) => handleLayerRenameKeyDown(e, i)}
+                      />
+                    ) : (
+                      <span
+                        className={`block truncate text-[12px] ${isActive ? 'text-content' : 'text-content-secondary'}`}
+                        data-testid={`layer-panel-layer-name-${i}`}
+                      >
+                        {name || defaultLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        <div className="shrink-0">
+          <div className="border-t border-edge" style={collapsed ? { maxWidth: '2rem' } : undefined} />
+          <div className="flex pt-2">
+            <button
+              type="button"
+              className={LAYER_TOGGLE_BTN}
+              onClick={onToggleCollapse}
+              aria-label={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}
+              data-testid={collapsed ? 'layer-panel-expand-btn' : 'layer-panel-collapse-btn'}
+            >
+              {collapsed ? <ChevronsRight size={14} aria-hidden="true" /> : <ChevronsLeft size={14} aria-hidden="true" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const COPY_BTN_BASE = 'rounded border px-1.5 py-0.5 text-xs leading-none disabled:opacity-50'
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
 
@@ -212,8 +337,16 @@ function KeyboardPane({
           readOnly={isDualMode ? !isActive : false}
         />
       </div>
-      {isActive && isDualMode && onCopyAll && (
-        <div className="flex items-center justify-center gap-2 py-1">
+      {isActive && !onCopyAll && pasteHint && (
+        <div data-testid="paste-hint" className="flex items-center justify-center py-1 text-xs text-content-muted">
+          {pasteHint}
+        </div>
+      )}
+      <div className="flex items-center justify-between px-[5px] text-xs leading-none text-content-muted">
+        <span data-testid={layerLabelTestId} className="text-content-muted">
+          {layerLabel}
+        </span>
+        {isActive && isDualMode && onCopyAll && (
           <button
             type="button"
             data-testid="copy-all-button"
@@ -225,17 +358,7 @@ function KeyboardPane({
           >
             {copyAllPending || t('editor.keymap.copyAll')}
           </button>
-        </div>
-      )}
-      {isActive && !onCopyAll && pasteHint && (
-        <div data-testid="paste-hint" className="flex items-center justify-center py-1 text-xs text-content-muted">
-          {pasteHint}
-        </div>
-      )}
-      <div className="flex items-center justify-between px-[5px] text-xs leading-none text-content-muted">
-        <span data-testid={layerLabelTestId} className="text-content-muted">
-          {layerLabel}
-        </span>
+        )}
         <span className="flex items-center gap-1.5">
           {isActive && selectedKeycode && (
             <>
@@ -303,75 +426,6 @@ function SettingsModal({
   )
 }
 
-interface LayoutOptionsPanelProps {
-  options: LayoutOption[]
-  values: Map<number, number>
-  onChange: (index: number, value: number) => void
-}
-
-function LayoutOptionsPanel({ options, values, onChange }: LayoutOptionsPanelProps) {
-  // Compute the widest select option label to align all selects
-  const hasSelect = options.some((opt) => opt.labels.length > 2)
-  const selectRef = useRef<HTMLSelectElement>(null)
-  const [selectWidth, setSelectWidth] = useState<number | undefined>(undefined)
-
-  useEffect(() => {
-    if (!hasSelect || !selectRef.current) return
-    // Measure the natural width of the hidden sizer select
-    setSelectWidth(selectRef.current.offsetWidth)
-  }, [hasSelect, options])
-
-  // All choice labels across all selects (for the sizer)
-  const allChoiceLabels = useMemo(
-    () => options.filter((o) => o.labels.length > 2).flatMap((o) => o.labels.slice(1)),
-    [options],
-  )
-
-  return (
-    <div className="px-4 py-3 space-y-2">
-      {/* Hidden sizer select to measure the widest option */}
-      {hasSelect && (
-        <select
-          ref={selectRef}
-          className="invisible absolute rounded-md border border-edge px-3 py-1 text-xs"
-          tabIndex={-1}
-          aria-hidden="true"
-        >
-          {allChoiceLabels.map((label, i) => (
-            <option key={i}>{label}</option>
-          ))}
-        </select>
-      )}
-      {options.map((opt) => {
-        const val = values.get(opt.index) ?? 0
-        const isBoolean = opt.labels.length <= 2
-        return (
-          <label key={opt.index} className="flex items-center justify-between gap-4 cursor-pointer">
-            <span className="text-xs text-content-secondary">{opt.labels[0]}</span>
-            {isBoolean ? (
-              <input
-                type="checkbox"
-                checked={val === 1}
-                onChange={() => onChange(opt.index, val === 1 ? 0 : 1)}
-              />
-            ) : (
-              <select
-                value={val}
-                onChange={(e) => onChange(opt.index, Number(e.target.value))}
-                className="rounded-md border border-edge bg-surface-alt px-3 py-1 text-xs text-content-secondary"
-                style={selectWidth ? { width: selectWidth } : undefined}
-              >
-                {opt.labels.slice(1).map((label, i) => (
-                  <option key={i} value={i}>{label}</option>
-                ))}
-              </select>
-            )}
-          </label>
-        )
-      })}
-    </div>
-  )
-}
 
 interface PopoverForStateProps {
   popoverState: NonNullable<
@@ -422,6 +476,7 @@ function PopoverForState({
 
 export interface KeymapEditorHandle {
   toggleMatrix: () => void
+  toggleTypingTest: () => void
   matrixMode: boolean
   hasMatrixTester: boolean
 }
@@ -454,7 +509,8 @@ interface Props {
   macroBufferSize?: number
   macroBuffer?: number[]
   vialProtocol?: number
-  onSaveMacros?: (buffer: number[]) => Promise<void>
+  parsedMacros?: MacroAction[][] | null
+  onSaveMacros?: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
   tapHoldSupported?: boolean
   mouseKeysSupported?: boolean
   magicSupported?: boolean
@@ -467,14 +523,22 @@ interface Props {
   qmkSettingsReset?: () => Promise<void>
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   autoAdvance?: boolean
+  onAutoAdvanceChange?: (enabled: boolean) => void
+  keyboardLayout?: KeyboardLayoutId
+  onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void
   onOpenCombo?: () => void
   onOpenAltRepeatKey?: () => void
   onOpenKeyOverride?: () => void
-  onOpenEditorSettings?: () => void
-  panelSide?: PanelSide
+  toolsExtra?: React.ReactNode
+  dataPanel?: React.ReactNode
+  onOverlayOpen?: () => void
   layerNames?: string[]
+  onSetLayerName?: (layer: number, name: string) => void
+  layerPanelOpen?: boolean
+  onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
   dualMode?: boolean
@@ -523,6 +587,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   macroBufferSize,
   macroBuffer,
   vialProtocol,
+  parsedMacros,
   onSaveMacros,
   tapHoldSupported,
   mouseKeysSupported,
@@ -536,14 +601,22 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   qmkSettingsReset,
   onSettingsUpdate,
   autoAdvance = true,
+  onAutoAdvanceChange,
+  keyboardLayout = 'qwerty',
+  onKeyboardLayoutChange,
+  onLock,
   onMatrixModeChange,
   onOpenLighting,
   onOpenCombo,
   onOpenAltRepeatKey,
   onOpenKeyOverride,
-  onOpenEditorSettings,
-  panelSide = 'left',
+  toolsExtra,
+  dataPanel,
+  onOverlayOpen,
   layerNames,
+  onSetLayerName,
+  layerPanelOpen: layerPanelOpenProp,
+  onLayerPanelOpenChange,
   scale: scaleProp = 1,
   onScaleChange,
   dualMode,
@@ -574,6 +647,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [showAutoShiftSettings, setShowAutoShiftSettings] = useState(false)
   const [showOneShotKeysSettings, setShowOneShotKeysSettings] = useState(false)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const layerPanelCollapsed = layerPanelOpenProp === false
+  const toggleLayerPanel = useCallback(() => {
+    onLayerPanelOpenChange?.(!layerPanelOpenProp)
+  }, [onLayerPanelOpenChange, layerPanelOpenProp])
   const [matrixMode, setMatrixMode] = useState(false)
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set())
   const [everPressedKeys, setEverPressedKeys] = useState<Set<string>>(new Set())
@@ -644,6 +721,15 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
   }, [macroModalIndex, macroCount])
 
+  // Use preserved structured macros if available; otherwise deserialize from buffer.
+  const deserializedMacros = useMemo(
+    () => parsedMacros
+      ?? (macroBuffer && macroCount
+        ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
+        : undefined),
+    [parsedMacros, macroBuffer, macroCount, vialProtocol],
+  )
+
   // Build a set of TD/Macro qmkIds that have at least one action configured
   const configuredKeycodes = useMemo(() => {
     const set = new Set<string>()
@@ -655,16 +741,15 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         }
       }
     }
-    if (macroBuffer && macroCount) {
-      const macros = deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
-      for (let i = 0; i < macros.length; i++) {
-        if (macros[i].length > 0) {
+    if (deserializedMacros) {
+      for (let i = 0; i < deserializedMacros.length; i++) {
+        if (deserializedMacros[i].length > 0) {
           set.add(`M${i}`)
         }
       }
     }
     return set.size > 0 ? set : undefined
-  }, [tapDanceEntries, macroBuffer, macroCount, vialProtocol])
+  }, [tapDanceEntries, deserializedMacros])
 
   const remap = remapLabel ?? ((id: string) => id)
 
@@ -702,17 +787,45 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       effectiveLayoutOptions,
     )
     if (visible.length === 0) return 0
+    const s = KEY_UNIT * scaleProp
+    const spacing = KEY_SPACING * scaleProp
     let minY = Infinity
     let maxY = -Infinity
     for (const key of visible) {
-      const ky0 = KEY_UNIT * key.y
-      const ky1 = KEY_UNIT * (key.y + key.height) - KEY_SPACING
-      if (ky0 < minY) minY = ky0
-      if (ky1 > maxY) maxY = ky1
+      // Collect actual corners (4 per rect, not the Cartesian product)
+      const x0 = s * key.x
+      const y0 = s * key.y
+      const x1 = s * (key.x + key.width) - spacing
+      const y1 = s * (key.y + key.height) - spacing
+      const corners: [number, number][] = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+      const has2 = key.width2 !== key.width || key.height2 !== key.height || key.x2 !== 0 || key.y2 !== 0
+      if (has2) {
+        const sx0 = x0 + s * key.x2
+        const sy0 = y0 + s * key.y2
+        const sx1 = s * (key.x + key.x2 + key.width2) - spacing
+        const sy1 = s * (key.y + key.y2 + key.height2) - spacing
+        corners.push([sx0, sy0], [sx1, sy0], [sx1, sy1], [sx0, sy1])
+      }
+      if (key.rotation !== 0) {
+        const cx = s * key.rotationX
+        const cy = s * key.rotationY
+        const rad = (key.rotation * Math.PI) / 180
+        const cos = Math.cos(rad)
+        const sin = Math.sin(rad)
+        for (const [px, py] of corners) {
+          const ry = cy + (px - cx) * sin + (py - cy) * cos
+          if (ry < minY) minY = ry
+          if (ry > maxY) maxY = ry
+        }
+      } else {
+        for (const [, py] of corners) {
+          if (py < minY) minY = py
+          if (py > maxY) maxY = py
+        }
+      }
     }
-    const keySpan = (maxY - minY) * scaleProp
     const fixedChrome = KEYBOARD_PADDING * 2 + 20 + 16 // SVG padding + pt-3+pb-2 (20px) + info row (~16px)
-    return keySpan + fixedChrome
+    return maxY - minY + fixedChrome
   }, [layout, effectiveLayoutOptions, scaleProp])
 
   // Visible non-encoder, non-decal keys for Shift+click range selection
@@ -996,9 +1109,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   useImperativeHandle(ref, () => ({
     toggleMatrix: handleMatrixToggle,
+    toggleTypingTest: handleTypingTestToggle,
     matrixMode,
     hasMatrixTester,
-  }), [handleMatrixToggle, matrixMode, hasMatrixTester])
+  }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester])
 
   // Build keycodes map for a given layer: "row,col" -> serialized QMK ID
   // Also build a set of position keys whose keycode is remapped in the current layout
@@ -1582,6 +1696,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     return content
   }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, onOpenCombo, onOpenAltRepeatKey, onOpenKeyOverride, t])
 
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect)
+
   if (!layout) {
     return <div className="p-4 text-content-muted">{t('common.loading')}</div>
   }
@@ -1618,20 +1734,11 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
   const toolbar = (
-    <div className="flex shrink-0 flex-col gap-1 self-start">
-      {!typingTestMode && onOpenEditorSettings && (
-        <IconTooltip label={t('editorSettings.title')}>
-          <button
-            type="button"
-            data-testid="editor-settings-button"
-            aria-label={t('editorSettings.title')}
-            className={toggleButtonClass(false)}
-            onClick={onOpenEditorSettings}
-          >
-            {panelSide === 'left' ? <PanelLeftOpen size={16} aria-hidden="true" /> : <PanelRightOpen size={16} aria-hidden="true" />}
-          </button>
-        </IconTooltip>
-      )}
+    <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
+      {/* Spacer to push dual/zoom to vertical center */}
+      <div className="flex-1" />
+
+      {/* Dual mode + zoom — vertically centered */}
       {!typingTestMode && onDualModeChange && (
         <IconTooltip label={t('editor.keymap.dualMode')}>
           <button
@@ -1642,19 +1749,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             onClick={() => onDualModeChange(!dualMode)}
           >
             <Columns2 size={16} aria-hidden="true" />
-          </button>
-        </IconTooltip>
-      )}
-      {onTypingTestModeChange && hasMatrixTester && (
-        <IconTooltip label={t('editor.typingTest.title')}>
-          <button
-            type="button"
-            data-testid="typing-test-button"
-            aria-label={t('editor.typingTest.title')}
-            className={toggleButtonClass(typingTestMode ?? false)}
-            onClick={handleTypingTestToggle}
-          >
-            <Keyboard size={16} aria-hidden="true" />
           </button>
         </IconTooltip>
       )}
@@ -1686,56 +1780,21 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           </IconTooltip>
         </>
       )}
-      {!typingTestMode && onLayerChange && layers > 1 && (
-        <div className="flex flex-col items-center" role="group" aria-label={t('editor.keymap.layerLabel')}>
-          <div
-            className="relative overflow-hidden"
-            style={{
-              width: `${PAGER_CELL_REM}rem`,
-              height: `${PAGER_VIEWPORT_REM}rem`,
-            }}
-          >
-            <div
-              className={`pointer-events-none absolute left-0 rounded-full bg-tab-bg-active ${PAGER_CELL}`}
-              style={{ top: `${PAGER_CENTER * PAGER_STRIDE}rem` }}
-            />
-            <div
-              className="absolute left-0 flex flex-col transition-transform duration-200 ease-out"
-              style={{
-                gap: `${PAGER_GAP_REM}rem`,
-                transform: `translateY(${-currentLayer * PAGER_STRIDE}rem)`,
-              }}
-            >
-              <PagerSpacers count={PAGER_CENTER} prefix="pre" />
-              {Array.from({ length: layers }, (_, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className={layerButtonClass(i === currentLayer)}
-                  aria-current={i === currentLayer ? 'true' : undefined}
-                  onClick={() => { if (i !== currentLayer) onLayerChange(i) }}
-                  aria-label={t('editor.keymap.layerN', { n: i })}
-                >
-                  {i}
-                </button>
-              ))}
-              <PagerSpacers count={PAGER_CENTER} prefix="post" />
-            </div>
-          </div>
-        </div>
-      )}
+
+      {/* Spacer to balance */}
+      <div className="flex-1" />
     </div>
   )
 
   return (
-    <div className="flex h-full flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       {/* Keyboard area with toolbar */}
       <div
         className="flex items-start gap-2 overflow-auto"
         style={!typingTestMode && keyboardAreaMinHeight ? { minHeight: keyboardAreaMinHeight } : undefined}
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
-        {panelSide === 'left' && toolbar}
+        {toolbar}
         <div className={typingTestMode
           ? 'flex min-w-0 flex-1 flex-col gap-3'
           : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'
@@ -1906,7 +1965,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             </>
           )}
         </div>
-        {panelSide === 'right' && toolbar}
+        {/* Counterbalance toolbar width so keyboard centers in full width (single pane only) */}
+        {!dualMode && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (
@@ -1924,52 +1984,86 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       )}
 
       {/* Keycode palette */}
-      {!typingTestMode && <TabbedKeycodes
-        onKeycodeSelect={handleKeycodeSelect}
-        onKeycodeMultiSelect={handlePickerMultiSelect}
-        pickerSelectedKeycodes={pickerSelectedSet}
-        onBackgroundClick={handleDeselect}
-        highlightedKeycodes={configuredKeycodes}
-        maskOnly={isMaskKey}
-        lmMode={isLMMask}
-        showHint={!isMaskKey}
-        tabFooterContent={tabFooterContent}
-        tabBarRight={hasLayoutOptions ? (
-          <IconTooltip label={t('editor.layout.options')} side="top-end">
-            <button
-              ref={layoutButtonRef}
-              type="button"
-              aria-label={t('editor.layout.options')}
-              aria-expanded={layoutPanelOpen}
-              aria-controls="layout-options-panel"
-              className={`rounded p-1 transition-colors ${
-                layoutPanelOpen
-                  ? 'bg-surface-dim text-accent'
-                  : 'text-content-secondary hover:bg-surface-dim hover:text-content'
-              }`}
-              onClick={() => setLayoutPanelOpen((prev) => !prev)}
-            >
-              <LayoutList size={16} aria-hidden="true" />
-            </button>
-          </IconTooltip>
-        ) : undefined}
-        panelOverlay={hasLayoutOptions ? (
-          <div
-            id="layout-options-panel"
-            ref={layoutPanelRef}
-            className={`absolute inset-y-0 right-0 z-10 w-fit overflow-y-auto rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${
-              layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'
-            }`}
-            inert={!layoutPanelOpen || undefined}
-          >
-            <LayoutOptionsPanel
-              options={parsedOptions}
-              values={layoutValues}
-              onChange={handleLayoutOptionChange}
+      {!typingTestMode && (
+        <div className="flex min-h-0 flex-1 gap-2">
+          {onLayerChange && layers > 1 && (
+            <LayerListPanel
+              layers={layers}
+              currentLayer={currentLayer}
+              onLayerChange={onLayerChange}
+              layerNames={layerNames}
+              onSetLayerName={onSetLayerName}
+              collapsed={layerPanelCollapsed}
+              onToggleCollapse={toggleLayerPanel}
             />
-          </div>
-        ) : undefined}
-      />}
+          )}
+          <TabbedKeycodes
+            onKeycodeSelect={handleKeycodeSelect}
+            onKeycodeMultiSelect={handlePickerMultiSelect}
+            pickerSelectedKeycodes={pickerSelectedSet}
+            onBackgroundClick={handleDeselect}
+            highlightedKeycodes={configuredKeycodes}
+            maskOnly={isMaskKey}
+            lmMode={isLMMask}
+            showHint={!isMaskKey}
+            tabFooterContent={tabFooterContent}
+            tabContentOverride={tabContentOverride}
+            tabBarRight={
+              <button
+                ref={layoutButtonRef}
+                type="button"
+                aria-label={t('editorSettings.title')}
+                aria-expanded={layoutPanelOpen}
+                aria-controls="keycodes-overlay-panel"
+                className={`rounded p-1 transition-colors ${
+                  layoutPanelOpen
+                    ? 'bg-surface-dim text-accent'
+                    : 'text-content-secondary hover:bg-surface-dim hover:text-content'
+                }`}
+                onClick={() => {
+                  setLayoutPanelOpen((prev) => {
+                    if (!prev) onOverlayOpen?.()
+                    return !prev
+                  })
+                }}
+              >
+                <SlidersHorizontal size={16} aria-hidden="true" />
+              </button>
+            }
+            panelOverlay={
+              <div
+                id="keycodes-overlay-panel"
+                ref={layoutPanelRef}
+                className={`absolute inset-y-0 right-0 z-10 w-fit min-w-[320px] rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${
+                  layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'
+                }`}
+                inert={!layoutPanelOpen || undefined}
+              >
+                <KeycodesOverlayPanel
+                  hasLayoutOptions={hasLayoutOptions}
+                  layoutOptions={parsedOptions}
+                  layoutValues={layoutValues}
+                  onLayoutOptionChange={handleLayoutOptionChange}
+                  keyboardLayout={keyboardLayout}
+                  onKeyboardLayoutChange={onKeyboardLayoutChange}
+                  scale={scaleProp}
+                  onScaleChange={onScaleChange}
+                  autoAdvance={autoAdvance}
+                  onAutoAdvanceChange={onAutoAdvanceChange}
+                  matrixMode={matrixMode}
+                  hasMatrixTester={hasMatrixTester}
+                  onToggleMatrix={handleMatrixToggle}
+                  unlocked={unlocked ?? false}
+                  onLock={onLock}
+                  isDummy={isDummy}
+                  toolsExtra={toolsExtra}
+                  dataPanel={dataPanel}
+                />
+              </div>
+            }
+          />
+        </div>
+      )}
 
       {tdModalIndex !== null && tapDanceEntries && onSetTapDanceEntry && (
         <TapDanceModal
@@ -1978,6 +2072,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           onSave={handleTdModalSave}
           onClose={handleTdModalClose}
           isDummy={isDummy}
+          tapDanceEntries={tapDanceEntries}
+          deserializedMacros={deserializedMacros}
         />
       )}
 
@@ -1989,10 +2085,13 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           macroBuffer={macroBuffer}
           vialProtocol={vialProtocol ?? 0}
           onSaveMacros={onSaveMacros}
+          parsedMacros={parsedMacros}
           onClose={handleMacroModalClose}
           unlocked={unlocked}
           onUnlock={onUnlock}
           isDummy={isDummy}
+          tapDanceEntries={tapDanceEntries}
+          deserializedMacros={deserializedMacros}
         />
       )}
 

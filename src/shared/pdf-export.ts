@@ -3,7 +3,8 @@
 
 import { jsPDF } from 'jspdf'
 import type { KleKey } from './kle/types'
-import { filterVisibleKeys, repositionLayoutKeys } from './kle/filter-keys'
+import { filterVisibleKeys, hasSecondaryRect, repositionLayoutKeys } from './kle/filter-keys'
+import { computeUnionPolygon, insetAxisAlignedPolygon } from './kle/rect-union'
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer)
@@ -44,7 +45,10 @@ const USABLE_WIDTH = PAGE_WIDTH - MARGIN * 2
 const FOOTER_HEIGHT = 6
 const LAYER_HEADER_HEIGHT = 7
 const BORDER_PAD = 4
-const SPACING_RATIO = 0.2
+// Match Python vial-gui: size=3.2, spacing=0.2, full_cell=3.4
+// spacing_fraction = spacing / full_cell, face_inset = shadow_padding / full_cell
+const SPACING_FRACTION = 0.2 / 3.4 // ≈ 0.0588
+const FACE_INSET_FRACTION = 0.1 / 3.4 // ≈ 0.0294
 const ROUNDNESS = 0.08
 
 // Font size caps: Math.min(absolute max pt, scale-relative max pt)
@@ -104,12 +108,7 @@ function keyCorners(key: KleKey): [number, number][] {
     [key.x + key.width, key.y + key.height],
     [key.x, key.y + key.height],
   ]
-  const has2 =
-    key.width2 !== key.width ||
-    key.height2 !== key.height ||
-    key.x2 !== 0 ||
-    key.y2 !== 0
-  if (has2) {
+  if (hasSecondaryRect(key)) {
     corners.push(
       [key.x + key.x2, key.y + key.y2],
       [key.x + key.x2 + key.width2, key.y + key.y2],
@@ -204,6 +203,74 @@ function applyKeyRotation(
   doc.setCurrentTransformationMatrix(matrix)
 }
 
+/** Cubic Bézier kappa for 90° arc approximation: 4*(√2 − 1)/3 */
+const KAPPA = 0.5522847498
+
+/**
+ * Draw a filled+stroked polygon with rounded convex corners using jsPDF lines().
+ * Mirrors the SVG polygonToSvgPath logic for PDF output.
+ */
+function drawRoundedPolygon(
+  doc: jsPDF,
+  vertices: [number, number][],
+  cornerRadius: number,
+  style: string,
+): void {
+  const n = vertices.length
+  if (n < 3) return
+
+  const arcs = vertices.map((curr, i) => {
+    const prev = vertices[(i - 1 + n) % n]
+    const next = vertices[(i + 1) % n]
+    const dx1 = curr[0] - prev[0]
+    const dy1 = curr[1] - prev[1]
+    const len1 = Math.hypot(dx1, dy1)
+    const dx2 = next[0] - curr[0]
+    const dy2 = next[1] - curr[1]
+    const len2 = Math.hypot(dx2, dy2)
+    // Cross product > 0 = right turn (convex) in screen coords (y-down CW winding)
+    const isConvex = dx1 * dy2 - dy1 * dx2 > 0
+    const maxR = Math.min(len1, len2) / 2
+    const actualR = isConvex ? Math.min(cornerRadius, maxR) : 0
+    if (actualR <= 0) {
+      return { sx: curr[0], sy: curr[1], ex: curr[0], ey: curr[1], r: 0, tdx1: 0, tdy1: 0, tdx2: 0, tdy2: 0 }
+    }
+    return {
+      sx: curr[0] - (dx1 / len1) * actualR,
+      sy: curr[1] - (dy1 / len1) * actualR,
+      ex: curr[0] + (dx2 / len2) * actualR,
+      ey: curr[1] + (dy2 / len2) * actualR,
+      r: actualR,
+      tdx1: dx1 / len1, tdy1: dy1 / len1, // incoming edge unit direction
+      tdx2: dx2 / len2, tdy2: dy2 / len2, // outgoing edge unit direction
+    }
+  })
+
+  // Build relative-coordinate segments for doc.lines()
+  const segs: number[][] = []
+  let penX = arcs[0].ex
+  let penY = arcs[0].ey
+  for (let i = 1; i <= n; i++) {
+    const a = arcs[i % n]
+    // Straight line to arc start
+    segs.push([a.sx - penX, a.sy - penY])
+    penX = a.sx
+    penY = a.sy
+    if (a.r > 0) {
+      // Cubic Bezier: CP1 tangent to incoming edge, CP2 tangent to outgoing edge
+      const c1x = a.sx + KAPPA * a.r * a.tdx1
+      const c1y = a.sy + KAPPA * a.r * a.tdy1
+      const c2x = a.ex - KAPPA * a.r * a.tdx2
+      const c2y = a.ey - KAPPA * a.r * a.tdy2
+      segs.push([c1x - penX, c1y - penY, c2x - penX, c2y - penY, a.ex - penX, a.ey - penY])
+      penX = a.ex
+      penY = a.ey
+    }
+  }
+
+  doc.lines(segs, arcs[0].ex, arcs[0].ey, [1, 1], style, true)
+}
+
 function drawKey(
   doc: jsPDF,
   key: KleKey,
@@ -219,12 +286,21 @@ function drawKey(
     applyKeyRotation(doc, key, offsetX, offsetY, scale)
   }
 
-  const spacing = scale * SPACING_RATIO
-  const x = offsetX + key.x * scale
-  const y = offsetY + key.y * scale
-  const w = key.width * scale - spacing
-  const h = key.height * scale - spacing
+  const spacing = scale * SPACING_FRACTION
+  const inset = scale * FACE_INSET_FRACTION
   const corner = scale * ROUNDNESS
+
+  // Grid-cell rect (before face inset)
+  const gx = offsetX + key.x * scale
+  const gy = offsetY + key.y * scale
+  const gw = key.width * scale - spacing
+  const gh = key.height * scale - spacing
+
+  // Visual face rect (inset from grid cell)
+  const x = gx + inset
+  const y = gy + inset
+  const w = gw - 2 * inset
+  const h = gh - 2 * inset
 
   const code = input.keymap.get(`${layer},${key.row},${key.col}`) ?? 0
   const qmkId = input.serializeKeycode(code)
@@ -233,7 +309,23 @@ function drawKey(
 
   doc.setDrawColor(0)
   doc.setFillColor(255, 255, 255)
-  doc.roundedRect(x, y, w, h, corner, corner, 'FD')
+
+  if (hasSecondaryRect(key)) {
+    // Union polygon for ISO/stepped keys
+    const gx2 = gx + key.x2 * scale
+    const gy2 = gy + key.y2 * scale
+    const gw2 = key.width2 * scale - spacing
+    const gh2 = key.height2 * scale - spacing
+    const verts = computeUnionPolygon(gx, gy, gw, gh, gx2, gy2, gw2, gh2)
+    if (verts.length > 0) {
+      drawRoundedPolygon(doc, insetAxisAlignedPolygon(verts, inset), corner, 'FD')
+    } else {
+      // Fallback: non-overlapping secondary rect, draw primary rect only
+      doc.roundedRect(x, y, w, h, corner, corner, 'FD')
+    }
+  } else {
+    doc.roundedRect(x, y, w, h, corner, corner, 'FD')
+  }
 
   if (masked) {
     // Inner rect for masked keys (modifier + base key)
@@ -308,7 +400,7 @@ function drawEncoder(
     applyKeyRotation(doc, key, offsetX, offsetY, scale)
   }
 
-  const spacing = scale * SPACING_RATIO
+  const spacing = scale * SPACING_FRACTION
   const cx = offsetX + key.x * scale + (key.width * scale - spacing) / 2
   const cy = offsetY + key.y * scale + (key.height * scale - spacing) / 2
   const r = Math.min(key.width, key.height) * scale / 2 - spacing / 2
@@ -362,7 +454,7 @@ export function generateKeymapPdf(input: PdfExportInput): string {
     maxContentHeight / bounds.height,
   )
   // Visual keyboard dimensions (keys are visually smaller due to inter-key spacing)
-  const spacing = scale * SPACING_RATIO
+  const spacing = scale * SPACING_FRACTION
   const visualW = bounds.width * scale - spacing
   const visualH = bounds.height * scale - spacing
 

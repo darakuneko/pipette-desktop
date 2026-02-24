@@ -125,7 +125,7 @@ describe('LayoutStoreModal', () => {
     expect(screen.queryByTestId('layout-store-rename-input')).not.toBeInTheDocument()
   })
 
-  it('cancels rename on blur (clicking outside)', () => {
+  it('commits rename on blur (clicking outside)', () => {
     const onRename = vi.fn()
     render(
       <LayoutStoreModal
@@ -142,7 +142,7 @@ describe('LayoutStoreModal', () => {
     fireEvent.change(input, { target: { value: 'Changed Name' } })
     fireEvent.blur(input)
 
-    expect(onRename).not.toHaveBeenCalled()
+    expect(onRename).toHaveBeenCalledWith('entry-1', 'Changed Name')
     expect(screen.queryByTestId('layout-store-rename-input')).not.toBeInTheDocument()
   })
 

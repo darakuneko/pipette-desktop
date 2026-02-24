@@ -493,10 +493,9 @@ describe('macro', () => {
       expect(result).toEqual(actions)
     })
 
-    it('v2: multi-keycode tap splits into separate actions on round-trip', () => {
-      // v2 serializes each keycode with its own prefix, and v2 deserialize
-      // does not merge adjacent same-type actions (unlike v1).
-      // This is the intended behavior: each keycode becomes its own action.
+    it('v2: multi-keycode tap flattens into individual actions on round-trip', () => {
+      // v2 binary format is lossy for group boundaries — each keycode
+      // becomes its own action. The UI preserves grouping in-memory.
       const actions: MacroAction[] = [{ type: 'tap', keycodes: [0x04, 0x05] }]
       const bytes = serializeMacro(actions, V2)
       const result = deserializeMacro(bytes, V2)

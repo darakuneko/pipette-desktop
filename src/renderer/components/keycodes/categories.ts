@@ -50,7 +50,6 @@ import {
   KEYCODES_TAP_DANCE,
   KEYCODES_USER,
   KEYCODES_MACRO,
-  KEYCODES_MACRO_M,
   KEYCODES_MACRO_BASE,
   KEYCODES_MIDI,
   KEYCODES_MIDI_BASIC,
@@ -83,7 +82,6 @@ export interface KeycodeGroup {
 export interface KeycodeCategory {
   id: string
   labelKey: string // i18n key
-  hintKey?: string // i18n key for clickable-edit hint shown below the tab heading
   getKeycodes: () => Keycode[]
   getGroups?: () => KeycodeGroup[]
 }
@@ -153,19 +151,13 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
   {
     id: 'tapDance',
     labelKey: 'keycodes.tapDance',
-    hintKey: 'keycodes.hint.clickToEdit',
     getKeycodes: () => KEYCODES_TAP_DANCE,
-    getGroups: () => [
-      { labelKey: 'keycodes.group.tapDance', keycodes: KEYCODES_TAP_DANCE },
-    ],
   },
   {
     id: 'macro',
     labelKey: 'keycodes.macro',
-    hintKey: 'keycodes.hint.clickToEdit',
     getKeycodes: () => KEYCODES_MACRO,
     getGroups: () => [
-      { labelKey: 'keycodes.group.macroM', keycodes: KEYCODES_MACRO_M },
       { labelKey: 'keycodes.group.macroDM', keycodes: KEYCODES_MACRO_BASE },
     ],
   },

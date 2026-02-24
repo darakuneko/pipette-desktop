@@ -105,8 +105,6 @@ const defaultProps = {
   onDefaultAutoAdvanceChange: vi.fn(),
   autoLockTime: 10 as const,
   onAutoLockTimeChange: vi.fn(),
-  panelSide: 'left' as const,
-  onPanelSideChange: vi.fn(),
   hubEnabled: true,
   onHubEnabledChange: vi.fn(),
   hubAuthenticated: false,
@@ -122,7 +120,6 @@ describe('SettingsModal', () => {
     defaultProps.onDefaultLayoutChange = vi.fn()
     defaultProps.onDefaultAutoAdvanceChange = vi.fn()
     defaultProps.onAutoLockTimeChange = vi.fn()
-    defaultProps.onPanelSideChange = vi.fn()
     defaultProps.onHubEnabledChange = vi.fn()
     defaultProps.hubAuthenticated = false
   })
@@ -904,28 +901,6 @@ describe('SettingsModal', () => {
       expect(screen.getByTestId('settings-auto-lock-time-selector')).toHaveValue('50')
     })
 
-  })
-
-  describe('Panel Side section (Tools tab)', () => {
-    it('renders panel side Left and Right options', () => {
-      renderAndSwitchToTools()
-      expect(screen.getByTestId('panel-side-option-left')).toBeInTheDocument()
-      expect(screen.getByTestId('panel-side-option-right')).toBeInTheDocument()
-    })
-
-    it('highlights the active panel side', () => {
-      renderAndSwitchToTools({ panelSide: 'right' as const })
-      expect(screen.getByTestId('panel-side-option-right').className).toContain('bg-accent/15')
-      expect(screen.getByTestId('panel-side-option-left').className).not.toContain('bg-accent/15')
-    })
-
-    it('calls onPanelSideChange when a side option is clicked', () => {
-      const onPanelSideChange = vi.fn()
-      renderAndSwitchToTools({ panelSide: 'left' as const, onPanelSideChange })
-
-      fireEvent.click(screen.getByTestId('panel-side-option-right'))
-      expect(onPanelSideChange).toHaveBeenCalledWith('right')
-    })
   })
 
   describe('Language selector (Tools tab)', () => {
