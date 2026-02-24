@@ -4,7 +4,7 @@
 import type { KleKey } from './types'
 
 /** Whether the key has a secondary rectangle (stepped, ISO enter, etc.) */
-function hasSecondaryRect(key: KleKey): boolean {
+export function hasSecondaryRect(key: KleKey): boolean {
   return (
     key.width2 !== key.width || key.height2 !== key.height ||
     key.x2 !== 0 || key.y2 !== 0

@@ -24,7 +24,7 @@ import {
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
 } from './constants'
-import { computeUnionPath } from './rect-union'
+import { computeUnionPath } from '../../../shared/kle/rect-union'
 
 interface Props {
   kleKey: KleKey
