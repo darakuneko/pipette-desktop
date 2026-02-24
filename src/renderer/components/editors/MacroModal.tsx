@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
 import type { MacroAction } from '../../../preload/macro'
+import type { TapDanceEntry } from '../../../shared/types/protocol'
 
 interface Props {
   index: number
@@ -18,6 +19,8 @@ interface Props {
   unlocked?: boolean
   onUnlock?: () => void
   isDummy?: boolean
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
 }
 
 export function MacroModal({
@@ -32,6 +35,8 @@ export function MacroModal({
   unlocked,
   onUnlock,
   isDummy,
+  tapDanceEntries,
+  deserializedMacros,
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
@@ -71,6 +76,8 @@ export function MacroModal({
             onUnlock={onUnlock}
             isDummy={isDummy}
             onEditingChange={setIsEditing}
+            tapDanceEntries={tapDanceEntries}
+            deserializedMacros={deserializedMacros}
           />
         </div>
       </div>

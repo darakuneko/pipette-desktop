@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
+import type { MacroAction } from '../../../preload/macro'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { MaskKeyPreview } from './MaskKeyPreview'
@@ -22,6 +24,8 @@ interface Props {
   onSave: (index: number, entry: TapDanceEntry) => Promise<void>
   onClose: () => void
   isDummy?: boolean
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
 }
 
 const TAPPING_TERM_MIN = 0
@@ -40,7 +44,7 @@ const keycodeFields: { key: KeycodeFieldName; labelKey: string }[] = [
   { key: 'onTapHold', labelKey: 'editor.tapDance.onTapHold' },
 ]
 
-export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props) {
+export function TapDanceModal({ index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros }: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
@@ -133,6 +137,8 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
     [popoverField, updateField],
   )
 
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
+
   const modalWidth = isDummy ? 'w-[900px]' : 'w-[1050px]'
 
   return (
@@ -216,6 +222,7 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy }: Props)
                   onKeycodeSelect={maskedSelection.handleKeycodeSelect}
                   maskOnly={maskedSelection.maskOnly}
                   lmMode={maskedSelection.lmMode}
+                  tabContentOverride={tabContentOverride}
                   onClose={() => {
                     if (selectedField) {
                       setEditedEntry((prev) => ({ ...prev, [selectedField]: preEditValueRef.current }))

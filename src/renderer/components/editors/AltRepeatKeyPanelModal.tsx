@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { AltRepeatKeyEntry } from '../../../shared/types/protocol'
+import type { AltRepeatKeyEntry, TapDanceEntry } from '../../../shared/types/protocol'
 import { AltRepeatKeyOptions } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
+import type { MacroAction } from '../../../preload/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { MaskKeyPreview } from './MaskKeyPreview'
@@ -24,6 +26,8 @@ interface Props {
   onSetEntry: (index: number, entry: AltRepeatKeyEntry) => Promise<void>
   unlocked?: boolean
   onUnlock?: () => void
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
   onClose: () => void
 }
 
@@ -67,6 +71,8 @@ export function AltRepeatKeyPanelModal({
   onSetEntry,
   unlocked,
   onUnlock,
+  tapDanceEntries,
+  deserializedMacros,
   onClose,
 }: Props) {
   const { t } = useTranslation()
@@ -162,6 +168,8 @@ export function AltRepeatKeyPanelModal({
     resetKey: selectedField,
     initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
   })
+
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
 
   const handleFieldDoubleClick = useCallback(
     (field: KeycodeFieldName, rect: DOMRect) => {
@@ -316,6 +324,7 @@ export function AltRepeatKeyPanelModal({
                       onKeycodeSelect={maskedSelection.handleKeycodeSelect}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
+                      tabContentOverride={tabContentOverride}
                       onClose={() => {
                         if (selectedField) {
                           setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)

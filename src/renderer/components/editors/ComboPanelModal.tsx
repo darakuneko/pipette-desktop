@@ -2,13 +2,15 @@
 
 import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ComboEntry } from '../../../shared/types/protocol'
+import type { ComboEntry, TapDanceEntry } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
+import type { MacroAction } from '../../../preload/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
 import { MaskKeyPreview } from './MaskKeyPreview'
@@ -29,6 +31,8 @@ interface Props {
   qmkSettingsGet?: (qsid: number) => Promise<number[]>
   qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
   onSettingsUpdate?: (qsid: number, data: number[]) => void
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
   onClose: () => void
 }
 
@@ -74,6 +78,8 @@ export function ComboPanelModal({
   qmkSettingsGet,
   qmkSettingsSet,
   onSettingsUpdate,
+  tapDanceEntries,
+  deserializedMacros,
   onClose,
 }: Props) {
   const { t } = useTranslation()
@@ -189,6 +195,8 @@ export function ComboPanelModal({
     resetKey: selectedField,
     initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
   })
+
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
 
   const handleFieldDoubleClick = useCallback(
     (field: KeycodeFieldName, rect: DOMRect) => {
@@ -344,6 +352,7 @@ export function ComboPanelModal({
                       onKeycodeSelect={maskedSelection.handleKeycodeSelect}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
+                      tabContentOverride={tabContentOverride}
                       onClose={() => {
                         if (selectedField) {
                           setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)

@@ -17,10 +17,12 @@ import {
   isValidMacroText,
 } from '../../../preload/macro'
 import { type Keycode, deserialize } from '../../../shared/keycodes/keycodes'
+import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { MaskKeyPreview } from './MaskKeyPreview'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
@@ -38,6 +40,8 @@ interface Props {
   onUnlock?: () => void
   isDummy?: boolean
   onEditingChange?: (editing: boolean) => void
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
 }
 
 function parseMacroBuffer(
@@ -74,6 +78,8 @@ export function MacroEditor({
   onUnlock,
   isDummy,
   onEditingChange,
+  tapDanceEntries,
+  deserializedMacros,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -320,6 +326,8 @@ export function MacroEditor({
     initialValue: macroInitialValue,
   })
 
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
+
   const handleMaskPartClick = useCallback(
     (actionIndex: number, keycodeIndex: number, part: 'outer' | 'inner') => {
       const action = currentActions[actionIndex]
@@ -481,6 +489,7 @@ export function MacroEditor({
               onKeycodeSelect={maskedSelection.handleKeycodeSelect}
               maskOnly={maskedSelection.maskOnly}
               lmMode={maskedSelection.lmMode}
+              tabContentOverride={tabContentOverride}
               onClose={revertAndDeselect}
             />
           </div>

@@ -35,7 +35,7 @@ import { generateKeymapPdf } from '../shared/pdf-export'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, macroActionsToJson } from '../preload/macro'
+import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson } from '../preload/macro'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -69,6 +69,14 @@ export function App() {
   const keyboard = useKeyboard()
   const sync = useSync()
   const startupNotification = useStartupNotification()
+
+  const deserializedMacros = useMemo(
+    () => keyboard.parsedMacros
+      ?? (keyboard.macroBuffer && keyboard.macroCount
+        ? deserializeAllMacros(keyboard.macroBuffer, keyboard.vialProtocol, keyboard.macroCount)
+        : undefined),
+    [keyboard.parsedMacros, keyboard.macroBuffer, keyboard.macroCount, keyboard.vialProtocol],
+  )
 
   // Wire keyboard's layer name persistence through devicePrefs
   useEffect(() => {
@@ -1292,6 +1300,8 @@ export function App() {
           qmkSettingsGet={comboTimeoutSupported ? api.qmkSettingsGet : undefined}
           qmkSettingsSet={comboTimeoutSupported ? api.qmkSettingsSet : undefined}
           onSettingsUpdate={comboTimeoutSupported ? keyboard.updateQmkSettingsValue : undefined}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowComboModal(false)}
         />
       )}
@@ -1302,6 +1312,8 @@ export function App() {
           onSetEntry={keyboard.setAltRepeatKeyEntry}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowAltRepeatKeyModal(false)}
         />
       )}
@@ -1312,6 +1324,8 @@ export function App() {
           onSetEntry={keyboard.setKeyOverrideEntry}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
+          tapDanceEntries={keyboard.tapDanceEntries}
+          deserializedMacros={deserializedMacros}
           onClose={() => setShowKeyOverrideModal(false)}
         />
       )}
