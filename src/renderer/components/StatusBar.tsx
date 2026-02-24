@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { Keyboard } from 'lucide-react'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { SyncStatusType } from '../../shared/types/sync'
 
@@ -20,6 +19,7 @@ interface Props {
   typingTestMode?: boolean
   hasMatrixTester?: boolean
   onTypingTestModeChange?: () => void
+  onDisconnect?: () => void
 }
 
 export function StatusBar({
@@ -33,6 +33,7 @@ export function StatusBar({
   typingTestMode,
   hasMatrixTester,
   onTypingTestModeChange,
+  onDisconnect,
 }: Props) {
   const { t } = useTranslation()
 
@@ -92,8 +93,17 @@ export function StatusBar({
             className={typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onTypingTestModeChange}
           >
-            <Keyboard size={12} aria-hidden="true" />
             {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
+          </button>
+        )}
+        {onDisconnect && (
+          <button
+            type="button"
+            data-testid="disconnect-button"
+            className="flex items-center gap-1 rounded border border-edge px-1.5 text-xs text-red-500 transition-colors hover:text-red-600"
+            onClick={onDisconnect}
+          >
+            {t('common.disconnect')}
           </button>
         )}
       </div>

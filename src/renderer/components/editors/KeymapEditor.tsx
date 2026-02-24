@@ -28,7 +28,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, Globe, ChevronsLeft, ChevronsRight, Unplug } from 'lucide-react'
+import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, Globe, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -61,14 +61,12 @@ const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border borde
 
 function IconTooltip({ label, side = 'right', children }: {
   label: string
-  side?: 'right' | 'left' | 'top-end'
+  side?: 'right' | 'top-end'
   children: React.ReactNode
 }) {
-  const posClass = side === 'left'
-    ? 'right-full top-1/2 -translate-y-1/2 mr-2'
-    : side === 'right'
-      ? 'left-full top-1/2 -translate-y-1/2 ml-2'
-      : 'bottom-full right-0 mb-2'
+  const posClass = side === 'right'
+    ? 'left-full top-1/2 -translate-y-1/2 ml-2'
+    : 'bottom-full right-0 mb-2'
   return (
     <div className="group/tip relative">
       {children}
@@ -561,7 +559,6 @@ interface Props {
   onTypingTestLanguageChange?: (lang: string) => void
   deviceName?: string
   isDummy?: boolean
-  onDisconnect?: () => void
 }
 
 export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function KeymapEditor({
@@ -640,7 +637,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onTypingTestLanguageChange,
   deviceName,
   isDummy,
-  onDisconnect,
 }, ref) {
   const { t } = useTranslation()
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
@@ -1972,23 +1968,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           )}
         </div>
         {/* Counterbalance toolbar width so keyboard centers in full width (single pane only) */}
-        {!typingTestMode && (
-          <div className="flex shrink-0 flex-col items-center self-stretch" style={!dualMode ? { width: PANEL_COLLAPSED_WIDTH } : undefined}>
-            {onDisconnect && (
-              <IconTooltip label={t('common.disconnect')} side="left">
-                <button
-                  type="button"
-                  data-testid="disconnect-button"
-                  aria-label={t('common.disconnect')}
-                  className={`${CONTROL_BASE} transition-colors border-2 border-red-400 text-content-secondary hover:text-content`}
-                  onClick={onDisconnect}
-                >
-                  <Unplug size={16} aria-hidden="true" />
-                </button>
-              </IconTooltip>
-            )}
-          </div>
-        )}
+        {!dualMode && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (

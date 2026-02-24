@@ -1203,7 +1203,6 @@ export function App() {
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
             deviceName={deviceName}
             isDummy={device.isDummy}
-            onDisconnect={handleDisconnect}
           />
         </div>
 
@@ -1225,6 +1224,7 @@ export function App() {
         typingTestMode={typingTestMode}
         hasMatrixTester={matrixState.hasMatrixTester}
         onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
+        onDisconnect={handleDisconnect}
       />
 
       {showUnlockDialog && !device.isDummy && (
