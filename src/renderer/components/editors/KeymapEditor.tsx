@@ -226,7 +226,7 @@ function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames, onSet
   )
 }
 
-const COPY_BTN_BASE = 'rounded-md border px-3 py-1 text-xs disabled:opacity-50'
+const COPY_BTN_BASE = 'rounded border px-1.5 py-0.5 text-xs leading-none disabled:opacity-50'
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
 
@@ -337,8 +337,16 @@ function KeyboardPane({
           readOnly={isDualMode ? !isActive : false}
         />
       </div>
-      {isActive && isDualMode && onCopyAll && (
-        <div className="flex items-center justify-center gap-2 py-1">
+      {isActive && !onCopyAll && pasteHint && (
+        <div data-testid="paste-hint" className="flex items-center justify-center py-1 text-xs text-content-muted">
+          {pasteHint}
+        </div>
+      )}
+      <div className="flex items-center justify-between px-[5px] text-xs leading-none text-content-muted">
+        <span data-testid={layerLabelTestId} className="text-content-muted">
+          {layerLabel}
+        </span>
+        {isActive && isDualMode && onCopyAll && (
           <button
             type="button"
             data-testid="copy-all-button"
@@ -350,17 +358,7 @@ function KeyboardPane({
           >
             {copyAllPending || t('editor.keymap.copyAll')}
           </button>
-        </div>
-      )}
-      {isActive && !onCopyAll && pasteHint && (
-        <div data-testid="paste-hint" className="flex items-center justify-center py-1 text-xs text-content-muted">
-          {pasteHint}
-        </div>
-      )}
-      <div className="flex items-center justify-between px-[5px] text-xs leading-none text-content-muted">
-        <span data-testid={layerLabelTestId} className="text-content-muted">
-          {layerLabel}
-        </span>
+        )}
         <span className="flex items-center gap-1.5">
           {isActive && selectedKeycode && (
             <>
