@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { DISPLAY_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeButton } from './KeycodeButton'
@@ -8,8 +8,7 @@ import {
   KEYCODES_SPECIAL,
   KEYCODES_SHIFTED,
   KEYCODES_BASIC,
-  KEYCODES_BASIC_NUMPAD,
-  KEYCODES_BASIC_NAV,
+  KEYCODES_ISO,
   type Keycode,
   findKeycode,
 } from '../../../shared/keycodes/keycodes'
@@ -35,34 +34,17 @@ function collectLayoutQmkIds(kle: unknown[][]): Set<string> {
   return ids
 }
 
-/** Get remaining keycodes not shown in the keyboard layout, based on layout size */
+function defaultIsVisible(kc: Keycode): boolean {
+  return !kc.hidden
+}
+
+/** All basic keycodes in display order (same as the basic category) */
+const ALL_BASIC_KEYCODES: Keycode[] = [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO]
+
+/** Get all basic keycodes not present in the keyboard layout */
 function getRemainingKeycodes(layout: DisplayLayoutDef): Keycode[] {
   const shownIds = collectLayoutQmkIds(layout.kle)
-  const remaining: Keycode[] = []
-
-  // Always show: KEYCODES_SPECIAL + KEYCODES_SHIFTED (not on any physical layout)
-  for (const kc of KEYCODES_SPECIAL) {
-    if (!shownIds.has(kc.qmkId)) remaining.push(kc)
-  }
-  for (const kc of KEYCODES_SHIFTED) {
-    if (!shownIds.has(kc.qmkId)) remaining.push(kc)
-  }
-
-  // Conditionally show based on layout size
-  if (layout.id !== 'ansi_100') {
-    // 80% and 70% don't have numpad
-    for (const kc of KEYCODES_BASIC_NUMPAD) {
-      if (!shownIds.has(kc.qmkId)) remaining.push(kc)
-    }
-  }
-  if (layout.id === 'ansi_70') {
-    // 70% doesn't have nav cluster
-    for (const kc of KEYCODES_BASIC_NAV) {
-      if (!shownIds.has(kc.qmkId)) remaining.push(kc)
-    }
-  }
-
-  return remaining
+  return ALL_BASIC_KEYCODES.filter((kc) => !shownIds.has(kc.qmkId))
 }
 
 export function BasicKeyboardView({
@@ -88,6 +70,8 @@ export function BasicKeyboardView({
     return () => observer.disconnect()
   }, [])
 
+  const visCheck = isVisible ?? defaultIsVisible
+
   const selectedLayout = useMemo<DisplayLayoutDef | null>(() => {
     for (const def of DISPLAY_LAYOUTS) {
       if (containerWidth >= def.minWidth) return def
@@ -95,15 +79,11 @@ export function BasicKeyboardView({
     return null
   }, [containerWidth])
 
-  const remainingKeycodes = useMemo(() => {
-    if (!selectedLayout) return null
-    return getRemainingKeycodes(selectedLayout)
-  }, [selectedLayout])
+  const visibleRemainingKeycodes = useMemo(() => {
+    if (!selectedLayout) return []
+    return getRemainingKeycodes(selectedLayout).filter(visCheck)
+  }, [selectedLayout, visCheck])
 
-  const defaultIsVisible = useCallback((kc: Keycode) => !kc.hidden, [])
-  const visCheck = isVisible ?? defaultIsVisible
-
-  // Flat fallback: all basic keycodes
   const flatKeycodes = useMemo(() => {
     return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED].filter(visCheck)
   }, [visCheck])
@@ -120,9 +100,9 @@ export function BasicKeyboardView({
             highlightedKeycodes={highlightedKeycodes}
             pickerSelectedKeycodes={pickerSelectedKeycodes}
           />
-          {remainingKeycodes && remainingKeycodes.filter(visCheck).length > 0 && (
+          {visibleRemainingKeycodes.length > 0 && (
             <div className="mt-2 flex flex-wrap gap-1">
-              {remainingKeycodes.filter(visCheck).map((kc) => (
+              {visibleRemainingKeycodes.map((kc) => (
                 <KeycodeButton
                   key={kc.qmkId}
                   keycode={kc}
