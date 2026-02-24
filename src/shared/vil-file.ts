@@ -21,7 +21,8 @@ export function isVilFile(data: unknown): data is VilFile {
     typeof obj.qmkSettings === 'object' &&
     obj.qmkSettings !== null &&
     (obj.layerNames === undefined ||
-      (Array.isArray(obj.layerNames) && obj.layerNames.every((n) => typeof n === 'string')))
+      (Array.isArray(obj.layerNames) && obj.layerNames.every((n) => typeof n === 'string'))) &&
+    (obj.macroJson === undefined || obj.macroJson === null || Array.isArray(obj.macroJson))
   )
 }
 
