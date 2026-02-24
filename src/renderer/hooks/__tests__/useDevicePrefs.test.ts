@@ -94,14 +94,15 @@ describe('useDevicePrefs', () => {
       expect(result.current.layerNames).toEqual([])
 
       expect(mockPipetteSettingsGet).toHaveBeenCalledWith('0xAABB')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', {
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         keyboardLayout: 'dvorak',
         autoAdvance: false,
         layerPanelOpen: true,
+        basicViewType: 'list',
         layerNames: [],
         typingTestResults: [],
-      })
+      }))
     })
 
     it('restores existing per-device prefs from IPC', async () => {

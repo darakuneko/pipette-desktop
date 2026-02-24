@@ -481,6 +481,8 @@ interface Props {
   onDefaultAutoAdvanceChange: (enabled: boolean) => void
   defaultLayerPanelOpen: boolean
   onDefaultLayerPanelOpenChange: (open: boolean) => void
+  defaultBasicViewType: 'list' | 'keyboard'
+  onDefaultBasicViewTypeChange: (type: 'list' | 'keyboard') => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   onResetStart?: () => void
@@ -608,6 +610,8 @@ export function SettingsModal({
   onDefaultAutoAdvanceChange,
   defaultLayerPanelOpen,
   onDefaultLayerPanelOpenChange,
+  defaultBasicViewType,
+  onDefaultBasicViewTypeChange,
   autoLockTime,
   onAutoLockTimeChange,
   onResetStart,
@@ -1065,6 +1069,22 @@ export function SettingsModal({
                     >
                       <span className={toggleKnobClass(defaultLayerPanelOpen)} />
                     </button>
+                  </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
+                    <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
+                      {t('settings.defaultBasicViewType')}
+                    </label>
+                    <select
+                      id="settings-default-basic-view-type-selector"
+                      value={defaultBasicViewType}
+                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as 'list' | 'keyboard')}
+                      className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                      data-testid="settings-default-basic-view-type-selector"
+                    >
+                      <option value="list">{t('settings.basicViewTypeList')}</option>
+                      <option value="keyboard">{t('settings.basicViewTypeKeyboard')}</option>
+                    </select>
                   </div>
                 </div>
               </section>

@@ -32,6 +32,8 @@ interface Props {
   onScaleChange?: (delta: number) => void
   autoAdvance: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  basicViewType?: 'list' | 'keyboard'
+  onBasicViewTypeChange?: (type: 'list' | 'keyboard') => void
   matrixMode: boolean
   hasMatrixTester: boolean
   onToggleMatrix?: () => void
@@ -55,6 +57,8 @@ export function KeycodesOverlayPanel({
   onScaleChange,
   autoAdvance,
   onAutoAdvanceChange,
+  basicViewType,
+  onBasicViewTypeChange,
   matrixMode,
   hasMatrixTester,
   onToggleMatrix,
@@ -197,6 +201,25 @@ export function KeycodesOverlayPanel({
                 <span className={toggleKnobClass(autoAdvance)} />
               </button>
             </div>
+
+            {/* Basic tab view type */}
+            {basicViewType != null && onBasicViewTypeChange && (
+              <div className={ROW_CLASS} data-testid="overlay-basic-view-type-row">
+                <label htmlFor="overlay-basic-view-type-selector" className="text-[13px] font-medium text-content">
+                  {t('editorSettings.basicViewType')}
+                </label>
+                <select
+                  id="overlay-basic-view-type-selector"
+                  value={basicViewType}
+                  onChange={(e) => onBasicViewTypeChange(e.target.value as 'list' | 'keyboard')}
+                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                  data-testid="overlay-basic-view-type-selector"
+                >
+                  <option value="list">{t('settings.basicViewTypeList')}</option>
+                  <option value="keyboard">{t('settings.basicViewTypeKeyboard')}</option>
+                </select>
+              </div>
+            )}
 
             {/* Key tester toggle */}
             {(hasMatrixTester || matrixMode) && onToggleMatrix && (

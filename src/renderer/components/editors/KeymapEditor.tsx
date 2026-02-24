@@ -524,6 +524,8 @@ interface Props {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   autoAdvance?: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  basicViewType?: 'list' | 'keyboard'
+  onBasicViewTypeChange?: (type: 'list' | 'keyboard') => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   onLock?: () => void
@@ -602,6 +604,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onSettingsUpdate,
   autoAdvance = true,
   onAutoAdvanceChange,
+  basicViewType,
+  onBasicViewTypeChange,
   keyboardLayout = 'qwerty',
   onKeyboardLayoutChange,
   onLock,
@@ -2008,6 +2012,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             showHint={!isMaskKey}
             tabFooterContent={tabFooterContent}
             tabContentOverride={tabContentOverride}
+            basicViewType={basicViewType}
             tabBarRight={
               <button
                 ref={layoutButtonRef}
@@ -2050,6 +2055,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onScaleChange={onScaleChange}
                   autoAdvance={autoAdvance}
                   onAutoAdvanceChange={onAutoAdvanceChange}
+                  basicViewType={basicViewType}
+                  onBasicViewTypeChange={onBasicViewTypeChange}
                   matrixMode={matrixMode}
                   hasMatrixTester={hasMatrixTester}
                   onToggleMatrix={handleMatrixToggle}

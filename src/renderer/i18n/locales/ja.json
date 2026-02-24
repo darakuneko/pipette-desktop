@@ -474,6 +474,9 @@
     "defaultLayout": "デフォルトレイアウト",
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
+    "defaultBasicViewType": "デフォルト Basic タブ表示",
+    "basicViewTypeList": "リスト",
+    "basicViewTypeKeyboard": "キーボード",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",
@@ -495,7 +498,8 @@
     "tabData": "データ",
     "tabSave": "保存",
     "tabTools": "設定",
-    "tabLayout": "レイアウト"
+    "tabLayout": "レイアウト",
+    "basicViewType": "Basic タブ表示"
   },
   "hub": {
     "uploadToHub": "アップロード",

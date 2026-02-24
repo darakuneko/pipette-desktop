@@ -8,9 +8,9 @@ import { useAppConfig } from './useAppConfig'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
-import type { AutoLockMinutes } from '../../shared/types/app-config'
+import type { AutoLockMinutes, BasicViewType } from '../../shared/types/app-config'
 
-export type { KeyboardLayoutId, AutoLockMinutes }
+export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
 
@@ -51,10 +51,13 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
   return typeof r.date === 'string' && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
 }
 
+const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['list', 'keyboard'])
+
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
   autoAdvance: boolean
   layerPanelOpen: boolean
+  basicViewType: BasicViewType
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
@@ -62,10 +65,11 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
+  defaultBasicViewType: BasicViewType,
 ): ValidatedPrefs | null {
   if (!data) return null
 
@@ -76,6 +80,9 @@ function validateIpcPrefs(
   if (layout === null && autoAdvance === null) return null
 
   const layerPanelOpen = typeof data.layerPanelOpen === 'boolean' ? data.layerPanelOpen : defaultLayerPanelOpen
+  const basicViewType = typeof data.basicViewType === 'string' && VALID_BASIC_VIEW_TYPES.has(data.basicViewType)
+    ? data.basicViewType as BasicViewType
+    : defaultBasicViewType
 
   const layerNames = Array.isArray(data.layerNames)
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
@@ -88,6 +95,7 @@ function validateIpcPrefs(
     keyboardLayout: layout ?? defaultLayout,
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
     layerPanelOpen,
+    basicViewType,
     layerNames,
     typingTestResults,
     typingTestConfig: validateTypingTestConfig(data.typingTestConfig),
@@ -99,6 +107,7 @@ export interface UseDevicePrefsReturn {
   layout: KeyboardLayoutId
   autoAdvance: boolean
   layerPanelOpen: boolean
+  basicViewType: BasicViewType
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
@@ -106,6 +115,7 @@ export interface UseDevicePrefsReturn {
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
   setLayerPanelOpen: (open: boolean) => void
+  setBasicViewType: (type: BasicViewType) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
@@ -113,9 +123,11 @@ export interface UseDevicePrefsReturn {
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean
+  defaultBasicViewType: BasicViewType
   setDefaultLayout: (id: KeyboardLayoutId) => void
   setDefaultAutoAdvance: (enabled: boolean) => void
   setDefaultLayerPanelOpen: (open: boolean) => void
+  setDefaultBasicViewType: (type: BasicViewType) => void
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
@@ -146,10 +158,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     : 'qwerty'
   const defaultAutoAdvance = config.defaultAutoAdvance
   const defaultLayerPanelOpen = config.defaultLayerPanelOpen
+  const defaultBasicViewType = config.defaultBasicViewType
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
+  const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
@@ -166,6 +180,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       keyboardLayout: layoutRef.current,
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
+      basicViewType: basicViewTypeRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -189,6 +204,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayerPanelOpen(open)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateLayerPanelOpen])
+
+  const setBasicViewType = useCallback((type: BasicViewType) => {
+    updateBasicViewType(type)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateBasicViewType])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
@@ -225,6 +245,10 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     set('defaultLayerPanelOpen', open)
   }, [set])
 
+  const setDefaultBasicViewType = useCallback((type: BasicViewType) => {
+    set('defaultBasicViewType', type)
+  }, [set])
+
   const setAutoLockTime = useCallback((m: AutoLockMinutes) => {
     set('autoLockTime', m)
   }, [set])
@@ -237,7 +261,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     try {
       const raw = await window.vialAPI.pipetteSettingsGet(uid)
       if (applySeqRef.current !== seq) return
-      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen)
+      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType)
     } catch {
       // IPC failure — fall through to defaults
     }
@@ -247,6 +271,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       keyboardLayout: defaultLayout,
       autoAdvance: defaultAutoAdvance,
       layerPanelOpen: defaultLayerPanelOpen,
+      basicViewType: defaultBasicViewType,
       layerNames: [],
       typingTestResults: [],
     }
@@ -254,6 +279,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayout(resolved.keyboardLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
+    updateBasicViewType(resolved.basicViewType)
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
@@ -262,7 +288,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     if (!prefs) {
       saveCurrentPrefs()
     }
-  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen])
+  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType])
 
   const remapLabel = useCallback(
     (qmkId: string): string => remapKeycode(qmkId, layout),
@@ -278,6 +304,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     layout,
     autoAdvance,
     layerPanelOpen,
+    basicViewType,
     layerNames,
     typingTestResults,
     typingTestConfig,
@@ -285,6 +312,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setLayout,
     setAutoAdvance,
     setLayerPanelOpen,
+    setBasicViewType,
     setLayerNames,
     addTypingTestResult,
     setTypingTestConfig,
@@ -292,9 +320,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     defaultLayout,
     defaultAutoAdvance,
     defaultLayerPanelOpen,
+    defaultBasicViewType,
     setDefaultLayout,
     setDefaultAutoAdvance,
     setDefaultLayerPanelOpen,
+    setDefaultBasicViewType,
     autoLockTime: config.autoLockTime,
     setAutoLockTime,
     applyDevicePrefs,

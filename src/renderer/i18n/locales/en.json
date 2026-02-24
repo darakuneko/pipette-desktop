@@ -474,6 +474,9 @@
     "defaultLayout": "Default Layout",
     "defaultAutoAdvance": "Default Auto Move",
     "defaultLayerPanelOpen": "Default Layer List Open",
+    "defaultBasicViewType": "Default Basic Tab View",
+    "basicViewTypeList": "List",
+    "basicViewTypeKeyboard": "Keyboard",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",
@@ -495,7 +498,8 @@
     "tabData": "Data",
     "tabSave": "Save",
     "tabTools": "Settings",
-    "tabLayout": "Layout"
+    "tabLayout": "Layout",
+    "basicViewType": "Basic Tab View"
   },
   "hub": {
     "uploadToHub": "Upload",

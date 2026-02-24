@@ -6,6 +6,7 @@ import { type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '.
 import { KEYCODE_CATEGORIES, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { X } from 'lucide-react'
 import { KeycodeButton } from './KeycodeButton'
+import { BasicKeyboardView } from './BasicKeyboardView'
 
 const LM_CATEGORY: KeycodeCategory = {
   id: 'lm-mods',
@@ -36,6 +37,7 @@ interface Props {
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
+  basicViewType?: 'list' | 'keyboard' // View type for the basic tab
 }
 
 export function TabbedKeycodes({
@@ -52,6 +54,7 @@ export function TabbedKeycodes({
   panelOverlay,
   showHint = false,
   tabContentOverride,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
@@ -179,6 +182,20 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+    // Keyboard view for basic tab
+    if (category.id === 'basic' && basicViewType === 'keyboard' && !maskOnly && !lmMode) {
+      return (
+        <BasicKeyboardView
+          onKeycodeClick={handleKeycodeClick}
+          onKeycodeHover={handleKeycodeHover}
+          onKeycodeHoverEnd={handleKeycodeHoverEnd}
+          highlightedKeycodes={highlightedKeycodes}
+          pickerSelectedKeycodes={pickerSelectedKeycodes}
+          isVisible={isVisible}
+        />
+      )
+    }
+
     const override = tabContentOverride && Object.hasOwn(tabContentOverride, category.id) ? tabContentOverride[category.id] : null
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
 

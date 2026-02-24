@@ -28,5 +28,6 @@ export interface PipetteSettings {
   typingTestConfig?: Record<string, unknown>
   typingTestLanguage?: string
   layerPanelOpen?: boolean
+  basicViewType?: 'list' | 'keyboard'
   _updatedAt?: string // ISO 8601 — last update time
 }

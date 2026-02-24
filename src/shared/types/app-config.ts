@@ -9,6 +9,7 @@ export interface WindowState {
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
+export type BasicViewType = 'list' | 'keyboard'
 
 export interface AppConfig {
   autoSync: boolean
@@ -22,6 +23,7 @@ export interface AppConfig {
   language?: string
   hubEnabled: boolean
   lastNotificationSeen?: string
+  defaultBasicViewType: BasicViewType
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -35,6 +37,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'language',
   'hubEnabled',
   'lastNotificationSeen',
+  'defaultBasicViewType',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -47,4 +50,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   autoLockTime: 10,
   language: 'en',
   hubEnabled: false,
+  defaultBasicViewType: 'list',
 }

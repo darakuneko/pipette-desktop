@@ -938,6 +938,8 @@ export function App() {
             onDefaultAutoAdvanceChange={devicePrefs.setDefaultAutoAdvance}
             defaultLayerPanelOpen={devicePrefs.defaultLayerPanelOpen}
             onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
+            defaultBasicViewType={devicePrefs.defaultBasicViewType}
+            onDefaultBasicViewTypeChange={devicePrefs.setDefaultBasicViewType}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
             onResetStart={() => setResettingData(true)}
@@ -1170,6 +1172,8 @@ export function App() {
             onSettingsUpdate={hasIntegratedSettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
+            basicViewType={devicePrefs.basicViewType}
+            onBasicViewTypeChange={devicePrefs.setBasicViewType}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
             onLock={handleLock}

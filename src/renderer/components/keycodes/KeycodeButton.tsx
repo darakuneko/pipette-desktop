@@ -10,9 +10,10 @@ interface Props {
   onHoverEnd?: () => void
   highlighted?: boolean
   selected?: boolean
+  sizeClass?: string
 }
 
-function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected }: Props) {
+function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected, sizeClass }: Props) {
   if (keycode.hidden) return null
 
   const label = keycode.label
@@ -25,7 +26,8 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
     [keycode, onHover],
   )
 
-  const base = 'flex flex-col items-center justify-center rounded border p-1 text-xs hover:bg-picker-item-hover hover:border-accent active:bg-accent/20 w-[44px] h-[44px] transition-colors'
+  const size = sizeClass ?? 'w-[44px] h-[44px]'
+  const base = `flex flex-col items-center justify-center rounded border p-1 text-xs hover:bg-picker-item-hover hover:border-accent active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
     variant = 'border-accent bg-accent/20 text-accent ring-1 ring-accent'
