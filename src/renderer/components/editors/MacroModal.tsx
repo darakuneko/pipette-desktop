@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
+import type { MacroAction } from '../../../preload/macro'
 
 interface Props {
   index: number
@@ -11,7 +12,8 @@ interface Props {
   macroBufferSize: number
   macroBuffer: number[]
   vialProtocol: number
-  onSaveMacros: (buffer: number[]) => Promise<void>
+  onSaveMacros: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
+  parsedMacros?: MacroAction[][] | null
   onClose: () => void
   unlocked?: boolean
   onUnlock?: () => void
@@ -25,6 +27,7 @@ export function MacroModal({
   macroBuffer,
   vialProtocol,
   onSaveMacros,
+  parsedMacros,
   onClose,
   unlocked,
   onUnlock,
@@ -61,6 +64,7 @@ export function MacroModal({
             macroBuffer={macroBuffer}
             vialProtocol={vialProtocol}
             onSaveMacros={onSaveMacros}
+            parsedMacros={parsedMacros}
             onClose={onClose}
             initialMacro={index}
             unlocked={unlocked}

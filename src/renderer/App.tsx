@@ -1147,6 +1147,7 @@ export function App() {
             macroBufferSize={keyboard.macroBufferSize}
             macroBuffer={keyboard.macroBuffer}
             vialProtocol={keyboard.vialProtocol}
+            parsedMacros={keyboard.parsedMacros}
             onSaveMacros={keyboard.setMacroBuffer}
             tapHoldSupported={tapHoldSupported}
             mouseKeysSupported={mouseKeysSupported}

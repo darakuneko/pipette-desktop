@@ -535,7 +535,8 @@ interface Props {
   macroBufferSize?: number
   macroBuffer?: number[]
   vialProtocol?: number
-  onSaveMacros?: (buffer: number[]) => Promise<void>
+  parsedMacros?: MacroAction[][] | null
+  onSaveMacros?: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
   tapHoldSupported?: boolean
   mouseKeysSupported?: boolean
   magicSupported?: boolean
@@ -613,6 +614,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   macroBufferSize,
   macroBuffer,
   vialProtocol,
+  parsedMacros,
   onSaveMacros,
   tapHoldSupported,
   mouseKeysSupported,
@@ -747,12 +749,13 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
   }, [macroModalIndex, macroCount])
 
-  // Deserialize macros once; shared between configuredKeycodes and tabContentOverride
+  // Use preserved structured macros if available; otherwise deserialize from buffer.
   const deserializedMacros = useMemo(
-    () => macroBuffer && macroCount
-      ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
-      : undefined,
-    [macroBuffer, macroCount, vialProtocol],
+    () => parsedMacros
+      ?? (macroBuffer && macroCount
+        ? deserializeAllMacros(macroBuffer, vialProtocol ?? 0, macroCount)
+        : undefined),
+    [parsedMacros, macroBuffer, macroCount, vialProtocol],
   )
 
   // Build a set of TD/Macro qmkIds that have at least one action configured
@@ -2203,6 +2206,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           macroBuffer={macroBuffer}
           vialProtocol={vialProtocol ?? 0}
           onSaveMacros={onSaveMacros}
+          parsedMacros={parsedMacros}
           onClose={handleMacroModalClose}
           unlocked={unlocked}
           onUnlock={onUnlock}

@@ -27,7 +27,7 @@ import {
 } from '../../shared/constants/protocol'
 import { mapToRecord, recordToMap } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, macroActionsToJson } from '../../preload/macro'
+import { splitMacroBuffer, deserializeMacro, macroActionsToJson, type MacroAction } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
@@ -59,6 +59,7 @@ export interface KeyboardState {
   macroCount: number
   macroBufferSize: number
   macroBuffer: number[]
+  parsedMacros: MacroAction[][] | null
   dynamicCounts: DynamicEntryCounts
   tapDanceEntries: TapDanceEntry[]
   comboEntries: ComboEntry[]
@@ -112,6 +113,7 @@ function emptyState(): KeyboardState {
     macroCount: 0,
     macroBufferSize: 0,
     macroBuffer: [],
+    parsedMacros: null,
     dynamicCounts: { tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 0, featureFlags: 0 },
     tapDanceEntries: [],
     comboEntries: [],
@@ -567,11 +569,11 @@ export function useKeyboard() {
     bumpActivity()
   }, [bumpActivity])
 
-  const setMacroBuffer = useCallback(async (buffer: number[]) => {
+  const setMacroBuffer = useCallback(async (buffer: number[], parsedMacros?: MacroAction[][]) => {
     if (!stateRef.current.isDummy) {
       await window.vialAPI.setMacroBuffer(buffer)
     }
-    setState((s) => ({ ...s, macroBuffer: buffer }))
+    setState((s) => ({ ...s, macroBuffer: buffer, parsedMacros: parsedMacros ?? null }))
     bumpActivity()
   }, [bumpActivity])
 
@@ -867,6 +869,7 @@ export function useKeyboard() {
       keymap,
       encoderLayout,
       macroBuffer: vil.macros,
+      parsedMacros: null,
       layoutOptions: vil.layoutOptions,
       tapDanceEntries: vil.tapDance,
       comboEntries: vil.combo,

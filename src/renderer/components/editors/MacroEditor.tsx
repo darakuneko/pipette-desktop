@@ -30,7 +30,8 @@ interface Props {
   macroBufferSize: number
   macroBuffer: number[]
   vialProtocol: number
-  onSaveMacros: (buffer: number[]) => Promise<void>
+  onSaveMacros: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
+  parsedMacros?: MacroAction[][] | null
   onClose?: () => void
   initialMacro?: number
   unlocked?: boolean
@@ -66,6 +67,7 @@ export function MacroEditor({
   macroBuffer,
   vialProtocol,
   onSaveMacros,
+  parsedMacros: parsedMacrosProp,
   onClose,
   initialMacro,
   unlocked,
@@ -101,7 +103,7 @@ export function MacroEditor({
   }, [isDummy, favStore.refreshEntries])
 
   const [macros, setMacros] = useState<MacroAction[][]>(() =>
-    parseMacroBuffer(macroBuffer, vialProtocol, macroCount),
+    parsedMacrosProp ?? parseMacroBuffer(macroBuffer, vialProtocol, macroCount),
   )
   const macrosRef = useRef(macros)
   macrosRef.current = macros
@@ -197,8 +199,9 @@ export function MacroEditor({
 
   const handleSave = useCallback(async () => {
     await guardAll(async () => {
-      const buffer = serializeAllMacros(macrosRef.current, vialProtocol)
-      await onSaveMacros(buffer)
+      const current = macrosRef.current
+      const buffer = serializeAllMacros(current, vialProtocol)
+      await onSaveMacros(buffer, current)
       setDirty(false)
       onClose?.()
     })
