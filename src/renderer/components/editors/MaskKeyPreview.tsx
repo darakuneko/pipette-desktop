@@ -60,7 +60,6 @@ export function MaskKeyPreview(props: Props) {
   if (props.onConfirm !== undefined) {
     const { onConfirm } = props
 
-    // eslint-disable-next-line react-hooks/rules-of-hooks
     useEffect(() => {
       const handler = (e: KeyboardEvent) => {
         if (e.key !== 'Enter') return
