@@ -76,15 +76,6 @@ describe('EditorSettingsModal', () => {
     expect(dialog.className).toContain('border-r')
   })
 
-  it('renders on right side when panelSide="right"', () => {
-    render(<EditorSettingsModal {...DEFAULT_PROPS} panelSide="right" />)
-
-    const dialog = screen.getByRole('dialog')
-    expect(dialog.className).toContain('right-0')
-    expect(dialog.className).toContain('border-l')
-    expect(dialog.className).not.toContain('left-0')
-  })
-
   describe('isDummy mode', () => {
     it('hides save form and history when isDummy is true', () => {
       render(<EditorSettingsModal {...DEFAULT_PROPS} isDummy />)

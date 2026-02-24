@@ -9,7 +9,6 @@ export interface WindowState {
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
-export type PanelSide = 'left' | 'right'
 
 export interface AppConfig {
   autoSync: boolean
@@ -20,7 +19,6 @@ export interface AppConfig {
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean
   autoLockTime: AutoLockMinutes
-  panelSide: PanelSide
   language?: string
   hubEnabled: boolean
   lastNotificationSeen?: string
@@ -34,7 +32,6 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'defaultAutoAdvance',
   'defaultLayerPanelOpen',
   'autoLockTime',
-  'panelSide',
   'language',
   'hubEnabled',
   'lastNotificationSeen',
@@ -48,7 +45,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   defaultAutoAdvance: true,
   defaultLayerPanelOpen: true,
   autoLockTime: 10,
-  panelSide: 'left',
   language: 'en',
   hubEnabled: false,
 }

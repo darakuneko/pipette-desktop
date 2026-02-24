@@ -8,9 +8,9 @@ import { useAppConfig } from './useAppConfig'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
-import type { AutoLockMinutes, PanelSide } from '../../shared/types/app-config'
+import type { AutoLockMinutes } from '../../shared/types/app-config'
 
-export type { KeyboardLayoutId, AutoLockMinutes, PanelSide }
+export type { KeyboardLayoutId, AutoLockMinutes }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
 
@@ -118,8 +118,6 @@ export interface UseDevicePrefsReturn {
   setDefaultLayerPanelOpen: (open: boolean) => void
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
-  panelSide: PanelSide
-  setPanelSide: (side: PanelSide) => void
   applyDevicePrefs: (uid: string) => Promise<void>
   remapLabel: (qmkId: string) => string
   isRemapped: (qmkId: string) => boolean
@@ -231,10 +229,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     set('autoLockTime', m)
   }, [set])
 
-  const setPanelSide = useCallback((side: PanelSide) => {
-    set('panelSide', side)
-  }, [set])
-
   const applyDevicePrefs = useCallback(async (uid: string) => {
     uidRef.current = uid
     const seq = ++applySeqRef.current
@@ -303,8 +297,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setDefaultLayerPanelOpen,
     autoLockTime: config.autoLockTime,
     setAutoLockTime,
-    panelSide: config.panelSide,
-    setPanelSide,
     applyDevicePrefs,
     remapLabel,
     isRemapped,

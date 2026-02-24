@@ -480,9 +480,6 @@
     "autoLockDescription": "Lock after inactivity.",
     "autoLockMinutes": "{{minutes}} min",
     "language": "Language",
-    "panelSide": "Panel Side",
-    "panelLeft": "Left",
-    "panelRight": "Right",
     "tabNotification": "Notification",
     "tabAbout": "About",
     "about": {

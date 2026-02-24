@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { PanelSide } from '../../hooks/useDevicePrefs'
 import type { SyncStatusType } from '../../../shared/types/sync'
 import { LayoutStoreContent, type LayoutStoreContentProps } from './LayoutStoreModal'
 import { ModalCloseButton } from './ModalCloseButton'
@@ -85,14 +84,12 @@ export function ResetKeyboardDataSection({
 
 const PANEL_BASE = 'absolute top-0 h-full w-[440px] max-w-[90vw] flex flex-col border-edge bg-surface-alt shadow-xl transition-transform duration-300 ease-out'
 
-function panelPositionClass(side: PanelSide, open: boolean): string {
-  if (side === 'left') return `${PANEL_BASE} left-0 border-r ${open ? 'translate-x-0' : '-translate-x-full'}`
-  return `${PANEL_BASE} right-0 border-l ${open ? 'translate-x-0' : 'translate-x-full'}`
+function panelPositionClass(open: boolean): string {
+  return `${PANEL_BASE} left-0 border-r ${open ? 'translate-x-0' : '-translate-x-full'}`
 }
 
 interface Props extends Omit<LayoutStoreContentProps, 'keyboardName'> {
   onClose: () => void
-  panelSide?: PanelSide
   syncStatus?: SyncStatusType
   onResetKeyboardData?: () => Promise<void>
   deviceName?: string
@@ -100,7 +97,6 @@ interface Props extends Omit<LayoutStoreContentProps, 'keyboardName'> {
 
 export function EditorSettingsModal({
   onClose,
-  panelSide = 'left',
   syncStatus,
   onResetKeyboardData,
   deviceName = '',
@@ -141,7 +137,7 @@ export function EditorSettingsModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="editor-settings-title"
-        className={panelPositionClass(panelSide, open)}
+        className={panelPositionClass(open)}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

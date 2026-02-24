@@ -932,8 +932,6 @@ export function App() {
             onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
-            panelSide={devicePrefs.panelSide}
-            onPanelSideChange={devicePrefs.setPanelSide}
             onResetStart={() => setResettingData(true)}
             onResetEnd={() => setResettingData(false)}
             onClose={() => setShowSettings(false)}
@@ -1178,7 +1176,6 @@ export function App() {
             onOverlayOpen={!device.isDummy ? layoutStore.refreshEntries : undefined}
             layerPanelOpen={devicePrefs.layerPanelOpen}
             onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
-            panelSide={devicePrefs.panelSide}
             scale={keymapScale}
             onScaleChange={adjustKeymapScale}
             dualMode={dualMode}

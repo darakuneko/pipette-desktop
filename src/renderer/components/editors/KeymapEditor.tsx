@@ -26,7 +26,6 @@ import { ModalCloseButton } from './ModalCloseButton'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
-import type { PanelSide } from '../../hooks/useDevicePrefs'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import { Columns2, ZoomIn, ZoomOut, Keyboard, SquareMenu, Globe, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
@@ -534,7 +533,6 @@ interface Props {
   toolsExtra?: React.ReactNode
   dataPanel?: React.ReactNode
   onOverlayOpen?: () => void
-  panelSide?: PanelSide
   layerNames?: string[]
   onSetLayerName?: (layer: number, name: string) => void
   layerPanelOpen?: boolean
@@ -612,7 +610,6 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   toolsExtra,
   dataPanel,
   onOverlayOpen,
-  panelSide = 'left',
   layerNames,
   onSetLayerName,
   layerPanelOpen: layerPanelOpenProp,

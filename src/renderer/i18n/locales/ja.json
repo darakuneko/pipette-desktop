@@ -480,9 +480,6 @@
     "autoLockDescription": "無操作時に自動ロック。",
     "autoLockMinutes": "{{minutes}}分",
     "language": "言語",
-    "panelSide": "パネル位置",
-    "panelLeft": "左",
-    "panelRight": "右",
     "tabNotification": "お知らせ",
     "tabAbout": "情報",
     "about": {
