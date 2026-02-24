@@ -27,7 +27,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import { Columns2, ZoomIn, ZoomOut, SquareMenu, Globe, ChevronsLeft, ChevronsRight, Unplug } from 'lucide-react'
+import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, Globe, ChevronsLeft, ChevronsRight, Unplug } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -2031,7 +2031,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   })
                 }}
               >
-                <SquareMenu size={16} aria-hidden="true" />
+                <SlidersHorizontal size={16} aria-hidden="true" />
               </button>
             }
             panelOverlay={
