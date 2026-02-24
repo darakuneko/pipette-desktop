@@ -74,14 +74,17 @@ export function MaskKeyPreview(props: Props) {
     }, [onConfirm])
 
     return (
-      <button
-        type="button"
-        data-testid="mask-confirm-btn"
-        className="rounded bg-accent px-2 py-0.5 text-xs text-content-inverse hover:bg-accent-hover"
-        onClick={onConfirm}
-      >
-        {t('common.select')}
-      </button>
+      <>
+        <div className="h-[50px] w-px bg-edge" />
+        <button
+          type="button"
+          data-testid="mask-confirm-btn"
+          className="h-[50px] whitespace-nowrap rounded-lg bg-accent px-4 text-sm text-content-inverse hover:bg-accent-hover"
+          onClick={onConfirm}
+        >
+          {t('common.select')}
+        </button>
+      </>
     )
   }
 

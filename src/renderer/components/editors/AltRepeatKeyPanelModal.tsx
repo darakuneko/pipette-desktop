@@ -286,28 +286,26 @@ export function AltRepeatKeyPanelModal({
                     return (
                       <div key={key} className="flex items-center gap-3">
                         <label className="min-w-[140px] text-sm text-content">{t(labelKey)}</label>
-                        <div className={`flex items-center ${selectedField === key ? 'rounded-lg border border-accent' : ''}`}>
-                          <KeycodeField
-                            value={editedEntry[key]}
-                            selected={selectedField === key}
-                            selectedMaskPart={selectedField === key && maskedSelection.editingPart === 'inner'}
-                            onSelect={() => { if (!selectedField) { preEditValueRef.current = editedEntry[key]; setSelectedField(key) } }}
-                            onMaskPartClick={(part) => {
-                              if (selectedField === key) {
-                                maskedSelection.setEditingPart(part)
-                              } else if (!selectedField) {
-                                preEditValueRef.current = editedEntry[key]
-                                maskedSelection.enterMaskMode(editedEntry[key], part)
-                                setSelectedField(key)
-                              }
-                            }}
-                            onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
-                            label={t(labelKey)}
-                          />
-                          {selectedField === key && (
-                            <MaskKeyPreview onConfirm={maskedSelection.confirm} />
-                          )}
-                        </div>
+                        <KeycodeField
+                          value={editedEntry[key]}
+                          selected={selectedField === key}
+                          selectedMaskPart={selectedField === key && maskedSelection.editingPart === 'inner'}
+                          onSelect={() => { if (!selectedField) { preEditValueRef.current = editedEntry[key]; setSelectedField(key) } }}
+                          onMaskPartClick={(part) => {
+                            if (selectedField === key) {
+                              maskedSelection.setEditingPart(part)
+                            } else if (!selectedField) {
+                              preEditValueRef.current = editedEntry[key]
+                              maskedSelection.enterMaskMode(editedEntry[key], part)
+                              setSelectedField(key)
+                            }
+                          }}
+                          onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
+                          label={t(labelKey)}
+                        />
+                        {selectedField === key && (
+                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                        )}
                       </div>
                     )
                   })}
