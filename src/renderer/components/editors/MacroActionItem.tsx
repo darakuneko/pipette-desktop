@@ -1,29 +1,33 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { GripVertical } from 'lucide-react'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
-import { KeycodeField } from './KeycodeField'
+import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 
-type ActionType = MacroAction['type']
+export type ActionType = MacroAction['type']
 
 interface Props {
   action: MacroAction
   index: number
-  isFirst: boolean
-  isLast: boolean
   onChange: (index: number, action: MacroAction) => void
   onDelete: (index: number) => void
-  onMoveUp: (index: number) => void
-  onMoveDown: (index: number) => void
+  onDragStart: () => void
+  onDragOver: (e: React.DragEvent) => void
+  onDrop: () => void
+  onDragEnd: () => void
+  dropIndicator: 'above' | 'below' | null
   selectedKeycodeIndex: number | null
+  selectedMaskPart?: boolean
   onKeycodeClick: (keycodeIndex: number) => void
   onKeycodeDoubleClick: (keycodeIndex: number, rect: DOMRect) => void
   onKeycodeAdd: () => void
+  onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
+  selectButton?: React.ReactNode
+  focusMode?: boolean
 }
 
-const ACTION_TYPES: ActionType[] = ['text', 'tap', 'down', 'up', 'delay']
-
-function defaultAction(type: ActionType): MacroAction {
+export function defaultAction(type: ActionType): MacroAction {
   switch (type) {
     case 'text':
       return { type: 'text', text: '' }
@@ -39,16 +43,21 @@ function defaultAction(type: ActionType): MacroAction {
 export function MacroActionItem({
   action,
   index,
-  isFirst,
-  isLast,
   onChange,
   onDelete,
-  onMoveUp,
-  onMoveDown,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  dropIndicator,
   selectedKeycodeIndex,
+  selectedMaskPart,
   onKeycodeClick,
   onKeycodeDoubleClick,
   onKeycodeAdd,
+  onMaskPartClick,
+  selectButton,
+  focusMode,
 }: Props) {
   const { t } = useTranslation()
 
@@ -58,12 +67,6 @@ export function MacroActionItem({
     down: t('editor.macro.down'),
     up: t('editor.macro.up'),
     delay: t('editor.macro.delay'),
-  }
-
-  const handleTypeChange = (newType: ActionType) => {
-    if (newType !== action.type) {
-      onChange(index, defaultAction(newType))
-    }
   }
 
   const renderContent = () => {
@@ -90,19 +93,26 @@ export function MacroActionItem({
       case 'up':
         return (
           <div className="flex flex-wrap items-center gap-1 flex-1">
-            {action.keycodes.map((kc, ki) => (
-              <KeycodeField
-                key={ki}
-                value={kc}
-                selected={selectedKeycodeIndex === ki}
-                onSelect={() => onKeycodeClick(ki)}
-                onDoubleClick={selectedKeycodeIndex === ki ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
-              />
-            ))}
+            {action.keycodes.map((kc, ki) => {
+              const isSelected = selectedKeycodeIndex === ki
+              return (
+                <KeycodeField
+                  key={ki}
+                  value={kc}
+                  selected={isSelected}
+                  selectedMaskPart={isSelected && selectedMaskPart}
+                  onSelect={() => onKeycodeClick(ki)}
+                  onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
+                  onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
+                />
+              )
+            })}
+            {selectButton}
             <button
               type="button"
               data-testid="macro-add-keycode"
-              className="flex items-center justify-center w-[44px] h-[44px] rounded border border-dashed border-edge text-content-muted hover:border-accent hover:text-accent"
+              style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
+              className="flex items-center justify-center rounded border border-dashed border-edge text-content-muted hover:border-accent hover:text-accent"
               onClick={onKeycodeAdd}
               title={t('editor.macro.addKeycode')}
             >
@@ -132,45 +142,47 @@ export function MacroActionItem({
     }
   }
 
+  const isKeycodeType = action.type === 'tap' || action.type === 'down' || action.type === 'up'
+
+  if (focusMode && isKeycodeType && selectedKeycodeIndex !== null) {
+    const kc = action.keycodes[selectedKeycodeIndex]
+    return (
+      <div className="flex items-center gap-3">
+        <label className="min-w-[140px] text-sm text-content">{typeLabels[action.type]}</label>
+        <KeycodeField
+          value={kc ?? 0}
+          selected
+          selectedMaskPart={selectedMaskPart}
+          onSelect={() => onKeycodeClick(selectedKeycodeIndex)}
+          onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(selectedKeycodeIndex, part) : undefined}
+          onDoubleClick={(rect) => onKeycodeDoubleClick(selectedKeycodeIndex, rect)}
+        />
+        {selectButton}
+      </div>
+    )
+  }
+
   return (
-    <div className="flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5">
-      {/* Move up/down */}
-      <div className="flex flex-col">
-        <button
-          type="button"
-          disabled={isFirst}
-          onClick={() => onMoveUp(index)}
-          className="px-1 text-xs text-content-muted hover:text-content disabled:opacity-30"
-        >
-          &#9650;
-        </button>
-        <button
-          type="button"
-          disabled={isLast}
-          onClick={() => onMoveDown(index)}
-          className="px-1 text-xs text-content-muted hover:text-content disabled:opacity-30"
-        >
-          &#9660;
-        </button>
+    <div
+      onDragOver={onDragOver}
+      onDrop={(e) => { e.preventDefault(); onDrop() }}
+      className={`flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5 ${dropIndicator === 'above' ? 'border-t-2 border-t-accent' : dropIndicator === 'below' ? 'border-b-2 border-b-accent' : ''}`}
+    >
+      <div
+        draggable
+        data-testid="drag-handle"
+        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); onDragStart() }}
+        onDragEnd={onDragEnd}
+        className="flex items-center gap-1.5 border-r border-edge py-1 pl-1 pr-3 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="shrink-0 text-content-muted" size={14} />
+        <span className="min-w-[36px] text-center text-sm text-content-secondary">
+          {typeLabels[action.type]}
+        </span>
       </div>
 
-      {/* Type selector */}
-      <select
-        value={action.type}
-        onChange={(e) => handleTypeChange(e.target.value as ActionType)}
-        className="rounded border border-edge bg-surface px-1.5 py-1 text-sm"
-      >
-        {ACTION_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {typeLabels[type]}
-          </option>
-        ))}
-      </select>
-
-      {/* Content */}
       {renderContent()}
 
-      {/* Remove */}
       <button
         type="button"
         onClick={() => onDelete(index)}

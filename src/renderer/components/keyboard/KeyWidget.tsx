@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import {
   keycodeLabel,
   isMask,
@@ -11,6 +11,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import {
   KEY_UNIT,
   KEY_SPACING,
+  KEY_FACE_INSET,
   KEY_ROUNDNESS,
   KEY_BG_COLOR,
   KEY_BORDER_COLOR,
@@ -22,7 +23,9 @@ import {
   KEY_TEXT_COLOR,
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
+  KEY_HOVER_COLOR,
 } from './constants'
+import { computeUnionPath } from '../../../shared/kle/rect-union'
 
 interface Props {
   kleKey: KleKey
@@ -37,6 +40,8 @@ interface Props {
   remapped?: boolean
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
+  hoverMaskParts?: boolean
+  selectedFill?: boolean
   scale?: number
 }
 
@@ -53,17 +58,27 @@ function KeyWidgetInner({
   remapped,
   onClick,
   onDoubleClick,
+  hoverMaskParts,
+  selectedFill = true,
   scale = 1,
 }: Props) {
+  const [hoveredPart, setHoveredPart] = useState<'outer' | 'inner' | null>(null)
   const s = KEY_UNIT * scale
   const spacing = KEY_SPACING * scale
+  const inset = KEY_FACE_INSET * scale
   const corner = s * KEY_ROUNDNESS
 
-  // Key rectangle (flat style matching picker buttons)
-  const x = s * kleKey.x
-  const y = s * kleKey.y
-  const w = s * kleKey.width - spacing
-  const h = s * kleKey.height - spacing
+  // Grid-cell rect (used for rotation center, label centering)
+  const gx = s * kleKey.x
+  const gy = s * kleKey.y
+  const gw = s * kleKey.width - spacing
+  const gh = s * kleKey.height - spacing
+
+  // Visual key face: inset from grid cell to create breathing room (matches Python shadow)
+  const x = gx + inset
+  const y = gy + inset
+  const w = gw - 2 * inset
+  const h = gh - 2 * inset
 
   // Key fill color (always use theme colors, ignore KLE color overrides)
   // Priority: pressed > selected > multiSelected > highlighted > everPressed > default
@@ -73,10 +88,11 @@ function KeyWidgetInner({
   let fillColor = KEY_BG_COLOR
   let invertText = false
   if (pressed) fillColor = KEY_PRESSED_COLOR
-  else if (selected && !innerSelected) { fillColor = KEY_SELECTED_COLOR; invertText = true }
+  else if (selected && !innerSelected && selectedFill) { fillColor = KEY_SELECTED_COLOR; invertText = true }
   else if (multiSelected) fillColor = KEY_MULTI_SELECTED_COLOR
   else if (highlighted) { fillColor = KEY_HIGHLIGHT_COLOR; invertText = true }
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
+  else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
 
   // Label text color: inverted when key is selected/highlighted, remap color
   // for remapped keys in non-mask mode, default otherwise
@@ -101,16 +117,19 @@ function KeyWidgetInner({
   const rotX = s * kleKey.rotationX
   const rotY = s * kleKey.rotationY
 
-  // Second rect (for stepped/ISO keys)
-  const has2 =
+  // Union path for stepped/ISO keys (two overlapping rects merged into one outline)
+  const hasSecondRect =
     kleKey.width2 !== kleKey.width ||
     kleKey.height2 !== kleKey.height ||
     kleKey.x2 !== 0 ||
     kleKey.y2 !== 0
-  const x2 = x + s * kleKey.x2
-  const y2 = y + s * kleKey.y2
-  const w2 = s * kleKey.width2 - spacing
-  const h2 = s * kleKey.height2 - spacing
+  const gx2 = gx + s * kleKey.x2
+  const gy2 = gy + s * kleKey.y2
+  const gw2 = s * kleKey.width2 - spacing
+  const gh2 = s * kleKey.height2 - spacing
+  const unionPath = hasSecondRect
+    ? computeUnionPath(gx, gy, gw, gh, gx2, gy2, gw2, gh2, corner, inset)
+    : ''
 
   // Inner rect geometry for masked keys (inset on all sides)
   const innerPad = 2 * scale
@@ -175,26 +194,24 @@ function KeyWidgetInner({
       transform={groupTransform}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
+      onMouseEnter={hoverMaskParts && masked ? () => setHoveredPart('outer') : undefined}
+      onMouseLeave={hoverMaskParts && masked ? () => setHoveredPart(null) : undefined}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
-      {/* Key rect (flat style) */}
-      <rect
-        x={x}
-        y={y}
-        width={w}
-        height={h}
-        rx={corner}
-        ry={corner}
-        fill={fillColor}
-        stroke={outerStroke}
-        strokeWidth={outerStrokeWidth}
-      />
-      {has2 && (
+      {/* Key shape: unified path for ISO/stepped keys, simple rect for normal */}
+      {unionPath ? (
+        <path
+          d={unionPath}
+          fill={fillColor}
+          stroke={outerStroke}
+          strokeWidth={outerStrokeWidth}
+        />
+      ) : (
         <rect
-          x={x2}
-          y={y2}
-          width={w2}
-          height={h2}
+          x={x}
+          y={y}
+          width={w}
+          height={h}
           rx={corner}
           ry={corner}
           fill={fillColor}
@@ -213,11 +230,13 @@ function KeyWidgetInner({
           height={innerH}
           rx={innerCorner}
           ry={innerCorner}
-          fill={KEY_MASK_RECT_COLOR}
+          fill={hoverMaskParts && hoveredPart === 'inner' ? KEY_HOVER_COLOR : KEY_MASK_RECT_COLOR}
           stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
           strokeWidth={innerBorderActive ? 2 : 1}
           onClick={handleInnerClick}
           onDoubleClick={handleInnerDoubleClick}
+          onMouseEnter={hoverMaskParts ? () => setHoveredPart('inner') : undefined}
+          onMouseLeave={hoverMaskParts ? () => setHoveredPart('outer') : undefined}
         />
       )}
 

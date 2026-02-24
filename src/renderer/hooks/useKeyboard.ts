@@ -27,7 +27,7 @@ import {
 } from '../../shared/constants/protocol'
 import { mapToRecord, recordToMap } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, macroActionsToJson } from '../../preload/macro'
+import { splitMacroBuffer, deserializeMacro, macroActionsToJson, type MacroAction } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
@@ -59,6 +59,7 @@ export interface KeyboardState {
   macroCount: number
   macroBufferSize: number
   macroBuffer: number[]
+  parsedMacros: MacroAction[][] | null
   dynamicCounts: DynamicEntryCounts
   tapDanceEntries: TapDanceEntry[]
   comboEntries: ComboEntry[]
@@ -112,6 +113,7 @@ function emptyState(): KeyboardState {
     macroCount: 0,
     macroBufferSize: 0,
     macroBuffer: [],
+    parsedMacros: null,
     dynamicCounts: { tapDance: 0, combo: 0, keyOverride: 0, altRepeatKey: 0, featureFlags: 0 },
     tapDanceEntries: [],
     comboEntries: [],
@@ -443,14 +445,17 @@ export function useKeyboard() {
   }, [])
 
   const loadDummy = useCallback((definition: KeyboardDefinition) => {
-    const DUMMY_LAYERS = 4
+    const rawLayers = definition.dynamic_keymap?.layer_count ?? 4
+    const dummyLayers = Number.isInteger(rawLayers) && rawLayers >= 1 && rawLayers <= 32
+      ? rawLayers
+      : 4
     const DUMMY_MACRO_COUNT = 16
     const DUMMY_MACRO_BUFFER_SIZE = 900
 
     const newState = emptyState()
     newState.isDummy = true
-    newState.layers = DUMMY_LAYERS
-    newState.layerNames = new Array<string>(DUMMY_LAYERS).fill('')
+    newState.layers = dummyLayers
+    newState.layerNames = new Array<string>(dummyLayers).fill('')
     newState.macroCount = DUMMY_MACRO_COUNT
     newState.macroBufferSize = DUMMY_MACRO_BUFFER_SIZE
     newState.macroBuffer = new Array(DUMMY_MACRO_BUFFER_SIZE).fill(0)
@@ -471,7 +476,7 @@ export function useKeyboard() {
     }
 
     // Initialize keymap with KC_NO (0x0000)
-    for (let layer = 0; layer < DUMMY_LAYERS; layer++) {
+    for (let layer = 0; layer < dummyLayers; layer++) {
       for (let row = 0; row < newState.rows; row++) {
         for (let col = 0; col < newState.cols; col++) {
           newState.keymap.set(`${layer},${row},${col}`, 0x0000)
@@ -480,7 +485,7 @@ export function useKeyboard() {
     }
 
     // Initialize encoder layout with KC_NO (0x0000)
-    for (let layer = 0; layer < DUMMY_LAYERS; layer++) {
+    for (let layer = 0; layer < dummyLayers; layer++) {
       for (let idx = 0; idx < newState.encoderCount; idx++) {
         newState.encoderLayout.set(`${layer},${idx},0`, 0x0000)
         newState.encoderLayout.set(`${layer},${idx},1`, 0x0000)
@@ -564,11 +569,11 @@ export function useKeyboard() {
     bumpActivity()
   }, [bumpActivity])
 
-  const setMacroBuffer = useCallback(async (buffer: number[]) => {
+  const setMacroBuffer = useCallback(async (buffer: number[], parsedMacros?: MacroAction[][]) => {
     if (!stateRef.current.isDummy) {
       await window.vialAPI.setMacroBuffer(buffer)
     }
-    setState((s) => ({ ...s, macroBuffer: buffer }))
+    setState((s) => ({ ...s, macroBuffer: buffer, parsedMacros: parsedMacros ?? null }))
     bumpActivity()
   }, [bumpActivity])
 
@@ -864,6 +869,7 @@ export function useKeyboard() {
       keymap,
       encoderLayout,
       macroBuffer: vil.macros,
+      parsedMacros: null,
       layoutOptions: vil.layoutOptions,
       tapDanceEntries: vil.tapDance,
       comboEntries: vil.combo,

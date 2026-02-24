@@ -37,11 +37,12 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
       rename.cancelRename()
       return
     }
+    // Close editor immediately to prevent blur from double-committing
+    rename.cancelRename()
     setBusy(true)
     setError(null)
     try {
       await onRename(post.id, trimmed)
-      rename.cancelRename()
       rename.scheduleFlash(post.id)
     } catch {
       setError(t('hub.renameFailed'))
@@ -58,6 +59,20 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
       rename.cancelRename()
     }
   }, [handleSubmitRename, rename.cancelRename])
+
+  function handleBlurCommit(): void {
+    if (busy) return
+    const trimmed = rename.editLabel.trim()
+    const changed = !!(trimmed && trimmed !== rename.originalLabel)
+    rename.cancelRename()
+    if (!changed) return
+    setBusy(true)
+    setError(null)
+    void onRename(post.id, trimmed)
+      .then(() => rename.scheduleFlash(post.id))
+      .catch(() => setError(t('hub.renameFailed')))
+      .finally(() => setBusy(false))
+  }
 
   const handleConfirmDelete = useCallback(async () => {
     setBusy(true)
@@ -82,7 +97,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
     <div data-testid={`hub-post-${post.id}`}>
       <div
         className={`flex items-center justify-between rounded-lg border border-edge bg-surface/20 px-3 py-2 ${rename.confirmedId === post.id ? 'confirm-flash' : ''}`}
-        onMouseDown={(e) => rename.handleCardMouseDown(e, post.id)}
+
       >
         <div className="flex-1 flex flex-col min-w-0">
           {rename.editingId === post.id ? (
@@ -91,7 +106,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
               className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
               value={rename.editLabel}
               onChange={(e) => rename.setEditLabel(e.target.value)}
-              onBlur={rename.cancelRename}
+              onBlur={handleBlurCommit}
               onKeyDown={handleKeyDown}
               disabled={busy}
               maxLength={200}

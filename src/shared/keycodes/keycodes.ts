@@ -1425,6 +1425,15 @@ export function keycodeLabel(qmkId: string): string {
   return kc?.label ?? qmkId
 }
 
+/** Short human-readable label for a raw keycode value.
+ *  For masked keycodes (e.g. LT, MT) returns the full serialized form with KC_/QK_ prefixes stripped.
+ *  For simple keycodes returns the compact label (e.g. "A", "Enter"). */
+export function codeToLabel(code: number): string {
+  const qmkId = serialize(code)
+  if (isMask(qmkId)) return qmkId.replace(/KC_|QK_|RGB_|BL_/g, '')
+  return keycodeLabel(qmkId).replaceAll('\n', ' ')
+}
+
 export function keycodeTooltip(qmkId: string): string | undefined {
   const kc = findOuterKeycode(qmkId)
   if (kc === undefined) return undefined

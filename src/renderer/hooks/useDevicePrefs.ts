@@ -8,9 +8,9 @@ import { useAppConfig } from './useAppConfig'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
-import type { AutoLockMinutes, PanelSide } from '../../shared/types/app-config'
+import type { AutoLockMinutes } from '../../shared/types/app-config'
 
-export type { KeyboardLayoutId, AutoLockMinutes, PanelSide }
+export type { KeyboardLayoutId, AutoLockMinutes }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
 
@@ -54,6 +54,7 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
   autoAdvance: boolean
+  layerPanelOpen: boolean
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
@@ -61,9 +62,10 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
+  defaultLayerPanelOpen: boolean,
 ): ValidatedPrefs | null {
   if (!data) return null
 
@@ -72,6 +74,8 @@ function validateIpcPrefs(
     : null
   const autoAdvance = typeof data.autoAdvance === 'boolean' ? data.autoAdvance : null
   if (layout === null && autoAdvance === null) return null
+
+  const layerPanelOpen = typeof data.layerPanelOpen === 'boolean' ? data.layerPanelOpen : defaultLayerPanelOpen
 
   const layerNames = Array.isArray(data.layerNames)
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
@@ -83,6 +87,7 @@ function validateIpcPrefs(
   return {
     keyboardLayout: layout ?? defaultLayout,
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
+    layerPanelOpen,
     layerNames,
     typingTestResults,
     typingTestConfig: validateTypingTestConfig(data.typingTestConfig),
@@ -93,24 +98,26 @@ function validateIpcPrefs(
 export interface UseDevicePrefsReturn {
   layout: KeyboardLayoutId
   autoAdvance: boolean
+  layerPanelOpen: boolean
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
   typingTestLanguage: string | undefined
   setLayout: (id: KeyboardLayoutId) => void
   setAutoAdvance: (enabled: boolean) => void
+  setLayerPanelOpen: (open: boolean) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
   setTypingTestLanguage: (lang: string) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
+  defaultLayerPanelOpen: boolean
   setDefaultLayout: (id: KeyboardLayoutId) => void
   setDefaultAutoAdvance: (enabled: boolean) => void
+  setDefaultLayerPanelOpen: (open: boolean) => void
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
-  panelSide: PanelSide
-  setPanelSide: (side: PanelSide) => void
   applyDevicePrefs: (uid: string) => Promise<void>
   remapLabel: (qmkId: string) => string
   isRemapped: (qmkId: string) => boolean
@@ -138,9 +145,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     ? config.defaultKeyboardLayout
     : 'qwerty'
   const defaultAutoAdvance = config.defaultAutoAdvance
+  const defaultLayerPanelOpen = config.defaultLayerPanelOpen
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
+  const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
@@ -156,6 +165,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       _rev: 1,
       keyboardLayout: layoutRef.current,
       autoAdvance: autoAdvanceRef.current,
+      layerPanelOpen: layerPanelOpenRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -174,6 +184,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateAutoAdvance(enabled)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateAutoAdvance])
+
+  const setLayerPanelOpen = useCallback((open: boolean) => {
+    updateLayerPanelOpen(open)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateLayerPanelOpen])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
@@ -206,12 +221,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     set('defaultAutoAdvance', enabled)
   }, [set])
 
-  const setAutoLockTime = useCallback((m: AutoLockMinutes) => {
-    set('autoLockTime', m)
+  const setDefaultLayerPanelOpen = useCallback((open: boolean) => {
+    set('defaultLayerPanelOpen', open)
   }, [set])
 
-  const setPanelSide = useCallback((side: PanelSide) => {
-    set('panelSide', side)
+  const setAutoLockTime = useCallback((m: AutoLockMinutes) => {
+    set('autoLockTime', m)
   }, [set])
 
   const applyDevicePrefs = useCallback(async (uid: string) => {
@@ -222,7 +237,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     try {
       const raw = await window.vialAPI.pipetteSettingsGet(uid)
       if (applySeqRef.current !== seq) return
-      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance)
+      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen)
     } catch {
       // IPC failure — fall through to defaults
     }
@@ -231,12 +246,14 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     const resolved: ValidatedPrefs = prefs ?? {
       keyboardLayout: defaultLayout,
       autoAdvance: defaultAutoAdvance,
+      layerPanelOpen: defaultLayerPanelOpen,
       layerNames: [],
       typingTestResults: [],
     }
 
     updateLayout(resolved.keyboardLayout)
     updateAutoAdvance(resolved.autoAdvance)
+    updateLayerPanelOpen(resolved.layerPanelOpen)
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
@@ -245,7 +262,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     if (!prefs) {
       saveCurrentPrefs()
     }
-  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance])
+  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen])
 
   const remapLabel = useCallback(
     (qmkId: string): string => remapKeycode(qmkId, layout),
@@ -260,24 +277,26 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   return {
     layout,
     autoAdvance,
+    layerPanelOpen,
     layerNames,
     typingTestResults,
     typingTestConfig,
     typingTestLanguage,
     setLayout,
     setAutoAdvance,
+    setLayerPanelOpen,
     setLayerNames,
     addTypingTestResult,
     setTypingTestConfig,
     setTypingTestLanguage,
     defaultLayout,
     defaultAutoAdvance,
+    defaultLayerPanelOpen,
     setDefaultLayout,
     setDefaultAutoAdvance,
+    setDefaultLayerPanelOpen,
     autoLockTime: config.autoLockTime,
     setAutoLockTime,
-    panelSide: config.panelSide,
-    setPanelSide,
     applyDevicePrefs,
     remapLabel,
     isRemapped,

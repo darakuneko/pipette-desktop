@@ -136,13 +136,9 @@ export function UnlockDialog({
         <p className="text-xs text-content-muted">{t('unlock.hint')}</p>
 
         {macroWarning && (
-          <div
-            className="mt-4 space-y-2 rounded border border-warning/50 bg-warning/10 p-3 text-xs text-warning"
-            data-testid="macro-unlock-warning"
-          >
-            <p>{t('editor.macro.unlockClickAgain')}</p>
-            <p>{t('editor.macro.unlockWarning')}</p>
-          </div>
+          <p className="mt-4 text-xs text-content-muted" data-testid="macro-unlock-warning">
+            {t('editor.macro.unlockClickAgain')}
+          </p>
         )}
       </div>
     </div>

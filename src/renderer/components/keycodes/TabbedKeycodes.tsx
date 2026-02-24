@@ -35,6 +35,7 @@ interface Props {
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
+  tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
 }
 
 export function TabbedKeycodes({
@@ -50,6 +51,7 @@ export function TabbedKeycodes({
   tabBarRight,
   panelOverlay,
   showHint = false,
+  tabContentOverride,
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
@@ -177,15 +179,19 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+    const override = tabContentOverride && Object.hasOwn(tabContentOverride, category.id) ? tabContentOverride[category.id] : null
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
-    if (!groups) {
+
+    // Override only — no groups to show below
+    if (override && !groups?.length) return override
+
+    // No override, no groups — fall back to flat keycode grid
+    if (!override && !groups?.length) {
       return renderKeycodeGrid(category.getKeycodes().filter(isVisible))
     }
 
-    const hint = category.hintKey ? t(category.hintKey) : undefined
-    let hintUsed = false
     const rows: KeycodeGroup[][] = []
-    for (const group of groups) {
+    for (const group of (groups ?? [])) {
       const prev = rows[rows.length - 1]
       if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
         prev.push(group)
@@ -193,15 +199,17 @@ export function TabbedKeycodes({
         rows.push([group])
       }
     }
-    return rows.map((row) => (
+    const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
-        {row.map((group) => {
-          const groupHint = !hintUsed && hint ? hint : undefined
-          if (groupHint) hintUsed = true
-          return renderGroup(group, groupHint)
-        })}
+        {row.map((group) => renderGroup(group))}
       </div>
     ))
+
+    // Override + groups — render override above groups
+    if (override) {
+      return <>{override}{groupContent}</>
+    }
+    return groupContent
   }
 
   return (

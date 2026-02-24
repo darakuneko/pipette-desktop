@@ -67,7 +67,7 @@ function deserializeV1(data: number[]): MacroAction[] {
     const byte = data[i]
 
     if (byte === SS_TAP_CODE || byte === SS_DOWN_CODE || byte === SS_UP_CODE) {
-      const type = byte === SS_TAP_CODE ? 'tap' : byte === SS_DOWN_CODE ? 'down' : 'up'
+      const type = actionTypeFromCode(SS_TAP_CODE, SS_DOWN_CODE, byte)
       const keycodes: number[] = []
       while (i < data.length && data[i] === byte) {
         i++
@@ -91,7 +91,21 @@ function deserializeV1(data: number[]): MacroAction[] {
   return actions
 }
 
-/** Deserialize a single macro from bytes (v2 format). */
+function actionTypeFromCode(
+  tapCode: number,
+  downCode: number,
+  code: number,
+): 'tap' | 'down' | 'up' {
+  if (code === tapCode) return 'tap'
+  if (code === downCode) return 'down'
+  return 'up'
+}
+
+/** Deserialize a single macro from bytes (v2 format).
+ *
+ *  Each keycode becomes its own action. The v2 binary format is lossy for
+ *  group boundaries, so no merging is attempted. The UI preserves grouping
+ *  in-memory; re-parsing only happens on initial load or revert. */
 function deserializeV2(data: number[]): MacroAction[] {
   const actions: MacroAction[] = []
   let i = 0
@@ -107,7 +121,7 @@ function deserializeV2(data: number[]): MacroAction[] {
 
       if (actionCode === SS_TAP_CODE || actionCode === SS_DOWN_CODE || actionCode === SS_UP_CODE) {
         // 1-byte keycode action
-        const type = actionCode === SS_TAP_CODE ? 'tap' : actionCode === SS_DOWN_CODE ? 'down' : 'up'
+        const type = actionTypeFromCode(SS_TAP_CODE, SS_DOWN_CODE, actionCode)
         i += 2
         if (i < data.length) {
           actions.push({ type, keycodes: [data[i]] })
@@ -115,7 +129,7 @@ function deserializeV2(data: number[]): MacroAction[] {
         }
       } else if (actionCode === VIAL_MACRO_EXT_TAP || actionCode === VIAL_MACRO_EXT_DOWN || actionCode === VIAL_MACRO_EXT_UP) {
         // 2-byte keycode action (little-endian)
-        const type = actionCode === VIAL_MACRO_EXT_TAP ? 'tap' : actionCode === VIAL_MACRO_EXT_DOWN ? 'down' : 'up'
+        const type = actionTypeFromCode(VIAL_MACRO_EXT_TAP, VIAL_MACRO_EXT_DOWN, actionCode)
         i += 2
         if (i + 1 < data.length) {
           let kc = data[i] | (data[i + 1] << 8)

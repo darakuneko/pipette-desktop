@@ -27,5 +27,6 @@ export interface PipetteSettings {
   typingTestResults?: TypingTestResult[]
   typingTestConfig?: Record<string, unknown>
   typingTestLanguage?: string
+  layerPanelOpen?: boolean
   _updatedAt?: string // ISO 8601 — last update time
 }

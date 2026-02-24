@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { rotatePoint, KeyboardWidget } from '../KeyboardWidget'
-import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../constants'
+import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
@@ -148,4 +148,11 @@ describe('KeyboardWidget bounds with rotation', () => {
     expect(vbW).toBeGreaterThan(unrotatedW)
     expect(vbH).toBeGreaterThan(unrotatedH)
   })
+})
+
+// Regression test: KEY_SPACING must match Python's spacing/size ratio (0.2/3.4 ≈ 5.88%)
+it('KEY_SPACING matches Python vial-gui ratio', () => {
+  const expected = KEY_UNIT * KEY_SPACING_RATIO / (KEY_SIZE_RATIO + KEY_SPACING_RATIO)
+  expect(KEY_SPACING).toBeCloseTo(expected)
+  expect(KEY_SPACING / KEY_UNIT).toBeCloseTo(0.0588, 3)
 })

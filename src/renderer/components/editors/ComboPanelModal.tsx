@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ComboEntry } from '../../../shared/types/protocol'
+import type { ComboEntry, TapDanceEntry } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { serialize, deserialize, keycodeLabel } from '../../../shared/keycodes/keycodes'
+import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
+import type { MacroAction } from '../../../preload/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
+import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -27,6 +31,8 @@ interface Props {
   qmkSettingsGet?: (qsid: number) => Promise<number[]>
   qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
   onSettingsUpdate?: (qsid: number, data: number[]) => void
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
   onClose: () => void
 }
 
@@ -46,25 +52,23 @@ const keycodeFields: FieldDescriptor[] = [
   { key: 'output', labelKey: 'editor.combo.output' },
 ]
 
-function codeToLabel(code: number): string {
-  return keycodeLabel(serialize(code)).replaceAll('\n', ' ')
-}
 
 function isConfigured(entry: ComboEntry): boolean {
   return entry.key1 !== 0 || entry.key2 !== 0
 }
 
-function comboInputLabel(entry: ComboEntry): string {
-  return [entry.key1, entry.key2, entry.key3, entry.key4]
-    .filter((k) => k !== 0)
-    .map(codeToLabel)
-    .join(' ')
-}
+const COMBO_FIELDS = [
+  { key: 'key1', prefix: 'K1' },
+  { key: 'key2', prefix: 'K2' },
+  { key: 'key3', prefix: 'K3' },
+  { key: 'key4', prefix: 'K4' },
+  { key: 'output', prefix: 'O' },
+] as const
 
 const TILE_STYLE_CONFIGURED =
-  'border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
+  'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
 const TILE_STYLE_EMPTY =
-  'border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
+  'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
 
 export function ComboPanelModal({
   entries,
@@ -74,6 +78,8 @@ export function ComboPanelModal({
   qmkSettingsGet,
   qmkSettingsSet,
   onSettingsUpdate,
+  tapDanceEntries,
+  deserializedMacros,
   onClose,
 }: Props) {
   const { t } = useTranslation()
@@ -84,6 +90,7 @@ export function ComboPanelModal({
   const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
+  const preEditValueRef = useRef<number>(0)
 
   const favStore = useFavoriteStore({
     favoriteType: 'combo',
@@ -176,13 +183,20 @@ export function ComboPanelModal({
     setSelectedField(null)
   }, [])
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!selectedField) return
-      updateField(selectedField, deserialize(kc.qmkId))
+  const maskedSelection = useMaskedKeycodeSelection({
+    onUpdate(code: number) {
+      if (!selectedField) return false
+      setEditedEntry((prev) => prev ? { ...prev, [selectedField]: code } : prev)
     },
-    [selectedField, updateField],
-  )
+    onCommit() {
+      setPopoverState(null)
+      setSelectedField(null)
+    },
+    resetKey: selectedField,
+    initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
+  })
+
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
 
   const handleFieldDoubleClick = useCallback(
     (field: KeycodeFieldName, rect: DOMRect) => {
@@ -242,17 +256,18 @@ export function ComboPanelModal({
                   key={i}
                   type="button"
                   data-testid={`combo-tile-${i}`}
-                  className={`relative flex min-h-0 flex-col items-center justify-center rounded-md border p-1.5 text-xs leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY}`}
+                  className={`relative flex min-h-0 flex-col items-start rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${configured ? TILE_STYLE_CONFIGURED : TILE_STYLE_EMPTY}`}
                   onClick={() => setSelectedIndex(i)}
                 >
                   <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
                   {configured ? (
-                    <span className="flex w-full flex-col items-center truncate">
-                      <span className="max-w-full truncate">{comboInputLabel(entry)}</span>
-                      <span className="text-content-secondary/60">&darr;</span>
-                      <span className="max-w-full truncate">
-                        {entry.output !== 0 ? codeToLabel(entry.output) : '\u00A0'}
-                      </span>
+                    <span className="mt-3 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0.5 overflow-hidden">
+                      {COMBO_FIELDS.map(({ key, prefix }) => (
+                        <Fragment key={key}>
+                          <span className="text-left text-content-secondary/60">{prefix}</span>
+                          <span className="truncate text-left">{entry[key] !== 0 ? codeToLabel(entry[key]) : ''}</span>
+                        </Fragment>
+                      ))}
                     </span>
                   ) : (
                     <span className="w-full text-center text-content-secondary/60">
@@ -309,10 +324,23 @@ export function ComboPanelModal({
                         <KeycodeField
                           value={editedEntry[key]}
                           selected={selectedField === key}
-                          onSelect={() => { if (!selectedField) setSelectedField(key) }}
+                          selectedMaskPart={selectedField === key && maskedSelection.editingPart === 'inner'}
+                          onSelect={() => { if (!selectedField) { preEditValueRef.current = editedEntry[key]; setSelectedField(key) } }}
+                          onMaskPartClick={(part) => {
+                            if (selectedField === key) {
+                              maskedSelection.setEditingPart(part)
+                            } else if (!selectedField) {
+                              preEditValueRef.current = editedEntry[key]
+                              maskedSelection.enterMaskMode(editedEntry[key], part)
+                              setSelectedField(key)
+                            }
+                          }}
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey, labelOpts)}
                         />
+                        {selectedField === key && (
+                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                        )}
                       </div>
                     )
                   })}
@@ -320,7 +348,19 @@ export function ComboPanelModal({
 
                 {selectedField && (
                   <div className="mt-3">
-                    <TabbedKeycodes onKeycodeSelect={handleKeycodeSelect} onClose={() => setSelectedField(null)} />
+                    <TabbedKeycodes
+                      onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                      maskOnly={maskedSelection.maskOnly}
+                      lmMode={maskedSelection.lmMode}
+                      tabContentOverride={tabContentOverride}
+                      onClose={() => {
+                        if (selectedField) {
+                          setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)
+                        }
+                        maskedSelection.clearMask()
+                        setSelectedField(null)
+                      }}
+                    />
                   </div>
                 )}
 
@@ -413,7 +453,7 @@ export function ComboPanelModal({
       onClick={handleClose}
     >
       <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[950px] max-w-[95vw] h-[70vh] flex flex-col' : 'p-6'}`}
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[1050px] max-w-[95vw] h-[80vh] flex flex-col' : 'p-6'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {!selectedField && (

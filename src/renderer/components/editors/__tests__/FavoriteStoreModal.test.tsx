@@ -148,7 +148,7 @@ describe('FavoriteStoreModal', () => {
     expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
   })
 
-  it('cancels rename on blur (clicking outside)', () => {
+  it('commits rename on blur (clicking outside)', () => {
     const onRename = vi.fn()
     render(
       <FavoriteStoreModal
@@ -165,7 +165,7 @@ describe('FavoriteStoreModal', () => {
     fireEvent.change(input, { target: { value: 'Changed Name' } })
     fireEvent.blur(input)
 
-    expect(onRename).not.toHaveBeenCalled()
+    expect(onRename).toHaveBeenCalledWith('fav-1', 'Changed Name')
     expect(screen.queryByTestId('favorite-store-rename-input')).not.toBeInTheDocument()
   })
 

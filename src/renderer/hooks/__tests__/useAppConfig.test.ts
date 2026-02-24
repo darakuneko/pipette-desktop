@@ -73,10 +73,10 @@ describe('useAppConfig', () => {
 
     // Should not throw
     act(() => {
-      result.current.set('panelSide', 'right')
+      result.current.set('autoLockTime', 30)
     })
 
-    expect(result.current.config.panelSide).toBe('right')
+    expect(result.current.config.autoLockTime).toBe(30)
   })
 
   it('throws when used outside provider', () => {

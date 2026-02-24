@@ -28,6 +28,8 @@ export interface KeyboardDefinition {
   lighting?: string
   customKeycodes?: { name: string; title: string; shortName: string }[]
   vial?: { midi?: string }
+  /** QMK dynamic_keymap config — layer_count overrides dummy layer count (default: 4) */
+  dynamic_keymap?: { layer_count?: number }
 }
 
 /** Tap Dance entry */

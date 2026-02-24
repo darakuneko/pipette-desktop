@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { MacroActionItem } from './MacroActionItem'
+import { MacroActionItem, defaultAction, type ActionType } from './MacroActionItem'
 import { MacroRecorder } from './MacroRecorder'
 import { MacroTextEditor } from './MacroTextEditor'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import type { MacroAction } from '../../../preload/macro'
 import {
+  type MacroAction,
   deserializeAllMacros,
   serializeAllMacros,
   serializeMacro,
@@ -16,12 +16,15 @@ import {
   jsonToMacroActions,
   isValidMacroText,
 } from '../../../preload/macro'
-import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserialize } from '../../../shared/keycodes/keycodes'
+import { type Keycode, deserialize } from '../../../shared/keycodes/keycodes'
+import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
+import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
+import { MaskKeyPreview } from './MaskKeyPreview'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 
 interface Props {
@@ -29,12 +32,16 @@ interface Props {
   macroBufferSize: number
   macroBuffer: number[]
   vialProtocol: number
-  onSaveMacros: (buffer: number[]) => Promise<void>
+  onSaveMacros: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
+  parsedMacros?: MacroAction[][] | null
   onClose?: () => void
   initialMacro?: number
   unlocked?: boolean
   onUnlock?: () => void
   isDummy?: boolean
+  onEditingChange?: (editing: boolean) => void
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
 }
 
 function parseMacroBuffer(
@@ -64,11 +71,15 @@ export function MacroEditor({
   macroBuffer,
   vialProtocol,
   onSaveMacros,
+  parsedMacros: parsedMacrosProp,
   onClose,
   initialMacro,
   unlocked,
   onUnlock,
   isDummy,
+  onEditingChange,
+  tapDanceEntries,
+  deserializedMacros,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -98,7 +109,7 @@ export function MacroEditor({
   }, [isDummy, favStore.refreshEntries])
 
   const [macros, setMacros] = useState<MacroAction[][]>(() =>
-    parseMacroBuffer(macroBuffer, vialProtocol, macroCount),
+    parsedMacrosProp ?? parseMacroBuffer(macroBuffer, vialProtocol, macroCount),
   )
   const macrosRef = useRef(macros)
   macrosRef.current = macros
@@ -109,6 +120,13 @@ export function MacroEditor({
   const [selectedKey, setSelectedKey] = useState<{ actionIndex: number; keycodeIndex: number } | null>(null)
   const [popoverState, setPopoverState] = useState<{ actionIndex: number; keycodeIndex: number; anchorRect: DOMRect } | null>(null)
   const [showTextEditor, setShowTextEditor] = useState(false)
+  const preEditValueRef = useRef<number>(0)
+
+  const isEditing = selectedKey !== null
+
+  useLayoutEffect(() => {
+    onEditingChange?.(isEditing)
+  }, [isEditing, onEditingChange])
 
   const updateActions = useCallback(
     (newActions: MacroAction[]) => {
@@ -134,10 +152,12 @@ export function MacroEditor({
     [currentActions, updateActions],
   )
 
-  const handleAddAction = useCallback(() => {
-    const newAction: MacroAction = { type: 'text', text: '' }
-    updateActions([...currentActions, newAction])
-  }, [currentActions, updateActions])
+  const handleAddActionType = useCallback(
+    (type: ActionType) => {
+      updateActions([...currentActions, defaultAction(type)])
+    },
+    [currentActions, updateActions],
+  )
 
   const handleChange = useCallback(
     (index: number, action: MacroAction) => {
@@ -155,30 +175,39 @@ export function MacroEditor({
     [currentActions, updateActions],
   )
 
-  const handleMoveUp = useCallback(
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }, [])
+
+  const handleDrop = useCallback(
     (index: number) => {
-      if (index === 0) return
+      if (dragIndex === null || dragIndex === index) return
       const updated = [...currentActions]
-      ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
+      const [moved] = updated.splice(dragIndex, 1)
+      updated.splice(index, 0, moved)
       updateActions(updated)
     },
-    [currentActions, updateActions],
+    [dragIndex, currentActions, updateActions],
   )
 
-  const handleMoveDown = useCallback(
-    (index: number) => {
-      if (index >= currentActions.length - 1) return
-      const updated = [...currentActions]
-      ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
-      updateActions(updated)
-    },
-    [currentActions, updateActions],
-  )
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }, [])
 
   const handleSave = useCallback(async () => {
     await guardAll(async () => {
-      const buffer = serializeAllMacros(macrosRef.current, vialProtocol)
-      await onSaveMacros(buffer)
+      const current = macrosRef.current
+      const buffer = serializeAllMacros(current, vialProtocol)
+      await onSaveMacros(buffer, current)
       setDirty(false)
       onClose?.()
     })
@@ -242,9 +271,13 @@ export function MacroEditor({
 
   const handleKeycodeClick = useCallback(
     (actionIndex: number, keycodeIndex: number) => {
+      const action = currentActions[actionIndex]
+      if (isKeycodeAction(action)) {
+        preEditValueRef.current = action.keycodes[keycodeIndex] ?? 0
+      }
       setSelectedKey({ actionIndex, keycodeIndex })
     },
-    [],
+    [currentActions],
   )
 
   const handleKeycodeDoubleClick = useCallback(
@@ -264,43 +297,51 @@ export function MacroEditor({
     [currentActions, setKeycodeAt],
   )
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!selectedKey) return
-      const code = deserialize(kc.qmkId)
+  const macroInitialValue = (() => {
+    if (!selectedKey) return undefined
+    const action = currentActions[selectedKey.actionIndex]
+    return isKeycodeAction(action) ? action.keycodes[selectedKey.keycodeIndex] : undefined
+  })()
+
+  const maskedSelection = useMaskedKeycodeSelection({
+    onUpdate(code: number) {
+      if (!selectedKey) return false
       const action = currentActions[selectedKey.actionIndex]
-      if (!isKeycodeAction(action)) return
+      if (!isKeycodeAction(action)) return false
 
       if (code === KC_NO) {
         // Delete this keycode, but keep at least one
-        if (action.keycodes.length <= 1) return
+        if (action.keycodes.length <= 1) return false
         setKeycodeAt(selectedKey.actionIndex, action.keycodes.filter((_, i) => i !== selectedKey.keycodeIndex))
       } else {
         const newKeycodes = [...action.keycodes]
         newKeycodes[selectedKey.keycodeIndex] = code
         setKeycodeAt(selectedKey.actionIndex, newKeycodes)
       }
+    },
+    onCommit() {
       setSelectedKey(null)
     },
-    [selectedKey, currentActions, setKeycodeAt],
-  )
+    resetKey: selectedKey,
+    initialValue: macroInitialValue,
+  })
 
-  const handlePopoverKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!popoverState) return
-      const action = currentActions[popoverState.actionIndex]
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
+
+  const handleMaskPartClick = useCallback(
+    (actionIndex: number, keycodeIndex: number, part: 'outer' | 'inner') => {
+      const action = currentActions[actionIndex]
       if (!isKeycodeAction(action)) return
-
-      const newKeycodes = [...action.keycodes]
-      newKeycodes[popoverState.keycodeIndex] = deserialize(kc.qmkId)
-      setKeycodeAt(popoverState.actionIndex, newKeycodes)
-      setPopoverState(null)
-      setSelectedKey(null)
+      const code = action.keycodes[keycodeIndex]
+      if (code == null) return
+      preEditValueRef.current = code
+      maskedSelection.enterMaskMode(code, part)
+      setSelectedKey({ actionIndex, keycodeIndex })
     },
-    [popoverState, currentActions, setKeycodeAt],
+    [currentActions, maskedSelection.enterMaskMode],
   )
 
-  const handlePopoverRawKeycodeSelect = useCallback(
+  const applyPopoverKeycode = useCallback(
     (code: number) => {
       if (!popoverState) return
       const action = currentActions[popoverState.actionIndex]
@@ -313,6 +354,11 @@ export function MacroEditor({
       setSelectedKey(null)
     },
     [popoverState, currentActions, setKeycodeAt],
+  )
+
+  const handlePopoverKeycodeSelect = useCallback(
+    (kc: Keycode) => applyPopoverKeycode(deserialize(kc.qmkId)),
+    [applyPopoverKeycode],
   )
 
   const closePopover = useCallback(() => {
@@ -329,24 +375,38 @@ export function MacroEditor({
 
   const pickerRef = useRef<HTMLDivElement>(null)
 
+  const revertAndDeselect = useCallback(() => {
+    if (selectedKey) {
+      const action = currentActions[selectedKey.actionIndex]
+      if (isKeycodeAction(action) && action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current) {
+        const newKeycodes = [...action.keycodes]
+        newKeycodes[selectedKey.keycodeIndex] = preEditValueRef.current
+        setKeycodeAt(selectedKey.actionIndex, newKeycodes)
+      }
+    }
+    maskedSelection.clearMask()
+    setSelectedKey(null)
+  }, [selectedKey, currentActions, setKeycodeAt, maskedSelection.clearMask])
+
   // Close picker when clicking outside of it.
   // Uses click (not mousedown) so the DOM hasn't re-rendered yet when the
   // event processes — the modal's stopPropagation still covers the area and
   // prevents the backdrop from receiving the event.
   useEffect(() => {
-    if (!selectedKey) return
-    const handler = (e: MouseEvent) => {
+    if (!isEditing) return
+    function handler(e: MouseEvent): void {
       const target = e.target as Node | null
       if (!target) return
       if (pickerRef.current?.contains(target)) return
       // Resolve to Element for text node targets (e.g. spans inside buttons)
       const el = target instanceof Element ? target : target.parentElement
       if (el?.closest('[data-testid="keycode-field"]')) return
-      setSelectedKey(null)
+      if (el?.closest('[data-testid="mask-confirm-btn"]')) return
+      revertAndDeselect()
     }
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
-  }, [selectedKey])
+  }, [isEditing, revertAndDeselect])
 
   const popoverKeycode = (() => {
     if (!popoverState) return 0
@@ -358,102 +418,120 @@ export function MacroEditor({
     <>
       <div className="flex-1 flex flex-col min-h-0" data-testid="editor-macro">
         {/* Fixed header: memory + action buttons */}
-        <div className="shrink-0 px-6 pt-2 pb-3 flex items-center gap-2">
-          <span className="text-xs text-content-muted" data-testid="macro-memory">
-            {t('editor.macro.memoryUsage', {
-              used: memoryUsed,
-              total: macroBufferSize,
-            })}
-          </span>
-          <div className="flex-1" />
-          <button
-            type="button"
-            data-testid="macro-add-action"
-            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
-            onClick={handleAddAction}
-          >
-            {t('editor.macro.addAction')}
-          </button>
-          <MacroRecorder onRecordComplete={handleRecordComplete} />
-          <button
-            type="button"
-            data-testid="macro-text-editor-btn"
-            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
-            onClick={() => setShowTextEditor(true)}
-          >
-            {t('editor.macro.textEditor')}
-          </button>
-        </div>
-
-        {/* Scrollable content: action list + picker */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
-          <div className="space-y-1" data-testid="macro-action-list">
-            {currentActions.map((action, i) => (
-              <MacroActionItem
-                key={i}
-                action={action}
-                index={i}
-                onChange={handleChange}
-                onDelete={handleDelete}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-                isFirst={i === 0}
-                isLast={i === currentActions.length - 1}
-                selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
-                onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
-                onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
-                onKeycodeAdd={() => handleKeycodeAdd(i)}
-              />
-            ))}
-          </div>
-
-          {selectedKey !== null && (
-            <div ref={pickerRef} className="mt-3">
-              <TabbedKeycodes
-                onKeycodeSelect={handleKeycodeSelect}
-                onClose={() => setSelectedKey(null)}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Fixed footer: Clear / Revert / Save — aligned with favorites Import / Export */}
-        <div className="shrink-0 px-6 py-3">
-          <div className="flex justify-end gap-2">
-            <ConfirmButton
-              testId="macro-clear"
-              confirming={clearAction.confirming}
-              onClick={() => { revertAction.reset(); clearAction.trigger() }}
-              labelKey="common.clear"
-              confirmLabelKey="common.confirmClear"
-              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
-            />
-            <ConfirmButton
-              testId="macro-revert"
-              confirming={revertAction.confirming}
-              onClick={() => { clearAction.reset(); revertAction.trigger() }}
-              labelKey="common.revert"
-              confirmLabelKey="common.confirmRevert"
-              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
-            />
+          <div className={`shrink-0 px-6 pt-2 pb-3 flex items-center gap-2 ${isEditing ? 'hidden' : ''}`}>
+            <span className="text-xs text-content-muted" data-testid="macro-memory">
+              {t('editor.macro.memoryUsage', {
+                used: memoryUsed,
+                total: macroBufferSize,
+              })}
+            </span>
+            <div className="flex-1" />
+            <select
+              data-testid="macro-add-action"
+              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleAddActionType(e.target.value as ActionType)
+                e.target.value = ''
+              }}
+            >
+              <option value="" disabled>{t('editor.macro.addAction')}</option>
+              <option value="text">{t('editor.macro.text')}</option>
+              <option value="tap">{t('editor.macro.tap')}</option>
+              <option value="down">{t('editor.macro.down')}</option>
+              <option value="up">{t('editor.macro.up')}</option>
+              <option value="delay">{t('editor.macro.delay')}</option>
+            </select>
+            <MacroRecorder onRecordComplete={handleRecordComplete} />
             <button
               type="button"
-              data-testid="macro-save"
-              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-              onClick={handleSave}
-              disabled={!dirty || hasInvalidText}
+              data-testid="macro-text-editor-btn"
+              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
+              onClick={() => setShowTextEditor(true)}
             >
-              {t('common.save')}
+              {t('editor.macro.textEditor')}
             </button>
           </div>
+
+        {/* Scrollable content: action list + picker */}
+        <div className={`flex-1 overflow-y-auto px-6 pb-6 ${isEditing ? 'pt-6' : ''}`}>
+          <div className="space-y-1" data-testid="macro-action-list">
+            {currentActions.map((action, i) => {
+              const isSelectedAction = selectedKey?.actionIndex === i
+              if (isEditing && !isSelectedAction) return null
+              return (
+                <MacroActionItem
+                  key={i}
+                  action={action}
+                  index={i}
+                  onChange={handleChange}
+                  onDelete={handleDelete}
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  dropIndicator={dragOverIndex === i && dragIndex !== null && dragIndex !== i ? (dragIndex < i ? 'below' : 'above') : null}
+                  selectedKeycodeIndex={isSelectedAction ? selectedKey.keycodeIndex : null}
+                  selectedMaskPart={isSelectedAction && maskedSelection.editingPart === 'inner'}
+                  onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
+                  onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
+                  onKeycodeAdd={() => handleKeycodeAdd(i)}
+                  onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
+                  selectButton={isSelectedAction ? <MaskKeyPreview onConfirm={maskedSelection.confirm} /> : undefined}
+                  focusMode={isEditing}
+                />
+              )
+            })}
+          </div>
+
+          <div ref={pickerRef} className={`mt-3 ${isEditing ? '' : 'hidden'}`}>
+            <TabbedKeycodes
+              onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+              maskOnly={maskedSelection.maskOnly}
+              lmMode={maskedSelection.lmMode}
+              tabContentOverride={tabContentOverride}
+              onClose={revertAndDeselect}
+            />
+          </div>
         </div>
+
+        {/* Fixed footer: Clear / Revert / Save */}
+          <div className={`shrink-0 px-6 py-3 ${isEditing ? 'hidden' : ''}`}>
+            <div className="flex justify-end gap-2">
+              <ConfirmButton
+                testId="macro-clear"
+                confirming={clearAction.confirming}
+                onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                labelKey="common.clear"
+                confirmLabelKey="common.confirmClear"
+                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+              />
+              <ConfirmButton
+                testId="macro-revert"
+                confirming={revertAction.confirming}
+                onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                labelKey="common.revert"
+                confirmLabelKey="common.confirmRevert"
+                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+              />
+              <button
+                type="button"
+                data-testid="macro-save"
+                className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                onClick={handleSave}
+                disabled={!dirty || hasInvalidText}
+              >
+                {t('common.save')}
+              </button>
+            </div>
+          </div>
 
         {popoverState !== null && (
           <KeyPopover
             anchorRect={popoverState.anchorRect}
             currentKeycode={popoverKeycode}
             onKeycodeSelect={handlePopoverKeycodeSelect}
-            onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+            onRawKeycodeSelect={applyPopoverKeycode}
             onClose={closePopover}
           />
         )}
@@ -469,7 +547,7 @@ export function MacroEditor({
 
       {!isDummy && (
         <div
-          className="w-[456px] shrink-0 flex flex-col"
+          className={`w-[456px] shrink-0 flex flex-col ${isEditing ? 'hidden' : ''}`}
           data-testid="macro-favorites-panel"
         >
           <FavoriteStoreContent

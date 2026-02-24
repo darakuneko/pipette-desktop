@@ -69,9 +69,18 @@ export function FavoriteStoreContent({
     setSaveLabel('')
   }
 
-  function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
-    const newLabel = rename.handleKeyDown(e, entryId)
+  function commitRename(entryId: string): void {
+    const newLabel = rename.commitRename(entryId)
     if (newLabel) onRename(entryId, newLabel)
+  }
+
+  function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
+    if (e.key === 'Enter') {
+      commitRename(entryId)
+    } else if (e.key === 'Escape') {
+      e.stopPropagation()
+      rename.cancelRename()
+    }
   }
 
   return (
@@ -127,7 +136,6 @@ export function FavoriteStoreContent({
                 key={entry.id}
                 className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename.confirmedId === entry.id ? 'confirm-flash' : ''}`}
                 data-testid="favorite-store-entry"
-                onMouseDown={(e) => rename.handleCardMouseDown(e, entry.id)}
               >
                 <div className="flex items-center justify-between mb-1">
                   <div className="min-w-0 flex-1">
@@ -136,7 +144,7 @@ export function FavoriteStoreContent({
                         type="text"
                         value={rename.editLabel}
                         onChange={(e) => rename.setEditLabel(e.target.value)}
-                        onBlur={rename.cancelRename}
+                        onBlur={() => commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
                         className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"

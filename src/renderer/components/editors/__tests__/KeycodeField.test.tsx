@@ -13,44 +13,16 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     return qmkId
   },
   keycodeTooltip: (qmkId: string) => (qmkId === 'KC_NO' ? undefined : `Tooltip: ${qmkId}`),
-  isModifiableKeycode: () => false,
-  extractModMask: () => 0,
-  extractBasicKey: (code: number) => code & 0xff,
-  buildModMaskKeycode: (mask: number, key: number) => (mask << 8) | key,
+  isMask: () => false,
+  findOuterKeycode: () => undefined,
+  findInnerKeycode: () => undefined,
 }))
 
 describe('KeycodeField', () => {
-  it('renders the keycode label', () => {
-    render(<KeycodeField value={0} selected={false} onSelect={() => {}} />)
-    expect(screen.getByTestId('keycode-field')).toHaveTextContent('None')
-  })
-
-  it('renders label for non-zero keycode', () => {
-    render(<KeycodeField value={4} selected={false} onSelect={() => {}} />)
-    expect(screen.getByTestId('keycode-field')).toHaveTextContent('KC_4')
-  })
-
-  it('renders multi-line labels as separate spans', () => {
-    render(<KeycodeField value={99} selected={false} onSelect={() => {}} />)
-    const btn = screen.getByTestId('keycode-field')
-    const spans = btn.querySelectorAll('span')
-    expect(spans).toHaveLength(2)
-    expect(spans[0]).toHaveTextContent('Line1')
-    expect(spans[1]).toHaveTextContent('Line2')
-  })
-
-  it('applies selected styles when selected', () => {
-    render(<KeycodeField value={0} selected={true} onSelect={() => {}} />)
-    const btn = screen.getByTestId('keycode-field')
-    expect(btn.className).toContain('border-accent')
-    expect(btn.className).toContain('ring-2')
-  })
-
-  it('applies non-selected styles when not selected', () => {
+  it('renders an svg element inside the button', () => {
     render(<KeycodeField value={0} selected={false} onSelect={() => {}} />)
     const btn = screen.getByTestId('keycode-field')
-    expect(btn.className).toContain('border-picker-item-border')
-    expect(btn.className).not.toContain('ring-2')
+    expect(btn.querySelector('svg')).not.toBeNull()
   })
 
   it('calls onSelect when clicked', () => {
@@ -84,5 +56,35 @@ describe('KeycodeField', () => {
   it('does not set title when tooltip is undefined', () => {
     render(<KeycodeField value={0} selected={false} onSelect={() => {}} />)
     expect(screen.getByTestId('keycode-field')).not.toHaveAttribute('title')
+  })
+
+  it('delays onSelect when onDoubleClick is provided', () => {
+    vi.useFakeTimers()
+    const onSelect = vi.fn()
+    const onDoubleClick = vi.fn()
+    render(
+      <KeycodeField value={0} selected={false} onSelect={onSelect} onDoubleClick={onDoubleClick} />,
+    )
+    fireEvent.click(screen.getByTestId('keycode-field'))
+    expect(onSelect).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(300)
+    expect(onSelect).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it('calls onDoubleClick on double-click and cancels pending select', () => {
+    vi.useFakeTimers()
+    const onSelect = vi.fn()
+    const onDoubleClick = vi.fn()
+    render(
+      <KeycodeField value={0} selected={false} onSelect={onSelect} onDoubleClick={onDoubleClick} />,
+    )
+    const btn = screen.getByTestId('keycode-field')
+    fireEvent.click(btn)
+    fireEvent.doubleClick(btn)
+    vi.advanceTimersByTime(300)
+    expect(onDoubleClick).toHaveBeenCalledOnce()
+    expect(onSelect).not.toHaveBeenCalled()
+    vi.useRealTimers()
   })
 })

@@ -156,7 +156,7 @@ describe('DataModal', () => {
       expect(screen.getByTestId('data-modal-fav-rename-input')).toBeInTheDocument()
     })
 
-    it('cancels rename on blur (clicking outside)', async () => {
+    it('commits rename on blur (clicking outside)', async () => {
       mockFavoriteStoreList.mockResolvedValueOnce({
         success: true,
         entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
@@ -173,7 +173,7 @@ describe('DataModal', () => {
       fireEvent.blur(input)
 
       expect(screen.queryByTestId('data-modal-fav-rename-input')).not.toBeInTheDocument()
-      expect(mockFavoriteStoreRename).not.toHaveBeenCalled()
+      expect(mockFavoriteStoreRename).toHaveBeenCalledWith('tapDance', 'e1', 'Changed')
     })
 
     it('cancels rename on Escape', async () => {
@@ -350,7 +350,7 @@ describe('DataModal', () => {
       expect(screen.queryByTestId('hub-rename-input-p1')).not.toBeInTheDocument()
     })
 
-    it('cancels hub post rename on blur', () => {
+    it('commits hub post rename on blur', () => {
       const onHubRename = vi.fn().mockResolvedValue(undefined)
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
@@ -362,7 +362,7 @@ describe('DataModal', () => {
       fireEvent.blur(input)
 
       expect(screen.queryByTestId('hub-rename-input-p1')).not.toBeInTheDocument()
-      expect(onHubRename).not.toHaveBeenCalled()
+      expect(onHubRename).toHaveBeenCalledWith('p1', 'Changed Title')
     })
 
     describe('hub post confirm flash', () => {

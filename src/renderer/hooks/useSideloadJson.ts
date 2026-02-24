@@ -25,6 +25,14 @@ export function isKeyboardDefinition(data: unknown): data is KeyboardDefinition 
     return false
   }
 
+  if ('dynamic_keymap' in data && data.dynamic_keymap != null) {
+    if (!isRecord(data.dynamic_keymap)) return false
+    const lc = data.dynamic_keymap.layer_count
+    if (lc != null && (typeof lc !== 'number' || !Number.isInteger(lc) || lc < 1 || lc > 32)) {
+      return false
+    }
+  }
+
   return true
 }
 
