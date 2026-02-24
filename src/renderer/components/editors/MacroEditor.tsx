@@ -37,6 +37,7 @@ interface Props {
   unlocked?: boolean
   onUnlock?: () => void
   isDummy?: boolean
+  onEditingChange?: (editing: boolean) => void
 }
 
 function parseMacroBuffer(
@@ -71,6 +72,7 @@ export function MacroEditor({
   unlocked,
   onUnlock,
   isDummy,
+  onEditingChange,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -112,6 +114,12 @@ export function MacroEditor({
   const [popoverState, setPopoverState] = useState<{ actionIndex: number; keycodeIndex: number; anchorRect: DOMRect } | null>(null)
   const [showTextEditor, setShowTextEditor] = useState(false)
   const preEditValueRef = useRef<number>(0)
+
+  const isEditing = selectedKey !== null
+
+  useEffect(() => {
+    onEditingChange?.(isEditing)
+  }, [isEditing, onEditingChange])
 
   const updateActions = useCallback(
     (newActions: MacroAction[]) => {
@@ -375,8 +383,8 @@ export function MacroEditor({
   // event processes — the modal's stopPropagation still covers the area and
   // prevents the backdrop from receiving the event.
   useEffect(() => {
-    if (!selectedKey) return
-    const handler = (e: MouseEvent) => {
+    if (!isEditing) return
+    function handler(e: MouseEvent): void {
       const target = e.target as Node | null
       if (!target) return
       if (pickerRef.current?.contains(target)) return
@@ -388,7 +396,7 @@ export function MacroEditor({
     }
     window.addEventListener('click', handler)
     return () => window.removeEventListener('click', handler)
-  }, [selectedKey, revertAndDeselect])
+  }, [isEditing, revertAndDeselect])
 
   const popoverKeycode = (() => {
     if (!popoverState) return 0
@@ -400,59 +408,66 @@ export function MacroEditor({
     <>
       <div className="flex-1 flex flex-col min-h-0" data-testid="editor-macro">
         {/* Fixed header: memory + action buttons */}
-        <div className="shrink-0 px-6 pt-2 pb-3 flex items-center gap-2">
-          <span className="text-xs text-content-muted" data-testid="macro-memory">
-            {t('editor.macro.memoryUsage', {
-              used: memoryUsed,
-              total: macroBufferSize,
-            })}
-          </span>
-          <div className="flex-1" />
-          <button
-            type="button"
-            data-testid="macro-add-action"
-            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
-            onClick={handleAddAction}
-          >
-            {t('editor.macro.addAction')}
-          </button>
-          <MacroRecorder onRecordComplete={handleRecordComplete} />
-          <button
-            type="button"
-            data-testid="macro-text-editor-btn"
-            className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
-            onClick={() => setShowTextEditor(true)}
-          >
-            {t('editor.macro.textEditor')}
-          </button>
-        </div>
+        {!isEditing && (
+          <div className="shrink-0 px-6 pt-2 pb-3 flex items-center gap-2">
+            <span className="text-xs text-content-muted" data-testid="macro-memory">
+              {t('editor.macro.memoryUsage', {
+                used: memoryUsed,
+                total: macroBufferSize,
+              })}
+            </span>
+            <div className="flex-1" />
+            <button
+              type="button"
+              data-testid="macro-add-action"
+              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
+              onClick={handleAddAction}
+            >
+              {t('editor.macro.addAction')}
+            </button>
+            <MacroRecorder onRecordComplete={handleRecordComplete} />
+            <button
+              type="button"
+              data-testid="macro-text-editor-btn"
+              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised"
+              onClick={() => setShowTextEditor(true)}
+            >
+              {t('editor.macro.textEditor')}
+            </button>
+          </div>
+        )}
 
         {/* Scrollable content: action list + picker */}
-        <div className="flex-1 overflow-y-auto px-6 pb-6">
+        <div className={`flex-1 overflow-y-auto px-6 pb-6 ${isEditing ? 'pt-6' : ''}`}>
           <div className="space-y-1" data-testid="macro-action-list">
-            {currentActions.map((action, i) => (
-              <MacroActionItem
-                key={i}
-                action={action}
-                index={i}
-                onChange={handleChange}
-                onDelete={handleDelete}
-                onMoveUp={handleMoveUp}
-                onMoveDown={handleMoveDown}
-                isFirst={i === 0}
-                isLast={i === currentActions.length - 1}
-                selectedKeycodeIndex={selectedKey?.actionIndex === i ? selectedKey.keycodeIndex : null}
-                selectedMaskPart={selectedKey?.actionIndex === i && maskedSelection.editingPart === 'inner'}
-                onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
-                onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
-                onKeycodeAdd={() => handleKeycodeAdd(i)}
-                onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
-                selectButton={selectedKey?.actionIndex === i ? <MaskKeyPreview onConfirm={maskedSelection.confirm} /> : undefined}
-              />
-            ))}
+            {currentActions.map((action, i) => {
+              const isSelectedAction = selectedKey?.actionIndex === i
+              if (isEditing && !isSelectedAction) return null
+              return (
+                <MacroActionItem
+                  key={i}
+                  action={action}
+                  index={i}
+                  onChange={handleChange}
+                  onDelete={handleDelete}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                  isFirst={i === 0}
+                  isLast={i === currentActions.length - 1}
+                  selectedKeycodeIndex={isSelectedAction ? selectedKey.keycodeIndex : null}
+                  selectedMaskPart={isSelectedAction && maskedSelection.editingPart === 'inner'}
+                  onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
+                  onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
+                  onKeycodeAdd={() => handleKeycodeAdd(i)}
+                  onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
+                  selectButton={isSelectedAction ? <MaskKeyPreview onConfirm={maskedSelection.confirm} /> : undefined}
+                  focusMode={isEditing}
+                />
+              )
+            })}
           </div>
 
-          {selectedKey !== null && (
+          {isEditing && (
             <div ref={pickerRef} className="mt-3">
               <TabbedKeycodes
                 onKeycodeSelect={maskedSelection.handleKeycodeSelect}
@@ -464,36 +479,38 @@ export function MacroEditor({
           )}
         </div>
 
-        {/* Fixed footer: Clear / Revert / Save — aligned with favorites Import / Export */}
-        <div className="shrink-0 px-6 py-3">
-          <div className="flex justify-end gap-2">
-            <ConfirmButton
-              testId="macro-clear"
-              confirming={clearAction.confirming}
-              onClick={() => { revertAction.reset(); clearAction.trigger() }}
-              labelKey="common.clear"
-              confirmLabelKey="common.confirmClear"
-              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
-            />
-            <ConfirmButton
-              testId="macro-revert"
-              confirming={revertAction.confirming}
-              onClick={() => { clearAction.reset(); revertAction.trigger() }}
-              labelKey="common.revert"
-              confirmLabelKey="common.confirmRevert"
-              className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
-            />
-            <button
-              type="button"
-              data-testid="macro-save"
-              className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-              onClick={handleSave}
-              disabled={!dirty || hasInvalidText}
-            >
-              {t('common.save')}
-            </button>
+        {/* Fixed footer: Clear / Revert / Save */}
+        {!isEditing && (
+          <div className="shrink-0 px-6 py-3">
+            <div className="flex justify-end gap-2">
+              <ConfirmButton
+                testId="macro-clear"
+                confirming={clearAction.confirming}
+                onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                labelKey="common.clear"
+                confirmLabelKey="common.confirmClear"
+                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+              />
+              <ConfirmButton
+                testId="macro-revert"
+                confirming={revertAction.confirming}
+                onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                labelKey="common.revert"
+                confirmLabelKey="common.confirmRevert"
+                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
+              />
+              <button
+                type="button"
+                data-testid="macro-save"
+                className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                onClick={handleSave}
+                disabled={!dirty || hasInvalidText}
+              >
+                {t('common.save')}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {popoverState !== null && (
           <KeyPopover
@@ -516,7 +533,7 @@ export function MacroEditor({
 
       {!isDummy && (
         <div
-          className="w-[456px] shrink-0 flex flex-col"
+          className={`w-[456px] shrink-0 flex flex-col ${isEditing ? 'hidden' : ''}`}
           data-testid="macro-favorites-panel"
         >
           <FavoriteStoreContent

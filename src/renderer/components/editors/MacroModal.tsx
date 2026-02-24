@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
@@ -30,6 +31,7 @@ export function MacroModal({
   isDummy,
 }: Props) {
   const { t } = useTranslation()
+  const [isEditing, setIsEditing] = useState(false)
   const modalWidth = isDummy ? 'w-[1000px]' : 'w-[1050px]'
 
   return (
@@ -43,12 +45,14 @@ export function MacroModal({
         data-testid="macro-modal"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
-          <h3 className="text-lg font-semibold">
-            {t('editor.macro.editTitle', { index })}
-          </h3>
-          <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
-        </div>
+        {!isEditing && (
+          <div className="px-6 pt-6 pb-4 flex items-center justify-between shrink-0">
+            <h3 className="text-lg font-semibold">
+              {t('editor.macro.editTitle', { index })}
+            </h3>
+            <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
+          </div>
+        )}
 
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <MacroEditor
@@ -62,6 +66,7 @@ export function MacroModal({
             unlocked={unlocked}
             onUnlock={onUnlock}
             isDummy={isDummy}
+            onEditingChange={setIsEditing}
           />
         </div>
       </div>

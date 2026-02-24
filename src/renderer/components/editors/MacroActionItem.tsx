@@ -22,6 +22,7 @@ interface Props {
   onKeycodeAdd: () => void
   onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
   selectButton?: React.ReactNode
+  focusMode?: boolean
 }
 
 const ACTION_TYPES: ActionType[] = ['text', 'tap', 'down', 'up', 'delay']
@@ -55,6 +56,7 @@ export function MacroActionItem({
   onKeycodeAdd,
   onMaskPartClick,
   selectButton,
+  focusMode,
 }: Props) {
   const { t } = useTranslation()
 
@@ -96,17 +98,20 @@ export function MacroActionItem({
       case 'up':
         return (
           <div className="flex flex-wrap items-center gap-1 flex-1">
-            {action.keycodes.map((kc, ki) => (
-              <KeycodeField
-                key={ki}
-                value={kc}
-                selected={selectedKeycodeIndex === ki}
-                selectedMaskPart={selectedKeycodeIndex === ki && selectedMaskPart}
-                onSelect={() => onKeycodeClick(ki)}
-                onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
-                onDoubleClick={selectedKeycodeIndex === ki ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
-              />
-            ))}
+            {action.keycodes.map((kc, ki) => {
+              const isSelected = selectedKeycodeIndex === ki
+              return (
+                <KeycodeField
+                  key={ki}
+                  value={kc}
+                  selected={isSelected}
+                  selectedMaskPart={isSelected && selectedMaskPart}
+                  onSelect={() => onKeycodeClick(ki)}
+                  onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
+                  onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
+                />
+              )
+            })}
             {selectButton}
             <button
               type="button"
@@ -139,6 +144,24 @@ export function MacroActionItem({
           </div>
         )
     }
+  }
+
+  if (focusMode && (action.type === 'tap' || action.type === 'down' || action.type === 'up') && selectedKeycodeIndex !== null) {
+    const kc = action.keycodes[selectedKeycodeIndex]
+    return (
+      <div className="flex items-center gap-3">
+        <label className="min-w-[140px] text-sm text-content">{typeLabels[action.type]}</label>
+        <KeycodeField
+          value={kc ?? 0}
+          selected
+          selectedMaskPart={selectedMaskPart}
+          onSelect={() => onKeycodeClick(selectedKeycodeIndex)}
+          onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(selectedKeycodeIndex, part) : undefined}
+          onDoubleClick={(rect) => onKeycodeDoubleClick(selectedKeycodeIndex, rect)}
+        />
+        {selectButton}
+      </div>
+    )
   }
 
   return (
