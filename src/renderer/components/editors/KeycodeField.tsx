@@ -46,7 +46,6 @@ const FIELD_KEY: KleKey = {
   ghost: false,
 }
 
-const SVG_SIZE = KEY_UNIT
 // Crop viewBox to tightly frame the visible key face
 // Face rect starts at (INSET, INSET) with size (UNIT - SPACING - 2*INSET)
 const FACE_ORIGIN = KEY_FACE_INSET
@@ -98,7 +97,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       aria-pressed={selected}
       title={tooltip}
       data-testid="keycode-field"
-      className="flex shrink-0"
+      className={`flex shrink-0 rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border'}`}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
     >

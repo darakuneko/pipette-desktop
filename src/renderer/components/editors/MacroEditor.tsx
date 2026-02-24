@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useState, useCallback, useMemo, useEffect, useLayoutEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MacroActionItem, defaultAction, type ActionType } from './MacroActionItem'
 import { MacroRecorder } from './MacroRecorder'
 import { MacroTextEditor } from './MacroTextEditor'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import type { MacroAction } from '../../../preload/macro'
 import {
+  type MacroAction,
   deserializeAllMacros,
   serializeAllMacros,
   serializeMacro,
@@ -16,8 +16,7 @@ import {
   jsonToMacroActions,
   isValidMacroText,
 } from '../../../preload/macro'
-import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserialize } from '../../../shared/keycodes/keycodes'
+import { type Keycode, deserialize } from '../../../shared/keycodes/keycodes'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection'
@@ -117,7 +116,7 @@ export function MacroEditor({
 
   const isEditing = selectedKey !== null
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     onEditingChange?.(isEditing)
   }, [isEditing, onEditingChange])
 
@@ -168,25 +167,33 @@ export function MacroEditor({
     [currentActions, updateActions],
   )
 
-  const handleMoveUp = useCallback(
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index)
+  }, [])
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    setDragOverIndex(index)
+  }, [])
+
+  const handleDrop = useCallback(
     (index: number) => {
-      if (index === 0) return
+      if (dragIndex === null || dragIndex === index) return
       const updated = [...currentActions]
-      ;[updated[index - 1], updated[index]] = [updated[index], updated[index - 1]]
+      const [moved] = updated.splice(dragIndex, 1)
+      updated.splice(index, 0, moved)
       updateActions(updated)
     },
-    [currentActions, updateActions],
+    [dragIndex, currentActions, updateActions],
   )
 
-  const handleMoveDown = useCallback(
-    (index: number) => {
-      if (index >= currentActions.length - 1) return
-      const updated = [...currentActions]
-      ;[updated[index], updated[index + 1]] = [updated[index + 1], updated[index]]
-      updateActions(updated)
-    },
-    [currentActions, updateActions],
-  )
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }, [])
 
   const handleSave = useCallback(async () => {
     await guardAll(async () => {
@@ -323,22 +330,7 @@ export function MacroEditor({
     [currentActions, maskedSelection.enterMaskMode],
   )
 
-  const handlePopoverKeycodeSelect = useCallback(
-    (kc: Keycode) => {
-      if (!popoverState) return
-      const action = currentActions[popoverState.actionIndex]
-      if (!isKeycodeAction(action)) return
-
-      const newKeycodes = [...action.keycodes]
-      newKeycodes[popoverState.keycodeIndex] = deserialize(kc.qmkId)
-      setKeycodeAt(popoverState.actionIndex, newKeycodes)
-      setPopoverState(null)
-      setSelectedKey(null)
-    },
-    [popoverState, currentActions, setKeycodeAt],
-  )
-
-  const handlePopoverRawKeycodeSelect = useCallback(
+  const applyPopoverKeycode = useCallback(
     (code: number) => {
       if (!popoverState) return
       const action = currentActions[popoverState.actionIndex]
@@ -351,6 +343,11 @@ export function MacroEditor({
       setSelectedKey(null)
     },
     [popoverState, currentActions, setKeycodeAt],
+  )
+
+  const handlePopoverKeycodeSelect = useCallback(
+    (kc: Keycode) => applyPopoverKeycode(deserialize(kc.qmkId)),
+    [applyPopoverKeycode],
   )
 
   const closePopover = useCallback(() => {
@@ -410,8 +407,7 @@ export function MacroEditor({
     <>
       <div className="flex-1 flex flex-col min-h-0" data-testid="editor-macro">
         {/* Fixed header: memory + action buttons */}
-        {!isEditing && (
-          <div className="shrink-0 px-6 pt-2 pb-3 flex items-center gap-2">
+          <div className={`shrink-0 px-6 pt-2 pb-3 flex items-center gap-2 ${isEditing ? 'hidden' : ''}`}>
             <span className="text-xs text-content-muted" data-testid="macro-memory">
               {t('editor.macro.memoryUsage', {
                 used: memoryUsed,
@@ -445,7 +441,6 @@ export function MacroEditor({
               {t('editor.macro.textEditor')}
             </button>
           </div>
-        )}
 
         {/* Scrollable content: action list + picker */}
         <div className={`flex-1 overflow-y-auto px-6 pb-6 ${isEditing ? 'pt-6' : ''}`}>
@@ -460,10 +455,11 @@ export function MacroEditor({
                   index={i}
                   onChange={handleChange}
                   onDelete={handleDelete}
-                  onMoveUp={handleMoveUp}
-                  onMoveDown={handleMoveDown}
-                  isFirst={i === 0}
-                  isLast={i === currentActions.length - 1}
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={(e) => handleDragOver(e, i)}
+                  onDrop={() => handleDrop(i)}
+                  onDragEnd={handleDragEnd}
+                  dropIndicator={dragOverIndex === i && dragIndex !== null && dragIndex !== i ? (dragIndex < i ? 'below' : 'above') : null}
                   selectedKeycodeIndex={isSelectedAction ? selectedKey.keycodeIndex : null}
                   selectedMaskPart={isSelectedAction && maskedSelection.editingPart === 'inner'}
                   onKeycodeClick={(ki) => handleKeycodeClick(i, ki)}
@@ -477,21 +473,18 @@ export function MacroEditor({
             })}
           </div>
 
-          {isEditing && (
-            <div ref={pickerRef} className="mt-3">
-              <TabbedKeycodes
-                onKeycodeSelect={maskedSelection.handleKeycodeSelect}
-                maskOnly={maskedSelection.maskOnly}
-                lmMode={maskedSelection.lmMode}
-                onClose={revertAndDeselect}
-              />
-            </div>
-          )}
+          <div ref={pickerRef} className={`mt-3 ${isEditing ? '' : 'hidden'}`}>
+            <TabbedKeycodes
+              onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+              maskOnly={maskedSelection.maskOnly}
+              lmMode={maskedSelection.lmMode}
+              onClose={revertAndDeselect}
+            />
+          </div>
         </div>
 
         {/* Fixed footer: Clear / Revert / Save */}
-        {!isEditing && (
-          <div className="shrink-0 px-6 py-3">
+          <div className={`shrink-0 px-6 py-3 ${isEditing ? 'hidden' : ''}`}>
             <div className="flex justify-end gap-2">
               <ConfirmButton
                 testId="macro-clear"
@@ -520,14 +513,13 @@ export function MacroEditor({
               </button>
             </div>
           </div>
-        )}
 
         {popoverState !== null && (
           <KeyPopover
             anchorRect={popoverState.anchorRect}
             currentKeycode={popoverKeycode}
             onKeycodeSelect={handlePopoverKeycodeSelect}
-            onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
+            onRawKeycodeSelect={applyPopoverKeycode}
             onClose={closePopover}
           />
         )}

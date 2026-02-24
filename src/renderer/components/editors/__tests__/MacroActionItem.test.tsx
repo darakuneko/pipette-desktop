@@ -40,8 +40,11 @@ describe('MacroActionItem', () => {
   const defaultCallbacks = {
     onChange: vi.fn(),
     onDelete: vi.fn(),
-    onMoveUp: vi.fn(),
-    onMoveDown: vi.fn(),
+    onDragStart: vi.fn(),
+    onDragOver: vi.fn(),
+    onDrop: vi.fn(),
+    onDragEnd: vi.fn(),
+    dropIndicator: null as 'above' | 'below' | null,
     selectedKeycodeIndex: null as number | null,
     onKeycodeClick: vi.fn(),
     onKeycodeDoubleClick: vi.fn(),
@@ -57,7 +60,7 @@ describe('MacroActionItem', () => {
 
     it('renders text input with value', () => {
       render(
-        <MacroActionItem action={textAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={textAction} index={0} {...defaultCallbacks} />,
       )
       const input = screen.getByPlaceholderText('Text') as HTMLInputElement
       expect(input.value).toBe('hello')
@@ -66,7 +69,7 @@ describe('MacroActionItem', () => {
     it('calls onChange when text is edited', () => {
       const onChange = vi.fn()
       render(
-        <MacroActionItem action={textAction} index={2} isFirst={false} isLast={false} {...defaultCallbacks} onChange={onChange} />,
+        <MacroActionItem action={textAction} index={2} {...defaultCallbacks} onChange={onChange} />,
       )
       fireEvent.change(screen.getByPlaceholderText('Text'), { target: { value: 'world' } })
       expect(onChange).toHaveBeenCalledWith(2, { type: 'text', text: 'world' })
@@ -74,7 +77,7 @@ describe('MacroActionItem', () => {
 
     it('shows no warning for valid ASCII text', () => {
       render(
-        <MacroActionItem action={textAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={textAction} index={0} {...defaultCallbacks} />,
       )
       expect(screen.queryByText('Only ASCII characters (A-Z, 0-9, symbols) are supported')).not.toBeInTheDocument()
       const input = screen.getByPlaceholderText('Text')
@@ -84,7 +87,7 @@ describe('MacroActionItem', () => {
     it('shows warning and red border for non-ASCII text', () => {
       const nonAsciiAction: MacroAction = { type: 'text', text: 'こんにちは' }
       render(
-        <MacroActionItem action={nonAsciiAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={nonAsciiAction} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByText('Only ASCII characters (A-Z, 0-9, symbols) are supported')).toBeInTheDocument()
       const input = screen.getByPlaceholderText('Text')
@@ -94,7 +97,7 @@ describe('MacroActionItem', () => {
     it('shows warning for mixed ASCII and non-ASCII text', () => {
       const mixedAction: MacroAction = { type: 'text', text: 'Hello こんにちは' }
       render(
-        <MacroActionItem action={mixedAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={mixedAction} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByText('Only ASCII characters (A-Z, 0-9, symbols) are supported')).toBeInTheDocument()
     })
@@ -104,7 +107,7 @@ describe('MacroActionItem', () => {
     it('renders KeycodeField buttons for keycodes', () => {
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
-        <MacroActionItem action={tapAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} />,
       )
       const keycodeFields = screen.getAllByTestId('keycode-field')
       expect(keycodeFields).toHaveLength(1)
@@ -113,7 +116,7 @@ describe('MacroActionItem', () => {
     it('renders multiple KeycodeField buttons for multiple keycodes', () => {
       const multiAction: MacroAction = { type: 'tap', keycodes: [0x04, 0x05] }
       render(
-        <MacroActionItem action={multiAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={multiAction} index={0} {...defaultCallbacks} />,
       )
       const keycodeFields = screen.getAllByTestId('keycode-field')
       expect(keycodeFields).toHaveLength(2)
@@ -122,7 +125,7 @@ describe('MacroActionItem', () => {
     it('renders add keycode button', () => {
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
-        <MacroActionItem action={tapAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByTestId('macro-add-keycode')).toBeInTheDocument()
     })
@@ -131,7 +134,7 @@ describe('MacroActionItem', () => {
       const onKeycodeAdd = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
-        <MacroActionItem action={tapAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} onKeycodeAdd={onKeycodeAdd} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeAdd={onKeycodeAdd} />,
       )
       fireEvent.click(screen.getByTestId('macro-add-keycode'))
       expect(onKeycodeAdd).toHaveBeenCalled()
@@ -141,7 +144,7 @@ describe('MacroActionItem', () => {
       const onKeycodeClick = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
-        <MacroActionItem action={tapAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} onKeycodeClick={onKeycodeClick} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeClick={onKeycodeClick} />,
       )
       fireEvent.click(screen.getByTestId('keycode-field'))
       // KeycodeField uses a timeout for single click when onDoubleClick is not provided
@@ -152,7 +155,7 @@ describe('MacroActionItem', () => {
     it('reflects selectedKeycodeIndex via aria-pressed', () => {
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41, 0x42] }
       render(
-        <MacroActionItem action={tapAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} selectedKeycodeIndex={0} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} selectedKeycodeIndex={0} />,
       )
       const keycodeFields = screen.getAllByTestId('keycode-field')
       expect(keycodeFields[0]).toHaveAttribute('aria-pressed', 'true')
@@ -163,7 +166,7 @@ describe('MacroActionItem', () => {
   describe('down action', () => {
     it('renders KeycodeField button', () => {
       render(
-        <MacroActionItem action={{ type: 'down', keycodes: [0x10] }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={{ type: 'down', keycodes: [0x10] }} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByTestId('keycode-field')).toBeInTheDocument()
     })
@@ -172,7 +175,7 @@ describe('MacroActionItem', () => {
   describe('up action', () => {
     it('renders KeycodeField button', () => {
       render(
-        <MacroActionItem action={{ type: 'up', keycodes: [0x20] }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={{ type: 'up', keycodes: [0x20] }} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByTestId('keycode-field')).toBeInTheDocument()
     })
@@ -183,7 +186,7 @@ describe('MacroActionItem', () => {
 
     it('renders number input with delay value', () => {
       render(
-        <MacroActionItem action={delayAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={delayAction} index={0} {...defaultCallbacks} />,
       )
       const input = screen.getByDisplayValue('250') as HTMLInputElement
       expect(input.type).toBe('number')
@@ -191,7 +194,7 @@ describe('MacroActionItem', () => {
 
     it('shows ms label', () => {
       render(
-        <MacroActionItem action={delayAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={delayAction} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByText('ms')).toBeInTheDocument()
     })
@@ -199,7 +202,7 @@ describe('MacroActionItem', () => {
     it('calls onChange with parsed delay value', () => {
       const onChange = vi.fn()
       render(
-        <MacroActionItem action={delayAction} index={1} isFirst={false} isLast={false} {...defaultCallbacks} onChange={onChange} />,
+        <MacroActionItem action={delayAction} index={1} {...defaultCallbacks} onChange={onChange} />,
       )
       fireEvent.change(screen.getByDisplayValue('250'), { target: { value: '500' } })
       expect(onChange).toHaveBeenCalledWith(1, { type: 'delay', delay: 500 })
@@ -208,7 +211,7 @@ describe('MacroActionItem', () => {
     it('clamps negative delay to 0', () => {
       const onChange = vi.fn()
       render(
-        <MacroActionItem action={delayAction} index={0} isFirst={true} isLast={false} {...defaultCallbacks} onChange={onChange} />,
+        <MacroActionItem action={delayAction} index={0} {...defaultCallbacks} onChange={onChange} />,
       )
       fireEvent.change(screen.getByDisplayValue('250'), { target: { value: '-10' } })
       expect(onChange).toHaveBeenCalledWith(0, { type: 'delay', delay: 0 })
@@ -218,53 +221,45 @@ describe('MacroActionItem', () => {
   describe('type label', () => {
     it('displays the action type as a text label', () => {
       render(
-        <MacroActionItem action={{ type: 'tap', keycodes: [0] }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={{ type: 'tap', keycodes: [0] }} index={0} {...defaultCallbacks} />,
       )
       expect(screen.getByText('Tap')).toBeInTheDocument()
     })
   })
 
-  describe('move and delete controls', () => {
-    it('disables move up when isFirst', () => {
+  describe('drag handle and delete', () => {
+    it('has a draggable handle', () => {
       render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={0} isFirst={true} isLast={false} {...defaultCallbacks} />,
+        <MacroActionItem action={{ type: 'text', text: '' }} index={0} {...defaultCallbacks} />,
       )
-      expect(screen.getAllByRole('button')[0]).toBeDisabled()
-    })
-
-    it('disables move down when isLast', () => {
-      render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={0} isFirst={false} isLast={true} {...defaultCallbacks} />,
-      )
-      expect(screen.getAllByRole('button')[1]).toBeDisabled()
-    })
-
-    it('calls onMoveUp with index', () => {
-      const onMoveUp = vi.fn()
-      render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={2} isFirst={false} isLast={false} {...defaultCallbacks} onMoveUp={onMoveUp} />,
-      )
-      fireEvent.click(screen.getAllByRole('button')[0])
-      expect(onMoveUp).toHaveBeenCalledWith(2)
-    })
-
-    it('calls onMoveDown with index', () => {
-      const onMoveDown = vi.fn()
-      render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={1} isFirst={false} isLast={false} {...defaultCallbacks} onMoveDown={onMoveDown} />,
-      )
-      fireEvent.click(screen.getAllByRole('button')[1])
-      expect(onMoveDown).toHaveBeenCalledWith(1)
+      const handle = screen.getByTestId('drag-handle')
+      expect(handle).toHaveAttribute('draggable', 'true')
     })
 
     it('calls onDelete with index when delete button clicked', () => {
       const onDelete = vi.fn()
       render(
-        <MacroActionItem action={{ type: 'text', text: '' }} index={4} isFirst={false} isLast={false} {...defaultCallbacks} onDelete={onDelete} />,
+        <MacroActionItem action={{ type: 'text', text: '' }} index={4} {...defaultCallbacks} onDelete={onDelete} />,
       )
       const buttons = screen.getAllByRole('button')
       fireEvent.click(buttons[buttons.length - 1])
       expect(onDelete).toHaveBeenCalledWith(4)
+    })
+
+    it('shows top indicator when dropIndicator is above', () => {
+      const { container } = render(
+        <MacroActionItem action={{ type: 'text', text: '' }} index={0} {...defaultCallbacks} dropIndicator="above" />,
+      )
+      const outerDiv = container.firstElementChild as HTMLElement
+      expect(outerDiv.className).toContain('border-t-accent')
+    })
+
+    it('shows bottom indicator when dropIndicator is below', () => {
+      const { container } = render(
+        <MacroActionItem action={{ type: 'text', text: '' }} index={0} {...defaultCallbacks} dropIndicator="below" />,
+      )
+      const outerDiv = container.firstElementChild as HTMLElement
+      expect(outerDiv.className).toContain('border-b-accent')
     })
   })
 })

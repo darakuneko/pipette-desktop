@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { GripVertical } from 'lucide-react'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
 import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 
@@ -9,12 +10,13 @@ export type ActionType = MacroAction['type']
 interface Props {
   action: MacroAction
   index: number
-  isFirst: boolean
-  isLast: boolean
   onChange: (index: number, action: MacroAction) => void
   onDelete: (index: number) => void
-  onMoveUp: (index: number) => void
-  onMoveDown: (index: number) => void
+  onDragStart: () => void
+  onDragOver: (e: React.DragEvent) => void
+  onDrop: () => void
+  onDragEnd: () => void
+  dropIndicator: 'above' | 'below' | null
   selectedKeycodeIndex: number | null
   selectedMaskPart?: boolean
   onKeycodeClick: (keycodeIndex: number) => void
@@ -41,12 +43,13 @@ export function defaultAction(type: ActionType): MacroAction {
 export function MacroActionItem({
   action,
   index,
-  isFirst,
-  isLast,
   onChange,
   onDelete,
-  onMoveUp,
-  onMoveDown,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  dropIndicator,
   selectedKeycodeIndex,
   selectedMaskPart,
   onKeycodeClick,
@@ -160,36 +163,26 @@ export function MacroActionItem({
   }
 
   return (
-    <div className="flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5">
-      {/* Move up/down */}
-      <div className="flex flex-col items-center">
-        <button
-          type="button"
-          disabled={isFirst}
-          onClick={() => onMoveUp(index)}
-          className="px-1 text-xs leading-none text-content-muted hover:text-content disabled:opacity-30"
-        >
-          &#9650;
-        </button>
-        <button
-          type="button"
-          disabled={isLast}
-          onClick={() => onMoveDown(index)}
-          className="px-1 text-xs leading-none text-content-muted hover:text-content disabled:opacity-30"
-        >
-          &#9660;
-        </button>
+    <div
+      onDragOver={onDragOver}
+      onDrop={(e) => { e.preventDefault(); onDrop() }}
+      className={`flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5 ${dropIndicator === 'above' ? 'border-t-2 border-t-accent' : dropIndicator === 'below' ? 'border-b-2 border-b-accent' : ''}`}
+    >
+      <div
+        draggable
+        data-testid="drag-handle"
+        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); onDragStart() }}
+        onDragEnd={onDragEnd}
+        className="flex items-center gap-1.5 border-r border-edge py-1 pl-1 pr-3 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="shrink-0 text-content-muted" size={14} />
+        <span className="min-w-[36px] text-center text-sm text-content-secondary">
+          {typeLabels[action.type]}
+        </span>
       </div>
 
-      {/* Type label */}
-      <span className="min-w-[50px] text-center text-sm text-content-secondary">
-        {typeLabels[action.type]}
-      </span>
-
-      {/* Content */}
       {renderContent()}
 
-      {/* Remove */}
       <button
         type="button"
         onClick={() => onDelete(index)}
