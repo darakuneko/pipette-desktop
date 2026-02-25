@@ -277,6 +277,7 @@
       "lock": "Lock",
       "numpad": "Numpad",
       "system": "System",
+      "shifted": "Shifted Symbols",
       "internal": "Internal",
       "magic": "Magic",
       "audio": "Audio & Music",
