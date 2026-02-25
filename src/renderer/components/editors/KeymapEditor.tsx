@@ -2014,6 +2014,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             tabFooterContent={tabFooterContent}
             tabContentOverride={tabContentOverride}
             basicViewType={basicViewType}
+            remapLabel={remapLabel}
             tabBarRight={
               <button
                 ref={layoutButtonRef}

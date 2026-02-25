@@ -39,6 +39,7 @@ interface Props {
   showHint?: boolean // Show multi-select usage hint at the bottom
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
+  remapLabel?: (qmkId: string) => string
 }
 
 export function TabbedKeycodes({
@@ -56,6 +57,7 @@ export function TabbedKeycodes({
   showHint = false,
   tabContentOverride,
   basicViewType,
+  remapLabel,
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
@@ -153,6 +155,7 @@ export function TabbedKeycodes({
         highlightedKeycodes={highlightedKeycodes}
         pickerSelectedKeycodes={pickerSelectedKeycodes}
         isVisible={isVisible}
+        remapLabel={remapLabel}
       />
     )
   }
@@ -190,6 +193,7 @@ export function TabbedKeycodes({
           highlightedKeycodes={highlightedKeycodes}
           pickerSelectedKeycodes={pickerSelectedKeycodes}
           isVisible={isVisible}
+          remapLabel={remapLabel}
         />
       )
     }

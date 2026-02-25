@@ -12,6 +12,25 @@ interface Props {
   highlightedKeycodes?: Set<string>
   pickerSelectedKeycodes?: Set<string>
   isVisible?: (kc: Keycode) => boolean
+  remapLabel?: (qmkId: string) => string
+}
+
+/** Return remapped display label for a keycode, or undefined if unchanged */
+export function getRemapDisplayLabel(qmkId: string, remapLabel?: (qmkId: string) => string): string | undefined {
+  if (!remapLabel) return undefined
+  const remapped = remapLabel(qmkId)
+  return remapped !== qmkId ? remapped : undefined
+}
+
+/** Compute remap display props for a split key's base keycode */
+export function getSplitRemapProps(qmkId: string, remapLabel?: (qmkId: string) => string) {
+  const remapped = getRemapDisplayLabel(qmkId, remapLabel)
+  if (remapped == null) return undefined
+  if (remapped.includes('\n')) {
+    const [shifted, base] = remapped.split('\n')
+    return { baseDisplayLabel: base, shiftedDisplayLabel: shifted }
+  }
+  return { baseDisplayLabel: remapped }
 }
 
 export function KeycodeGrid({
@@ -22,6 +41,7 @@ export function KeycodeGrid({
   highlightedKeycodes,
   pickerSelectedKeycodes,
   isVisible,
+  remapLabel,
 }: Props): React.ReactNode {
   const visible = isVisible ? keycodes.filter(isVisible) : keycodes
 
@@ -30,6 +50,7 @@ export function KeycodeGrid({
       {visible.map((kc) => {
         const shifted = getShiftedKeycode(kc.qmkId)
         if (shifted && (!isVisible || isVisible(shifted))) {
+          const splitRemap = getSplitRemapProps(kc.qmkId, remapLabel)
           return (
             <div key={kc.qmkId} className="w-[44px] h-[44px]">
               <SplitKey
@@ -40,10 +61,12 @@ export function KeycodeGrid({
                 onHoverEnd={onHoverEnd}
                 highlightedKeycodes={highlightedKeycodes}
                 pickerSelectedKeycodes={pickerSelectedKeycodes}
+                {...splitRemap}
               />
             </div>
           )
         }
+        const displayLabel = getRemapDisplayLabel(kc.qmkId, remapLabel)
         return (
           <KeycodeButton
             key={kc.qmkId}
@@ -53,6 +76,7 @@ export function KeycodeGrid({
             onHoverEnd={onHoverEnd}
             highlighted={highlightedKeycodes?.has(kc.qmkId)}
             selected={pickerSelectedKeycodes?.has(kc.qmkId)}
+            displayLabel={displayLabel}
           />
         )
       })}

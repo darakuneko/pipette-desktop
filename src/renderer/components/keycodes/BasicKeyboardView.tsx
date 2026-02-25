@@ -23,6 +23,7 @@ interface Props {
   highlightedKeycodes?: Set<string>
   pickerSelectedKeycodes?: Set<string>
   isVisible?: (kc: Keycode) => boolean
+  remapLabel?: (qmkId: string) => string
 }
 
 /** Collect all QMK IDs present in a KLE layout definition */
@@ -70,6 +71,7 @@ export function BasicKeyboardView({
   highlightedKeycodes,
   pickerSelectedKeycodes,
   isVisible,
+  remapLabel,
 }: Props) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -118,6 +120,7 @@ export function BasicKeyboardView({
         highlightedKeycodes={highlightedKeycodes}
         pickerSelectedKeycodes={pickerSelectedKeycodes}
         isVisible={visCheck}
+        remapLabel={remapLabel}
       />
     )
   }
@@ -133,6 +136,7 @@ export function BasicKeyboardView({
             onKeycodeHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
             pickerSelectedKeycodes={pickerSelectedKeycodes}
+            remapLabel={remapLabel}
           />
           {remainingRows.length > 0 && (
             <div className="mt-1">

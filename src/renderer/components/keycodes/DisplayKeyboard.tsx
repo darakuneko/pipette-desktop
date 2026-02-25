@@ -4,6 +4,7 @@ import { useMemo } from 'react'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import { KeycodeButton } from './KeycodeButton'
+import { getRemapDisplayLabel, getSplitRemapProps } from './KeycodeGrid'
 import { SplitKey, getShiftedKeycode } from './SplitKey'
 
 /** Grid multiplier: 1u = 4 grid cells (same as vial-gui QGridLayout) */
@@ -51,6 +52,7 @@ interface Props {
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
   pickerSelectedKeycodes?: Set<string>
+  remapLabel?: (qmkId: string) => string
 }
 
 interface GridKey {
@@ -70,6 +72,7 @@ export function DisplayKeyboard({
   onKeycodeHoverEnd,
   highlightedKeycodes,
   pickerSelectedKeycodes,
+  remapLabel,
 }: Props) {
   const { gridKeys, totalCols, totalRows } = useMemo(() => {
     const layout = parseKle(kle)
@@ -142,6 +145,7 @@ export function DisplayKeyboard({
               onHoverEnd={onKeycodeHoverEnd}
               highlightedKeycodes={highlightedKeycodes}
               pickerSelectedKeycodes={pickerSelectedKeycodes}
+              {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
             />
           ) : (
             <KeycodeButton
@@ -152,6 +156,7 @@ export function DisplayKeyboard({
               highlighted={highlightedKeycodes?.has(gk.keycode.qmkId)}
               selected={pickerSelectedKeycodes?.has(gk.keycode.qmkId)}
               sizeClass="w-full h-full"
+              displayLabel={getRemapDisplayLabel(gk.keycode.qmkId, remapLabel)}
             />
           )}
         </div>

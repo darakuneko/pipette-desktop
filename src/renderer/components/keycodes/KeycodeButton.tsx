@@ -11,12 +11,13 @@ interface Props {
   highlighted?: boolean
   selected?: boolean
   sizeClass?: string
+  displayLabel?: string
 }
 
-function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected, sizeClass }: Props) {
+function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel }: Props) {
   if (keycode.hidden) return null
 
-  const label = keycode.label
+  const label = displayLabel ?? keycode.label
   const lines = label.split('\n')
 
   const handleMouseEnter = useCallback(
@@ -33,6 +34,8 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
     variant = 'border-accent bg-accent/20 text-accent ring-1 ring-accent'
   } else if (highlighted) {
     variant = 'border-accent/50 bg-accent/10 text-accent'
+  } else if (displayLabel != null) {
+    variant = 'border-picker-item-border bg-picker-item-bg text-key-label-remap'
   } else {
     variant = 'border-picker-item-border bg-picker-item-bg text-picker-item-text'
   }
