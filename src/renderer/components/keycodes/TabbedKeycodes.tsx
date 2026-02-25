@@ -147,7 +147,7 @@ export function TabbedKeycodes({
 
     // When split keys are active, expand each base keycode with its shifted
     // counterpart so multi-select can address both halves independently.
-    if (useSplit) {
+    if (useSplit && !maskOnly) {
       const expanded: Keycode[] = []
       for (const kc of keycodes) {
         const shifted = getShiftedKeycode(kc.qmkId)
@@ -212,7 +212,7 @@ export function TabbedKeycodes({
         highlightedKeycodes={highlightedKeycodes}
         pickerSelectedKeycodes={pickerSelectedKeycodes}
         isVisible={isVisible}
-        splitKeyMode={splitKeyMode}
+        splitKeyMode={maskOnly ? 'flat' : splitKeyMode}
         remapLabel={remapLabel}
       />
     )
