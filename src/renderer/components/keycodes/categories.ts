@@ -114,6 +114,7 @@ function basicCharactersGroup(extra?: { layoutRow: number }): KeycodeGroup {
 function getBasicGroupsList(): KeycodeGroup[] {
   return [
     basicCharactersGroup(),
+    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
     { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
     { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 1 },
     { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 2 },
@@ -131,6 +132,7 @@ function getBasicGroupsAnsi(): KeycodeGroup[] {
   return [
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
+    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
@@ -148,12 +150,13 @@ function getBasicGroupsIso(): KeycodeGroup[] {
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
     basicCharactersGroup({ layoutRow: 1 }),
-    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
-    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
-    { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
-    { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 2 },
-    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 3 },
-    { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 3 },
+    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED, layoutRow: 1 },
+    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 2 },
+    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 2 },
+    { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
+    { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
+    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 4 },
+    { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 4 },
     { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS },
   ]
 }

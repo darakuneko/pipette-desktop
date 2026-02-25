@@ -940,6 +940,8 @@ export function App() {
             onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
             defaultBasicViewType={devicePrefs.defaultBasicViewType}
             onDefaultBasicViewTypeChange={devicePrefs.setDefaultBasicViewType}
+            defaultSplitKeyMode={devicePrefs.defaultSplitKeyMode}
+            onDefaultSplitKeyModeChange={devicePrefs.setDefaultSplitKeyMode}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
             onResetStart={() => setResettingData(true)}
@@ -1174,6 +1176,8 @@ export function App() {
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             basicViewType={devicePrefs.basicViewType}
             onBasicViewTypeChange={devicePrefs.setBasicViewType}
+            splitKeyMode={devicePrefs.splitKeyMode}
+            onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
             onLock={handleLock}

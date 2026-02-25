@@ -503,7 +503,8 @@
     "tabSave": "保存",
     "tabTools": "設定",
     "tabLayout": "レイアウト",
-    "basicViewType": "Basic タブ表示"
+    "basicViewType": "Basic タブ表示",
+    "splitKeyMode": "Split Key"
   },
   "hub": {
     "uploadToHub": "アップロード",

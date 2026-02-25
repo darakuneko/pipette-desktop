@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { Keycode } from '../../../shared/keycodes/keycodes'
+import type { SplitKeyMode } from '../../../shared/types/app-config'
 import { KeycodeButton } from './KeycodeButton'
 import { SplitKey, getShiftedKeycode } from './SplitKey'
 
@@ -12,6 +13,7 @@ interface Props {
   highlightedKeycodes?: Set<string>
   pickerSelectedKeycodes?: Set<string>
   isVisible?: (kc: Keycode) => boolean
+  splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
 }
 
@@ -41,14 +43,16 @@ export function KeycodeGrid({
   highlightedKeycodes,
   pickerSelectedKeycodes,
   isVisible,
+  splitKeyMode,
   remapLabel,
 }: Props): React.ReactNode {
   const visible = isVisible ? keycodes.filter(isVisible) : keycodes
+  const useSplit = splitKeyMode !== 'flat'
 
   return (
     <div className="flex flex-wrap gap-1">
       {visible.map((kc) => {
-        const shifted = getShiftedKeycode(kc.qmkId)
+        const shifted = useSplit ? getShiftedKeycode(kc.qmkId) : null
         if (shifted && (!isVisible || isVisible(shifted))) {
           const splitRemap = getSplitRemapProps(kc.qmkId, remapLabel)
           return (

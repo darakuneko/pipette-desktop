@@ -8,9 +8,9 @@ import { useAppConfig } from './useAppConfig'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
-import type { AutoLockMinutes, BasicViewType } from '../../shared/types/app-config'
+import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 
-export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType }
+export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
 
@@ -53,12 +53,14 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
 
 const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'list'])
 const LEGACY_BASIC_VIEW_MAP: Record<string, string> = { keyboard: 'ansi' }
+const VALID_SPLIT_KEY_MODES: ReadonlySet<string> = new Set(['split', 'flat'])
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
   autoAdvance: boolean
   layerPanelOpen: boolean
   basicViewType: BasicViewType
+  splitKeyMode: SplitKeyMode
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
@@ -66,11 +68,12 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
   defaultBasicViewType: BasicViewType,
+  defaultSplitKeyMode: SplitKeyMode,
 ): ValidatedPrefs | null {
   if (!data) return null
 
@@ -87,6 +90,9 @@ function validateIpcPrefs(
   const basicViewType = rawBasicView !== null && VALID_BASIC_VIEW_TYPES.has(rawBasicView)
     ? rawBasicView as BasicViewType
     : defaultBasicViewType
+  const splitKeyMode = typeof data.splitKeyMode === 'string' && VALID_SPLIT_KEY_MODES.has(data.splitKeyMode)
+    ? data.splitKeyMode as SplitKeyMode
+    : defaultSplitKeyMode
 
   const layerNames = Array.isArray(data.layerNames)
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
@@ -100,6 +106,7 @@ function validateIpcPrefs(
     autoAdvance: autoAdvance ?? defaultAutoAdvance,
     layerPanelOpen,
     basicViewType,
+    splitKeyMode,
     layerNames,
     typingTestResults,
     typingTestConfig: validateTypingTestConfig(data.typingTestConfig),
@@ -112,6 +119,7 @@ export interface UseDevicePrefsReturn {
   autoAdvance: boolean
   layerPanelOpen: boolean
   basicViewType: BasicViewType
+  splitKeyMode: SplitKeyMode
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
@@ -120,6 +128,7 @@ export interface UseDevicePrefsReturn {
   setAutoAdvance: (enabled: boolean) => void
   setLayerPanelOpen: (open: boolean) => void
   setBasicViewType: (type: BasicViewType) => void
+  setSplitKeyMode: (mode: SplitKeyMode) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
@@ -128,10 +137,12 @@ export interface UseDevicePrefsReturn {
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean
   defaultBasicViewType: BasicViewType
+  defaultSplitKeyMode: SplitKeyMode
   setDefaultLayout: (id: KeyboardLayoutId) => void
   setDefaultAutoAdvance: (enabled: boolean) => void
   setDefaultLayerPanelOpen: (open: boolean) => void
   setDefaultBasicViewType: (type: BasicViewType) => void
+  setDefaultSplitKeyMode: (mode: SplitKeyMode) => void
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
@@ -163,11 +174,13 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const defaultAutoAdvance = config.defaultAutoAdvance
   const defaultLayerPanelOpen = config.defaultLayerPanelOpen
   const defaultBasicViewType = config.defaultBasicViewType
+  const defaultSplitKeyMode = config.defaultSplitKeyMode ?? 'split'
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
+  const [splitKeyMode, updateSplitKeyMode, splitKeyModeRef] = useStateRef<SplitKeyMode>(defaultSplitKeyMode)
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
@@ -185,6 +198,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       autoAdvance: autoAdvanceRef.current,
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
+      splitKeyMode: splitKeyModeRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -213,6 +227,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateBasicViewType(type)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateBasicViewType])
+
+  const setSplitKeyMode = useCallback((mode: SplitKeyMode) => {
+    updateSplitKeyMode(mode)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateSplitKeyMode])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
@@ -253,6 +272,10 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     set('defaultBasicViewType', type)
   }, [set])
 
+  const setDefaultSplitKeyMode = useCallback((mode: SplitKeyMode) => {
+    set('defaultSplitKeyMode', mode)
+  }, [set])
+
   const setAutoLockTime = useCallback((m: AutoLockMinutes) => {
     set('autoLockTime', m)
   }, [set])
@@ -265,7 +288,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     try {
       const raw = await window.vialAPI.pipetteSettingsGet(uid)
       if (applySeqRef.current !== seq) return
-      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType)
+      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode)
     } catch {
       // IPC failure — fall through to defaults
     }
@@ -276,6 +299,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       autoAdvance: defaultAutoAdvance,
       layerPanelOpen: defaultLayerPanelOpen,
       basicViewType: defaultBasicViewType,
+      splitKeyMode: defaultSplitKeyMode,
       layerNames: [],
       typingTestResults: [],
     }
@@ -284,6 +308,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
     updateBasicViewType(resolved.basicViewType)
+    updateSplitKeyMode(resolved.splitKeyMode)
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
@@ -292,7 +317,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     if (!prefs) {
       saveCurrentPrefs()
     }
-  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType])
+  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode])
 
   const remapLabel = useCallback(
     (qmkId: string): string => remapKeycode(qmkId, layout),
@@ -309,6 +334,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     autoAdvance,
     layerPanelOpen,
     basicViewType,
+    splitKeyMode,
     layerNames,
     typingTestResults,
     typingTestConfig,
@@ -317,6 +343,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setAutoAdvance,
     setLayerPanelOpen,
     setBasicViewType,
+    setSplitKeyMode,
     setLayerNames,
     addTypingTestResult,
     setTypingTestConfig,
@@ -325,10 +352,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     defaultAutoAdvance,
     defaultLayerPanelOpen,
     defaultBasicViewType,
+    defaultSplitKeyMode,
     setDefaultLayout,
     setDefaultAutoAdvance,
     setDefaultLayerPanelOpen,
     setDefaultBasicViewType,
+    setDefaultSplitKeyMode,
     autoLockTime: config.autoLockTime,
     setAutoLockTime,
     applyDevicePrefs,

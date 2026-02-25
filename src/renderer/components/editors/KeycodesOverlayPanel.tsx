@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { BasicViewType } from '../../../shared/types/app-config'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
@@ -35,6 +35,8 @@ interface Props {
   onAutoAdvanceChange?: (enabled: boolean) => void
   basicViewType?: BasicViewType
   onBasicViewTypeChange?: (type: BasicViewType) => void
+  splitKeyMode?: SplitKeyMode
+  onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   matrixMode: boolean
   hasMatrixTester: boolean
   onToggleMatrix?: () => void
@@ -60,6 +62,8 @@ export function KeycodesOverlayPanel({
   onAutoAdvanceChange,
   basicViewType,
   onBasicViewTypeChange,
+  splitKeyMode,
+  onSplitKeyModeChange,
   matrixMode,
   hasMatrixTester,
   onToggleMatrix,
@@ -223,6 +227,26 @@ export function KeycodesOverlayPanel({
               </div>
             )}
 
+            {/* Split key toggle */}
+            {splitKeyMode != null && onSplitKeyModeChange && (
+              <div className={ROW_CLASS} data-testid="overlay-split-key-mode-row">
+                <span className="text-[13px] font-medium text-content">
+                  {t('editorSettings.splitKeyMode')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={splitKeyMode === 'split'}
+                  aria-label={t('editorSettings.splitKeyMode')}
+                  className={toggleTrackClass(splitKeyMode === 'split')}
+                  onClick={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
+                  data-testid="overlay-split-key-mode-toggle"
+                >
+                  <span className={toggleKnobClass(splitKeyMode === 'split')} />
+                </button>
+              </div>
+            )}
+
             {/* Key tester toggle */}
             {(hasMatrixTester || matrixMode) && onToggleMatrix && (
               <div className={ROW_CLASS} data-testid="overlay-matrix-row">
@@ -246,7 +270,7 @@ export function KeycodesOverlayPanel({
             {/* Lock button + status */}
             {!isDummy && (
               <div className={ROW_CLASS} data-testid="overlay-lock-row">
-                <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
                   <span className="text-[13px] font-medium text-content">
                     {t('settings.security')}
                   </span>

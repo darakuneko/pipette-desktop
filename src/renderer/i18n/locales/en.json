@@ -503,7 +503,8 @@
     "tabSave": "Save",
     "tabTools": "Settings",
     "tabLayout": "Layout",
-    "basicViewType": "Basic Tab View"
+    "basicViewType": "Basic Tab View",
+    "splitKeyMode": "Split Key"
   },
   "hub": {
     "uploadToHub": "Upload",

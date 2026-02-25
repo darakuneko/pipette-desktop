@@ -14,7 +14,7 @@ import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, Lo
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../hooks/useDevicePrefs'
-import type { BasicViewType } from '../../shared/types/app-config'
+import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
@@ -484,6 +484,8 @@ interface Props {
   onDefaultLayerPanelOpenChange: (open: boolean) => void
   defaultBasicViewType: BasicViewType
   onDefaultBasicViewTypeChange: (type: BasicViewType) => void
+  defaultSplitKeyMode: SplitKeyMode
+  onDefaultSplitKeyModeChange: (mode: SplitKeyMode) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   onResetStart?: () => void
@@ -613,6 +615,8 @@ export function SettingsModal({
   onDefaultLayerPanelOpenChange,
   defaultBasicViewType,
   onDefaultBasicViewTypeChange,
+  defaultSplitKeyMode,
+  onDefaultSplitKeyModeChange,
   autoLockTime,
   onAutoLockTimeChange,
   onResetStart,
@@ -1087,6 +1091,23 @@ export function SettingsModal({
                       <option value="iso">{t('settings.basicViewTypeIso')}</option>
                       <option value="list">{t('settings.basicViewTypeList')}</option>
                     </select>
+                  </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
+                    <span className="text-[13px] font-medium text-content">
+                      {t('editorSettings.splitKeyMode')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={defaultSplitKeyMode === 'split'}
+                      aria-label={t('editorSettings.splitKeyMode')}
+                      className={toggleTrackClass(defaultSplitKeyMode === 'split')}
+                      onClick={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
+                      data-testid="settings-default-split-key-mode-toggle"
+                    >
+                      <span className={toggleKnobClass(defaultSplitKeyMode === 'split')} />
+                    </button>
                   </div>
                 </div>
               </section>

@@ -616,6 +616,80 @@ describe('useDevicePrefs', () => {
     })
   })
 
+  describe('splitKeyMode', () => {
+    it('defaults to split', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.splitKeyMode).toBe('split')
+      expect(result.current.defaultSplitKeyMode).toBe('split')
+    })
+
+    it('restores splitKeyMode from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        splitKeyMode: 'flat',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.splitKeyMode).toBe('flat')
+    })
+
+    it('setSplitKeyMode saves via IPC', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+      act(() => {
+        result.current.setSplitKeyMode('flat')
+      })
+
+      expect(result.current.splitKeyMode).toBe('flat')
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        splitKeyMode: 'flat',
+      }))
+    })
+
+    it('setDefaultSplitKeyMode persists via IPC', async () => {
+      const { mockAppConfigSet } = setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      act(() => {
+        result.current.setDefaultSplitKeyMode('flat')
+      })
+      expect(mockAppConfigSet).toHaveBeenCalledWith('defaultSplitKeyMode', 'flat')
+    })
+
+    it('falls back to default for invalid splitKeyMode from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        splitKeyMode: 'invalid',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.splitKeyMode).toBe('split')
+    })
+  })
+
   describe('remapLabel and isRemapped', () => {
     it('remapLabel delegates to remapKeycode with current layout', async () => {
       setupMocks()

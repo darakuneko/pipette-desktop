@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ANSI_LAYOUTS, ISO_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
-import type { BasicViewType } from '../../../shared/types/app-config'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeGrid } from './KeycodeGrid'
 import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeGroup } from './categories'
@@ -17,6 +17,7 @@ import { parseKle } from '../../../shared/kle/kle-parser'
 
 interface Props {
   viewType: BasicViewType
+  splitKeyMode?: SplitKeyMode
   onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
@@ -65,6 +66,7 @@ function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) =>
 
 export function BasicKeyboardView({
   viewType,
+  splitKeyMode,
   onKeycodeClick,
   onKeycodeHover,
   onKeycodeHoverEnd,
@@ -120,6 +122,7 @@ export function BasicKeyboardView({
         highlightedKeycodes={highlightedKeycodes}
         pickerSelectedKeycodes={pickerSelectedKeycodes}
         isVisible={visCheck}
+        splitKeyMode={splitKeyMode}
         remapLabel={remapLabel}
       />
     )
@@ -136,6 +139,7 @@ export function BasicKeyboardView({
             onKeycodeHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
             pickerSelectedKeycodes={pickerSelectedKeycodes}
+            splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
           />
           {remainingRows.length > 0 && (
