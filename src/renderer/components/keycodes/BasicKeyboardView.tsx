@@ -50,6 +50,7 @@ function getBasicGroups(): KeycodeGroup[] {
 interface RemainingGroup {
   labelKey: string
   keycodes: Keycode[]
+  layoutRow?: number
 }
 
 /** Group remaining keycodes by their basic category group */
@@ -61,7 +62,7 @@ function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) =>
   for (const group of groups) {
     const remaining = group.keycodes.filter((kc) => !shownIds.has(kc.qmkId) && visCheck(kc))
     if (remaining.length > 0) {
-      result.push({ labelKey: group.labelKey, keycodes: remaining })
+      result.push({ labelKey: group.labelKey, keycodes: remaining, layoutRow: group.layoutRow })
     }
   }
 
@@ -145,14 +146,29 @@ export function BasicKeyboardView({
           />
           {remainingGroups.length > 0 && (
             <div className="mt-1">
-              {remainingGroups.map((group) => (
-                <div key={group.labelKey}>
-                  <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
-                    {t(group.labelKey)}
-                  </h4>
-                  {renderKeycodeGrid(group.keycodes)}
-                </div>
-              ))}
+              {(() => {
+                const rows: RemainingGroup[][] = []
+                for (const group of remainingGroups) {
+                  const prev = rows[rows.length - 1]
+                  if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
+                    prev.push(group)
+                  } else {
+                    rows.push([group])
+                  }
+                }
+                return rows.map((row) => (
+                  <div key={row[0].labelKey} className="flex gap-x-3">
+                    {row.map((group) => (
+                      <div key={group.labelKey}>
+                        <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
+                          {t(group.labelKey)}
+                        </h4>
+                        {renderKeycodeGrid(group.keycodes)}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              })()}
             </div>
           )}
         </>
