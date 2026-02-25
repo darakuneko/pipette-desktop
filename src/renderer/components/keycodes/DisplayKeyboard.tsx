@@ -3,6 +3,7 @@
 import { useMemo } from 'react'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
+import type { SplitKeyMode } from '../../../shared/types/app-config'
 import { KeycodeButton } from './KeycodeButton'
 import { getRemapDisplayLabel, getSplitRemapProps } from './KeycodeGrid'
 import { SplitKey, getShiftedKeycode } from './SplitKey'
@@ -38,9 +39,13 @@ function computeSteppedKeyInfo(
   const srx = (x2 - left + w2) / bboxW * 100
   const sby = (y2 - top + h2) / bboxH * 100
 
-  // L-shape polygon: secondary on top, primary extends down
+  // L-shape polygon vertices (percentages of bounding box)
+  const pts: [number, number][] = [
+    [sx, 0], [srx, 0], [prx, pby], [px, pby], [px, sby], [sx, sby],
+  ]
+
   const p = (v: number) => `${v.toFixed(1)}%`
-  const clipPath = `polygon(${p(sx)} 0%, ${p(srx)} 0%, ${p(prx)} ${p(pby)}, ${p(px)} ${p(pby)}, ${p(px)} ${p(sby)}, ${p(sx)} ${p(sby)})`
+  const clipPath = `polygon(${pts.map(([x, y]) => `${p(x)} ${p(y)}`).join(', ')})`
 
   return { left, top, width: bboxW, height: bboxH, clipPath }
 }
@@ -52,6 +57,7 @@ interface Props {
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
   pickerSelectedKeycodes?: Set<string>
+  splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
 }
 
@@ -72,6 +78,7 @@ export function DisplayKeyboard({
   onKeycodeHoverEnd,
   highlightedKeycodes,
   pickerSelectedKeycodes,
+  splitKeyMode,
   remapLabel,
 }: Props) {
   const { gridKeys, totalCols, totalRows } = useMemo(() => {
@@ -100,7 +107,7 @@ export function DisplayKeyboard({
       const colSpan = Math.round(spanW * GRID_SCALE)
       const rowSpan = Math.round(spanH * GRID_SCALE)
 
-      const shiftedKc = getShiftedKeycode(kc.qmkId)
+      const shiftedKc = splitKeyMode !== 'flat' ? getShiftedKeycode(kc.qmkId) : null
 
       keys.push({
         keycode: kc,
@@ -117,7 +124,7 @@ export function DisplayKeyboard({
     }
 
     return { gridKeys: keys, totalCols: maxCol, totalRows: maxRow }
-  }, [kle])
+  }, [kle, splitKeyMode])
 
   return (
     <div
@@ -127,40 +134,52 @@ export function DisplayKeyboard({
         gridTemplateRows: `repeat(${totalRows}, 8px)`,
       }}
     >
-      {gridKeys.map((gk) => (
-        <div
-          key={gk.keycode.qmkId}
-          style={{
-            gridRow: `${gk.gridRow} / span ${gk.gridRowSpan}`,
-            gridColumn: `${gk.gridCol} / span ${gk.gridColSpan}`,
-            clipPath: gk.clipPath,
-          }}
-        >
-          {gk.shiftedKeycode ? (
-            <SplitKey
-              base={gk.keycode}
-              shifted={gk.shiftedKeycode}
-              onClick={onKeycodeClick}
-              onHover={onKeycodeHover}
-              onHoverEnd={onKeycodeHoverEnd}
-              highlightedKeycodes={highlightedKeycodes}
-              pickerSelectedKeycodes={pickerSelectedKeycodes}
-              {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
-            />
-          ) : (
-            <KeycodeButton
-              keycode={gk.keycode}
-              onClick={onKeycodeClick}
-              onHover={onKeycodeHover}
-              onHoverEnd={onKeycodeHoverEnd}
-              highlighted={highlightedKeycodes?.has(gk.keycode.qmkId)}
-              selected={pickerSelectedKeycodes?.has(gk.keycode.qmkId)}
-              sizeClass="w-full h-full"
-              displayLabel={getRemapDisplayLabel(gk.keycode.qmkId, remapLabel)}
-            />
-          )}
-        </div>
-      ))}
+      {gridKeys.map((gk) => {
+        const isSelected = pickerSelectedKeycodes?.has(gk.keycode.qmkId)
+        const isHighlighted = highlightedKeycodes?.has(gk.keycode.qmkId)
+
+        const buttonContent = gk.shiftedKeycode ? (
+          <SplitKey
+            base={gk.keycode}
+            shifted={gk.shiftedKeycode}
+            onClick={onKeycodeClick}
+            onHover={onKeycodeHover}
+            onHoverEnd={onKeycodeHoverEnd}
+            highlightedKeycodes={highlightedKeycodes}
+            pickerSelectedKeycodes={pickerSelectedKeycodes}
+            {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
+          />
+        ) : (
+          <KeycodeButton
+            keycode={gk.keycode}
+            onClick={onKeycodeClick}
+            onHover={onKeycodeHover}
+            onHoverEnd={onKeycodeHoverEnd}
+            highlighted={isHighlighted}
+            selected={isSelected}
+            sizeClass="w-full h-full"
+            displayLabel={getRemapDisplayLabel(gk.keycode.qmkId, remapLabel)}
+          />
+        )
+
+        return (
+          <div
+            key={gk.keycode.qmkId}
+            style={{
+              gridRow: `${gk.gridRow} / span ${gk.gridRowSpan}`,
+              gridColumn: `${gk.gridCol} / span ${gk.gridColSpan}`,
+            }}
+          >
+            {gk.clipPath ? (
+              <div className="h-full w-full" style={{ clipPath: gk.clipPath }}>
+                {buttonContent}
+              </div>
+            ) : (
+              buttonContent
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -28,16 +28,16 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
   )
 
   const size = sizeClass ?? 'w-[44px] h-[44px]'
-  const base = `flex flex-col items-center justify-center rounded border p-1 text-xs hover:bg-picker-item-hover hover:border-accent active:bg-accent/20 ${size} transition-colors`
+  const base = `flex flex-col items-center justify-center rounded border border-transparent p-1 text-xs hover:bg-picker-item-hover active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
-    variant = 'border-accent bg-accent/20 text-accent ring-1 ring-accent'
+    variant = 'bg-accent/20 text-accent'
   } else if (highlighted) {
-    variant = 'border-accent/50 bg-accent/10 text-accent'
+    variant = 'bg-accent/10 text-accent'
   } else if (displayLabel != null) {
-    variant = 'border-picker-item-border bg-picker-item-bg text-key-label-remap'
+    variant = 'bg-picker-item-bg text-key-label-remap'
   } else {
-    variant = 'border-picker-item-border bg-picker-item-bg text-picker-item-text'
+    variant = 'bg-picker-item-bg text-picker-item-text'
   }
 
   return (
