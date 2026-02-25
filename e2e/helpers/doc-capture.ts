@@ -3,9 +3,9 @@
 // Screenshot capture script for Pipette operation guide documentation.
 // Usage: pnpm build && pnpm doc:screenshots
 import { _electron as electron } from '@playwright/test'
-import type { Page, Locator } from '@playwright/test'
-import { mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
+import type { ElectronApplication, Page, Locator } from '@playwright/test'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
+import { resolve, join } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -164,6 +164,60 @@ async function captureDeviceSelection(page: Page): Promise<void> {
 
 // --- Phase 1.5: Data Modal (from device selector) ---
 
+const DUMMY_FAVORITES: Record<string, { type: string; entries: { id: string; label: string; filename: string; savedAt: string; updatedAt?: string }[] }> = {
+  tapDance: {
+    type: 'tapDance',
+    entries: [
+      { id: 'doc-td-1', label: 'Ctrl/Esc', filename: 'doc-td-1.json', savedAt: '2026-02-20T10:00:00.000Z', updatedAt: '2026-02-25T12:30:00.000Z' },
+      { id: 'doc-td-2', label: 'Shift/CapsWord', filename: 'doc-td-2.json', savedAt: '2026-02-21T08:15:00.000Z', updatedAt: '2026-02-24T09:00:00.000Z' },
+      { id: 'doc-td-3', label: 'Layer Toggle', filename: 'doc-td-3.json', savedAt: '2026-02-22T14:30:00.000Z' },
+    ],
+  },
+  macro: {
+    type: 'macro',
+    entries: [
+      { id: 'doc-mc-1', label: 'Email Signature', filename: 'doc-mc-1.json', savedAt: '2026-02-19T09:00:00.000Z', updatedAt: '2026-02-25T10:00:00.000Z' },
+      { id: 'doc-mc-2', label: 'Git Commit', filename: 'doc-mc-2.json', savedAt: '2026-02-22T16:00:00.000Z' },
+    ],
+  },
+}
+
+// Playwright's electron.launch() uses a different userData path than the installed app.
+// We resolve it dynamically via app.evaluate() before seeding.
+
+function seedDummyFavorites(favBase: string): Map<string, string | null> {
+  const backups = new Map<string, string | null>()
+  for (const [type, index] of Object.entries(DUMMY_FAVORITES)) {
+    const dir = join(favBase, type)
+    mkdirSync(dir, { recursive: true })
+    const indexPath = join(dir, 'index.json')
+    backups.set(indexPath, existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null)
+    writeFileSync(indexPath, JSON.stringify(index, null, 2), 'utf-8')
+    for (const entry of index.entries) {
+      const fp = join(dir, entry.filename)
+      if (!existsSync(fp)) writeFileSync(fp, '{}', 'utf-8')
+    }
+  }
+  return backups
+}
+
+function restoreFavorites(backups: Map<string, string | null>, favBase: string): void {
+  for (const [indexPath, original] of backups) {
+    if (original != null) {
+      writeFileSync(indexPath, original, 'utf-8')
+    } else {
+      try { unlinkSync(indexPath) } catch { /* ignore */ }
+    }
+  }
+  for (const index of Object.values(DUMMY_FAVORITES)) {
+    const dir = join(favBase, index.type)
+    for (const entry of index.entries) {
+      const fp = join(dir, entry.filename)
+      try { unlinkSync(fp) } catch { /* ignore */ }
+    }
+  }
+}
+
 async function captureDataModal(page: Page): Promise<void> {
   console.log('\n--- Phase 1.5: Data Modal ---')
 
@@ -174,7 +228,7 @@ async function captureDataModal(page: Page): Promise<void> {
   }
 
   await dataBtn.click()
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1000)
 
   const backdrop = page.locator('[data-testid="data-modal-backdrop"]')
   try {
@@ -182,6 +236,14 @@ async function captureDataModal(page: Page): Promise<void> {
   } catch {
     console.log('  [skip] Data modal did not open')
     return
+  }
+
+  // Wait for entries to load
+  const entries = page.locator('[data-testid="data-modal-fav-entry"]')
+  try {
+    await entries.first().waitFor({ state: 'visible', timeout: 5000 })
+  } catch {
+    console.log('  [warn] No favorite entries loaded')
   }
 
   await capture(page, 'data-modal', { fullPage: true })
@@ -762,9 +824,17 @@ async function main(): Promise<void> {
     cwd: PROJECT_ROOT,
   })
 
+  // Resolve actual userData path from the running Electron process
+  const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
+  const favBase = join(userDataPath, 'sync', 'favorites')
+  console.log(`userData: ${userDataPath}`)
+
+  // Seed dummy favorites into the correct directory and reload renderer to pick them up
+  const favBackups = seedDummyFavorites(favBase)
+
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.setViewportSize({ width: 1320, height: 900 })
+  await page.setViewportSize({ width: 1320, height: 960 })
   await page.waitForTimeout(3000)
 
   try {
@@ -796,6 +866,7 @@ async function main(): Promise<void> {
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
     await app.close()
+    restoreFavorites(favBackups, favBase)
   }
 }
 
