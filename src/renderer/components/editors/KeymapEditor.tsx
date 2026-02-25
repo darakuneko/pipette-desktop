@@ -1771,12 +1771,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   // Paste readiness: either from picker multi-select or from pane-to-pane selection
   const canCopy = !!dualMode && effectivePrimaryLayer !== effectiveSecondaryLayer
-  const pickerPasteReady = pickerSelectedKeycodes.length > 0
   const panePasteReady = canCopy
     && selectionSourcePane != null
     && selectionSourcePane !== activePane
     && multiSelectedKeys.size > 0
-  const pasteReady = panePasteReady || pickerPasteReady
   const showCopyAll = canCopy && !panePasteReady
   const pasteHintText: string | undefined = undefined
   const copyAllConfirmText = inactivePaneLayer != null
