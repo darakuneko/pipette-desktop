@@ -18,6 +18,9 @@ interface Props {
   matrixMode: boolean
   typingTestMode?: boolean
   hasMatrixTester?: boolean
+  comboActive?: boolean
+  altRepeatKeyActive?: boolean
+  keyOverrideActive?: boolean
   onTypingTestModeChange?: () => void
   onDisconnect?: () => void
 }
@@ -32,6 +35,9 @@ export function StatusBar({
   matrixMode,
   typingTestMode,
   hasMatrixTester,
+  comboActive,
+  altRepeatKeyActive,
+  keyOverrideActive,
   onTypingTestModeChange,
   onDisconnect,
 }: Props) {
@@ -51,6 +57,24 @@ export function StatusBar({
         {autoAdvance && (
           <>
             <span data-testid="auto-advance-status">{t('statusBar.autoAdvance')}</span>
+            <span className="text-edge">|</span>
+          </>
+        )}
+        {comboActive && (
+          <>
+            <span data-testid="combo-status">{t('editor.combo.title')}</span>
+            <span className="text-edge">|</span>
+          </>
+        )}
+        {altRepeatKeyActive && (
+          <>
+            <span data-testid="alt-repeat-key-status">{t('editor.altRepeatKey.title')}</span>
+            <span className="text-edge">|</span>
+          </>
+        )}
+        {keyOverrideActive && (
+          <>
+            <span data-testid="key-override-status">{t('editor.keyOverride.title')}</span>
             <span className="text-edge">|</span>
           </>
         )}

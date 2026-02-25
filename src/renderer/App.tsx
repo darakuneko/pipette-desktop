@@ -1231,6 +1231,9 @@ export function App() {
         matrixMode={matrixState.matrixMode}
         typingTestMode={typingTestMode}
         hasMatrixTester={matrixState.hasMatrixTester}
+        comboActive={comboSupported && keyboard.comboEntries.some((e) => e.output !== 0)}
+        altRepeatKeyActive={altRepeatKeySupported && keyboard.altRepeatKeyEntries.some((e) => e.enabled)}
+        keyOverrideActive={keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
         onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
         onDisconnect={handleDisconnect}
       />
