@@ -50,8 +50,9 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 ![Keymap Editor Overview](screenshots/03-keymap-editor-overview.png)
 
 - Top area: Physical keyboard layout (shows the current keycode assigned to each key)
-- Left side: Toolbar (dual mode, zoom, typing test, etc.)
-- Bottom area: Keycode palette (tabbed interface)
+- Left side: Toolbar (dual mode, zoom, etc.)
+- Bottom area: Keycode palette (tabbed interface) with overlay panel toggle
+- Right side (when open): Keycodes Overlay Panel (tools, save, layout options)
 - Bottom bar: Status bar
 
 ### 2.2 Changing Keys
@@ -77,6 +78,14 @@ Layer switching buttons are located on the left side of the keyboard layout.
 - Click layer number buttons to switch between layers
 - Layer 0 is the default layer
 - The number of available layers depends on the keyboard configuration
+
+The layer panel can be collapsed to save space:
+
+![Layer Panel Collapsed](screenshots/39-layer-panel-collapsed.png)
+
+Click the collapse button (chevron) to minimize the layer panel to just numbers. Click the expand button to restore full layer names.
+
+![Layer Panel Expanded](screenshots/40-layer-panel-expanded.png)
 
 ### 2.4 Key Popover
 
@@ -147,10 +156,27 @@ Select keycodes from different categories using the tabbed palette at the bottom
 
 ### 3.1 Basic
 
-Standard character keys, function keys, modifier keys, and navigation keys.
+Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports three view types, selectable from the Keycodes Overlay Panel (§3.10):
 
-![Basic Tab](screenshots/07-tab-basic.png)
+**ANSI Keyboard View** (default)
 
+![Basic Tab — ANSI View](screenshots/36-basic-ansi-view.png)
+
+Displays keycodes as an ANSI keyboard layout. Click a key on the visual keyboard to assign it.
+
+**ISO Keyboard View**
+
+![Basic Tab — ISO View](screenshots/37-basic-iso-view.png)
+
+Displays keycodes as an ISO keyboard layout with the ISO-specific keys.
+
+**List View**
+
+![Basic Tab — List View](screenshots/38-basic-list-view.png)
+
+Displays keycodes in the traditional scrollable list format.
+
+All views include:
 - Character keys (A-Z, 0-9, symbols)
 - Function keys (F1-F24)
 - Editing keys (Enter, Tab, Backspace, Delete)
@@ -186,7 +212,13 @@ Keycodes that assign different actions to tap and hold.
 
 ![Tap-Hold / Tap Dance Tab](screenshots/10-tab-tapDance.png)
 
-- Click a Tap Dance entry to open the edit modal
+The Tap Dance section displays a **tile grid preview** showing all entries at a glance:
+
+![Tap Dance Tile Grid](screenshots/41-td-tile-grid.png)
+
+- Each tile shows the entry number and a summary of configured actions
+- Configured entries display their tap/hold actions; unconfigured tiles show the number only
+- Click a tile to open the Tap Dance edit modal
 - Configure tap, hold, double-tap, and other actions for each entry
 
 ### 3.5 Macro
@@ -195,7 +227,13 @@ Macro keycodes.
 
 ![Macro Tab](screenshots/11-tab-macro.png)
 
-- Click a macro entry to open the edit modal
+The Macro section displays a **tile grid preview** showing all entries at a glance:
+
+![Macro Tile Grid](screenshots/42-macro-tile-grid.png)
+
+- Each tile shows the macro number and a preview of the recorded sequence
+- Configured entries display a summary of key actions; unconfigured tiles show the number only
+- Click a tile to open the Macro edit modal
 - Record sequences of key inputs as macros
 
 ### 3.6 Quantum
@@ -243,6 +281,36 @@ User-defined keycodes.
 - Custom keycodes defined in firmware
 
 > **Note**: The MIDI tab is only displayed for MIDI-capable keyboards.
+
+### 3.10 Keycodes Overlay Panel
+
+The Keycodes Overlay Panel provides quick access to editor tools and save functions. Toggle it with the panel button at the right end of the keycode tab bar.
+
+**Settings Tab**
+
+![Overlay Panel — Settings](screenshots/28-overlay-tools.png)
+
+- **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, and List views for the Basic tab
+- **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
+- **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
+- **Split Key Mode**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
+- **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
+- **Security**: Shows lock status (Locked/Unlocked) with a Lock button
+- **Import**: Restore from `.vil` files or sideload custom JSON definitions
+- **Reset Keyboard Data**: Reset keyboard to factory defaults
+
+**Save Tab**
+
+![Overlay Panel — Save](screenshots/29-overlay-save.png)
+
+- **Export Current State**: Download keymap as `.vil`, `keymap.c`, or PDF cheat sheet
+- **Save Current State**: Save a snapshot of the current keyboard state with a label
+- **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions
+- This is the same Save panel as the standalone editor settings (§6)
+
+**Layout Tab** (when available)
+
+Some keyboards support layout options (see §2.5). When available, a Layout tab appears as the first tab in the overlay panel, providing access to the same layout options.
 
 ---
 
@@ -426,52 +494,26 @@ Within the Synced Data list:
 - **Delete**: Remove a saved entry
 - **Export**: Download an individual saved entry as a file
 
-> **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.4). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
+> **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.1). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
 
 ---
 
 ## 6. Editor Settings Panel
 
-Open the editor settings panel from the settings button (gear icon) in the keymap editor.
+Open the editor settings panel from the save button (floppy disk icon) in the keycode tab bar, or use the Save tab in the Keycodes Overlay Panel (§3.10).
 
-### 6.1 Layer Settings (Layers Tab)
+![Editor Settings — Save](screenshots/27-editor-settings-save.png)
 
-![Layer Settings](screenshots/27-editor-settings-layers.png)
+The editor settings panel now provides a single **Save** panel with the following features:
 
-- Layer list with the current layer highlighted
-- Click a layer to switch to it
-- Click a layer name to rename it (custom names are saved per keyboard)
-
-Layer names are Pipette-specific — they are not written to the keyboard firmware and are not visible in Vial or other keymap editors.
-
-| Default Name | Common Example |
-|-------------|----------------|
-| Layer 0 | Base layer (QWERTY, Dvorak, etc.) |
-| Layer 1 | Symbol / number layer |
-| Layer 2 | Navigation / function keys |
-| Layer 3 | Media / adjustment layer |
-
-### 6.2 Tool Settings (Tools Tab)
-
-![Tool Settings](screenshots/28-editor-settings-tools.png)
-
-- **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
-- **Zoom**: Adjust the keyboard layout display scale
-- **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
-- **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
-- **Security**: Shows lock status (Locked/Unlocked) with a Lock button to re-lock the keyboard
-
-### 6.3 Data Management (Data Tab)
-
-![Data Management](screenshots/29-editor-settings-data.png)
-
-- **Import**: Restore from `.vil` files or sideload custom JSON definitions
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, or PDF cheat sheet
 - **Save Current State**: Save a snapshot of the current keyboard state with a label. Enter a name in the Label field and click Save. If the Label field is left empty, the Save button is disabled. Saved snapshots appear in the Synced Data list below and can be loaded or deleted later
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
-### 6.4 Cloud Sync (Google Drive appDataFolder)
+> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.10). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
+
+### 6.1 Cloud Sync (Google Drive appDataFolder)
 
 Pipette can sync your saved snapshots, favorites, and per-keyboard settings across multiple devices via Google Drive.
 
@@ -521,6 +563,28 @@ The Data tab contains the following sections: Google Account, Data Sync, Pipette
 Synced data is stored in [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata) — a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
 
 See the [Data Guide](Data.md) for details on what is synced and how your data is protected.
+
+#### Settings — Troubleshooting
+
+![Settings — Troubleshooting](screenshots/settings-troubleshooting.png)
+
+The Troubleshooting tab in the Settings modal (on the device selection screen) provides:
+
+- **Scan Remote Data**: Scan Google Drive for all sync files, with counts and details
+- **Per-keyboard Reset**: Select and delete specific keyboard sync data from Google Drive
+- **Local Data**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
+
+#### Settings — Defaults
+
+![Settings — Defaults](screenshots/settings-defaults.png)
+
+The Tools tab in the Settings modal includes a **Defaults** section for setting initial preferences for new keyboard connections:
+
+- **Keyboard Layout**: Default display layout (QWERTY, Dvorak, etc.)
+- **Auto Advance**: Default auto-advance behavior
+- **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
+- **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/List)
+- **Split Key Mode**: Default split key display mode
 
 ---
 
