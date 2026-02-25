@@ -2,7 +2,7 @@
 
 // Screenshot capture script for Layout Options documentation.
 // Loads a dummy JSON definition (e2e_test_001.json) that has layout options
-// and captures screenshots of the Layout Options panel.
+// and captures screenshots via the Keycodes Overlay Panel's Layout tab.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-layout-options.ts
 
@@ -46,6 +46,15 @@ async function dismissNotificationModal(page: Page): Promise<void> {
   await page.waitForTimeout(500)
 }
 
+async function ensureOverlayOpen(page: Page): Promise<void> {
+  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
+  const isExpanded = await toggle.getAttribute('aria-expanded')
+  if (isExpanded !== 'true') {
+    await toggle.click()
+    await page.waitForTimeout(500)
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
@@ -79,18 +88,27 @@ async function main(): Promise<void> {
 
     await dismissNotificationModal(page)
 
-    const layoutBtn = page.locator('button[aria-controls="layout-options-panel"]')
-    if ((await layoutBtn.count()) === 0) {
-      throw new Error('Layout options button not found — keyboard definition may not have layout options')
+    // Open overlay panel and switch to Layout tab
+    await ensureOverlayOpen(page)
+    const layoutTab = page.locator('[data-testid="overlay-tab-layout"]')
+    if ((await layoutTab.count()) === 0) {
+      throw new Error('Layout tab not found — keyboard definition may not have layout options')
     }
-
-    await layoutBtn.click()
+    await layoutTab.click()
     await page.waitForTimeout(500)
     await capture(page, 'layout-options-open')
 
-    const selects = page.locator('#layout-options-panel select:not([aria-hidden="true"])')
-    if ((await selects.count()) > 0) {
-      await selects.first().selectOption({ index: 1 })
+    // Change first visible option to capture the changed state.
+    // Scope to the Layout tab content area (visible, not inert) to avoid
+    // matching selects from the hidden Tools/Save tabs.
+    const layoutContent = page.locator('[data-testid="keycodes-overlay-panel"] > div:not([inert]) select:not([aria-hidden="true"])')
+    const checkboxes = page.locator('[data-testid="keycodes-overlay-panel"] > div:not([inert]) input[type="checkbox"]')
+    if ((await layoutContent.count()) > 0) {
+      await layoutContent.first().selectOption({ index: 1 })
+      await page.waitForTimeout(500)
+      await capture(page, 'layout-options-changed')
+    } else if ((await checkboxes.count()) > 0) {
+      await checkboxes.first().click()
       await page.waitForTimeout(500)
       await capture(page, 'layout-options-changed')
     }

@@ -23,6 +23,21 @@ async function isAvailable(locator: Locator): Promise<boolean> {
 // A global counter tracks sequential numbering.
 let screenshotCounter = 0
 
+async function takeScreenshot(
+  page: Page,
+  filename: string,
+  label: string,
+  opts?: { element?: Locator; fullPage?: boolean },
+): Promise<void> {
+  const path = resolve(SCREENSHOT_DIR, filename)
+  if (opts?.element) {
+    await opts.element.screenshot({ path })
+  } else {
+    await page.screenshot({ path, fullPage: opts?.fullPage ?? false })
+  }
+  console.log(`  [${label}] ${filename}`)
+}
+
 async function capture(
   page: Page,
   name: string,
@@ -30,16 +45,15 @@ async function capture(
 ): Promise<void> {
   screenshotCounter++
   const num = String(screenshotCounter).padStart(2, '0')
-  const filename = `${num}-${name}.png`
-  const path = resolve(SCREENSHOT_DIR, filename)
+  await takeScreenshot(page, `${num}-${name}.png`, num, opts)
+}
 
-  if (opts?.element) {
-    await opts.element.screenshot({ path })
-  } else {
-    await page.screenshot({ path, fullPage: opts?.fullPage ?? false })
-  }
-
-  console.log(`  [${num}] ${filename}`)
+async function captureNamed(
+  page: Page,
+  name: string,
+  opts?: { element?: Locator; fullPage?: boolean },
+): Promise<void> {
+  await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
 async function dismissNotificationModal(page: Page): Promise<void> {
@@ -70,6 +84,40 @@ async function waitForUnlockDialog(page: Page): Promise<void> {
   } catch {
     console.log('  [warn] Unlock timed out')
   }
+}
+
+async function ensureOverlayOpen(page: Page): Promise<boolean> {
+  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
+  if (!(await isAvailable(toggle))) return false
+
+  const isExpanded = await toggle.getAttribute('aria-expanded')
+  if (isExpanded !== 'true') {
+    await toggle.click()
+    await page.waitForTimeout(500)
+  }
+  return true
+}
+
+async function closeOverlay(page: Page): Promise<void> {
+  const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
+  if (await isAvailable(toggle)) {
+    const isExpanded = await toggle.getAttribute('aria-expanded')
+    if (isExpanded === 'true') {
+      await toggle.click()
+      await page.waitForTimeout(300)
+    }
+  }
+}
+
+async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean> {
+  const tab = page.locator(`[data-testid="${tabTestId}"]`)
+  if (!(await isAvailable(tab))) {
+    console.log(`  [skip] ${tabTestId} not found`)
+    return false
+  }
+  await tab.click()
+  await page.waitForTimeout(300)
+  return true
 }
 
 async function connectDevice(page: Page): Promise<boolean> {
@@ -140,6 +188,61 @@ async function captureDataModal(page: Page): Promise<void> {
 
   await page.locator('[data-testid="data-modal-close"]').click()
   await page.waitForTimeout(300)
+}
+
+// --- Phase 1.7: Settings Modal (from device selector, named screenshots) ---
+
+async function captureSettingsModal(page: Page): Promise<void> {
+  console.log('\n--- Phase 1.7: Settings Modal ---')
+
+  const settingsBtn = page.locator('[data-testid="settings-button"]')
+  if (!(await isAvailable(settingsBtn))) {
+    console.log('  [skip] settings-button not found')
+    return
+  }
+
+  await settingsBtn.click()
+  await page.waitForTimeout(500)
+
+  const settingsModal = page.locator('[data-testid="settings-modal"]')
+  if (!(await isAvailable(settingsModal))) {
+    console.log('  [skip] settings-modal not found')
+    return
+  }
+
+  // Switch to Troubleshooting tab
+  const troubleshootingTab = page.locator('[data-testid="settings-tab-troubleshooting"]')
+  if (await isAvailable(troubleshootingTab)) {
+    await troubleshootingTab.click()
+    await page.waitForTimeout(300)
+    await captureNamed(page, 'settings-troubleshooting', { fullPage: true })
+  } else {
+    console.log('  [skip] troubleshooting tab not found')
+  }
+
+  // Switch to Tools tab to capture defaults section
+  const toolsTab = page.locator('[data-testid="settings-tab-tools"]')
+  if (await isAvailable(toolsTab)) {
+    await toolsTab.click()
+    await page.waitForTimeout(300)
+
+    // Scroll down to show defaults section
+    const defaultsSection = page.locator('[data-testid="settings-default-layout-row"]')
+    if (await isAvailable(defaultsSection)) {
+      await defaultsSection.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(200)
+    }
+    await captureNamed(page, 'settings-defaults', { fullPage: true })
+  } else {
+    console.log('  [skip] tools tab not found')
+  }
+
+  // Close settings modal
+  const closeBtn = page.locator('[data-testid="settings-close"]')
+  if (await isAvailable(closeBtn)) {
+    await closeBtn.click()
+    await page.waitForTimeout(300)
+  }
 }
 
 // --- Phase 2: Keymap Editor Overview ---
@@ -355,45 +458,40 @@ async function captureModalEditors(page: Page): Promise<void> {
   }
 }
 
-// --- Phase 7: Editor Settings Panel ---
-
-const EDITOR_SETTINGS_TABS = [
-  { name: 'tools', labelEn: 'Tools', labelJa: 'ツール' },
-  { name: 'data', labelEn: 'Data', labelJa: 'データ' },
-]
+// --- Phase 7: Editor Settings Panel (Save only) ---
 
 async function captureEditorSettings(page: Page): Promise<void> {
-  console.log('\n--- Phase 7: Editor Settings ---')
+  console.log('\n--- Phase 7: Editor Settings (Save Panel) ---')
 
-  const settingsBtn = page.locator('[data-testid="editor-settings-button"]')
-  if (!(await isAvailable(settingsBtn))) {
-    console.log('  [skip] editor-settings-button not found')
+  if (!(await ensureOverlayOpen(page))) {
+    console.log('  [skip] overlay toggle not found')
     return
   }
 
-  await settingsBtn.click()
-  await page.waitForTimeout(500)
+  if (await switchOverlayTab(page, 'overlay-tab-data')) {
+    await capture(page, 'editor-settings-save', { fullPage: true })
+  }
+}
 
-  const backdrop = page.locator('[data-testid="editor-settings-backdrop"]')
-  if (!(await isAvailable(backdrop))) return
+// --- Phase 7.5: Overlay Panel ---
 
-  await capture(page, 'editor-settings-tools', { fullPage: true })
+async function captureOverlayPanel(page: Page): Promise<void> {
+  console.log('\n--- Phase 7.5: Overlay Panel ---')
 
-  for (const tab of EDITOR_SETTINGS_TABS) {
-    // Try English first, then Japanese — handles both locales
-    let tabBtn = backdrop.locator('button', { hasText: new RegExp(`^${escapeRegex(tab.labelEn)}$`) })
-    if (!(await isAvailable(tabBtn))) {
-      tabBtn = backdrop.locator('button', { hasText: new RegExp(`^${escapeRegex(tab.labelJa)}$`) })
-    }
-    if (await isAvailable(tabBtn)) {
-      await tabBtn.click()
-      await page.waitForTimeout(300)
-      await capture(page, `editor-settings-${tab.name}`, { fullPage: true })
-    }
+  if (!(await ensureOverlayOpen(page))) {
+    console.log('  [skip] overlay toggle not found')
+    return
   }
 
-  await page.locator('[data-testid="editor-settings-close"]').click()
-  await page.waitForTimeout(300)
+  if (await switchOverlayTab(page, 'overlay-tab-tools')) {
+    await capture(page, 'overlay-tools', { fullPage: true })
+  }
+
+  if (await switchOverlayTab(page, 'overlay-tab-data')) {
+    await capture(page, 'overlay-save', { fullPage: true })
+  }
+
+  await closeOverlay(page)
 }
 
 // --- Phase 8: Status Bar ---
@@ -425,12 +523,13 @@ async function captureFavorites(page: Page): Promise<void> {
   await tdTabBtn.first().click()
   await page.waitForTimeout(300)
 
-  const tdEntry = page.locator('button', { hasText: new RegExp(`^${escapeRegex('TD(0)')}$`) })
-  if (!(await isAvailable(tdEntry))) {
-    console.log('  [skip] TD(0) entry not found')
+  // TD tab now shows a tile grid — click tile 0 to open the modal
+  const tdTile = page.locator('[data-testid="td-tile-0"]')
+  if (!(await isAvailable(tdTile))) {
+    console.log('  [skip] td-tile-0 not found')
     return
   }
-  await tdEntry.first().click()
+  await tdTile.click()
   await page.waitForTimeout(500)
 
   const tdBackdrop = page.locator('[data-testid="td-modal-backdrop"]')
@@ -455,13 +554,14 @@ async function captureKeyPopover(page: Page): Promise<void> {
 
   const editorContent = page.locator('[data-testid="editor-content"]')
 
-  // Switch to layer 0 and Basic tab
-  const layer0Btn = editorContent.locator('button', { hasText: /^0$/ })
+  // Switch to layer 0 using the layer panel testid
+  const layer0Btn = page.locator('[data-testid="layer-panel-layer-num-0"]')
   if (await isAvailable(layer0Btn)) {
-    await layer0Btn.first().click()
+    await layer0Btn.click()
     await page.waitForTimeout(300)
   }
-  const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
+  // Switch to Basic tab using a visible button in the keycode tab bar
+  const basicBtn = editorContent.locator('button:visible', { hasText: /^Basic$/ })
   if (await isAvailable(basicBtn)) {
     await basicBtn.first().click()
     await page.waitForTimeout(300)
@@ -524,6 +624,129 @@ async function captureKeyPopover(page: Page): Promise<void> {
   }
 }
 
+// --- Phase 11: Basic View Variants ---
+
+async function captureBasicViewVariants(page: Page): Promise<void> {
+  console.log('\n--- Phase 11: Basic View Variants ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+
+  // Switch to Basic tab first
+  const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
+  if (await isAvailable(basicBtn)) {
+    await basicBtn.first().click()
+    await page.waitForTimeout(300)
+  }
+
+  if (!(await ensureOverlayOpen(page))) {
+    console.log('  [skip] overlay toggle not found')
+    return
+  }
+
+  await switchOverlayTab(page, 'overlay-tab-tools')
+
+  const viewTypeSelector = page.locator('[data-testid="overlay-basic-view-type-selector"]')
+  if (!(await isAvailable(viewTypeSelector))) {
+    console.log('  [skip] view type selector not found')
+    await closeOverlay(page)
+    return
+  }
+
+  // Capture each view type: select option in overlay, close for clean screenshot, capture
+  const viewTypes = [
+    { value: 'ansi', name: 'basic-ansi-view' },
+    { value: 'iso', name: 'basic-iso-view' },
+    { value: 'list', name: 'basic-list-view' },
+  ]
+
+  for (const view of viewTypes) {
+    await ensureOverlayOpen(page)
+    await switchOverlayTab(page, 'overlay-tab-tools')
+    await viewTypeSelector.selectOption(view.value)
+    await page.waitForTimeout(500)
+    await closeOverlay(page)
+    await capture(page, view.name, { fullPage: true })
+  }
+
+  // Restore ANSI view
+  await ensureOverlayOpen(page)
+  await switchOverlayTab(page, 'overlay-tab-tools')
+  await viewTypeSelector.selectOption('ansi')
+  await page.waitForTimeout(300)
+  await closeOverlay(page)
+}
+
+// --- Phase 12: Layer Panel States ---
+
+async function captureLayerPanelStates(page: Page): Promise<void> {
+  console.log('\n--- Phase 12: Layer Panel States ---')
+
+  // First try to find the collapse button (panel is expanded)
+  const collapseBtn = page.locator('[data-testid="layer-panel-collapse-btn"]')
+  const expandBtn = page.locator('[data-testid="layer-panel-expand-btn"]')
+
+  if (await isAvailable(collapseBtn)) {
+    // Panel is expanded — capture collapsed first, then expanded
+    await collapseBtn.click()
+    await page.waitForTimeout(500)
+    await capture(page, 'layer-panel-collapsed', { fullPage: true })
+
+    // Re-expand
+    const expandBtnAfter = page.locator('[data-testid="layer-panel-expand-btn"]')
+    if (await isAvailable(expandBtnAfter)) {
+      await expandBtnAfter.click()
+      await page.waitForTimeout(500)
+    }
+    await capture(page, 'layer-panel-expanded', { fullPage: true })
+  } else if (await isAvailable(expandBtn)) {
+    // Panel is collapsed — capture collapsed first
+    await capture(page, 'layer-panel-collapsed', { fullPage: true })
+
+    await expandBtn.click()
+    await page.waitForTimeout(500)
+    await capture(page, 'layer-panel-expanded', { fullPage: true })
+  } else {
+    console.log('  [skip] layer panel collapse/expand buttons not found')
+  }
+}
+
+// --- Phase 13: Tile Grids ---
+
+async function captureTileGrids(page: Page): Promise<void> {
+  console.log('\n--- Phase 13: Tile Grids ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+
+  const tileGrids = [
+    { tabLabel: 'Tap-Hold / Tap Dance', tileTestId: 'td-tile-0', name: 'td-tile-grid' },
+    { tabLabel: 'Macro', tileTestId: 'macro-tile-0', name: 'macro-tile-grid' },
+  ]
+
+  for (const grid of tileGrids) {
+    const tabBtn = editorContent.locator('button', { hasText: new RegExp(`^${escapeRegex(grid.tabLabel)}$`) })
+    if (!(await isAvailable(tabBtn))) {
+      console.log(`  [skip] ${grid.tabLabel} tab not found`)
+      continue
+    }
+    await tabBtn.first().click()
+    await page.waitForTimeout(300)
+
+    const tile = page.locator(`[data-testid="${grid.tileTestId}"]`)
+    if (await isAvailable(tile)) {
+      await capture(page, grid.name, { fullPage: true })
+    } else {
+      console.log(`  [skip] ${grid.tileTestId} not found`)
+    }
+  }
+
+  // Return to Basic tab
+  const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
+  if (await isAvailable(basicBtn)) {
+    await basicBtn.first().click()
+    await page.waitForTimeout(300)
+  }
+}
+
 // --- Main ---
 
 async function main(): Promise<void> {
@@ -546,8 +769,9 @@ async function main(): Promise<void> {
 
   try {
     await dismissNotificationModal(page)
-    await captureDeviceSelection(page)
-    await captureDataModal(page)
+    await captureDeviceSelection(page)       // 01
+    await captureDataModal(page)             // 02
+    await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
 
     const connected = await connectDevice(page)
     if (!connected) {
@@ -555,15 +779,19 @@ async function main(): Promise<void> {
       return
     }
 
-    await captureKeymapEditor(page)
-    await captureLayerNavigation(page)
-    await captureKeycodeCategories(page)
-    await captureSidebarTools(page)
-    await captureModalEditors(page)
-    await captureEditorSettings(page)
-    await captureStatusBar(page)
-    await captureFavorites(page)
-    await captureKeyPopover(page)
+    await captureKeymapEditor(page)          // 03
+    await captureLayerNavigation(page)       // 04-06
+    await captureKeycodeCategories(page)     // 07-15 (MIDI skipped for GPK60)
+    await captureSidebarTools(page)          // 16-19
+    await captureModalEditors(page)          // 20-26
+    await captureEditorSettings(page)        // 27 (editor-settings-save)
+    await captureOverlayPanel(page)          // 28-29 (overlay-tools, overlay-save)
+    await captureStatusBar(page)             // 30
+    await captureFavorites(page)             // 31
+    await captureKeyPopover(page)            // 32-35
+    await captureBasicViewVariants(page)     // 36-38
+    await captureLayerPanelStates(page)      // 39-40
+    await captureTileGrids(page)             // 41-42
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
