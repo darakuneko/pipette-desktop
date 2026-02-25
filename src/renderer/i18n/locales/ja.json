@@ -65,7 +65,6 @@
       "layerN": "Layer {{n}}",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-      "zoomLabel": "ズーム",
       "dualMode": "2画面編集",
       "copyAll": "レイヤーをコピー",
       "copyAllConfirm": "{{target}} を {{source}} の内容で上書きしますか？",
@@ -270,6 +269,8 @@
     "midi": "MIDI",
     "group": {
       "characters": "Characters",
+      "alphabet": "Alphabet",
+      "numbersSymbols": "Numbers & Symbols",
       "editing": "Editing",
       "modifiers": "Modifiers",
       "navigation": "Navigation",
@@ -277,6 +278,7 @@
       "lock": "Lock",
       "numpad": "Numpad",
       "system": "System",
+      "shifted": "Shifted Symbols",
       "internal": "Internal",
       "magic": "Magic",
       "audio": "Audio & Music",
@@ -367,7 +369,7 @@
     "system": "システム"
   },
   "layout": {
-    "keyboardLayout": "レイアウト"
+    "keyboardLayout": "キーラベル表示"
   },
   "layoutStore": {
     "load": "読み込み",
@@ -419,12 +421,14 @@
     "disable": "停止",
     "manualSync": "手動同期",
     "sync": "同期",
-    "resetSyncData": "同期データリセット",
+    "resetSyncData": "同期データ",
     "resetConfirm": "Google Drive appDataFolder上の同期データがすべて削除されます。この操作は取り消せません。",
     "resetTarget": {
       "keyboards": "すべてのキーボードデータ",
+      "keyboardData": "キーボードデータ",
       "favorites": "お気に入りデータ",
-      "appSettings": "アプリケーションデータ"
+      "appSettings": "アプリケーションデータ",
+      "undecryptable": "復号できないファイル"
     },
     "deleteSelected": "選択を削除",
     "resetTargetsConfirm": "選択したデータが完全に削除されます。この操作は取り消せません。",
@@ -444,15 +448,15 @@
     "importFailed": "インポートに失敗しました",
     "resetLocalData": "ローカルデータリセット",
     "resetLocalConfirm": "この端末に保存されたすべてのレイアウトとお気に入りが削除されます。この操作は取り消せません。",
-    "resetKeyboardData": "キーボードデータリセット",
-    "resetKeyboardDataConfirm": "{{name}} の保存済みレイアウトと設定が削除されます。\nGoogle Drive appDataFolder の同期データおよび Hub の投稿も削除されます。\nキーボード本体に保存されている設定には影響しません。",
-    "resettingKeyboardData": "データを削除中...",
-    "resetDisabledWhileSyncing": "同期中はリセットできません",
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
     "undecryptable": "復号できないファイル",
+    "scanRemote": "スキャン",
+    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします。",
     "scanUndecryptable": "スキャン",
     "scanning": "スキャン中...",
+    "noRemoteData": "リモートデータはありません",
     "noUndecryptable": "復号できないファイルはありません",
+    "undecryptableCount": "{{count}} 件の復号できないファイル",
     "undecryptableFound": "{{count}} 件の復号できないファイルが見つかりました",
     "deleteUndecryptable": "選択を削除",
     "deleteUndecryptableConfirm": "選択したファイルが Google Drive から完全に削除されます。この操作は取り消せません。",
@@ -471,15 +475,20 @@
     "dataSync": "データ同期",
     "defaults": "新しいキーボードのデフォルト設定",
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
-    "defaultLayout": "デフォルトレイアウト",
+    "defaultLayout": "デフォルトキーラベル",
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
+    "defaultBasicViewType": "デフォルト Basic タブ表示",
+    "basicViewTypeList": "LIST",
+    "basicViewTypeAnsi": "ANSI",
+    "basicViewTypeIso": "ISO",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",
     "autoLockMinutes": "{{minutes}}分",
     "language": "言語",
     "tabNotification": "お知らせ",
+    "tabTroubleshooting": "トラブルシューティング",
     "tabAbout": "情報",
     "about": {
       "version": "バージョン {{version}}",
@@ -495,7 +504,9 @@
     "tabData": "データ",
     "tabSave": "保存",
     "tabTools": "設定",
-    "tabLayout": "レイアウト"
+    "tabLayout": "レイアウト",
+    "basicViewType": "Basic タブ表示",
+    "splitKeyMode": "Split Key"
   },
   "hub": {
     "uploadToHub": "アップロード",

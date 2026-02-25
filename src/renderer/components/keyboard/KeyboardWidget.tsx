@@ -148,22 +148,24 @@ function KeyboardWidgetInner({
       viewBox={`${bounds.originX} ${bounds.originY} ${bounds.width} ${bounds.height}`}
       className="select-none"
     >
+      {/* Render non-selected keys first, then selected key on top so its
+          stroke is never hidden by adjacent keys painted later in DOM order */}
       {visibleKeys.map((key, idx) => {
         const isEncoder = key.encoderIdx >= 0
+        const isSelected = isEncoder
+          ? selectedEncoder?.idx === key.encoderIdx && selectedEncoder?.dir === key.encoderDir
+          : selectedKey?.row === key.row && selectedKey?.col === key.col
+        if (isSelected) return null
 
         if (isEncoder) {
           const encKey = String(key.encoderIdx)
           const [cw, ccw] = encoderKeycodes?.get(encKey) ?? ['KC_NO', 'KC_NO']
-          const keycode = key.encoderDir === 0 ? cw : ccw
-          const isSelected =
-            selectedEncoder?.idx === key.encoderIdx &&
-            selectedEncoder?.dir === key.encoderDir
           return (
             <EncoderWidget
               key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
               kleKey={key}
-              keycode={keycode}
-              selected={isSelected}
+              keycode={key.encoderDir === 0 ? cw : ccw}
+              selected={false}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}
@@ -172,20 +174,58 @@ function KeyboardWidgetInner({
         }
 
         const posKey = `${key.row},${key.col}`
-        const keycode = keycodes.get(posKey) ?? 'KC_NO'
-        const maskKeycode = maskKeycodes?.get(posKey)
-        const isSelected =
-          selectedKey?.row === key.row && selectedKey?.col === key.col
-
         return (
           <KeyWidget
             key={`key-${key.row}-${key.col}-${idx}`}
             kleKey={key}
-            keycode={keycode}
-            maskKeycode={maskKeycode}
-            selected={isSelected}
+            keycode={keycodes.get(posKey) ?? 'KC_NO'}
+            maskKeycode={maskKeycodes?.get(posKey)}
+            selected={false}
             multiSelected={multiSelectedKeys?.has(posKey)}
-            selectedMaskPart={isSelected ? selectedMaskPart : undefined}
+            pressed={pressedKeys?.has(posKey)}
+            highlighted={highlightedKeys?.has(posKey)}
+            everPressed={everPressedKeys?.has(posKey)}
+            remapped={remappedKeys?.has(posKey)}
+            onClick={readOnly ? undefined : onKeyClick}
+            onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
+            scale={scale}
+          />
+        )
+      })}
+      {/* Selected key rendered last for top z-order */}
+      {visibleKeys.map((key, idx) => {
+        const isEncoder = key.encoderIdx >= 0
+        const isSelected = isEncoder
+          ? selectedEncoder?.idx === key.encoderIdx && selectedEncoder?.dir === key.encoderDir
+          : selectedKey?.row === key.row && selectedKey?.col === key.col
+        if (!isSelected) return null
+
+        if (isEncoder) {
+          const encKey = String(key.encoderIdx)
+          const [cw, ccw] = encoderKeycodes?.get(encKey) ?? ['KC_NO', 'KC_NO']
+          return (
+            <EncoderWidget
+              key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
+              kleKey={key}
+              keycode={key.encoderDir === 0 ? cw : ccw}
+              selected
+              onClick={readOnly ? undefined : onEncoderClick}
+              onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
+              scale={scale}
+            />
+          )
+        }
+
+        const posKey = `${key.row},${key.col}`
+        return (
+          <KeyWidget
+            key={`key-${key.row}-${key.col}-${idx}`}
+            kleKey={key}
+            keycode={keycodes.get(posKey) ?? 'KC_NO'}
+            maskKeycode={maskKeycodes?.get(posKey)}
+            selected
+            multiSelected={multiSelectedKeys?.has(posKey)}
+            selectedMaskPart={selectedMaskPart}
             pressed={pressedKeys?.has(posKey)}
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}

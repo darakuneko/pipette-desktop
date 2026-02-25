@@ -1398,6 +1398,21 @@ export function findKeycode(qmkId: string): Keycode | undefined {
   return KEYCODES_MAP.get(qmkId)
 }
 
+let LABEL_MAP: Map<string, Keycode> | null = null
+
+/** Reverse-lookup: find a keycode whose label exactly matches the given string */
+export function findKeycodeByLabel(label: string): Keycode | undefined {
+  if (!LABEL_MAP) {
+    LABEL_MAP = new Map()
+    // Last-write-wins: KEYCODES_SHIFTED (loaded after numpad) takes priority
+    // so e.g. '+' resolves to KC_PLUS rather than KC_KP_PLUS
+    for (const kc of KEYCODES) {
+      LABEL_MAP.set(kc.label, kc)
+    }
+  }
+  return LABEL_MAP.get(label)
+}
+
 export function findOuterKeycode(qmkId: string): Keycode | undefined {
   if (isMask(qmkId)) {
     qmkId = qmkId.substring(0, qmkId.indexOf('('))
@@ -1885,6 +1900,7 @@ export function recreateKeycodes(): void {
   )
   KEYCODES_MAP.clear()
   RAWCODES_MAP.clear()
+  LABEL_MAP = null
   for (const keycode of KEYCODES) {
     KEYCODES_MAP.set(keycode.qmkId.replace('(kc)', ''), keycode)
     RAWCODES_MAP.set(deserialize(keycode.qmkId), keycode)

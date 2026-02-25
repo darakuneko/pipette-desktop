@@ -106,6 +106,7 @@ import {
   isSyncInProgress,
   resetPasswordCheckCache,
   listUndecryptableFiles,
+  scanRemoteData,
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
@@ -876,6 +877,79 @@ describe('sync-service', () => {
       await expect(listUndecryptableFiles()).rejects.toThrow('sync.passwordMismatch')
       // Data file should never be downloaded
       expect(mockDownloadFile).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('scanRemoteData', () => {
+    const mockDecrypt = vi.mocked(mockDecryptFn)
+
+    it('categorizes keyboards, favorites, and undecryptable files', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'keyboards_uid1_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f2', name: 'keyboards_uid1_snapshots.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f3', name: 'keyboards_uid2_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f4', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f5', name: 'favorites_macro.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid2', '2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+
+      // All decrypt OK except f5
+      mockDecrypt
+        .mockResolvedValueOnce('ok')
+        .mockResolvedValueOnce('ok')
+        .mockResolvedValueOnce('ok')
+        .mockResolvedValueOnce('ok')
+        .mockRejectedValueOnce(new Error('bad'))
+
+      const result = await scanRemoteData()
+
+      expect(result.keyboards.sort()).toEqual(['uid1', 'uid2'])
+      expect(result.favorites.sort()).toEqual(['macro', 'tapDance'])
+      expect(result.undecryptable).toHaveLength(1)
+      expect(result.undecryptable[0].fileId).toBe('f5')
+    })
+
+    it('returns empty result when not authenticated', async () => {
+      mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
+
+      const result = await scanRemoteData()
+      expect(result).toEqual({ keyboards: [], favorites: [], undecryptable: [] })
+    })
+
+    it('deduplicates keyboard UIDs', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'f1', name: 'keyboards_uid1_settings.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f2', name: 'keyboards_uid1_snapshots.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+        .mockResolvedValueOnce(makeSettingsEnvelope('uid1', '2025-01-01T00:00:00.000Z'))
+
+      const result = await scanRemoteData()
+      expect(result.keyboards).toEqual(['uid1'])
+    })
+
+    it('excludes password-check file from categories', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'pc', name: 'password-check.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile
+        .mockResolvedValueOnce({ ciphertext: 'check' })
+        .mockResolvedValueOnce(makeRemoteEnvelope('2025-01-01T00:00:00.000Z'))
+      mockDecrypt
+        .mockResolvedValueOnce(JSON.stringify({ type: 'password-check', version: 1 }))
+        .mockResolvedValueOnce('ok')
+
+      const result = await scanRemoteData()
+      expect(result.favorites).toEqual(['tapDance'])
+      expect(result.keyboards).toEqual([])
+      expect(result.undecryptable).toEqual([])
     })
   })
 

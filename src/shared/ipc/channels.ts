@@ -63,6 +63,7 @@ export const IpcChannels = {
   SYNC_PROGRESS: 'sync:progress',
   SYNC_PENDING_STATUS: 'sync:pending-status',
   SYNC_LIST_UNDECRYPTABLE: 'sync:list-undecryptable',
+  SYNC_SCAN_REMOTE: 'sync:scan-remote',
   SYNC_DELETE_FILES: 'sync:delete-files',
   SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
 
@@ -77,6 +78,7 @@ export const IpcChannels = {
   LANG_DELETE: 'lang:delete',
 
   // Data management (renderer → main → renderer)
+  LIST_STORED_KEYBOARDS: 'data:list-stored-keyboards',
   RESET_KEYBOARD_DATA: 'data:reset-keyboard',
   RESET_LOCAL_TARGETS: 'data:reset-local-targets',
   EXPORT_LOCAL_DATA: 'data:export-local',
