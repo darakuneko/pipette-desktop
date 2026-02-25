@@ -165,10 +165,10 @@ export function DisplayKeyboard({
 
   return (
     <div
-      className="inline-grid"
+      className="inline-grid gap-1"
       style={{
-        gridTemplateColumns: `repeat(${totalCols}, 11px)`,
-        gridTemplateRows: `repeat(${totalRows}, 11px)`,
+        gridTemplateColumns: `repeat(${totalCols}, 8px)`,
+        gridTemplateRows: `repeat(${totalRows}, 8px)`,
       }}
     >
       {gridKeys.map((gk) => (
