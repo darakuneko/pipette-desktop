@@ -59,10 +59,10 @@ export interface SplitKeyProps {
   shiftedDisplayLabel?: string
 }
 
-function splitTextColor(highlighted?: boolean, selected?: boolean, remapped?: boolean): string {
-  if (selected || highlighted) return 'text-accent'
-  if (remapped) return 'text-key-label-remap'
-  return 'text-picker-item-text'
+function splitHalfClass(highlighted?: boolean, selected?: boolean, remapped?: boolean): string {
+  const text = selected ? 'text-accent' : highlighted ? 'text-accent' : remapped ? 'text-key-label-remap' : 'text-picker-item-text'
+  const bg = selected ? 'bg-accent/20' : highlighted ? 'bg-accent/10' : ''
+  return `${text} ${bg}`
 }
 
 const SPLIT_HALF_BASE = 'flex-1 cursor-pointer flex items-center justify-center text-[10px] leading-tight whitespace-nowrap transition-colors hover:bg-picker-item-hover'
@@ -83,14 +83,12 @@ function SplitKeyInner({
   const shiftHighlighted = highlightedKeycodes?.has(shifted.qmkId)
   const shiftSelected = pickerSelectedKeycodes?.has(shifted.qmkId)
 
-  let outerVariant: string
-  if (baseSelected || shiftSelected) {
-    outerVariant = 'border-accent bg-accent/20 ring-1 ring-accent'
-  } else if (baseHighlighted || shiftHighlighted) {
-    outerVariant = 'border-accent/50 bg-accent/10'
-  } else {
-    outerVariant = 'border-picker-item-border bg-picker-item-bg'
-  }
+  const anySelected = baseSelected || shiftSelected
+  const anyHighlighted = baseHighlighted || shiftHighlighted
+  const outerBorder = anySelected
+    ? 'border-accent'
+    : anyHighlighted ? 'border-accent/50' : 'border-picker-item-border'
+  const outerBg = !anySelected && !anyHighlighted ? 'bg-picker-item-bg' : ''
 
   const rawBaseLabel = base.label.includes('\n') ? base.label.split('\n')[1] : base.label
   const baseLabel = baseDisplayLabel ?? rawBaseLabel
@@ -101,10 +99,10 @@ function SplitKeyInner({
   const hoverShifted = (shiftedDisplayLabel ? findKeycodeByLabel(shiftedDisplayLabel) : undefined) ?? shifted
 
   return (
-    <div className={`flex h-full w-full flex-col rounded border ${outerVariant}`}>
+    <div className={`flex h-full w-full flex-col rounded border ${outerBorder} ${outerBg}`}>
       <button
         type="button"
-        className={`${SPLIT_HALF_BASE} rounded-t ${splitTextColor(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
+        className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
         onClick={(e) => onClick?.(shifted, e)}
         onMouseEnter={(e) => onHover?.(hoverShifted, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
@@ -113,7 +111,7 @@ function SplitKeyInner({
       </button>
       <button
         type="button"
-        className={`${SPLIT_HALF_BASE} rounded-b ${splitTextColor(baseHighlighted, baseSelected, baseDisplayLabel != null)}`}
+        className={`${SPLIT_HALF_BASE} rounded-b ${splitHalfClass(baseHighlighted, baseSelected, baseDisplayLabel != null)}`}
         onClick={(e) => onClick?.(base, e)}
         onMouseEnter={(e) => onHover?.(hoverBase, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}

@@ -10,7 +10,7 @@ import { ANSI_LAYOUTS, ISO_LAYOUTS } from './display-keyboard-defs'
 import { X } from 'lucide-react'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
-import { isShiftedKeycode } from './SplitKey'
+import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
 
 const LM_CATEGORY: KeycodeCategory = {
   id: 'lm-mods',
@@ -111,6 +111,8 @@ export function TabbedKeycodes({
     const cat = categories.find((c) => c.id === activeTab)
     if (!cat) return []
 
+    let keycodes: Keycode[]
+
     // For keyboard views (ANSI/ISO), order by physical layout position
     if (cat.id === 'basic' && basicViewType != null && basicViewType !== 'list' && !maskOnly && !lmMode) {
       const layouts = basicViewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
@@ -132,17 +134,35 @@ export function TabbedKeycodes({
       const remaining = groups
         ? groups.flatMap((g) => g.keycodes.filter((kc) => !layoutIds.has(kc.qmkId) && isVisible(kc)))
         : []
-      return [...layoutKeycodes, ...remaining]
+      keycodes = [...layoutKeycodes, ...remaining]
+    } else {
+      const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
+      if (!groups) keycodes = cat.getKeycodes().filter(isVisible)
+      else keycodes = groups.flatMap((g) =>
+        g.sections
+          ? g.sections.flatMap((s) => s.filter(isVisible))
+          : g.keycodes.filter(isVisible),
+      )
     }
 
-    const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
-    if (!groups) return cat.getKeycodes().filter(isVisible)
-    return groups.flatMap((g) =>
-      g.sections
-        ? g.sections.flatMap((s) => s.filter(isVisible))
-        : g.keycodes.filter(isVisible),
-    )
-  }, [categories, activeTab, isVisible, revision, basicViewType, maskOnly, lmMode])
+    // When split keys are active, expand each base keycode with its shifted
+    // counterpart so multi-select can address both halves independently.
+    if (useSplit) {
+      const expanded: Keycode[] = []
+      for (const kc of keycodes) {
+        const shifted = getShiftedKeycode(kc.qmkId)
+        if (shifted) {
+          expanded.push(shifted) // top half
+          expanded.push(kc)     // bottom half
+        } else {
+          expanded.push(kc)
+        }
+      }
+      return expanded
+    }
+
+    return keycodes
+  }, [categories, activeTab, isVisible, revision, basicViewType, maskOnly, lmMode, useSplit])
 
   // Reset active tab if it no longer exists in the filtered categories
   useEffect(() => {

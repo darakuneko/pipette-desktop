@@ -53,7 +53,7 @@ export function KeycodeGrid({
     <div className="flex flex-wrap gap-1">
       {visible.map((kc) => {
         const shifted = useSplit ? getShiftedKeycode(kc.qmkId) : null
-        if (shifted && (!isVisible || isVisible(shifted))) {
+        if (shifted) {
           const splitRemap = getSplitRemapProps(kc.qmkId, remapLabel)
           return (
             <div key={kc.qmkId} className="w-[44px] h-[44px]">
