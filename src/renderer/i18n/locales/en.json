@@ -477,7 +477,7 @@
     "defaultLayerPanelOpen": "Default Layer List Open",
     "defaultBasicViewType": "Default Basic Tab View",
     "basicViewTypeList": "List",
-    "basicViewTypeKeyboard": "Keyboard",
+    "basicViewTypeKeyboard": "ANSI",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",

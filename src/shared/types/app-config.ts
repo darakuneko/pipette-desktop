@@ -50,5 +50,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   autoLockTime: 10,
   language: 'en',
   hubEnabled: false,
-  defaultBasicViewType: 'list',
+  defaultBasicViewType: 'keyboard',
 }

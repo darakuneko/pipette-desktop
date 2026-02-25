@@ -477,7 +477,7 @@
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
     "basicViewTypeList": "リスト",
-    "basicViewTypeKeyboard": "キーボード",
+    "basicViewTypeKeyboard": "ANSI",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",
