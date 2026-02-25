@@ -165,9 +165,9 @@ export function DisplayKeyboard({
 
   return (
     <div
-      className="inline-grid gap-px"
+      className="inline-grid"
       style={{
-        gridTemplateColumns: `repeat(${totalCols}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${totalCols}, 11px)`,
         gridTemplateRows: `repeat(${totalRows}, 11px)`,
       }}
     >
