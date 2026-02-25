@@ -65,7 +65,6 @@
       "layerN": "Layer {{n}}",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-      "zoomLabel": "ズーム",
       "dualMode": "2画面編集",
       "copyAll": "レイヤーをコピー",
       "copyAllConfirm": "{{target}} を {{source}} の内容で上書きしますか？",

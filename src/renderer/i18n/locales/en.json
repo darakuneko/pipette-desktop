@@ -65,7 +65,6 @@
       "layerN": "Layer {{n}}",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-      "zoomLabel": "Zoom",
       "dualMode": "Split Edit",
       "copyAll": "Copy Layer",
       "copyAllConfirm": "Overwrite {{target}} with {{source}}?",
