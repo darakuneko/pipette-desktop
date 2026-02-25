@@ -17,7 +17,7 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 ## Screenshot
 
 <p align="center">
-  <img width="1200" alt="03-keymap-editor" src="https://github.com/user-attachments/assets/7515d6c2-463b-4e62-be68-151ebad630c0" />
+  <img width="1200" alt="03-keymap-editor" src="docs/screenshots/03-keymap-editor-overview.png" />
 </p>
 
 ## Installation
