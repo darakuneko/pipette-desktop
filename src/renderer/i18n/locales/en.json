@@ -369,7 +369,7 @@
     "system": "System"
   },
   "layout": {
-    "keyboardLayout": "Layout"
+    "keyboardLayout": "Key Labels"
   },
   "layoutStore": {
     "load": "Load",
@@ -473,7 +473,7 @@
     "dataSync": "Data Sync",
     "defaults": "Defaults for New Keyboards",
     "defaultsDescription": "Applied when a new keyboard connects.",
-    "defaultLayout": "Default Layout",
+    "defaultLayout": "Default Key Labels",
     "defaultAutoAdvance": "Default Auto Move",
     "defaultLayerPanelOpen": "Default Layer List Open",
     "defaultBasicViewType": "Default Basic Tab View",

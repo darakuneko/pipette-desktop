@@ -369,7 +369,7 @@
     "system": "システム"
   },
   "layout": {
-    "keyboardLayout": "レイアウト"
+    "keyboardLayout": "キーラベル表示"
   },
   "layoutStore": {
     "load": "読み込み",
@@ -473,7 +473,7 @@
     "dataSync": "データ同期",
     "defaults": "新しいキーボードのデフォルト設定",
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
-    "defaultLayout": "デフォルトレイアウト",
+    "defaultLayout": "デフォルトキーラベル",
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
