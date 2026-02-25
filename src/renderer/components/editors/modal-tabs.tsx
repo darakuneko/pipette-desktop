@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ModalTabId = 'tools' | 'data' | 'notification' | 'about'
+export type ModalTabId = 'tools' | 'data' | 'notification' | 'troubleshooting' | 'about'
 
 export type DataModalTabId = 'tapDance' | 'macro' | 'combo' | 'keyOverride' | 'altRepeatKey' | 'hubPost'
 
