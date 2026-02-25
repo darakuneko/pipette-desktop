@@ -71,7 +71,7 @@ export interface LastSyncResult {
 export type SyncStatusType = 'pending' | 'syncing' | 'synced' | 'error' | 'partial' | 'none'
 
 export interface SyncResetTargets {
-  keyboards: boolean
+  keyboards: boolean | string[] // true = all, string[] = specific UIDs
   favorites: boolean
 }
 
@@ -85,6 +85,17 @@ export interface UndecryptableFile {
   fileId: string
   fileName: string
   syncUnit: string | null
+}
+
+export interface SyncDataScanResult {
+  keyboards: string[]
+  favorites: string[]
+  undecryptable: UndecryptableFile[]
+}
+
+export interface StoredKeyboardInfo {
+  uid: string
+  name: string
 }
 
 export type SyncScope =

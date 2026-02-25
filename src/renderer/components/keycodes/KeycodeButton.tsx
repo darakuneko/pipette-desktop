@@ -10,12 +10,14 @@ interface Props {
   onHoverEnd?: () => void
   highlighted?: boolean
   selected?: boolean
+  sizeClass?: string
+  displayLabel?: string
 }
 
-function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected }: Props) {
+function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel }: Props) {
   if (keycode.hidden) return null
 
-  const label = keycode.label
+  const label = displayLabel ?? keycode.label
   const lines = label.split('\n')
 
   const handleMouseEnter = useCallback(
@@ -25,14 +27,18 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
     [keycode, onHover],
   )
 
-  const base = 'flex flex-col items-center justify-center rounded border p-1 text-xs hover:bg-picker-item-hover hover:border-accent active:bg-accent/20 w-[44px] h-[44px] transition-colors'
+  const size = sizeClass ?? 'w-[44px] h-[44px]'
+  const hover = selected ? '' : 'hover:bg-picker-item-hover'
+  const base = `flex flex-col items-center justify-center rounded border border-transparent p-1 text-xs outline-none ${hover} active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
-    variant = 'border-accent bg-accent/20 text-accent ring-1 ring-accent'
+    variant = 'bg-accent/20 text-accent'
   } else if (highlighted) {
-    variant = 'border-accent/50 bg-accent/10 text-accent'
+    variant = 'bg-accent/10 text-accent'
+  } else if (displayLabel != null) {
+    variant = 'bg-picker-item-bg text-key-label-remap'
   } else {
-    variant = 'border-picker-item-border bg-picker-item-bg text-picker-item-text'
+    variant = 'bg-picker-item-bg text-picker-item-text'
   }
 
   return (

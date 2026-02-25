@@ -1,86 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { SyncStatusType } from '../../../shared/types/sync'
 import { LayoutStoreContent, type LayoutStoreContentProps } from './LayoutStoreModal'
 import { ModalCloseButton } from './ModalCloseButton'
-
-const CANCEL_BTN = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim'
-const DANGER_BTN = 'rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90'
-
-export interface ResetKeyboardDataSectionProps {
-  confirming: boolean
-  busy: boolean
-  disabled?: boolean
-  disabledTitle?: string
-  deviceName: string
-  onStartConfirm: () => void
-  onCancel: () => void
-  onConfirm: () => void
-}
-
-export function ResetKeyboardDataSection({
-  confirming,
-  busy,
-  disabled,
-  disabledTitle,
-  deviceName,
-  onStartConfirm,
-  onCancel,
-  onConfirm,
-}: ResetKeyboardDataSectionProps) {
-  const { t } = useTranslation()
-
-  return (
-    <div className="shrink-0 border-t border-edge pt-3 mt-3" data-testid="reset-keyboard-data-section">
-      {confirming ? (
-        <div className="space-y-2">
-          <div
-            className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger whitespace-pre-line"
-            data-testid="reset-keyboard-data-warning"
-          >
-            {t('sync.resetKeyboardDataConfirm', { name: deviceName })}
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button
-              type="button"
-              className={CANCEL_BTN}
-              onClick={onCancel}
-              disabled={busy}
-              data-testid="reset-keyboard-data-cancel"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              type="button"
-              className={DANGER_BTN}
-              onClick={onConfirm}
-              disabled={busy || disabled}
-              data-testid="reset-keyboard-data-confirm"
-            >
-              {t('common.reset')}
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-content-muted">{t('sync.resetKeyboardData')}</span>
-          <button
-            type="button"
-            className="rounded border border-danger/50 px-2 py-0.5 text-[11px] text-danger hover:bg-danger/10 disabled:opacity-50"
-            onClick={onStartConfirm}
-            disabled={disabled}
-            title={disabled ? disabledTitle : undefined}
-            data-testid="reset-keyboard-data-btn"
-          >
-            {t('common.reset')}
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
 
 const PANEL_BASE = 'absolute top-0 h-full w-[440px] max-w-[90vw] flex flex-col border-edge bg-surface-alt shadow-xl transition-transform duration-300 ease-out'
 
@@ -90,15 +13,11 @@ function panelPositionClass(open: boolean): string {
 
 interface Props extends Omit<LayoutStoreContentProps, 'keyboardName'> {
   onClose: () => void
-  syncStatus?: SyncStatusType
-  onResetKeyboardData?: () => Promise<void>
   deviceName?: string
 }
 
 export function EditorSettingsModal({
   onClose,
-  syncStatus,
-  onResetKeyboardData,
   deviceName = '',
   isDummy,
   ...dataProps
@@ -106,19 +25,6 @@ export function EditorSettingsModal({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
-  const [confirmingResetKeyboard, setConfirmingResetKeyboard] = useState(false)
-  const [resetBusy, setResetBusy] = useState(false)
-
-  const handleConfirmReset = useCallback(async () => {
-    if (!onResetKeyboardData) return
-    setResetBusy(true)
-    try {
-      await onResetKeyboardData()
-    } finally {
-      setResetBusy(false)
-      setConfirmingResetKeyboard(false)
-    }
-  }, [onResetKeyboardData])
 
   useEffect(() => {
     // Trigger slide-in on next frame so the transition plays
@@ -152,18 +58,6 @@ export function EditorSettingsModal({
             isDummy={isDummy}
             keyboardName={deviceName}
             listClassName="overflow-y-auto"
-            footer={onResetKeyboardData && (
-              <ResetKeyboardDataSection
-                confirming={confirmingResetKeyboard}
-                busy={resetBusy}
-                disabled={syncStatus === 'syncing'}
-                disabledTitle={t('sync.resetDisabledWhileSyncing')}
-                deviceName={deviceName}
-                onStartConfirm={() => setConfirmingResetKeyboard(true)}
-                onCancel={() => setConfirmingResetKeyboard(false)}
-                onConfirm={handleConfirmReset}
-              />
-            )}
           />
         </div>
       </div>

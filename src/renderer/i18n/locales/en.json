@@ -65,7 +65,6 @@
       "layerN": "Layer {{n}}",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-      "zoomLabel": "Zoom",
       "dualMode": "Split Edit",
       "copyAll": "Copy Layer",
       "copyAllConfirm": "Overwrite {{target}} with {{source}}?",
@@ -270,6 +269,8 @@
     "midi": "MIDI",
     "group": {
       "characters": "Characters",
+      "alphabet": "Alphabet",
+      "numbersSymbols": "Numbers & Symbols",
       "editing": "Editing",
       "modifiers": "Modifiers",
       "navigation": "Navigation",
@@ -277,6 +278,7 @@
       "lock": "Lock",
       "numpad": "Numpad",
       "system": "System",
+      "shifted": "Shifted Symbols",
       "internal": "Internal",
       "magic": "Magic",
       "audio": "Audio & Music",
@@ -367,7 +369,7 @@
     "system": "System"
   },
   "layout": {
-    "keyboardLayout": "Layout"
+    "keyboardLayout": "Key Labels"
   },
   "layoutStore": {
     "load": "Load",
@@ -419,12 +421,14 @@
     "disable": "Disable",
     "manualSync": "Manual Sync",
     "sync": "Sync",
-    "resetSyncData": "Reset Sync Data",
+    "resetSyncData": "Sync Data",
     "resetConfirm": "This will delete all synced data from Google Drive appDataFolder. This action cannot be undone.",
     "resetTarget": {
       "keyboards": "All Keyboard Data",
+      "keyboardData": "Keyboard Data",
       "favorites": "Favorite Data",
-      "appSettings": "Application Data"
+      "appSettings": "Application Data",
+      "undecryptable": "Undecryptable Files"
     },
     "deleteSelected": "Delete Selected",
     "resetTargetsConfirm": "The selected data will be permanently deleted. This action cannot be undone.",
@@ -444,15 +448,15 @@
     "importFailed": "Import failed",
     "resetLocalData": "Reset Local Data",
     "resetLocalConfirm": "This will delete all saved layouts and favorites on this device. This action cannot be undone.",
-    "resetKeyboardData": "Reset Keyboard Data",
-    "resetKeyboardDataConfirm": "{{name}}'s saved layouts and settings will be deleted.\nSynced data in Google Drive appDataFolder and Hub posts for this keyboard will also be deleted.\nSettings stored on the keyboard itself are not affected.",
-    "resettingKeyboardData": "Deleting data...",
-    "resetDisabledWhileSyncing": "Cannot reset while sync is in progress",
     "passwordMismatch": "Sync password does not match. Please check your encryption password.",
     "undecryptable": "Undecryptable Files",
+    "scanRemote": "Scan",
+    "scanRemoteDesc": "Scan remote data to see what is stored in Google Drive.",
     "scanUndecryptable": "Scan",
     "scanning": "Scanning...",
+    "noRemoteData": "No remote data found",
     "noUndecryptable": "No undecryptable files found",
+    "undecryptableCount": "{{count}} undecryptable file(s)",
     "undecryptableFound": "{{count}} undecryptable file(s) found",
     "deleteUndecryptable": "Delete Selected",
     "deleteUndecryptableConfirm": "The selected files will be permanently deleted from Google Drive. This action cannot be undone.",
@@ -471,15 +475,20 @@
     "dataSync": "Data Sync",
     "defaults": "Defaults for New Keyboards",
     "defaultsDescription": "Applied when a new keyboard connects.",
-    "defaultLayout": "Default Layout",
+    "defaultLayout": "Default Key Labels",
     "defaultAutoAdvance": "Default Auto Move",
     "defaultLayerPanelOpen": "Default Layer List Open",
+    "defaultBasicViewType": "Default Basic Tab View",
+    "basicViewTypeList": "LIST",
+    "basicViewTypeAnsi": "ANSI",
+    "basicViewTypeIso": "ISO",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",
     "autoLockMinutes": "{{minutes}} min",
     "language": "Language",
     "tabNotification": "Notification",
+    "tabTroubleshooting": "Troubleshooting",
     "tabAbout": "About",
     "about": {
       "version": "Version {{version}}",
@@ -495,7 +504,9 @@
     "tabData": "Data",
     "tabSave": "Save",
     "tabTools": "Settings",
-    "tabLayout": "Layout"
+    "tabLayout": "Layout",
+    "basicViewType": "Basic Tab View",
+    "splitKeyMode": "Split Key"
   },
   "hub": {
     "uploadToHub": "Upload",

@@ -2,7 +2,7 @@
 // IPC handler registration for sync operations
 
 import { BrowserWindow, app, dialog } from 'electron'
-import { rm, readFile, writeFile, mkdir } from 'node:fs/promises'
+import { rm, readFile, readdir, writeFile, mkdir } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { loadAppConfig, getAppConfigStore, onAppConfigChange } from '../app-config'
@@ -28,11 +28,12 @@ import {
   readIndexFile,
   resetPasswordCheckCache,
   listUndecryptableFiles,
+  scanRemoteData,
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
 } from './sync-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -167,14 +168,24 @@ export function setupSyncIpc(): void {
   secureHandle(IpcChannels.SYNC_RESET_TARGETS, (_event, targets: SyncResetTargets) =>
     wrapIpc('Reset sync targets failed', async () => {
       if (typeof targets !== 'object' || targets === null) throw new Error('Invalid targets')
-      if (typeof targets.keyboards !== 'boolean' || typeof targets.favorites !== 'boolean') {
-        throw new Error('Invalid targets: expected boolean fields')
+      const hasKeyboards = targets.keyboards === true || (Array.isArray(targets.keyboards) && targets.keyboards.length > 0)
+      if (typeof targets.keyboards !== 'boolean' && !Array.isArray(targets.keyboards)) {
+        throw new Error('Invalid targets: keyboards must be boolean or string[]')
       }
-      if (!targets.keyboards && !targets.favorites) throw new Error('No targets selected')
+      if (typeof targets.favorites !== 'boolean') {
+        throw new Error('Invalid targets: favorites must be boolean')
+      }
+      if (!hasKeyboards && !targets.favorites) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
-      if (targets.keyboards) {
+      if (targets.keyboards === true) {
         cancelPendingChanges('keyboards/')
         await deleteFilesByPrefix('keyboards_')
+      } else if (Array.isArray(targets.keyboards)) {
+        for (const uid of targets.keyboards) {
+          if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid keyboard UID')
+          cancelPendingChanges(`keyboards/${uid}/`)
+          await deleteFilesByPrefix(`keyboards_${uid}_`)
+        }
       }
       if (targets.favorites) {
         cancelPendingChanges('favorites/')
@@ -208,6 +219,35 @@ export function setupSyncIpc(): void {
         }
       }),
   )
+
+  // --- List stored keyboards ---
+  secureHandle(IpcChannels.LIST_STORED_KEYBOARDS, async (): Promise<StoredKeyboardInfo[]> => {
+    const userData = app.getPath('userData')
+    const keyboardsDir = join(userData, 'sync', 'keyboards')
+    const results: StoredKeyboardInfo[] = []
+    try {
+      const entries = await readdir(keyboardsDir, { withFileTypes: true })
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue
+        const uid = entry.name
+        if (!isSafeKey(uid)) continue
+        let name = uid
+        // Try to extract device name from first snapshot entry filename
+        try {
+          const raw = await readFile(join(keyboardsDir, uid, 'snapshots', 'index.json'), 'utf-8')
+          const index = JSON.parse(raw) as SnapshotIndex
+          const active = index.entries.find((e) => !e.deletedAt)
+          if (active) {
+            // filename: "{deviceName}_{ISO_timestamp}.pipette"
+            const match = active.filename.match(/^(.+?)_\d{4}-\d{2}-/)
+            if (match) name = match[1]
+          }
+        } catch { /* no snapshots */ }
+        results.push({ uid, name })
+      }
+    } catch { /* dir doesn't exist */ }
+    return results
+  })
 
   // --- Reset keyboard data (per-device) ---
   secureHandle(IpcChannels.RESET_KEYBOARD_DATA, (_event, uid: string) =>
@@ -397,6 +437,8 @@ export function setupSyncIpc(): void {
 
   // --- Undecryptable files ---
   secureHandle(IpcChannels.SYNC_LIST_UNDECRYPTABLE, () => listUndecryptableFiles())
+
+  secureHandle(IpcChannels.SYNC_SCAN_REMOTE, (): Promise<SyncDataScanResult> => scanRemoteData())
 
   secureHandle(IpcChannels.SYNC_DELETE_FILES, (_event, fileIds: string[]) =>
     wrapIpc('Delete files failed', async () => {

@@ -11,7 +11,7 @@ import type { DeviceInfo, KeyboardDefinition } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult } from '../shared/types/hub'
@@ -224,6 +224,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_PENDING_STATUS),
   syncListUndecryptable: (): Promise<UndecryptableFile[]> =>
     ipcRenderer.invoke(IpcChannels.SYNC_LIST_UNDECRYPTABLE),
+  syncScanRemote: (): Promise<SyncDataScanResult> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_SCAN_REMOTE),
   syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
   syncCheckPasswordExists: (): Promise<boolean> =>
@@ -271,6 +273,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SHELL_OPEN_EXTERNAL, url),
 
   // --- Data Management ---
+  listStoredKeyboards: (): Promise<StoredKeyboardInfo[]> =>
+    ipcRenderer.invoke(IpcChannels.LIST_STORED_KEYBOARDS),
   resetKeyboardData: (uid: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.RESET_KEYBOARD_DATA, uid),
   resetLocalTargets: (targets: LocalResetTargets): Promise<{ success: boolean; error?: string }> =>

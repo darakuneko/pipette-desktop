@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useRef, useEffect } from 'react'
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Monitor, Sun, Moon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -10,10 +10,11 @@ import { formatDate, formatDateShort } from './editors/store-modal-shared'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { ModalTabId } from './editors/modal-tabs'
-import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, LocalResetTargets, UndecryptableFile } from '../../shared/types/sync'
+import type { SyncStatusType, LastSyncResult, SyncProgress, LocalResetTargets, SyncDataScanResult, StoredKeyboardInfo } from '../../shared/types/sync'
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../hooks/useDevicePrefs'
+import type { BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'tools' as const, labelKey: 'settings.tabTools' },
   { id: 'data' as const, labelKey: 'settings.tabData' },
   { id: 'notification' as const, labelKey: 'settings.tabNotification' },
+  { id: 'troubleshooting' as const, labelKey: 'settings.tabTroubleshooting' },
   { id: 'about' as const, labelKey: 'settings.tabAbout' },
 ]
 
@@ -35,9 +37,16 @@ function scoreColor(score: number | null): string {
   return 'bg-accent'
 }
 
+function toggleSetItem<T>(prev: Set<T>, item: T, selected: boolean): Set<T> {
+  const next = new Set(prev)
+  if (selected) next.add(item)
+  else next.delete(item)
+  return next
+}
+
 const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
 const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
-const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10'
+const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50'
 
 interface SyncStatusSectionProps {
   syncStatus: SyncStatusType
@@ -103,122 +112,191 @@ function SyncStatusSection({ syncStatus, progress, lastSyncResult }: SyncStatusS
   )
 }
 
-interface UndecryptableFilesSectionProps {
+interface SyncDataResetSectionProps {
   sync: UseSyncReturn
+  storedKeyboards: StoredKeyboardInfo[]
   disabled: boolean
+  onResetStart?: () => void
+  onResetEnd?: () => void
 }
 
-function UndecryptableFilesSection({ sync, disabled }: UndecryptableFilesSectionProps) {
+function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetStart, onResetEnd }: SyncDataResetSectionProps) {
   const { t } = useTranslation()
-  const [files, setFiles] = useState<UndecryptableFile[] | null>(null)
+  const [scanResult, setScanResult] = useState<SyncDataScanResult | null>(null)
   const [scanning, setScanning] = useState(false)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
+  const [favoritesSelected, setFavoritesSelected] = useState(false)
+  const [selectedUndecryptable, setSelectedUndecryptable] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const keyboardNameMap = useMemo(() => new Map(storedKeyboards.map((kb) => [kb.uid, kb.name])), [storedKeyboards])
+
+  const resetSelections = useCallback(() => {
+    setConfirming(false)
+    setSelectedKeyboardUids(new Set())
+    setFavoritesSelected(false)
+    setSelectedUndecryptable(new Set())
+  }, [])
+
   const handleScan = useCallback(async () => {
     setScanning(true)
-    setFiles(null)
-    setSelected(new Set())
-    setConfirming(false)
+    setScanResult(null)
+    resetSelections()
     setError(null)
     try {
-      const result = await sync.listUndecryptable()
-      setFiles(result)
+      const result = await sync.scanRemote()
+      setScanResult(result)
     } catch {
       setError(t('statusBar.sync.error'))
     } finally {
       setScanning(false)
     }
-  }, [sync, t])
+  }, [sync, resetSelections, t])
 
-  const toggleFile = useCallback((fileId: string) => {
-    setSelected((prev) => {
-      const next = new Set(prev)
-      if (next.has(fileId)) next.delete(fileId)
-      else next.add(fileId)
-      return next
-    })
+  const toggleUndecryptable = useCallback((fileId: string) => {
+    setSelectedUndecryptable((prev) => toggleSetItem(prev, fileId, !prev.has(fileId)))
     setConfirming(false)
   }, [])
 
-  const toggleAll = useCallback(() => {
-    if (!files) return
-    if (selected.size === files.length) {
-      setSelected(new Set())
+  const toggleAllUndecryptable = useCallback(() => {
+    if (!scanResult) return
+    if (selectedUndecryptable.size === scanResult.undecryptable.length) {
+      setSelectedUndecryptable(new Set())
     } else {
-      setSelected(new Set(files.map((f) => f.fileId)))
+      setSelectedUndecryptable(new Set(scanResult.undecryptable.map((f) => f.fileId)))
     }
     setConfirming(false)
-  }, [files, selected.size])
+  }, [scanResult, selectedUndecryptable.size])
+
+  const anySelected = selectedKeyboardUids.size > 0 || favoritesSelected || selectedUndecryptable.size > 0
+  const allUndecryptableSelected = scanResult !== null && scanResult.undecryptable.length > 0 && selectedUndecryptable.size === scanResult.undecryptable.length
 
   const handleDelete = useCallback(async () => {
-    if (selected.size === 0) return
+    if (!anySelected) return
     setDeleting(true)
     setError(null)
+    onResetStart?.()
     try {
-      const result = await sync.deleteFiles([...selected])
-      if (result.success) {
-        setFiles((prev) => prev?.filter((f) => !selected.has(f.fileId)) ?? null)
-        setSelected(new Set())
-        setConfirming(false)
-      } else {
-        setError(result.error ?? t('statusBar.sync.error'))
+      if (selectedKeyboardUids.size > 0 || favoritesSelected) {
+        const targets = {
+          keyboards: selectedKeyboardUids.size > 0 ? [...selectedKeyboardUids] : false as const,
+          favorites: favoritesSelected,
+        }
+        const result = await sync.resetSyncTargets(targets)
+        if (!result.success) {
+          setError(result.error ?? t('statusBar.sync.error'))
+          return
+        }
+      }
+      if (selectedUndecryptable.size > 0) {
+        const result = await sync.deleteFiles([...selectedUndecryptable])
+        if (!result.success) {
+          setError(result.error ?? t('statusBar.sync.error'))
+          return
+        }
+      }
+      resetSelections()
+      try {
+        const result = await sync.scanRemote()
+        setScanResult(result)
+      } catch {
+        setScanResult(null)
+        setError(t('statusBar.sync.error'))
       }
     } catch {
       setError(t('statusBar.sync.error'))
     } finally {
       setDeleting(false)
+      onResetEnd?.()
     }
-  }, [sync, selected, t])
+  }, [sync, selectedKeyboardUids, favoritesSelected, selectedUndecryptable, resetSelections, onResetStart, onResetEnd, t])
 
-  const allSelected = files !== null && files.length > 0 && selected.size === files.length
+  const hasNoData = scanResult !== null && scanResult.keyboards.length === 0 && scanResult.favorites.length === 0 && scanResult.undecryptable.length === 0
 
   return (
     <section className="mb-6">
       <div className="mb-2 flex items-center justify-between">
         <h4 className="text-sm font-medium text-content-secondary">
-          {t('sync.undecryptable')}
+          {t('sync.resetSyncData')}
         </h4>
         <button
           type="button"
           className={BTN_SECONDARY}
           onClick={handleScan}
           disabled={disabled || scanning}
-          data-testid="undecryptable-scan"
+          data-testid="sync-data-scan"
         >
-          {scanning ? t('sync.scanning') : t('sync.scanUndecryptable')}
+          {scanning ? t('sync.scanning') : t('sync.scanRemote')}
         </button>
       </div>
       {error && (
-        <div className="mb-2 text-xs text-danger" data-testid="undecryptable-error">
+        <div className="mb-2 text-xs text-danger" data-testid="sync-data-error">
           {error}
         </div>
       )}
-      {files !== null && (
+      {hasNoData && (
+        <p className="text-sm text-content-muted" data-testid="sync-data-empty">
+          {t('sync.noRemoteData')}
+        </p>
+      )}
+      {scanResult !== null && !hasNoData && (
         <div className="space-y-2">
-          {files.length === 0 ? (
-            <p className="text-sm text-content-muted" data-testid="undecryptable-empty">
-              {t('sync.noUndecryptable')}
-            </p>
-          ) : (
-            <>
-              <p className="text-sm text-content-muted" data-testid="undecryptable-count">
-                {t('sync.undecryptableFound', { count: files.length })}
-              </p>
+          {scanResult.keyboards.length > 0 && (
+            <div>
+              <span className="text-sm text-content-muted">{t('sync.resetTarget.keyboardData')}</span>
+              <div className="ml-4 mt-1 space-y-1">
+                {scanResult.keyboards.map((uid) => (
+                  <label key={uid} className="flex items-center gap-2 text-sm text-content" data-testid={`sync-target-keyboard-${uid}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedKeyboardUids.has(uid)}
+                      onChange={(e) => {
+                        setSelectedKeyboardUids((prev) => toggleSetItem(prev, uid, e.target.checked))
+                        setConfirming(false)
+                      }}
+                      disabled={disabled || deleting}
+                      className="accent-danger"
+                    />
+                    {keyboardNameMap.get(uid) ?? uid}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+          {scanResult.favorites.length > 0 && (
+            <label className="flex items-center gap-2 text-sm text-content" data-testid="sync-target-favorites">
+              <input
+                type="checkbox"
+                checked={favoritesSelected}
+                onChange={(e) => {
+                  setFavoritesSelected(e.target.checked)
+                  setConfirming(false)
+                }}
+                disabled={disabled || deleting}
+                className="accent-danger"
+              />
+              {t('sync.resetTarget.favorites')}
+            </label>
+          )}
+          {scanResult.undecryptable.length > 0 && (
+            <div>
               <div className="flex items-center justify-between">
+                <span className="text-sm text-content-muted" data-testid="sync-data-undecryptable-count">
+                  {t('sync.undecryptableCount', { count: scanResult.undecryptable.length })}
+                </span>
                 <button
                   type="button"
                   className="text-xs text-content-muted hover:text-content"
-                  onClick={toggleAll}
+                  onClick={toggleAllUndecryptable}
                   data-testid="undecryptable-toggle-all"
                 >
-                  {allSelected ? t('sync.deselectAll') : t('sync.selectAll')}
+                  {allUndecryptableSelected ? t('sync.deselectAll') : t('sync.selectAll')}
                 </button>
               </div>
-              <div className="max-h-40 overflow-y-auto space-y-1">
-                {files.map((file) => (
+              <div className="mt-1 max-h-40 overflow-y-auto space-y-1">
+                {scanResult.undecryptable.map((file) => (
                   <label
                     key={file.fileId}
                     className="flex items-center gap-2 rounded border border-edge bg-surface/20 px-2 py-1.5 text-sm text-content"
@@ -226,57 +304,57 @@ function UndecryptableFilesSection({ sync, disabled }: UndecryptableFilesSection
                   >
                     <input
                       type="checkbox"
-                      checked={selected.has(file.fileId)}
-                      onChange={() => toggleFile(file.fileId)}
-                      disabled={deleting}
+                      checked={selectedUndecryptable.has(file.fileId)}
+                      onChange={() => toggleUndecryptable(file.fileId)}
+                      disabled={disabled || deleting}
                       className="accent-danger"
                     />
                     <span className="truncate">{file.syncUnit ?? file.fileName}</span>
                   </label>
                 ))}
               </div>
-              <div className="flex items-center justify-end">
+            </div>
+          )}
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              className={BTN_DANGER_OUTLINE}
+              onClick={() => setConfirming(true)}
+              disabled={disabled || !anySelected || deleting}
+              data-testid="sync-reset-data"
+            >
+              {t('sync.deleteSelected')}
+            </button>
+          </div>
+          {confirming && (
+            <div className="space-y-2">
+              <div
+                className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger"
+                data-testid="sync-reset-data-warning"
+              >
+                {t('sync.resetTargetsConfirm')}
+              </div>
+              <div className="flex gap-2 justify-end">
                 <button
                   type="button"
-                  className={`${BTN_DANGER_OUTLINE} disabled:opacity-50`}
-                  onClick={() => setConfirming(true)}
-                  disabled={selected.size === 0 || deleting}
-                  data-testid="undecryptable-delete"
+                  className={BTN_SECONDARY}
+                  onClick={() => setConfirming(false)}
+                  disabled={deleting}
+                  data-testid="sync-reset-data-cancel"
                 >
-                  {t('sync.deleteUndecryptable')}
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
+                  onClick={handleDelete}
+                  disabled={!anySelected || deleting}
+                  data-testid="sync-reset-data-confirm"
+                >
+                  {t('sync.deleteSelected')}
                 </button>
               </div>
-              {confirming && (
-                <div className="space-y-2">
-                  <div
-                    className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger"
-                    data-testid="undecryptable-delete-warning"
-                  >
-                    {t('sync.deleteUndecryptableConfirm')}
-                  </div>
-                  <div className="flex gap-2 justify-end">
-                    <button
-                      type="button"
-                      className={BTN_SECONDARY}
-                      onClick={() => setConfirming(false)}
-                      disabled={deleting}
-                      data-testid="undecryptable-delete-cancel"
-                    >
-                      {t('common.cancel')}
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
-                      onClick={handleDelete}
-                      disabled={selected.size === 0 || deleting}
-                      data-testid="undecryptable-delete-confirm"
-                    >
-                      {t('sync.deleteUndecryptable')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
         </div>
       )}
@@ -284,70 +362,89 @@ function UndecryptableFilesSection({ sync, disabled }: UndecryptableFilesSection
   )
 }
 
-interface DangerCheckboxItem {
-  key: string
-  checked: boolean
-  labelKey: string
-  testId: string
-}
-
-interface DangerCheckboxGroupProps {
-  items: DangerCheckboxItem[]
-  onToggle: (key: string, checked: boolean) => void
+interface LocalDataResetGroupProps {
+  storedKeyboards: StoredKeyboardInfo[]
+  selectedKeyboardUids: Set<string>
+  onToggleKeyboard: (uid: string, checked: boolean) => void
+  localTargets: LocalResetTargets
+  onToggleTarget: (key: string, checked: boolean) => void
   disabled: boolean
   confirming: boolean
   onRequestConfirm: () => void
   onCancelConfirm: () => void
   onConfirm: () => void
-  confirmWarningKey: string
-  deleteTestId: string
-  confirmTestId: string
-  cancelTestId: string
-  warningTestId: string
   busy: boolean
   confirmDisabled: boolean
 }
 
-function DangerCheckboxGroup({
-  items,
-  onToggle,
+function LocalDataResetGroup({
+  storedKeyboards,
+  selectedKeyboardUids,
+  onToggleKeyboard,
+  localTargets,
+  onToggleTarget,
   disabled,
   confirming,
   onRequestConfirm,
   onCancelConfirm,
   onConfirm,
-  confirmWarningKey,
-  deleteTestId,
-  confirmTestId,
-  cancelTestId,
-  warningTestId,
   busy,
   confirmDisabled,
-}: DangerCheckboxGroupProps) {
+}: LocalDataResetGroupProps) {
   const { t } = useTranslation()
-  const anySelected = items.some((item) => item.checked)
+  const anySelected = selectedKeyboardUids.size > 0 || localTargets.favorites || localTargets.appSettings
 
   return (
     <div className="space-y-2">
-      {items.map((item) => (
-        <label key={item.key} className="flex items-center gap-2 text-sm text-content" data-testid={item.testId}>
-          <input
-            type="checkbox"
-            checked={item.checked}
-            onChange={(e) => onToggle(item.key, e.target.checked)}
-            disabled={disabled}
-            className="accent-danger"
-          />
-          {t(item.labelKey)}
-        </label>
-      ))}
+      {/* Keyboard Data — individual keyboards */}
+      {storedKeyboards.length > 0 && (
+        <div>
+          <span className="text-sm text-content-muted">{t('sync.resetTarget.keyboardData')}</span>
+          <div className="ml-4 mt-1 space-y-1">
+            {storedKeyboards.map((kb) => (
+              <label key={kb.uid} className="flex items-center gap-2 text-sm text-content" data-testid={`local-target-keyboard-${kb.uid}`}>
+                <input
+                  type="checkbox"
+                  checked={selectedKeyboardUids.has(kb.uid)}
+                  onChange={(e) => onToggleKeyboard(kb.uid, e.target.checked)}
+                  disabled={disabled}
+                  className="accent-danger"
+                />
+                {kb.name}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* Favorites & App Settings */}
+      <label className="flex items-center gap-2 text-sm text-content" data-testid="local-target-favorites">
+        <input
+          type="checkbox"
+          checked={localTargets.favorites}
+          onChange={(e) => onToggleTarget('favorites', e.target.checked)}
+          disabled={disabled}
+          className="accent-danger"
+        />
+        {t('sync.resetTarget.favorites')}
+      </label>
+      <label className="flex items-center gap-2 text-sm text-content" data-testid="local-target-appSettings">
+        <input
+          type="checkbox"
+          checked={localTargets.appSettings}
+          onChange={(e) => onToggleTarget('appSettings', e.target.checked)}
+          disabled={disabled}
+          className="accent-danger"
+        />
+        {t('sync.resetTarget.appSettings')}
+      </label>
+      {/* Delete button */}
       <div className="flex items-center justify-end">
         <button
           type="button"
-          className={`${BTN_DANGER_OUTLINE} disabled:opacity-50`}
+          className={BTN_DANGER_OUTLINE}
           onClick={onRequestConfirm}
           disabled={disabled || !anySelected}
-          data-testid={deleteTestId}
+          data-testid="reset-local-data"
         >
           {t('sync.deleteSelected')}
         </button>
@@ -356,9 +453,9 @@ function DangerCheckboxGroup({
         <div className="space-y-2">
           <div
             className="rounded border border-danger/50 bg-danger/10 p-2 text-xs text-danger"
-            data-testid={warningTestId}
+            data-testid="reset-local-data-warning"
           >
-            {t(confirmWarningKey)}
+            {t('sync.resetLocalTargetsConfirm')}
           </div>
           <div className="flex gap-2 justify-end">
             <button
@@ -366,7 +463,7 @@ function DangerCheckboxGroup({
               className={BTN_SECONDARY}
               onClick={onCancelConfirm}
               disabled={busy}
-              data-testid={cancelTestId}
+              data-testid="reset-local-data-cancel"
             >
               {t('common.cancel')}
             </button>
@@ -375,7 +472,7 @@ function DangerCheckboxGroup({
               className="rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
               onClick={onConfirm}
               disabled={confirmDisabled || !anySelected}
-              data-testid={confirmTestId}
+              data-testid="reset-local-data-confirm"
             >
               {t('sync.deleteSelected')}
             </button>
@@ -481,6 +578,10 @@ interface Props {
   onDefaultAutoAdvanceChange: (enabled: boolean) => void
   defaultLayerPanelOpen: boolean
   onDefaultLayerPanelOpenChange: (open: boolean) => void
+  defaultBasicViewType: BasicViewType
+  onDefaultBasicViewTypeChange: (type: BasicViewType) => void
+  defaultSplitKeyMode: SplitKeyMode
+  onDefaultSplitKeyModeChange: (mode: SplitKeyMode) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   onResetStart?: () => void
@@ -608,6 +709,10 @@ export function SettingsModal({
   onDefaultAutoAdvanceChange,
   defaultLayerPanelOpen,
   onDefaultLayerPanelOpenChange,
+  defaultBasicViewType,
+  onDefaultBasicViewTypeChange,
+  defaultSplitKeyMode,
+  onDefaultSplitKeyModeChange,
   autoLockTime,
   onAutoLockTimeChange,
   onResetStart,
@@ -631,8 +736,6 @@ export function SettingsModal({
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [changingPassword, setChangingPassword] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [syncTargets, setSyncTargets] = useState<SyncResetTargets>({ keyboards: false, favorites: false })
-  const [confirmingSyncReset, setConfirmingSyncReset] = useState(false)
   const [localTargets, setLocalTargets] = useState<LocalResetTargets>({ keyboards: false, favorites: false, appSettings: false })
   const [confirmingLocalReset, setConfirmingLocalReset] = useState(false)
   const [authenticating, setAuthenticating] = useState(false)
@@ -640,9 +743,18 @@ export function SettingsModal({
   const [confirmingGoogleDisconnect, setConfirmingGoogleDisconnect] = useState(false)
   const [confirmingHubDisconnect, setConfirmingHubDisconnect] = useState(false)
   const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
+  const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
+  const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
+  const storedKeyboardsFetchedRef = useRef(false)
   const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
   const [notificationLoading, setNotificationLoading] = useState(false)
   const notificationFetchedRef = useRef(false)
+
+  useEffect(() => {
+    if (activeTab !== 'troubleshooting' || storedKeyboardsFetchedRef.current) return
+    storedKeyboardsFetchedRef.current = true
+    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
+  }, [activeTab])
 
   useEffect(() => {
     if (activeTab !== 'notification' || notificationFetchedRef.current) return
@@ -771,35 +883,37 @@ export function SettingsModal({
     }
   }, [sync, handleSyncNow])
 
-  const handleResetSyncTargets = useCallback(async () => {
-    setBusy(true)
-    onResetStart?.()
-    try {
-      const result = await sync.resetSyncTargets(syncTargets)
-      if (result.success) {
-        setConfirmingSyncReset(false)
-        setSyncTargets({ keyboards: false, favorites: false })
-      }
-    } finally {
-      setBusy(false)
-      onResetEnd?.()
-    }
-  }, [sync, syncTargets, onResetStart, onResetEnd])
-
   const handleResetLocalTargets = useCallback(async () => {
     setBusy(true)
     onResetStart?.()
     try {
-      const result = await window.vialAPI.resetLocalTargets(localTargets)
-      if (result.success) {
+      const keyboardUids = Array.from(selectedKeyboardUids)
+      const deletedUids = new Set<string>()
+      for (const uid of keyboardUids) {
+        try {
+          await window.vialAPI.resetKeyboardData(uid)
+          deletedUids.add(uid)
+        } catch { /* continue deleting other keyboards */ }
+      }
+      const hasNonKeyboardTargets = localTargets.favorites || localTargets.appSettings
+      if (hasNonKeyboardTargets) {
+        await window.vialAPI.resetLocalTargets({ keyboards: false, favorites: localTargets.favorites, appSettings: localTargets.appSettings })
+      }
+      if (deletedUids.size > 0 || hasNonKeyboardTargets) {
         setConfirmingLocalReset(false)
         setLocalTargets({ keyboards: false, favorites: false, appSettings: false })
+        setSelectedKeyboardUids((prev) => {
+          const next = new Set(prev)
+          for (const uid of deletedUids) next.delete(uid)
+          return next
+        })
+        setStoredKeyboards((prev) => prev.filter((kb) => !deletedUids.has(kb.uid)))
       }
     } finally {
       setBusy(false)
       onResetEnd?.()
     }
-  }, [localTargets, onResetStart, onResetEnd])
+  }, [localTargets, selectedKeyboardUids, onResetStart, onResetEnd])
 
   const handleExport = useCallback(async () => {
     setBusy(true)
@@ -1066,6 +1180,40 @@ export function SettingsModal({
                       <span className={toggleKnobClass(defaultLayerPanelOpen)} />
                     </button>
                   </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
+                    <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
+                      {t('settings.defaultBasicViewType')}
+                    </label>
+                    <select
+                      id="settings-default-basic-view-type-selector"
+                      value={defaultBasicViewType}
+                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as BasicViewType)}
+                      className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                      data-testid="settings-default-basic-view-type-selector"
+                    >
+                      <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
+                      <option value="iso">{t('settings.basicViewTypeIso')}</option>
+                      <option value="list">{t('settings.basicViewTypeList')}</option>
+                    </select>
+                  </div>
+
+                  <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
+                    <span className="text-[13px] font-medium text-content">
+                      {t('editorSettings.splitKeyMode')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={defaultSplitKeyMode === 'split'}
+                      aria-label={t('editorSettings.splitKeyMode')}
+                      className={toggleTrackClass(defaultSplitKeyMode === 'split')}
+                      onClick={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
+                      data-testid="settings-default-split-key-mode-toggle"
+                    >
+                      <span className={toggleKnobClass(defaultSplitKeyMode === 'split')} />
+                    </button>
+                  </div>
                 </div>
               </section>
 
@@ -1303,103 +1451,73 @@ export function SettingsModal({
                 </section>
               )}
 
-              <hr className="my-4 border-edge" />
+            </div>
+          )}
+          {activeTab === 'troubleshooting' && (
+            <div className="pt-4 space-y-6" data-testid="troubleshooting-tab-content">
+              {/* Sync Data (unified scan + reset) */}
+              <SyncDataResetSection
+                sync={sync}
+                storedKeyboards={storedKeyboards}
+                disabled={syncDisabled}
+                onResetStart={onResetStart}
+                onResetEnd={onResetEnd}
+              />
 
-              {/* Troubleshooting (collapsible) */}
-              <details className="mb-4" data-testid="troubleshooting-details">
-                <summary className="cursor-pointer text-[15px] font-bold text-content select-none">
-                  {t('sync.troubleshooting')}
-                </summary>
-                <div className="mt-4 space-y-6">
-                  {/* Undecryptable Files */}
-                  <UndecryptableFilesSection sync={sync} disabled={syncDisabled} />
-
-                  {/* Reset Sync Data */}
-                  <section>
-                    <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                      {t('sync.resetSyncData')}
-                    </h4>
-                    <DangerCheckboxGroup
-                      items={[
-                        { key: 'keyboards', checked: syncTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'sync-target-keyboards' },
-                        { key: 'favorites', checked: syncTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'sync-target-favorites' },
-                      ]}
-                      onToggle={(key, checked) => setSyncTargets((prev) => ({ ...prev, [key]: checked }))}
-                      disabled={busy || syncDisabled}
-                      confirming={confirmingSyncReset}
-                      onRequestConfirm={() => setConfirmingSyncReset(true)}
-                      onCancelConfirm={() => setConfirmingSyncReset(false)}
-                      onConfirm={handleResetSyncTargets}
-                      confirmWarningKey="sync.resetTargetsConfirm"
-                      deleteTestId="sync-reset-data"
-                      warningTestId="sync-reset-data-warning"
-                      cancelTestId="sync-reset-data-cancel"
-                      confirmTestId="sync-reset-data-confirm"
-                      busy={busy}
-                      confirmDisabled={busy || syncDisabled}
-                    />
-                  </section>
-
-                  {/* Local Data */}
-                  <section>
-                    <h4 className="mb-2 text-sm font-medium text-content-secondary">
-                      {t('sync.localData')}
-                    </h4>
-                    <div className="flex items-center justify-between mb-3">
-                      {importResult ? (
-                        <span
-                          className={`text-sm ${importResult === 'success' ? 'text-accent' : 'text-danger'}`}
-                          data-testid="local-data-import-result"
-                        >
-                          {importResult === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
-                        </span>
-                      ) : (
-                        <span />
-                      )}
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          className={BTN_SECONDARY}
-                          onClick={handleImport}
-                          disabled={busy}
-                          data-testid="local-data-import"
-                        >
-                          {t('sync.import')}
-                        </button>
-                        <button
-                          type="button"
-                          className={BTN_SECONDARY}
-                          onClick={handleExport}
-                          disabled={busy}
-                          data-testid="local-data-export"
-                        >
-                          {t('sync.export')}
-                        </button>
-                      </div>
-                    </div>
-                    <DangerCheckboxGroup
-                      items={[
-                        { key: 'keyboards', checked: localTargets.keyboards, labelKey: 'sync.resetTarget.keyboards', testId: 'local-target-keyboards' },
-                        { key: 'favorites', checked: localTargets.favorites, labelKey: 'sync.resetTarget.favorites', testId: 'local-target-favorites' },
-                        { key: 'appSettings', checked: localTargets.appSettings, labelKey: 'sync.resetTarget.appSettings', testId: 'local-target-appSettings' },
-                      ]}
-                      onToggle={(key, checked) => setLocalTargets((prev) => ({ ...prev, [key]: checked }))}
-                      disabled={busy || isSyncing}
-                      confirming={confirmingLocalReset}
-                      onRequestConfirm={() => setConfirmingLocalReset(true)}
-                      onCancelConfirm={() => setConfirmingLocalReset(false)}
-                      onConfirm={handleResetLocalTargets}
-                      confirmWarningKey="sync.resetLocalTargetsConfirm"
-                      deleteTestId="reset-local-data"
-                      warningTestId="reset-local-data-warning"
-                      cancelTestId="reset-local-data-cancel"
-                      confirmTestId="reset-local-data-confirm"
-                      busy={busy}
-                      confirmDisabled={busy || isSyncing}
-                    />
-                  </section>
+              {/* Local Data */}
+              <section>
+                <h4 className="mb-2 text-sm font-medium text-content-secondary">
+                  {t('sync.localData')}
+                </h4>
+                <div className="flex items-center justify-between mb-3">
+                  {importResult ? (
+                    <span
+                      className={`text-sm ${importResult === 'success' ? 'text-accent' : 'text-danger'}`}
+                      data-testid="local-data-import-result"
+                    >
+                      {importResult === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      onClick={handleImport}
+                      disabled={busy}
+                      data-testid="local-data-import"
+                    >
+                      {t('sync.import')}
+                    </button>
+                    <button
+                      type="button"
+                      className={BTN_SECONDARY}
+                      onClick={handleExport}
+                      disabled={busy}
+                      data-testid="local-data-export"
+                    >
+                      {t('sync.export')}
+                    </button>
+                  </div>
                 </div>
-              </details>
+                <LocalDataResetGroup
+                  storedKeyboards={storedKeyboards}
+                  selectedKeyboardUids={selectedKeyboardUids}
+                  onToggleKeyboard={(uid, checked) => {
+                    setSelectedKeyboardUids((prev) => toggleSetItem(prev, uid, checked))
+                  }}
+                  localTargets={localTargets}
+                  onToggleTarget={(key, checked) => setLocalTargets((prev) => ({ ...prev, [key]: checked }))}
+                  disabled={busy || isSyncing}
+                  confirming={confirmingLocalReset}
+                  onRequestConfirm={() => setConfirmingLocalReset(true)}
+                  onCancelConfirm={() => setConfirmingLocalReset(false)}
+                  onConfirm={handleResetLocalTargets}
+                  busy={busy}
+                  confirmDisabled={busy || isSyncing}
+                />
+              </section>
             </div>
           )}
           {activeTab === 'notification' && (

@@ -49,6 +49,11 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
     return !nonBasic.has(qmkId)
   },
   getAvailableLMMods: () => [],
+  findKeycode: () => undefined,
+  KEYCODES_SPECIAL: [],
+  KEYCODES_BASIC: [],
+  KEYCODES_SHIFTED: [],
+  KEYCODES_ISO: [],
 }))
 
 import { TabbedKeycodes } from '../TabbedKeycodes'
