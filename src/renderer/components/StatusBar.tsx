@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { SyncStatusType } from '../../shared/types/sync'
 
-const TYPING_TEST_BASE = 'flex items-center gap-1 rounded border px-1.5 text-xs transition-colors'
+const TYPING_TEST_BASE = 'flex items-center justify-center gap-1 rounded border px-2.5 py-1 text-xs leading-none transition-colors'
 const TYPING_TEST_ACTIVE = `${TYPING_TEST_BASE} border-accent bg-accent/10 text-accent`
 const TYPING_TEST_INACTIVE = `${TYPING_TEST_BASE} border-edge text-content-secondary hover:text-content`
 
@@ -38,7 +38,7 @@ export function StatusBar({
   const { t } = useTranslation()
 
   return (
-    <div className="flex items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs text-content-secondary" data-testid="status-bar">
+    <div className="flex items-center justify-between border-t border-edge bg-surface-alt px-4 py-1.5 text-xs leading-none text-content-secondary" data-testid="status-bar">
       <div className="flex items-center gap-3">
         <span>{deviceName}</span>
         {loadedLabel && (
@@ -100,7 +100,7 @@ export function StatusBar({
           <button
             type="button"
             data-testid="disconnect-button"
-            className="flex items-center gap-1 rounded border border-edge px-1.5 text-xs text-red-500 transition-colors hover:text-red-600"
+            className="flex items-center justify-center gap-1 rounded border border-edge px-2.5 py-1 text-xs leading-none text-red-500 transition-colors hover:text-red-600"
             onClick={onDisconnect}
           >
             {t('common.disconnect')}
