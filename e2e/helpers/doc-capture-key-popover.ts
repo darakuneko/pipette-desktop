@@ -57,7 +57,7 @@ async function main(): Promise<void> {
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
-  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.setViewportSize({ width: 1320, height: 900 })
   await page.waitForTimeout(3000)
 
   try {
