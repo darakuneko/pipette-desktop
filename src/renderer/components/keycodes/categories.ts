@@ -102,7 +102,7 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
       { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 2 },
       { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV, layoutRow: 2 },
       { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
-      { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED, layoutRow: 3 },
+      { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
       { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 3 },
       { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 3 },
       { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 4 },
