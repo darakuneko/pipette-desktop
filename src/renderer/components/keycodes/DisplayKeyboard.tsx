@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { memo, useCallback, useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import { KeycodeButton } from './KeycodeButton'
@@ -61,12 +61,12 @@ interface SplitKeyProps {
   pickerSelectedKeycodes?: Set<string>
 }
 
-function splitStyle(kc: Keycode, highlighted?: boolean, selected?: boolean): string {
-  const base = 'flex items-center justify-center text-[10px] leading-tight whitespace-nowrap transition-colors'
-  if (selected) return `${base} text-accent`
-  if (highlighted) return `${base} text-accent`
-  return `${base} text-picker-item-text`
+function splitTextColor(highlighted?: boolean, selected?: boolean): string {
+  if (selected || highlighted) return 'text-accent'
+  return 'text-picker-item-text'
 }
+
+const SPLIT_HALF_BASE = 'flex-1 cursor-pointer flex items-center justify-center text-[10px] leading-tight whitespace-nowrap transition-colors hover:bg-picker-item-hover'
 
 function SplitKeyInner({
   base,
@@ -82,47 +82,37 @@ function SplitKeyInner({
   const shiftHighlighted = highlightedKeycodes?.has(shifted.qmkId)
   const shiftSelected = pickerSelectedKeycodes?.has(shifted.qmkId)
 
-  const outerHighlighted = baseHighlighted || shiftHighlighted
-  const outerSelected = baseSelected || shiftSelected
-
   let outerVariant: string
-  if (outerSelected) {
+  if (baseSelected || shiftSelected) {
     outerVariant = 'border-accent bg-accent/20 ring-1 ring-accent'
-  } else if (outerHighlighted) {
+  } else if (baseHighlighted || shiftHighlighted) {
     outerVariant = 'border-accent/50 bg-accent/10'
   } else {
     outerVariant = 'border-picker-item-border bg-picker-item-bg'
   }
 
-  const handleHover = useCallback(
-    (kc: Keycode) => (e: React.MouseEvent<HTMLDivElement>) => {
-      onHover?.(kc, e.currentTarget.getBoundingClientRect())
-    },
-    [onHover],
-  )
+  const baseLabel = base.label.includes('\n') ? base.label.split('\n')[1] : base.label
 
   return (
     <div className={`flex h-full w-full flex-col rounded border ${outerVariant}`}>
-      {/* Shifted zone (top half) */}
-      <div
-        role="button"
-        className={`flex-1 cursor-pointer rounded-t hover:bg-picker-item-hover ${splitStyle(shifted, shiftHighlighted, shiftSelected)}`}
+      <button
+        type="button"
+        className={`${SPLIT_HALF_BASE} rounded-t ${splitTextColor(shiftHighlighted, shiftSelected)}`}
         onClick={(e) => onClick?.(shifted, e)}
-        onMouseEnter={handleHover(shifted)}
+        onMouseEnter={(e) => onHover?.(shifted, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
       >
         {shifted.label}
-      </div>
-      {/* Base zone (bottom half) */}
-      <div
-        role="button"
-        className={`flex-1 cursor-pointer rounded-b hover:bg-picker-item-hover ${splitStyle(base, baseHighlighted, baseSelected)}`}
+      </button>
+      <button
+        type="button"
+        className={`${SPLIT_HALF_BASE} rounded-b ${splitTextColor(baseHighlighted, baseSelected)}`}
         onClick={(e) => onClick?.(base, e)}
-        onMouseEnter={handleHover(base)}
+        onMouseEnter={(e) => onHover?.(base, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
       >
-        {base.label.includes('\n') ? base.label.split('\n')[1] : base.label}
-      </div>
+        {baseLabel}
+      </button>
     </div>
   )
 }
@@ -154,7 +144,7 @@ export function DisplayKeyboard({
       const colSpan = Math.round(key.width * GRID_SCALE)
       const rowSpan = Math.round(key.height * GRID_SCALE)
 
-      const shiftedQmkId = SHIFTED_MAP[qmkId]
+      const shiftedQmkId = SHIFTED_MAP[kc.qmkId]
       const shiftedKc = shiftedQmkId ? findKeycode(shiftedQmkId) ?? null : null
 
       keys.push({
