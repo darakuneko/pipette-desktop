@@ -478,7 +478,7 @@
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
-    "basicViewTypeList": "リスト",
+    "basicViewTypeList": "LIST",
     "basicViewTypeKeyboard": "ANSI",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
