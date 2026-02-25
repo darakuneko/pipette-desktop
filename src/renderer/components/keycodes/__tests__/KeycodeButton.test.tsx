@@ -114,8 +114,8 @@ describe('KeycodeButton', () => {
   it('selected takes precedence over highlighted', () => {
     render(<KeycodeButton keycode={makeKeycode({ qmkId: 'KC_L', label: 'L' })} selected highlighted />)
     const btn = screen.getByRole('button')
-    expect(btn.className).toContain('ring-accent')
     expect(btn.className).toContain('bg-accent/20')
+    expect(btn.className).toContain('text-accent')
     // Should NOT have the highlighted-only style
     expect(btn.className).not.toContain('bg-accent/10')
   })
