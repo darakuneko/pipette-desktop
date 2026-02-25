@@ -4,9 +4,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useTranslation } from 'react-i18next'
 import { type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
 import type { BasicViewType } from '../../../shared/types/app-config'
-import { KEYCODE_CATEGORIES, type KeycodeCategory, type KeycodeGroup } from './categories'
+import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { X } from 'lucide-react'
-import { KeycodeButton } from './KeycodeButton'
+import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
 
 const LM_CATEGORY: KeycodeCategory = {
@@ -145,19 +145,15 @@ export function TabbedKeycodes({
 
   function renderKeycodeGrid(keycodes: Keycode[]): React.ReactNode {
     return (
-      <div className="flex flex-wrap gap-1">
-        {keycodes.filter(isVisible).map((kc) => (
-          <KeycodeButton
-            key={kc.qmkId}
-            keycode={kc}
-            onClick={handleKeycodeClick}
-            onHover={handleKeycodeHover}
-            onHoverEnd={handleKeycodeHoverEnd}
-            highlighted={highlightedKeycodes?.has(kc.qmkId)}
-            selected={pickerSelectedKeycodes?.has(kc.qmkId)}
-          />
-        ))}
-      </div>
+      <KeycodeGrid
+        keycodes={keycodes}
+        onClick={handleKeycodeClick}
+        onHover={handleKeycodeHover}
+        onHoverEnd={handleKeycodeHoverEnd}
+        highlightedKeycodes={highlightedKeycodes}
+        pickerSelectedKeycodes={pickerSelectedKeycodes}
+        isVisible={isVisible}
+      />
     )
   }
 
@@ -209,15 +205,7 @@ export function TabbedKeycodes({
       return renderKeycodeGrid(category.getKeycodes().filter(isVisible))
     }
 
-    const rows: KeycodeGroup[][] = []
-    for (const group of (groups ?? [])) {
-      const prev = rows[rows.length - 1]
-      if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
-        prev.push(group)
-      } else {
-        rows.push([group])
-      }
-    }
+    const rows = groupByLayoutRow(groups ?? [])
     const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
         {row.map((group) => renderGroup(group))}

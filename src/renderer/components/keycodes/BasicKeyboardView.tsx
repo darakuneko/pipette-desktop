@@ -5,11 +5,10 @@ import { useTranslation } from 'react-i18next'
 import { ANSI_LAYOUTS, ISO_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
 import type { BasicViewType } from '../../../shared/types/app-config'
 import { DisplayKeyboard } from './DisplayKeyboard'
-import { KeycodeButton } from './KeycodeButton'
-import { KEYCODE_CATEGORIES, type KeycodeGroup } from './categories'
+import { KeycodeGrid } from './KeycodeGrid'
+import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeGroup } from './categories'
 import {
   KEYCODES_SPECIAL,
-  KEYCODES_SHIFTED,
   KEYCODES_BASIC,
   type Keycode,
   findKeycode,
@@ -41,23 +40,17 @@ function defaultIsVisible(kc: Keycode): boolean {
   return !kc.hidden
 }
 
-/** Get the basic category groups definition */
-function getBasicGroups(): KeycodeGroup[] {
+/** Get the basic category groups definition for a given view type */
+function getBasicGroups(viewType: string): KeycodeGroup[] {
   const basic = KEYCODE_CATEGORIES.find((c) => c.id === 'basic')
-  return basic?.getGroups?.() ?? []
-}
-
-interface RemainingGroup {
-  labelKey: string
-  keycodes: Keycode[]
-  layoutRow?: number
+  return basic?.getGroups?.(viewType) ?? []
 }
 
 /** Group remaining keycodes by their basic category group */
-function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) => boolean): RemainingGroup[] {
+function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) => boolean, viewType: string): KeycodeGroup[] {
   const shownIds = collectLayoutQmkIds(layout.kle)
-  const groups = getBasicGroups()
-  const result: RemainingGroup[] = []
+  const groups = getBasicGroups(viewType)
+  const result: KeycodeGroup[] = []
 
   for (const group of groups) {
     const remaining = group.keycodes.filter((kc) => !shownIds.has(kc.qmkId) && visCheck(kc))
@@ -105,30 +98,27 @@ export function BasicKeyboardView({
     return null
   }, [containerWidth, layouts])
 
-  const remainingGroups = useMemo(() => {
+  const remainingRows = useMemo(() => {
     if (!selectedLayout) return []
-    return getRemainingGroups(selectedLayout, visCheck)
-  }, [selectedLayout, visCheck])
+    const groups = getRemainingGroups(selectedLayout, visCheck, viewType)
+    return groupByLayoutRow(groups)
+  }, [selectedLayout, visCheck, viewType])
 
   const flatKeycodes = useMemo(() => {
-    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED].filter(visCheck)
+    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC].filter(visCheck)
   }, [visCheck])
 
   function renderKeycodeGrid(keycodes: Keycode[]) {
     return (
-      <div className="flex flex-wrap gap-1">
-        {keycodes.map((kc) => (
-          <KeycodeButton
-            key={kc.qmkId}
-            keycode={kc}
-            onClick={onKeycodeClick}
-            onHover={onKeycodeHover}
-            onHoverEnd={onKeycodeHoverEnd}
-            highlighted={highlightedKeycodes?.has(kc.qmkId)}
-            selected={pickerSelectedKeycodes?.has(kc.qmkId)}
-          />
-        ))}
-      </div>
+      <KeycodeGrid
+        keycodes={keycodes}
+        onClick={onKeycodeClick}
+        onHover={onKeycodeHover}
+        onHoverEnd={onKeycodeHoverEnd}
+        highlightedKeycodes={highlightedKeycodes}
+        pickerSelectedKeycodes={pickerSelectedKeycodes}
+        isVisible={visCheck}
+      />
     )
   }
 
@@ -144,31 +134,20 @@ export function BasicKeyboardView({
             highlightedKeycodes={highlightedKeycodes}
             pickerSelectedKeycodes={pickerSelectedKeycodes}
           />
-          {remainingGroups.length > 0 && (
+          {remainingRows.length > 0 && (
             <div className="mt-1">
-              {(() => {
-                const rows: RemainingGroup[][] = []
-                for (const group of remainingGroups) {
-                  const prev = rows[rows.length - 1]
-                  if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
-                    prev.push(group)
-                  } else {
-                    rows.push([group])
-                  }
-                }
-                return rows.map((row) => (
-                  <div key={row[0].labelKey} className="flex gap-x-3">
-                    {row.map((group) => (
-                      <div key={group.labelKey}>
-                        <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
-                          {t(group.labelKey)}
-                        </h4>
-                        {renderKeycodeGrid(group.keycodes)}
-                      </div>
-                    ))}
-                  </div>
-                ))
-              })()}
+              {remainingRows.map((row) => (
+                <div key={row[0].labelKey} className="flex gap-x-3">
+                  {row.map((group) => (
+                    <div key={group.labelKey}>
+                      <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
+                        {t(group.labelKey)}
+                      </h4>
+                      {renderKeycodeGrid(group.keycodes)}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
           )}
         </>

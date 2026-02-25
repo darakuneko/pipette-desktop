@@ -79,11 +79,83 @@ export interface KeycodeGroup {
   layoutRow?: number // consecutive groups sharing the same layoutRow render side-by-side
 }
 
+/** Collect consecutive groups that share the same layoutRow into rows for side-by-side rendering */
+export function groupByLayoutRow<T extends { layoutRow?: number }>(groups: T[]): T[][] {
+  const rows: T[][] = []
+  for (const group of groups) {
+    const prev = rows[rows.length - 1]
+    if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
+      prev.push(group)
+    } else {
+      rows.push([group])
+    }
+  }
+  return rows
+}
+
 export interface KeycodeCategory {
   id: string
   labelKey: string // i18n key
   getKeycodes: () => Keycode[]
-  getGroups?: () => KeycodeGroup[]
+  getGroups?: (viewType?: string) => KeycodeGroup[]
+}
+
+/** Characters group shared across all views */
+function basicCharactersGroup(extra?: { layoutRow: number }): KeycodeGroup {
+  return {
+    labelKey: 'keycodes.group.characters',
+    keycodes: KEYCODES_BASIC_CHARACTERS,
+    sections: [[...KEYCODES_BASIC_NUMBERS, ...KEYCODES_BASIC_SYMBOLS], KEYCODES_BASIC_LETTERS],
+    ...extra,
+  }
+}
+
+/** Group ordering for LIST view — shows all groups with full context */
+function getBasicGroupsList(): KeycodeGroup[] {
+  return [
+    basicCharactersGroup(),
+    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
+    { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 1 },
+    { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 2 },
+    { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV, layoutRow: 2 },
+    { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
+    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 3 },
+    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 3 },
+    { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
+    { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
+  ]
+}
+
+/** Group ordering for ANSI keyboard view — remaining keycodes below ANSI layout */
+function getBasicGroupsAnsi(): KeycodeGroup[] {
+  return [
+    { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
+    { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
+    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
+    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
+    { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
+    { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 2 },
+    basicCharactersGroup(),
+    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 3 },
+    { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 3 },
+    { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS },
+  ]
+}
+
+/** Group ordering for ISO keyboard view — remaining keycodes below ISO layout */
+function getBasicGroupsIso(): KeycodeGroup[] {
+  return [
+    { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
+    { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
+    basicCharactersGroup({ layoutRow: 1 }),
+    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
+    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
+    { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
+    { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 2 },
+    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 3 },
+    { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 3 },
+    { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS },
+  ]
 }
 
 export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
@@ -91,23 +163,11 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
     id: 'basic',
     labelKey: 'keycodes.basic',
     getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO],
-    getGroups: () => [
-      {
-        labelKey: 'keycodes.group.characters',
-        keycodes: KEYCODES_BASIC_CHARACTERS,
-        sections: [[...KEYCODES_BASIC_NUMBERS, ...KEYCODES_BASIC_SYMBOLS], KEYCODES_BASIC_LETTERS],
-      },
-      { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
-      { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 1 },
-      { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 2 },
-      { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV, layoutRow: 2 },
-      { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
-      { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
-      { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 3 },
-      { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 3 },
-      { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 4 },
-      { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 4 },
-    ],
+    getGroups: (viewType?: string) => {
+      if (viewType === 'ansi') return getBasicGroupsAnsi()
+      if (viewType === 'iso') return getBasicGroupsIso()
+      return getBasicGroupsList()
+    },
   },
   {
     id: 'layers',
