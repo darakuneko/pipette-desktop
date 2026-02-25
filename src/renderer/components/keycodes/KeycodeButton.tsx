@@ -28,7 +28,8 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
   )
 
   const size = sizeClass ?? 'w-[44px] h-[44px]'
-  const base = `flex flex-col items-center justify-center rounded border border-transparent p-1 text-xs hover:bg-picker-item-hover active:bg-accent/20 ${size} transition-colors`
+  const hover = selected ? '' : 'hover:bg-picker-item-hover'
+  const base = `flex flex-col items-center justify-center rounded border border-transparent p-1 text-xs outline-none ${hover} active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
     variant = 'bg-accent/20 text-accent'

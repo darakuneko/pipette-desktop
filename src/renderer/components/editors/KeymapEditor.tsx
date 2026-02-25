@@ -7,7 +7,7 @@ import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
-import type { BasicViewType } from '../../../shared/types/app-config'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
@@ -527,6 +527,8 @@ interface Props {
   onAutoAdvanceChange?: (enabled: boolean) => void
   basicViewType?: BasicViewType
   onBasicViewTypeChange?: (type: BasicViewType) => void
+  splitKeyMode?: SplitKeyMode
+  onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   onLock?: () => void
@@ -607,6 +609,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onAutoAdvanceChange,
   basicViewType,
   onBasicViewTypeChange,
+  splitKeyMode,
+  onSplitKeyModeChange,
   keyboardLayout = 'qwerty',
   onKeyboardLayoutChange,
   onLock,
@@ -1731,7 +1735,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     && multiSelectedKeys.size > 0
   const pasteReady = panePasteReady || pickerPasteReady
   const showCopyAll = canCopy && !panePasteReady
-  const pasteHintText = pasteReady ? t('editor.keymap.clickToPaste') : undefined
+  const pasteHintText: string | undefined = undefined
   const copyAllConfirmText = inactivePaneLayer != null
     ? t('editor.keymap.copyAllConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
@@ -2014,6 +2018,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             tabFooterContent={tabFooterContent}
             tabContentOverride={tabContentOverride}
             basicViewType={basicViewType}
+            splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
             tabBarRight={
               <button
@@ -2059,6 +2064,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onAutoAdvanceChange={onAutoAdvanceChange}
                   basicViewType={basicViewType}
                   onBasicViewTypeChange={onBasicViewTypeChange}
+                  splitKeyMode={splitKeyMode}
+                  onSplitKeyModeChange={onSplitKeyModeChange}
                   matrixMode={matrixMode}
                   hasMatrixTester={hasMatrixTester}
                   onToggleMatrix={handleMatrixToggle}
