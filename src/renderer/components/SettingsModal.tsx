@@ -1082,8 +1082,8 @@ export function SettingsModal({
                       className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
                       data-testid="settings-default-basic-view-type-selector"
                     >
-                      <option value="list">{t('settings.basicViewTypeList')}</option>
                       <option value="keyboard">{t('settings.basicViewTypeKeyboard')}</option>
+                      <option value="list">{t('settings.basicViewTypeList')}</option>
                     </select>
                   </div>
                 </div>
