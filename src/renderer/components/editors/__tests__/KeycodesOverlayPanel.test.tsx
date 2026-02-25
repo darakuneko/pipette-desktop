@@ -13,9 +13,6 @@ vi.mock('react-i18next', () => ({
         'editorSettings.tabTools': 'Tools',
         'editorSettings.tabLayout': 'Layout',
         'layout.keyboardLayout': 'Layout',
-        'editor.keymap.zoomLabel': 'Zoom',
-        'editor.keymap.zoomIn': 'Zoom In',
-        'editor.keymap.zoomOut': 'Zoom Out',
         'editor.autoAdvance': 'Auto Move',
         'editor.matrixTester.title': 'Key Tester',
         'settings.security': 'Security',
@@ -32,7 +29,6 @@ const DEFAULT_PROPS = {
   hasLayoutOptions: false,
   keyboardLayout: 'qwerty' as const,
   onKeyboardLayoutChange: vi.fn(),
-  scale: 1,
   autoAdvance: true,
   onAutoAdvanceChange: vi.fn(),
   matrixMode: false,
@@ -127,12 +123,6 @@ describe('KeycodesOverlayPanel', () => {
 
     fireEvent.change(screen.getByTestId('overlay-layout-selector'), { target: { value: 'dvorak' } })
     expect(onKeyboardLayoutChange).toHaveBeenCalledWith('dvorak')
-  })
-
-  it('shows zoom controls with percentage', () => {
-    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} scale={1.0} />)
-
-    expect(screen.getByTestId('overlay-zoom-value')).toHaveTextContent('100%')
   })
 
   it('calls onAutoAdvanceChange when toggle is clicked', () => {

@@ -26,7 +26,6 @@ import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
 import { LayoutStoreContent, type FileStatus, type HubEntryResult } from './components/editors/LayoutStoreModal'
-import { ResetKeyboardDataSection } from './components/editors/EditorSettingsModal'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
@@ -279,8 +278,6 @@ export function App() {
   }, [dualMode, activePane])
 
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
-  const [confirmingResetKeyboard, setConfirmingResetKeyboard] = useState(false)
-  const [resetBusy, setResetBusy] = useState(false)
   const [showLightingModal, setShowLightingModal] = useState(false)
   const [showComboModal, setShowComboModal] = useState(false)
   const [showAltRepeatKeyModal, setShowAltRepeatKeyModal] = useState(false)
@@ -791,8 +788,6 @@ export function App() {
     if (!keyOverrideSupported) setShowKeyOverrideModal(false)
   }, [lightingSupported, comboSupported, altRepeatKeySupported, keyOverrideSupported])
 
-  const [resettingKeyboard, setResettingKeyboard] = useState(false)
-
   const handleDisconnect = useCallback(async () => {
     try {
       await window.vialAPI.lock().catch(() => {})
@@ -837,34 +832,6 @@ export function App() {
     },
     [device, keyboard, devicePrefs, handleDisconnect, t],
   )
-
-  const handleResetKeyboardData = useCallback(async () => {
-    setResettingKeyboard(true)
-    try {
-      const result = await window.vialAPI.resetKeyboardData(keyboard.uid)
-      if (result.success) {
-        // Best-effort: delete all Hub posts for this keyboard
-        for (const post of hubKeyboardPosts) {
-          await window.vialAPI.hubDeletePost(post.id).catch(() => {})
-        }
-        await handleDisconnect()
-      } else {
-        setResettingKeyboard(false)
-      }
-    } catch {
-      setResettingKeyboard(false)
-    }
-  }, [keyboard.uid, handleDisconnect, hubKeyboardPosts])
-
-  const handleConfirmResetKeyboard = useCallback(async () => {
-    setResetBusy(true)
-    try {
-      await handleResetKeyboardData()
-    } finally {
-      setResetBusy(false)
-      setConfirmingResetKeyboard(false)
-    }
-  }, [handleResetKeyboardData])
 
   const handleLock = useCallback(async () => {
     await window.vialAPI.lock()
@@ -938,6 +905,10 @@ export function App() {
             onDefaultAutoAdvanceChange={devicePrefs.setDefaultAutoAdvance}
             defaultLayerPanelOpen={devicePrefs.defaultLayerPanelOpen}
             onDefaultLayerPanelOpenChange={devicePrefs.setDefaultLayerPanelOpen}
+            defaultBasicViewType={devicePrefs.defaultBasicViewType}
+            onDefaultBasicViewTypeChange={devicePrefs.setDefaultBasicViewType}
+            defaultSplitKeyMode={devicePrefs.defaultSplitKeyMode}
+            onDefaultSplitKeyModeChange={devicePrefs.setDefaultSplitKeyMode}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
             onResetStart={() => setResettingData(true)}
@@ -1009,20 +980,6 @@ export function App() {
             )}
           </div>
         </div>
-      )}
-
-      {/* Reset Keyboard Data */}
-      {!device.isDummy && (
-        <ResetKeyboardDataSection
-          confirming={confirmingResetKeyboard}
-          busy={resetBusy}
-          disabled={sync.syncStatus === 'syncing'}
-          disabledTitle={t('sync.resetDisabledWhileSyncing')}
-          deviceName={deviceName}
-          onStartConfirm={() => setConfirmingResetKeyboard(true)}
-          onCancel={() => setConfirmingResetKeyboard(false)}
-          onConfirm={handleConfirmResetKeyboard}
-        />
       )}
     </>
   )
@@ -1108,14 +1065,14 @@ export function App() {
         />
       )}
 
-      {(resettingKeyboard || resettingData) && (
+      {resettingData && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-surface" data-testid="resetting-overlay">
           <div className="flex flex-col items-center gap-4">
             <div className="h-1 w-48 overflow-hidden rounded bg-surface-dim">
               <div className="h-full w-3/5 animate-pulse rounded bg-danger" />
             </div>
             <p className="text-sm font-medium text-content-secondary">
-              {resettingKeyboard ? t('sync.resettingKeyboardData') : t('sync.resettingData')}
+              {t('sync.resettingData')}
             </p>
           </div>
         </div>
@@ -1170,6 +1127,10 @@ export function App() {
             onSettingsUpdate={hasIntegratedSettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
+            basicViewType={devicePrefs.basicViewType}
+            onBasicViewTypeChange={devicePrefs.setBasicViewType}
+            splitKeyMode={devicePrefs.splitKeyMode}
+            onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
             onLock={handleLock}
@@ -1223,6 +1184,9 @@ export function App() {
         matrixMode={matrixState.matrixMode}
         typingTestMode={typingTestMode}
         hasMatrixTester={matrixState.hasMatrixTester}
+        comboActive={comboSupported && keyboard.comboEntries.some((e) => e.output !== 0)}
+        altRepeatKeyActive={altRepeatKeySupported && keyboard.altRepeatKeyEntries.some((e) => e.enabled)}
+        keyOverrideActive={keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
         onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
         onDisconnect={handleDisconnect}
       />

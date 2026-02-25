@@ -21,7 +21,7 @@ import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import { mergeEntries, gcTombstones } from './merge'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
-import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncScope } from '../../shared/types/sync'
+import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope } from '../../shared/types/sync'
 
 const SYNC_CONCURRENCY = 10
 const DEBOUNCE_MS = 10_000
@@ -105,20 +105,23 @@ async function requireSyncCredentials(): Promise<string | null> {
   return retrievePassword()
 }
 
-// --- Undecryptable files ---
+// --- Remote data inspection ---
 
-export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
+async function fetchValidatedDataFiles(): Promise<{ password: string; dataFiles: DriveFile[] } | null> {
   const password = await requireSyncCredentials()
-  if (!password) return []
+  if (!password) return null
   const remoteFiles = await listFiles()
 
   await validatePasswordCheck(password, remoteFiles)
 
   const passwordCheckFileName = driveFileName(PASSWORD_CHECK_UNIT)
   const dataFiles = remoteFiles.filter((f) => f.name !== passwordCheckFileName)
+  return { password, dataFiles }
+}
 
+async function findUndecryptableFiles(password: string, dataFiles: DriveFile[]): Promise<UndecryptableFile[]> {
+  const undecryptable: UndecryptableFile[] = []
   const limit = pLimit(SYNC_CONCURRENCY)
-  const result: UndecryptableFile[] = []
   await Promise.allSettled(
     dataFiles.map((file) =>
       limit(async () => {
@@ -126,7 +129,7 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
           const envelope = await downloadFile(file.id)
           await decrypt(envelope, password)
         } catch {
-          result.push({
+          undecryptable.push({
             fileId: file.id,
             fileName: file.name,
             syncUnit: syncUnitFromFileName(file.name),
@@ -135,7 +138,42 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
       }),
     ),
   )
-  return result
+  return undecryptable
+}
+
+export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
+  const result = await fetchValidatedDataFiles()
+  if (!result) return []
+  return findUndecryptableFiles(result.password, result.dataFiles)
+}
+
+export async function scanRemoteData(): Promise<SyncDataScanResult> {
+  const result = await fetchValidatedDataFiles()
+  if (!result) return { keyboards: [], favorites: [], undecryptable: [] }
+  const { password, dataFiles } = result
+
+  // Categorize from filenames (no download needed)
+  const keyboardUids = new Set<string>()
+  const favoriteTypes = new Set<string>()
+  for (const file of dataFiles) {
+    const syncUnit = syncUnitFromFileName(file.name)
+    if (!syncUnit) continue
+    if (syncUnit.startsWith('keyboards/')) {
+      const uid = syncUnit.split('/')[1]
+      if (uid) keyboardUids.add(uid)
+    } else if (syncUnit.startsWith('favorites/')) {
+      const type = syncUnit.split('/')[1]
+      if (type) favoriteTypes.add(type)
+    }
+  }
+
+  const undecryptable = await findUndecryptableFiles(password, dataFiles)
+
+  return {
+    keyboards: [...keyboardUids],
+    favorites: [...favoriteTypes],
+    undecryptable,
+  }
 }
 
 // --- Non-destructive password change ---

@@ -2,7 +2,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, act } from '@testing-library/react'
+import { render, act } from '@testing-library/react'
 import type { Keycode } from '../../../../shared/keycodes/keycodes'
 
 vi.mock('react-i18next', () => ({
@@ -382,7 +382,7 @@ describe('KeymapEditor — picker paste', () => {
     ])
   })
 
-  it('shows paste hint in single pane mode when picker selection exists', () => {
+  it('stores picker selection after multi-select', () => {
     render(<KeymapEditor {...defaultProps} />)
     const multiSelect = getOnKeycodeMultiSelect()!
 
@@ -390,7 +390,7 @@ describe('KeymapEditor — picker paste', () => {
       multiSelect(TAB_KEYCODES[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODES)
     })
 
-    expect(screen.getByTestId('paste-hint')).toHaveTextContent('Click a key to paste')
+    expect(getPickerSelectedSet()!.size).toBe(1)
   })
 
   it('clears picker selection on layer change', () => {

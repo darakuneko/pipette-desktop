@@ -7,6 +7,7 @@ import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
@@ -74,6 +75,49 @@ function IconTooltip({ label, side = 'right', children }: {
         {label}
       </div>
     </div>
+  )
+}
+
+function ScaleInput({ scale, onScaleChange }: { scale: number; onScaleChange: (delta: number) => void }) {
+  const display = `${Math.round(scale * 100)}`
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(display)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const commit = useCallback(() => {
+    setEditing(false)
+    const parsed = parseInt(draft, 10)
+    if (Number.isNaN(parsed)) return
+    const newScale = Math.round(Math.max(MIN_SCALE, Math.min(MAX_SCALE, parsed / 100)) * 10) / 10
+    const delta = newScale - scale
+    if (delta !== 0) onScaleChange(delta)
+  }, [draft, scale, onScaleChange])
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        data-testid="scale-display"
+        className="size-[34px] rounded-md border border-edge text-[11px] leading-none tabular-nums text-content-secondary hover:text-content transition-colors flex items-center justify-center"
+        onClick={() => { setDraft(String(Math.round(scale * 100))); setEditing(true) }}
+      >
+        {display}
+      </button>
+    )
+  }
+
+  return (
+    <input
+      ref={inputRef}
+      data-testid="scale-input"
+      className="size-[34px] rounded-md border border-accent bg-transparent text-[11px] leading-none tabular-nums text-content text-center outline-none"
+      value={draft}
+      autoFocus
+      onFocus={() => inputRef.current?.select()}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => { if (e.key === 'Enter') commit(); if (e.key === 'Escape') setEditing(false) }}
+      onBlur={commit}
+    />
   )
 }
 
@@ -524,6 +568,10 @@ interface Props {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   autoAdvance?: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  basicViewType?: BasicViewType
+  onBasicViewTypeChange?: (type: BasicViewType) => void
+  splitKeyMode?: SplitKeyMode
+  onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   onLock?: () => void
@@ -602,6 +650,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onSettingsUpdate,
   autoAdvance = true,
   onAutoAdvanceChange,
+  basicViewType,
+  onBasicViewTypeChange,
+  splitKeyMode,
+  onSplitKeyModeChange,
   keyboardLayout = 'qwerty',
   onKeyboardLayoutChange,
   onLock,
@@ -1719,14 +1771,12 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
   // Paste readiness: either from picker multi-select or from pane-to-pane selection
   const canCopy = !!dualMode && effectivePrimaryLayer !== effectiveSecondaryLayer
-  const pickerPasteReady = pickerSelectedKeycodes.length > 0
   const panePasteReady = canCopy
     && selectionSourcePane != null
     && selectionSourcePane !== activePane
     && multiSelectedKeys.size > 0
-  const pasteReady = panePasteReady || pickerPasteReady
   const showCopyAll = canCopy && !panePasteReady
-  const pasteHintText = pasteReady ? t('editor.keymap.clickToPaste') : undefined
+  const pasteHintText: string | undefined = undefined
   const copyAllConfirmText = inactivePaneLayer != null
     ? t('editor.keymap.copyAllConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
@@ -1766,6 +1816,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               <ZoomIn size={16} aria-hidden="true" />
             </button>
           </IconTooltip>
+          <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
           <IconTooltip label={t('editor.keymap.zoomOut')}>
             <button
               type="button"
@@ -2008,6 +2059,9 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
             showHint={!isMaskKey}
             tabFooterContent={tabFooterContent}
             tabContentOverride={tabContentOverride}
+            basicViewType={basicViewType}
+            splitKeyMode={splitKeyMode}
+            remapLabel={remapLabel}
             tabBarRight={
               <button
                 ref={layoutButtonRef}
@@ -2046,10 +2100,12 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onLayoutOptionChange={handleLayoutOptionChange}
                   keyboardLayout={keyboardLayout}
                   onKeyboardLayoutChange={onKeyboardLayoutChange}
-                  scale={scaleProp}
-                  onScaleChange={onScaleChange}
                   autoAdvance={autoAdvance}
                   onAutoAdvanceChange={onAutoAdvanceChange}
+                  basicViewType={basicViewType}
+                  onBasicViewTypeChange={onBasicViewTypeChange}
+                  splitKeyMode={splitKeyMode}
+                  onSplitKeyModeChange={onSplitKeyModeChange}
                   matrixMode={matrixMode}
                   hasMatrixTester={hasMatrixTester}
                   onToggleMatrix={handleMatrixToggle}

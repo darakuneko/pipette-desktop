@@ -15,7 +15,7 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult } from './hub'
@@ -137,6 +137,7 @@ export interface VialAPI {
   syncOnProgress(callback: (progress: SyncProgress) => void): () => void
   syncHasPendingChanges(): Promise<boolean>
   syncListUndecryptable(): Promise<UndecryptableFile[]>
+  syncScanRemote(): Promise<SyncDataScanResult>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncCheckPasswordExists(): Promise<boolean>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
@@ -148,6 +149,7 @@ export interface VialAPI {
   langDelete(name: string): Promise<{ success: boolean; error?: string }>
 
   // Data management
+  listStoredKeyboards(): Promise<StoredKeyboardInfo[]>
   resetKeyboardData(uid: string): Promise<{ success: boolean; error?: string }>
   resetLocalTargets(targets: LocalResetTargets): Promise<{ success: boolean; error?: string }>
   exportLocalData(): Promise<{ success: boolean; error?: string }>

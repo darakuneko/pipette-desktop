@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
-import { KEYCODE_CATEGORIES, type KeycodeCategory, type KeycodeGroup } from './categories'
+import { findKeycode, type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
+import { parseKle } from '../../../shared/kle/kle-parser'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
+import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
+import { ANSI_LAYOUTS, ISO_LAYOUTS } from './display-keyboard-defs'
 import { X } from 'lucide-react'
-import { KeycodeButton } from './KeycodeButton'
+import { KeycodeGrid } from './KeycodeGrid'
+import { BasicKeyboardView } from './BasicKeyboardView'
+import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
 
 const LM_CATEGORY: KeycodeCategory = {
   id: 'lm-mods',
@@ -36,6 +41,9 @@ interface Props {
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
+  basicViewType?: BasicViewType // View type for the basic tab
+  splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
+  remapLabel?: (qmkId: string) => string
 }
 
 export function TabbedKeycodes({
@@ -52,6 +60,9 @@ export function TabbedKeycodes({
   panelOverlay,
   showHint = false,
   tabContentOverride,
+  basicViewType,
+  splitKeyMode,
+  remapLabel,
 }: Props) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState('basic')
@@ -75,9 +86,16 @@ export function TabbedKeycodes({
     [onBackgroundClick],
   )
 
+  const useSplit = splitKeyMode !== 'flat'
+
   const isVisible = useCallback(
-    (kc: Keycode): boolean => !kc.hidden && (!maskOnly || lmMode || isBasic(kc.qmkId)),
-    [maskOnly, lmMode],
+    (kc: Keycode): boolean => {
+      if (kc.hidden) return false
+      if (maskOnly && !lmMode && !isBasic(kc.qmkId)) return false
+      if (useSplit && isShiftedKeycode(kc.qmkId)) return false
+      return true
+    },
+    [maskOnly, lmMode, useSplit],
   )
 
   const revision = getKeycodeRevision()
@@ -92,14 +110,59 @@ export function TabbedKeycodes({
   const activeTabKeycodes = useMemo(() => {
     const cat = categories.find((c) => c.id === activeTab)
     if (!cat) return []
-    const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
-    if (!groups) return cat.getKeycodes().filter(isVisible)
-    return groups.flatMap((g) =>
-      g.sections
-        ? g.sections.flatMap((s) => s.filter(isVisible))
-        : g.keycodes.filter(isVisible),
-    )
-  }, [categories, activeTab, isVisible, revision])
+
+    let keycodes: Keycode[]
+
+    // For keyboard views (ANSI/ISO), order by physical layout position
+    if (cat.id === 'basic' && basicViewType != null && basicViewType !== 'list' && !maskOnly && !lmMode) {
+      const layouts = basicViewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
+      // Largest layout has the most keys — extract QMK IDs in physical row-major order
+      const kleLayout = parseKle(layouts[0].kle)
+      const layoutKeycodes: Keycode[] = []
+      const layoutIds = new Set<string>()
+      for (const key of kleLayout.keys) {
+        const qmkId = key.labels[0]
+        if (!qmkId) continue
+        const kc = findKeycode(qmkId)
+        if (kc && isVisible(kc)) {
+          layoutKeycodes.push(kc)
+          layoutIds.add(qmkId)
+        }
+      }
+      // Append remaining keycodes from view-specific groups (not on the keyboard)
+      const groups = cat.getGroups?.(basicViewType)?.filter((g) => g.keycodes.some(isVisible))
+      const remaining = groups
+        ? groups.flatMap((g) => g.keycodes.filter((kc) => !layoutIds.has(kc.qmkId) && isVisible(kc)))
+        : []
+      keycodes = [...layoutKeycodes, ...remaining]
+    } else {
+      const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
+      if (!groups) keycodes = cat.getKeycodes().filter(isVisible)
+      else keycodes = groups.flatMap((g) =>
+        g.sections
+          ? g.sections.flatMap((s) => s.filter(isVisible))
+          : g.keycodes.filter(isVisible),
+      )
+    }
+
+    // When split keys are active, expand each base keycode with its shifted
+    // counterpart so multi-select can address both halves independently.
+    if (useSplit && !maskOnly) {
+      const expanded: Keycode[] = []
+      for (const kc of keycodes) {
+        const shifted = getShiftedKeycode(kc.qmkId)
+        if (shifted) {
+          expanded.push(shifted) // top half
+          expanded.push(kc)     // bottom half
+        } else {
+          expanded.push(kc)
+        }
+      }
+      return expanded
+    }
+
+    return keycodes
+  }, [categories, activeTab, isVisible, revision, basicViewType, maskOnly, lmMode, useSplit])
 
   // Reset active tab if it no longer exists in the filtered categories
   useEffect(() => {
@@ -141,19 +204,17 @@ export function TabbedKeycodes({
 
   function renderKeycodeGrid(keycodes: Keycode[]): React.ReactNode {
     return (
-      <div className="flex flex-wrap gap-1">
-        {keycodes.filter(isVisible).map((kc) => (
-          <KeycodeButton
-            key={kc.qmkId}
-            keycode={kc}
-            onClick={handleKeycodeClick}
-            onHover={handleKeycodeHover}
-            onHoverEnd={handleKeycodeHoverEnd}
-            highlighted={highlightedKeycodes?.has(kc.qmkId)}
-            selected={pickerSelectedKeycodes?.has(kc.qmkId)}
-          />
-        ))}
-      </div>
+      <KeycodeGrid
+        keycodes={keycodes}
+        onClick={handleKeycodeClick}
+        onHover={handleKeycodeHover}
+        onHoverEnd={handleKeycodeHoverEnd}
+        highlightedKeycodes={highlightedKeycodes}
+        pickerSelectedKeycodes={pickerSelectedKeycodes}
+        isVisible={isVisible}
+        splitKeyMode={maskOnly ? 'flat' : splitKeyMode}
+        remapLabel={remapLabel}
+      />
     )
   }
 
@@ -179,6 +240,23 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+    // Keyboard view for basic tab (ANSI or ISO)
+    if (category.id === 'basic' && basicViewType !== 'list' && basicViewType != null && !maskOnly && !lmMode) {
+      return (
+        <BasicKeyboardView
+          viewType={basicViewType}
+          splitKeyMode={splitKeyMode}
+          onKeycodeClick={handleKeycodeClick}
+          onKeycodeHover={handleKeycodeHover}
+          onKeycodeHoverEnd={handleKeycodeHoverEnd}
+          highlightedKeycodes={highlightedKeycodes}
+          pickerSelectedKeycodes={pickerSelectedKeycodes}
+          isVisible={isVisible}
+          remapLabel={remapLabel}
+        />
+      )
+    }
+
     const override = tabContentOverride && Object.hasOwn(tabContentOverride, category.id) ? tabContentOverride[category.id] : null
     const groups = category.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
 
@@ -190,15 +268,7 @@ export function TabbedKeycodes({
       return renderKeycodeGrid(category.getKeycodes().filter(isVisible))
     }
 
-    const rows: KeycodeGroup[][] = []
-    for (const group of (groups ?? [])) {
-      const prev = rows[rows.length - 1]
-      if (prev != null && group.layoutRow != null && prev[0].layoutRow === group.layoutRow) {
-        prev.push(group)
-      } else {
-        rows.push([group])
-      }
-    }
+    const rows = groupByLayoutRow(groups ?? [])
     const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
         {row.map((group) => renderGroup(group))}

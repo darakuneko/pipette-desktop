@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
@@ -17,7 +18,6 @@ function tabClass(active: boolean): string {
   return `${TAB_BASE} border-b-transparent text-content-muted hover:text-content`
 }
 
-const ZOOM_BTN = 'rounded border border-edge px-2 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim disabled:opacity-30 disabled:pointer-events-none'
 
 interface Props {
   // Layout options
@@ -28,10 +28,12 @@ interface Props {
   // Tools
   keyboardLayout: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
-  scale: number
-  onScaleChange?: (delta: number) => void
   autoAdvance: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
+  basicViewType?: BasicViewType
+  onBasicViewTypeChange?: (type: BasicViewType) => void
+  splitKeyMode?: SplitKeyMode
+  onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   matrixMode: boolean
   hasMatrixTester: boolean
   onToggleMatrix?: () => void
@@ -51,10 +53,12 @@ export function KeycodesOverlayPanel({
   onLayoutOptionChange,
   keyboardLayout,
   onKeyboardLayoutChange,
-  scale,
-  onScaleChange,
   autoAdvance,
   onAutoAdvanceChange,
+  basicViewType,
+  onBasicViewTypeChange,
+  splitKeyMode,
+  onSplitKeyModeChange,
   matrixMode,
   hasMatrixTester,
   onToggleMatrix,
@@ -128,6 +132,26 @@ export function KeycodesOverlayPanel({
           inert={activeTab !== 'tools' || undefined}
         >
           <div className="flex flex-col gap-2 px-4 py-3">
+            {/* Basic tab view type */}
+            {basicViewType != null && onBasicViewTypeChange && (
+              <div className={ROW_CLASS} data-testid="overlay-basic-view-type-row">
+                <label htmlFor="overlay-basic-view-type-selector" className="text-[13px] font-medium text-content">
+                  {t('editorSettings.basicViewType')}
+                </label>
+                <select
+                  id="overlay-basic-view-type-selector"
+                  value={basicViewType}
+                  onChange={(e) => onBasicViewTypeChange(e.target.value as BasicViewType)}
+                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                  data-testid="overlay-basic-view-type-selector"
+                >
+                  <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
+                  <option value="iso">{t('settings.basicViewTypeIso')}</option>
+                  <option value="list">{t('settings.basicViewTypeList')}</option>
+                </select>
+              </div>
+            )}
+
             {/* Keyboard layout selector */}
             <div className={ROW_CLASS} data-testid="overlay-layout-row">
               <label htmlFor="overlay-layout-selector" className="text-[13px] font-medium text-content">
@@ -148,38 +172,6 @@ export function KeycodesOverlayPanel({
               </select>
             </div>
 
-            {/* Zoom controls */}
-            <div className={ROW_CLASS} data-testid="overlay-zoom-row">
-              <span className="text-[13px] font-medium text-content">
-                {t('editor.keymap.zoomLabel')}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  data-testid="overlay-zoom-out"
-                  aria-label={t('editor.keymap.zoomOut')}
-                  className={ZOOM_BTN}
-                  disabled={scale <= 0.3}
-                  onClick={() => onScaleChange?.(-0.1)}
-                >
-                  &minus;
-                </button>
-                <span className="min-w-[3ch] text-center text-[13px] tabular-nums text-content-secondary" data-testid="overlay-zoom-value">
-                  {Math.round(scale * 100)}%
-                </span>
-                <button
-                  type="button"
-                  data-testid="overlay-zoom-in"
-                  aria-label={t('editor.keymap.zoomIn')}
-                  className={ZOOM_BTN}
-                  disabled={scale >= 2.0}
-                  onClick={() => onScaleChange?.(0.1)}
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
             {/* Auto-advance toggle */}
             <div className={ROW_CLASS} data-testid="overlay-auto-advance-row">
               <span className="text-[13px] font-medium text-content">
@@ -197,6 +189,26 @@ export function KeycodesOverlayPanel({
                 <span className={toggleKnobClass(autoAdvance)} />
               </button>
             </div>
+
+            {/* Split key toggle */}
+            {splitKeyMode != null && onSplitKeyModeChange && (
+              <div className={ROW_CLASS} data-testid="overlay-split-key-mode-row">
+                <span className="text-[13px] font-medium text-content">
+                  {t('editorSettings.splitKeyMode')}
+                </span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={splitKeyMode === 'split'}
+                  aria-label={t('editorSettings.splitKeyMode')}
+                  className={toggleTrackClass(splitKeyMode === 'split')}
+                  onClick={() => onSplitKeyModeChange(splitKeyMode === 'split' ? 'flat' : 'split')}
+                  data-testid="overlay-split-key-mode-toggle"
+                >
+                  <span className={toggleKnobClass(splitKeyMode === 'split')} />
+                </button>
+              </div>
+            )}
 
             {/* Key tester toggle */}
             {(hasMatrixTester || matrixMode) && onToggleMatrix && (
@@ -221,7 +233,7 @@ export function KeycodesOverlayPanel({
             {/* Lock button + status */}
             {!isDummy && (
               <div className={ROW_CLASS} data-testid="overlay-lock-row">
-                <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-1.5">
                   <span className="text-[13px] font-medium text-content">
                     {t('settings.security')}
                   </span>

@@ -399,10 +399,8 @@ describe('KeymapEditor — click-to-paste', () => {
     // Switch to secondary pane (target)
     rerender(<KeymapEditor {...defaultProps} activePane="secondary" currentLayer={1} />)
 
-    // Copy All should be hidden
+    // On target pane with selection, Copy All is hidden
     expect(screen.queryByTestId('copy-all-button')).not.toBeInTheDocument()
-    // Paste hint should be shown
-    expect(screen.getByTestId('paste-hint')).toHaveTextContent('Click a key to paste')
   })
 
   it('shows Copy All (not paste hint) when no selection exists', () => {
@@ -423,9 +421,6 @@ describe('KeymapEditor — click-to-paste', () => {
 
     capturedWidgetProps = []
     rerender(<KeymapEditor {...defaultProps} activePane="secondary" currentLayer={1} />)
-
-    // Paste hint visible before paste
-    expect(screen.getByTestId('paste-hint')).toBeInTheDocument()
 
     // Perform paste
     const secondaryClick = getLatestOnKeyClick()!

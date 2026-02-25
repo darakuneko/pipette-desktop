@@ -14,6 +14,7 @@ import type {
   LastSyncResult,
   SyncResetTargets,
   UndecryptableFile,
+  SyncDataScanResult,
   SyncScope,
 } from '../../shared/types/sync'
 
@@ -52,6 +53,7 @@ export interface UseSyncReturn {
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
   refreshStatus: () => Promise<void>
   listUndecryptable: () => Promise<UndecryptableFile[]>
+  scanRemote: () => Promise<SyncDataScanResult>
   deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
 }
 
@@ -222,6 +224,11 @@ export function useSync(): UseSyncReturn {
     [],
   )
 
+  const scanRemote = useCallback(
+    () => window.vialAPI.syncScanRemote(),
+    [],
+  )
+
   const deleteFiles = useCallback(
     (fileIds: string[]) => window.vialAPI.syncDeleteFiles(fileIds),
     [],
@@ -260,6 +267,7 @@ export function useSync(): UseSyncReturn {
     syncNow,
     refreshStatus,
     listUndecryptable,
+    scanRemote,
     deleteFiles,
   }
 }
