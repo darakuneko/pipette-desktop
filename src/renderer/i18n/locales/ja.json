@@ -270,6 +270,8 @@
     "midi": "MIDI",
     "group": {
       "characters": "Characters",
+      "alphabet": "Alphabet",
+      "numbersSymbols": "Numbers & Symbols",
       "editing": "Editing",
       "modifiers": "Modifiers",
       "navigation": "Navigation",

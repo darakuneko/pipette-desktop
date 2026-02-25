@@ -95,7 +95,7 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
       {
         labelKey: 'keycodes.group.characters',
         keycodes: KEYCODES_BASIC_CHARACTERS,
-        sections: [KEYCODES_BASIC_NUMBERS, KEYCODES_BASIC_LETTERS, KEYCODES_BASIC_SYMBOLS],
+        sections: [[...KEYCODES_BASIC_NUMBERS, ...KEYCODES_BASIC_SYMBOLS], KEYCODES_BASIC_LETTERS],
       },
       { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
       { labelKey: 'keycodes.group.function', keycodes: KEYCODES_BASIC_FUNCTION, layoutRow: 1 },
