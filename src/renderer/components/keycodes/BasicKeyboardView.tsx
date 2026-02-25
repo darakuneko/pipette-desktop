@@ -1,14 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useEffect, useRef, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { DISPLAY_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeButton } from './KeycodeButton'
+import { KEYCODE_CATEGORIES, type KeycodeGroup } from './categories'
 import {
   KEYCODES_SPECIAL,
   KEYCODES_SHIFTED,
   KEYCODES_BASIC,
-  KEYCODES_ISO,
   type Keycode,
   findKeycode,
 } from '../../../shared/keycodes/keycodes'
@@ -38,13 +39,31 @@ function defaultIsVisible(kc: Keycode): boolean {
   return !kc.hidden
 }
 
-/** All basic keycodes in display order (same as the basic category) */
-const ALL_BASIC_KEYCODES: Keycode[] = [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO]
+/** Get the basic category groups definition */
+function getBasicGroups(): KeycodeGroup[] {
+  const basic = KEYCODE_CATEGORIES.find((c) => c.id === 'basic')
+  return basic?.getGroups?.() ?? []
+}
 
-/** Get all basic keycodes not present in the keyboard layout */
-function getRemainingKeycodes(layout: DisplayLayoutDef): Keycode[] {
+interface RemainingGroup {
+  labelKey: string
+  keycodes: Keycode[]
+}
+
+/** Group remaining keycodes by their basic category group */
+function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) => boolean): RemainingGroup[] {
   const shownIds = collectLayoutQmkIds(layout.kle)
-  return ALL_BASIC_KEYCODES.filter((kc) => !shownIds.has(kc.qmkId))
+  const groups = getBasicGroups()
+  const result: RemainingGroup[] = []
+
+  for (const group of groups) {
+    const remaining = group.keycodes.filter((kc) => !shownIds.has(kc.qmkId) && visCheck(kc))
+    if (remaining.length > 0) {
+      result.push({ labelKey: group.labelKey, keycodes: remaining })
+    }
+  }
+
+  return result
 }
 
 export function BasicKeyboardView({
@@ -55,6 +74,7 @@ export function BasicKeyboardView({
   pickerSelectedKeycodes,
   isVisible,
 }: Props) {
+  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerWidth, setContainerWidth] = useState(0)
 
@@ -79,14 +99,32 @@ export function BasicKeyboardView({
     return null
   }, [containerWidth])
 
-  const visibleRemainingKeycodes = useMemo(() => {
+  const remainingGroups = useMemo(() => {
     if (!selectedLayout) return []
-    return getRemainingKeycodes(selectedLayout).filter(visCheck)
+    return getRemainingGroups(selectedLayout, visCheck)
   }, [selectedLayout, visCheck])
 
   const flatKeycodes = useMemo(() => {
     return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED].filter(visCheck)
   }, [visCheck])
+
+  function renderKeycodeGrid(keycodes: Keycode[]) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {keycodes.map((kc) => (
+          <KeycodeButton
+            key={kc.qmkId}
+            keycode={kc}
+            onClick={onKeycodeClick}
+            onHover={onKeycodeHover}
+            onHoverEnd={onKeycodeHoverEnd}
+            highlighted={highlightedKeycodes?.has(kc.qmkId)}
+            selected={pickerSelectedKeycodes?.has(kc.qmkId)}
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div ref={containerRef}>
@@ -100,36 +138,21 @@ export function BasicKeyboardView({
             highlightedKeycodes={highlightedKeycodes}
             pickerSelectedKeycodes={pickerSelectedKeycodes}
           />
-          {visibleRemainingKeycodes.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1">
-              {visibleRemainingKeycodes.map((kc) => (
-                <KeycodeButton
-                  key={kc.qmkId}
-                  keycode={kc}
-                  onClick={onKeycodeClick}
-                  onHover={onKeycodeHover}
-                  onHoverEnd={onKeycodeHoverEnd}
-                  highlighted={highlightedKeycodes?.has(kc.qmkId)}
-                  selected={pickerSelectedKeycodes?.has(kc.qmkId)}
-                />
+          {remainingGroups.length > 0 && (
+            <div className="mt-1">
+              {remainingGroups.map((group) => (
+                <div key={group.labelKey}>
+                  <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
+                    {t(group.labelKey)}
+                  </h4>
+                  {renderKeycodeGrid(group.keycodes)}
+                </div>
               ))}
             </div>
           )}
         </>
       ) : (
-        <div className="flex flex-wrap gap-1">
-          {flatKeycodes.map((kc) => (
-            <KeycodeButton
-              key={kc.qmkId}
-              keycode={kc}
-              onClick={onKeycodeClick}
-              onHover={onKeycodeHover}
-              onHoverEnd={onKeycodeHoverEnd}
-              highlighted={highlightedKeycodes?.has(kc.qmkId)}
-              selected={pickerSelectedKeycodes?.has(kc.qmkId)}
-            />
-          ))}
-        </div>
+        renderKeycodeGrid(flatKeycodes)
       )}
     </div>
   )
