@@ -182,10 +182,11 @@ export function TabbedKeycodes({
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
-    // Keyboard view for basic tab
-    if (category.id === 'basic' && basicViewType === 'keyboard' && !maskOnly && !lmMode) {
+    // Keyboard view for basic tab (ANSI or ISO)
+    if (category.id === 'basic' && basicViewType !== 'list' && basicViewType != null && !maskOnly && !lmMode) {
       return (
         <BasicKeyboardView
+          viewType={basicViewType}
           onKeycodeClick={handleKeycodeClick}
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}

@@ -9,7 +9,7 @@ export interface WindowState {
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
-export type BasicViewType = 'list' | 'keyboard'
+export type BasicViewType = 'ansi' | 'iso' | 'list'
 
 export interface AppConfig {
   autoSync: boolean
@@ -50,5 +50,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   autoLockTime: 10,
   language: 'en',
   hubEnabled: false,
-  defaultBasicViewType: 'keyboard',
+  defaultBasicViewType: 'ansi',
 }

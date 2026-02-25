@@ -51,7 +51,7 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
   return typeof r.date === 'string' && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
 }
 
-const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['list', 'keyboard'])
+const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'list'])
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId

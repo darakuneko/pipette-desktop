@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { DISPLAY_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
+import { ANSI_LAYOUTS, ISO_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
+import type { BasicViewType } from '../../../shared/types/app-config'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeButton } from './KeycodeButton'
 import { KEYCODE_CATEGORIES, type KeycodeGroup } from './categories'
@@ -16,6 +17,7 @@ import {
 import { parseKle } from '../../../shared/kle/kle-parser'
 
 interface Props {
+  viewType: BasicViewType
   onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
@@ -67,6 +69,7 @@ function getRemainingGroups(layout: DisplayLayoutDef, visCheck: (kc: Keycode) =>
 }
 
 export function BasicKeyboardView({
+  viewType,
   onKeycodeClick,
   onKeycodeHover,
   onKeycodeHoverEnd,
@@ -92,12 +95,14 @@ export function BasicKeyboardView({
 
   const visCheck = isVisible ?? defaultIsVisible
 
+  const layouts = viewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
+
   const selectedLayout = useMemo<DisplayLayoutDef | null>(() => {
-    for (const def of DISPLAY_LAYOUTS) {
+    for (const def of layouts) {
       if (containerWidth >= def.minWidth) return def
     }
     return null
-  }, [containerWidth])
+  }, [containerWidth, layouts])
 
   const remainingGroups = useMemo(() => {
     if (!selectedLayout) return []

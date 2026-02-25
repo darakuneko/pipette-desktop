@@ -99,7 +99,7 @@ describe('useDevicePrefs', () => {
         keyboardLayout: 'dvorak',
         autoAdvance: false,
         layerPanelOpen: true,
-        basicViewType: 'keyboard',
+        basicViewType: 'ansi',
         layerNames: [],
         typingTestResults: [],
       }))
