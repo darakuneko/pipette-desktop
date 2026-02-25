@@ -34,6 +34,3 @@ export const ISO_LAYOUTS: DisplayLayoutDef[] = [
   { id: 'iso_80', kle: ISO_80, minWidth: 830 },
   { id: 'iso_70', kle: ISO_70, minWidth: 720 },
 ]
-
-/** @deprecated Use ANSI_LAYOUTS or ISO_LAYOUTS instead */
-export const DISPLAY_LAYOUTS = ANSI_LAYOUTS

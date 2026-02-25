@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
+import type { BasicViewType } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
@@ -32,8 +33,8 @@ interface Props {
   onScaleChange?: (delta: number) => void
   autoAdvance: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
-  basicViewType?: 'list' | 'keyboard'
-  onBasicViewTypeChange?: (type: 'list' | 'keyboard') => void
+  basicViewType?: BasicViewType
+  onBasicViewTypeChange?: (type: BasicViewType) => void
   matrixMode: boolean
   hasMatrixTester: boolean
   onToggleMatrix?: () => void
@@ -211,7 +212,7 @@ export function KeycodesOverlayPanel({
                 <select
                   id="overlay-basic-view-type-selector"
                   value={basicViewType}
-                  onChange={(e) => onBasicViewTypeChange(e.target.value as 'list' | 'keyboard')}
+                  onChange={(e) => onBasicViewTypeChange(e.target.value as BasicViewType)}
                   className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
                   data-testid="overlay-basic-view-type-selector"
                 >

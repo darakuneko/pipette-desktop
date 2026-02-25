@@ -52,6 +52,7 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
 }
 
 const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'list'])
+const LEGACY_BASIC_VIEW_MAP: Record<string, string> = { keyboard: 'ansi' }
 
 interface ValidatedPrefs {
   keyboardLayout: KeyboardLayoutId
@@ -80,8 +81,11 @@ function validateIpcPrefs(
   if (layout === null && autoAdvance === null) return null
 
   const layerPanelOpen = typeof data.layerPanelOpen === 'boolean' ? data.layerPanelOpen : defaultLayerPanelOpen
-  const basicViewType = typeof data.basicViewType === 'string' && VALID_BASIC_VIEW_TYPES.has(data.basicViewType)
-    ? data.basicViewType as BasicViewType
+  const rawBasicView = typeof data.basicViewType === 'string'
+    ? (LEGACY_BASIC_VIEW_MAP[data.basicViewType] ?? data.basicViewType)
+    : null
+  const basicViewType = rawBasicView !== null && VALID_BASIC_VIEW_TYPES.has(rawBasicView)
+    ? rawBasicView as BasicViewType
     : defaultBasicViewType
 
   const layerNames = Array.isArray(data.layerNames)

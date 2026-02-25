@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
+import type { BasicViewType } from '../../../shared/types/app-config'
 import { KEYCODE_CATEGORIES, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { X } from 'lucide-react'
 import { KeycodeButton } from './KeycodeButton'
@@ -37,7 +38,7 @@ interface Props {
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
-  basicViewType?: 'list' | 'keyboard' // View type for the basic tab
+  basicViewType?: BasicViewType // View type for the basic tab
 }
 
 export function TabbedKeycodes({

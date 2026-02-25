@@ -7,6 +7,7 @@ import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import type { KleKey, KeyboardLayout } from '../../../shared/kle/types'
+import type { BasicViewType } from '../../../shared/types/app-config'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
@@ -524,8 +525,8 @@ interface Props {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   autoAdvance?: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
-  basicViewType?: 'list' | 'keyboard'
-  onBasicViewTypeChange?: (type: 'list' | 'keyboard') => void
+  basicViewType?: BasicViewType
+  onBasicViewTypeChange?: (type: BasicViewType) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   onLock?: () => void

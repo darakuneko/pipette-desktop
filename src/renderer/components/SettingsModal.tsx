@@ -14,6 +14,7 @@ import type { SyncStatusType, LastSyncResult, SyncProgress, SyncResetTargets, Lo
 import type { UseSyncReturn } from '../hooks/useSync'
 import type { ThemeMode } from '../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../hooks/useDevicePrefs'
+import type { BasicViewType } from '../../shared/types/app-config'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
 import { KEYBOARD_LAYOUTS } from '../data/keyboard-layouts'
 import i18n, { SUPPORTED_LANGUAGES } from '../i18n'
@@ -481,8 +482,8 @@ interface Props {
   onDefaultAutoAdvanceChange: (enabled: boolean) => void
   defaultLayerPanelOpen: boolean
   onDefaultLayerPanelOpenChange: (open: boolean) => void
-  defaultBasicViewType: 'list' | 'keyboard'
-  onDefaultBasicViewTypeChange: (type: 'list' | 'keyboard') => void
+  defaultBasicViewType: BasicViewType
+  onDefaultBasicViewTypeChange: (type: BasicViewType) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   onResetStart?: () => void
@@ -1078,7 +1079,7 @@ export function SettingsModal({
                     <select
                       id="settings-default-basic-view-type-selector"
                       value={defaultBasicViewType}
-                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as 'list' | 'keyboard')}
+                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as BasicViewType)}
                       className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
                       data-testid="settings-default-basic-view-type-selector"
                     >
