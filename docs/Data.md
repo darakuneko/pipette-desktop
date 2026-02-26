@@ -63,7 +63,7 @@ Snapshots are created manually via "Save Current State" and stored as `.pipette`
 
 ### Favorites
 
-Reusable configurations that work across any keyboard.
+Reusable configurations that work across any keyboard. Individual entries can be uploaded to Pipette Hub.
 
 | Type | Description |
 |------|-------------|
@@ -72,6 +72,8 @@ Reusable configurations that work across any keyboard.
 | Combo | Saved combo definition |
 | Key Override | Saved key override rule |
 | Alternate Repeat Key | Saved alt repeat key mapping |
+
+Each favorite entry may have an associated `hubPostId` if it has been uploaded to Hub. Renaming a Hub-uploaded favorite also updates its title on Hub.
 
 ### Typing Test Language Packs
 
@@ -163,9 +165,12 @@ App settings (theme, language, window state, etc.) are **not** synced.
 
 - Uploading requires signing in with the same Google account used for sync
 - Pipette sends your Google `id_token` to the Hub server, which verifies it against Google's public keys and issues a short-lived Hub session token
-- Uploads include: keymap data (`.vil` and `.pipette` formats), a `keymap.c` export, a PDF cheat sheet, and a thumbnail screenshot
+- **Keyboard snapshot uploads** include: keymap data (`.vil` and `.pipette` formats), a `keymap.c` export, a PDF cheat sheet, and a thumbnail screenshot
+- **Favorite entry uploads** include: the favorite configuration as a JSON file (Pipette's favorite export format with QMK keycode names)
 
 ### What Is Uploaded
+
+**Keyboard Snapshots:**
 
 | Item | Description |
 |------|-------------|
@@ -176,6 +181,14 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | `keymap.c` | QMK-compatible C source |
 | PDF | Printable keymap cheat sheet |
 | Thumbnail | Screenshot of the current keymap view |
+
+**Favorite Entries (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key):**
+
+| Item | Description |
+|------|-------------|
+| Title | Favorite entry label |
+| Post type | Entry type (`td`, `macro`, `combo`, `ko`, `ark`) |
+| JSON file | Favorite configuration in Pipette export format (with QMK keycode names) |
 
 ### Security & Privacy
 
@@ -199,7 +212,8 @@ Pipette can export keymap data in several formats. These are local file download
 | VIL | `.vil` | Complete keyboard state (compatible with Vial GUI) |
 | Pipette | `.pipette` | Pipette's snapshot format (includes layer names) |
 | keymap.c | `.c` | QMK-compatible C source code |
-| PDF | `.pdf` | Printable keymap cheat sheet |
+| PDF (Keymap) | `.pdf` | Printable keymap cheat sheet |
+| PDF (Layout) | `.pdf` | Layout export with key outlines and summary pages for dynamic entries |
 
 ---
 

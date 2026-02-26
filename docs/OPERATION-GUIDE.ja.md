@@ -33,6 +33,7 @@
 
 - **お気に入りタブ**: Tap Dance、Macro、Combo、Key Override、Alt Repeat Key — タイプごとにタブが分かれています
 - エントリごとの操作: クリックでリネーム、削除、または個別の **Export**
+- **Hub アクション**: Hub 接続時、各エントリに **Upload to Hub** / **Update on Hub** / **Remove from Hub** ボタンが表示されます（インラインお気に入りパネルと同じ）
 - フッターの **Import** / **Export All** ボタンで一括操作
 
 ![データモーダル — Hub Posts](screenshots/02-data-modal-hub-posts.png)
@@ -303,7 +304,7 @@ QMK の高度な機能用キーコードです。
 
 ![オーバーレイパネル — Save](screenshots/29-overlay-save.png)
 
-- **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF チートシートとしてダウンロード
+- **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF キーマップチートシート、PDF レイアウトエクスポート（キーアウトラインと Tap Dance・Macro・Combo・Key Override・Alt Repeat Key のサマリーページ付き）としてダウンロード
 - **Save Current State**: 現在のキーボード状態をラベル付きで保存
 - **Synced Data**: 保存済みスナップショットの一覧。Load・Rename・Delete・Export の操作が可能
 - エディタ設定パネル (§6) と同じ Save パネルです
@@ -487,9 +488,18 @@ Quantum タブの Alt Repeat Key 設定ボタンから開きます。Repeat Key 
 Synced Data リスト内:
 
 - **Load**: 保存した設定を現在のエントリに適用
-- **Rename**: 保存したエントリのラベルを変更
+- **Rename**: 保存したエントリのラベルを変更（Hub にアップロード済みの場合、Hub 上のタイトルも同期されます）
 - **Delete**: 保存したエントリを削除
 - **Export**: 個別の保存済みエントリをファイルとしてダウンロード
+
+Pipette Hub 接続時は、各エントリに Hub アクションも表示されます:
+
+![インラインお気に入り — Hub アクション](screenshots/hub-fav-inline.png)
+
+- **Upload to Hub**: お気に入りエントリを Pipette Hub にフィーチャー投稿としてアップロード
+- **Update on Hub**: 最新の設定で Hub 上の投稿を更新
+- **Remove from Hub**: Hub からエントリを削除（2段階確認付き）
+- **Open in Browser**: Hub の個別投稿ページをブラウザで開く
 
 > **Note**: お気に入りは特定のキーボードに依存しません。保存したエントリは互換性のある別のキーボードでも読み込めます。クラウド同期を有効にすると、複数デバイス間でも同期されます (§6.1 参照)。お気に入りはデバイス選択画面のデータモーダルからも管理できます (§1.3 参照)。
 
@@ -503,7 +513,7 @@ Synced Data リスト内:
 
 エディタ設定パネルは単一の **Save** パネルを提供します:
 
-- **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF チートシートとしてダウンロード
+- **Export Current State**: キーマップを `.vil`、`keymap.c`、PDF キーマップチートシート、PDF レイアウトエクスポート（キーアウトラインと Tap Dance・Macro・Combo・Key Override・Alt Repeat Key のサマリーページ付き）としてダウンロード
 - **Save Current State**: 現在のキーボード状態をラベル付きで保存します。Label フィールドに名前を入力して Save をクリックします。Label が空の場合は Save ボタンが無効になります。保存したスナップショットは下の Synced Data リストに表示され、読み込みや削除ができます
 - **Synced Data**: 保存済みスナップショットの一覧。クリックで読み込み・名前変更・削除
 - **キーボードデータリセット**: キーボードを初期状態に戻す (要注意)
@@ -587,7 +597,7 @@ Pipette は保存したスナップショット、お気に入り、キーボー
 
 ## 7. Pipette Hub
 
-[Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev/) は、キーマップをアップロードして共有できるコミュニティキーマップギャラリーです。
+[Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev/) は、キーマップやお気に入り設定をアップロードして共有できるコミュニティキーマップギャラリーです。
 
 ### 7.1 Hub のセットアップ
 
@@ -617,7 +627,21 @@ Hub 機能を使用するには Google アカウント認証が必要です。�
 - **Update**: 現在のキーボード状態で Hub の投稿を更新
 - **Remove**: Hub からキーマップを削除
 
-### 7.3 Hub ウェブサイト
+### 7.3 お気に入りエントリのアップロード
+
+個別のお気に入りエントリ (Tap Dance、Macro、Combo、Key Override、Alt Repeat Key) も Hub にアップロードできます:
+
+![データモーダル — お気に入り Hub アクション](screenshots/hub-fav-data-modal.png)
+
+1. インラインお気に入りパネルのあるエディタモーダル、またはデバイス選択画面のデータモーダルを開きます
+2. お気に入りリストの各エントリに、Hub 接続時は **Upload to Hub** ボタンが表示されます
+3. **Upload to Hub** をクリックして設定を共有します
+4. アップロード後、**Open in Browser**、**Update on Hub**、**Remove from Hub** ボタンが表示されます
+5. Hub にアップロード済みのお気に入りをリネームすると、Hub 上のタイトルも自動的に更新されます
+
+> **Note**: アップロードには Display Name の設定が必要です。Display Name が未設定の場合、Upload ボタンの代わりに警告が表示されます。
+
+### 7.4 Hub ウェブサイト
 
 [Pipette Hub ウェブサイト](https://pipette-hub-worker.keymaps.workers.dev/) では、アップロードされたキーマップがギャラリー形式で表示されます。
 

@@ -33,6 +33,7 @@ The Data button on the device selection screen opens the Data modal for centrali
 
 - **Favorites tabs**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type has its own tab
 - Per-entry actions: click to rename, delete, or **Export** individual entries
+- **Hub actions**: When Hub is connected, each entry shows **Upload to Hub** / **Update on Hub** / **Remove from Hub** buttons (same as the inline favorites panel)
 - **Import** / **Export All** buttons at the footer for bulk operations
 
 ![Data Modal — Hub Posts](screenshots/02-data-modal-hub-posts.png)
@@ -303,7 +304,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Save](screenshots/29-overlay-save.png)
 
-- **Export Current State**: Download keymap as `.vil`, `keymap.c`, or PDF cheat sheet
+- **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
 - **Save Current State**: Save a snapshot of the current keyboard state with a label
 - **Synced Data**: List of saved snapshots with Load, Rename, Delete, and Export actions
 - This is the same Save panel as the standalone editor settings (§6)
@@ -490,9 +491,18 @@ The inline favorites panel provides:
 Within the Synced Data list:
 
 - **Load**: Apply a saved configuration to the current entry
-- **Rename**: Change the label of a saved entry
+- **Rename**: Change the label of a saved entry (also synced to Hub if the entry is uploaded)
 - **Delete**: Remove a saved entry
 - **Export**: Download an individual saved entry as a file
+
+When Pipette Hub is connected, each saved entry also shows Hub actions:
+
+![Inline Favorites — Hub Actions](screenshots/hub-fav-inline.png)
+
+- **Upload to Hub**: Upload the favorite entry to Pipette Hub as a feature post
+- **Update on Hub**: Re-upload the latest configuration to update the existing Hub post
+- **Remove from Hub**: Delete the entry from Pipette Hub (two-step confirmation)
+- **Open in Browser**: Open the individual Hub post page in your browser
 
 > **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.1). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
 
@@ -506,7 +516,7 @@ Open the editor settings panel from the save button (floppy disk icon) in the ke
 
 The editor settings panel now provides a single **Save** panel with the following features:
 
-- **Export Current State**: Download keymap as `.vil`, `keymap.c`, or PDF cheat sheet
+- **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
 - **Save Current State**: Save a snapshot of the current keyboard state with a label. Enter a name in the Label field and click Save. If the Label field is left empty, the Save button is disabled. Saved snapshots appear in the Synced Data list below and can be loaded or deleted later
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
@@ -590,7 +600,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 
 ## 7. Pipette Hub
 
-[Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev/) is a community keymap gallery where you can upload and share your keyboard configurations.
+[Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev/) is a community keymap gallery where you can upload and share your keyboard configurations and favorite entries.
 
 ### 7.1 Hub Setup
 
@@ -620,7 +630,21 @@ To upload a keymap to Hub:
 - **Update**: Re-uploads the current keyboard state to update the existing Hub post
 - **Remove**: Removes the keymap from Hub
 
-### 7.3 Hub Website
+### 7.3 Uploading Favorite Entries
+
+Individual favorite entries (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) can also be uploaded to Hub:
+
+![Data Modal — Favorites Hub Actions](screenshots/hub-fav-data-modal.png)
+
+1. Open any editor modal with the inline favorites panel, or use the Data modal from the device selection screen
+2. In the favorites list, each entry shows an **Upload to Hub** button when Hub is connected
+3. Click **Upload to Hub** to share the configuration
+4. After uploading, **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons appear
+5. Renaming a favorite that is uploaded to Hub also updates the title on Hub automatically
+
+> **Note**: A Display Name must be set before uploading. If no Display Name is configured, a warning is shown instead of the Upload button.
+
+### 7.4 Hub Website
 
 The [Pipette Hub website](https://pipette-hub-worker.keymaps.workers.dev/) displays uploaded keymaps in a gallery format.
 
