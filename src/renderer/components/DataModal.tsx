@@ -77,7 +77,7 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
   return (
     <div className="pt-4 flex flex-col h-full">
       {/* Entry list */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {manage.entries.length === 0 ? (
           <div className="py-4 text-center text-[13px] text-content-muted" data-testid="data-modal-fav-empty">
             {t('favoriteStore.noSaved')}
