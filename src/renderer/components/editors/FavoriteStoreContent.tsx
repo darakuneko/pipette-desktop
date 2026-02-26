@@ -7,7 +7,6 @@ import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate }
 import { FavoriteHubActions } from './FavoriteHubActions'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
-import type { HubFeaturePostType } from '../../../shared/types/hub'
 import type { FavoriteImportResultState } from '../../hooks/useFavoriteStore'
 
 export function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) => string, result: FavoriteImportResultState): string {
@@ -40,7 +39,6 @@ export interface FavoriteStoreContentProps {
   onExportEntry: (entryId: string) => void
   onImport: () => void
   // Hub integration (optional)
-  hubPostType?: HubFeaturePostType
   hubOrigin?: string
   hubNeedsDisplayName?: boolean
   hubUploading?: string | null
@@ -67,7 +65,6 @@ export function FavoriteStoreContent({
   onExport,
   onExportEntry,
   onImport,
-  hubPostType,
   hubOrigin,
   hubNeedsDisplayName,
   hubUploading,
@@ -256,7 +253,6 @@ export function FavoriteStoreContent({
 
                 <FavoriteHubActions
                   entry={entry}
-                  postType={hubPostType}
                   hubOrigin={hubOrigin}
                   hubNeedsDisplayName={hubNeedsDisplayName}
                   hubUploading={hubUploading}

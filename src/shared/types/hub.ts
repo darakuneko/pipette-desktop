@@ -89,8 +89,6 @@ export interface HubUserResult {
   error?: string
 }
 
-export type HubFeaturePostType = 'td' | 'macro' | 'combo' | 'ko' | 'ark'
-
 export interface HubUploadFavoritePostParams {
   type: FavoriteType
   entryId: string

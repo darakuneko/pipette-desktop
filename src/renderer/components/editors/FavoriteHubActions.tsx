@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
-import type { HubFeaturePostType } from '../../../shared/types/hub'
 
 const HUB_BTN_BASE = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
 const HUB_BTN = `${HUB_BTN_BASE} disabled:opacity-50`
@@ -16,7 +15,6 @@ export interface FavHubEntryResult {
 
 interface FavoriteHubActionsProps {
   entry: SavedFavoriteMeta
-  postType?: HubFeaturePostType
   hubOrigin?: string
   hubNeedsDisplayName?: boolean
   hubUploading?: string | null
@@ -28,7 +26,6 @@ interface FavoriteHubActionsProps {
 
 export function FavoriteHubActions({
   entry,
-  postType,
   hubOrigin,
   hubNeedsDisplayName,
   hubUploading,
@@ -48,7 +45,7 @@ export function FavoriteHubActions({
   const result = hubUploadResult?.entryId === entry.id ? hubUploadResult : null
 
   const hasHubPost = !!entry.hubPostId
-  const hubListUrl = hasHubPost && hubOrigin && postType ? `${hubOrigin}/?post_type=${postType}` : null
+  const hubPostUrl = hasHubPost && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(entry.hubPostId!)}` : null
 
   return (
     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="fav-hub-actions">
@@ -79,12 +76,12 @@ export function FavoriteHubActions({
                 </>
               ) : (
                 <>
-                  {hubListUrl && (
+                  {hubPostUrl && (
                     <a
-                      href={hubListUrl}
+                      href={hubPostUrl}
                       onClick={(e) => {
                         e.preventDefault()
-                        void window.vialAPI.openExternal(hubListUrl)
+                        void window.vialAPI.openExternal(hubPostUrl)
                       }}
                       className={HUB_BTN_BASE}
                       data-testid="fav-hub-share-link"

@@ -307,7 +307,6 @@ export function TapDanceModal({
                 exporting={favStore.exporting}
                 importing={favStore.importing}
                 importResult={favStore.importResult}
-                hubPostType="td"
                 hubOrigin={hubOrigin}
                 hubNeedsDisplayName={hubNeedsDisplayName}
                 hubUploading={hubUploading}
