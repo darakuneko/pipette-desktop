@@ -36,7 +36,7 @@ import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson } from '../preload/macro'
+import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson, jsonToMacroActions } from '../preload/macro'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -530,8 +530,10 @@ export function App() {
       combo: vilData.combo,
       keyOverride: vilData.keyOverride,
       altRepeatKey: vilData.altRepeatKey,
-      macros: splitMacroBuffer(vilData.macros, keyboard.macroCount)
-        .map((m) => deserializeMacro(m, keyboard.vialProtocol)),
+      macros: vilData.macroJson
+        ? vilData.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
+        : splitMacroBuffer(vilData.macros, keyboard.macroCount)
+            .map((m) => deserializeMacro(m, keyboard.vialProtocol)),
     }
   }, [keyboard.definition, keyboard.layout, keyboard.encoderCount,
       keyboard.macroCount, keyboard.vialProtocol])
