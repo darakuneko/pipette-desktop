@@ -267,6 +267,8 @@ const SECTION_HEADER_HEIGHT = 8
 interface CardGrid {
   /** Current Y offset for the active row */
   curY: number
+  /** Computed card width based on columns and usable width */
+  cardWidth: number
   /** Per-page heights for footer positioning */
   pageHeights: number[]
   /** Advance to the next card slot, paginating if needed. Returns the card X position. */
@@ -299,6 +301,7 @@ function createCardGrid(
 
   return {
     get curY() { return curY },
+    cardWidth,
     pageHeights,
     nextCard(): number {
       if (col >= columns) {
@@ -414,13 +417,12 @@ function drawComboPages(
   if (configured.length === 0) return []
 
   const comboCardHeight = 10
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (COMBO_COLUMNS - 1)) / COMBO_COLUMNS
   const grid = createCardGrid(doc, 'Combos', COMBO_COLUMNS, comboCardHeight)
 
   for (const combo of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, cardWidth, comboCardHeight)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, comboCardHeight)
 
     // Draw key badges inside card
     doc.setFont('helvetica', 'normal')
@@ -468,13 +470,12 @@ function drawTapDancePages(
   if (configured.length === 0) return []
 
   const tdCardHeight = TD_ROW_HEIGHT * 5 + CARD_PADDING * 2 // header + 4 rows + padding
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (TD_COLUMNS - 1)) / TD_COLUMNS
   const grid = createCardGrid(doc, 'Tap Dance', TD_COLUMNS, tdCardHeight)
 
   for (const { td, idx } of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, cardWidth, tdCardHeight)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, tdCardHeight)
 
     // Header row: TD index badge + tapping term
     const headerY = grid.curY + CARD_PADDING
@@ -527,13 +528,12 @@ function drawKeyOverridePages(
   if (configured.length === 0) return []
 
   const koCardHeight = KO_ROW_HEIGHT * 3 + CARD_PADDING * 2 // header + 2 rows + padding
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (KO_COLUMNS - 1)) / KO_COLUMNS
   const grid = createCardGrid(doc, 'Key Overrides', KO_COLUMNS, koCardHeight)
 
   for (const { ko, idx } of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, cardWidth, koCardHeight, ko.enabled)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, koCardHeight, ko.enabled)
 
     // Header row: KO index badge + enabled status
     const headerY = grid.curY + CARD_PADDING
@@ -588,13 +588,12 @@ function drawAltRepeatKeyPages(
   if (configured.length === 0) return []
 
   const arCardHeight = 10
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (AR_COLUMNS - 1)) / AR_COLUMNS
   const grid = createCardGrid(doc, 'Alt Repeat Keys', AR_COLUMNS, arCardHeight)
 
   for (const { ar, idx } of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, cardWidth, arCardHeight, ar.enabled)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, arCardHeight, ar.enabled)
 
     // Draw AR index badge + last key -> alt key
     doc.setFont('helvetica', 'normal')
@@ -632,7 +631,7 @@ function drawAltRepeatKeyPages(
     if (!ar.enabled) {
       doc.setFontSize(BADGE_FONT_SIZE)
       doc.setTextColor(180)
-      doc.text('(off)', cardX + cardWidth - CARD_PADDING, badgeMidY, { align: 'right', baseline: 'middle' })
+      doc.text('(off)', cardX + grid.cardWidth - CARD_PADDING, badgeMidY, { align: 'right', baseline: 'middle' })
     }
   }
 
