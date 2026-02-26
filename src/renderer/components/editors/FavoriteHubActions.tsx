@@ -48,100 +48,106 @@ export function FavoriteHubActions({
   const hubPostUrl = hasHubPost && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(entry.hubPostId!)}` : null
 
   return (
-    <div className="flex flex-wrap items-center gap-1 mt-1" data-testid="fav-hub-actions">
-      {hubNeedsDisplayName && (
-        <span className="text-[10px] text-content-muted" data-testid="fav-hub-needs-display-name">
-          {t('hub.needsDisplayName')}
-        </span>
-      )}
-
-      {isUploading && (
-        <span className="text-[10px] text-accent" data-testid="fav-hub-uploading">
-          {t('hub.uploading')}
-        </span>
-      )}
-
-      {result && (
-        <span
-          className={`text-[10px] ${result.kind === 'success' ? 'text-accent' : 'text-red-400'}`}
-          data-testid="fav-hub-result"
-        >
-          {result.message}
-        </span>
-      )}
-
-      {!isUploading && hasHubPost && (
-        <>
-          {!hubNeedsDisplayName && onUpdateOnHub && (
+    <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="fav-hub-actions">
+      <div className="flex items-center justify-between">
+        <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+        <div className="flex gap-1">
+          {!isUploading && hasHubPost && (
+            <>
+              {hubPostUrl && (
+                <a
+                  href={hubPostUrl}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    void window.vialAPI.openExternal(hubPostUrl)
+                  }}
+                  className={HUB_BTN_BASE}
+                  data-testid="fav-hub-share-link"
+                >
+                  {t('hub.openInBrowser')}
+                </a>
+              )}
+              {confirmRemoveId === entry.id ? (
+                <>
+                  <button
+                    type="button"
+                    className={HUB_BTN}
+                    onClick={() => { onRemoveFromHub?.(entry.id); setConfirmRemoveId(null) }}
+                    disabled={disabled}
+                    data-testid="fav-hub-remove-confirm"
+                  >
+                    {t('hub.confirmRemove')}
+                  </button>
+                  <button
+                    type="button"
+                    className={HUB_BTN}
+                    onClick={() => setConfirmRemoveId(null)}
+                    data-testid="fav-hub-remove-cancel"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {!hubNeedsDisplayName && onUpdateOnHub && (
+                    <button
+                      type="button"
+                      className={HUB_BTN}
+                      onClick={() => onUpdateOnHub(entry.id)}
+                      disabled={disabled}
+                      data-testid="fav-hub-update-btn"
+                    >
+                      {isUploading ? t('hub.updating') : t('hub.updateOnHub')}
+                    </button>
+                  )}
+                  {onRemoveFromHub && (
+                    <button
+                      type="button"
+                      className={HUB_BTN}
+                      onClick={() => setConfirmRemoveId(entry.id)}
+                      disabled={disabled}
+                      data-testid="fav-hub-remove-btn"
+                    >
+                      {t('hub.removeFromHub')}
+                    </button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {!isUploading && !hasHubPost && !hubNeedsDisplayName && onUploadToHub && (
             <button
               type="button"
               className={HUB_BTN}
-              onClick={() => onUpdateOnHub(entry.id)}
+              onClick={() => onUploadToHub(entry.id)}
               disabled={disabled}
-              data-testid="fav-hub-update-btn"
+              data-testid="fav-hub-upload-btn"
             >
-              {t('hub.updateOnHub')}
+              {t('hub.uploadToHub')}
             </button>
           )}
-          {confirmRemoveId === entry.id ? (
-            <>
-              <button
-                type="button"
-                className={HUB_BTN}
-                onClick={() => { onRemoveFromHub?.(entry.id); setConfirmRemoveId(null) }}
-                disabled={disabled}
-                data-testid="fav-hub-remove-confirm"
-              >
-                {t('hub.confirmRemove')}
-              </button>
-              <button
-                type="button"
-                className={HUB_BTN}
-                onClick={() => setConfirmRemoveId(null)}
-                data-testid="fav-hub-remove-cancel"
-              >
-                {t('common.cancel')}
-              </button>
-            </>
-          ) : (
-            onRemoveFromHub && (
-              <button
-                type="button"
-                className={HUB_BTN}
-                onClick={() => setConfirmRemoveId(entry.id)}
-                disabled={disabled}
-                data-testid="fav-hub-remove-btn"
-              >
-                {t('hub.removeFromHub')}
-              </button>
-            )
-          )}
-          {hubPostUrl && (
-            <a
-              href={hubPostUrl}
-              onClick={(e) => {
-                e.preventDefault()
-                void window.vialAPI.openExternal(hubPostUrl)
-              }}
-              className={HUB_BTN_BASE}
-              data-testid="fav-hub-share-link"
-            >
-              {t('hub.openInBrowser')}
-            </a>
-          )}
-        </>
-      )}
-
-      {!isUploading && !hasHubPost && !hubNeedsDisplayName && onUploadToHub && (
-        <button
-          type="button"
-          className={HUB_BTN}
-          onClick={() => onUploadToHub(entry.id)}
-          disabled={disabled}
-          data-testid="fav-hub-upload-btn"
+        </div>
+      </div>
+      {hubNeedsDisplayName && (hasHubPost ? !onUpdateOnHub : !onUploadToHub) && (
+        <div
+          className="mt-1 text-[11px] text-content-muted"
+          data-testid="fav-hub-needs-display-name"
         >
-          {t('hub.uploadToHub')}
-        </button>
+          {t('hub.needsDisplayName')}
+        </div>
+      )}
+      {isUploading && (
+        <div className="mt-1 text-[11px] text-accent" data-testid="fav-hub-uploading">
+          {t('hub.uploading')}
+        </div>
+      )}
+      {result && (
+        <div
+          className={`mt-1 text-[11px] font-medium ${result.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+          data-testid="fav-hub-result"
+        >
+          {result.message}
+        </div>
       )}
     </div>
   )

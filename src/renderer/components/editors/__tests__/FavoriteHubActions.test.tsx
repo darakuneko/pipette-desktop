@@ -111,7 +111,7 @@ describe('FavoriteHubActions', () => {
     expect(screen.queryByTestId('fav-hub-share-link')).not.toBeInTheDocument()
   })
 
-  it('shows needsDisplayName message and hides upload button for non-uploaded entries', () => {
+  it('hides upload button when hubNeedsDisplayName is true for non-uploaded entries', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY}
@@ -120,9 +120,21 @@ describe('FavoriteHubActions', () => {
       />,
     )
 
+    // Upload hidden; needsDisplayName not shown because onUploadToHub is provided
+    expect(screen.queryByTestId('fav-hub-upload-btn')).not.toBeInTheDocument()
+  })
+
+  it('shows needsDisplayName when handler is absent and hubNeedsDisplayName is true', () => {
+    render(
+      <FavoriteHubActions
+        entry={ENTRY}
+        hubNeedsDisplayName
+        onRemoveFromHub={vi.fn()}
+      />,
+    )
+
     expect(screen.getByTestId('fav-hub-needs-display-name')).toBeInTheDocument()
     expect(screen.getByText('hub.needsDisplayName')).toBeInTheDocument()
-    expect(screen.queryByTestId('fav-hub-upload-btn')).not.toBeInTheDocument()
   })
 
   it('shows remove/share but hides update when needsDisplayName is true for uploaded entries', () => {
@@ -137,7 +149,6 @@ describe('FavoriteHubActions', () => {
       />,
     )
 
-    expect(screen.getByTestId('fav-hub-needs-display-name')).toBeInTheDocument()
     expect(screen.queryByTestId('fav-hub-update-btn')).not.toBeInTheDocument()
     expect(screen.getByTestId('fav-hub-remove-btn')).toBeInTheDocument()
     expect(screen.getByTestId('fav-hub-share-link')).toBeInTheDocument()
@@ -209,7 +220,7 @@ describe('FavoriteHubActions', () => {
     const el = screen.getByTestId('fav-hub-result')
     expect(el).toBeInTheDocument()
     expect(el.textContent).toBe('Upload failed')
-    expect(el.className).toContain('text-red-400')
+    expect(el.className).toContain('text-danger')
   })
 
   it('does not show result message when hubUploadResult entryId does not match', () => {
