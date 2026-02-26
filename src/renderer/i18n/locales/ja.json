@@ -479,6 +479,7 @@
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
+    "defaultSplitKeyMode": "デフォルト Split Key",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
