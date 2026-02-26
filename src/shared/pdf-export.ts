@@ -3,6 +3,7 @@
 
 import { jsPDF } from 'jspdf'
 import type { KleKey } from './kle/types'
+import type { ComboEntry, TapDanceEntry } from './types/protocol'
 import { filterVisibleKeys, hasSecondaryRect, repositionLayoutKeys } from './kle/filter-keys'
 import { computeUnionPolygon, insetAxisAlignedPolygon } from './kle/rect-union'
 import {
@@ -36,6 +37,8 @@ export interface PdfExportInput {
   isMask: (qmkId: string) => boolean
   findOuterKeycode: (qmkId: string) => { label: string } | undefined
   findInnerKeycode: (qmkId: string) => { label: string } | undefined
+  tapDance?: TapDanceEntry[]
+  combo?: ComboEntry[]
 }
 
 const LAYER_HEADER_HEIGHT = 7
@@ -234,6 +237,244 @@ function drawEncoder(
   }
 }
 
+// ── Combo / Tap Dance helpers ─────────────────────────────────────────
+
+/** Summary page height: A4 landscape height */
+const SUMMARY_PAGE_HEIGHT = 210
+const CARD_GAP = 3
+const CARD_PADDING = 2.5
+const CARD_CORNER = 1.5
+const BADGE_CORNER = 0.8
+const BADGE_PADDING_X = 1.5
+const BADGE_PADDING_Y = 0.8
+const BADGE_FONT_SIZE = 7
+const BADGE_HEIGHT = BADGE_FONT_SIZE * 0.353 + BADGE_PADDING_Y * 2 // pt to mm
+const COMBO_COLUMNS = 2
+const TD_COLUMNS = 3
+const TD_ROW_HEIGHT = 5
+const SECTION_HEADER_SIZE = 12
+const SECTION_HEADER_HEIGHT = 8
+
+export function isEmptyCombo(entry: ComboEntry): boolean {
+  return entry.key1 === 0 && entry.key2 === 0 && entry.key3 === 0 && entry.key4 === 0 && entry.output === 0
+}
+
+export function isEmptyTapDance(entry: TapDanceEntry): boolean {
+  return entry.onTap === 0 && entry.onHold === 0 && entry.onDoubleTap === 0 && entry.onTapHold === 0
+}
+
+function pdfKeycodeLabel(code: number, input: PdfExportInput): string {
+  const qmkId = input.serializeKeycode(code)
+  const label = input.keycodeLabel(qmkId)
+  const sanitized = sanitizeLabel(label.split('\n')[0])
+  if (sanitized.trim()) return sanitized
+  return sanitizeLabel(qmkId.replace(/^KC_/, ''))
+}
+
+/**
+ * Draw a key badge (rounded rect + centered label). Returns badge width.
+ */
+function drawKeyBadge(
+  doc: jsPDF,
+  label: string,
+  x: number,
+  y: number,
+  fillColor: [number, number, number] = [0xF1, 0xF5, 0xF9],
+  textColor: [number, number, number] = [0, 0, 0],
+): number {
+  doc.setFontSize(BADGE_FONT_SIZE)
+  const textW = doc.getTextWidth(label)
+  const badgeW = textW + BADGE_PADDING_X * 2
+
+  doc.setFillColor(...fillColor)
+  doc.setDrawColor(200)
+  doc.setLineWidth(0.15)
+  doc.roundedRect(x, y, badgeW, BADGE_HEIGHT, BADGE_CORNER, BADGE_CORNER, 'FD')
+
+  doc.setTextColor(...textColor)
+  doc.text(label, x + badgeW / 2, y + BADGE_HEIGHT / 2, { align: 'center', baseline: 'middle' })
+
+  return badgeW
+}
+
+/**
+ * Draw combo pages. Returns page heights for footer positioning.
+ */
+function drawComboPages(
+  doc: jsPDF,
+  combos: ComboEntry[],
+  input: PdfExportInput,
+): number[] {
+  const configured = combos.filter((c) => !isEmptyCombo(c))
+  if (configured.length === 0) return []
+
+  const pageHeights: number[] = []
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (COMBO_COLUMNS - 1)) / COMBO_COLUMNS
+  const comboCardHeight = 10
+
+  let curY = 0
+  let col = 0
+
+  function startPage(continued: boolean): void {
+    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
+    pageHeights.push(SUMMARY_PAGE_HEIGHT)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(SECTION_HEADER_SIZE)
+    doc.setTextColor(0)
+    doc.text(continued ? 'Combos (cont.)' : 'Combos', MARGIN, MARGIN + 5)
+    curY = MARGIN + SECTION_HEADER_HEIGHT
+    col = 0
+  }
+
+  startPage(false)
+
+  for (const combo of configured) {
+    // Check if we need a new row
+    if (col >= COMBO_COLUMNS) {
+      curY += comboCardHeight + CARD_GAP
+      col = 0
+    }
+
+    // Check if new page needed
+    if (curY + comboCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+      startPage(true)
+    }
+
+    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
+
+    // Card background
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(200)
+    doc.setLineWidth(0.2)
+    doc.roundedRect(cardX, curY, cardWidth, comboCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+
+    // Draw key badges inside card
+    doc.setFont('helvetica', 'normal')
+    let badgeX = cardX + CARD_PADDING
+    const badgeY = curY + (comboCardHeight - BADGE_HEIGHT) / 2
+    const badgeMidY = badgeY + BADGE_HEIGHT / 2
+
+    const keys = [combo.key1, combo.key2, combo.key3, combo.key4].filter((k) => k !== 0)
+    for (let i = 0; i < keys.length; i++) {
+      if (i > 0) {
+        doc.setFontSize(BADGE_FONT_SIZE)
+        doc.setTextColor(150)
+        doc.text('+', badgeX + 1.5, badgeMidY, { align: 'center', baseline: 'middle' })
+        badgeX += 3
+      }
+      const label = pdfKeycodeLabel(keys[i], input)
+      const w = drawKeyBadge(doc, label, badgeX, badgeY)
+      badgeX += w + 1
+    }
+
+    // Arrow separator
+    doc.setFontSize(BADGE_FONT_SIZE)
+    doc.setTextColor(150)
+    doc.text('->', badgeX + 1.5, badgeMidY, { align: 'center', baseline: 'middle' })
+    badgeX += 5
+
+    // Output key badge
+    const outputLabel = pdfKeycodeLabel(combo.output, input)
+    drawKeyBadge(doc, outputLabel, badgeX, badgeY)
+
+    col++
+  }
+
+  return pageHeights
+}
+
+/**
+ * Draw tap dance pages. Returns page heights for footer positioning.
+ */
+function drawTapDancePages(
+  doc: jsPDF,
+  tapDances: TapDanceEntry[],
+  input: PdfExportInput,
+): number[] {
+  const configured = tapDances
+    .map((td, idx) => ({ td, idx }))
+    .filter(({ td }) => !isEmptyTapDance(td))
+  if (configured.length === 0) return []
+
+  const pageHeights: number[] = []
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (TD_COLUMNS - 1)) / TD_COLUMNS
+  const tdCardHeight = TD_ROW_HEIGHT * 5 + CARD_PADDING * 2 // header + 4 rows + padding
+
+  let curY = 0
+  let col = 0
+
+  function startPage(continued: boolean): void {
+    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
+    pageHeights.push(SUMMARY_PAGE_HEIGHT)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(SECTION_HEADER_SIZE)
+    doc.setTextColor(0)
+    doc.text(continued ? 'Tap Dance (cont.)' : 'Tap Dance', MARGIN, MARGIN + 5)
+    curY = MARGIN + SECTION_HEADER_HEIGHT
+    col = 0
+  }
+
+  startPage(false)
+
+  for (const { td, idx } of configured) {
+    if (col >= TD_COLUMNS) {
+      curY += tdCardHeight + CARD_GAP
+      col = 0
+    }
+
+    if (curY + tdCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+      startPage(true)
+    }
+
+    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
+
+    // Card background
+    doc.setFillColor(255, 255, 255)
+    doc.setDrawColor(200)
+    doc.setLineWidth(0.2)
+    doc.roundedRect(cardX, curY, cardWidth, tdCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+
+    // Header row: TD index badge + tapping term
+    const headerY = curY + CARD_PADDING
+    const tdLabel = `TD${idx}`
+    drawKeyBadge(doc, tdLabel, cardX + CARD_PADDING, headerY, [0x1E, 0x29, 0x3B], [255, 255, 255])
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(BADGE_FONT_SIZE)
+    doc.setTextColor(120)
+    doc.text(`${td.tappingTerm}ms`, cardX + CARD_PADDING + 18, headerY + BADGE_HEIGHT / 2, { baseline: 'middle' })
+
+    // Action rows
+    const actions: [string, number][] = [
+      ['Tap:', td.onTap],
+      ['Hold:', td.onHold],
+      ['DblTap:', td.onDoubleTap],
+      ['TpHold:', td.onTapHold],
+    ]
+
+    for (let i = 0; i < actions.length; i++) {
+      const rowY = headerY + (i + 1) * TD_ROW_HEIGHT
+      const [rowLabel, keycode] = actions[i]
+
+      // Row label
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(BADGE_FONT_SIZE)
+      doc.setTextColor(120)
+      doc.text(rowLabel, cardX + CARD_PADDING, rowY + TD_ROW_HEIGHT / 2, { baseline: 'middle' })
+
+      // Key badge
+      if (keycode !== 0) {
+        const kcLabel = pdfKeycodeLabel(keycode, input)
+        drawKeyBadge(doc, kcLabel, cardX + CARD_PADDING + 18, rowY + (TD_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+      }
+    }
+
+    col++
+  }
+
+  return pageHeights
+}
+
 export function generateKeymapPdf(input: PdfExportInput): string {
   const visibleKeys = filterVisibleKeys(
     repositionLayoutKeys(input.keys, input.layoutOptions),
@@ -245,6 +486,26 @@ export function generateKeymapPdf(input: PdfExportInput): string {
   const bounds = computeBounds(visibleKeys)
   if (bounds.width === 0 || bounds.height === 0) {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+    const emptyPageHeight = 210 // A4 landscape height
+    const footerText = buildFooterText(input.deviceName, formatTimestamp(new Date()))
+    const emptyPageHeights: number[] = [emptyPageHeight]
+
+    if (input.combo) {
+      emptyPageHeights.push(...drawComboPages(doc, input.combo, input))
+    }
+    if (input.tapDance) {
+      emptyPageHeights.push(...drawTapDancePages(doc, input.tapDance, input))
+    }
+
+    const totalPages = doc.getNumberOfPages()
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(7)
+      doc.setTextColor(150)
+      const h = emptyPageHeights[p - 1] ?? emptyPageHeight
+      doc.text(footerText, PAGE_WIDTH / 2, h - MARGIN, { align: 'center' })
+    }
     return arrayBufferToBase64(doc.output('arraybuffer'))
   }
 
@@ -304,14 +565,31 @@ export function generateKeymapPdf(input: PdfExportInput): string {
     }
   }
 
-  // Footer on each page
+  // Track per-page heights: layer pages use dynamic pageHeight, summary pages use SUMMARY_PAGE_HEIGHT
+  const layerPageCount = doc.getNumberOfPages()
+  const perPageHeights: number[] = Array(layerPageCount).fill(pageHeight) as number[]
+
+  // Append combo pages (if any)
+  if (input.combo) {
+    const comboHeights = drawComboPages(doc, input.combo, input)
+    perPageHeights.push(...comboHeights)
+  }
+
+  // Append tap dance pages (if any)
+  if (input.tapDance) {
+    const tdHeights = drawTapDancePages(doc, input.tapDance, input)
+    perPageHeights.push(...tdHeights)
+  }
+
+  // Footer on each page (using per-page heights for correct Y positioning)
   const totalPages = doc.getNumberOfPages()
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(7)
     doc.setTextColor(150)
-    doc.text(footerText, PAGE_WIDTH / 2, pageHeight - MARGIN, { align: 'center' })
+    const h = perPageHeights[p - 1] ?? pageHeight
+    doc.text(footerText, PAGE_WIDTH / 2, h - MARGIN, { align: 'center' })
   }
 
   return arrayBufferToBase64(doc.output('arraybuffer'))

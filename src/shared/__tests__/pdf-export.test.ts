@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { generateKeymapPdf, type PdfExportInput } from '../pdf-export'
+import { generateKeymapPdf, isEmptyCombo, isEmptyTapDance, type PdfExportInput } from '../pdf-export'
 import type { KleKey } from '../kle/types'
+import type { ComboEntry, TapDanceEntry } from '../types/protocol'
 
 function makeKey(overrides: Partial<KleKey> = {}): KleKey {
   return {
@@ -105,6 +106,15 @@ function decodePdf(base64: string): Uint8Array {
 
 function pdfSignature(bytes: Uint8Array): string {
   return String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3], bytes[4])
+}
+
+/** Count PDF pages by counting /Type /Page occurrences (excluding /Type /Pages). */
+function countPages(base64: string): number {
+  const bytes = decodePdf(base64)
+  const text = new TextDecoder('latin1').decode(bytes)
+  // Match "/Type /Page" not followed by "s" (to exclude "/Type /Pages")
+  const matches = text.match(/\/Type\s+\/Page(?!s)/g)
+  return matches?.length ?? 0
 }
 
 describe('generateKeymapPdf', () => {
@@ -319,5 +329,147 @@ describe('generateKeymapPdf', () => {
     expect(typeof base64).toBe('string')
     const bytes = decodePdf(base64)
     expect(pdfSignature(bytes)).toBe('%PDF-')
+  })
+
+  // ── Combo / Tap Dance pages ─────────────────────────────────────────
+
+  it('backward compat: no combo/tapDance fields produces same page count', () => {
+    const withoutFields = generateKeymapPdf(createBasicInput())
+    const withUndefined = generateKeymapPdf(createBasicInput({
+      combo: undefined,
+      tapDance: undefined,
+    }))
+    expect(countPages(withoutFields)).toBe(countPages(withUndefined))
+    // Size should be roughly equal (within 5% tolerance for timestamp/ID diffs)
+    const sizeA = decodePdf(withoutFields).length
+    const sizeB = decodePdf(withUndefined).length
+    expect(Math.abs(sizeA - sizeB)).toBeLessThan(sizeA * 0.05)
+  })
+
+  it('empty combo/tapDance arrays produce no extra pages', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmpty = generateKeymapPdf(createBasicInput({
+      combo: [],
+      tapDance: [],
+    }))
+    expect(countPages(withEmpty)).toBe(countPages(baseline))
+  })
+
+  it('all-zero combo entries are skipped (no extra pages)', () => {
+    const emptyCombos: ComboEntry[] = [
+      { key1: 0, key2: 0, key3: 0, key4: 0, output: 0 },
+      { key1: 0, key2: 0, key3: 0, key4: 0, output: 0 },
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmptyCombos = generateKeymapPdf(createBasicInput({ combo: emptyCombos }))
+    expect(countPages(withEmptyCombos)).toBe(countPages(baseline))
+  })
+
+  it('all-zero tapDance entries are skipped (no extra pages)', () => {
+    const emptyTds: TapDanceEntry[] = [
+      { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 },
+      { onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 },
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmptyTds = generateKeymapPdf(createBasicInput({ tapDance: emptyTds }))
+    expect(countPages(withEmptyTds)).toBe(countPages(baseline))
+  })
+
+  it('configured combos add extra pages', () => {
+    const combos: ComboEntry[] = [
+      { key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 },
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withCombos = generateKeymapPdf(createBasicInput({ combo: combos }))
+    expect(countPages(withCombos)).toBeGreaterThan(countPages(baseline))
+    expect(decodePdf(withCombos).length).toBeGreaterThan(decodePdf(baseline).length)
+  })
+
+  it('configured tap dances add extra pages', () => {
+    const tapDances: TapDanceEntry[] = [
+      { onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 },
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withTds = generateKeymapPdf(createBasicInput({ tapDance: tapDances }))
+    expect(countPages(withTds)).toBeGreaterThan(countPages(baseline))
+    expect(decodePdf(withTds).length).toBeGreaterThan(decodePdf(baseline).length)
+  })
+
+  it('both combo + tap dance produce more pages than combo only', () => {
+    const combos: ComboEntry[] = [
+      { key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 },
+    ]
+    const tapDances: TapDanceEntry[] = [
+      { onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 },
+    ]
+    const comboOnly = generateKeymapPdf(createBasicInput({ combo: combos }))
+    const both = generateKeymapPdf(createBasicInput({ combo: combos, tapDance: tapDances }))
+    expect(countPages(both)).toBeGreaterThan(countPages(comboOnly))
+  })
+
+  it('empty keys with configured combos still generates combo pages', () => {
+    const combos: ComboEntry[] = [
+      { key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 },
+    ]
+    const base64 = generateKeymapPdf(createBasicInput({
+      keys: [],
+      keymap: new Map(),
+      combo: combos,
+    }))
+    const bytes = decodePdf(base64)
+    expect(pdfSignature(bytes)).toBe('%PDF-')
+    // Should have at least 2 pages: empty keymap page + combo page
+    expect(countPages(base64)).toBeGreaterThanOrEqual(2)
+  })
+
+  it('many entries cause pagination (40 combos, 30 tap dances)', () => {
+    const combos: ComboEntry[] = Array.from({ length: 40 }, (_, i) => ({
+      key1: 0x04, key2: 0x05 + (i % 3), key3: 0, key4: 0, output: 0x29,
+    }))
+    const tapDances: TapDanceEntry[] = Array.from({ length: 30 }, () => ({
+      onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200,
+    }))
+    const base64 = generateKeymapPdf(createBasicInput({ combo: combos, tapDance: tapDances }))
+    const bytes = decodePdf(base64)
+    expect(pdfSignature(bytes)).toBe('%PDF-')
+    // 1 layer + multiple combo pages + multiple TD pages
+    expect(countPages(base64)).toBeGreaterThan(3)
+  })
+})
+
+describe('isEmptyCombo', () => {
+  it('returns true for all-zero entry', () => {
+    expect(isEmptyCombo({ key1: 0, key2: 0, key3: 0, key4: 0, output: 0 })).toBe(true)
+  })
+
+  it('returns false when any key is set', () => {
+    expect(isEmptyCombo({ key1: 0x04, key2: 0, key3: 0, key4: 0, output: 0 })).toBe(false)
+    expect(isEmptyCombo({ key1: 0, key2: 0x05, key3: 0, key4: 0, output: 0 })).toBe(false)
+    expect(isEmptyCombo({ key1: 0, key2: 0, key3: 0, key4: 0, output: 0x29 })).toBe(false)
+  })
+
+  it('returns false for a fully configured entry', () => {
+    expect(isEmptyCombo({ key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 })).toBe(false)
+  })
+})
+
+describe('isEmptyTapDance', () => {
+  it('returns true for all-zero entry', () => {
+    expect(isEmptyTapDance({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 })).toBe(true)
+  })
+
+  it('returns false when any action is set', () => {
+    expect(isEmptyTapDance({ onTap: 0x04, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 })).toBe(false)
+    expect(isEmptyTapDance({ onTap: 0, onHold: 0x05, onDoubleTap: 0, onTapHold: 0, tappingTerm: 0 })).toBe(false)
+    expect(isEmptyTapDance({ onTap: 0, onHold: 0, onDoubleTap: 0x06, onTapHold: 0, tappingTerm: 0 })).toBe(false)
+    expect(isEmptyTapDance({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0x29, tappingTerm: 0 })).toBe(false)
+  })
+
+  it('returns true when only tappingTerm is set (no actions)', () => {
+    expect(isEmptyTapDance({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 })).toBe(true)
+  })
+
+  it('returns false for a fully configured entry', () => {
+    expect(isEmptyTapDance({ onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 })).toBe(false)
   })
 })

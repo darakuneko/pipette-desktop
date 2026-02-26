@@ -182,6 +182,8 @@ export function App() {
       isMask,
       findOuterKeycode,
       findInnerKeycode,
+      tapDance: keyboard.tapDanceEntries,
+      combo: keyboard.comboEntries,
     }),
     [
       deviceName,
@@ -191,6 +193,8 @@ export function App() {
       keyboard.encoderLayout,
       keyboard.encoderCount,
       decodedLayoutOptions,
+      keyboard.tapDanceEntries,
+      keyboard.comboEntries,
     ],
   )
 
@@ -516,6 +520,8 @@ export function App() {
         ? decodeLayoutOptions(vilData.layoutOptions, labels)
         : new Map<number, number>(),
       serializeKeycode,
+      tapDance: vilData.tapDance,
+      combo: vilData.combo,
     }
   }, [keyboard.definition, keyboard.layout, keyboard.encoderCount])
 
