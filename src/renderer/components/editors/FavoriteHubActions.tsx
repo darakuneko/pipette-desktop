@@ -54,19 +54,6 @@ export function FavoriteHubActions({
         <div className="flex gap-1">
           {!isUploading && hasHubPost && (
             <>
-              {hubPostUrl && (
-                <a
-                  href={hubPostUrl}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    void window.vialAPI.openExternal(hubPostUrl)
-                  }}
-                  className={HUB_BTN_BASE}
-                  data-testid="fav-hub-share-link"
-                >
-                  {t('hub.openInBrowser')}
-                </a>
-              )}
               {confirmRemoveId === entry.id ? (
                 <>
                   <button
@@ -89,6 +76,19 @@ export function FavoriteHubActions({
                 </>
               ) : (
                 <>
+                  {hubPostUrl && (
+                    <a
+                      href={hubPostUrl}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        void window.vialAPI.openExternal(hubPostUrl)
+                      }}
+                      className={HUB_BTN_BASE}
+                      data-testid="fav-hub-share-link"
+                    >
+                      {t('hub.openInBrowser')}
+                    </a>
+                  )}
                   {!hubNeedsDisplayName && onUpdateOnHub && (
                     <button
                       type="button"
