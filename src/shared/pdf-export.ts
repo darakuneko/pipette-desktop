@@ -484,7 +484,7 @@ function drawTapDancePages(
   if (configured.length === 0) return []
 
   const tdCardHeight = TD_ROW_HEIGHT * 5 + CARD_PADDING * 2 // header + 4 rows + padding
-  const grid = createCardGrid(doc, 'Tap Dance', TD_COLUMNS, tdCardHeight)
+  const grid = createCardGrid(doc, 'Tap-Hold / Tap Dance', TD_COLUMNS, tdCardHeight)
 
   for (const { td, idx } of configured) {
     const cardX = grid.nextCard()
@@ -745,20 +745,20 @@ function appendSummaryPages(
   input: PdfExportInput,
   pageHeights: number[],
 ): void {
-  if (input.combo) {
-    pageHeights.push(...drawComboPages(doc, input.combo, input))
-  }
   if (input.tapDance) {
     pageHeights.push(...drawTapDancePages(doc, input.tapDance, input))
   }
-  if (input.keyOverride) {
-    pageHeights.push(...drawKeyOverridePages(doc, input.keyOverride, input))
+  if (input.macros) {
+    pageHeights.push(...drawMacroPages(doc, input.macros, input))
+  }
+  if (input.combo) {
+    pageHeights.push(...drawComboPages(doc, input.combo, input))
   }
   if (input.altRepeatKey) {
     pageHeights.push(...drawAltRepeatKeyPages(doc, input.altRepeatKey, input))
   }
-  if (input.macros) {
-    pageHeights.push(...drawMacroPages(doc, input.macros, input))
+  if (input.keyOverride) {
+    pageHeights.push(...drawKeyOverridePages(doc, input.keyOverride, input))
   }
 }
 
