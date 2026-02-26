@@ -248,6 +248,7 @@
     "protocolVersion": "This keyboard's VIA protocol version is not supported. Please update your firmware.",
     "exportKeymapCFailed": "Failed to export keymap.c file",
     "exportPdfFailed": "Failed to export Keymap PDF",
+    "exportLayoutPdfFailed": "Failed to export Layout PDF",
     "sideloadFailed": "Failed to load JSON definition file",
     "sideloadInvalidDefinition": "Invalid keyboard definition: missing required fields (matrix, layouts)",
     "notVialCompatible": "This device may not be a Vial-compatible keyboard."
@@ -369,7 +370,10 @@
     "system": "System"
   },
   "layout": {
-    "keyboardLayout": "Key Labels"
+    "keyboardLayout": "Key Labels",
+    "exportAllPdf": "All",
+    "exportCurrentPdf": "Current",
+    "pdfFooterLabel": ".pdf"
   },
   "layoutStore": {
     "load": "Load",
