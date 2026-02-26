@@ -24,7 +24,7 @@ export interface FavoriteExportEntry {
 
 export interface FavoriteExportFile {
   app: 'pipette'
-  version: 1
+  version: 2
   scope: 'fav'
   exportedAt: string
   categories: Record<string, FavoriteExportEntry[]>

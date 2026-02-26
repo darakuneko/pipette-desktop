@@ -6,7 +6,8 @@ import { join } from 'node:path'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
-import { isValidFavoriteType, isFavoriteDataFile, FAV_EXPORT_KEY_MAP, FAV_TYPE_TO_EXPORT_KEY, isValidFavExportFile } from '../shared/favorite-data'
+import { isValidFavoriteType, isFavoriteDataFile, FAV_EXPORT_KEY_MAP, FAV_TYPE_TO_EXPORT_KEY, isValidFavExportFile, serializeFavData, deserializeFavData } from '../shared/favorite-data'
+import { serialize as serializeKeycode, deserialize as deserializeKeycode } from '../shared/keycodes/keycodes'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteIndex, FavoriteExportEntry, FavoriteImportResult } from '../shared/types/favorite-store'
@@ -205,7 +206,7 @@ export function setupFavoriteStore(): void {
             exportEntries.push({
               label: entry.label,
               savedAt: entry.savedAt,
-              data: parsed.data,
+              data: serializeFavData(scope, parsed.data, serializeKeycode),
             })
           } catch {
             // Skip unreadable entries
@@ -240,7 +241,7 @@ export function setupFavoriteStore(): void {
 
         const exportFile = {
           app: 'pipette' as const,
-          version: 1 as const,
+          version: 2 as const,
           scope: 'fav' as const,
           exportedAt: now.toISOString(),
           categories,
@@ -295,7 +296,8 @@ export function setupFavoriteStore(): void {
           await mkdir(dir, { recursive: true })
 
           for (const entry of entries) {
-            if (!isFavoriteDataFile({ type: favType, data: entry.data }, favType)) {
+            const normalizedData = deserializeFavData(favType, entry.data, deserializeKeycode)
+            if (!isFavoriteDataFile({ type: favType, data: normalizedData }, favType)) {
               skipped++
               continue
             }
@@ -313,7 +315,7 @@ export function setupFavoriteStore(): void {
             const filename = `${favType}_${timestamp}_${randomUUID().slice(0, 8)}.json`
             const filePath = getSafeFilePath(favType, filename)
 
-            await writeFile(filePath, JSON.stringify({ type: favType, data: entry.data }), 'utf-8')
+            await writeFile(filePath, JSON.stringify({ type: favType, data: normalizedData }), 'utf-8')
 
             const meta: SavedFavoriteMeta = {
               id: randomUUID(),

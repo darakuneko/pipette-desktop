@@ -341,13 +341,13 @@ describe('favorite-store', () => {
 
       const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
       expect(exported.app).toBe('pipette')
-      expect(exported.version).toBe(1)
+      expect(exported.version).toBe(2)
       expect(exported.scope).toBe('fav')
       expect(exported.exportedAt).toBeTruthy()
       expect(exported.categories.td).toHaveLength(1)
       expect(exported.categories.td[0].label).toBe('My TD')
       expect(exported.categories.td[0].savedAt).toBeTruthy()
-      expect(exported.categories.td[0].data).toEqual({ onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 })
+      expect(exported.categories.td[0].data).toEqual({ onTap: 'KC_A', onHold: 'KC_NO', onDoubleTap: 'KC_NO', onTapHold: 'KC_NO', tappingTerm: 200 })
     })
 
     it('exports a single entry by entryId', async () => {
@@ -487,13 +487,13 @@ describe('favorite-store', () => {
   })
 
   describe('import', () => {
-    const validTapDanceData = { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
-    const validComboData = { key1: 4, key2: 5, key3: 0, key4: 0, output: 6 }
+    const validTapDanceData = { onTap: 'KC_A', onHold: 'KC_NO', onDoubleTap: 'KC_NO', onTapHold: 'KC_NO', tappingTerm: 200 }
+    const validComboData = { key1: 'KC_A', key2: 'KC_B', key3: 'KC_NO', key4: 'KC_NO', output: 'KC_G' }
 
     function makeExportFile(categories: Record<string, Array<{ label: string; savedAt: string; data: unknown }>>): string {
       return JSON.stringify({
         app: 'pipette',
-        version: 1,
+        version: 2,
         scope: 'fav',
         exportedAt: new Date().toISOString(),
         categories,
@@ -566,6 +566,22 @@ describe('favorite-store', () => {
       expect(result.imported).toBe(0)
       expect(result.skipped).toBe(0)
       expect(result.error).toBe('cancelled')
+    })
+
+    it('rejects v1 export file (legacy format)', async () => {
+      const importFile = join(mockUserDataPath, 'import-v1.json')
+      await writeFile(importFile, JSON.stringify({
+        app: 'pipette', version: 1, scope: 'fav',
+        exportedAt: new Date().toISOString(),
+        categories: { td: [{ label: 'Old TD', savedAt: '2025-01-01T00:00:00.000Z', data: { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 } }] },
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid export file format')
     })
 
     it('rejects invalid export file format', async () => {

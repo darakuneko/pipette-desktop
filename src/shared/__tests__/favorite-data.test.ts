@@ -6,7 +6,10 @@ import {
   isFavoriteDataFile,
   FAV_EXPORT_KEY_MAP,
   FAV_TYPE_TO_EXPORT_KEY,
+  FAV_KEYCODE_FIELDS,
   isValidFavExportFile,
+  serializeFavData,
+  deserializeFavData,
 } from '../favorite-data'
 
 describe('isValidFavoriteType', () => {
@@ -207,7 +210,7 @@ describe('isValidFavExportFile', () => {
   function makeValidExportFile(categories: Record<string, unknown[]> = {}) {
     return {
       app: 'pipette',
-      version: 1,
+      version: 2,
       scope: 'fav',
       exportedAt: '2026-01-01T00:00:00.000Z',
       categories,
@@ -267,9 +270,15 @@ describe('isValidFavExportFile', () => {
       expect(isValidFavExportFile(file)).toBe(false)
     })
 
-    it('rejects wrong version', () => {
+    it('rejects version 1 (legacy)', () => {
       const file = makeValidExportFile()
-      ;(file as Record<string, unknown>).version = 2
+      ;(file as Record<string, unknown>).version = 1
+      expect(isValidFavExportFile(file)).toBe(false)
+    })
+
+    it('rejects unsupported version', () => {
+      const file = makeValidExportFile()
+      ;(file as Record<string, unknown>).version = 3
       expect(isValidFavExportFile(file)).toBe(false)
     })
 
@@ -364,5 +373,163 @@ describe('isValidFavExportFile', () => {
       const file = makeValidExportFile({ macro: [makeEntry({ data: null })] })
       expect(isValidFavExportFile(file)).toBe(true)
     })
+  })
+
+})
+
+describe('FAV_KEYCODE_FIELDS', () => {
+  it('lists keycode fields for tapDance (excludes tappingTerm)', () => {
+    expect(FAV_KEYCODE_FIELDS.tapDance).toEqual(['onTap', 'onHold', 'onDoubleTap', 'onTapHold'])
+  })
+
+  it('lists no fields for macro (already uses QMK names)', () => {
+    expect(FAV_KEYCODE_FIELDS.macro).toEqual([])
+  })
+
+  it('lists keycode fields for combo', () => {
+    expect(FAV_KEYCODE_FIELDS.combo).toEqual(['key1', 'key2', 'key3', 'key4', 'output'])
+  })
+
+  it('lists only trigger/replacement for keyOverride (excludes bitmasks)', () => {
+    expect(FAV_KEYCODE_FIELDS.keyOverride).toEqual(['triggerKey', 'replacementKey'])
+  })
+
+  it('lists only lastKey/altKey for altRepeatKey (excludes bitmasks)', () => {
+    expect(FAV_KEYCODE_FIELDS.altRepeatKey).toEqual(['lastKey', 'altKey'])
+  })
+
+  it('covers all FavoriteTypes', () => {
+    const ALL_FAV_TYPES = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey'] as const
+    for (const t of ALL_FAV_TYPES) {
+      expect(FAV_KEYCODE_FIELDS).toHaveProperty(t)
+    }
+  })
+})
+
+describe('serializeFavData', () => {
+  const mockSerialize = (code: number): string => `QMK_${code}`
+
+  it('converts keycode fields in tapDance data', () => {
+    const data = { onTap: 4, onHold: 5, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+    const result = serializeFavData('tapDance', data, mockSerialize)
+    expect(result).toEqual({
+      onTap: 'QMK_4',
+      onHold: 'QMK_5',
+      onDoubleTap: 'QMK_0',
+      onTapHold: 'QMK_0',
+      tappingTerm: 200,
+    })
+  })
+
+  it('converts keycode fields in combo data', () => {
+    const data = { key1: 4, key2: 5, key3: 0, key4: 0, output: 10 }
+    const result = serializeFavData('combo', data, mockSerialize)
+    expect(result).toEqual({
+      key1: 'QMK_4',
+      key2: 'QMK_5',
+      key3: 'QMK_0',
+      key4: 'QMK_0',
+      output: 'QMK_10',
+    })
+  })
+
+  it('converts only triggerKey/replacementKey in keyOverride data', () => {
+    const data = {
+      triggerKey: 4, replacementKey: 5,
+      layers: 0xffff, triggerMods: 2, negativeMods: 0,
+      suppressedMods: 0, options: 0, enabled: true,
+    }
+    const result = serializeFavData('keyOverride', data, mockSerialize)
+    expect(result).toEqual({
+      triggerKey: 'QMK_4', replacementKey: 'QMK_5',
+      layers: 0xffff, triggerMods: 2, negativeMods: 0,
+      suppressedMods: 0, options: 0, enabled: true,
+    })
+  })
+
+  it('converts only lastKey/altKey in altRepeatKey data', () => {
+    const data = { lastKey: 4, altKey: 5, allowedMods: 0, options: 0, enabled: true }
+    const result = serializeFavData('altRepeatKey', data, mockSerialize)
+    expect(result).toEqual({
+      lastKey: 'QMK_4', altKey: 'QMK_5',
+      allowedMods: 0, options: 0, enabled: true,
+    })
+  })
+
+  it('returns macro data unchanged', () => {
+    const data = [['tap', 'KC_A'], ['text', 'hello']]
+    const result = serializeFavData('macro', data, mockSerialize)
+    expect(result).toEqual(data)
+  })
+
+  it('does not mutate the original data object', () => {
+    const data = { onTap: 4, onHold: 5, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+    const original = { ...data }
+    serializeFavData('tapDance', data, mockSerialize)
+    expect(data).toEqual(original)
+  })
+
+  it('returns non-object data unchanged', () => {
+    expect(serializeFavData('tapDance', null, mockSerialize)).toBeNull()
+    expect(serializeFavData('tapDance', 42, mockSerialize)).toBe(42)
+  })
+})
+
+describe('deserializeFavData', () => {
+  const mockDeserialize = (val: string | number): number =>
+    typeof val === 'number' ? val : parseInt(val.replace('QMK_', ''), 10)
+
+  it('converts QMK name fields back to numbers in tapDance data', () => {
+    const data = { onTap: 'QMK_4', onHold: 'QMK_5', onDoubleTap: 'QMK_0', onTapHold: 'QMK_0', tappingTerm: 200 }
+    const result = deserializeFavData('tapDance', data, mockDeserialize)
+    expect(result).toEqual({
+      onTap: 4, onHold: 5, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200,
+    })
+  })
+
+  it('passes through already-numeric fields (backward compat v1)', () => {
+    const data = { onTap: 4, onHold: 5, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 }
+    const result = deserializeFavData('tapDance', data, mockDeserialize)
+    expect(result).toEqual(data)
+  })
+
+  it('converts combo data', () => {
+    const data = { key1: 'QMK_4', key2: 'QMK_5', key3: 'QMK_0', key4: 'QMK_0', output: 'QMK_10' }
+    const result = deserializeFavData('combo', data, mockDeserialize)
+    expect(result).toEqual({ key1: 4, key2: 5, key3: 0, key4: 0, output: 10 })
+  })
+
+  it('returns macro data unchanged', () => {
+    const data = [['tap', 'KC_A'], ['text', 'hello']]
+    const result = deserializeFavData('macro', data, mockDeserialize)
+    expect(result).toEqual(data)
+  })
+
+  it('does not mutate the original data object', () => {
+    const data = { onTap: 'QMK_4', onHold: 'QMK_5', onDoubleTap: 'QMK_0', onTapHold: 'QMK_0', tappingTerm: 200 }
+    const original = { ...data }
+    deserializeFavData('tapDance', data, mockDeserialize)
+    expect(data).toEqual(original)
+  })
+
+  it('returns non-object data unchanged', () => {
+    expect(deserializeFavData('tapDance', null, mockDeserialize)).toBeNull()
+  })
+})
+
+describe('serializeFavData / deserializeFavData roundtrip', () => {
+  const mockSerialize = (code: number): string => `QMK_${code}`
+  const mockDeserialize = (val: string | number): number =>
+    typeof val === 'number' ? val : parseInt(val.replace('QMK_', ''), 10)
+
+  it.each([
+    ['tapDance', { onTap: 48, onHold: 68, onDoubleTap: 230, onTapHold: 226, tappingTerm: 150 }],
+    ['combo', { key1: 4, key2: 5, key3: 0, key4: 0, output: 10 }],
+    ['keyOverride', { triggerKey: 4, replacementKey: 5, layers: 0xffff, triggerMods: 0, negativeMods: 0, suppressedMods: 0, options: 0, enabled: true }],
+    ['altRepeatKey', { lastKey: 4, altKey: 5, allowedMods: 0, options: 0, enabled: true }],
+  ] as const)('roundtrips %s data', (type, data) => {
+    const serialized = serializeFavData(type, data, mockSerialize)
+    const deserialized = deserializeFavData(type, serialized, mockDeserialize)
+    expect(deserialized).toEqual(data)
   })
 })
