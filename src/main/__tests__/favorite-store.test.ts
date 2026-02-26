@@ -568,6 +568,22 @@ describe('favorite-store', () => {
       expect(result.error).toBe('cancelled')
     })
 
+    it('rejects v1 export file (legacy format)', async () => {
+      const importFile = join(mockUserDataPath, 'import-v1.json')
+      await writeFile(importFile, JSON.stringify({
+        app: 'pipette', version: 1, scope: 'fav',
+        exportedAt: new Date().toISOString(),
+        categories: { td: [{ label: 'Old TD', savedAt: '2025-01-01T00:00:00.000Z', data: { onTap: 4, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 } }] },
+      }), 'utf-8')
+
+      vi.mocked(dialog.showOpenDialog).mockResolvedValue({ canceled: false, filePaths: [importFile] })
+
+      const handler = getHandler(IpcChannels.FAVORITE_STORE_IMPORT)
+      const result = await handler(fakeEvent) as { success: boolean; imported: number; skipped: number; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toBe('Invalid export file format')
+    })
+
     it('rejects invalid export file format', async () => {
       const importFile = join(mockUserDataPath, 'import-bad-format.json')
       await writeFile(importFile, JSON.stringify({ not: 'a valid export' }), 'utf-8')
