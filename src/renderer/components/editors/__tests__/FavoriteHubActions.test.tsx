@@ -70,11 +70,10 @@ describe('FavoriteHubActions', () => {
     expect(screen.queryByTestId('fav-hub-upload-btn')).not.toBeInTheDocument()
   })
 
-  it('shows Open link when entry has hubPostId, hubOrigin, and postType', () => {
+  it('shows Open link when entry has hubPostId and hubOrigin', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY_WITH_HUB}
-        postType="td"
         hubOrigin="https://hub.example.com"
         onUpdateOnHub={vi.fn()}
       />,
@@ -82,7 +81,7 @@ describe('FavoriteHubActions', () => {
 
     const link = screen.getByTestId('fav-hub-share-link')
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', 'https://hub.example.com/?post_type=td')
+    expect(link).toHaveAttribute('href', 'https://hub.example.com/post/hub-post-42')
     expect(screen.getByText('hub.openInBrowser')).toBeInTheDocument()
   })
 
@@ -90,7 +89,6 @@ describe('FavoriteHubActions', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY_WITH_HUB}
-        postType="td"
         hubOrigin="https://hub.example.com"
         onUpdateOnHub={vi.fn()}
       />,
@@ -98,7 +96,7 @@ describe('FavoriteHubActions', () => {
 
     fireEvent.click(screen.getByTestId('fav-hub-share-link'))
     expect(window.vialAPI.openExternal).toHaveBeenCalledWith(
-      'https://hub.example.com/?post_type=td',
+      'https://hub.example.com/post/hub-post-42',
     )
   })
 
@@ -106,7 +104,6 @@ describe('FavoriteHubActions', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY_WITH_HUB}
-        postType="td"
         onUpdateOnHub={vi.fn()}
       />,
     )
@@ -144,7 +141,6 @@ describe('FavoriteHubActions', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY_WITH_HUB}
-        postType="td"
         hubNeedsDisplayName
         hubOrigin="https://hub.example.com"
         onUploadToHub={vi.fn()}
