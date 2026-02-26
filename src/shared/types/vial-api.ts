@@ -13,7 +13,7 @@ import type {
   UnlockStatus,
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
-import type { SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
+import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo } from './sync'
 import type { PipetteSettings } from './pipette-settings'
@@ -181,5 +181,5 @@ export interface VialAPI {
   hubUpdateFavoritePost(params: HubUpdateFavoritePostParams): Promise<HubUploadResult>
 
   // Favorite Store extensions
-  favoriteStoreSetHubPostId(type: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+  favoriteStoreSetHubPostId(type: FavoriteType, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
 }

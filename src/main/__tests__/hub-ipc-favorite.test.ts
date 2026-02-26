@@ -388,6 +388,61 @@ describe('hub-ipc favorite handlers', () => {
   })
 
   // ----------------------------------------------------------------
+  // Security: path traversal and schema validation
+  // ----------------------------------------------------------------
+  describe('security', () => {
+    it('rejects entries with unsafe filename (path traversal)', async () => {
+      mockHubAuth()
+      const maliciousIndex: FavoriteIndex = {
+        type: 'tapDance',
+        entries: [{
+          id: 'evil-entry',
+          label: 'Evil',
+          savedAt: '2025-01-01T00:00:00.000Z',
+          filename: '../../etc/passwd',
+        }],
+      }
+      mockFavoriteFs('tapDance', maliciousIndex)
+
+      const handler = getHandlerFor('hub:upload-favorite-post')
+      const result = await handler({}, {
+        type: 'tapDance',
+        entryId: 'evil-entry',
+        title: 'Test',
+      })
+
+      expect(result).toEqual({ success: false, error: 'Invalid filename' })
+      expect(uploadFeaturePostToHub).not.toHaveBeenCalled()
+    })
+
+    it('rejects entries where stored type does not match requested type', async () => {
+      mockHubAuth()
+      const index: FavoriteIndex = {
+        type: 'tapDance',
+        entries: [{
+          id: 'entry-1',
+          label: 'Test',
+          savedAt: '2025-01-01T00:00:00.000Z',
+          filename: 'entry-1.json',
+        }],
+      }
+      // Data file claims to be a different type
+      const mismatchedData = { type: 'macro', data: [['tap', 4]] }
+      mockFavoriteFs('tapDance', index, mismatchedData)
+
+      const handler = getHandlerFor('hub:upload-favorite-post')
+      const result = await handler({}, {
+        type: 'tapDance',
+        entryId: 'entry-1',
+        title: 'Test',
+      })
+
+      expect(result).toEqual({ success: false, error: 'Entry type mismatch' })
+      expect(uploadFeaturePostToHub).not.toHaveBeenCalled()
+    })
+  })
+
+  // ----------------------------------------------------------------
   // post_type mapping
   // ----------------------------------------------------------------
   describe('post_type mapping', () => {

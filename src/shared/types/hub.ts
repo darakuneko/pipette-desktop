@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Shared types for Hub upload operations
 
+import type { FavoriteType } from './favorite-store'
+
 export interface HubUploadPostParams {
   title: string
   keyboardName: string
@@ -90,7 +92,7 @@ export interface HubUserResult {
 export type HubFeaturePostType = 'td' | 'macro' | 'combo' | 'ko' | 'ark'
 
 export interface HubUploadFavoritePostParams {
-  type: string // FavoriteType
+  type: FavoriteType
   entryId: string
   title: string
 }

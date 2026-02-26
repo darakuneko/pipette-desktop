@@ -174,6 +174,10 @@ function buildFiles(params: HubUploadPostParams): HubUploadFiles {
   return files
 }
 
+function isSafePathSegment(segment: string): boolean {
+  return /^[a-zA-Z0-9_.-]+$/.test(segment) && segment !== '.' && segment !== '..'
+}
+
 async function buildFavoriteExportJson(type: FavoriteType, entryId: string): Promise<string> {
   const favDir = join(app.getPath('userData'), 'sync', 'favorites', type)
   const indexPath = join(favDir, 'index.json')
@@ -182,10 +186,12 @@ async function buildFavoriteExportJson(type: FavoriteType, entryId: string): Pro
   const entry = index.entries.find((e) => e.id === entryId && !e.deletedAt)
   if (!entry) throw new Error('Entry not found')
 
+  if (!isSafePathSegment(entry.filename)) throw new Error('Invalid filename')
   const filePath = join(favDir, entry.filename)
   const fileRaw = await readFile(filePath, 'utf-8')
   const parsed = JSON.parse(fileRaw) as { type: string; data: unknown }
   if (parsed.data == null) throw new Error('Entry data is empty')
+  if (parsed.type !== type) throw new Error('Entry type mismatch')
 
   const exportKey = FAV_TYPE_TO_EXPORT_KEY[type]
   const serializedData = serializeFavData(type, parsed.data, serializeKeycode)

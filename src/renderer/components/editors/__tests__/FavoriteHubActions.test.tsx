@@ -81,7 +81,7 @@ describe('FavoriteHubActions', () => {
 
     const link = screen.getByTestId('fav-hub-share-link')
     expect(link).toBeInTheDocument()
-    expect(link).toHaveAttribute('href', 'https://hub.example.com/posts/hub-post-42')
+    expect(link).toHaveAttribute('href', 'https://hub.example.com/post/hub-post-42')
     expect(screen.getByText('hub.openInBrowser')).toBeInTheDocument()
   })
 
@@ -96,7 +96,7 @@ describe('FavoriteHubActions', () => {
 
     fireEvent.click(screen.getByTestId('fav-hub-share-link'))
     expect(window.vialAPI.openExternal).toHaveBeenCalledWith(
-      'https://hub.example.com/posts/hub-post-42',
+      'https://hub.example.com/post/hub-post-42',
     )
   })
 
@@ -111,7 +111,7 @@ describe('FavoriteHubActions', () => {
     expect(screen.queryByTestId('fav-hub-share-link')).not.toBeInTheDocument()
   })
 
-  it('shows needsDisplayName message and hides action buttons when hubNeedsDisplayName is true', () => {
+  it('shows needsDisplayName message and hides upload button for non-uploaded entries', () => {
     render(
       <FavoriteHubActions
         entry={ENTRY}
@@ -123,8 +123,24 @@ describe('FavoriteHubActions', () => {
     expect(screen.getByTestId('fav-hub-needs-display-name')).toBeInTheDocument()
     expect(screen.getByText('hub.needsDisplayName')).toBeInTheDocument()
     expect(screen.queryByTestId('fav-hub-upload-btn')).not.toBeInTheDocument()
+  })
+
+  it('shows remove/share but hides update when needsDisplayName is true for uploaded entries', () => {
+    render(
+      <FavoriteHubActions
+        entry={ENTRY_WITH_HUB}
+        hubNeedsDisplayName
+        hubOrigin="https://hub.example.com"
+        onUploadToHub={vi.fn()}
+        onUpdateOnHub={vi.fn()}
+        onRemoveFromHub={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByTestId('fav-hub-needs-display-name')).toBeInTheDocument()
     expect(screen.queryByTestId('fav-hub-update-btn')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('fav-hub-remove-btn')).not.toBeInTheDocument()
+    expect(screen.getByTestId('fav-hub-remove-btn')).toBeInTheDocument()
+    expect(screen.getByTestId('fav-hub-share-link')).toBeInTheDocument()
   })
 
   it('shows Uploading indicator when hubUploading matches entry.id', () => {
