@@ -267,6 +267,7 @@ const KO_COLUMNS = 3
 const KO_ROW_HEIGHT = 5
 const AR_COLUMNS = 2
 const MACRO_COLUMNS = 2
+const SINGLE_ROW_CARD_HEIGHT = 10
 const SECTION_HEADER_SIZE = 12
 const SECTION_HEADER_HEIGHT = 8
 
@@ -430,18 +431,17 @@ function drawComboPages(
   const configured = combos.filter((c) => !isEmptyCombo(c))
   if (configured.length === 0) return []
 
-  const comboCardHeight = 10
-  const grid = createCardGrid(doc, 'Combos', COMBO_COLUMNS, comboCardHeight)
+  const grid = createCardGrid(doc, 'Combos', COMBO_COLUMNS, SINGLE_ROW_CARD_HEIGHT)
 
   for (const combo of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, comboCardHeight)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, SINGLE_ROW_CARD_HEIGHT)
 
     // Draw key badges inside card
     doc.setFont('helvetica', 'normal')
     let badgeX = cardX + CARD_PADDING
-    const badgeY = grid.curY + (comboCardHeight - BADGE_HEIGHT) / 2
+    const badgeY = grid.curY + (SINGLE_ROW_CARD_HEIGHT - BADGE_HEIGHT) / 2
     const badgeMidY = badgeY + BADGE_HEIGHT / 2
 
     const keys = [combo.key1, combo.key2, combo.key3, combo.key4].filter((k) => k !== 0)
@@ -601,18 +601,17 @@ function drawAltRepeatKeyPages(
     .filter(({ ar }) => !isEmptyAltRepeatKey(ar))
   if (configured.length === 0) return []
 
-  const arCardHeight = 10
-  const grid = createCardGrid(doc, 'Alt Repeat Keys', AR_COLUMNS, arCardHeight)
+  const grid = createCardGrid(doc, 'Alt Repeat Keys', AR_COLUMNS, SINGLE_ROW_CARD_HEIGHT)
 
   for (const { ar, idx } of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, arCardHeight, ar.enabled)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, SINGLE_ROW_CARD_HEIGHT, ar.enabled)
 
     // Draw AR index badge + last key -> alt key
     doc.setFont('helvetica', 'normal')
     let badgeX = cardX + CARD_PADDING
-    const badgeY = grid.curY + (arCardHeight - BADGE_HEIGHT) / 2
+    const badgeY = grid.curY + (SINGLE_ROW_CARD_HEIGHT - BADGE_HEIGHT) / 2
     const badgeMidY = badgeY + BADGE_HEIGHT / 2
 
     const w0 = drawKeyBadge(doc, `AR${idx}`, badgeX, badgeY, [0x1E, 0x29, 0x3B], [255, 255, 255])
@@ -668,17 +667,16 @@ function drawMacroPages(
     .filter(({ actions }) => !isEmptyMacro(actions))
   if (configured.length === 0) return []
 
-  const macroCardHeight = 10
-  const grid = createCardGrid(doc, 'Macros', MACRO_COLUMNS, macroCardHeight)
+  const grid = createCardGrid(doc, 'Macros', MACRO_COLUMNS, SINGLE_ROW_CARD_HEIGHT)
 
   for (const { actions, idx } of configured) {
     const cardX = grid.nextCard()
 
-    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, macroCardHeight)
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, SINGLE_ROW_CARD_HEIGHT)
 
     doc.setFont('helvetica', 'normal')
     let badgeX = cardX + CARD_PADDING
-    const badgeY = grid.curY + (macroCardHeight - BADGE_HEIGHT) / 2
+    const badgeY = grid.curY + (SINGLE_ROW_CARD_HEIGHT - BADGE_HEIGHT) / 2
     const badgeMidY = badgeY + BADGE_HEIGHT / 2
     const maxX = cardX + grid.cardWidth - CARD_PADDING
 
@@ -738,6 +736,52 @@ function drawMacroPages(
   return grid.pageHeights
 }
 
+/**
+ * Append summary section pages (combos, tap dance, key overrides, alt repeat keys, macros).
+ * Each draw function adds pages to the doc and returns per-page heights.
+ */
+function appendSummaryPages(
+  doc: jsPDF,
+  input: PdfExportInput,
+  pageHeights: number[],
+): void {
+  if (input.combo) {
+    pageHeights.push(...drawComboPages(doc, input.combo, input))
+  }
+  if (input.tapDance) {
+    pageHeights.push(...drawTapDancePages(doc, input.tapDance, input))
+  }
+  if (input.keyOverride) {
+    pageHeights.push(...drawKeyOverridePages(doc, input.keyOverride, input))
+  }
+  if (input.altRepeatKey) {
+    pageHeights.push(...drawAltRepeatKeyPages(doc, input.altRepeatKey, input))
+  }
+  if (input.macros) {
+    pageHeights.push(...drawMacroPages(doc, input.macros, input))
+  }
+}
+
+/**
+ * Render footer text on every page, using per-page heights for correct Y positioning.
+ */
+function renderFooters(
+  doc: jsPDF,
+  footerText: string,
+  pageHeights: number[],
+  fallbackHeight: number,
+): void {
+  const totalPages = doc.getNumberOfPages()
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7)
+    doc.setTextColor(150)
+    const h = pageHeights[p - 1] ?? fallbackHeight
+    doc.text(footerText, PAGE_WIDTH / 2, h - MARGIN, { align: 'center' })
+  }
+}
+
 export function generateKeymapPdf(input: PdfExportInput): string {
   const visibleKeys = filterVisibleKeys(
     repositionLayoutKeys(input.keys, input.layoutOptions),
@@ -749,35 +793,11 @@ export function generateKeymapPdf(input: PdfExportInput): string {
   const bounds = computeBounds(visibleKeys)
   if (bounds.width === 0 || bounds.height === 0) {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
-    const emptyPageHeight = 210 // A4 landscape height
     const footerText = buildFooterText(input.deviceName, formatTimestamp(new Date()))
-    const emptyPageHeights: number[] = [emptyPageHeight]
+    const pageHeights: number[] = [SUMMARY_PAGE_HEIGHT]
 
-    if (input.combo) {
-      emptyPageHeights.push(...drawComboPages(doc, input.combo, input))
-    }
-    if (input.tapDance) {
-      emptyPageHeights.push(...drawTapDancePages(doc, input.tapDance, input))
-    }
-    if (input.keyOverride) {
-      emptyPageHeights.push(...drawKeyOverridePages(doc, input.keyOverride, input))
-    }
-    if (input.altRepeatKey) {
-      emptyPageHeights.push(...drawAltRepeatKeyPages(doc, input.altRepeatKey, input))
-    }
-    if (input.macros) {
-      emptyPageHeights.push(...drawMacroPages(doc, input.macros, input))
-    }
-
-    const totalPages = doc.getNumberOfPages()
-    for (let p = 1; p <= totalPages; p++) {
-      doc.setPage(p)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(7)
-      doc.setTextColor(150)
-      const h = emptyPageHeights[p - 1] ?? emptyPageHeight
-      doc.text(footerText, PAGE_WIDTH / 2, h - MARGIN, { align: 'center' })
-    }
+    appendSummaryPages(doc, input, pageHeights)
+    renderFooters(doc, footerText, pageHeights, SUMMARY_PAGE_HEIGHT)
     return arrayBufferToBase64(doc.output('arraybuffer'))
   }
 
@@ -841,46 +861,8 @@ export function generateKeymapPdf(input: PdfExportInput): string {
   const layerPageCount = doc.getNumberOfPages()
   const perPageHeights: number[] = Array(layerPageCount).fill(pageHeight) as number[]
 
-  // Append combo pages (if any)
-  if (input.combo) {
-    const comboHeights = drawComboPages(doc, input.combo, input)
-    perPageHeights.push(...comboHeights)
-  }
-
-  // Append tap dance pages (if any)
-  if (input.tapDance) {
-    const tdHeights = drawTapDancePages(doc, input.tapDance, input)
-    perPageHeights.push(...tdHeights)
-  }
-
-  // Append key override pages (if any)
-  if (input.keyOverride) {
-    const koHeights = drawKeyOverridePages(doc, input.keyOverride, input)
-    perPageHeights.push(...koHeights)
-  }
-
-  // Append alt repeat key pages (if any)
-  if (input.altRepeatKey) {
-    const arHeights = drawAltRepeatKeyPages(doc, input.altRepeatKey, input)
-    perPageHeights.push(...arHeights)
-  }
-
-  // Append macro pages (if any)
-  if (input.macros) {
-    const macroHeights = drawMacroPages(doc, input.macros, input)
-    perPageHeights.push(...macroHeights)
-  }
-
-  // Footer on each page (using per-page heights for correct Y positioning)
-  const totalPages = doc.getNumberOfPages()
-  for (let p = 1; p <= totalPages; p++) {
-    doc.setPage(p)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(7)
-    doc.setTextColor(150)
-    const h = perPageHeights[p - 1] ?? pageHeight
-    doc.text(footerText, PAGE_WIDTH / 2, h - MARGIN, { align: 'center' })
-  }
+  appendSummaryPages(doc, input, perPageHeights)
+  renderFooters(doc, footerText, perPageHeights, pageHeight)
 
   return arrayBufferToBase64(doc.output('arraybuffer'))
 }

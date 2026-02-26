@@ -684,8 +684,8 @@ describe('generateKeymapPdf - Macros', () => {
 
   it('many macros cause pagination', () => {
     const macros: PdfMacroAction[][] = Array.from({ length: 40 }, () => [
-      { type: 'text' as const, text: 'Hello World' },
-      { type: 'tap' as const, keycodes: [0x04] },
+      { type: 'text', text: 'Hello World' },
+      { type: 'tap', keycodes: [0x04] },
     ])
     const base64 = generateKeymapPdf(createBasicInput({ macros }))
     expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
