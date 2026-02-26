@@ -7,7 +7,9 @@ import {
   isEmptyTapDance,
   isEmptyKeyOverride,
   isEmptyAltRepeatKey,
+  isEmptyMacro,
   type PdfExportInput,
+  type PdfMacroAction,
 } from '../pdf-export'
 import type { KleKey } from '../kle/types'
 import type { AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry } from '../types/protocol'
@@ -600,5 +602,107 @@ describe('generateKeymapPdf - Key Override / Alt Repeat Key', () => {
     expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
     // 1 layer + multiple KO pages
     expect(countPages(base64)).toBeGreaterThan(2)
+  })
+})
+
+// ── Macro tests ────────────────────────────────────────────────────
+
+describe('isEmptyMacro', () => {
+  it('returns true for empty actions array', () => {
+    expect(isEmptyMacro([])).toBe(true)
+  })
+
+  it('returns false for text action', () => {
+    expect(isEmptyMacro([{ type: 'text', text: 'hello' }])).toBe(false)
+  })
+
+  it('returns false for tap action', () => {
+    expect(isEmptyMacro([{ type: 'tap', keycodes: [0x04] }])).toBe(false)
+  })
+
+  it('returns false for delay action', () => {
+    expect(isEmptyMacro([{ type: 'delay', delay: 500 }])).toBe(false)
+  })
+})
+
+describe('generateKeymapPdf - Macros', () => {
+  it('empty macros array produces no extra pages', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmpty = generateKeymapPdf(createBasicInput({ macros: [] }))
+    expect(countPages(withEmpty)).toBe(countPages(baseline))
+  })
+
+  it('all-empty macros are skipped (no extra pages)', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmpty = generateKeymapPdf(createBasicInput({ macros: [[], []] }))
+    expect(countPages(withEmpty)).toBe(countPages(baseline))
+  })
+
+  it('configured macros add extra pages', () => {
+    const macros: PdfMacroAction[][] = [
+      [{ type: 'text', text: 'Hello' }, { type: 'tap', keycodes: [0x04, 0x05] }],
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withMacros = generateKeymapPdf(createBasicInput({ macros }))
+    expect(countPages(withMacros)).toBeGreaterThan(countPages(baseline))
+    expect(decodePdf(withMacros).length).toBeGreaterThan(decodePdf(baseline).length)
+  })
+
+  it('macros with all action types render correctly', () => {
+    const macros: PdfMacroAction[][] = [
+      [
+        { type: 'text', text: 'Hello World' },
+        { type: 'tap', keycodes: [0x04, 0x05] },
+        { type: 'down', keycodes: [0x06] },
+        { type: 'delay', delay: 500 },
+        { type: 'up', keycodes: [0x06] },
+      ],
+    ]
+    const base64 = generateKeymapPdf(createBasicInput({ macros }))
+    expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
+    expect(countPages(base64)).toBeGreaterThan(1)
+  })
+
+  it('all five feature types together produce more pages than four', () => {
+    const combos: ComboEntry[] = [{ key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 }]
+    const tapDances: TapDanceEntry[] = [{ onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 }]
+    const keyOverrides: KeyOverrideEntry[] = [makeKo({ triggerKey: 0x04, replacementKey: 0x05 })]
+    const altRepeatKeys: AltRepeatKeyEntry[] = [makeAr({ lastKey: 0x04, altKey: 0x05 })]
+    const macros: PdfMacroAction[][] = [[{ type: 'text', text: 'Hello' }]]
+
+    const fourTypes = generateKeymapPdf(createBasicInput({
+      combo: combos, tapDance: tapDances,
+      keyOverride: keyOverrides, altRepeatKey: altRepeatKeys,
+    }))
+    const fiveTypes = generateKeymapPdf(createBasicInput({
+      combo: combos, tapDance: tapDances,
+      keyOverride: keyOverrides, altRepeatKey: altRepeatKeys,
+      macros,
+    }))
+    expect(countPages(fiveTypes)).toBeGreaterThan(countPages(fourTypes))
+  })
+
+  it('many macros cause pagination', () => {
+    const macros: PdfMacroAction[][] = Array.from({ length: 40 }, () => [
+      { type: 'text' as const, text: 'Hello World' },
+      { type: 'tap' as const, keycodes: [0x04] },
+    ])
+    const base64 = generateKeymapPdf(createBasicInput({ macros }))
+    expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
+    // 1 layer + multiple macro pages
+    expect(countPages(base64)).toBeGreaterThan(2)
+  })
+
+  it('empty keys with configured macros still generates macro pages', () => {
+    const macros: PdfMacroAction[][] = [
+      [{ type: 'text', text: 'Hello' }],
+    ]
+    const base64 = generateKeymapPdf(createBasicInput({
+      keys: [],
+      keymap: new Map(),
+      macros,
+    }))
+    expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
+    expect(countPages(base64)).toBeGreaterThanOrEqual(2)
   })
 })

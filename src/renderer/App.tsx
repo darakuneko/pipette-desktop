@@ -186,6 +186,7 @@ export function App() {
       combo: keyboard.comboEntries,
       keyOverride: keyboard.keyOverrideEntries,
       altRepeatKey: keyboard.altRepeatKeyEntries,
+      macros: deserializedMacros,
     }),
     [
       deviceName,
@@ -199,6 +200,7 @@ export function App() {
       keyboard.comboEntries,
       keyboard.keyOverrideEntries,
       keyboard.altRepeatKeyEntries,
+      deserializedMacros,
     ],
   )
 
@@ -528,8 +530,11 @@ export function App() {
       combo: vilData.combo,
       keyOverride: vilData.keyOverride,
       altRepeatKey: vilData.altRepeatKey,
+      macros: splitMacroBuffer(vilData.macros, keyboard.macroCount)
+        .map((m) => deserializeMacro(m, keyboard.vialProtocol)),
     }
-  }, [keyboard.definition, keyboard.layout, keyboard.encoderCount])
+  }, [keyboard.definition, keyboard.layout, keyboard.encoderCount,
+      keyboard.macroCount, keyboard.vialProtocol])
 
   const buildVilExportContext = useCallback((vilData: VilFile) => {
     const macroActions = splitMacroBuffer(vilData.macros, keyboard.macroCount)

@@ -41,7 +41,16 @@ export interface PdfExportInput {
   combo?: ComboEntry[]
   keyOverride?: KeyOverrideEntry[]
   altRepeatKey?: AltRepeatKeyEntry[]
+  macros?: PdfMacroAction[][]
 }
+
+// Structurally compatible with MacroAction from preload/macro.ts
+export type PdfMacroAction =
+  | { type: 'text'; text: string }
+  | { type: 'tap'; keycodes: number[] }
+  | { type: 'down'; keycodes: number[] }
+  | { type: 'up'; keycodes: number[] }
+  | { type: 'delay'; delay: number }
 
 const LAYER_HEADER_HEIGHT = 7
 
@@ -257,6 +266,7 @@ const TD_ROW_HEIGHT = 5
 const KO_COLUMNS = 3
 const KO_ROW_HEIGHT = 5
 const AR_COLUMNS = 2
+const MACRO_COLUMNS = 2
 const SECTION_HEADER_SIZE = 12
 const SECTION_HEADER_HEIGHT = 8
 
@@ -334,6 +344,10 @@ function drawCardRect(
   doc.setDrawColor(200)
   doc.setLineWidth(0.2)
   doc.roundedRect(x, y, width, height, CARD_CORNER, CARD_CORNER, 'FD')
+}
+
+export function isEmptyMacro(actions: PdfMacroAction[]): boolean {
+  return actions.length === 0
 }
 
 export function isEmptyCombo(entry: ComboEntry): boolean {
@@ -638,6 +652,92 @@ function drawAltRepeatKeyPages(
   return grid.pageHeights
 }
 
+// ── Macro drawing ─────────────────────────────────────────────────
+
+/**
+ * Draw macro pages. Returns page heights for footer positioning.
+ * Each macro is rendered as a single-row card with M{idx} badge and inline actions.
+ */
+function drawMacroPages(
+  doc: jsPDF,
+  macros: PdfMacroAction[][],
+  input: PdfExportInput,
+): number[] {
+  const configured = macros
+    .map((actions, idx) => ({ actions, idx }))
+    .filter(({ actions }) => !isEmptyMacro(actions))
+  if (configured.length === 0) return []
+
+  const macroCardHeight = 10
+  const grid = createCardGrid(doc, 'Macros', MACRO_COLUMNS, macroCardHeight)
+
+  for (const { actions, idx } of configured) {
+    const cardX = grid.nextCard()
+
+    drawCardRect(doc, cardX, grid.curY, grid.cardWidth, macroCardHeight)
+
+    doc.setFont('helvetica', 'normal')
+    let badgeX = cardX + CARD_PADDING
+    const badgeY = grid.curY + (macroCardHeight - BADGE_HEIGHT) / 2
+    const badgeMidY = badgeY + BADGE_HEIGHT / 2
+    const maxX = cardX + grid.cardWidth - CARD_PADDING
+
+    // M{idx} badge
+    const w0 = drawKeyBadge(doc, `M${idx}`, badgeX, badgeY, [0x1E, 0x29, 0x3B], [255, 255, 255])
+    badgeX += w0 + 2
+
+    // Render actions inline with truncation
+    for (const action of actions) {
+      if (badgeX >= maxX - 5) {
+        doc.setFontSize(BADGE_FONT_SIZE)
+        doc.setTextColor(150)
+        doc.text('...', badgeX, badgeMidY, { baseline: 'middle' })
+        break
+      }
+
+      switch (action.type) {
+        case 'text': {
+          const quoted = `"${sanitizeLabel(action.text)}"`
+          doc.setFontSize(BADGE_FONT_SIZE)
+          doc.setFont('helvetica', 'italic')
+          doc.setTextColor(80)
+          doc.text(quoted, badgeX, badgeMidY, { baseline: 'middle' })
+          badgeX += doc.getTextWidth(quoted) + 2
+          doc.setFont('helvetica', 'normal')
+          break
+        }
+        case 'tap':
+        case 'down':
+        case 'up': {
+          if (action.type !== 'tap') {
+            const prefix = action.type === 'down' ? 'Dn:' : 'Up:'
+            doc.setFontSize(BADGE_FONT_SIZE)
+            doc.setTextColor(120)
+            doc.text(prefix, badgeX, badgeMidY, { baseline: 'middle' })
+            badgeX += doc.getTextWidth(prefix) + 0.5
+          }
+          for (const kc of action.keycodes) {
+            if (badgeX >= maxX - 5) break
+            const w = drawKeyBadge(doc, pdfKeycodeLabel(kc, input), badgeX, badgeY)
+            badgeX += w + 1
+          }
+          break
+        }
+        case 'delay': {
+          const delayText = `${action.delay}ms`
+          doc.setFontSize(BADGE_FONT_SIZE)
+          doc.setTextColor(120)
+          doc.text(delayText, badgeX, badgeMidY, { baseline: 'middle' })
+          badgeX += doc.getTextWidth(delayText) + 2
+          break
+        }
+      }
+    }
+  }
+
+  return grid.pageHeights
+}
+
 export function generateKeymapPdf(input: PdfExportInput): string {
   const visibleKeys = filterVisibleKeys(
     repositionLayoutKeys(input.keys, input.layoutOptions),
@@ -664,6 +764,9 @@ export function generateKeymapPdf(input: PdfExportInput): string {
     }
     if (input.altRepeatKey) {
       emptyPageHeights.push(...drawAltRepeatKeyPages(doc, input.altRepeatKey, input))
+    }
+    if (input.macros) {
+      emptyPageHeights.push(...drawMacroPages(doc, input.macros, input))
     }
 
     const totalPages = doc.getNumberOfPages()
@@ -760,6 +863,12 @@ export function generateKeymapPdf(input: PdfExportInput): string {
   if (input.altRepeatKey) {
     const arHeights = drawAltRepeatKeyPages(doc, input.altRepeatKey, input)
     perPageHeights.push(...arHeights)
+  }
+
+  // Append macro pages (if any)
+  if (input.macros) {
+    const macroHeights = drawMacroPages(doc, input.macros, input)
+    perPageHeights.push(...macroHeights)
   }
 
   // Footer on each page (using per-page heights for correct Y positioning)
