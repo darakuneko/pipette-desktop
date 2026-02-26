@@ -492,6 +492,7 @@ export function KeyOverridePanelModal({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRefreshEntries={favStore.refreshEntries}
           />
         </div>
       </div>

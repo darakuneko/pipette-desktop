@@ -86,6 +86,11 @@ function FavoriteTabContent({
     }
   }, [active, manage.refreshEntries])
 
+  // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
+  useEffect(() => {
+    if (hubUploadResult) void manage.refreshEntries()
+  }, [hubUploadResult, manage.refreshEntries])
+
   function commitRename(entryId: string): void {
     const newLabel = rename.commitRename(entryId)
     if (newLabel) void manage.renameEntry(entryId, newLabel)

@@ -588,6 +588,7 @@ export function MacroEditor({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRefreshEntries={favStore.refreshEntries}
           />
         </div>
       )}

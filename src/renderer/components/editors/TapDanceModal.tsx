@@ -313,6 +313,7 @@ export function TapDanceModal({
                 onUploadToHub={onUploadToHub}
                 onUpdateOnHub={onUpdateOnHub}
                 onRemoveFromHub={onRemoveFromHub}
+                onRefreshEntries={favStore.refreshEntries}
               />
             </div>
           )}

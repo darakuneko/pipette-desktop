@@ -463,6 +463,7 @@ export function ComboPanelModal({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRefreshEntries={favStore.refreshEntries}
           />
         </div>
       </div>

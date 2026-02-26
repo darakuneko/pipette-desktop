@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
@@ -46,6 +46,7 @@ export interface FavoriteStoreContentProps {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRefreshEntries?: () => void
 }
 
 export function FavoriteStoreContent({
@@ -70,11 +71,17 @@ export function FavoriteStoreContent({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRefreshEntries,
 }: FavoriteStoreContentProps) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState('')
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
+  useEffect(() => {
+    if (hubUploadResult) onRefreshEntries?.()
+  }, [hubUploadResult, onRefreshEntries])
 
   const trimmedSaveLabel = saveLabel.trim()
   const canSubmitSave = canSave && !saving && trimmedSaveLabel.length > 0
