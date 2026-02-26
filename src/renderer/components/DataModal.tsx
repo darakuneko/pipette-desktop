@@ -7,6 +7,8 @@ import { useInlineRename } from '../hooks/useInlineRename'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './editors/store-modal-shared'
+import { FavoriteHubActions } from './editors/FavoriteHubActions'
+import type { FavHubEntryResult } from './editors/FavoriteHubActions'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from './hub-post-shared'
 import type { DataModalTabId, TabDef } from './editors/modal-tabs'
 import type { FavoriteType } from '../../shared/types/favorite-store'
@@ -23,6 +25,13 @@ interface Props {
   onHubRename: (postId: string, newTitle: string) => Promise<void>
   onHubDelete: (postId: string) => Promise<void>
   hubOrigin?: string
+  // Favorite Hub upload props
+  hubNeedsDisplayName?: boolean
+  hubFavUploading?: string | null
+  hubFavUploadResult?: FavHubEntryResult | null
+  onFavUploadToHub?: (type: FavoriteType, entryId: string) => void
+  onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
+  onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
 }
 
 const FAV_TABS: TabDef<DataModalTabId>[] = [
@@ -44,9 +53,26 @@ function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) =>
 interface FavoriteTabContentProps {
   favoriteType: FavoriteType
   active: boolean
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
 }
 
-function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
+function FavoriteTabContent({
+  favoriteType,
+  active,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
+}: FavoriteTabContentProps) {
   const { t } = useTranslation()
   const manage = useFavoriteManage(favoriteType)
   const hasInitialized = useRef(false)
@@ -160,6 +186,17 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
                     {t('favoriteStore.export')}
                   </button>
                 </div>
+
+                <FavoriteHubActions
+                  entry={entry}
+                  hubOrigin={hubOrigin}
+                  hubNeedsDisplayName={hubNeedsDisplayName}
+                  hubUploading={hubUploading}
+                  hubUploadResult={hubUploadResult}
+                  onUploadToHub={onUploadToHub}
+                  onUpdateOnHub={onUpdateOnHub}
+                  onRemoveFromHub={onRemoveFromHub}
+                />
               </div>
             ))}
           </div>
@@ -213,6 +250,12 @@ export function DataModal({
   onHubRename,
   onHubDelete,
   hubOrigin,
+  hubNeedsDisplayName,
+  hubFavUploading,
+  hubFavUploadResult,
+  onFavUploadToHub,
+  onFavUpdateOnHub,
+  onFavRemoveFromHub,
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
@@ -346,6 +389,13 @@ export function DataModal({
               key={activeTab}
               favoriteType={activeTab}
               active={isFavTab(activeTab)}
+              hubOrigin={hubOrigin}
+              hubNeedsDisplayName={hubNeedsDisplayName}
+              hubUploading={hubFavUploading}
+              hubUploadResult={hubFavUploadResult}
+              onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub(activeTab, entryId) : undefined}
+              onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub(activeTab, entryId) : undefined}
+              onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub(activeTab, entryId) : undefined}
             />
           )}
           {activeTab === 'hubPost' && (

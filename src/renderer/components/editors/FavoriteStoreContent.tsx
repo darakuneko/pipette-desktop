@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
+import { FavoriteHubActions } from './FavoriteHubActions'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
 import type { FavoriteImportResultState } from '../../hooks/useFavoriteStore'
 
@@ -36,6 +38,14 @@ export interface FavoriteStoreContentProps {
   onExport: () => void
   onExportEntry: (entryId: string) => void
   onImport: () => void
+  // Hub integration (optional)
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
 }
 
 export function FavoriteStoreContent({
@@ -53,6 +63,13 @@ export function FavoriteStoreContent({
   onExport,
   onExportEntry,
   onImport,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
 }: FavoriteStoreContentProps) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState('')
@@ -219,6 +236,17 @@ export function FavoriteStoreContent({
                     {t('favoriteStore.export')}
                   </button>
                 </div>
+
+                <FavoriteHubActions
+                  entry={entry}
+                  hubOrigin={hubOrigin}
+                  hubNeedsDisplayName={hubNeedsDisplayName}
+                  hubUploading={hubUploading}
+                  hubUploadResult={hubUploadResult}
+                  onUploadToHub={onUploadToHub}
+                  onUpdateOnHub={onUpdateOnHub}
+                  onRemoveFromHub={onRemoveFromHub}
+                />
               </div>
             ))}
           </div>

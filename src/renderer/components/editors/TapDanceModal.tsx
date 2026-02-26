@@ -17,6 +17,7 @@ import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 
 interface Props {
   index: number
@@ -26,6 +27,14 @@ interface Props {
   isDummy?: boolean
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
+  // Hub integration (optional)
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
 }
 
 const TAPPING_TERM_MIN = 0
@@ -44,7 +53,10 @@ const keycodeFields: { key: KeycodeFieldName; labelKey: string }[] = [
   { key: 'onTapHold', labelKey: 'editor.tapDance.onTapHold' },
 ]
 
-export function TapDanceModal({ index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros }: Props) {
+export function TapDanceModal({
+  index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros,
+  hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub,
+}: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
@@ -294,6 +306,13 @@ export function TapDanceModal({ index, entry, onSave, onClose, isDummy, tapDance
                 exporting={favStore.exporting}
                 importing={favStore.importing}
                 importResult={favStore.importResult}
+                hubOrigin={hubOrigin}
+                hubNeedsDisplayName={hubNeedsDisplayName}
+                hubUploading={hubUploading}
+                hubUploadResult={hubUploadResult}
+                onUploadToHub={onUploadToHub}
+                onUpdateOnHub={onUpdateOnHub}
+                onRemoveFromHub={onRemoveFromHub}
               />
             </div>
           )}

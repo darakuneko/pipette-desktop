@@ -86,3 +86,15 @@ export interface HubUserResult {
   user?: HubUser
   error?: string
 }
+
+export type HubFeaturePostType = 'td' | 'macro' | 'combo' | 'ko' | 'ark'
+
+export interface HubUploadFavoritePostParams {
+  type: string // FavoriteType
+  entryId: string
+  title: string
+}
+
+export interface HubUpdateFavoritePostParams extends HubUploadFavoritePostParams {
+  postId: string
+}

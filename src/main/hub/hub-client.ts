@@ -124,38 +124,43 @@ function sanitizeFieldValue(value: string): string {
   return value.replace(/\r\n|\r|\n/g, ' ')
 }
 
+class MultipartBuilder {
+  private readonly boundary = `----PipetteBoundary${Date.now()}`
+  private readonly parts: Buffer[] = []
+
+  appendField(name: string, value: string): void {
+    this.parts.push(Buffer.from(
+      `--${this.boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${sanitizeFieldValue(value)}\r\n`,
+    ))
+  }
+
+  appendFile(fieldName: string, filename: string, data: Buffer, contentType: string): void {
+    this.parts.push(Buffer.from(
+      `--${this.boundary}\r\nContent-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
+    ))
+    this.parts.push(data)
+    this.parts.push(Buffer.from('\r\n'))
+  }
+
+  build(): { body: Buffer; boundary: string } {
+    this.parts.push(Buffer.from(`--${this.boundary}--\r\n`))
+    return { body: Buffer.concat(this.parts), boundary: this.boundary }
+  }
+}
+
 function buildMultipartBody(
   title: string,
   keyboardName: string,
   files: HubUploadFiles,
 ): { body: Buffer; boundary: string } {
-  const boundary = `----PipetteBoundary${Date.now()}`
-  const parts: Buffer[] = []
-
-  function appendField(name: string, value: string): void {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${sanitizeFieldValue(value)}\r\n`,
-    ))
-  }
-
-  function appendFile(fieldName: string, filename: string, data: Buffer, contentType: string): void {
-    parts.push(Buffer.from(
-      `--${boundary}\r\nContent-Disposition: form-data; name="${fieldName}"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
-    ))
-    parts.push(data)
-    parts.push(Buffer.from('\r\n'))
-  }
-
-  appendField('title', title)
-  appendField('keyboard_name', keyboardName)
-  appendFile('vil', files.vil.name, files.vil.data, 'application/json')
-  appendFile('c', files.c.name, files.c.data, 'text/plain')
-  appendFile('pdf', files.pdf.name, files.pdf.data, 'application/pdf')
-  appendFile('thumbnail', files.thumbnail.name, files.thumbnail.data, 'image/jpeg')
-
-  parts.push(Buffer.from(`--${boundary}--\r\n`))
-
-  return { body: Buffer.concat(parts), boundary }
+  const mp = new MultipartBuilder()
+  mp.appendField('title', title)
+  mp.appendField('keyboard_name', keyboardName)
+  mp.appendFile('vil', files.vil.name, files.vil.data, 'application/json')
+  mp.appendFile('c', files.c.name, files.c.data, 'text/plain')
+  mp.appendFile('pdf', files.pdf.name, files.pdf.data, 'application/pdf')
+  mp.appendFile('thumbnail', files.thumbnail.name, files.thumbnail.data, 'image/jpeg')
+  return mp.build()
 }
 
 export async function fetchAuthMe(jwt: string): Promise<HubUser> {
@@ -264,6 +269,64 @@ export function updatePostOnHub(
   files: HubUploadFiles,
 ): Promise<HubPostResponse> {
   return submitPost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, keyboardName, files, 'Hub update failed')
+}
+
+// --- Feature (favorite) post support ---
+
+export interface HubFeatureUploadFile {
+  name: string
+  data: Buffer
+}
+
+function buildFeatureMultipartBody(
+  title: string,
+  postType: string,
+  jsonFile: HubFeatureUploadFile,
+): { body: Buffer; boundary: string } {
+  const mp = new MultipartBuilder()
+  mp.appendField('title', title)
+  mp.appendField('post_type', postType)
+  mp.appendFile('json', jsonFile.name, jsonFile.data, 'application/json')
+  return mp.build()
+}
+
+async function submitFeaturePost(
+  jwt: string,
+  method: 'POST' | 'PUT',
+  path: string,
+  title: string,
+  postType: string,
+  jsonFile: HubFeatureUploadFile,
+  label: string,
+): Promise<HubPostResponse> {
+  const { body, boundary } = buildFeatureMultipartBody(title, postType, jsonFile)
+  return hubFetch<HubPostResponse>(`${HUB_API_BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  }, label)
+}
+
+export function uploadFeaturePostToHub(
+  jwt: string,
+  title: string,
+  postType: string,
+  jsonFile: HubFeatureUploadFile,
+): Promise<HubPostResponse> {
+  return submitFeaturePost(jwt, 'POST', '/api/files', title, postType, jsonFile, 'Hub feature upload failed')
+}
+
+export function updateFeaturePostOnHub(
+  jwt: string,
+  postId: string,
+  title: string,
+  postType: string,
+  jsonFile: HubFeatureUploadFile,
+): Promise<HubPostResponse> {
+  return submitFeaturePost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, postType, jsonFile, 'Hub feature update failed')
 }
 
 export function getHubOrigin(): string {

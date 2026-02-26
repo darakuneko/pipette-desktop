@@ -4,10 +4,16 @@
 import { secureHandle } from '../ipc-guard'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams } from '../../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin } from './hub-client'
+import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub } from './hub-client'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
+import { isValidFavoriteType, FAV_TYPE_TO_EXPORT_KEY, serializeFavData } from '../../shared/favorite-data'
+import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
+import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { app } from 'electron'
 
 const AUTH_ERROR = 'Not authenticated with Google. Please sign in again.'
 const POST_ID_RE = /^[a-zA-Z0-9_-]+$/
@@ -168,6 +174,39 @@ function buildFiles(params: HubUploadPostParams): HubUploadFiles {
   return files
 }
 
+async function buildFavoriteExportJson(type: FavoriteType, entryId: string): Promise<string> {
+  const favDir = join(app.getPath('userData'), 'sync', 'favorites', type)
+  const indexPath = join(favDir, 'index.json')
+  const indexRaw = await readFile(indexPath, 'utf-8')
+  const index = JSON.parse(indexRaw) as FavoriteIndex
+  const entry = index.entries.find((e) => e.id === entryId && !e.deletedAt)
+  if (!entry) throw new Error('Entry not found')
+
+  const filePath = join(favDir, entry.filename)
+  const fileRaw = await readFile(filePath, 'utf-8')
+  const parsed = JSON.parse(fileRaw) as { type: string; data: unknown }
+  if (parsed.data == null) throw new Error('Entry data is empty')
+
+  const exportKey = FAV_TYPE_TO_EXPORT_KEY[type]
+  const serializedData = serializeFavData(type, parsed.data, serializeKeycode)
+
+  const exportFile = {
+    app: 'pipette' as const,
+    version: 2 as const,
+    scope: 'fav' as const,
+    exportedAt: new Date().toISOString(),
+    categories: {
+      [exportKey]: [{
+        label: entry.label,
+        savedAt: entry.savedAt,
+        data: serializedData,
+      }],
+    },
+  }
+
+  return JSON.stringify(exportFile)
+}
+
 export function setupHubIpc(): void {
   secureHandle(
     IpcChannels.HUB_UPLOAD_POST,
@@ -310,6 +349,49 @@ export function setupHubIpc(): void {
       // with the new display name instead of returning a stale cached/inflight result.
       cachedHubJwt = null
       inflightHubAuth = null
+    },
+  )
+
+  // --- Favorite (feature) post handlers ---
+
+  async function prepareFavoritePost(
+    params: HubUploadFavoritePostParams,
+  ): Promise<{ title: string; postType: string; jsonFile: { name: string; data: Buffer } }> {
+    if (!isValidFavoriteType(params.type)) throw new Error('Invalid favorite type')
+    const title = validateTitle(params.title)
+    const postType = FAV_TYPE_TO_EXPORT_KEY[params.type]
+    const jsonStr = await buildFavoriteExportJson(params.type, params.entryId)
+    return { title, postType, jsonFile: { name: `${postType}.json`, data: Buffer.from(jsonStr, 'utf-8') } }
+  }
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_FAVORITE_POST,
+    async (_event, params: HubUploadFavoritePostParams): Promise<HubUploadResult> => {
+      try {
+        const { title, postType, jsonFile } = await prepareFavoritePost(params)
+        const result = await withTokenRetry((jwt) =>
+          uploadFeaturePostToHub(jwt, title, postType, jsonFile),
+        )
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPDATE_FAVORITE_POST,
+    async (_event, params: HubUpdateFavoritePostParams): Promise<HubUploadResult> => {
+      try {
+        validatePostId(params.postId)
+        const { title, postType, jsonFile } = await prepareFavoritePost(params)
+        const result = await withTokenRetry((jwt) =>
+          updateFeaturePostOnHub(jwt, params.postId, title, postType, jsonFile),
+        )
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Update failed') }
+      }
     },
   )
 }

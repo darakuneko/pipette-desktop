@@ -20,6 +20,7 @@ import { ModifierPicker } from './ModifierPicker'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 
 interface Props {
   entries: AltRepeatKeyEntry[]
@@ -29,6 +30,14 @@ interface Props {
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
   onClose: () => void
+  // Hub integration (optional)
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
 }
 
 type KeycodeFieldName = 'lastKey' | 'altKey'
@@ -74,6 +83,13 @@ export function AltRepeatKeyPanelModal({
   tapDanceEntries,
   deserializedMacros,
   onClose,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -441,6 +457,13 @@ export function AltRepeatKeyPanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
+            hubOrigin={hubOrigin}
+            hubNeedsDisplayName={hubNeedsDisplayName}
+            hubUploading={hubUploading}
+            hubUploadResult={hubUploadResult}
+            onUploadToHub={onUploadToHub}
+            onUpdateOnHub={onUpdateOnHub}
+            onRemoveFromHub={onRemoveFromHub}
           />
         </div>
       </div>

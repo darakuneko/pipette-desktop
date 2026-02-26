@@ -26,6 +26,7 @@ import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { MaskKeyPreview } from './MaskKeyPreview'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 
 interface Props {
   macroCount: number
@@ -42,6 +43,14 @@ interface Props {
   onEditingChange?: (editing: boolean) => void
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
+  // Hub integration (optional)
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
 }
 
 function parseMacroBuffer(
@@ -80,6 +89,13 @@ export function MacroEditor({
   onEditingChange,
   tapDanceEntries,
   deserializedMacros,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -565,6 +581,13 @@ export function MacroEditor({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
+            hubOrigin={hubOrigin}
+            hubNeedsDisplayName={hubNeedsDisplayName}
+            hubUploading={hubUploading}
+            hubUploadResult={hubUploadResult}
+            onUploadToHub={onUploadToHub}
+            onUpdateOnHub={onUpdateOnHub}
+            onRemoveFromHub={onRemoveFromHub}
           />
         </div>
       )}
