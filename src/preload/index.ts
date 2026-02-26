@@ -14,7 +14,7 @@ import type { AppConfig } from '../shared/types/app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult } from '../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
 
 /**
@@ -263,6 +263,16 @@ const vialAPI = {
   // --- Notification ---
   notificationFetch: (): Promise<NotificationFetchResult> =>
     ipcRenderer.invoke(IpcChannels.NOTIFICATION_FETCH),
+
+  // --- Hub Feature posts (favorites) ---
+  hubUploadFavoritePost: (params: HubUploadFavoritePostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_FAVORITE_POST, params),
+  hubUpdateFavoritePost: (params: HubUpdateFavoritePostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPDATE_FAVORITE_POST, params),
+
+  // --- Favorite Store extensions ---
+  favoriteStoreSetHubPostId: (type: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_SET_HUB_POST_ID, type, entryId, hubPostId),
 
   // --- Snapshot Store extensions ---
   snapshotStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>

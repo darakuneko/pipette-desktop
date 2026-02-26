@@ -255,6 +255,31 @@ export function setupFavoriteStore(): void {
     },
   )
 
+  // --- Set Hub Post ID ---
+  secureHandle(
+    IpcChannels.FAVORITE_STORE_SET_HUB_POST_ID,
+    async (_event, type: unknown, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> => {
+      try {
+        validateType(type)
+        const found = await findEntry(type, entryId)
+        if (!found) return { success: false, error: 'Entry not found' }
+
+        const normalized = hubPostId?.trim() || null
+        if (normalized === null) {
+          delete found.entry.hubPostId
+        } else {
+          found.entry.hubPostId = normalized
+        }
+        found.entry.updatedAt = new Date().toISOString()
+        await writeIndex(type, found.index)
+        notifyChange(`favorites/${type}`)
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
   // --- Import ---
   secureHandle(
     IpcChannels.FAVORITE_STORE_IMPORT,

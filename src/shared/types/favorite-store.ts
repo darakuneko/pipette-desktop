@@ -9,6 +9,7 @@ export interface SavedFavoriteMeta {
   filename: string // Internal filename
   updatedAt?: string // ISO 8601 — last update time
   deletedAt?: string // ISO 8601 — tombstone timestamp
+  hubPostId?: string // Hub post ID (if uploaded)
 }
 
 export interface FavoriteIndex {

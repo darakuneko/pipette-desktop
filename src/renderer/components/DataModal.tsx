@@ -7,9 +7,13 @@ import { useInlineRename } from '../hooks/useInlineRename'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './editors/store-modal-shared'
+import { FavoriteHubActions } from './editors/FavoriteHubActions'
+import type { FavHubEntryResult } from './editors/FavoriteHubActions'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from './hub-post-shared'
 import type { DataModalTabId, TabDef } from './editors/modal-tabs'
+import { FAV_TYPE_TO_EXPORT_KEY } from '../../shared/favorite-data'
 import type { FavoriteType } from '../../shared/types/favorite-store'
+import type { HubFeaturePostType } from '../../shared/types/hub'
 import type { FavoriteImportResultState } from '../hooks/useFavoriteStore'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 
@@ -23,6 +27,14 @@ interface Props {
   onHubRename: (postId: string, newTitle: string) => Promise<void>
   onHubDelete: (postId: string) => Promise<void>
   hubOrigin?: string
+  // Favorite Hub upload props
+  hubNeedsDisplayName?: boolean
+  hubFavUploading?: string | null
+  hubFavUploadResult?: FavHubEntryResult | null
+  onFavUploadToHub?: (type: FavoriteType, entryId: string) => void
+  onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
+  onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
+  onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 const FAV_TABS: TabDef<DataModalTabId>[] = [
@@ -44,9 +56,28 @@ function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) =>
 interface FavoriteTabContentProps {
   favoriteType: FavoriteType
   active: boolean
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
-function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
+function FavoriteTabContent({
+  favoriteType,
+  active,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
+  onRenameOnHub,
+}: FavoriteTabContentProps) {
   const { t } = useTranslation()
   const manage = useFavoriteManage(favoriteType)
   const hasInitialized = useRef(false)
@@ -60,14 +91,24 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
     }
   }, [active, manage.refreshEntries])
 
-  function commitRename(entryId: string): void {
+  // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
+  useEffect(() => {
+    if (hubUploadResult) void manage.refreshEntries()
+  }, [hubUploadResult, manage.refreshEntries])
+
+  async function commitRename(entryId: string): Promise<void> {
     const newLabel = rename.commitRename(entryId)
-    if (newLabel) void manage.renameEntry(entryId, newLabel)
+    if (!newLabel) return
+    const entry = manage.entries.find((e) => e.id === entryId)
+    const ok = await manage.renameEntry(entryId, newLabel)
+    if (ok && entry?.hubPostId && onRenameOnHub) {
+      onRenameOnHub(entryId, entry.hubPostId, newLabel)
+    }
   }
 
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
     if (e.key === 'Enter') {
-      commitRename(entryId)
+      void commitRename(entryId)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
       rename.cancelRename()
@@ -97,7 +138,7 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
                         type="text"
                         value={rename.editLabel}
                         onChange={(e) => rename.setEditLabel(e.target.value)}
-                        onBlur={() => commitRename(entry.id)}
+                        onBlur={() => void commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
                         className="flex-1 w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
@@ -160,6 +201,18 @@ function FavoriteTabContent({ favoriteType, active }: FavoriteTabContentProps) {
                     {t('favoriteStore.export')}
                   </button>
                 </div>
+
+                <FavoriteHubActions
+                  entry={entry}
+                  postType={FAV_TYPE_TO_EXPORT_KEY[favoriteType] as HubFeaturePostType}
+                  hubOrigin={hubOrigin}
+                  hubNeedsDisplayName={hubNeedsDisplayName}
+                  hubUploading={hubUploading}
+                  hubUploadResult={hubUploadResult}
+                  onUploadToHub={onUploadToHub}
+                  onUpdateOnHub={onUpdateOnHub}
+                  onRemoveFromHub={onRemoveFromHub}
+                />
               </div>
             ))}
           </div>
@@ -213,6 +266,13 @@ export function DataModal({
   onHubRename,
   onHubDelete,
   hubOrigin,
+  hubNeedsDisplayName,
+  hubFavUploading,
+  hubFavUploadResult,
+  onFavUploadToHub,
+  onFavUpdateOnHub,
+  onFavRemoveFromHub,
+  onFavRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
@@ -346,6 +406,14 @@ export function DataModal({
               key={activeTab}
               favoriteType={activeTab}
               active={isFavTab(activeTab)}
+              hubOrigin={hubOrigin}
+              hubNeedsDisplayName={hubNeedsDisplayName}
+              hubUploading={hubFavUploading}
+              hubUploadResult={hubFavUploadResult}
+              onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub(activeTab, entryId) : undefined}
+              onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub(activeTab, entryId) : undefined}
+              onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub(activeTab, entryId) : undefined}
+              onRenameOnHub={onFavRenameOnHub}
             />
           )}
           {activeTab === 'hubPost' && (

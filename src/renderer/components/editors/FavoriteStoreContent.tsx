@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
+import { FavoriteHubActions } from './FavoriteHubActions'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
+import type { HubFeaturePostType } from '../../../shared/types/hub'
 import type { FavoriteImportResultState } from '../../hooks/useFavoriteStore'
 
 export function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) => string, result: FavoriteImportResultState): string {
@@ -31,11 +34,22 @@ export interface FavoriteStoreContentProps {
   canSave?: boolean
   onSave: (label: string) => void
   onLoad: (entryId: string) => void
-  onRename: (entryId: string, newLabel: string) => void
+  onRename: (entryId: string, newLabel: string) => Promise<boolean> | void
   onDelete: (entryId: string) => void
   onExport: () => void
   onExportEntry: (entryId: string) => void
   onImport: () => void
+  // Hub integration (optional)
+  hubPostType?: HubFeaturePostType
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  onRefreshEntries?: () => void
 }
 
 export function FavoriteStoreContent({
@@ -53,11 +67,26 @@ export function FavoriteStoreContent({
   onExport,
   onExportEntry,
   onImport,
+  hubPostType,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
+  onRenameOnHub,
+  onRefreshEntries,
 }: FavoriteStoreContentProps) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState('')
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+
+  // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
+  useEffect(() => {
+    if (hubUploadResult) onRefreshEntries?.()
+  }, [hubUploadResult, onRefreshEntries])
 
   const trimmedSaveLabel = saveLabel.trim()
   const canSubmitSave = canSave && !saving && trimmedSaveLabel.length > 0
@@ -69,14 +98,19 @@ export function FavoriteStoreContent({
     setSaveLabel('')
   }
 
-  function commitRename(entryId: string): void {
+  async function commitRename(entryId: string): Promise<void> {
     const newLabel = rename.commitRename(entryId)
-    if (newLabel) onRename(entryId, newLabel)
+    if (!newLabel) return
+    const entry = entries.find((e) => e.id === entryId)
+    const ok = await onRename(entryId, newLabel)
+    if (ok !== false && entry?.hubPostId && onRenameOnHub) {
+      onRenameOnHub(entryId, entry.hubPostId, newLabel)
+    }
   }
 
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
     if (e.key === 'Enter') {
-      commitRename(entryId)
+      void commitRename(entryId)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
       rename.cancelRename()
@@ -144,7 +178,7 @@ export function FavoriteStoreContent({
                         type="text"
                         value={rename.editLabel}
                         onChange={(e) => rename.setEditLabel(e.target.value)}
-                        onBlur={() => commitRename(entry.id)}
+                        onBlur={() => void commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
                         className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
@@ -219,6 +253,18 @@ export function FavoriteStoreContent({
                     {t('favoriteStore.export')}
                   </button>
                 </div>
+
+                <FavoriteHubActions
+                  entry={entry}
+                  postType={hubPostType}
+                  hubOrigin={hubOrigin}
+                  hubNeedsDisplayName={hubNeedsDisplayName}
+                  hubUploading={hubUploading}
+                  hubUploadResult={hubUploadResult}
+                  onUploadToHub={onUploadToHub}
+                  onUpdateOnHub={onUpdateOnHub}
+                  onRemoveFromHub={onRemoveFromHub}
+                />
               </div>
             ))}
           </div>
