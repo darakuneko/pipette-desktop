@@ -184,6 +184,8 @@ export function App() {
       findInnerKeycode,
       tapDance: keyboard.tapDanceEntries,
       combo: keyboard.comboEntries,
+      keyOverride: keyboard.keyOverrideEntries,
+      altRepeatKey: keyboard.altRepeatKeyEntries,
     }),
     [
       deviceName,
@@ -195,6 +197,8 @@ export function App() {
       decodedLayoutOptions,
       keyboard.tapDanceEntries,
       keyboard.comboEntries,
+      keyboard.keyOverrideEntries,
+      keyboard.altRepeatKeyEntries,
     ],
   )
 
@@ -522,6 +526,8 @@ export function App() {
       serializeKeycode,
       tapDance: vilData.tapDance,
       combo: vilData.combo,
+      keyOverride: vilData.keyOverride,
+      altRepeatKey: vilData.altRepeatKey,
     }
   }, [keyboard.definition, keyboard.layout, keyboard.encoderCount])
 

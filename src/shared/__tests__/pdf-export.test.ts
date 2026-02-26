@@ -1,9 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { generateKeymapPdf, isEmptyCombo, isEmptyTapDance, type PdfExportInput } from '../pdf-export'
+import {
+  generateKeymapPdf,
+  isEmptyCombo,
+  isEmptyTapDance,
+  isEmptyKeyOverride,
+  isEmptyAltRepeatKey,
+  type PdfExportInput,
+} from '../pdf-export'
 import type { KleKey } from '../kle/types'
-import type { ComboEntry, TapDanceEntry } from '../types/protocol'
+import type { AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry } from '../types/protocol'
 
 function makeKey(overrides: Partial<KleKey> = {}): KleKey {
   return {
@@ -471,5 +478,127 @@ describe('isEmptyTapDance', () => {
 
   it('returns false for a fully configured entry', () => {
     expect(isEmptyTapDance({ onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 })).toBe(false)
+  })
+})
+
+// ── Key Override tests ──────────────────────────────────────────────
+
+function makeKo(overrides?: Partial<KeyOverrideEntry>): KeyOverrideEntry {
+  return {
+    triggerKey: 0, replacementKey: 0, layers: 0,
+    triggerMods: 0, negativeMods: 0, suppressedMods: 0,
+    options: 0, enabled: true, ...overrides,
+  }
+}
+
+function makeAr(overrides?: Partial<AltRepeatKeyEntry>): AltRepeatKeyEntry {
+  return {
+    lastKey: 0, altKey: 0, allowedMods: 0, options: 0, enabled: true, ...overrides,
+  }
+}
+
+describe('isEmptyKeyOverride', () => {
+  it('returns true for all-zero entry', () => {
+    expect(isEmptyKeyOverride(makeKo())).toBe(true)
+  })
+
+  it('returns false when triggerKey is set', () => {
+    expect(isEmptyKeyOverride(makeKo({ triggerKey: 0x04 }))).toBe(false)
+  })
+
+  it('returns false when replacementKey is set', () => {
+    expect(isEmptyKeyOverride(makeKo({ replacementKey: 0x05 }))).toBe(false)
+  })
+})
+
+describe('isEmptyAltRepeatKey', () => {
+  it('returns true for all-zero entry', () => {
+    expect(isEmptyAltRepeatKey(makeAr())).toBe(true)
+  })
+
+  it('returns false when lastKey is set', () => {
+    expect(isEmptyAltRepeatKey(makeAr({ lastKey: 0x04 }))).toBe(false)
+  })
+
+  it('returns false when altKey is set', () => {
+    expect(isEmptyAltRepeatKey(makeAr({ altKey: 0x05 }))).toBe(false)
+  })
+})
+
+describe('generateKeymapPdf - Key Override / Alt Repeat Key', () => {
+  it('empty keyOverride/altRepeatKey arrays produce no extra pages', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withEmpty = generateKeymapPdf(createBasicInput({
+      keyOverride: [],
+      altRepeatKey: [],
+    }))
+    expect(countPages(withEmpty)).toBe(countPages(baseline))
+  })
+
+  it('all-zero keyOverride entries are skipped', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withZero = generateKeymapPdf(createBasicInput({
+      keyOverride: [makeKo(), makeKo()],
+    }))
+    expect(countPages(withZero)).toBe(countPages(baseline))
+  })
+
+  it('all-zero altRepeatKey entries are skipped', () => {
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withZero = generateKeymapPdf(createBasicInput({
+      altRepeatKey: [makeAr(), makeAr()],
+    }))
+    expect(countPages(withZero)).toBe(countPages(baseline))
+  })
+
+  it('configured key overrides add extra pages', () => {
+    const entries: KeyOverrideEntry[] = [
+      makeKo({ triggerKey: 0x04, replacementKey: 0x05, triggerMods: 0x02, enabled: true }),
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withKo = generateKeymapPdf(createBasicInput({ keyOverride: entries }))
+    expect(countPages(withKo)).toBeGreaterThan(countPages(baseline))
+  })
+
+  it('configured alt repeat keys add extra pages', () => {
+    const entries: AltRepeatKeyEntry[] = [
+      makeAr({ lastKey: 0x04, altKey: 0x05, enabled: true }),
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withAr = generateKeymapPdf(createBasicInput({ altRepeatKey: entries }))
+    expect(countPages(withAr)).toBeGreaterThan(countPages(baseline))
+  })
+
+  it('disabled entries are still rendered (not skipped)', () => {
+    const entries: KeyOverrideEntry[] = [
+      makeKo({ triggerKey: 0x04, replacementKey: 0x05, enabled: false }),
+    ]
+    const baseline = generateKeymapPdf(createBasicInput())
+    const withDisabled = generateKeymapPdf(createBasicInput({ keyOverride: entries }))
+    expect(countPages(withDisabled)).toBeGreaterThan(countPages(baseline))
+  })
+
+  it('all four feature types together produce more pages than any alone', () => {
+    const combos: ComboEntry[] = [{ key1: 0x04, key2: 0x05, key3: 0, key4: 0, output: 0x29 }]
+    const tapDances: TapDanceEntry[] = [{ onTap: 0x04, onHold: 0x05, onDoubleTap: 0x06, onTapHold: 0x29, tappingTerm: 200 }]
+    const keyOverrides: KeyOverrideEntry[] = [makeKo({ triggerKey: 0x04, replacementKey: 0x05 })]
+    const altRepeatKeys: AltRepeatKeyEntry[] = [makeAr({ lastKey: 0x04, altKey: 0x05 })]
+
+    const comboOnly = generateKeymapPdf(createBasicInput({ combo: combos }))
+    const all = generateKeymapPdf(createBasicInput({
+      combo: combos, tapDance: tapDances,
+      keyOverride: keyOverrides, altRepeatKey: altRepeatKeys,
+    }))
+    expect(countPages(all)).toBeGreaterThan(countPages(comboOnly))
+  })
+
+  it('many key overrides cause pagination', () => {
+    const entries = Array.from({ length: 30 }, (_, i) =>
+      makeKo({ triggerKey: 0x04 + (i % 5), replacementKey: 0x29 }),
+    )
+    const base64 = generateKeymapPdf(createBasicInput({ keyOverride: entries }))
+    expect(pdfSignature(decodePdf(base64))).toBe('%PDF-')
+    // 1 layer + multiple KO pages
+    expect(countPages(base64)).toBeGreaterThan(2)
   })
 })

@@ -3,7 +3,7 @@
 
 import { jsPDF } from 'jspdf'
 import type { KleKey } from './kle/types'
-import type { ComboEntry, TapDanceEntry } from './types/protocol'
+import type { AltRepeatKeyEntry, ComboEntry, KeyOverrideEntry, TapDanceEntry } from './types/protocol'
 import { filterVisibleKeys, hasSecondaryRect, repositionLayoutKeys } from './kle/filter-keys'
 import { computeUnionPolygon, insetAxisAlignedPolygon } from './kle/rect-union'
 import {
@@ -39,6 +39,8 @@ export interface PdfExportInput {
   findInnerKeycode: (qmkId: string) => { label: string } | undefined
   tapDance?: TapDanceEntry[]
   combo?: ComboEntry[]
+  keyOverride?: KeyOverrideEntry[]
+  altRepeatKey?: AltRepeatKeyEntry[]
 }
 
 const LAYER_HEADER_HEIGHT = 7
@@ -263,6 +265,33 @@ export function isEmptyTapDance(entry: TapDanceEntry): boolean {
   return entry.onTap === 0 && entry.onHold === 0 && entry.onDoubleTap === 0 && entry.onTapHold === 0
 }
 
+export function isEmptyKeyOverride(entry: KeyOverrideEntry): boolean {
+  return entry.triggerKey === 0 && entry.replacementKey === 0
+}
+
+export function isEmptyAltRepeatKey(entry: AltRepeatKeyEntry): boolean {
+  return entry.lastKey === 0 && entry.altKey === 0
+}
+
+const MOD_NAMES: [number, string][] = [
+  [1 << 0, 'LCtrl'],
+  [1 << 1, 'LShift'],
+  [1 << 2, 'LAlt'],
+  [1 << 3, 'LGUI'],
+  [1 << 4, 'RCtrl'],
+  [1 << 5, 'RShift'],
+  [1 << 6, 'RAlt'],
+  [1 << 7, 'RGUI'],
+]
+
+function formatMods(mods: number): string {
+  if (mods === 0) return ''
+  return MOD_NAMES
+    .filter(([bit]) => (mods & bit) !== 0)
+    .map(([, name]) => name)
+    .join('+')
+}
+
 function pdfKeycodeLabel(code: number, input: PdfExportInput): string {
   const qmkId = input.serializeKeycode(code)
   const label = input.keycodeLabel(qmkId)
@@ -475,6 +504,208 @@ function drawTapDancePages(
   return pageHeights
 }
 
+// ── Key Override / Alt Repeat Key drawing ──────────────────────────
+
+const KO_COLUMNS = 3
+const KO_ROW_HEIGHT = 5
+
+/**
+ * Draw key override pages. Returns page heights for footer positioning.
+ */
+function drawKeyOverridePages(
+  doc: jsPDF,
+  entries: KeyOverrideEntry[],
+  input: PdfExportInput,
+): number[] {
+  const configured = entries
+    .map((ko, idx) => ({ ko, idx }))
+    .filter(({ ko }) => !isEmptyKeyOverride(ko))
+  if (configured.length === 0) return []
+
+  const pageHeights: number[] = []
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (KO_COLUMNS - 1)) / KO_COLUMNS
+  const koCardHeight = KO_ROW_HEIGHT * 3 + CARD_PADDING * 2 // header + 2 rows + padding
+
+  let curY = 0
+  let col = 0
+
+  function startPage(continued: boolean): void {
+    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
+    pageHeights.push(SUMMARY_PAGE_HEIGHT)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(SECTION_HEADER_SIZE)
+    doc.setTextColor(0)
+    doc.text(continued ? 'Key Overrides (cont.)' : 'Key Overrides', MARGIN, MARGIN + 5)
+    curY = MARGIN + SECTION_HEADER_HEIGHT
+    col = 0
+  }
+
+  startPage(false)
+
+  for (const { ko, idx } of configured) {
+    if (col >= KO_COLUMNS) {
+      curY += koCardHeight + CARD_GAP
+      col = 0
+    }
+
+    if (curY + koCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+      startPage(true)
+    }
+
+    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
+
+    // Card background (muted if disabled)
+    doc.setFillColor(ko.enabled ? 255 : 245, ko.enabled ? 255 : 245, ko.enabled ? 255 : 245)
+    doc.setDrawColor(200)
+    doc.setLineWidth(0.2)
+    doc.roundedRect(cardX, curY, cardWidth, koCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+
+    // Header row: KO index badge + enabled status
+    const headerY = curY + CARD_PADDING
+    drawKeyBadge(doc, `KO${idx}`, cardX + CARD_PADDING, headerY, [0x1E, 0x29, 0x3B], [255, 255, 255])
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(BADGE_FONT_SIZE)
+    doc.setTextColor(ko.enabled ? 100 : 180)
+    doc.text(ko.enabled ? 'Enabled' : 'Disabled', cardX + CARD_PADDING + 18, headerY + BADGE_HEIGHT / 2, { baseline: 'middle' })
+
+    // Trigger row: key + mods
+    const triggerY = headerY + KO_ROW_HEIGHT
+    doc.setTextColor(120)
+    doc.text('Trigger:', cardX + CARD_PADDING, triggerY + KO_ROW_HEIGHT / 2, { baseline: 'middle' })
+    let trigBadgeX = cardX + CARD_PADDING + 18
+    if (ko.triggerKey !== 0) {
+      const trigLabel = pdfKeycodeLabel(ko.triggerKey, input)
+      const w = drawKeyBadge(doc, trigLabel, trigBadgeX, triggerY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+      trigBadgeX += w + 1
+    }
+    const modsStr = formatMods(ko.triggerMods)
+    if (modsStr) {
+      doc.setFontSize(BADGE_FONT_SIZE)
+      doc.setTextColor(150)
+      doc.text(`+ ${modsStr}`, trigBadgeX + 1, triggerY + KO_ROW_HEIGHT / 2, { baseline: 'middle' })
+    }
+
+    // Replacement row
+    const replaceY = triggerY + KO_ROW_HEIGHT
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(BADGE_FONT_SIZE)
+    doc.setTextColor(120)
+    doc.text('Output:', cardX + CARD_PADDING, replaceY + KO_ROW_HEIGHT / 2, { baseline: 'middle' })
+    if (ko.replacementKey !== 0) {
+      const replLabel = pdfKeycodeLabel(ko.replacementKey, input)
+      drawKeyBadge(doc, replLabel, cardX + CARD_PADDING + 18, replaceY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+    }
+
+    col++
+  }
+
+  return pageHeights
+}
+
+const AR_COLUMNS = 2
+
+/**
+ * Draw alt repeat key pages. Returns page heights for footer positioning.
+ */
+function drawAltRepeatKeyPages(
+  doc: jsPDF,
+  entries: AltRepeatKeyEntry[],
+  input: PdfExportInput,
+): number[] {
+  const configured = entries
+    .map((ar, idx) => ({ ar, idx }))
+    .filter(({ ar }) => !isEmptyAltRepeatKey(ar))
+  if (configured.length === 0) return []
+
+  const pageHeights: number[] = []
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (AR_COLUMNS - 1)) / AR_COLUMNS
+  const arCardHeight = 10
+
+  let curY = 0
+  let col = 0
+
+  function startPage(continued: boolean): void {
+    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
+    pageHeights.push(SUMMARY_PAGE_HEIGHT)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(SECTION_HEADER_SIZE)
+    doc.setTextColor(0)
+    doc.text(continued ? 'Alt Repeat Keys (cont.)' : 'Alt Repeat Keys', MARGIN, MARGIN + 5)
+    curY = MARGIN + SECTION_HEADER_HEIGHT
+    col = 0
+  }
+
+  startPage(false)
+
+  for (const { ar, idx } of configured) {
+    if (col >= AR_COLUMNS) {
+      curY += arCardHeight + CARD_GAP
+      col = 0
+    }
+
+    if (curY + arCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+      startPage(true)
+    }
+
+    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
+
+    // Card background (muted if disabled)
+    doc.setFillColor(ar.enabled ? 255 : 245, ar.enabled ? 255 : 245, ar.enabled ? 255 : 245)
+    doc.setDrawColor(200)
+    doc.setLineWidth(0.2)
+    doc.roundedRect(cardX, curY, cardWidth, arCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+
+    // Draw AR index badge + last key -> alt key
+    doc.setFont('helvetica', 'normal')
+    let badgeX = cardX + CARD_PADDING
+    const badgeY = curY + (arCardHeight - BADGE_HEIGHT) / 2
+    const badgeMidY = badgeY + BADGE_HEIGHT / 2
+
+    // AR index badge
+    const w0 = drawKeyBadge(doc, `AR${idx}`, badgeX, badgeY, [0x1E, 0x29, 0x3B], [255, 255, 255])
+    badgeX += w0 + 2
+
+    // Last key badge
+    if (ar.lastKey !== 0) {
+      const lastLabel = pdfKeycodeLabel(ar.lastKey, input)
+      const w = drawKeyBadge(doc, lastLabel, badgeX, badgeY)
+      badgeX += w + 1
+    }
+
+    // Mods (if any)
+    const arModsStr = formatMods(ar.allowedMods)
+    if (arModsStr) {
+      doc.setFontSize(BADGE_FONT_SIZE)
+      doc.setTextColor(150)
+      doc.text(`+ ${arModsStr}`, badgeX + 1, badgeMidY, { baseline: 'middle' })
+      badgeX += doc.getTextWidth(`+ ${arModsStr}`) + 2
+    }
+
+    // Arrow separator
+    doc.setFontSize(BADGE_FONT_SIZE)
+    doc.setTextColor(150)
+    doc.text('->', badgeX + 1.5, badgeMidY, { align: 'center', baseline: 'middle' })
+    badgeX += 5
+
+    // Alt key badge
+    if (ar.altKey !== 0) {
+      drawKeyBadge(doc, pdfKeycodeLabel(ar.altKey, input), badgeX, badgeY)
+    }
+
+    // Disabled indicator
+    if (!ar.enabled) {
+      doc.setFontSize(BADGE_FONT_SIZE)
+      doc.setTextColor(180)
+      doc.text('(off)', cardX + cardWidth - CARD_PADDING, badgeMidY, { align: 'right', baseline: 'middle' })
+    }
+
+    col++
+  }
+
+  return pageHeights
+}
+
 export function generateKeymapPdf(input: PdfExportInput): string {
   const visibleKeys = filterVisibleKeys(
     repositionLayoutKeys(input.keys, input.layoutOptions),
@@ -495,6 +726,12 @@ export function generateKeymapPdf(input: PdfExportInput): string {
     }
     if (input.tapDance) {
       emptyPageHeights.push(...drawTapDancePages(doc, input.tapDance, input))
+    }
+    if (input.keyOverride) {
+      emptyPageHeights.push(...drawKeyOverridePages(doc, input.keyOverride, input))
+    }
+    if (input.altRepeatKey) {
+      emptyPageHeights.push(...drawAltRepeatKeyPages(doc, input.altRepeatKey, input))
     }
 
     const totalPages = doc.getNumberOfPages()
@@ -579,6 +816,18 @@ export function generateKeymapPdf(input: PdfExportInput): string {
   if (input.tapDance) {
     const tdHeights = drawTapDancePages(doc, input.tapDance, input)
     perPageHeights.push(...tdHeights)
+  }
+
+  // Append key override pages (if any)
+  if (input.keyOverride) {
+    const koHeights = drawKeyOverridePages(doc, input.keyOverride, input)
+    perPageHeights.push(...koHeights)
+  }
+
+  // Append alt repeat key pages (if any)
+  if (input.altRepeatKey) {
+    const arHeights = drawAltRepeatKeyPages(doc, input.altRepeatKey, input)
+    perPageHeights.push(...arHeights)
   }
 
   // Footer on each page (using per-page heights for correct Y positioning)
