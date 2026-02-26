@@ -707,13 +707,12 @@ function drawMacroPages(
         case 'tap':
         case 'down':
         case 'up': {
-          if (action.type !== 'tap') {
-            const prefix = action.type === 'down' ? 'Dn:' : 'Up:'
-            doc.setFontSize(BADGE_FONT_SIZE)
-            doc.setTextColor(120)
-            doc.text(prefix, badgeX, badgeMidY, { baseline: 'middle' })
-            badgeX += doc.getTextWidth(prefix) + 0.5
-          }
+          const prefixMap = { tap: 'Tap:', down: 'Dn:', up: 'Up:' } as const
+          const prefix = prefixMap[action.type]
+          doc.setFontSize(BADGE_FONT_SIZE)
+          doc.setTextColor(120)
+          doc.text(prefix, badgeX, badgeMidY, { baseline: 'middle' })
+          badgeX += doc.getTextWidth(prefix) + 0.5
           for (const kc of action.keycodes) {
             if (badgeX >= maxX - 5) break
             const w = drawKeyBadge(doc, pdfKeycodeLabel(kc, input), badgeX, badgeY)
