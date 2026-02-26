@@ -36,7 +36,7 @@ import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
-import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson } from '../preload/macro'
+import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson, jsonToMacroActions } from '../preload/macro'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -182,6 +182,11 @@ export function App() {
       isMask,
       findOuterKeycode,
       findInnerKeycode,
+      tapDance: keyboard.tapDanceEntries,
+      combo: keyboard.comboEntries,
+      keyOverride: keyboard.keyOverrideEntries,
+      altRepeatKey: keyboard.altRepeatKeyEntries,
+      macros: deserializedMacros,
     }),
     [
       deviceName,
@@ -191,6 +196,11 @@ export function App() {
       keyboard.encoderLayout,
       keyboard.encoderCount,
       decodedLayoutOptions,
+      keyboard.tapDanceEntries,
+      keyboard.comboEntries,
+      keyboard.keyOverrideEntries,
+      keyboard.altRepeatKeyEntries,
+      deserializedMacros,
     ],
   )
 
@@ -516,8 +526,17 @@ export function App() {
         ? decodeLayoutOptions(vilData.layoutOptions, labels)
         : new Map<number, number>(),
       serializeKeycode,
+      tapDance: vilData.tapDance,
+      combo: vilData.combo,
+      keyOverride: vilData.keyOverride,
+      altRepeatKey: vilData.altRepeatKey,
+      macros: vilData.macroJson
+        ? vilData.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
+        : splitMacroBuffer(vilData.macros, keyboard.macroCount)
+            .map((m) => deserializeMacro(m, keyboard.vialProtocol)),
     }
-  }, [keyboard.definition, keyboard.layout, keyboard.encoderCount])
+  }, [keyboard.definition, keyboard.layout, keyboard.encoderCount,
+      keyboard.macroCount, keyboard.vialProtocol])
 
   const buildVilExportContext = useCallback((vilData: VilFile) => {
     const macroActions = splitMacroBuffer(vilData.macros, keyboard.macroCount)
