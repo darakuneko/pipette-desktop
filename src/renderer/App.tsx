@@ -31,6 +31,8 @@ import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { generateKeymapC } from '../shared/keymap-export'
 import { generateKeymapPdf } from '../shared/pdf-export'
+import { generateAllLayoutOptionsPdf, generateCurrentLayoutPdf, type LayoutPdfInput } from '../shared/pdf-layout-export'
+import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
 import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
@@ -437,6 +439,34 @@ export function App() {
     const ok = await fileIO.exportPdf()
     if (ok) showFileSuccess('export')
   }, [fileIO.exportPdf, showFileSuccess])
+
+  const exportLayoutPdf = useCallback(async (
+    generator: (input: LayoutPdfInput) => string,
+    suffix: string,
+  ) => {
+    try {
+      const parsedOptions = parseLayoutLabels(keyboard.definition?.layouts?.labels)
+      const base64 = generator({
+        deviceName,
+        keys: keyboard.layout?.keys ?? [],
+        layoutOptions: parsedOptions,
+        currentValues: decodedLayoutOptions,
+      })
+      await window.vialAPI.exportPdf(base64, `${deviceName}_layout_${suffix}`)
+    } catch {
+      // Export errors are non-critical; file dialog handles user feedback
+    }
+  }, [keyboard.definition, keyboard.layout, decodedLayoutOptions, deviceName])
+
+  const handleExportLayoutPdfAll = useCallback(
+    () => exportLayoutPdf(generateAllLayoutOptionsPdf, 'all'),
+    [exportLayoutPdf],
+  )
+
+  const handleExportLayoutPdfCurrent = useCallback(
+    () => exportLayoutPdf(generateCurrentLayoutPdf, 'current'),
+    [exportLayoutPdf],
+  )
 
   function deriveFileStatus(): FileStatus {
     if (fileIO.loading) return 'importing'
@@ -1164,6 +1194,8 @@ export function App() {
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
             deviceName={deviceName}
             isDummy={device.isDummy}
+            onExportLayoutPdfAll={handleExportLayoutPdfAll}
+            onExportLayoutPdfCurrent={handleExportLayoutPdfCurrent}
           />
         </div>
 

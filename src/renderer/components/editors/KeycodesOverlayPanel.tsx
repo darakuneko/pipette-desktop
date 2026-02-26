@@ -12,6 +12,7 @@ import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
 type OverlayTab = 'layout' | 'tools' | 'data'
 
 const TAB_BASE = 'flex-1 py-1.5 text-[11px] font-medium transition-colors border-b-2'
+const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-[11px] text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
 
 function tabClass(active: boolean): string {
   if (active) return `${TAB_BASE} border-b-accent text-content`
@@ -44,6 +45,9 @@ interface Props {
   toolsExtra?: React.ReactNode
   // Save tab (formerly Data)
   dataPanel?: React.ReactNode
+  // Layout PDF export callbacks
+  onExportLayoutPdfAll?: () => void
+  onExportLayoutPdfCurrent?: () => void
 }
 
 export function KeycodesOverlayPanel({
@@ -67,6 +71,8 @@ export function KeycodesOverlayPanel({
   isDummy,
   toolsExtra,
   dataPanel,
+  onExportLayoutPdfAll,
+  onExportLayoutPdfCurrent,
 }: Props) {
   const { t } = useTranslation()
   const hasData = dataPanel != null
@@ -116,14 +122,41 @@ export function KeycodesOverlayPanel({
       <div className="flex-1 grid min-h-0">
         {hasLayoutOptions && layoutOptions && layoutValues && onLayoutOptionChange && (
           <div
-            className={`col-start-1 row-start-1 overflow-y-auto ${activeTab !== 'layout' ? 'invisible' : ''}`}
+            className={`col-start-1 row-start-1 flex flex-col min-h-0 ${activeTab !== 'layout' ? 'invisible' : ''}`}
             inert={activeTab !== 'layout' || undefined}
           >
-            <LayoutOptionsPanel
-              options={layoutOptions}
-              values={layoutValues}
-              onChange={onLayoutOptionChange}
-            />
+            <div className="flex-1 overflow-y-auto">
+              <LayoutOptionsPanel
+                options={layoutOptions}
+                values={layoutValues}
+                onChange={onLayoutOptionChange}
+              />
+            </div>
+            {(onExportLayoutPdfAll || onExportLayoutPdfCurrent) && (
+              <div className="shrink-0 border-t border-edge px-4 py-2 flex items-center gap-2" data-testid="layout-pdf-footer">
+                <span className="text-[11px] text-content-muted">{t('layout.pdfFooterLabel')}</span>
+                {onExportLayoutPdfAll && (
+                  <button
+                    type="button"
+                    className={FOOTER_BTN}
+                    onClick={onExportLayoutPdfAll}
+                    data-testid="layout-pdf-all-button"
+                  >
+                    {t('layout.exportAllPdf')}
+                  </button>
+                )}
+                {onExportLayoutPdfCurrent && (
+                  <button
+                    type="button"
+                    className={FOOTER_BTN}
+                    onClick={onExportLayoutPdfCurrent}
+                    data-testid="layout-pdf-current-button"
+                  >
+                    {t('layout.exportCurrentPdf')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 

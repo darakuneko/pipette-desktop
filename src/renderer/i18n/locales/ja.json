@@ -248,6 +248,7 @@
     "protocolVersion": "このキーボードのVIAプロトコルバージョンはサポートされていません。ファームウェアを更新してください。",
     "exportKeymapCFailed": "keymap.c ファイルのエクスポートに失敗しました",
     "exportPdfFailed": "キーマップPDFのエクスポートに失敗しました",
+    "exportLayoutPdfFailed": "レイアウトPDFのエクスポートに失敗しました",
     "sideloadFailed": "JSON定義ファイルの読み込みに失敗しました",
     "sideloadInvalidDefinition": "無効なキーボード定義: 必須フィールド（matrix, layouts）がありません",
     "notVialCompatible": "Vial対応キーボードではない可能性があります"
@@ -369,7 +370,10 @@
     "system": "システム"
   },
   "layout": {
-    "keyboardLayout": "キーラベル表示"
+    "keyboardLayout": "キーラベル表示",
+    "exportAllPdf": "全て",
+    "exportCurrentPdf": "現在",
+    "pdfFooterLabel": ".pdf"
   },
   "layoutStore": {
     "load": "読み込み",
@@ -479,6 +483,7 @@
     "defaultAutoAdvance": "デフォルト自動移動",
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
+    "defaultSplitKeyMode": "デフォルト Split Key",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",

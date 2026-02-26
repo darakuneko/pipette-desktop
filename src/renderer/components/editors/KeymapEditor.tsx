@@ -605,6 +605,8 @@ interface Props {
   onTypingTestLanguageChange?: (lang: string) => void
   deviceName?: string
   isDummy?: boolean
+  onExportLayoutPdfAll?: () => void
+  onExportLayoutPdfCurrent?: () => void
 }
 
 export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function KeymapEditor({
@@ -687,6 +689,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onTypingTestLanguageChange,
   deviceName,
   isDummy,
+  onExportLayoutPdfAll,
+  onExportLayoutPdfCurrent,
 }, ref) {
   const { t } = useTranslation()
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
@@ -2114,6 +2118,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   isDummy={isDummy}
                   toolsExtra={toolsExtra}
                   dataPanel={dataPanel}
+                  onExportLayoutPdfAll={onExportLayoutPdfAll}
+                  onExportLayoutPdfCurrent={onExportLayoutPdfCurrent}
                 />
               </div>
             }

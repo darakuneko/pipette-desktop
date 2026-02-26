@@ -1128,6 +1128,23 @@ export function SettingsModal({
                   {t('settings.defaultsDescription')}
                 </p>
                 <div className="flex flex-col gap-3">
+                  <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
+                    <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
+                      {t('settings.defaultBasicViewType')}
+                    </label>
+                    <select
+                      id="settings-default-basic-view-type-selector"
+                      value={defaultBasicViewType}
+                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as BasicViewType)}
+                      className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                      data-testid="settings-default-basic-view-type-selector"
+                    >
+                      <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
+                      <option value="iso">{t('settings.basicViewTypeIso')}</option>
+                      <option value="list">{t('settings.basicViewTypeList')}</option>
+                    </select>
+                  </div>
+
                   <div className={ROW_CLASS} data-testid="settings-default-layout-row">
                     <label htmlFor="settings-default-layout-selector" className="text-[13px] font-medium text-content">
                       {t('settings.defaultLayout')}
@@ -1164,6 +1181,23 @@ export function SettingsModal({
                     </button>
                   </div>
 
+                  <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
+                    <span className="text-[13px] font-medium text-content">
+                      {t('settings.defaultSplitKeyMode')}
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={defaultSplitKeyMode === 'split'}
+                      aria-label={t('settings.defaultSplitKeyMode')}
+                      className={toggleTrackClass(defaultSplitKeyMode === 'split')}
+                      onClick={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
+                      data-testid="settings-default-split-key-mode-toggle"
+                    >
+                      <span className={toggleKnobClass(defaultSplitKeyMode === 'split')} />
+                    </button>
+                  </div>
+
                   <div className={ROW_CLASS} data-testid="settings-default-layer-panel-open-row">
                     <span className="text-[13px] font-medium text-content">
                       {t('settings.defaultLayerPanelOpen')}
@@ -1178,40 +1212,6 @@ export function SettingsModal({
                       data-testid="settings-default-layer-panel-open-toggle"
                     >
                       <span className={toggleKnobClass(defaultLayerPanelOpen)} />
-                    </button>
-                  </div>
-
-                  <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
-                    <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
-                      {t('settings.defaultBasicViewType')}
-                    </label>
-                    <select
-                      id="settings-default-basic-view-type-selector"
-                      value={defaultBasicViewType}
-                      onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as BasicViewType)}
-                      className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-                      data-testid="settings-default-basic-view-type-selector"
-                    >
-                      <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
-                      <option value="iso">{t('settings.basicViewTypeIso')}</option>
-                      <option value="list">{t('settings.basicViewTypeList')}</option>
-                    </select>
-                  </div>
-
-                  <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
-                    <span className="text-[13px] font-medium text-content">
-                      {t('editorSettings.splitKeyMode')}
-                    </span>
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={defaultSplitKeyMode === 'split'}
-                      aria-label={t('editorSettings.splitKeyMode')}
-                      className={toggleTrackClass(defaultSplitKeyMode === 'split')}
-                      onClick={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
-                      data-testid="settings-default-split-key-mode-toggle"
-                    >
-                      <span className={toggleKnobClass(defaultSplitKeyMode === 'split')} />
                     </button>
                   </div>
                 </div>
