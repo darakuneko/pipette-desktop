@@ -607,6 +607,15 @@ interface Props {
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void
   onExportLayoutPdfCurrent?: () => void
+  // Hub favorite props (forwarded to TapDanceModal / MacroModal)
+  favHubOrigin?: string
+  favHubNeedsDisplayName?: boolean
+  favHubUploading?: string | null
+  favHubUploadResult?: import('./FavoriteHubActions').FavHubEntryResult | null
+  onFavUploadToHub?: (type: string, entryId: string) => void
+  onFavUpdateOnHub?: (type: string, entryId: string) => void
+  onFavRemoveFromHub?: (type: string, entryId: string) => void
+  onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function KeymapEditor({
@@ -691,6 +700,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   isDummy,
   onExportLayoutPdfAll,
   onExportLayoutPdfCurrent,
+  favHubOrigin,
+  favHubNeedsDisplayName,
+  favHubUploading,
+  favHubUploadResult,
+  onFavUploadToHub,
+  onFavUpdateOnHub,
+  onFavRemoveFromHub,
+  onFavRenameOnHub,
 }, ref) {
   const { t } = useTranslation()
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
@@ -2136,6 +2153,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           isDummy={isDummy}
           tapDanceEntries={tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          hubOrigin={favHubOrigin}
+          hubNeedsDisplayName={favHubNeedsDisplayName}
+          hubUploading={favHubUploading}
+          hubUploadResult={favHubUploadResult}
+          onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('tapDance', entryId) : undefined}
+          onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('tapDance', entryId) : undefined}
+          onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('tapDance', entryId) : undefined}
+          onRenameOnHub={onFavRenameOnHub}
         />
       )}
 
@@ -2154,6 +2179,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           isDummy={isDummy}
           tapDanceEntries={tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          hubOrigin={favHubOrigin}
+          hubNeedsDisplayName={favHubNeedsDisplayName}
+          hubUploading={favHubUploading}
+          hubUploadResult={favHubUploadResult}
+          onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('macro', entryId) : undefined}
+          onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('macro', entryId) : undefined}
+          onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('macro', entryId) : undefined}
+          onRenameOnHub={onFavRenameOnHub}
         />
       )}
 

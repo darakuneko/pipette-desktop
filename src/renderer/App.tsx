@@ -50,6 +50,8 @@ import { EMPTY_UID } from '../shared/constants/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../shared/types/hub'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../shared/types/hub'
+import type { FavoriteType, SavedFavoriteMeta } from '../shared/types/favorite-store'
+import type { FavHubEntryResult } from './components/editors/FavoriteHubActions'
 import settingsDefs from '../shared/qmk-settings-defs.json'
 
 // Lighting types that require the RGBConfigurator modal
@@ -96,6 +98,9 @@ export function App() {
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
   const [hubUploadResult, setHubUploadResult] = useState<HubEntryResult | null>(null)
+  const [favHubUploading, setFavHubUploading] = useState<string | null>(null)
+  const favHubUploadingRef = useRef(false)
+  const [favHubUploadResult, setFavHubUploadResult] = useState<FavHubEntryResult | null>(null)
   const [lastLoadedLabel, setLastLoadedLabel] = useState('')
   // Clear loaded label when device identity changes (USB unplug/replug, device switch)
   useEffect(() => { setLastLoadedLabel('') }, [keyboard.uid])
@@ -784,6 +789,118 @@ export function App() {
     }
   }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
 
+  // --- Favorite Hub upload handlers ---
+
+  const persistFavHubPostId = useCallback(async (type: FavoriteType, entryId: string, postId: string | null) => {
+    await window.vialAPI.favoriteStoreSetHubPostId(type, entryId, postId)
+  }, [])
+
+  function hubResultErrorMessage(result: HubUploadResult, fallbackKey: string): string {
+    if (result.error === HUB_ERROR_ACCOUNT_DEACTIVATED) {
+      markAccountDeactivated()
+      return t('hub.accountDeactivated')
+    }
+    if (result.error === HUB_ERROR_RATE_LIMITED) return t('hub.rateLimited')
+    return result.error || t(fallbackKey)
+  }
+
+  const runFavHubOperation = useCallback(async (
+    type: FavoriteType,
+    entryId: string,
+    requireHubPostId: boolean,
+    operation: (entry: SavedFavoriteMeta) => Promise<void>,
+  ) => {
+    if (favHubUploadingRef.current) return
+    favHubUploadingRef.current = true
+
+    const listResult = await window.vialAPI.favoriteStoreList(type)
+    const entry = listResult.entries?.find((e: SavedFavoriteMeta) => e.id === entryId)
+    if (!entry || (requireHubPostId && !entry.hubPostId)) {
+      favHubUploadingRef.current = false
+      return
+    }
+
+    setFavHubUploading(entryId)
+    setFavHubUploadResult(null)
+    try {
+      await operation(entry)
+    } finally {
+      setFavHubUploading(null)
+      favHubUploadingRef.current = false
+    }
+  }, [])
+
+  const handleFavUploadToHub = useCallback(async (type: FavoriteType, entryId: string) => {
+    await runFavHubOperation(type, entryId, false, async (entry) => {
+      try {
+        const result = await window.vialAPI.hubUploadFavoritePost({
+          type, entryId, title: entry.label || type,
+        })
+        if (result.success) {
+          if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
+          setFavHubUploadResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId })
+        } else {
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.uploadFailed'), entryId })
+        }
+      } catch {
+        setFavHubUploadResult({ kind: 'error', message: t('hub.uploadFailed'), entryId })
+      }
+    })
+  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t])
+
+  const handleFavUpdateOnHub = useCallback(async (type: FavoriteType, entryId: string) => {
+    await runFavHubOperation(type, entryId, true, async (entry) => {
+      try {
+        const result = await window.vialAPI.hubUpdateFavoritePost({
+          type, entryId, title: entry.label || type, postId: entry.hubPostId!,
+        })
+        if (result.success) {
+          setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
+        } else {
+          setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+        }
+      } catch {
+        setFavHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId })
+      }
+    })
+  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t])
+
+  const handleFavRemoveFromHub = useCallback(async (type: FavoriteType, entryId: string) => {
+    await runFavHubOperation(type, entryId, true, async (entry) => {
+      try {
+        const result = await window.vialAPI.hubDeletePost(entry.hubPostId!)
+        if (result.success) {
+          await persistFavHubPostId(type, entryId, null)
+          setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
+        } else {
+          setFavHubUploadResult({ kind: 'error', message: result.error || t('hub.removeFailed'), entryId })
+        }
+      } catch {
+        setFavHubUploadResult({ kind: 'error', message: t('hub.removeFailed'), entryId })
+      }
+    })
+  }, [runFavHubOperation, persistFavHubPostId, t])
+
+  const handleFavRenameOnHub = useCallback(async (entryId: string, hubPostId: string, newLabel: string) => {
+    if (!hubReady || favHubUploadingRef.current) return
+    favHubUploadingRef.current = true
+    setFavHubUploading(entryId)
+    setFavHubUploadResult(null)
+    try {
+      const result = await window.vialAPI.hubPatchPost({ postId: hubPostId, title: newLabel })
+      if (result.success) {
+        setFavHubUploadResult({ kind: 'success', message: t('hub.hubSynced'), entryId })
+      } else {
+        setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.renameFailed'), entryId })
+      }
+    } catch {
+      setFavHubUploadResult({ kind: 'error', message: t('hub.renameFailed'), entryId })
+    } finally {
+      setFavHubUploading(null)
+      favHubUploadingRef.current = false
+    }
+  }, [hubReady, markAccountDeactivated, t])
+
   // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
   // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
   const phase2SyncPending = !deviceSyncing &&
@@ -984,6 +1101,13 @@ export function App() {
             onHubRename={handleHubRenamePost}
             onHubDelete={handleHubDeletePost}
             hubOrigin={hubOrigin}
+            hubNeedsDisplayName={hubReady && !hubCanUpload}
+            hubFavUploading={favHubUploading}
+            hubFavUploadResult={favHubUploadResult}
+            onFavUploadToHub={hubCanUpload ? handleFavUploadToHub : undefined}
+            onFavUpdateOnHub={hubCanUpload ? handleFavUpdateOnHub : undefined}
+            onFavRemoveFromHub={hubReady ? handleFavRemoveFromHub : undefined}
+            onFavRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
           />
         )}
         {startupNotification.visible && (
@@ -1215,6 +1339,14 @@ export function App() {
             isDummy={device.isDummy}
             onExportLayoutPdfAll={handleExportLayoutPdfAll}
             onExportLayoutPdfCurrent={handleExportLayoutPdfCurrent}
+            favHubOrigin={hubReady ? hubOrigin : undefined}
+            favHubNeedsDisplayName={hubReady && !hubCanUpload}
+            favHubUploading={favHubUploading}
+            favHubUploadResult={favHubUploadResult}
+            onFavUploadToHub={hubCanUpload ? handleFavUploadToHub : undefined}
+            onFavUpdateOnHub={hubCanUpload ? handleFavUpdateOnHub : undefined}
+            onFavRemoveFromHub={hubReady ? handleFavRemoveFromHub : undefined}
+            onFavRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
           />
         </div>
 
@@ -1318,6 +1450,14 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           onClose={() => setShowComboModal(false)}
+          hubOrigin={hubReady ? hubOrigin : undefined}
+          hubNeedsDisplayName={hubReady && !hubCanUpload}
+          hubUploading={favHubUploading}
+          hubUploadResult={favHubUploadResult}
+          onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('combo', entryId) : undefined}
+          onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('combo', entryId) : undefined}
+          onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('combo', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 
@@ -1330,6 +1470,14 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           onClose={() => setShowAltRepeatKeyModal(false)}
+          hubOrigin={hubReady ? hubOrigin : undefined}
+          hubNeedsDisplayName={hubReady && !hubCanUpload}
+          hubUploading={favHubUploading}
+          hubUploadResult={favHubUploadResult}
+          onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('altRepeatKey', entryId) : undefined}
+          onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('altRepeatKey', entryId) : undefined}
+          onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('altRepeatKey', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 
@@ -1342,6 +1490,14 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           onClose={() => setShowKeyOverrideModal(false)}
+          hubOrigin={hubReady ? hubOrigin : undefined}
+          hubNeedsDisplayName={hubReady && !hubCanUpload}
+          hubUploading={favHubUploading}
+          hubUploadResult={favHubUploadResult}
+          onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('keyOverride', entryId) : undefined}
+          onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('keyOverride', entryId) : undefined}
+          onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('keyOverride', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 

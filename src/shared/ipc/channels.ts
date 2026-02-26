@@ -104,4 +104,11 @@ export const IpcChannels = {
 
   // Snapshot Store extensions
   SNAPSHOT_STORE_SET_HUB_POST_ID: 'snapshot-store:set-hub-post-id',
+
+  // Hub Feature posts (favorites)
+  HUB_UPLOAD_FAVORITE_POST: 'hub:upload-favorite-post',
+  HUB_UPDATE_FAVORITE_POST: 'hub:update-favorite-post',
+
+  // Favorite Store extensions
+  FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
 } as const

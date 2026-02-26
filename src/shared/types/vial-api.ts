@@ -13,12 +13,12 @@ import type {
   UnlockStatus,
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
-import type { SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
+import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -175,4 +175,11 @@ export interface VialAPI {
 
   // Snapshot Store extensions
   snapshotStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+
+  // Hub Feature posts (favorites)
+  hubUploadFavoritePost(params: HubUploadFavoritePostParams): Promise<HubUploadResult>
+  hubUpdateFavoritePost(params: HubUpdateFavoritePostParams): Promise<HubUploadResult>
+
+  // Favorite Store extensions
+  favoriteStoreSetHubPostId(type: FavoriteType, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
 }

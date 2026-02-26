@@ -6,6 +6,7 @@ import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
+import type { FavHubEntryResult } from './FavoriteHubActions'
 
 interface Props {
   index: number
@@ -21,6 +22,15 @@ interface Props {
   isDummy?: boolean
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
+  // Hub integration (optional)
+  hubOrigin?: string
+  hubNeedsDisplayName?: boolean
+  hubUploading?: string | null
+  hubUploadResult?: FavHubEntryResult | null
+  onUploadToHub?: (entryId: string) => void
+  onUpdateOnHub?: (entryId: string) => void
+  onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 export function MacroModal({
@@ -37,6 +47,14 @@ export function MacroModal({
   isDummy,
   tapDanceEntries,
   deserializedMacros,
+  hubOrigin,
+  hubNeedsDisplayName,
+  hubUploading,
+  hubUploadResult,
+  onUploadToHub,
+  onUpdateOnHub,
+  onRemoveFromHub,
+  onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
@@ -81,6 +99,14 @@ export function MacroModal({
             onEditingChange={setIsEditing}
             tapDanceEntries={tapDanceEntries}
             deserializedMacros={deserializedMacros}
+            hubOrigin={hubOrigin}
+            hubNeedsDisplayName={hubNeedsDisplayName}
+            hubUploading={hubUploading}
+            hubUploadResult={hubUploadResult}
+            onUploadToHub={onUploadToHub}
+            onUpdateOnHub={onUpdateOnHub}
+            onRemoveFromHub={onRemoveFromHub}
+            onRenameOnHub={onRenameOnHub}
           />
         </div>
       </div>
