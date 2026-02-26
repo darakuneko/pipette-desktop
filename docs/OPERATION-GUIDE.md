@@ -652,7 +652,7 @@ The [Pipette Hub website](https://pipette-hub-worker.keymaps.workers.dev/) displ
 
 - Browse uploaded keymaps from the community
 - Search by keyboard name
-- Download keymaps as `.vil`, `.c`, `.pdf`, or `.pippette` files
+- Download keymaps as `.vil`, `.c`, `.pdf`, or `.pipette` files
 
 #### Individual Keymap Page
 
@@ -663,7 +663,7 @@ Clicking a keymap card opens the detail page with a full keyboard layout visuali
 - View all layers (Layer 0–3) of the uploaded keymap
 - Review Tap Dance, Macro, Combo, Alt Repeat Key, and Key Override configurations
 - **Copy URL** or **Share on X** to share with others
-- Download in various formats (`.pdf`, `.c`, `.vil`, `.pippette`)
+- Download in various formats (`.pdf`, `.c`, `.vil`, `.pipette`)
 
 See the [Data Guide](Data.md) for details on how Hub authentication works.
 

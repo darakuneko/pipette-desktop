@@ -263,10 +263,10 @@ async function captureDataModalHub(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 }
 
-// --- Phase 5: Inline Favorites with Hub actions (requires device) ---
+// --- Phase 4: Inline Favorites with Hub actions (requires device) ---
 
 async function captureInlineFavoritesHub(page: Page): Promise<void> {
-  console.log('\n--- Phase 5: Inline Favorites — Hub actions ---')
+  console.log('\n--- Phase 4: Inline Favorites — Hub actions ---')
 
   const editorContent = page.locator('[data-testid="editor-content"]')
   const tdTabLabel = 'Tap-Hold / Tap Dance'
@@ -315,7 +315,7 @@ async function captureInlineFavoritesHub(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 }
 
-// --- Phase 4: Editor Settings -> Data tab -> Save & Upload ---
+// --- Phase 5: Editor Settings -> Data tab -> Save & Upload ---
 
 async function waitForUploadButton(page: Page): Promise<{ available: boolean; locator: Locator }> {
   const uploadBtn = page.locator('[data-testid="layout-store-upload-hub"]').first()
@@ -354,7 +354,7 @@ async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean>
 }
 
 async function captureEditorDataTab(page: Page): Promise<void> {
-  console.log('\n--- Phase 4: Overlay Panel -> Data tab (Save & Upload) ---')
+  console.log('\n--- Phase 5: Overlay Panel -> Data tab (Save & Upload) ---')
 
   // Dismiss any overlays that may have appeared (unlock dialog, notifications)
   await dismissOverlays(page)
