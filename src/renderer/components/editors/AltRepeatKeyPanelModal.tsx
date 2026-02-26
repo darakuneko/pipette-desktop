@@ -457,6 +457,7 @@ export function AltRepeatKeyPanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
+            hubPostType="ark"
             hubOrigin={hubOrigin}
             hubNeedsDisplayName={hubNeedsDisplayName}
             hubUploading={hubUploading}

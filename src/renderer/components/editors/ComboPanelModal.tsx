@@ -456,6 +456,7 @@ export function ComboPanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
+            hubPostType="combo"
             hubOrigin={hubOrigin}
             hubNeedsDisplayName={hubNeedsDisplayName}
             hubUploading={hubUploading}

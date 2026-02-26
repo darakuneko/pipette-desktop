@@ -11,7 +11,9 @@ import { FavoriteHubActions } from './editors/FavoriteHubActions'
 import type { FavHubEntryResult } from './editors/FavoriteHubActions'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from './hub-post-shared'
 import type { DataModalTabId, TabDef } from './editors/modal-tabs'
+import { FAV_TYPE_TO_EXPORT_KEY } from '../../shared/favorite-data'
 import type { FavoriteType } from '../../shared/types/favorite-store'
+import type { HubFeaturePostType } from '../../shared/types/hub'
 import type { FavoriteImportResultState } from '../hooks/useFavoriteStore'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
 
@@ -194,6 +196,7 @@ function FavoriteTabContent({
 
                 <FavoriteHubActions
                   entry={entry}
+                  postType={FAV_TYPE_TO_EXPORT_KEY[favoriteType] as HubFeaturePostType}
                   hubOrigin={hubOrigin}
                   hubNeedsDisplayName={hubNeedsDisplayName}
                   hubUploading={hubUploading}

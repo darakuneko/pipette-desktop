@@ -485,6 +485,7 @@ export function KeyOverridePanelModal({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
+            hubPostType="ko"
             hubOrigin={hubOrigin}
             hubNeedsDisplayName={hubNeedsDisplayName}
             hubUploading={hubUploading}
