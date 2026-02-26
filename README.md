@@ -38,6 +38,15 @@ Download the latest release for your platform:
 > chmod +x Pipette-linux-x86_64.AppImage
 > ```
 
+---
+
+### Distribution Policy
+
+Pipette is officially distributed only as an AppImage on Linux.
+
+We do not provide or document distro-specific packages (.deb, .rpm, AUR, Flatpak, Snap, etc.) in order to keep the maintenance and support scope focused on the AppImage release.
+
+Community-maintained packages may exist, but they are not officially supported.
 
 ## Usage
 
