@@ -395,6 +395,15 @@ function pdfKeycodeLabel(code: number, input: PdfExportInput): string {
 }
 
 /**
+ * QMK ID-based label for macro badges. Shows full QMK name (e.g. LCTL_T(KC_3))
+ * instead of the visual key cap label, matching pipette-hub's macro card format.
+ */
+function pdfMacroLabel(code: number, input: PdfExportInput): string {
+  const qmkId = input.serializeKeycode(code)
+  return sanitizeLabel(qmkId.startsWith('KC_') ? qmkId.slice(3) : qmkId)
+}
+
+/**
  * Draw a key badge (rounded rect + centered label). Returns badge width.
  */
 function drawKeyBadge(
@@ -715,7 +724,7 @@ function drawMacroPages(
           badgeX += doc.getTextWidth(prefix) + 0.5
           for (const kc of action.keycodes) {
             if (badgeX >= maxX - 5) break
-            const w = drawKeyBadge(doc, pdfKeycodeLabel(kc, input), badgeX, badgeY)
+            const w = drawKeyBadge(doc, pdfMacroLabel(kc, input), badgeX, badgeY)
             badgeX += w + 1
           }
           break
