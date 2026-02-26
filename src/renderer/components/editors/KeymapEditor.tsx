@@ -615,6 +615,7 @@ interface Props {
   onFavUploadToHub?: (type: string, entryId: string) => void
   onFavUpdateOnHub?: (type: string, entryId: string) => void
   onFavRemoveFromHub?: (type: string, entryId: string) => void
+  onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function KeymapEditor({
@@ -706,6 +707,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onFavUploadToHub,
   onFavUpdateOnHub,
   onFavRemoveFromHub,
+  onFavRenameOnHub,
 }, ref) {
   const { t } = useTranslation()
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
@@ -2158,6 +2160,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('tapDance', entryId) : undefined}
           onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('tapDance', entryId) : undefined}
           onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('tapDance', entryId) : undefined}
+          onRenameOnHub={onFavRenameOnHub}
         />
       )}
 
@@ -2183,6 +2186,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('macro', entryId) : undefined}
           onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('macro', entryId) : undefined}
           onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('macro', entryId) : undefined}
+          onRenameOnHub={onFavRenameOnHub}
         />
       )}
 

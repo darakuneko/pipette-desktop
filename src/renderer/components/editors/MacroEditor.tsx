@@ -51,6 +51,7 @@ interface Props {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 function parseMacroBuffer(
@@ -96,6 +97,7 @@ export function MacroEditor({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -589,6 +591,7 @@ export function MacroEditor({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRenameOnHub={onRenameOnHub}
             onRefreshEntries={favStore.refreshEntries}
           />
         </div>

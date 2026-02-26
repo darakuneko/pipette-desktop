@@ -30,6 +30,7 @@ interface Props {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 export function MacroModal({
@@ -53,6 +54,7 @@ export function MacroModal({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
@@ -104,6 +106,7 @@ export function MacroModal({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRenameOnHub={onRenameOnHub}
           />
         </div>
       </div>

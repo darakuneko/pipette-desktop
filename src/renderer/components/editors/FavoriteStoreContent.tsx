@@ -34,7 +34,7 @@ export interface FavoriteStoreContentProps {
   canSave?: boolean
   onSave: (label: string) => void
   onLoad: (entryId: string) => void
-  onRename: (entryId: string, newLabel: string) => void
+  onRename: (entryId: string, newLabel: string) => Promise<boolean> | void
   onDelete: (entryId: string) => void
   onExport: () => void
   onExportEntry: (entryId: string) => void
@@ -48,6 +48,7 @@ export interface FavoriteStoreContentProps {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   onRefreshEntries?: () => void
 }
 
@@ -74,6 +75,7 @@ export function FavoriteStoreContent({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
   onRefreshEntries,
 }: FavoriteStoreContentProps) {
   const { t } = useTranslation()
@@ -96,14 +98,19 @@ export function FavoriteStoreContent({
     setSaveLabel('')
   }
 
-  function commitRename(entryId: string): void {
+  async function commitRename(entryId: string): Promise<void> {
     const newLabel = rename.commitRename(entryId)
-    if (newLabel) onRename(entryId, newLabel)
+    if (!newLabel) return
+    const entry = entries.find((e) => e.id === entryId)
+    const ok = await onRename(entryId, newLabel)
+    if (ok !== false && entry?.hubPostId && onRenameOnHub) {
+      onRenameOnHub(entryId, entry.hubPostId, newLabel)
+    }
   }
 
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
     if (e.key === 'Enter') {
-      commitRename(entryId)
+      void commitRename(entryId)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
       rename.cancelRename()
@@ -171,7 +178,7 @@ export function FavoriteStoreContent({
                         type="text"
                         value={rename.editLabel}
                         onChange={(e) => rename.setEditLabel(e.target.value)}
-                        onBlur={() => commitRename(entry.id)}
+                        onBlur={() => void commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
                         className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"

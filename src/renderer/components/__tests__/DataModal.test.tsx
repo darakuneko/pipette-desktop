@@ -269,6 +269,63 @@ describe('DataModal', () => {
       expect(screen.getByTestId('data-modal-fav-delete-confirm')).toBeInTheDocument()
       expect(screen.getByTestId('data-modal-fav-delete-cancel')).toBeInTheDocument()
     })
+
+    it('calls onFavRenameOnHub after renaming an entry with hubPostId', async () => {
+      const onFavRenameOnHub = vi.fn()
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now(), hubPostId: 'hub-post-42' }],
+      })
+      mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
+      // After rename, refreshEntries is called
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'New Hub Name', savedAt: Date.now(), hubPostId: 'hub-post-42' }],
+      })
+
+      render(<DataModal {...makeProps({ onFavRenameOnHub })} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+      const input = screen.getByTestId('data-modal-fav-rename-input')
+      fireEvent.change(input, { target: { value: 'New Hub Name' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      await waitFor(() => {
+        expect(onFavRenameOnHub).toHaveBeenCalledWith('e1', 'hub-post-42', 'New Hub Name')
+      })
+    })
+
+    it('does not call onFavRenameOnHub when entry has no hubPostId', async () => {
+      const onFavRenameOnHub = vi.fn()
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
+      })
+      mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
+      // After rename, refreshEntries is called
+      mockFavoriteStoreList.mockResolvedValueOnce({
+        success: true,
+        entries: [{ id: 'e1', label: 'Renamed', savedAt: Date.now() }],
+      })
+
+      render(<DataModal {...makeProps({ onFavRenameOnHub })} />)
+      await waitFor(() => {
+        expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
+      })
+
+      fireEvent.click(screen.getByTestId('data-modal-fav-entry-label'))
+      const input = screen.getByTestId('data-modal-fav-rename-input')
+      fireEvent.change(input, { target: { value: 'Renamed' } })
+      fireEvent.keyDown(input, { key: 'Enter' })
+
+      await waitFor(() => {
+        expect(mockFavoriteStoreRename).toHaveBeenCalledWith('tapDance', 'e1', 'Renamed')
+      })
+      expect(onFavRenameOnHub).not.toHaveBeenCalled()
+    })
   })
 
   describe('hub post tab', () => {

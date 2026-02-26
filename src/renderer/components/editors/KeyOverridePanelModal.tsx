@@ -39,6 +39,7 @@ interface Props {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 type KeycodeFieldName = 'triggerKey' | 'replacementKey'
@@ -99,6 +100,7 @@ export function KeyOverridePanelModal({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -493,6 +495,7 @@ export function KeyOverridePanelModal({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRenameOnHub={onRenameOnHub}
             onRefreshEntries={favStore.refreshEntries}
           />
         </div>

@@ -881,6 +881,26 @@ export function App() {
     })
   }, [runFavHubOperation, persistFavHubPostId, t])
 
+  const handleFavRenameOnHub = useCallback(async (entryId: string, hubPostId: string, newLabel: string) => {
+    if (!hubReady || favHubUploadingRef.current) return
+    favHubUploadingRef.current = true
+    setFavHubUploading(entryId)
+    setFavHubUploadResult(null)
+    try {
+      const result = await window.vialAPI.hubPatchPost({ postId: hubPostId, title: newLabel })
+      if (result.success) {
+        setFavHubUploadResult({ kind: 'success', message: t('hub.hubSynced'), entryId })
+      } else {
+        setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.renameFailed'), entryId })
+      }
+    } catch {
+      setFavHubUploadResult({ kind: 'error', message: t('hub.renameFailed'), entryId })
+    } finally {
+      setFavHubUploading(null)
+      favHubUploadingRef.current = false
+    }
+  }, [hubReady, markAccountDeactivated, t])
+
   // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
   // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
   const phase2SyncPending = !deviceSyncing &&
@@ -1087,6 +1107,7 @@ export function App() {
             onFavUploadToHub={hubCanUpload ? handleFavUploadToHub : undefined}
             onFavUpdateOnHub={hubCanUpload ? handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hubReady ? handleFavRemoveFromHub : undefined}
+            onFavRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
           />
         )}
         {startupNotification.visible && (
@@ -1325,6 +1346,7 @@ export function App() {
             onFavUploadToHub={hubCanUpload ? handleFavUploadToHub : undefined}
             onFavUpdateOnHub={hubCanUpload ? handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hubReady ? handleFavRemoveFromHub : undefined}
+            onFavRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
           />
         </div>
 
@@ -1435,6 +1457,7 @@ export function App() {
           onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('combo', entryId) : undefined}
           onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('combo', entryId) : undefined}
           onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('combo', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 
@@ -1454,6 +1477,7 @@ export function App() {
           onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('altRepeatKey', entryId) : undefined}
           onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('altRepeatKey', entryId) : undefined}
           onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('altRepeatKey', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 
@@ -1473,6 +1497,7 @@ export function App() {
           onUploadToHub={hubCanUpload ? (entryId) => handleFavUploadToHub('keyOverride', entryId) : undefined}
           onUpdateOnHub={hubCanUpload ? (entryId) => handleFavUpdateOnHub('keyOverride', entryId) : undefined}
           onRemoveFromHub={hubReady ? (entryId) => handleFavRemoveFromHub('keyOverride', entryId) : undefined}
+          onRenameOnHub={hubReady ? handleFavRenameOnHub : undefined}
         />
       )}
 

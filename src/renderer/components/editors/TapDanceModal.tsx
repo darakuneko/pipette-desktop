@@ -35,6 +35,7 @@ interface Props {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 const TAPPING_TERM_MIN = 0
@@ -55,7 +56,7 @@ const keycodeFields: { key: KeycodeFieldName; labelKey: string }[] = [
 
 export function TapDanceModal({
   index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros,
-  hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub,
+  hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
@@ -314,6 +315,7 @@ export function TapDanceModal({
                 onUploadToHub={onUploadToHub}
                 onUpdateOnHub={onUpdateOnHub}
                 onRemoveFromHub={onRemoveFromHub}
+                onRenameOnHub={onRenameOnHub}
                 onRefreshEntries={favStore.refreshEntries}
               />
             </div>

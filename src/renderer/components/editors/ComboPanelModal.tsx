@@ -43,6 +43,7 @@ interface Props {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 type KeycodeFieldName = 'key1' | 'key2' | 'key3' | 'key4' | 'output'
@@ -97,6 +98,7 @@ export function ComboPanelModal({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -464,6 +466,7 @@ export function ComboPanelModal({
             onUploadToHub={onUploadToHub}
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
+            onRenameOnHub={onRenameOnHub}
             onRefreshEntries={favStore.refreshEntries}
           />
         </div>

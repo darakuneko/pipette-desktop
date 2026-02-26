@@ -34,6 +34,7 @@ interface Props {
   onFavUploadToHub?: (type: FavoriteType, entryId: string) => void
   onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
   onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
+  onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 const FAV_TABS: TabDef<DataModalTabId>[] = [
@@ -62,6 +63,7 @@ interface FavoriteTabContentProps {
   onUploadToHub?: (entryId: string) => void
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
+  onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
 }
 
 function FavoriteTabContent({
@@ -74,6 +76,7 @@ function FavoriteTabContent({
   onUploadToHub,
   onUpdateOnHub,
   onRemoveFromHub,
+  onRenameOnHub,
 }: FavoriteTabContentProps) {
   const { t } = useTranslation()
   const manage = useFavoriteManage(favoriteType)
@@ -93,14 +96,19 @@ function FavoriteTabContent({
     if (hubUploadResult) void manage.refreshEntries()
   }, [hubUploadResult, manage.refreshEntries])
 
-  function commitRename(entryId: string): void {
+  async function commitRename(entryId: string): Promise<void> {
     const newLabel = rename.commitRename(entryId)
-    if (newLabel) void manage.renameEntry(entryId, newLabel)
+    if (!newLabel) return
+    const entry = manage.entries.find((e) => e.id === entryId)
+    const ok = await manage.renameEntry(entryId, newLabel)
+    if (ok && entry?.hubPostId && onRenameOnHub) {
+      onRenameOnHub(entryId, entry.hubPostId, newLabel)
+    }
   }
 
   function handleRenameKeyDown(e: React.KeyboardEvent, entryId: string): void {
     if (e.key === 'Enter') {
-      commitRename(entryId)
+      void commitRename(entryId)
     } else if (e.key === 'Escape') {
       e.stopPropagation()
       rename.cancelRename()
@@ -130,7 +138,7 @@ function FavoriteTabContent({
                         type="text"
                         value={rename.editLabel}
                         onChange={(e) => rename.setEditLabel(e.target.value)}
-                        onBlur={() => commitRename(entry.id)}
+                        onBlur={() => void commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
                         className="flex-1 w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
@@ -264,6 +272,7 @@ export function DataModal({
   onFavUploadToHub,
   onFavUpdateOnHub,
   onFavRemoveFromHub,
+  onFavRenameOnHub,
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
@@ -404,6 +413,7 @@ export function DataModal({
               onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub(activeTab, entryId) : undefined}
               onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub(activeTab, entryId) : undefined}
               onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub(activeTab, entryId) : undefined}
+              onRenameOnHub={onFavRenameOnHub}
             />
           )}
           {activeTab === 'hubPost' && (
