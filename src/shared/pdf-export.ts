@@ -239,7 +239,7 @@ function drawEncoder(
   }
 }
 
-// ── Combo / Tap Dance helpers ─────────────────────────────────────────
+// ── Summary page helpers ──────────────────────────────────────────────
 
 /** Summary page height: A4 landscape height */
 const SUMMARY_PAGE_HEIGHT = 210
@@ -254,8 +254,84 @@ const BADGE_HEIGHT = BADGE_FONT_SIZE * 0.353 + BADGE_PADDING_Y * 2 // pt to mm
 const COMBO_COLUMNS = 2
 const TD_COLUMNS = 3
 const TD_ROW_HEIGHT = 5
+const KO_COLUMNS = 3
+const KO_ROW_HEIGHT = 5
+const AR_COLUMNS = 2
 const SECTION_HEADER_SIZE = 12
 const SECTION_HEADER_HEIGHT = 8
+
+/**
+ * Manages paginated card-grid layout for summary pages.
+ * Handles page creation, column wrapping, and overflow pagination.
+ */
+interface CardGrid {
+  /** Current Y offset for the active row */
+  curY: number
+  /** Per-page heights for footer positioning */
+  pageHeights: number[]
+  /** Advance to the next card slot, paginating if needed. Returns the card X position. */
+  nextCard(): number
+}
+
+function createCardGrid(
+  doc: jsPDF,
+  title: string,
+  columns: number,
+  cardHeight: number,
+): CardGrid {
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (columns - 1)) / columns
+  const pageHeights: number[] = []
+  let curY = 0
+  let col = 0
+
+  function startPage(continued: boolean): void {
+    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
+    pageHeights.push(SUMMARY_PAGE_HEIGHT)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(SECTION_HEADER_SIZE)
+    doc.setTextColor(0)
+    doc.text(continued ? `${title} (cont.)` : title, MARGIN, MARGIN + 5)
+    curY = MARGIN + SECTION_HEADER_HEIGHT
+    col = 0
+  }
+
+  startPage(false)
+
+  return {
+    get curY() { return curY },
+    pageHeights,
+    nextCard(): number {
+      if (col >= columns) {
+        curY += cardHeight + CARD_GAP
+        col = 0
+      }
+      if (curY + cardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
+        startPage(true)
+      }
+      const cardX = MARGIN + col * (cardWidth + CARD_GAP)
+      col++
+      return cardX
+    },
+  }
+}
+
+/**
+ * Draw a card background rectangle with optional enabled/disabled fill.
+ */
+function drawCardRect(
+  doc: jsPDF,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  enabled = true,
+): void {
+  const fill = enabled ? 255 : 245
+  doc.setFillColor(fill, fill, fill)
+  doc.setDrawColor(200)
+  doc.setLineWidth(0.2)
+  doc.roundedRect(x, y, width, height, CARD_CORNER, CARD_CORNER, 'FD')
+}
 
 export function isEmptyCombo(entry: ComboEntry): boolean {
   return entry.key1 === 0 && entry.key2 === 0 && entry.key3 === 0 && entry.key4 === 0 && entry.output === 0
@@ -337,50 +413,19 @@ function drawComboPages(
   const configured = combos.filter((c) => !isEmptyCombo(c))
   if (configured.length === 0) return []
 
-  const pageHeights: number[] = []
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (COMBO_COLUMNS - 1)) / COMBO_COLUMNS
   const comboCardHeight = 10
-
-  let curY = 0
-  let col = 0
-
-  function startPage(continued: boolean): void {
-    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
-    pageHeights.push(SUMMARY_PAGE_HEIGHT)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(SECTION_HEADER_SIZE)
-    doc.setTextColor(0)
-    doc.text(continued ? 'Combos (cont.)' : 'Combos', MARGIN, MARGIN + 5)
-    curY = MARGIN + SECTION_HEADER_HEIGHT
-    col = 0
-  }
-
-  startPage(false)
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (COMBO_COLUMNS - 1)) / COMBO_COLUMNS
+  const grid = createCardGrid(doc, 'Combos', COMBO_COLUMNS, comboCardHeight)
 
   for (const combo of configured) {
-    // Check if we need a new row
-    if (col >= COMBO_COLUMNS) {
-      curY += comboCardHeight + CARD_GAP
-      col = 0
-    }
+    const cardX = grid.nextCard()
 
-    // Check if new page needed
-    if (curY + comboCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-      startPage(true)
-    }
-
-    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
-
-    // Card background
-    doc.setFillColor(255, 255, 255)
-    doc.setDrawColor(200)
-    doc.setLineWidth(0.2)
-    doc.roundedRect(cardX, curY, cardWidth, comboCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+    drawCardRect(doc, cardX, grid.curY, cardWidth, comboCardHeight)
 
     // Draw key badges inside card
     doc.setFont('helvetica', 'normal')
     let badgeX = cardX + CARD_PADDING
-    const badgeY = curY + (comboCardHeight - BADGE_HEIGHT) / 2
+    const badgeY = grid.curY + (comboCardHeight - BADGE_HEIGHT) / 2
     const badgeMidY = badgeY + BADGE_HEIGHT / 2
 
     const keys = [combo.key1, combo.key2, combo.key3, combo.key4].filter((k) => k !== 0)
@@ -403,13 +448,10 @@ function drawComboPages(
     badgeX += 5
 
     // Output key badge
-    const outputLabel = pdfKeycodeLabel(combo.output, input)
-    drawKeyBadge(doc, outputLabel, badgeX, badgeY)
-
-    col++
+    drawKeyBadge(doc, pdfKeycodeLabel(combo.output, input), badgeX, badgeY)
   }
 
-  return pageHeights
+  return grid.pageHeights
 }
 
 /**
@@ -425,48 +467,18 @@ function drawTapDancePages(
     .filter(({ td }) => !isEmptyTapDance(td))
   if (configured.length === 0) return []
 
-  const pageHeights: number[] = []
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (TD_COLUMNS - 1)) / TD_COLUMNS
   const tdCardHeight = TD_ROW_HEIGHT * 5 + CARD_PADDING * 2 // header + 4 rows + padding
-
-  let curY = 0
-  let col = 0
-
-  function startPage(continued: boolean): void {
-    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
-    pageHeights.push(SUMMARY_PAGE_HEIGHT)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(SECTION_HEADER_SIZE)
-    doc.setTextColor(0)
-    doc.text(continued ? 'Tap Dance (cont.)' : 'Tap Dance', MARGIN, MARGIN + 5)
-    curY = MARGIN + SECTION_HEADER_HEIGHT
-    col = 0
-  }
-
-  startPage(false)
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (TD_COLUMNS - 1)) / TD_COLUMNS
+  const grid = createCardGrid(doc, 'Tap Dance', TD_COLUMNS, tdCardHeight)
 
   for (const { td, idx } of configured) {
-    if (col >= TD_COLUMNS) {
-      curY += tdCardHeight + CARD_GAP
-      col = 0
-    }
+    const cardX = grid.nextCard()
 
-    if (curY + tdCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-      startPage(true)
-    }
-
-    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
-
-    // Card background
-    doc.setFillColor(255, 255, 255)
-    doc.setDrawColor(200)
-    doc.setLineWidth(0.2)
-    doc.roundedRect(cardX, curY, cardWidth, tdCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+    drawCardRect(doc, cardX, grid.curY, cardWidth, tdCardHeight)
 
     // Header row: TD index badge + tapping term
-    const headerY = curY + CARD_PADDING
-    const tdLabel = `TD${idx}`
-    drawKeyBadge(doc, tdLabel, cardX + CARD_PADDING, headerY, [0x1E, 0x29, 0x3B], [255, 255, 255])
+    const headerY = grid.curY + CARD_PADDING
+    drawKeyBadge(doc, `TD${idx}`, cardX + CARD_PADDING, headerY, [0x1E, 0x29, 0x3B], [255, 255, 255])
 
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(BADGE_FONT_SIZE)
@@ -485,29 +497,21 @@ function drawTapDancePages(
       const rowY = headerY + (i + 1) * TD_ROW_HEIGHT
       const [rowLabel, keycode] = actions[i]
 
-      // Row label
       doc.setFont('helvetica', 'normal')
       doc.setFontSize(BADGE_FONT_SIZE)
       doc.setTextColor(120)
       doc.text(rowLabel, cardX + CARD_PADDING, rowY + TD_ROW_HEIGHT / 2, { baseline: 'middle' })
 
-      // Key badge
       if (keycode !== 0) {
-        const kcLabel = pdfKeycodeLabel(keycode, input)
-        drawKeyBadge(doc, kcLabel, cardX + CARD_PADDING + 18, rowY + (TD_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+        drawKeyBadge(doc, pdfKeycodeLabel(keycode, input), cardX + CARD_PADDING + 18, rowY + (TD_ROW_HEIGHT - BADGE_HEIGHT) / 2)
       }
     }
-
-    col++
   }
 
-  return pageHeights
+  return grid.pageHeights
 }
 
 // ── Key Override / Alt Repeat Key drawing ──────────────────────────
-
-const KO_COLUMNS = 3
-const KO_ROW_HEIGHT = 5
 
 /**
  * Draw key override pages. Returns page heights for footer positioning.
@@ -522,46 +526,17 @@ function drawKeyOverridePages(
     .filter(({ ko }) => !isEmptyKeyOverride(ko))
   if (configured.length === 0) return []
 
-  const pageHeights: number[] = []
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (KO_COLUMNS - 1)) / KO_COLUMNS
   const koCardHeight = KO_ROW_HEIGHT * 3 + CARD_PADDING * 2 // header + 2 rows + padding
-
-  let curY = 0
-  let col = 0
-
-  function startPage(continued: boolean): void {
-    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
-    pageHeights.push(SUMMARY_PAGE_HEIGHT)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(SECTION_HEADER_SIZE)
-    doc.setTextColor(0)
-    doc.text(continued ? 'Key Overrides (cont.)' : 'Key Overrides', MARGIN, MARGIN + 5)
-    curY = MARGIN + SECTION_HEADER_HEIGHT
-    col = 0
-  }
-
-  startPage(false)
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (KO_COLUMNS - 1)) / KO_COLUMNS
+  const grid = createCardGrid(doc, 'Key Overrides', KO_COLUMNS, koCardHeight)
 
   for (const { ko, idx } of configured) {
-    if (col >= KO_COLUMNS) {
-      curY += koCardHeight + CARD_GAP
-      col = 0
-    }
+    const cardX = grid.nextCard()
 
-    if (curY + koCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-      startPage(true)
-    }
-
-    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
-
-    // Card background (muted if disabled)
-    doc.setFillColor(ko.enabled ? 255 : 245, ko.enabled ? 255 : 245, ko.enabled ? 255 : 245)
-    doc.setDrawColor(200)
-    doc.setLineWidth(0.2)
-    doc.roundedRect(cardX, curY, cardWidth, koCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+    drawCardRect(doc, cardX, grid.curY, cardWidth, koCardHeight, ko.enabled)
 
     // Header row: KO index badge + enabled status
-    const headerY = curY + CARD_PADDING
+    const headerY = grid.curY + CARD_PADDING
     drawKeyBadge(doc, `KO${idx}`, cardX + CARD_PADDING, headerY, [0x1E, 0x29, 0x3B], [255, 255, 255])
 
     doc.setFont('helvetica', 'normal')
@@ -575,8 +550,7 @@ function drawKeyOverridePages(
     doc.text('Trigger:', cardX + CARD_PADDING, triggerY + KO_ROW_HEIGHT / 2, { baseline: 'middle' })
     let trigBadgeX = cardX + CARD_PADDING + 18
     if (ko.triggerKey !== 0) {
-      const trigLabel = pdfKeycodeLabel(ko.triggerKey, input)
-      const w = drawKeyBadge(doc, trigLabel, trigBadgeX, triggerY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+      const w = drawKeyBadge(doc, pdfKeycodeLabel(ko.triggerKey, input), trigBadgeX, triggerY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
       trigBadgeX += w + 1
     }
     const modsStr = formatMods(ko.triggerMods)
@@ -593,17 +567,12 @@ function drawKeyOverridePages(
     doc.setTextColor(120)
     doc.text('Output:', cardX + CARD_PADDING, replaceY + KO_ROW_HEIGHT / 2, { baseline: 'middle' })
     if (ko.replacementKey !== 0) {
-      const replLabel = pdfKeycodeLabel(ko.replacementKey, input)
-      drawKeyBadge(doc, replLabel, cardX + CARD_PADDING + 18, replaceY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
+      drawKeyBadge(doc, pdfKeycodeLabel(ko.replacementKey, input), cardX + CARD_PADDING + 18, replaceY + (KO_ROW_HEIGHT - BADGE_HEIGHT) / 2)
     }
-
-    col++
   }
 
-  return pageHeights
+  return grid.pageHeights
 }
-
-const AR_COLUMNS = 2
 
 /**
  * Draw alt repeat key pages. Returns page heights for footer positioning.
@@ -618,68 +587,36 @@ function drawAltRepeatKeyPages(
     .filter(({ ar }) => !isEmptyAltRepeatKey(ar))
   if (configured.length === 0) return []
 
-  const pageHeights: number[] = []
-  const cardWidth = (USABLE_WIDTH - CARD_GAP * (AR_COLUMNS - 1)) / AR_COLUMNS
   const arCardHeight = 10
-
-  let curY = 0
-  let col = 0
-
-  function startPage(continued: boolean): void {
-    doc.addPage([PAGE_WIDTH, SUMMARY_PAGE_HEIGHT])
-    pageHeights.push(SUMMARY_PAGE_HEIGHT)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(SECTION_HEADER_SIZE)
-    doc.setTextColor(0)
-    doc.text(continued ? 'Alt Repeat Keys (cont.)' : 'Alt Repeat Keys', MARGIN, MARGIN + 5)
-    curY = MARGIN + SECTION_HEADER_HEIGHT
-    col = 0
-  }
-
-  startPage(false)
+  const cardWidth = (USABLE_WIDTH - CARD_GAP * (AR_COLUMNS - 1)) / AR_COLUMNS
+  const grid = createCardGrid(doc, 'Alt Repeat Keys', AR_COLUMNS, arCardHeight)
 
   for (const { ar, idx } of configured) {
-    if (col >= AR_COLUMNS) {
-      curY += arCardHeight + CARD_GAP
-      col = 0
-    }
+    const cardX = grid.nextCard()
 
-    if (curY + arCardHeight > SUMMARY_PAGE_HEIGHT - MARGIN - FOOTER_HEIGHT) {
-      startPage(true)
-    }
-
-    const cardX = MARGIN + col * (cardWidth + CARD_GAP)
-
-    // Card background (muted if disabled)
-    doc.setFillColor(ar.enabled ? 255 : 245, ar.enabled ? 255 : 245, ar.enabled ? 255 : 245)
-    doc.setDrawColor(200)
-    doc.setLineWidth(0.2)
-    doc.roundedRect(cardX, curY, cardWidth, arCardHeight, CARD_CORNER, CARD_CORNER, 'FD')
+    drawCardRect(doc, cardX, grid.curY, cardWidth, arCardHeight, ar.enabled)
 
     // Draw AR index badge + last key -> alt key
     doc.setFont('helvetica', 'normal')
     let badgeX = cardX + CARD_PADDING
-    const badgeY = curY + (arCardHeight - BADGE_HEIGHT) / 2
+    const badgeY = grid.curY + (arCardHeight - BADGE_HEIGHT) / 2
     const badgeMidY = badgeY + BADGE_HEIGHT / 2
 
-    // AR index badge
     const w0 = drawKeyBadge(doc, `AR${idx}`, badgeX, badgeY, [0x1E, 0x29, 0x3B], [255, 255, 255])
     badgeX += w0 + 2
 
-    // Last key badge
     if (ar.lastKey !== 0) {
-      const lastLabel = pdfKeycodeLabel(ar.lastKey, input)
-      const w = drawKeyBadge(doc, lastLabel, badgeX, badgeY)
+      const w = drawKeyBadge(doc, pdfKeycodeLabel(ar.lastKey, input), badgeX, badgeY)
       badgeX += w + 1
     }
 
-    // Mods (if any)
-    const arModsStr = formatMods(ar.allowedMods)
-    if (arModsStr) {
+    const modsStr = formatMods(ar.allowedMods)
+    if (modsStr) {
+      const modsText = `+ ${modsStr}`
       doc.setFontSize(BADGE_FONT_SIZE)
       doc.setTextColor(150)
-      doc.text(`+ ${arModsStr}`, badgeX + 1, badgeMidY, { baseline: 'middle' })
-      badgeX += doc.getTextWidth(`+ ${arModsStr}`) + 2
+      doc.text(modsText, badgeX + 1, badgeMidY, { baseline: 'middle' })
+      badgeX += doc.getTextWidth(modsText) + 2
     }
 
     // Arrow separator
@@ -688,22 +625,18 @@ function drawAltRepeatKeyPages(
     doc.text('->', badgeX + 1.5, badgeMidY, { align: 'center', baseline: 'middle' })
     badgeX += 5
 
-    // Alt key badge
     if (ar.altKey !== 0) {
       drawKeyBadge(doc, pdfKeycodeLabel(ar.altKey, input), badgeX, badgeY)
     }
 
-    // Disabled indicator
     if (!ar.enabled) {
       doc.setFontSize(BADGE_FONT_SIZE)
       doc.setTextColor(180)
       doc.text('(off)', cardX + cardWidth - CARD_PADDING, badgeMidY, { align: 'right', baseline: 'middle' })
     }
-
-    col++
   }
 
-  return pageHeights
+  return grid.pageHeights
 }
 
 export function generateKeymapPdf(input: PdfExportInput): string {
