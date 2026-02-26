@@ -82,9 +82,9 @@ For complete instructions with screenshots:
 ### Data Management
 
 - **Snapshots** — Save and restore complete keyboard states (keymap, macros, dynamic entries, QMK settings)
-- **Favorites** — Inline favorites panel in every editor for saving/loading reusable configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard. Per-entry export, bulk import/export supported
+- **Favorites** — Inline favorites panel in every editor for saving/loading reusable configurations; not tied to a specific keyboard, so saved entries can be loaded on any compatible keyboard. Per-entry export, bulk import/export supported. Individual favorites can be uploaded to Pipette Hub
 - **Data Modal** — Centralized favorite and Hub post management from the device selection screen
-- **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, or PDF cheat sheet
+- **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for dynamic entries)
 - **Import** — Load `.vil` files to restore keyboard state
 
 ### Cloud Sync (Google Drive appDataFolder)
@@ -96,7 +96,7 @@ See [Data Guide](docs/Data.md) for details on what is synced and how your data i
 
 ### Pipette Hub
 
-Upload and share your keymaps on [Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev), a community keymap gallery.
+Upload and share your keymaps and favorite configurations on [Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev), a community keymap gallery. Keyboard snapshots, tap dance, macro, combo, key override, and alt repeat key configurations can all be shared.
 
 See [Data Guide](docs/Data.md) for details on how Hub authentication works.
 
