@@ -122,9 +122,7 @@ export function deserializeFavData(
   const result = { ...data }
   for (const field of fields) {
     const val = result[field]
-    if (typeof val === 'string') {
-      result[field] = deserializeFn(val)
-    } else if (typeof val === 'number') {
+    if (typeof val === 'string' || typeof val === 'number') {
       result[field] = deserializeFn(val)
     }
   }
