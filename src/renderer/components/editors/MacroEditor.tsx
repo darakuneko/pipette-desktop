@@ -583,7 +583,6 @@ export function MacroEditor({
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}
-            hubPostType="macro"
             hubOrigin={hubOrigin}
             hubNeedsDisplayName={hubNeedsDisplayName}
             hubUploading={hubUploading}
