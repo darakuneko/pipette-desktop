@@ -20,6 +20,14 @@ export const FAV_TYPE_TO_EXPORT_KEY: Record<FavoriteType, string> = {
   altRepeatKey: 'ark',
 }
 
+export const FAV_KEYCODE_FIELDS: Record<FavoriteType, readonly string[]> = {
+  tapDance: ['onTap', 'onHold', 'onDoubleTap', 'onTapHold'],
+  macro: [],
+  combo: ['key1', 'key2', 'key3', 'key4', 'output'],
+  keyOverride: ['triggerKey', 'replacementKey'],
+  altRepeatKey: ['lastKey', 'altKey'],
+}
+
 export function isValidFavoriteType(v: unknown): v is FavoriteType {
   return typeof v === 'string' && FAVORITE_TYPES.includes(v)
 }
@@ -70,7 +78,7 @@ function isValidAltRepeatKeyData(data: unknown): boolean {
 
 export function isValidFavExportFile(v: unknown): v is FavoriteExportFile {
   if (!isRecord(v)) return false
-  if (v.app !== 'pipette' || v.version !== 1 || v.scope !== 'fav') return false
+  if (v.app !== 'pipette' || v.version !== 2 || v.scope !== 'fav') return false
   if (typeof v.exportedAt !== 'string') return false
   const cats = v.categories
   if (!isRecord(cats)) return false
@@ -86,6 +94,41 @@ export function isValidFavExportFile(v: unknown): v is FavoriteExportFile {
     }
   }
   return true
+}
+
+export function serializeFavData(
+  type: FavoriteType,
+  data: unknown,
+  serializeFn: (code: number) => string,
+): unknown {
+  const fields = FAV_KEYCODE_FIELDS[type]
+  if (fields.length === 0 || !isRecord(data)) return data
+  const result = { ...data }
+  for (const field of fields) {
+    if (typeof result[field] === 'number') {
+      result[field] = serializeFn(result[field] as number)
+    }
+  }
+  return result
+}
+
+export function deserializeFavData(
+  type: FavoriteType,
+  data: unknown,
+  deserializeFn: (val: string | number) => number,
+): unknown {
+  const fields = FAV_KEYCODE_FIELDS[type]
+  if (fields.length === 0 || !isRecord(data)) return data
+  const result = { ...data }
+  for (const field of fields) {
+    const val = result[field]
+    if (typeof val === 'string') {
+      result[field] = deserializeFn(val)
+    } else if (typeof val === 'number') {
+      result[field] = deserializeFn(val)
+    }
+  }
+  return result
 }
 
 export function isFavoriteDataFile(v: unknown, type: FavoriteType): boolean {
