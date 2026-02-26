@@ -649,7 +649,7 @@ Hub 機能を使用するには Google アカウント認証が必要です。�
 
 - コミュニティのキーマップを閲覧
 - キーボード名で検索
-- `.vil`、`.c`、`.pdf`、`.pipette` 形式でダウンロード
+- `.vil`、`.c`、`.pdf` 形式でダウンロード
 
 #### 個別キーマップページ
 
@@ -660,7 +660,7 @@ Hub 機能を使用するには Google アカウント認証が必要です。�
 - アップロードされたキーマップの全レイヤー (Layer 0〜3) を表示
 - Tap Dance、Macro、Combo、Alt Repeat Key、Key Override の設定を確認
 - **Copy URL** や **Share on X** で他の人と共有
-- 各種形式 (`.pdf`、`.c`、`.vil`、`.pipette`) でダウンロード
+- 各種形式 (`.pdf`、`.c`、`.vil`) でダウンロード
 
 Hub 認証の詳細は [Data Guide](Data.md) を参照してください。
 
