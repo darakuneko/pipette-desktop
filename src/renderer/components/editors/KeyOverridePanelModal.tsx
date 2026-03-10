@@ -26,6 +26,7 @@ import type { FavHubEntryResult } from './FavoriteHubActions'
 interface Props {
   entries: KeyOverrideEntry[]
   onSetEntry: (index: number, entry: KeyOverrideEntry) => Promise<void>
+  initialIndex?: number
   unlocked?: boolean
   onUnlock?: () => void
   tapDanceEntries?: TapDanceEntry[]
@@ -88,6 +89,7 @@ function tileStyle(configured: boolean, enabled: boolean): string {
 export function KeyOverridePanelModal({
   entries,
   onSetEntry,
+  initialIndex,
   unlocked,
   onUnlock,
   tapDanceEntries,
@@ -104,7 +106,7 @@ export function KeyOverridePanelModal({
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
   const [editedEntry, setEditedEntry] = useState<KeyOverrideEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)

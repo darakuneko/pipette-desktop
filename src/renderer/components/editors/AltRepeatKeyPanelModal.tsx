@@ -25,6 +25,7 @@ import type { FavHubEntryResult } from './FavoriteHubActions'
 interface Props {
   entries: AltRepeatKeyEntry[]
   onSetEntry: (index: number, entry: AltRepeatKeyEntry) => Promise<void>
+  initialIndex?: number
   unlocked?: boolean
   onUnlock?: () => void
   tapDanceEntries?: TapDanceEntry[]
@@ -79,6 +80,7 @@ function tileStyle(configured: boolean, enabled: boolean): string {
 export function AltRepeatKeyPanelModal({
   entries,
   onSetEntry,
+  initialIndex,
   unlocked,
   onUnlock,
   tapDanceEntries,
@@ -95,7 +97,7 @@ export function AltRepeatKeyPanelModal({
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
   const [editedEntry, setEditedEntry] = useState<AltRepeatKeyEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)

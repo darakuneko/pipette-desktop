@@ -34,6 +34,7 @@ interface Props {
   onSettingsUpdate?: (qsid: number, data: number[]) => void
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
+  initialIndex?: number
   onClose: () => void
   // Hub integration (optional)
   hubOrigin?: string
@@ -90,6 +91,7 @@ export function ComboPanelModal({
   onSettingsUpdate,
   tapDanceEntries,
   deserializedMacros,
+  initialIndex,
   onClose,
   hubOrigin,
   hubNeedsDisplayName,
@@ -102,7 +104,7 @@ export function ComboPanelModal({
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
   const [comboTimeout, setComboTimeout] = useState<number | null>(null)
   const [savedTimeout, setSavedTimeout] = useState<number | null>(null)
   const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)

@@ -577,9 +577,12 @@ interface Props {
   onLock?: () => void
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void
-  onOpenCombo?: () => void
-  onOpenAltRepeatKey?: () => void
-  onOpenKeyOverride?: () => void
+  comboEntries?: import('../../../shared/types/protocol').ComboEntry[]
+  onOpenCombo?: (index?: number) => void
+  keyOverrideEntries?: import('../../../shared/types/protocol').KeyOverrideEntry[]
+  onOpenKeyOverride?: (index?: number) => void
+  altRepeatKeyEntries?: import('../../../shared/types/protocol').AltRepeatKeyEntry[]
+  onOpenAltRepeatKey?: (index?: number) => void
   toolsExtra?: React.ReactNode
   dataPanel?: React.ReactNode
   onOverlayOpen?: () => void
@@ -670,9 +673,12 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onLock,
   onMatrixModeChange,
   onOpenLighting,
+  comboEntries,
   onOpenCombo,
-  onOpenAltRepeatKey,
+  keyOverrideEntries,
   onOpenKeyOverride,
+  altRepeatKeyEntries,
+  onOpenAltRepeatKey,
   toolsExtra,
   dataPanel,
   onOverlayOpen,
@@ -1734,9 +1740,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => setShowOneShotKeysSettings(true), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'quantum', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => setShowMagicSettings(true), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'quantum', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => setShowAutoShiftSettings(true), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
-      { tab: 'quantum', key: 'combo', label: t('editor.combo.title'), onClick: onOpenCombo, testId: 'combo-settings-btn', enabled: !!onOpenCombo },
-      { tab: 'quantum', key: 'altRepeatKey', label: t('editor.altRepeatKey.title'), onClick: onOpenAltRepeatKey, testId: 'alt-repeat-key-settings-btn', enabled: !!onOpenAltRepeatKey },
-      { tab: 'quantum', key: 'keyOverride', label: t('editor.keyOverride.title'), onClick: onOpenKeyOverride, testId: 'key-override-settings-btn', enabled: !!onOpenKeyOverride },
+      // Combo, Key Override, Alt Repeat Key settings are shown inline via tile grids in their tabs
       { tab: 'backlight', key: 'lighting', label: t('editor.lighting.title'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
     ]
 
@@ -1767,9 +1771,13 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
 
     return content
-  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, onOpenCombo, onOpenAltRepeatKey, onOpenKeyOverride, t])
+  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, t])
 
-  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect)
+  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
+    comboEntries, onOpenCombo,
+    keyOverrideEntries, onOpenKeyOverride,
+    altRepeatKeyEntries, onOpenAltRepeatKey,
+  })
 
   if (!layout) {
     return <div className="p-4 text-content-muted">{t('common.loading')}</div>

@@ -297,8 +297,11 @@ export function App() {
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
   const [showLightingModal, setShowLightingModal] = useState(false)
   const [showComboModal, setShowComboModal] = useState(false)
+  const [comboInitialIndex, setComboInitialIndex] = useState<number | undefined>(undefined)
   const [showAltRepeatKeyModal, setShowAltRepeatKeyModal] = useState(false)
+  const [altRepeatKeyInitialIndex, setAltRepeatKeyInitialIndex] = useState<number | undefined>(undefined)
   const [showKeyOverrideModal, setShowKeyOverrideModal] = useState(false)
+  const [keyOverrideInitialIndex, setKeyOverrideInitialIndex] = useState<number | undefined>(undefined)
 
   const showFileSuccess = useCallback((kind: 'import' | 'export') => {
     setFileSuccessKind(kind)
@@ -1309,9 +1312,12 @@ export function App() {
             onLock={handleLock}
             onMatrixModeChange={handleMatrixModeChange}
             onOpenLighting={lightingSupported ? () => setShowLightingModal(true) : undefined}
-            onOpenCombo={comboSupported ? () => setShowComboModal(true) : undefined}
-            onOpenAltRepeatKey={altRepeatKeySupported ? () => setShowAltRepeatKeyModal(true) : undefined}
-            onOpenKeyOverride={keyOverrideSupported ? () => setShowKeyOverrideModal(true) : undefined}
+            comboEntries={comboSupported ? keyboard.comboEntries : undefined}
+            onOpenCombo={comboSupported ? (index?: number) => { setComboInitialIndex(index); setShowComboModal(true) } : undefined}
+            keyOverrideEntries={keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
+            onOpenKeyOverride={keyOverrideSupported ? (index?: number) => { setKeyOverrideInitialIndex(index); setShowKeyOverrideModal(true) } : undefined}
+            altRepeatKeyEntries={altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
+            onOpenAltRepeatKey={altRepeatKeySupported ? (index?: number) => { setAltRepeatKeyInitialIndex(index); setShowAltRepeatKeyModal(true) } : undefined}
             layerNames={!device.isDummy ? keyboard.layerNames : undefined}
             onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
             toolsExtra={toolsExtra}
@@ -1442,6 +1448,7 @@ export function App() {
         <ComboPanelModal
           entries={keyboard.comboEntries}
           onSetEntry={keyboard.setComboEntry}
+          initialIndex={comboInitialIndex}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
           qmkSettingsGet={comboTimeoutSupported ? api.qmkSettingsGet : undefined}
@@ -1449,7 +1456,7 @@ export function App() {
           onSettingsUpdate={comboTimeoutSupported ? keyboard.updateQmkSettingsValue : undefined}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
-          onClose={() => setShowComboModal(false)}
+          onClose={() => { setShowComboModal(false); setComboInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
@@ -1465,11 +1472,12 @@ export function App() {
         <AltRepeatKeyPanelModal
           entries={keyboard.altRepeatKeyEntries}
           onSetEntry={keyboard.setAltRepeatKeyEntry}
+          initialIndex={altRepeatKeyInitialIndex}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
-          onClose={() => setShowAltRepeatKeyModal(false)}
+          onClose={() => { setShowAltRepeatKeyModal(false); setAltRepeatKeyInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
@@ -1485,11 +1493,12 @@ export function App() {
         <KeyOverridePanelModal
           entries={keyboard.keyOverrideEntries}
           onSetEntry={keyboard.setKeyOverrideEntry}
+          initialIndex={keyOverrideInitialIndex}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
-          onClose={() => setShowKeyOverrideModal(false)}
+          onClose={() => { setShowKeyOverrideModal(false); setKeyOverrideInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
