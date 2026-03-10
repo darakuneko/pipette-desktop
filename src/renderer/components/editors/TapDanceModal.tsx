@@ -233,6 +233,7 @@ export function TapDanceModal({
               <div className="mt-3">
                 <TabbedKeycodes
                   onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                  onKeycodeDoubleClick={maskedSelection.selectAndCommit}
                   maskOnly={maskedSelection.maskOnly}
                   lmMode={maskedSelection.lmMode}
                   tabContentOverride={tabContentOverride}

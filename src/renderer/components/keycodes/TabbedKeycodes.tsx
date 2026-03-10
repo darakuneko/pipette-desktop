@@ -29,6 +29,7 @@ interface TooltipState {
 
 interface Props {
   onKeycodeSelect?: (keycode: Keycode) => void
+  onKeycodeDoubleClick?: (keycode: Keycode) => void
   onKeycodeMultiSelect?: (keycode: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => void
   pickerSelectedKeycodes?: Set<string>
   onBackgroundClick?: () => void
@@ -48,6 +49,7 @@ interface Props {
 
 export function TabbedKeycodes({
   onKeycodeSelect,
+  onKeycodeDoubleClick,
   onKeycodeMultiSelect,
   pickerSelectedKeycodes,
   onBackgroundClick,
@@ -207,6 +209,7 @@ export function TabbedKeycodes({
       <KeycodeGrid
         keycodes={keycodes}
         onClick={handleKeycodeClick}
+        onDoubleClick={onKeycodeDoubleClick}
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
@@ -247,6 +250,7 @@ export function TabbedKeycodes({
           viewType={basicViewType}
           splitKeyMode={splitKeyMode}
           onKeycodeClick={handleKeycodeClick}
+          onKeycodeDoubleClick={onKeycodeDoubleClick}
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}
           highlightedKeycodes={highlightedKeycodes}
@@ -346,9 +350,9 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {showHint && (
+        {(showHint || onKeycodeDoubleClick) && (
           <p className="px-3 pb-1.5 text-[11px] text-content-muted">
-            {t('editor.keymap.pickerHint')}
+            {showHint ? t('editor.keymap.pickerHint') : t('editor.keymap.pickerDoubleClickHint')}
           </p>
         )}
 

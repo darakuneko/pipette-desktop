@@ -13,6 +13,7 @@ interface Options {
 
 interface Result {
   handleKeycodeSelect: (kc: Keycode) => void
+  selectAndCommit: (kc: Keycode) => void
   maskOnly: boolean
   lmMode: boolean
   activeMask: number | null
@@ -107,8 +108,45 @@ export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initia
     [],
   )
 
+  const selectAndCommit = useCallback(
+    (kc: Keycode) => {
+      const mask = activeMaskRef.current
+      const part = editingPartRef.current
+
+      // Mask active + editing inner: compose masked value and commit
+      if (mask !== null && part === 'inner') {
+        const innerCode = deserialize(kc.qmkId)
+        const final = isLMKeycode(mask)
+          ? (mask & ~resolve('QMK_LM_MASK')) | (innerCode & resolve('QMK_LM_MASK'))
+          : (mask & 0xff00) | (innerCode & 0x00ff)
+        if (onUpdateRef.current(final) !== false) {
+          onCommitRef.current()
+          resetState()
+        }
+        return
+      }
+
+      // Masked keycode selected: enter mask mode (don't commit — user must pick inner key)
+      if (kc.masked) {
+        const maskCode = deserialize(kc.qmkId)
+        if (onUpdateRef.current(maskCode) !== false) {
+          setActiveMask(maskCode)
+          setEditingPart('inner')
+        }
+        return
+      }
+
+      // Normal key: update and commit
+      if (onUpdateRef.current(deserialize(kc.qmkId)) !== false) {
+        onCommitRef.current()
+        resetState()
+      }
+    },
+    [],
+  )
+
   const maskOnly = editingPart === 'inner' && activeMask !== null && !isLMKeycode(activeMask)
   const lmMode = editingPart === 'inner' && activeMask !== null && isLMKeycode(activeMask)
 
-  return { handleKeycodeSelect, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
+  return { handleKeycodeSelect, selectAndCommit, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
 }

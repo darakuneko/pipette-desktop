@@ -51,6 +51,7 @@ export interface SplitKeyProps {
   base: Keycode
   shifted: Keycode
   onClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onDoubleClick?: (keycode: Keycode) => void
   onHover?: (keycode: Keycode, rect: DOMRect) => void
   onHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
@@ -71,6 +72,7 @@ function SplitKeyInner({
   base,
   shifted,
   onClick,
+  onDoubleClick,
   onHover,
   onHoverEnd,
   highlightedKeycodes,
@@ -104,6 +106,7 @@ function SplitKeyInner({
         type="button"
         className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
         onClick={(e) => onClick?.(shifted, e)}
+        onDoubleClick={() => onDoubleClick?.(shifted)}
         onMouseEnter={(e) => onHover?.(hoverShifted, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
       >
@@ -113,6 +116,7 @@ function SplitKeyInner({
         type="button"
         className={`${SPLIT_HALF_BASE} rounded-b ${splitHalfClass(baseHighlighted, baseSelected, baseDisplayLabel != null)}`}
         onClick={(e) => onClick?.(base, e)}
+        onDoubleClick={() => onDoubleClick?.(base)}
         onMouseEnter={(e) => onHover?.(hoverBase, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
       >

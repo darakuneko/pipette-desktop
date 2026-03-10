@@ -505,6 +505,7 @@ export function MacroEditor({
           <div ref={pickerRef} className={`mt-3 ${isEditing ? '' : 'hidden'}`}>
             <TabbedKeycodes
               onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+              onKeycodeDoubleClick={maskedSelection.selectAndCommit}
               maskOnly={maskedSelection.maskOnly}
               lmMode={maskedSelection.lmMode}
               tabContentOverride={tabContentOverride}

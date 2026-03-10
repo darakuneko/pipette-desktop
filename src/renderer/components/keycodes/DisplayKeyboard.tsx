@@ -53,6 +53,7 @@ function computeSteppedKeyInfo(
 interface Props {
   kle: unknown[][]
   onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onKeycodeDoubleClick?: (keycode: Keycode) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
@@ -74,6 +75,7 @@ interface GridKey {
 export function DisplayKeyboard({
   kle,
   onKeycodeClick,
+  onKeycodeDoubleClick,
   onKeycodeHover,
   onKeycodeHoverEnd,
   highlightedKeycodes,
@@ -143,6 +145,7 @@ export function DisplayKeyboard({
             base={gk.keycode}
             shifted={gk.shiftedKeycode}
             onClick={onKeycodeClick}
+            onDoubleClick={onKeycodeDoubleClick}
             onHover={onKeycodeHover}
             onHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
@@ -153,6 +156,7 @@ export function DisplayKeyboard({
           <KeycodeButton
             keycode={gk.keycode}
             onClick={onKeycodeClick}
+            onDoubleClick={onKeycodeDoubleClick}
             onHover={onKeycodeHover}
             onHoverEnd={onKeycodeHoverEnd}
             highlighted={isHighlighted}

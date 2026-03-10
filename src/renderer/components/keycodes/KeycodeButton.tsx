@@ -6,6 +6,7 @@ import type { Keycode } from '../../../shared/keycodes/keycodes'
 interface Props {
   keycode: Keycode
   onClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onDoubleClick?: (keycode: Keycode) => void
   onHover?: (keycode: Keycode, rect: DOMRect) => void
   onHoverEnd?: () => void
   highlighted?: boolean
@@ -14,7 +15,7 @@ interface Props {
   displayLabel?: string
 }
 
-function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel }: Props) {
+function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverEnd, highlighted, selected, sizeClass, displayLabel }: Props) {
   if (keycode.hidden) return null
 
   const label = displayLabel ?? keycode.label
@@ -46,6 +47,7 @@ function KeycodeButtonInner({ keycode, onClick, onHover, onHoverEnd, highlighted
       type="button"
       className={`${base} ${variant}`}
       onClick={(e) => onClick?.(keycode, e)}
+      onDoubleClick={() => onDoubleClick?.(keycode)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={onHoverEnd}
     >

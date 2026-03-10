@@ -19,6 +19,7 @@ interface Props {
   viewType: BasicViewType
   splitKeyMode?: SplitKeyMode
   onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onKeycodeDoubleClick?: (keycode: Keycode) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
@@ -68,6 +69,7 @@ export function BasicKeyboardView({
   viewType,
   splitKeyMode,
   onKeycodeClick,
+  onKeycodeDoubleClick,
   onKeycodeHover,
   onKeycodeHoverEnd,
   highlightedKeycodes,
@@ -117,6 +119,7 @@ export function BasicKeyboardView({
       <KeycodeGrid
         keycodes={keycodes}
         onClick={onKeycodeClick}
+        onDoubleClick={onKeycodeDoubleClick}
         onHover={onKeycodeHover}
         onHoverEnd={onKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
@@ -135,6 +138,7 @@ export function BasicKeyboardView({
           <DisplayKeyboard
             kle={selectedLayout.kle}
             onKeycodeClick={onKeycodeClick}
+            onKeycodeDoubleClick={onKeycodeDoubleClick}
             onKeycodeHover={onKeycodeHover}
             onKeycodeHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
