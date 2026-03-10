@@ -71,7 +71,7 @@
       "copySelected": "選択キーを貼り付け ({{count}})",
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
-      "pickerDoubleClickHint": "ダブルクリックまたはEnterで選択して閉じる",
+      "pickerDoubleClickHint": "同じキーを再度ダブルクリックするか、Enterキーを押すと閉じます",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",

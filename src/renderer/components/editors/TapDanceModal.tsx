@@ -203,6 +203,9 @@ export function TapDanceModal({
                       onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                       label={t(labelKey)}
                     />
+                    {selectedField === key && !popoverState && editedEntry[key] !== preEditValueRef.current && (
+                      <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
+                    )}
                   </div>
                 )
               })}

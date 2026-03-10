@@ -492,6 +492,7 @@ export function MacroEditor({
                   onKeycodeAdd={() => handleKeycodeAdd(i)}
                   onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
                   focusMode={isEditing}
+                  showConfirmHint={isSelectedAction && isEditing && !popoverState && isKeycodeAction(action) && action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current}
                 />
               )
             })}

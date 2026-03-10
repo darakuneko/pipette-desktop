@@ -377,9 +377,9 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {(showHint || guardedDoubleClick) && (
+        {showHint && (
           <p className="px-3 pb-1.5 text-[11px] text-content-muted">
-            {showHint ? t('editor.keymap.pickerHint') : t('editor.keymap.pickerDoubleClickHint')}
+            {t('editor.keymap.pickerHint')}
           </p>
         )}
 
