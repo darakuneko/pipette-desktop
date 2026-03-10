@@ -206,6 +206,21 @@ describe('KeyPopover', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('closes on Enter key', () => {
+    render(<KeyPopover {...defaultProps} />)
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not close on Enter when focus is in input', () => {
+    render(<KeyPopover {...defaultProps} />)
+    const input = screen.getByPlaceholderText('Search keycodes...')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it('closes on outside click', async () => {
     render(
       <div>

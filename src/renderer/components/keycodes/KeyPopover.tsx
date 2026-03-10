@@ -114,6 +114,12 @@ export function KeyPopover({
       if (e.key === 'Escape') {
         e.stopPropagation()
         onClose()
+      } else if (e.key === 'Enter') {
+        const el = e.target as HTMLElement | null
+        if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable) return
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
       }
     }
     window.addEventListener('keydown', handler, true)
@@ -368,6 +374,7 @@ export function KeyPopover({
             modMask={currentModMask}
             basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}
             onKeycodeSelect={handleKeycodeSelect}
+            onClose={onClose}
           />
         )}
         {activeTab === 'code' && (

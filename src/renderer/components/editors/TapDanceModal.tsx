@@ -119,8 +119,6 @@ export function TapDanceModal({
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
     setEditedEntry((prev) => ({ ...prev, [field]: code }))
-    setPopoverState(null)
-    setSelectedField(null)
   }, [])
 
   const handleFieldDoubleClick = useCallback(

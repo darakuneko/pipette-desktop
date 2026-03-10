@@ -86,7 +86,8 @@
         "shT": "SH_T",
         "lm": "LM",
         "layerLabel": "Layer",
-        "keySelected": "Selected: {{key}}"
+        "keySelected": "Selected: {{key}}",
+        "clickToClose": "Click to close"
       }
     },
     "layout": {

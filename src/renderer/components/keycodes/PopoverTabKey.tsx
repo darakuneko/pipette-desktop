@@ -42,11 +42,12 @@ interface Props {
   lmMode?: boolean
   basicKeyOnly?: boolean
   onKeycodeSelect: (kc: Keycode) => void
+  onClose?: () => void
 }
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect }: Props) {
+export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose }: Props) {
   const hasModMask = modMask > 0
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
@@ -179,11 +180,23 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: l
       />
       <div className="max-h-[240px] overflow-y-auto" onScroll={handleDetailMouseLeave}>
         {query.trim() && results.length === 0 && (
-          <div className="px-2 py-3 text-center text-xs text-content-muted">
-            {suppressResults
-              ? t('editor.keymap.keyPopover.keySelected', { key: query })
-              : t('editor.keymap.keyPopover.noResults')}
-          </div>
+          suppressResults && onClose ? (
+            <button
+              type="button"
+              className="w-full rounded px-2 py-3 text-center text-xs text-content-muted hover:bg-surface-dim"
+              onClick={onClose}
+              data-testid="popover-close-hint"
+            >
+              <div>{t('editor.keymap.keyPopover.keySelected', { key: query })}</div>
+              <div className="mt-1 text-accent">{t('editor.keymap.keyPopover.clickToClose')}</div>
+            </button>
+          ) : (
+            <div className="px-2 py-3 text-center text-xs text-content-muted">
+              {suppressResults
+                ? t('editor.keymap.keyPopover.keySelected', { key: query })
+                : t('editor.keymap.keyPopover.noResults')}
+            </div>
+          )
         )}
         {results.map((entry) => (
           <button

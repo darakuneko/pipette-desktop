@@ -86,7 +86,8 @@
         "shT": "SH_T",
         "lm": "LM",
         "layerLabel": "レイヤー",
-        "keySelected": "選択済み: {{key}}"
+        "keySelected": "選択済み: {{key}}",
+        "clickToClose": "クリックして閉じる"
       }
     },
     "layout": {

@@ -367,8 +367,6 @@ export function MacroEditor({
       const newKeycodes = [...action.keycodes]
       newKeycodes[popoverState.keycodeIndex] = code
       setKeycodeAt(popoverState.actionIndex, newKeycodes)
-      setPopoverState(null)
-      setSelectedKey(null)
     },
     [popoverState, currentActions, setKeycodeAt],
   )

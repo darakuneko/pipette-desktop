@@ -198,8 +198,6 @@ export function ComboPanelModal({
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
     setEditedEntry((prev) => prev ? { ...prev, [field]: code } : prev)
-    setPopoverState(null)
-    setSelectedField(null)
   }, [])
 
   const maskedSelection = useMaskedKeycodeSelection({

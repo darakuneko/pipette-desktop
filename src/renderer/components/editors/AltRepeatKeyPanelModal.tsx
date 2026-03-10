@@ -171,8 +171,6 @@ export function AltRepeatKeyPanelModal({
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
     updateEntry(field, code)
-    setPopoverState(null)
-    setSelectedField(null)
   }, [updateEntry])
 
   const maskedSelection = useMaskedKeycodeSelection({

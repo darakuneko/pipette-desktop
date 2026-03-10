@@ -88,8 +88,8 @@ export function TabbedKeycodes({
     if (!onConfirm) return
     const handler = (e: KeyboardEvent) => {
       if (e.key !== 'Enter') return
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      const el = e.target as HTMLElement | null
+      if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable) return
       e.preventDefault()
       onConfirm()
     }
