@@ -955,6 +955,18 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
   }, [layoutPanelOpen])
 
+  // Escape deselects the current key/encoder selection
+  useEffect(() => {
+    if (!selectedKey && !selectedEncoder) return
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        clearSingleSelection()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [selectedKey, selectedEncoder])
+
   // --- Matrix tester polling ---
   const poll = useCallback(async () => {
     if (!pollingRef.current || !getMatrixState || rows == null || cols == null) return
