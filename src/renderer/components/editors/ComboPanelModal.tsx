@@ -13,7 +13,6 @@ import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
-import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -358,9 +357,6 @@ export function ComboPanelModal({
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey, labelOpts)}
                         />
-                        {selectedField === key && (
-                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
-                        )}
                       </div>
                     )
                   })}
@@ -371,6 +367,7 @@ export function ComboPanelModal({
                     <TabbedKeycodes
                       onKeycodeSelect={maskedSelection.handleKeycodeSelect}
                       onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+                      onConfirm={maskedSelection.confirm}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
                       tabContentOverride={tabContentOverride}

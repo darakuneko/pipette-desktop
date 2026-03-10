@@ -23,7 +23,6 @@ interface Props {
   onKeycodeDoubleClick: (keycodeIndex: number, rect: DOMRect) => void
   onKeycodeAdd: () => void
   onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
-  selectButton?: React.ReactNode
   focusMode?: boolean
 }
 
@@ -56,7 +55,6 @@ export function MacroActionItem({
   onKeycodeDoubleClick,
   onKeycodeAdd,
   onMaskPartClick,
-  selectButton,
   focusMode,
 }: Props) {
   const { t } = useTranslation()
@@ -107,7 +105,6 @@ export function MacroActionItem({
                 />
               )
             })}
-            {selectButton}
             <button
               type="button"
               data-testid="macro-add-keycode"
@@ -157,7 +154,6 @@ export function MacroActionItem({
           onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(selectedKeycodeIndex, part) : undefined}
           onDoubleClick={(rect) => onKeycodeDoubleClick(selectedKeycodeIndex, rect)}
         />
-        {selectButton}
       </div>
     )
   }

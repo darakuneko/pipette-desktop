@@ -24,7 +24,6 @@ import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
-import { MaskKeyPreview } from './MaskKeyPreview'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -419,7 +418,6 @@ export function MacroEditor({
       // Resolve to Element for text node targets (e.g. spans inside buttons)
       const el = target instanceof Element ? target : target.parentElement
       if (el?.closest('[data-testid="keycode-field"]')) return
-      if (el?.closest('[data-testid="mask-confirm-btn"]')) return
       revertAndDeselect()
     }
     window.addEventListener('click', handler)
@@ -495,7 +493,6 @@ export function MacroEditor({
                   onKeycodeDoubleClick={(ki, rect) => handleKeycodeDoubleClick(i, ki, rect)}
                   onKeycodeAdd={() => handleKeycodeAdd(i)}
                   onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
-                  selectButton={isSelectedAction ? <MaskKeyPreview onConfirm={maskedSelection.confirm} /> : undefined}
                   focusMode={isEditing}
                 />
               )
@@ -506,6 +503,7 @@ export function MacroEditor({
             <TabbedKeycodes
               onKeycodeSelect={maskedSelection.handleKeycodeSelect}
               onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+              onConfirm={maskedSelection.confirm}
               maskOnly={maskedSelection.maskOnly}
               lmMode={maskedSelection.lmMode}
               tabContentOverride={tabContentOverride}

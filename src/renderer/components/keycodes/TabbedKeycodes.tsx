@@ -30,6 +30,7 @@ interface TooltipState {
 interface Props {
   onKeycodeSelect?: (keycode: Keycode) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
+  onConfirm?: () => void // Confirm current selection (Enter key)
   onKeycodeMultiSelect?: (keycode: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => void
   pickerSelectedKeycodes?: Set<string>
   onBackgroundClick?: () => void
@@ -50,6 +51,7 @@ interface Props {
 export function TabbedKeycodes({
   onKeycodeSelect,
   onKeycodeDoubleClick,
+  onConfirm,
   onKeycodeMultiSelect,
   pickerSelectedKeycodes,
   onBackgroundClick,
@@ -80,6 +82,20 @@ export function TabbedKeycodes({
     const clampedLeft = Math.max(0, Math.min(tooltip.left - w / 2, tooltip.containerWidth - w))
     el.style.left = `${clampedLeft}px`
   }, [tooltip])
+
+  // Enter key confirms current selection and closes the picker
+  useEffect(() => {
+    if (!onConfirm) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement)?.isContentEditable) return
+      e.preventDefault()
+      onConfirm()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onConfirm])
 
   const handleBackgroundClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {

@@ -14,7 +14,6 @@ import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
-import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ModifierPicker } from './ModifierPicker'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
@@ -330,9 +329,6 @@ export function AltRepeatKeyPanelModal({
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey)}
                         />
-                        {selectedField === key && (
-                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
-                        )}
                       </div>
                     )
                   })}
@@ -343,6 +339,7 @@ export function AltRepeatKeyPanelModal({
                     <TabbedKeycodes
                       onKeycodeSelect={maskedSelection.handleKeycodeSelect}
                       onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+                      onConfirm={maskedSelection.confirm}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
                       tabContentOverride={tabContentOverride}
