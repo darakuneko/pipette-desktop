@@ -73,6 +73,17 @@ export function TabbedKeycodes({
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  // Guard against spurious double-clicks right after mount (layout shift can
+  // cause the second click of an external double-click to land on a key tile)
+  const mountTimeRef = useRef(Date.now())
+  const MOUNT_DBLCLICK_GUARD_MS = 400
+  const guardedDoubleClick = useMemo(() => {
+    if (!onKeycodeDoubleClick) return undefined
+    return (keycode: Keycode) => {
+      if (Date.now() - mountTimeRef.current < MOUNT_DBLCLICK_GUARD_MS) return
+      onKeycodeDoubleClick(keycode)
+    }
+  }, [onKeycodeDoubleClick])
 
   // Clamp tooltip horizontally after render so it never overflows the container
   useLayoutEffect(() => {
@@ -225,7 +236,7 @@ export function TabbedKeycodes({
       <KeycodeGrid
         keycodes={keycodes}
         onClick={handleKeycodeClick}
-        onDoubleClick={onKeycodeDoubleClick}
+        onDoubleClick={guardedDoubleClick}
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
@@ -266,7 +277,7 @@ export function TabbedKeycodes({
           viewType={basicViewType}
           splitKeyMode={splitKeyMode}
           onKeycodeClick={handleKeycodeClick}
-          onKeycodeDoubleClick={onKeycodeDoubleClick}
+          onKeycodeDoubleClick={guardedDoubleClick}
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}
           highlightedKeycodes={highlightedKeycodes}
@@ -366,7 +377,7 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {(showHint || onKeycodeDoubleClick) && (
+        {(showHint || guardedDoubleClick) && (
           <p className="px-3 pb-1.5 text-[11px] text-content-muted">
             {showHint ? t('editor.keymap.pickerHint') : t('editor.keymap.pickerDoubleClickHint')}
           </p>
