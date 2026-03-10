@@ -206,6 +206,11 @@ export function KeyOverridePanelModal({
     [selectedField],
   )
 
+  const confirmPopover = useCallback(() => {
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
+
   const popoverField = popoverState?.field ?? null
 
   const handlePopoverKeycodeSelect = useCallback(
@@ -380,7 +385,7 @@ export function KeyOverridePanelModal({
                     onKeycodeSelect={handlePopoverKeycodeSelect}
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
-                    onConfirm={() => { setPopoverState(null); setSelectedField(null) }}
+                    onConfirm={confirmPopover}
                   />
                 )}
 

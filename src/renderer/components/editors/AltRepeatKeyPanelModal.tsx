@@ -196,6 +196,11 @@ export function AltRepeatKeyPanelModal({
     [selectedField],
   )
 
+  const confirmPopover = useCallback(() => {
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
+
   const popoverField = popoverState?.field ?? null
 
   const handlePopoverKeycodeSelect = useCallback(
@@ -362,7 +367,7 @@ export function AltRepeatKeyPanelModal({
                     onKeycodeSelect={handlePopoverKeycodeSelect}
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
-                    onConfirm={() => { setPopoverState(null); setSelectedField(null) }}
+                    onConfirm={confirmPopover}
                   />
                 )}
 

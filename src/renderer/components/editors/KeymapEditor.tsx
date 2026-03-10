@@ -770,12 +770,12 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   }, [])
 
   /** Clear the single-key/encoder selection and popover. */
-  function clearSingleSelection(): void {
+  const clearSingleSelection = useCallback((): void => {
     setSelectedKey(null)
     setSelectedEncoder(null)
     setSelectedMaskPart(false)
     setPopoverState(null)
-  }
+  }, [])
 
   const [popoverState, setPopoverState] = useState<
     | { anchorRect: DOMRect; kind: 'key'; row: number; col: number; maskClicked: boolean }
@@ -965,7 +965,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [selectedKey, selectedEncoder])
+  }, [selectedKey, selectedEncoder, clearSingleSelection])
 
   // --- Matrix tester polling ---
   const poll = useCallback(async () => {

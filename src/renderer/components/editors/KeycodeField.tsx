@@ -105,7 +105,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       data-testid="keycode-field"
       className={`flex shrink-0 rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border'}`}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={isMasked ? undefined : handleDoubleClick}
     >
       <svg
         width={KEYCODE_FIELD_SIZE}

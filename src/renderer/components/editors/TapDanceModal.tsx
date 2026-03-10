@@ -129,6 +129,11 @@ export function TapDanceModal({
     [selectedField],
   )
 
+  const confirmPopover = useCallback(() => {
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
+
   const popoverField = popoverState?.field ?? null
 
   const handlePopoverKeycodeSelect = useCallback(
@@ -253,7 +258,7 @@ export function TapDanceModal({
                 onKeycodeSelect={handlePopoverKeycodeSelect}
                 onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                 onClose={() => setPopoverState(null)}
-                onConfirm={() => { setPopoverState(null); setSelectedField(null) }}
+                onConfirm={confirmPopover}
               />
             )}
 
