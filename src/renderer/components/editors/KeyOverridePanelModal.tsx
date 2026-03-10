@@ -377,6 +377,7 @@ export function KeyOverridePanelModal({
                     onKeycodeSelect={handlePopoverKeycodeSelect}
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
+                    onConfirm={() => { setPopoverState(null); setSelectedField(null) }}
                   />
                 )}
 

@@ -548,6 +548,7 @@ export function MacroEditor({
             onKeycodeSelect={handlePopoverKeycodeSelect}
             onRawKeycodeSelect={applyPopoverKeycode}
             onClose={closePopover}
+            onConfirm={() => { closePopover(); maskedSelection.clearMask(); setSelectedKey(null) }}
           />
         )}
 

@@ -38,6 +38,7 @@ interface KeyPopoverProps {
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
+  onConfirm?: () => void // Enter / click-to-close: confirm and close the picker
 }
 
 const POPOVER_WIDTH = 320
@@ -52,6 +53,7 @@ export function KeyPopover({
   onRawKeycodeSelect,
   onModMaskChange,
   onClose,
+  onConfirm,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -110,6 +112,7 @@ export function KeyPopover({
   }, [anchorRect, activeTab, wrapperMode])
 
   useEffect(() => {
+    const confirmClose = onConfirm ?? onClose
     const handler = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation()
@@ -119,12 +122,12 @@ export function KeyPopover({
         if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable) return
         e.preventDefault()
         e.stopPropagation()
-        onClose()
+        confirmClose()
       }
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
-  }, [onClose])
+  }, [onClose, onConfirm])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -374,7 +377,7 @@ export function KeyPopover({
             modMask={currentModMask}
             basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}
             onKeycodeSelect={handleKeycodeSelect}
-            onClose={onClose}
+            onClose={onConfirm ?? onClose}
           />
         )}
         {activeTab === 'code' && (

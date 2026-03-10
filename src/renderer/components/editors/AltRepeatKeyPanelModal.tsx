@@ -359,6 +359,7 @@ export function AltRepeatKeyPanelModal({
                     onKeycodeSelect={handlePopoverKeycodeSelect}
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
+                    onConfirm={() => { setPopoverState(null); setSelectedField(null) }}
                   />
                 )}
 
