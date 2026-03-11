@@ -348,7 +348,7 @@ QMK の高度な動作機能用のキーコードです。
 - **Keyboard Layout**: キーラベルの表示レイアウトを選択 (QWERTY、Dvorak など)
 - **Auto Advance**: キーコード割り当て後に次のキーへ自動移動する機能の切替
 - **Instant Key Selection**: キーの即時選択モードの切替 (動作の詳細は §2.2 参照)
-- **Split Key Mode**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
+- **キーピッカーでShiftキーを分離**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
 - **Key Tester**: Matrix Tester モードの切替 (対応キーボードのみ)
 - **Security**: ロック状態 (Locked/Unlocked) の表示と Lock ボタン
 - **Import**: `.vil` ファイルからの復元、またはカスタム JSON 定義のサイドロード
@@ -652,7 +652,7 @@ Pipette は保存したスナップショット、お気に入り、キーボー
 - **Instant Key Selection**: デフォルトのキーの即時選択動作 (§2.2 参照)
 - **Layer Panel Open**: レイヤーパネルを展開または折りたたんだ状態で開始するか
 - **Basic View Type**: Basic タブのデフォルトビュータイプ (ANSI/ISO/JIS/List)
-- **Split Key Mode**: デフォルトの分割キー表示モード
+- **キーピッカーでShiftキーを分離**: デフォルトのキーピッカーでのShift分離設定
 
 ---
 

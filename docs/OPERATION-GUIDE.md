@@ -348,7 +348,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 - **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
-- **Split Key Mode**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
+- **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
 - **Security**: Shows lock status (Locked/Unlocked) with a Lock button
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions
@@ -649,7 +649,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 - **Instant Key Selection**: Default instant key selection behavior (see §2.2)
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
 - **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
-- **Split Key Mode**: Default split key display mode
+- **Separate Shift in Key Picker**: Default setting for separating Shift in the key picker
 
 ---
 

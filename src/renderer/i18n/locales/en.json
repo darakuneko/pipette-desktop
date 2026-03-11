@@ -497,7 +497,7 @@
     "defaultAutoAdvance": "Auto Move",
     "defaultLayerPanelOpen": "Layer List Open",
     "defaultBasicViewType": "Basic Tab View",
-    "defaultSplitKeyMode": "Split Key",
+    "defaultSplitKeyMode": "Separate Shift in Key Picker",
     "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
@@ -527,7 +527,7 @@
     "tabTools": "Settings",
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
-    "splitKeyMode": "Split Key",
+    "splitKeyMode": "Separate Shift in Key Picker",
     "quickSelect": "Instant Key Selection"
   },
   "hub": {
