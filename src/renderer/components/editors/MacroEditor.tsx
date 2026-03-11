@@ -51,6 +51,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 function parseMacroBuffer(
@@ -97,6 +98,7 @@ export function MacroEditor({
   onUpdateOnHub,
   onRemoveFromHub,
   onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -341,6 +343,7 @@ export function MacroEditor({
     },
     resetKey: selectedKey,
     initialValue: macroInitialValue,
+    quickSelect,
   })
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
@@ -492,7 +495,7 @@ export function MacroEditor({
                   onKeycodeAdd={() => handleKeycodeAdd(i)}
                   onMaskPartClick={(ki, part) => handleMaskPartClick(i, ki, part)}
                   focusMode={isEditing}
-                  showConfirmHint={isSelectedAction && isEditing && !popoverState && isKeycodeAction(action) && action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current}
+                  showConfirmHint={isSelectedAction && isEditing && !popoverState && !quickSelect && isKeycodeAction(action) && action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current}
                 />
               )
             })}
@@ -500,8 +503,8 @@ export function MacroEditor({
 
           <div ref={pickerRef} className={`mt-3 ${isEditing ? '' : 'hidden'}`}>
             <TabbedKeycodes
-              onKeycodeSelect={maskedSelection.handleKeycodeSelect}
-              onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+              onKeycodeSelect={maskedSelection.pickerSelect}
+              onKeycodeDoubleClick={maskedSelection.pickerDoubleClick}
               onConfirm={maskedSelection.confirm}
               maskOnly={maskedSelection.maskOnly}
               lmMode={maskedSelection.lmMode}

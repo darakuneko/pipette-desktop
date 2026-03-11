@@ -87,7 +87,7 @@
         "lm": "LM",
         "layerLabel": "レイヤー",
         "keySelected": "選択済み: {{key}}",
-        "clickToClose": "クリックして閉じる"
+        "clickToClose": "クリックして適用して閉じる、またはEnterキーで確定"
       }
     },
     "layout": {
@@ -494,6 +494,7 @@
     "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
     "defaultBasicViewType": "デフォルト Basic タブ表示",
     "defaultSplitKeyMode": "デフォルト Split Key",
+    "defaultQuickSelect": "デフォルト Quick Select",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -521,7 +522,8 @@
     "tabTools": "設定",
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
-    "splitKeyMode": "Split Key"
+    "splitKeyMode": "Split Key",
+    "quickSelect": "Quick Select"
   },
   "hub": {
     "uploadToHub": "アップロード",

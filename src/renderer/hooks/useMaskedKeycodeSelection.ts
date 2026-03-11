@@ -9,11 +9,16 @@ interface Options {
   onCommit: () => void              // Close the picker / deselect the field
   resetKey?: unknown
   initialValue?: number             // Current field value — auto-detect mask on mount
+  quickSelect?: boolean             // When true, single click behaves like double-click (select-and-commit)
 }
 
 interface Result {
   handleKeycodeSelect: (kc: Keycode) => void
   selectAndCommit: (kc: Keycode) => void
+  /** Single-click handler: resolves to selectAndCommit when quickSelect is on */
+  pickerSelect: (kc: Keycode) => void
+  /** Double-click handler: undefined when quickSelect is on (single click already commits) */
+  pickerDoubleClick: ((kc: Keycode) => void) | undefined
   maskOnly: boolean
   lmMode: boolean
   activeMask: number | null
@@ -24,7 +29,7 @@ interface Result {
   enterMaskMode: (code: number, part: 'outer' | 'inner') => void
 }
 
-export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initialValue }: Options): Result {
+export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initialValue, quickSelect }: Options): Result {
   const [activeMask, setActiveMask] = useState<number | null>(null)
   const [editingPart, setEditingPart] = useState<'outer' | 'inner' | null>(null)
   const activeMaskRef = useRef(activeMask)
@@ -148,5 +153,9 @@ export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initia
   const maskOnly = editingPart === 'inner' && activeMask !== null && !isLMKeycode(activeMask)
   const lmMode = editingPart === 'inner' && activeMask !== null && isLMKeycode(activeMask)
 
-  return { handleKeycodeSelect, selectAndCommit, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
+  // Stable derived handlers: single-click confirms immediately when quickSelect is on
+  const pickerSelect = quickSelect ? selectAndCommit : handleKeycodeSelect
+  const pickerDoubleClick = quickSelect ? undefined : selectAndCommit
+
+  return { handleKeycodeSelect, selectAndCommit, pickerSelect, pickerDoubleClick, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
 }

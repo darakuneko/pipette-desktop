@@ -35,6 +35,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 const TAPPING_TERM_MIN = 0
@@ -56,6 +57,7 @@ const keycodeFields: { key: KeycodeFieldName; labelKey: string }[] = [
 export function TapDanceModal({
   index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
@@ -115,6 +117,7 @@ export function TapDanceModal({
     },
     resetKey: selectedField,
     initialValue: selectedField ? editedEntry[selectedField] : undefined,
+    quickSelect,
   })
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
@@ -208,7 +211,7 @@ export function TapDanceModal({
                       onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                       label={t(labelKey)}
                     />
-                    {selectedField === key && !popoverState && editedEntry[key] !== preEditValueRef.current && (
+                    {selectedField === key && !popoverState && !quickSelect && editedEntry[key] !== preEditValueRef.current && (
                       <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
                     )}
                   </div>
@@ -234,8 +237,8 @@ export function TapDanceModal({
             {selectedField && (
               <div className="mt-3">
                 <TabbedKeycodes
-                  onKeycodeSelect={maskedSelection.handleKeycodeSelect}
-                  onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+                  onKeycodeSelect={maskedSelection.pickerSelect}
+                  onKeycodeDoubleClick={maskedSelection.pickerDoubleClick}
                   onConfirm={maskedSelection.confirm}
                   maskOnly={maskedSelection.maskOnly}
                   lmMode={maskedSelection.lmMode}

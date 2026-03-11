@@ -30,5 +30,6 @@ export interface PipetteSettings {
   layerPanelOpen?: boolean
   basicViewType?: 'ansi' | 'iso' | 'list'
   splitKeyMode?: 'split' | 'flat'
+  quickSelect?: boolean
   _updatedAt?: string // ISO 8601 — last update time
 }

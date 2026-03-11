@@ -61,6 +61,7 @@ interface ValidatedPrefs {
   layerPanelOpen: boolean
   basicViewType: BasicViewType
   splitKeyMode: SplitKeyMode
+  quickSelect: boolean
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
@@ -68,12 +69,13 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
   defaultBasicViewType: BasicViewType,
   defaultSplitKeyMode: SplitKeyMode,
+  defaultQuickSelect: boolean,
 ): ValidatedPrefs | null {
   if (!data) return null
 
@@ -93,6 +95,7 @@ function validateIpcPrefs(
   const splitKeyMode = typeof data.splitKeyMode === 'string' && VALID_SPLIT_KEY_MODES.has(data.splitKeyMode)
     ? data.splitKeyMode as SplitKeyMode
     : defaultSplitKeyMode
+  const quickSelect = typeof data.quickSelect === 'boolean' ? data.quickSelect : defaultQuickSelect
 
   const layerNames = Array.isArray(data.layerNames)
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
@@ -107,6 +110,7 @@ function validateIpcPrefs(
     layerPanelOpen,
     basicViewType,
     splitKeyMode,
+    quickSelect,
     layerNames,
     typingTestResults,
     typingTestConfig: validateTypingTestConfig(data.typingTestConfig),
@@ -120,6 +124,7 @@ export interface UseDevicePrefsReturn {
   layerPanelOpen: boolean
   basicViewType: BasicViewType
   splitKeyMode: SplitKeyMode
+  quickSelect: boolean
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
@@ -129,6 +134,7 @@ export interface UseDevicePrefsReturn {
   setLayerPanelOpen: (open: boolean) => void
   setBasicViewType: (type: BasicViewType) => void
   setSplitKeyMode: (mode: SplitKeyMode) => void
+  setQuickSelect: (enabled: boolean) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
@@ -138,11 +144,13 @@ export interface UseDevicePrefsReturn {
   defaultLayerPanelOpen: boolean
   defaultBasicViewType: BasicViewType
   defaultSplitKeyMode: SplitKeyMode
+  defaultQuickSelect: boolean
   setDefaultLayout: (id: KeyboardLayoutId) => void
   setDefaultAutoAdvance: (enabled: boolean) => void
   setDefaultLayerPanelOpen: (open: boolean) => void
   setDefaultBasicViewType: (type: BasicViewType) => void
   setDefaultSplitKeyMode: (mode: SplitKeyMode) => void
+  setDefaultQuickSelect: (enabled: boolean) => void
   autoLockTime: AutoLockMinutes
   setAutoLockTime: (m: AutoLockMinutes) => void
   applyDevicePrefs: (uid: string) => Promise<void>
@@ -175,12 +183,14 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const defaultLayerPanelOpen = config.defaultLayerPanelOpen
   const defaultBasicViewType = config.defaultBasicViewType
   const defaultSplitKeyMode = config.defaultSplitKeyMode ?? 'split'
+  const defaultQuickSelect = config.defaultQuickSelect ?? false
 
   const [layout, updateLayout, layoutRef] = useStateRef<KeyboardLayoutId>(defaultLayout)
   const [autoAdvance, updateAutoAdvance, autoAdvanceRef] = useStateRef<boolean>(defaultAutoAdvance)
   const [layerPanelOpen, updateLayerPanelOpen, layerPanelOpenRef] = useStateRef<boolean>(defaultLayerPanelOpen)
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
   const [splitKeyMode, updateSplitKeyMode, splitKeyModeRef] = useStateRef<SplitKeyMode>(defaultSplitKeyMode)
+  const [quickSelect, updateQuickSelect, quickSelectRef] = useStateRef<boolean>(defaultQuickSelect)
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
@@ -199,6 +209,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       layerPanelOpen: layerPanelOpenRef.current,
       basicViewType: basicViewTypeRef.current,
       splitKeyMode: splitKeyModeRef.current,
+      quickSelect: quickSelectRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -232,6 +243,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateSplitKeyMode(mode)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateSplitKeyMode])
+
+  const setQuickSelect = useCallback((enabled: boolean) => {
+    updateQuickSelect(enabled)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateQuickSelect])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
@@ -276,6 +292,10 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     set('defaultSplitKeyMode', mode)
   }, [set])
 
+  const setDefaultQuickSelect = useCallback((enabled: boolean) => {
+    set('defaultQuickSelect', enabled)
+  }, [set])
+
   const setAutoLockTime = useCallback((m: AutoLockMinutes) => {
     set('autoLockTime', m)
   }, [set])
@@ -288,7 +308,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     try {
       const raw = await window.vialAPI.pipetteSettingsGet(uid)
       if (applySeqRef.current !== seq) return
-      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode)
+      prefs = validateIpcPrefs(raw, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect)
     } catch {
       // IPC failure — fall through to defaults
     }
@@ -300,6 +320,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       layerPanelOpen: defaultLayerPanelOpen,
       basicViewType: defaultBasicViewType,
       splitKeyMode: defaultSplitKeyMode,
+      quickSelect: defaultQuickSelect,
       layerNames: [],
       typingTestResults: [],
     }
@@ -309,6 +330,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayerPanelOpen(resolved.layerPanelOpen)
     updateBasicViewType(resolved.basicViewType)
     updateSplitKeyMode(resolved.splitKeyMode)
+    updateQuickSelect(resolved.quickSelect)
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
@@ -317,7 +339,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     if (!prefs) {
       saveCurrentPrefs()
     }
-  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode])
+  }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
 
   const remapLabel = useCallback(
     (qmkId: string): string => remapKeycode(qmkId, layout),
@@ -335,6 +357,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     layerPanelOpen,
     basicViewType,
     splitKeyMode,
+    quickSelect,
     layerNames,
     typingTestResults,
     typingTestConfig,
@@ -344,6 +367,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setLayerPanelOpen,
     setBasicViewType,
     setSplitKeyMode,
+    setQuickSelect,
     setLayerNames,
     addTypingTestResult,
     setTypingTestConfig,
@@ -353,11 +377,13 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     defaultLayerPanelOpen,
     defaultBasicViewType,
     defaultSplitKeyMode,
+    defaultQuickSelect,
     setDefaultLayout,
     setDefaultAutoAdvance,
     setDefaultLayerPanelOpen,
     setDefaultBasicViewType,
     setDefaultSplitKeyMode,
+    setDefaultQuickSelect,
     autoLockTime: config.autoLockTime,
     setAutoLockTime,
     applyDevicePrefs,

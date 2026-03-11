@@ -26,6 +26,7 @@ export interface AppConfig {
   lastNotificationSeen?: string
   defaultBasicViewType: BasicViewType
   defaultSplitKeyMode: SplitKeyMode
+  defaultQuickSelect: boolean
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -41,6 +42,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'lastNotificationSeen',
   'defaultBasicViewType',
   'defaultSplitKeyMode',
+  'defaultQuickSelect',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -55,4 +57,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   hubEnabled: false,
   defaultBasicViewType: 'ansi',
   defaultSplitKeyMode: 'split',
+  defaultQuickSelect: false,
 }

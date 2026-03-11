@@ -29,6 +29,8 @@ import { LayerSelector } from './LayerSelector'
 type Tab = 'key' | 'code'
 type WrapperMode = 'none' | 'modMask' | 'modTap' | 'lt' | 'shT' | 'lm'
 
+type PendingAction = { kind: 'kc'; kc: Keycode } | { kind: 'raw'; code: number }
+
 interface KeyPopoverProps {
   anchorRect: DOMRect
   currentKeycode: number
@@ -39,6 +41,7 @@ interface KeyPopoverProps {
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
   onConfirm?: () => void // Enter / click-to-close: confirm and close the picker
+  quickSelect?: boolean  // true: click applies + closes; false: buffer until Enter
 }
 
 const POPOVER_WIDTH = 320
@@ -54,6 +57,7 @@ export function KeyPopover({
   onModMaskChange,
   onClose,
   onConfirm,
+  quickSelect,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -61,6 +65,9 @@ export function KeyPopover({
   const [searchResetKey, setSearchResetKey] = useState(0)
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+
+  // When quickSelect is OFF, buffer search-result clicks until Enter confirms
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
   // Wrapper mode: determines how modifier + basic key are combined
   const [wrapperMode, setWrapperMode] = useState<WrapperMode>(() => {
@@ -112,24 +119,6 @@ export function KeyPopover({
   }, [anchorRect, activeTab, wrapperMode])
 
   useEffect(() => {
-    const confirmClose = onConfirm ?? onClose
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        onClose()
-      } else if (e.key === 'Enter') {
-        const el = e.target as HTMLElement | null
-        if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable) return
-        e.preventDefault()
-        e.stopPropagation()
-        confirmClose()
-      }
-    }
-    window.addEventListener('keydown', handler, true)
-    return () => window.removeEventListener('keydown', handler, true)
-  }, [onClose, onConfirm])
-
-  useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as Node | null
       if (popoverRef.current && target && !popoverRef.current.contains(target)) {
@@ -168,31 +157,72 @@ export function KeyPopover({
     [wrapperMode, currentKeycode, selectedLayer, onRawKeycodeSelect, onModMaskChange],
   )
 
-  const handleKeycodeSelect = useCallback(
-    (kc: Keycode) => {
+  // Wrap a keycode selection into a PendingAction (shared by buffer + commit paths)
+  const wrapKeycode = useCallback(
+    (kc: Keycode): PendingAction => {
       const code = resolve(kc.qmkId)
       switch (wrapperMode) {
-        case 'lt':
-          onRawKeycodeSelect(buildLTKeycode(selectedLayer, code))
-          break
-        case 'shT':
-          onRawKeycodeSelect(buildSHTKeycode(code))
-          break
-        case 'lm':
-          onRawKeycodeSelect(buildLMKeycode(selectedLayer, code))
-          break
-        case 'modTap':
-          onRawKeycodeSelect(buildModTapKeycode(currentModMask, code))
-          break
-        case 'modMask':
-          onRawKeycodeSelect(buildModMaskKeycode(currentModMask, code))
-          break
-        default:
-          onKeycodeSelect(kc)
+        case 'lt':   return { kind: 'raw', code: buildLTKeycode(selectedLayer, code) }
+        case 'shT':  return { kind: 'raw', code: buildSHTKeycode(code) }
+        case 'lm':   return { kind: 'raw', code: buildLMKeycode(selectedLayer, code) }
+        case 'modTap':  return { kind: 'raw', code: buildModTapKeycode(currentModMask, code) }
+        case 'modMask': return { kind: 'raw', code: buildModMaskKeycode(currentModMask, code) }
+        default:     return { kind: 'kc', kc }
       }
     },
-    [currentModMask, selectedLayer, wrapperMode, onKeycodeSelect, onRawKeycodeSelect],
+    [currentModMask, selectedLayer, wrapperMode],
   )
+
+  // Apply a PendingAction to the keymap
+  const applyAction = useCallback(
+    (action: PendingAction) => {
+      if (action.kind === 'kc') onKeycodeSelect(action.kc)
+      else onRawKeycodeSelect(action.code)
+    },
+    [onKeycodeSelect, onRawKeycodeSelect],
+  )
+
+  const handleKeycodeSelect = useCallback(
+    (kc: Keycode) => {
+      const action = wrapKeycode(kc)
+      if (quickSelect === false) {
+        setPendingAction(action)
+      } else {
+        applyAction(action)
+      }
+    },
+    [quickSelect, wrapKeycode, applyAction],
+  )
+
+  // Apply any buffered pending action then close the popover
+  const confirmAndClose = useCallback(() => {
+    if (pendingAction) applyAction(pendingAction)
+    ;(onConfirm ?? onClose)()
+  }, [pendingAction, applyAction, onConfirm, onClose])
+
+  // Refs so the keydown handler always sees latest values without re-subscribing
+  const pendingRef = useRef(pendingAction)
+  pendingRef.current = pendingAction
+  const confirmAndCloseRef = useRef(confirmAndClose)
+  confirmAndCloseRef.current = confirmAndClose
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+      } else if (e.key === 'Enter') {
+        const el = e.target as HTMLElement | null
+        // Allow Enter in inputs unless there's a buffered selection waiting to be confirmed
+        if (!pendingRef.current && (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable)) return
+        e.preventDefault()
+        e.stopPropagation()
+        confirmAndCloseRef.current()
+      }
+    }
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [onClose])
 
   // Handle layer selector changes — immediate keycode rebuild
   const handleLayerChange = useCallback(
@@ -377,7 +407,7 @@ export function KeyPopover({
             modMask={currentModMask}
             basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}
             onKeycodeSelect={handleKeycodeSelect}
-            onClose={onConfirm ?? onClose}
+            onClose={confirmAndClose}
           />
         )}
         {activeTab === 'code' && (

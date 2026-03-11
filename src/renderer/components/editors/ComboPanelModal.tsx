@@ -44,6 +44,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 type KeycodeFieldName = 'key1' | 'key2' | 'key3' | 'key4' | 'output'
@@ -100,6 +101,7 @@ export function ComboPanelModal({
   onUpdateOnHub,
   onRemoveFromHub,
   onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -211,6 +213,7 @@ export function ComboPanelModal({
     },
     resetKey: selectedField,
     initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
+    quickSelect,
   })
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
@@ -360,7 +363,7 @@ export function ComboPanelModal({
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey, labelOpts)}
                         />
-                        {selectedField === key && !popoverState && editedEntry[key] !== preEditValueRef.current && (
+                        {selectedField === key && !popoverState && !quickSelect && editedEntry[key] !== preEditValueRef.current && (
                           <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
                         )}
                       </div>
@@ -371,8 +374,8 @@ export function ComboPanelModal({
                 {selectedField && (
                   <div className="mt-3">
                     <TabbedKeycodes
-                      onKeycodeSelect={maskedSelection.handleKeycodeSelect}
-                      onKeycodeDoubleClick={maskedSelection.selectAndCommit}
+                      onKeycodeSelect={maskedSelection.pickerSelect}
+                      onKeycodeDoubleClick={maskedSelection.pickerDoubleClick}
                       onConfirm={maskedSelection.confirm}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}

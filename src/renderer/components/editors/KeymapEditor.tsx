@@ -484,6 +484,7 @@ interface PopoverForStateProps {
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
+  quickSelect?: boolean
 }
 
 function PopoverForState({
@@ -496,6 +497,7 @@ function PopoverForState({
   onRawKeycodeSelect,
   onModMaskChange,
   onClose,
+  quickSelect,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
@@ -503,6 +505,37 @@ function PopoverForState({
   const maskOnly = popoverState.kind === 'key'
     && popoverState.maskClicked
     && isMask(serialize(currentKeycode))
+
+  // When quickSelect is ON, key search click applies immediately + closes popover
+  const onSelectRef = useRef(onKeycodeSelect)
+  onSelectRef.current = onKeycodeSelect
+  const quickKeycodeSelect = useCallback((kc: Keycode) => {
+    onSelectRef.current(kc)
+    onClose()
+  }, [onClose])
+
+  const onRawRef = useRef(onRawKeycodeSelect)
+  onRawRef.current = onRawKeycodeSelect
+  const quickRawKeycodeSelect = useCallback((code: number) => {
+    onRawRef.current(code)
+    onClose()
+  }, [onClose])
+
+  if (quickSelect) {
+    return (
+      <KeyPopover
+        anchorRect={popoverState.anchorRect}
+        currentKeycode={currentKeycode}
+        maskOnly={maskOnly}
+        layers={layers}
+        onKeycodeSelect={quickKeycodeSelect}
+        onRawKeycodeSelect={quickRawKeycodeSelect}
+        onModMaskChange={onModMaskChange}
+        onClose={onClose}
+        quickSelect
+      />
+    )
+  }
 
   return (
     <KeyPopover
@@ -514,6 +547,7 @@ function PopoverForState({
       onRawKeycodeSelect={onRawKeycodeSelect}
       onModMaskChange={onModMaskChange}
       onClose={onClose}
+      quickSelect={false}
     />
   )
 }
@@ -572,6 +606,8 @@ interface Props {
   onBasicViewTypeChange?: (type: BasicViewType) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
+  quickSelect?: boolean
+  onQuickSelectChange?: (enabled: boolean) => void
   keyboardLayout?: KeyboardLayoutId
   onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   onLock?: () => void
@@ -668,6 +704,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onBasicViewTypeChange,
   splitKeyMode,
   onSplitKeyModeChange,
+  quickSelect,
+  onQuickSelectChange,
   keyboardLayout = 'qwerty',
   onKeyboardLayoutChange,
   onLock,
@@ -2072,6 +2110,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
           onModMaskChange={popoverState.kind === 'key' ? handlePopoverModMaskChange : undefined}
           onClose={() => setPopoverState(null)}
+          quickSelect={quickSelect}
         />
       )}
 
@@ -2147,6 +2186,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onBasicViewTypeChange={onBasicViewTypeChange}
                   splitKeyMode={splitKeyMode}
                   onSplitKeyModeChange={onSplitKeyModeChange}
+                  quickSelect={quickSelect}
+                  onQuickSelectChange={onQuickSelectChange}
                   matrixMode={matrixMode}
                   hasMatrixTester={hasMatrixTester}
                   onToggleMatrix={handleMatrixToggle}
@@ -2173,6 +2214,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           isDummy={isDummy}
           tapDanceEntries={tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          quickSelect={quickSelect}
           hubOrigin={favHubOrigin}
           hubNeedsDisplayName={favHubNeedsDisplayName}
           hubUploading={favHubUploading}
@@ -2199,6 +2241,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           isDummy={isDummy}
           tapDanceEntries={tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          quickSelect={quickSelect}
           hubOrigin={favHubOrigin}
           hubNeedsDisplayName={favHubNeedsDisplayName}
           hubUploading={favHubUploading}

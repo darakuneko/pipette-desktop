@@ -87,7 +87,7 @@
         "lm": "LM",
         "layerLabel": "Layer",
         "keySelected": "Selected: {{key}}",
-        "clickToClose": "Click to close"
+        "clickToClose": "Click to apply and close, or press Enter"
       }
     },
     "layout": {
@@ -494,6 +494,7 @@
     "defaultLayerPanelOpen": "Default Layer List Open",
     "defaultBasicViewType": "Default Basic Tab View",
     "defaultSplitKeyMode": "Default Split Key",
+    "defaultQuickSelect": "Default Quick Select",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -521,7 +522,8 @@
     "tabTools": "Settings",
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
-    "splitKeyMode": "Split Key"
+    "splitKeyMode": "Split Key",
+    "quickSelect": "Quick Select"
   },
   "hub": {
     "uploadToHub": "Upload",

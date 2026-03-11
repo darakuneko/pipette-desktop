@@ -1078,6 +1078,8 @@ export function App() {
             onDefaultBasicViewTypeChange={devicePrefs.setDefaultBasicViewType}
             defaultSplitKeyMode={devicePrefs.defaultSplitKeyMode}
             onDefaultSplitKeyModeChange={devicePrefs.setDefaultSplitKeyMode}
+            defaultQuickSelect={devicePrefs.defaultQuickSelect}
+            onDefaultQuickSelectChange={devicePrefs.setDefaultQuickSelect}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
             onResetStart={() => setResettingData(true)}
@@ -1307,6 +1309,8 @@ export function App() {
             onBasicViewTypeChange={devicePrefs.setBasicViewType}
             splitKeyMode={devicePrefs.splitKeyMode}
             onSplitKeyModeChange={devicePrefs.setSplitKeyMode}
+            quickSelect={devicePrefs.quickSelect}
+            onQuickSelectChange={devicePrefs.setQuickSelect}
             keyboardLayout={devicePrefs.layout}
             onKeyboardLayoutChange={devicePrefs.setLayout}
             onLock={handleLock}
@@ -1456,6 +1460,7 @@ export function App() {
           onSettingsUpdate={comboTimeoutSupported ? keyboard.updateQmkSettingsValue : undefined}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          quickSelect={devicePrefs.quickSelect}
           onClose={() => { setShowComboModal(false); setComboInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
@@ -1477,6 +1482,7 @@ export function App() {
           onUnlock={() => setShowUnlockDialog(true)}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          quickSelect={devicePrefs.quickSelect}
           onClose={() => { setShowAltRepeatKeyModal(false); setAltRepeatKeyInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
@@ -1498,6 +1504,7 @@ export function App() {
           onUnlock={() => setShowUnlockDialog(true)}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
+          quickSelect={devicePrefs.quickSelect}
           onClose={() => { setShowKeyOverrideModal(false); setKeyOverrideInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
