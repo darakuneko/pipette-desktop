@@ -87,7 +87,8 @@
         "lm": "LM",
         "layerLabel": "レイヤー",
         "keySelected": "選択済み: {{key}}",
-        "clickToClose": "クリックして適用して閉じる、またはEnterキーで確定"
+        "clickToClose": "クリックして適用して閉じる、またはEnterキーで確定",
+        "undo": "元に戻す"
       }
     },
     "layout": {

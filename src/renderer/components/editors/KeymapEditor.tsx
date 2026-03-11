@@ -485,6 +485,8 @@ interface PopoverForStateProps {
   onModMaskChange?: (newMask: number) => void
   onClose: () => void
   quickSelect?: boolean
+  previousKeycode?: number
+  onUndo?: () => void
 }
 
 function PopoverForState({
@@ -498,6 +500,8 @@ function PopoverForState({
   onModMaskChange,
   onClose,
   quickSelect,
+  previousKeycode,
+  onUndo,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
@@ -533,6 +537,8 @@ function PopoverForState({
         onModMaskChange={onModMaskChange}
         onClose={onClose}
         quickSelect
+        previousKeycode={previousKeycode}
+        onUndo={onUndo}
       />
     )
   }
@@ -548,6 +554,8 @@ function PopoverForState({
       onModMaskChange={onModMaskChange}
       onClose={onClose}
       quickSelect={false}
+      previousKeycode={previousKeycode}
+      onUndo={onUndo}
     />
   )
 }
@@ -820,6 +828,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     | { anchorRect: DOMRect; kind: 'encoder'; idx: number; dir: number }
     | null
   >(null)
+
+  // Per-key undo: stores the keycode before the most recent change (cleared on disconnect)
+  const [undoMap, setUndoMap] = useState<Map<string, number>>(() => new Map())
+
+  // Clear undo history when keymap is emptied (device disconnect/reset)
+  useEffect(() => {
+    if (keymap.size === 0) setUndoMap(new Map())
+  }, [keymap])
 
   const [tdModalIndex, setTdModalIndex] = useState<number | null>(null)
   const [macroModalIndex, setMacroModalIndex] = useState<number | null>(null)
@@ -1702,25 +1718,40 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     [selectedKey, selectedEncoder, currentLayer, keymap, isMaskKey, autoAdvance, onSetKey, onSetEncoder, advanceToNextKey, openTdModal, openMacroModal, guard, clearPending, clearPickerSelection],
   )
 
+  // Save the current keycode to the undo map before applying a change
+  const recordUndo = useCallback((mapKey: string, currentCode: number) => {
+    setUndoMap((prev) => {
+      if (prev.get(mapKey) === currentCode) return prev
+      const next = new Map(prev)
+      next.set(mapKey, currentCode)
+      return next
+    })
+  }, [])
+
   const handlePopoverKeycodeSelect = useCallback(
     async (kc: Keycode) => {
       clearPending()
       if (!popoverState) return
       const code = deserialize(kc.qmkId)
       if (popoverState.kind === 'key') {
-        const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
+        const mapKey = `${currentLayer},${popoverState.row},${popoverState.col}`
+        const currentCode = keymap.get(mapKey) ?? 0
         const popoverMask = popoverState.maskClicked && isMask(serialize(currentCode))
+        recordUndo(mapKey, currentCode)
         await guard([code], async () => {
           const finalCode = resolveKeycode(currentCode, code, popoverMask)
           await onSetKey(currentLayer, popoverState.row, popoverState.col, finalCode)
         })
       } else {
+        const mapKey = `${currentLayer},${popoverState.idx},${popoverState.dir}`
+        const currentCode = encoderLayout.get(mapKey) ?? 0
+        recordUndo(mapKey, currentCode)
         await guard([code], async () => {
           await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
         })
       }
     },
-    [popoverState, currentLayer, keymap, onSetKey, onSetEncoder, guard, clearPending],
+    [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, recordUndo],
   )
 
   const handlePopoverRawKeycodeSelect = useCallback(
@@ -1728,16 +1759,22 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       clearPending()
       if (!popoverState) return
       if (popoverState.kind === 'key') {
+        const mapKey = `${currentLayer},${popoverState.row},${popoverState.col}`
+        const currentCode = keymap.get(mapKey) ?? 0
+        recordUndo(mapKey, currentCode)
         await guard([code], async () => {
           await onSetKey(currentLayer, popoverState.row, popoverState.col, code)
         })
       } else {
+        const mapKey = `${currentLayer},${popoverState.idx},${popoverState.dir}`
+        const currentCode = encoderLayout.get(mapKey) ?? 0
+        recordUndo(mapKey, currentCode)
         await guard([code], async () => {
           await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
         })
       }
     },
-    [popoverState, currentLayer, onSetKey, onSetEncoder, guard, clearPending],
+    [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, recordUndo],
   )
 
   const handlePopoverModMaskChange = useCallback(
@@ -1752,6 +1789,21 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     },
     [popoverState, currentLayer, keymap, onSetKey, guard],
   )
+
+  // Undo support for the popover: derive previous keycode and handler from undoMap
+  const popoverUndoKeycode = useMemo(() => {
+    if (!popoverState) return undefined
+    const mapKey = popoverState.kind === 'key'
+      ? `${currentLayer},${popoverState.row},${popoverState.col}`
+      : `${currentLayer},${popoverState.idx},${popoverState.dir}`
+    return undoMap.get(mapKey)
+  }, [popoverState, currentLayer, undoMap])
+
+  const handlePopoverUndo = useCallback(() => {
+    if (popoverUndoKeycode == null) return
+    handlePopoverRawKeycodeSelect(popoverUndoKeycode)
+    setPopoverState(null)
+  }, [popoverUndoKeycode, handlePopoverRawKeycodeSelect])
 
   const handleCopyAllClick = useCallback(async () => {
     if (!copyAllPending) {
@@ -2111,6 +2163,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           onModMaskChange={popoverState.kind === 'key' ? handlePopoverModMaskChange : undefined}
           onClose={() => setPopoverState(null)}
           quickSelect={quickSelect}
+          previousKeycode={popoverUndoKeycode}
+          onUndo={handlePopoverUndo}
         />
       )}
 

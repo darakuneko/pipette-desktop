@@ -15,6 +15,7 @@ import {
   extractLMLayer,
   extractLMMod,
   resolve,
+  serialize,
   buildModMaskKeycode,
   buildModTapKeycode,
   buildLTKeycode,
@@ -42,6 +43,8 @@ interface KeyPopoverProps {
   onClose: () => void
   onConfirm?: () => void // Enter / click-to-close: confirm and close the picker
   quickSelect?: boolean  // true: click applies + closes; false: buffer until Enter
+  previousKeycode?: number // Previous keycode for undo (undefined = no undo available)
+  onUndo?: () => void      // Revert to previousKeycode and close
 }
 
 const POPOVER_WIDTH = 320
@@ -58,6 +61,8 @@ export function KeyPopover({
   onClose,
   onConfirm,
   quickSelect,
+  previousKeycode,
+  onUndo,
 }: KeyPopoverProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<Tab>('key')
@@ -418,6 +423,23 @@ export function KeyPopover({
           />
         )}
       </div>
+
+      {previousKeycode != null && onUndo && (
+        <div className="border-t border-edge-subtle px-3 py-1.5">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 rounded px-2 py-1 text-xs text-content-secondary hover:bg-surface-dim hover:text-content"
+            onClick={onUndo}
+            data-testid="popover-undo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-3.5 w-3.5 shrink-0">
+              <path fillRule="evenodd" d="M7.793 2.232a.75.75 0 0 1-.025 1.06L3.622 7.25h10.003a5.375 5.375 0 0 1 0 10.75H10.75a.75.75 0 0 1 0-1.5h2.875a3.875 3.875 0 0 0 0-7.75H3.622l4.146 3.957a.75.75 0 0 1-1.036 1.085l-5.5-5.25a.75.75 0 0 1 0-1.085l5.5-5.25a.75.75 0 0 1 1.06.025Z" clipRule="evenodd" />
+            </svg>
+            <span>{t('editor.keymap.keyPopover.undo')}</span>
+            <span className="ml-auto font-mono text-content-muted">{serialize(previousKeycode)}</span>
+          </button>
+        </div>
+      )}
     </div>
   )
 }
