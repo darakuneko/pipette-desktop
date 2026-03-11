@@ -345,12 +345,15 @@ const KEYCODE_TABS = [
   { id: 'basic', label: 'Basic' },
   { id: 'layers', label: 'Layers' },
   { id: 'modifiers', label: 'Modifiers' },
-  { id: 'tapDance', label: 'Tap-Hold / Tap Dance' },
-  { id: 'macro', label: 'Macro' },
-  { id: 'quantum', label: 'Quantum' },
-  { id: 'media', label: 'Media' },
+  { id: 'system', label: 'System' },
   { id: 'midi', label: 'MIDI' },
   { id: 'backlight', label: 'Lighting' },
+  { id: 'tapDance', label: 'Tap-Hold / Tap Dance' },
+  { id: 'macro', label: 'Macro' },
+  { id: 'combo', label: 'Combo' },
+  { id: 'keyOverride', label: 'Key Override' },
+  { id: 'altRepeatKey', label: 'Alt Repeat Key' },
+  { id: 'behavior', label: 'Behavior' },
   { id: 'user', label: 'User' },
 ]
 
@@ -367,7 +370,7 @@ async function captureKeycodeCategories(page: Page): Promise<void> {
     }
     await tabBtn.first().click()
     await page.waitForTimeout(300)
-    await capture(page, `tab-${tab.id}`, { fullPage: true })
+    await captureNamed(page, `tab-${tab.id}`, { fullPage: true })
   }
 
   const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
@@ -382,13 +385,13 @@ async function captureKeycodeCategories(page: Page): Promise<void> {
 async function captureSidebarTools(page: Page): Promise<void> {
   console.log('\n--- Phase 5: Toolbar ---')
 
-  await capture(page, 'toolbar', { fullPage: true })
+  await captureNamed(page, 'toolbar', { fullPage: true })
 
   const dualModeBtn = page.locator('[data-testid="dual-mode-button"]')
   if (await isAvailable(dualModeBtn)) {
     await dualModeBtn.click()
     await page.waitForTimeout(500)
-    await capture(page, 'dual-mode', { fullPage: true })
+    await captureNamed(page, 'dual-mode', { fullPage: true })
     await dualModeBtn.click()
     await page.waitForTimeout(500)
   } else {
@@ -400,7 +403,7 @@ async function captureSidebarTools(page: Page): Promise<void> {
     await zoomInBtn.click()
     await zoomInBtn.click()
     await page.waitForTimeout(300)
-    await capture(page, 'zoom-in', { fullPage: true })
+    await captureNamed(page, 'zoom-in', { fullPage: true })
     const zoomOutBtn = page.locator('[data-testid="zoom-out-button"]')
     if (await isAvailable(zoomOutBtn)) {
       await zoomOutBtn.click()
@@ -416,15 +419,22 @@ async function captureSidebarTools(page: Page): Promise<void> {
     await typingTestBtn.click()
     await waitForUnlockDialog(page)
     await page.waitForTimeout(1000)
-    await capture(page, 'typing-test', { fullPage: true })
+    await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
-    await page.keyboard.press('Escape')
+    // Forcefully remove all fixed overlay/modal elements that block interaction
+    await page.evaluate(() => {
+      document.querySelectorAll('.fixed.inset-0').forEach((el) => el.remove())
+    })
     await page.waitForTimeout(500)
-    await dismissNotificationModal(page)
     await typingTestBtn.click({ timeout: 5000 }).catch(() => {
       console.log('  [warn] Could not toggle typing test off')
     })
     await page.waitForTimeout(500)
+    // Final cleanup: remove any remaining overlays
+    await page.evaluate(() => {
+      document.querySelectorAll('.fixed.inset-0').forEach((el) => el.remove())
+    })
+    await page.waitForTimeout(300)
   } else {
     console.log('  [skip] typing-test-button not found')
   }
@@ -432,41 +442,38 @@ async function captureSidebarTools(page: Page): Promise<void> {
 
 // --- Phase 6: Modal Editors ---
 
-interface ModalCapture {
+// Tile-based editor captures (Combo, Key Override, Alt Repeat Key)
+// Overview: inline tile grid on the dedicated tab (no modal)
+// Detail: modal that opens when clicking a tile
+interface TileEditorCapture {
   name: string
   keycodeTab: string
-  settingsTestId: string
-  backdropPrefix: string
-  detailTileTestId?: string
+  tileTestId: string
+  backdropTestId: string
+  modalCloseTestId: string
 }
 
-const MODAL_CAPTURES: ModalCapture[] = [
-  {
-    name: 'lighting',
-    keycodeTab: 'Lighting',
-    settingsTestId: 'lighting-settings-btn',
-    backdropPrefix: 'lighting-modal',
-  },
+const TILE_EDITOR_CAPTURES: TileEditorCapture[] = [
   {
     name: 'combo',
-    keycodeTab: 'Quantum',
-    settingsTestId: 'combo-settings-btn',
-    backdropPrefix: 'combo-modal',
-    detailTileTestId: 'combo-tile-0',
+    keycodeTab: 'Combo',
+    tileTestId: 'combo-tile-0',
+    backdropTestId: 'combo-modal-backdrop',
+    modalCloseTestId: 'combo-modal-close',
   },
   {
     name: 'key-override',
-    keycodeTab: 'Quantum',
-    settingsTestId: 'key-override-settings-btn',
-    backdropPrefix: 'ko-modal',
-    detailTileTestId: 'ko-tile-0',
+    keycodeTab: 'Key Override',
+    tileTestId: 'ko-tile-0',
+    backdropTestId: 'ko-modal-backdrop',
+    modalCloseTestId: 'ko-modal-close',
   },
   {
     name: 'alt-repeat-key',
-    keycodeTab: 'Quantum',
-    settingsTestId: 'alt-repeat-key-settings-btn',
-    backdropPrefix: 'ar-modal',
-    detailTileTestId: 'ar-tile-0',
+    keycodeTab: 'Alt Repeat Key',
+    tileTestId: 'arep-tile-0',
+    backdropTestId: 'ar-modal-backdrop',
+    modalCloseTestId: 'ar-modal-close',
   },
 ]
 
@@ -476,6 +483,13 @@ async function openEditorModal(
   settingsTestId: string,
   backdropTestId: string,
 ): Promise<boolean> {
+  // Dismiss any lingering modals/overlays before interacting with tabs
+  await dismissNotificationModal(page)
+  await page.evaluate(() => {
+    document.querySelectorAll('.fixed.inset-0').forEach((el) => el.remove())
+  })
+  await page.waitForTimeout(300)
+
   const editorContent = page.locator('[data-testid="editor-content"]')
   const tabBtn = editorContent.locator('button', { hasText: new RegExp(`^${escapeRegex(keycodeTab)}$`) })
   if (!(await isAvailable(tabBtn))) return false
@@ -497,25 +511,55 @@ async function openEditorModal(
 async function captureModalEditors(page: Page): Promise<void> {
   console.log('\n--- Phase 6: Modal Editors ---')
 
-  for (const modal of MODAL_CAPTURES) {
-    const backdropTestId = `${modal.backdropPrefix}-backdrop`
-    if (!(await openEditorModal(page, modal.keycodeTab, modal.settingsTestId, backdropTestId))) {
-      console.log(`  [skip] ${modal.name} modal not available`)
+  // Lighting modal: still uses settings button
+  const lightingBackdropTestId = 'lighting-modal-backdrop'
+  if (await openEditorModal(page, 'Lighting', 'lighting-settings-btn', lightingBackdropTestId)) {
+    await captureNamed(page, 'lighting-modal', { fullPage: true })
+    await page.locator('[data-testid="lighting-modal-close"]').click()
+    await page.waitForTimeout(300)
+  } else {
+    console.log('  [skip] lighting modal not available')
+  }
+
+  // Tile-based editors: Combo, Key Override, Alt Repeat Key
+  // Overview = inline tile grid on the dedicated tab (no modal)
+  // Detail = modal that opens when clicking a tile
+  const editorContent = page.locator('[data-testid="editor-content"]')
+  for (const editor of TILE_EDITOR_CAPTURES) {
+    const tabBtn = editorContent.locator('button', { hasText: new RegExp(`^${escapeRegex(editor.keycodeTab)}$`) })
+    if (!(await isAvailable(tabBtn))) {
+      console.log(`  [skip] ${editor.name} tab not found`)
+      continue
+    }
+    await tabBtn.first().click()
+    await page.waitForTimeout(300)
+
+    // Capture the tab view (inline tile grid overview — no modal)
+    await captureNamed(page, `${editor.name}-modal`, { fullPage: true })
+
+    // Click tile to open detail editor modal
+    const tile = page.locator(`[data-testid="${editor.tileTestId}"]`)
+    if (!(await isAvailable(tile))) {
+      console.log(`  [skip] ${editor.name} tile not found, detail skipped`)
+      continue
+    }
+    await tile.click()
+    try {
+      await page.locator(`[data-testid="${editor.backdropTestId}"]`).waitFor({ state: 'visible', timeout: 3000 })
+      await page.waitForTimeout(300)
+      await captureNamed(page, `${editor.name}-detail`, { fullPage: true })
+    } catch {
+      console.log(`  [skip] ${editor.name} modal did not open, detail skipped`)
       continue
     }
 
-    await capture(page, `${modal.name}-modal`, { fullPage: true })
-
-    if (modal.detailTileTestId) {
-      const tile = page.locator(`[data-testid="${modal.detailTileTestId}"]`)
-      if (await isAvailable(tile)) {
-        await tile.click()
-        await page.waitForTimeout(300)
-        await capture(page, `${modal.name}-detail`, { fullPage: true })
-      }
+    // Close the modal
+    const closeBtn = page.locator(`[data-testid="${editor.modalCloseTestId}"]`)
+    if (await isAvailable(closeBtn)) {
+      await closeBtn.click()
+    } else {
+      await page.keyboard.press('Escape')
     }
-
-    await page.locator(`[data-testid="${modal.backdropPrefix}-close"]`).click()
     await page.waitForTimeout(300)
   }
 }
@@ -531,7 +575,7 @@ async function captureEditorSettings(page: Page): Promise<void> {
   }
 
   if (await switchOverlayTab(page, 'overlay-tab-data')) {
-    await capture(page, 'editor-settings-save', { fullPage: true })
+    await captureNamed(page, 'editor-settings-save', { fullPage: true })
   }
 }
 
@@ -546,11 +590,11 @@ async function captureOverlayPanel(page: Page): Promise<void> {
   }
 
   if (await switchOverlayTab(page, 'overlay-tab-tools')) {
-    await capture(page, 'overlay-tools', { fullPage: true })
+    await captureNamed(page, 'overlay-tools', { fullPage: true })
   }
 
   if (await switchOverlayTab(page, 'overlay-tab-data')) {
-    await capture(page, 'overlay-save', { fullPage: true })
+    await captureNamed(page, 'overlay-save', { fullPage: true })
   }
 
   await closeOverlay(page)
@@ -563,7 +607,7 @@ async function captureStatusBar(page: Page): Promise<void> {
 
   const statusBar = page.locator('[data-testid="status-bar"]')
   if (await isAvailable(statusBar)) {
-    await capture(page, 'status-bar', { element: statusBar })
+    await captureNamed(page, 'status-bar', { element: statusBar })
   } else {
     console.log('  [skip] status-bar not found')
   }
@@ -603,7 +647,7 @@ async function captureFavorites(page: Page): Promise<void> {
   }
 
   // TapDance modal now shows editor on the left and inline favorites panel on the right
-  await capture(page, 'inline-favorites', { fullPage: true })
+  await captureNamed(page, 'inline-favorites', { fullPage: true })
 
   await page.locator('[data-testid="td-modal-close"]').click()
   await page.waitForTimeout(300)
@@ -638,7 +682,13 @@ async function captureKeyPopover(page: Page): Promise<void> {
     return
   }
 
-  await keyLabel.dblclick({ force: true })
+  // Scroll window to top and ensure keyboard layout is visible
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.waitForTimeout(300)
+  // Use dispatchEvent to bypass viewport checks on SVG elements
+  await keyLabel.evaluate((el) => {
+    el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+  })
   await page.waitForTimeout(500)
 
   const popover = page.locator('[data-testid="key-popover"]')
@@ -648,12 +698,12 @@ async function captureKeyPopover(page: Page): Promise<void> {
   }
 
   // Capture Key tab (default view with search results)
-  await capture(page, 'key-popover-key', { fullPage: true })
+  await captureNamed(page, 'key-popover-key', { fullPage: true })
 
   // Switch to Code tab and capture
   await page.locator('[data-testid="popover-tab-code"]').click()
   await page.waitForTimeout(300)
-  await capture(page, 'key-popover-code', { fullPage: true })
+  await captureNamed(page, 'key-popover-code', { fullPage: true })
 
   // Switch back to Key tab and enable Mod Mask mode
   await page.locator('[data-testid="popover-tab-key"]').click()
@@ -669,14 +719,14 @@ async function captureKeyPopover(page: Page): Promise<void> {
     await page.waitForTimeout(200)
   }
 
-  await capture(page, 'key-popover-modifier', { fullPage: true })
+  await captureNamed(page, 'key-popover-modifier', { fullPage: true })
 
   // Switch to LT mode to show layer selector
   await page.locator('[data-testid="popover-mode-mod-mask"]').click()
   await page.waitForTimeout(200)
   await page.locator('[data-testid="popover-mode-lt"]').click()
   await page.waitForTimeout(300)
-  await capture(page, 'key-popover-lt', { fullPage: true })
+  await captureNamed(page, 'key-popover-lt', { fullPage: true })
 
   // Close the popover
   const closeBtn = page.locator('[data-testid="popover-close"]')
@@ -718,6 +768,7 @@ async function captureBasicViewVariants(page: Page): Promise<void> {
   const viewTypes = [
     { value: 'ansi', name: 'basic-ansi-view' },
     { value: 'iso', name: 'basic-iso-view' },
+    { value: 'jis', name: 'basic-jis-view' },
     { value: 'list', name: 'basic-list-view' },
   ]
 
@@ -727,7 +778,7 @@ async function captureBasicViewVariants(page: Page): Promise<void> {
     await viewTypeSelector.selectOption(view.value)
     await page.waitForTimeout(500)
     await closeOverlay(page)
-    await capture(page, view.name, { fullPage: true })
+    await captureNamed(page, view.name, { fullPage: true })
   }
 
   // Restore ANSI view
@@ -751,7 +802,7 @@ async function captureLayerPanelStates(page: Page): Promise<void> {
     // Panel is expanded — capture collapsed first, then expanded
     await collapseBtn.click()
     await page.waitForTimeout(500)
-    await capture(page, 'layer-panel-collapsed', { fullPage: true })
+    await captureNamed(page, 'layer-panel-collapsed', { fullPage: true })
 
     // Re-expand
     const expandBtnAfter = page.locator('[data-testid="layer-panel-expand-btn"]')
@@ -759,14 +810,14 @@ async function captureLayerPanelStates(page: Page): Promise<void> {
       await expandBtnAfter.click()
       await page.waitForTimeout(500)
     }
-    await capture(page, 'layer-panel-expanded', { fullPage: true })
+    await captureNamed(page, 'layer-panel-expanded', { fullPage: true })
   } else if (await isAvailable(expandBtn)) {
     // Panel is collapsed — capture collapsed first
-    await capture(page, 'layer-panel-collapsed', { fullPage: true })
+    await captureNamed(page, 'layer-panel-collapsed', { fullPage: true })
 
     await expandBtn.click()
     await page.waitForTimeout(500)
-    await capture(page, 'layer-panel-expanded', { fullPage: true })
+    await captureNamed(page, 'layer-panel-expanded', { fullPage: true })
   } else {
     console.log('  [skip] layer panel collapse/expand buttons not found')
   }
@@ -782,6 +833,9 @@ async function captureTileGrids(page: Page): Promise<void> {
   const tileGrids = [
     { tabLabel: 'Tap-Hold / Tap Dance', tileTestId: 'td-tile-0', name: 'td-tile-grid' },
     { tabLabel: 'Macro', tileTestId: 'macro-tile-0', name: 'macro-tile-grid' },
+    { tabLabel: 'Combo', tileTestId: 'combo-tile-0', name: 'combo-tile-grid' },
+    { tabLabel: 'Key Override', tileTestId: 'ko-tile-0', name: 'ko-tile-grid' },
+    { tabLabel: 'Alt Repeat Key', tileTestId: 'arep-tile-0', name: 'ar-tile-grid' },
   ]
 
   for (const grid of tileGrids) {
@@ -795,7 +849,7 @@ async function captureTileGrids(page: Page): Promise<void> {
 
     const tile = page.locator(`[data-testid="${grid.tileTestId}"]`)
     if (await isAvailable(tile)) {
-      await capture(page, grid.name, { fullPage: true })
+      await captureNamed(page, grid.name, { fullPage: true })
     } else {
       console.log(`  [skip] ${grid.tileTestId} not found`)
     }
@@ -851,17 +905,17 @@ async function main(): Promise<void> {
 
     await captureKeymapEditor(page)          // 03
     await captureLayerNavigation(page)       // 04-06
-    await captureKeycodeCategories(page)     // 07-15 (MIDI skipped for GPK60)
-    await captureSidebarTools(page)          // 16-19
-    await captureModalEditors(page)          // 20-26
-    await captureEditorSettings(page)        // 27 (editor-settings-save)
-    await captureOverlayPanel(page)          // 28-29 (overlay-tools, overlay-save)
-    await captureStatusBar(page)             // 30
-    await captureFavorites(page)             // 31
-    await captureKeyPopover(page)            // 32-35
-    await captureBasicViewVariants(page)     // 36-38
-    await captureLayerPanelStates(page)      // 39-40
-    await captureTileGrids(page)             // 41-42
+    await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
+    await captureSidebarTools(page)          // toolbar, dual-mode, zoom, typing-test
+    await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
+    await captureEditorSettings(page)        // editor-settings-save
+    await captureOverlayPanel(page)          // overlay-tools, overlay-save
+    await captureStatusBar(page)             // status-bar
+    await captureFavorites(page)             // inline-favorites
+    await captureKeyPopover(page)            // key-popover-key/code/modifier/lt
+    await captureBasicViewVariants(page)     // named: basic-{ansi,iso,jis,list}-view
+    await captureLayerPanelStates(page)      // layer-panel-collapsed/expanded
+    await captureTileGrids(page)             // td-tile-grid, macro-tile-grid
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {

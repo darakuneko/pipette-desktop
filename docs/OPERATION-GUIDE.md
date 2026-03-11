@@ -65,6 +65,14 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 
 - Ctrl+click to select multiple keys
 - Shift+click for range selection
+- Press Escape to deselect all keys
+
+**Instant Key Selection** controls how keycode assignment behaves:
+
+- **ON** (default): A single click on a keycode immediately assigns it and closes the selection. Fast workflow for quick edits.
+- **OFF**: A single click selects a keycode (highlighted), double-click or press Enter to confirm and assign. A hint is shown at the bottom of the palette. Useful when you want to browse keycodes before committing.
+
+This setting can be toggled per-keyboard in the Keycodes Overlay Panel (§3.13), and the global default can be set in Settings → Defaults (§6.1).
 
 ### 2.3 Layer Switching
 
@@ -82,11 +90,11 @@ Layer switching buttons are located on the left side of the keyboard layout.
 
 The layer panel can be collapsed to save space:
 
-![Layer Panel Collapsed](screenshots/39-layer-panel-collapsed.png)
+![Layer Panel Collapsed](screenshots/layer-panel-collapsed.png)
 
 Click the collapse button (chevron) to minimize the layer panel to just numbers. Click the expand button to restore full layer names.
 
-![Layer Panel Expanded](screenshots/40-layer-panel-expanded.png)
+![Layer Panel Expanded](screenshots/layer-panel-expanded.png)
 
 ### 2.4 Key Popover
 
@@ -94,7 +102,7 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 
 **Key Tab**
 
-![Key Popover — Key Tab](screenshots/32-key-popover-key.png)
+![Key Popover — Key Tab](screenshots/key-popover-key.png)
 
 - The search input is pre-filled with the current keycode name
 - Type to search by name, QMK ID, or alias — results are ranked by relevance
@@ -103,7 +111,7 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 
 **Code Tab**
 
-![Key Popover — Code Tab](screenshots/33-key-popover-code.png)
+![Key Popover — Code Tab](screenshots/key-popover-code.png)
 
 - Enter a keycode value directly in hexadecimal (e.g., `0x0029` for Escape)
 - The resolved keycode name is displayed below the hex input
@@ -113,14 +121,14 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 
 The mode buttons at the top of the popover let you build composite keycodes:
 
-![Key Popover — Modifier Mode](screenshots/34-key-popover-modifier.png)
+![Key Popover — Modifier Mode](screenshots/key-popover-modifier.png)
 
 - **Mod Mask**: Combine a modifier with a key (e.g., `LSFT(KC_ESCAPE)`)
 - **Mod-Tap**: Modifier on hold, key on tap (e.g., `LSFT_T(KC_ESCAPE)`)
 
 Both modes show the modifier checkbox strip to select Left/Right Ctrl, Shift, Alt, or GUI. Left and Right modifiers cannot be mixed — selecting one side disables the other.
 
-![Key Popover — LT Mode](screenshots/35-key-popover-lt.png)
+![Key Popover — LT Mode](screenshots/key-popover-lt.png)
 
 - **LT**: Layer-Tap — activate a layer on hold, send a key on tap (e.g., `LT0(KC_ESCAPE)`). A layer selector appears to choose the target layer.
 - **SH_T**: Swap Hands Tap — swap hands on hold, send a key on tap (e.g., `SH_T(KC_ESCAPE)`)
@@ -128,7 +136,9 @@ Both modes show the modifier checkbox strip to select Left/Right Ctrl, Shift, Al
 
 Click an active mode button to toggle it off and revert to a basic keycode.
 
-Press Escape or click outside the popover to close it.
+**Undo**: If the selected key already has a keycode assigned, the popover shows an **Undo** button that displays the previous keycode. Click it to revert to the previous assignment.
+
+**Confirmation**: Press **Enter** to confirm the current selection and close the popover. Press **Escape** or click outside the popover to close it without changes.
 
 ### 2.5 Layout Options
 
@@ -157,23 +167,29 @@ Select keycodes from different categories using the tabbed palette at the bottom
 
 ### 3.1 Basic
 
-Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports three view types, selectable from the Keycodes Overlay Panel (§3.10):
+Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports four view types, selectable from the Keycodes Overlay Panel (§3.13):
 
 **ANSI Keyboard View** (default)
 
-![Basic Tab — ANSI View](screenshots/36-basic-ansi-view.png)
+![Basic Tab — ANSI View](screenshots/basic-ansi-view.png)
 
 Displays keycodes as an ANSI keyboard layout. Click a key on the visual keyboard to assign it.
 
 **ISO Keyboard View**
 
-![Basic Tab — ISO View](screenshots/37-basic-iso-view.png)
+![Basic Tab — ISO View](screenshots/basic-iso-view.png)
 
 Displays keycodes as an ISO keyboard layout with the ISO-specific keys.
 
+**JIS Keyboard View**
+
+![Basic Tab — JIS View](screenshots/basic-jis-view.png)
+
+Displays keycodes as a JIS keyboard layout with JIS-specific keys (Yen, Ro, Henkan, Muhenkan, Katakana/Hiragana).
+
 **List View**
 
-![Basic Tab — List View](screenshots/38-basic-list-view.png)
+![Basic Tab — List View](screenshots/basic-list-view.png)
 
 Displays keycodes in the traditional scrollable list format.
 
@@ -183,12 +199,14 @@ All views include:
 - Editing keys (Enter, Tab, Backspace, Delete)
 - Navigation keys (arrows, Home, End, PageUp/Down)
 - Numpad keys
+- International keys (KC_INT1–KC_INT5)
+- Language keys (KC_LANG1–KC_LANG5)
 
 ### 3.2 Layers
 
 Keycodes for layer operations.
 
-![Layers Tab](screenshots/08-tab-layers.png)
+![Layers Tab](screenshots/tab-layers.png)
 
 - **MO(n)**: Momentarily activate layer n while held
 - **DF(n)**: Set default layer to n
@@ -201,100 +219,136 @@ Keycodes for layer operations.
 
 Keycodes for modifier key combinations and tap behavior settings.
 
-![Modifiers Tab](screenshots/09-tab-modifiers.png)
+![Modifiers Tab](screenshots/tab-modifiers.png)
 
 - **One-Shot Modifier (OSM)**: Activate modifier for the next keypress only
 - **Mod-Tap**: Modifier on hold, regular key on tap
 - **Mod Mask**: Modifier key combinations
 
-### 3.4 Tap-Hold / Tap Dance
+### 3.4 System
 
-Keycodes that assign different actions to tap and hold.
+Keycodes for mouse control, media playback, system utilities, and audio/haptic feedback.
 
-![Tap-Hold / Tap Dance Tab](screenshots/10-tab-tapDance.png)
+![System Tab](screenshots/tab-system.png)
 
-The Tap Dance section displays a **tile grid preview** showing all entries at a glance:
+- **Mouse**: buttons, movement, and scrolling
+- **Joystick**: axis and button keycodes
+- **Audio**: audio toggle and control keycodes
+- **Haptic**: haptic feedback toggle and control keycodes
+- **Media Playback**: play/stop/volume/track controls
+- **Locking Keys**: Locking Caps Lock, Num Lock, Scroll Lock
+- **App / Browser**: application launcher and browser navigation keys
+- **System Control**: system power, sleep, wake
+- **Boot**: enter bootloader mode (QK_BOOT)
 
-![Tap Dance Tile Grid](screenshots/41-td-tile-grid.png)
+> **Note**: The MIDI tab is only displayed for MIDI-capable keyboards. When available, it appears between System and Lighting.
 
-- Each tile shows the entry number and a summary of configured actions
-- Configured entries display their tap/hold actions; unconfigured tiles show the number only
-- Click a tile to open the Tap Dance edit modal
-- Configure tap, hold, double-tap, and other actions for each entry
-
-### 3.5 Macro
-
-Macro keycodes.
-
-![Macro Tab](screenshots/11-tab-macro.png)
-
-The Macro section displays a **tile grid preview** showing all entries at a glance:
-
-![Macro Tile Grid](screenshots/42-macro-tile-grid.png)
-
-- Each tile shows the macro number and a preview of the recorded sequence
-- Configured entries display a summary of key actions; unconfigured tiles show the number only
-- Click a tile to open the Macro edit modal
-- Record sequences of key inputs as macros
-
-### 3.6 Quantum
-
-Keycodes for advanced QMK features.
-
-![Quantum Tab](screenshots/12-tab-quantum.png)
-
-- Boot (bootloader mode)
-- Caps Word
-- Magic keys
-- Auto Shift
-- Combo
-- Key Override
-- Alt Repeat Key
-- Swap Hands
-
-### 3.7 Media
-
-Keycodes for media keys, mouse keys, and joystick operations.
-
-![Media Tab](screenshots/13-tab-media.png)
-
-- Mouse buttons, movement, and scrolling
-- Media playback controls (play/stop/volume)
-- Application launcher keys
-
-### 3.8 Lighting
+### 3.5 Lighting
 
 Keycodes for backlight and RGB lighting controls.
 
-![Lighting Tab](screenshots/14-tab-backlight.png)
+![Lighting Tab](screenshots/tab-backlight.png)
 
 - RGB Matrix controls
 - RGB Lighting controls
 - Backlight controls
 - LED Matrix controls
 
-### 3.9 User
+### 3.6 Tap-Hold / Tap Dance
+
+Keycodes that assign different actions to tap and hold.
+
+![Tap-Hold / Tap Dance Tab](screenshots/tab-tapDance.png)
+
+The Tap Dance section displays a **tile grid preview** showing all entries at a glance:
+
+![Tap Dance Tile Grid](screenshots/td-tile-grid.png)
+
+- Each tile shows the entry number and a summary of configured actions
+- Configured entries display their tap/hold actions; unconfigured tiles show the number only
+- Click a tile to open the Tap Dance edit modal directly to that entry
+- Configure tap, hold, double-tap, and other actions for each entry
+
+### 3.7 Macro
+
+Macro keycodes.
+
+![Macro Tab](screenshots/tab-macro.png)
+
+The Macro section displays a **tile grid preview** showing all entries at a glance:
+
+![Macro Tile Grid](screenshots/macro-tile-grid.png)
+
+- Each tile shows the macro number and a preview of the recorded sequence
+- Configured entries display a summary of key actions; unconfigured tiles show the number only
+- Click a tile to open the Macro edit modal directly to that entry
+- Record sequences of key inputs as macros
+
+### 3.8 Combo
+
+Combo keycodes for simultaneous key-press combinations.
+
+![Combo Tab](screenshots/tab-combo.png)
+
+The Combo tab displays a **tile grid preview** showing all entries and a settings area with a note: "These features apply to the entire keyboard, not just the current layer."
+
+- Each tile shows the combo number and a summary (e.g., "A + B → C")
+- Click a tile to open the Combo edit modal directly to that entry (§5.2)
+- Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
+
+### 3.9 Key Override
+
+Key Override keycodes for replacing key outputs when specific modifiers are held.
+
+![Key Override Tab](screenshots/tab-keyOverride.png)
+
+The Key Override tab displays a **tile grid preview** showing all entries and a settings area.
+
+- Each tile shows the override number and a summary
+- Click a tile to open the Key Override edit modal directly to that entry (§5.3)
+
+### 3.10 Alt Repeat Key
+
+Alt Repeat Key keycodes for context-aware alternate repeat key bindings.
+
+![Alt Repeat Key Tab](screenshots/tab-altRepeatKey.png)
+
+The Alt Repeat Key tab displays a **tile grid preview** showing all entries and a settings area.
+
+- Each tile shows the entry number and a summary
+- Click a tile to open the Alt Repeat Key edit modal directly to that entry (§5.4)
+
+### 3.11 Behavior
+
+Keycodes for advanced QMK behavior features.
+
+- **Magic**: Magic keycodes for swapping and toggling keyboard behaviors
+- **Mode**: NKRO toggle, mode switching keycodes
+- **Auto Shift**: Auto Shift toggle and configuration keycodes
+- **Swap Hands**: Swap Hands keycodes and Swap Hands Tap variants
+- **Caps Word**: Caps Word toggle
+
+### 3.12 User
 
 User-defined keycodes.
 
-![User Tab](screenshots/15-tab-user.png)
+![User Tab](screenshots/tab-user.png)
 
 - Custom keycodes defined in firmware
 
-> **Note**: The MIDI tab is only displayed for MIDI-capable keyboards.
-
-### 3.10 Keycodes Overlay Panel
+### 3.13 Keycodes Overlay Panel
 
 The Keycodes Overlay Panel provides quick access to editor tools and save functions. Toggle it with the panel button at the right end of the keycode tab bar.
 
 **Settings Tab**
 
-![Overlay Panel — Settings](screenshots/28-overlay-tools.png)
+![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
-- **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, and List views for the Basic tab
+- **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, JIS keyboard, and List views for the Basic tab
 - **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
-- **Split Key Mode**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
+- **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
+- **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
 - **Key Tester**: Toggle Matrix Tester mode (supported keyboards only)
 - **Security**: Shows lock status (Locked/Unlocked) with a Lock button
 - **Import**: Restore from `.vil` files or sideload custom JSON definitions
@@ -302,7 +356,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 **Save Tab**
 
-![Overlay Panel — Save](screenshots/29-overlay-save.png)
+![Overlay Panel — Save](screenshots/overlay-save.png)
 
 - **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
 - **Save Current State**: Save a snapshot of the current keyboard state with a label
@@ -319,13 +373,13 @@ Some keyboards support layout options (see §2.5). When available, a Layout tab 
 
 The toolbar on the left side of the keymap editor provides the following features.
 
-![Toolbar](screenshots/16-toolbar.png)
+![Toolbar](screenshots/toolbar.png)
 
 ### 4.1 Dual Mode (Split Edit)
 
 Displays two keyboard layouts side by side for comparing and copying keys between layers.
 
-![Dual Mode](screenshots/17-dual-mode.png)
+![Dual Mode](screenshots/dual-mode.png)
 
 - Click the button to toggle dual mode
 - Useful for copying key settings between layers
@@ -334,7 +388,7 @@ Displays two keyboard layouts side by side for comparing and copying keys betwee
 
 Adjusts the keyboard layout display scale.
 
-![Zoom In](screenshots/18-zoom-in.png)
+![Zoom In](screenshots/zoom-in.png)
 
 - (+) button to zoom in
 - (-) button to zoom out
@@ -403,13 +457,13 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 
 ## 5. Detail Setting Editors
 
-Open detail setting modals from the settings buttons at the bottom of each keycode palette tab.
+Open detail setting modals from their dedicated keycode tabs. Lighting opens via its settings button; Combo, Key Override, and Alt Repeat Key open by clicking a tile on their respective tabs.
 
 ### 5.1 Lighting Settings
 
 Open from the Lighting tab settings button. Configure RGB lighting colors and effects.
 
-![Lighting Settings](screenshots/20-lighting-modal.png)
+![Lighting Settings](screenshots/lighting-modal.png)
 
 - Select colors with the HSV color picker
 - Choose colors from preset palette
@@ -418,69 +472,69 @@ Open from the Lighting tab settings button. Configure RGB lighting colors and ef
 
 ### 5.2 Combo
 
-Open from the Quantum tab combo settings button. Configure simultaneous key press combinations to trigger different keys. The combo editor uses a **2-screen flow**: a tile grid overview followed by a detail editor.
+Configure simultaneous key press combinations to trigger different keys. The Combo tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
 
-**Screen 1 — Tile Grid Overview**
+**Tile Grid Overview (Combo tab)**
 
-![Combo List](screenshots/21-combo-modal.png)
+![Combo List](screenshots/combo-modal.png)
 
-Shows a grid of numbered tiles (0--31). Configured entries display a summary (e.g., "A + B -> C"). Click a tile to open the detail editor. Timeout (ms) and Save button are shown on this screen.
+The Combo tab shows a grid of numbered tiles (0--31). Configured entries display a summary. Click a tile to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the grid.
 
-**Screen 2 — Detail Editor**
+**Detail Editor**
 
-![Combo Detail](screenshots/22-combo-detail.png)
+![Combo Detail](screenshots/combo-detail.png)
 
-- Left panel: Combo editor with Key 1--4 and Output fields
+- Left panel: Combo editor with Key 1--4 and Output fields. Timeout (ms) and Save button for the global combo timeout.
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview
+- **Back** returns to the tile grid overview within the modal
 
 ### 5.3 Key Override
 
-Open from the Quantum tab key override settings button. Replace specific key inputs with different keys. The key override editor uses the same **2-screen flow** as Combo.
+Replace specific key inputs with different keys. The Key Override tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
 
-**Screen 1 — Tile Grid Overview**
+**Tile Grid Overview (Key Override tab)**
 
-![Key Override List](screenshots/23-key-override-modal.png)
+![Key Override List](screenshots/key-override-modal.png)
 
 Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
 
-**Screen 2 — Detail Editor**
+**Detail Editor**
 
-![Key Override Detail](screenshots/24-key-override-detail.png)
+![Key Override Detail](screenshots/key-override-detail.png)
 
 - Left panel: Trigger Key, Replacement Key, enabled toggle, layer and modifier options
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview
+- **Back** returns to the tile grid overview within the modal
 
 ### 5.4 Alt Repeat Key
 
-Open from the Quantum tab Alt Repeat Key settings button. Configure alternative actions for the Repeat Key. The Alt Repeat Key editor uses the same **2-screen flow** as Combo.
+Configure alternative actions for the Repeat Key. The Alt Repeat Key tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
 
-**Screen 1 — Tile Grid Overview**
+**Tile Grid Overview (Alt Repeat Key tab)**
 
-![Alt Repeat Key List](screenshots/25-alt-repeat-key-modal.png)
+![Alt Repeat Key List](screenshots/alt-repeat-key-modal.png)
 
 Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
 
-**Screen 2 — Detail Editor**
+**Detail Editor**
 
-![Alt Repeat Key Detail](screenshots/26-alt-repeat-key-detail.png)
+![Alt Repeat Key Detail](screenshots/alt-repeat-key-detail.png)
 
-- Left panel: Trigger Key, Replacement Key, enabled toggle, modifier options
+- Left panel: Last Key, Alt Key, enabled toggle, Allowed Mods, Options (DefaultToThisAltKey, Bidirectional, IgnoreModHandedness)
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview
+- **Back** returns to the tile grid overview within the modal
 
 ### 5.5 Favorites
 
 Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includes an inline **Favorites panel** on the right side of the editor.
 
-![Inline Favorites Panel](screenshots/31-inline-favorites.png)
+![Inline Favorites Panel](screenshots/inline-favorites.png)
 
 The inline favorites panel provides:
 
@@ -510,9 +564,9 @@ When Pipette Hub is connected, each saved entry also shows Hub actions:
 
 ## 6. Editor Settings Panel
 
-Open the editor settings panel from the save button (floppy disk icon) in the keycode tab bar, or use the Save tab in the Keycodes Overlay Panel (§3.10).
+Open the editor settings panel from the save button (floppy disk icon) in the keycode tab bar, or use the Save tab in the Keycodes Overlay Panel (§3.13).
 
-![Editor Settings — Save](screenshots/27-editor-settings-save.png)
+![Editor Settings — Save](screenshots/editor-settings-save.png)
 
 The editor settings panel now provides a single **Save** panel with the following features:
 
@@ -521,7 +575,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
-> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.10). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
+> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.13). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
 
 ### 6.1 Cloud Sync (Google Drive appDataFolder)
 
@@ -592,9 +646,10 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 
 - **Keyboard Layout**: Default display layout (QWERTY, Dvorak, etc.)
 - **Auto Advance**: Default auto-advance behavior
+- **Instant Key Selection**: Default instant key selection behavior (see §2.2)
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
-- **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/List)
-- **Split Key Mode**: Default split key display mode
+- **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
+- **Separate Shift in Key Picker**: Default setting for separating Shift in the key picker
 
 ---
 
@@ -673,7 +728,7 @@ See the [Data Guide](Data.md) for details on how Hub authentication works.
 
 The status bar at the bottom of the screen shows connection information and action buttons.
 
-![Status Bar](screenshots/30-status-bar.png)
+![Status Bar](screenshots/status-bar.png)
 
 - **Device name**: Shows the name of the connected keyboard
 - **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
