@@ -67,7 +67,7 @@
 - Shift+クリックで範囲選択ができます
 - Escape キーで全選択を解除します
 
-**Instant Key Selection** はキーコード割り当ての動作を制御します:
+**キーの即時選択 (Instant Key Selection)** はキーコード割り当ての動作を制御します:
 
 - **ON** (デフォルト): キーコードをシングルクリックすると即座に割り当てが完了し、選択が閉じます。素早い編集に最適です。
 - **OFF**: シングルクリックでキーコードを選択（ハイライト表示）し、ダブルクリックまたは Enter キーで確定・割り当て。パレット下部にヒントが表示されます。キーコードを確認してから決定したい場合に便利です。
@@ -347,7 +347,7 @@ QMK の高度な動作機能用のキーコードです。
 - **Basic View Type**: Basic タブのビュータイプを切り替え (ANSI キーボード、ISO キーボード、JIS キーボード、リスト)
 - **Keyboard Layout**: キーラベルの表示レイアウトを選択 (QWERTY、Dvorak など)
 - **Auto Advance**: キーコード割り当て後に次のキーへ自動移動する機能の切替
-- **Instant Key Selection**: インスタントキー選択モードの切替 (動作の詳細は §2.2 参照)
+- **Instant Key Selection**: キーの即時選択モードの切替 (動作の詳細は §2.2 参照)
 - **Split Key Mode**: 複合キーコードの分割表示を切替 (例: Mod-Tap を 2 つに分けて表示)
 - **Key Tester**: Matrix Tester モードの切替 (対応キーボードのみ)
 - **Security**: ロック状態 (Locked/Unlocked) の表示と Lock ボタン
@@ -649,7 +649,7 @@ Pipette は保存したスナップショット、お気に入り、キーボー
 
 - **Keyboard Layout**: デフォルトの表示レイアウト (QWERTY、Dvorak など)
 - **Auto Advance**: デフォルトの自動移動動作
-- **Instant Key Selection**: デフォルトのインスタントキー選択動作 (§2.2 参照)
+- **Instant Key Selection**: デフォルトのキーの即時選択動作 (§2.2 参照)
 - **Layer Panel Open**: レイヤーパネルを展開または折りたたんだ状態で開始するか
 - **Basic View Type**: Basic タブのデフォルトビュータイプ (ANSI/ISO/JIS/List)
 - **Split Key Mode**: デフォルトの分割キー表示モード
