@@ -16,6 +16,7 @@ import {
   KEYCODES_BASIC_SYSTEM,
   KEYCODES_SHIFTED,
   KEYCODES_ISO,
+  KEYCODES_JIS,
   KEYCODES_LAYERS,
   KEYCODES_LAYERS_SPECIAL,
   KEYCODES_LAYERS_MO,
@@ -122,6 +123,7 @@ function getBasicGroupsList(): KeycodeGroup[] {
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 3 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 3 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 3 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
   ]
@@ -136,6 +138,7 @@ function getBasicGroupsAnsi(): KeycodeGroup[] {
     { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 1 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 2 },
     basicCharactersGroup(),
@@ -154,6 +157,7 @@ function getBasicGroupsIso(): KeycodeGroup[] {
     { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 2 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 2 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 2 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
     { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 4 },
@@ -165,7 +169,7 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
   {
     id: 'basic',
     labelKey: 'keycodes.basic',
-    getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO, ...KEYCODES_MEDIA_FKEYS],
+    getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO, ...KEYCODES_JIS, ...KEYCODES_MEDIA_FKEYS],
     getGroups: (viewType?: string) => {
       if (viewType === 'ansi') return getBasicGroupsAnsi()
       if (viewType === 'iso' || viewType === 'jis') return getBasicGroupsIso()

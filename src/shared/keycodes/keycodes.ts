@@ -308,6 +308,9 @@ export const KEYCODES_SHIFTED: Keycode[] = [
 export const KEYCODES_ISO: Keycode[] = [
   K('KC_NONUS_HASH', '~\n#', 'Non-US # and ~', { alias: ['KC_NUHS'] }),
   K('KC_NONUS_BSLASH', '|\n\\', 'Non-US \\ and |', { alias: ['KC_NUBS'] }),
+]
+
+export const KEYCODES_JIS: Keycode[] = [
   K('KC_RO', '_\n\\', 'JIS \\ and _', { alias: ['KC_INT1'] }),
   K('KC_KANA', '\u30AB\u30BF\u30AB\u30CA\n\u3072\u3089\u304C\u306A', 'JIS Katakana/Hiragana', {
     alias: ['KC_INT2'],
@@ -1671,6 +1674,7 @@ function buildAnyKeycodeNames(): Map<string, number> {
     ...KEYCODES_BASIC,
     ...KEYCODES_SHIFTED,
     ...KEYCODES_ISO,
+    ...KEYCODES_JIS,
     ...KEYCODES_BACKLIGHT,
     ...KEYCODES_MEDIA,
     ...KEYCODES_USER,
@@ -1889,6 +1893,7 @@ export function recreateKeycodes(): void {
     ...KEYCODES_BASIC,
     ...KEYCODES_SHIFTED,
     ...KEYCODES_ISO,
+    ...KEYCODES_JIS,
     ...KEYCODES_LAYERS,
     ...KEYCODES_BOOT,
     ...KEYCODES_MODIFIERS,

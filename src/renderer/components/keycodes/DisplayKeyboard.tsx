@@ -60,6 +60,7 @@ interface Props {
   pickerSelectedKeycodes?: Set<string>
   splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
+  isVisible?: (kc: Keycode) => boolean
 }
 
 interface GridKey {
@@ -82,6 +83,7 @@ export function DisplayKeyboard({
   pickerSelectedKeycodes,
   splitKeyMode,
   remapLabel,
+  isVisible,
 }: Props) {
   const { gridKeys, totalCols, totalRows } = useMemo(() => {
     const layout = parseKle(kle)
@@ -137,10 +139,13 @@ export function DisplayKeyboard({
       }}
     >
       {gridKeys.map((gk) => {
-        const isSelected = pickerSelectedKeycodes?.has(gk.keycode.qmkId)
-        const isHighlighted = highlightedKeycodes?.has(gk.keycode.qmkId)
+        const keyVisible = !isVisible || isVisible(gk.keycode)
+        const isSelected = keyVisible ? pickerSelectedKeycodes?.has(gk.keycode.qmkId) : false
+        const isHighlighted = keyVisible ? highlightedKeycodes?.has(gk.keycode.qmkId) : false
 
-        const buttonContent = gk.shiftedKeycode ? (
+        const buttonContent = !keyVisible ? (
+          <div className="w-full h-full rounded-md bg-surface-dim opacity-30" />
+        ) : gk.shiftedKeycode ? (
           <SplitKey
             base={gk.keycode}
             shifted={gk.shiftedKeycode}

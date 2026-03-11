@@ -10,6 +10,8 @@ import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeGroup } from './categ
 import {
   KEYCODES_SPECIAL,
   KEYCODES_BASIC,
+  KEYCODES_ISO,
+  KEYCODES_JIS,
   type Keycode,
   findKeycode,
 } from '../../../shared/keycodes/keycodes'
@@ -111,7 +113,7 @@ export function BasicKeyboardView({
   }, [selectedLayout, visCheck, viewType])
 
   const flatKeycodes = useMemo(() => {
-    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC].filter(visCheck)
+    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_ISO, ...KEYCODES_JIS].filter(visCheck)
   }, [visCheck])
 
   function renderKeycodeGrid(keycodes: Keycode[]) {
@@ -145,6 +147,7 @@ export function BasicKeyboardView({
             pickerSelectedKeycodes={pickerSelectedKeycodes}
             splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
+            isVisible={visCheck}
           />
           {remainingRows.length > 0 && (
             <div className="mt-1">

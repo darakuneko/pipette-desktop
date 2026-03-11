@@ -261,7 +261,8 @@
   },
   "keycodes": {
     "basic": "Basic",
-    "iso": "ISO/JIS",
+    "iso": "ISO",
+    "jis": "JIS",
     "layers": "Layers",
     "quantum": "Behavior",
     "modifiers": "Modifiers",

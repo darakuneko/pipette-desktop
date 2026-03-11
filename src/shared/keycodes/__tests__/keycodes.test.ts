@@ -33,6 +33,7 @@ import {
   KEYCODES_SPECIAL,
   KEYCODES_SHIFTED,
   KEYCODES_ISO,
+  KEYCODES_JIS,
   KEYCODES_BOOT,
   KEYCODES_MODIFIERS,
   KEYCODES_QUANTUM,
@@ -277,7 +278,8 @@ describe('Core keycode system', () => {
     expect(KEYCODES_SPECIAL.length).toBe(2)
     expect(KEYCODES_BASIC.length).toBeGreaterThan(50)
     expect(KEYCODES_SHIFTED.length).toBe(21)
-    expect(KEYCODES_ISO.length).toBe(9)
+    expect(KEYCODES_ISO.length).toBe(2)
+    expect(KEYCODES_JIS.length).toBe(7)
     expect(KEYCODES_BOOT.length).toBe(3)
     expect(KEYCODES_MODIFIERS.length).toBeGreaterThan(30)
     expect(KEYCODES_QUANTUM.length).toBeGreaterThan(30)

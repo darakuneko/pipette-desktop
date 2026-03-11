@@ -20,6 +20,7 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 interface Props {
   entries: AltRepeatKeyEntry[]
@@ -40,6 +41,8 @@ interface Props {
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   quickSelect?: boolean
+  splitKeyMode?: SplitKeyMode
+  basicViewType?: BasicViewType
 }
 
 type KeycodeFieldName = 'lastKey' | 'altKey'
@@ -95,6 +98,8 @@ export function AltRepeatKeyPanelModal({
   onRemoveFromHub,
   onRenameOnHub,
   quickSelect,
+  splitKeyMode,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -352,6 +357,8 @@ export function AltRepeatKeyPanelModal({
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
                       tabContentOverride={tabContentOverride}
+                      splitKeyMode={splitKeyMode}
+                      basicViewType={basicViewType}
                       onClose={() => {
                         if (selectedField) {
                           setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)

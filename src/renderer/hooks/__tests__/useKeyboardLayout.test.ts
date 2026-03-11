@@ -114,7 +114,7 @@ describe('remapKeycode', () => {
     it('remaps Japanese-specific keys to display strings', () => {
       expect(remapKeycode('KC_LBRACKET', 'japanese')).toBe('`\n@')
       expect(remapKeycode('KC_RBRACKET', 'japanese')).toBe('{\n[')
-      expect(remapKeycode('KC_GRAVE', 'japanese')).toBe('HAN/\nZEN')
+      expect(remapKeycode('KC_GRAVE', 'japanese')).toBe('半角\n全角')
       expect(remapKeycode('KC_SCOLON', 'japanese')).toBe('+\n;')
       expect(remapKeycode('KC_QUOTE', 'japanese')).toBe('*\n:')
     })
@@ -263,6 +263,6 @@ describe('useKeyboardLayout', () => {
     const { result } = renderHookWithConfig(() => useKeyboardLayout())
     await act(async () => {})
     expect(result.current.layout).toBe('japanese')
-    expect(result.current.remapLabel('KC_GRAVE')).toBe('HAN/\nZEN')
+    expect(result.current.remapLabel('KC_GRAVE')).toBe('半角\n全角')
   })
 })
