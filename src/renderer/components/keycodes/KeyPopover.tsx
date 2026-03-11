@@ -194,9 +194,11 @@ export function KeyPopover({
         setPendingAction(action)
       } else {
         applyAction(action)
+        // Auto-close after immediate apply when quickSelect is on
+        ;(onConfirm ?? onClose)()
       }
     },
-    [quickSelect, wrapKeycode, applyAction],
+    [quickSelect, wrapKeycode, applyAction, onConfirm, onClose],
   )
 
   // Apply any buffered pending action then close the popover

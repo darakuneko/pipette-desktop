@@ -262,6 +262,7 @@ export function TapDanceModal({
                 onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                 onClose={() => setPopoverState(null)}
                 onConfirm={confirmPopover}
+                quickSelect={quickSelect}
               />
             )}
 

@@ -510,39 +510,6 @@ function PopoverForState({
     && popoverState.maskClicked
     && isMask(serialize(currentKeycode))
 
-  // When quickSelect is ON, key search click applies immediately + closes popover
-  const onSelectRef = useRef(onKeycodeSelect)
-  onSelectRef.current = onKeycodeSelect
-  const quickKeycodeSelect = useCallback((kc: Keycode) => {
-    onSelectRef.current(kc)
-    onClose()
-  }, [onClose])
-
-  const onRawRef = useRef(onRawKeycodeSelect)
-  onRawRef.current = onRawKeycodeSelect
-  const quickRawKeycodeSelect = useCallback((code: number) => {
-    onRawRef.current(code)
-    onClose()
-  }, [onClose])
-
-  if (quickSelect) {
-    return (
-      <KeyPopover
-        anchorRect={popoverState.anchorRect}
-        currentKeycode={currentKeycode}
-        maskOnly={maskOnly}
-        layers={layers}
-        onKeycodeSelect={quickKeycodeSelect}
-        onRawKeycodeSelect={quickRawKeycodeSelect}
-        onModMaskChange={onModMaskChange}
-        onClose={onClose}
-        quickSelect
-        previousKeycode={previousKeycode}
-        onUndo={onUndo}
-      />
-    )
-  }
-
   return (
     <KeyPopover
       anchorRect={popoverState.anchorRect}
@@ -553,7 +520,7 @@ function PopoverForState({
       onRawKeycodeSelect={onRawKeycodeSelect}
       onModMaskChange={onModMaskChange}
       onClose={onClose}
-      quickSelect={false}
+      quickSelect={quickSelect}
       previousKeycode={previousKeycode}
       onUndo={onUndo}
     />

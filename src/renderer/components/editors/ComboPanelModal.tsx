@@ -399,6 +399,7 @@ export function ComboPanelModal({
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
                     onConfirm={confirmPopover}
+                    quickSelect={quickSelect}
                   />
                 )}
 

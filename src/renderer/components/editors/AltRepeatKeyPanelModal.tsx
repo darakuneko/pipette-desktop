@@ -371,6 +371,7 @@ export function AltRepeatKeyPanelModal({
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
                     onConfirm={confirmPopover}
+                    quickSelect={quickSelect}
                   />
                 )}
 
