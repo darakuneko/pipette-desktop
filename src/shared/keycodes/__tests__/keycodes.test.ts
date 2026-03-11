@@ -33,6 +33,9 @@ import {
   KEYCODES_SPECIAL,
   KEYCODES_SHIFTED,
   KEYCODES_ISO,
+  KEYCODES_JIS,
+  KEYCODES_INTERNATIONAL,
+  KEYCODES_LANGUAGE,
   KEYCODES_BOOT,
   KEYCODES_MODIFIERS,
   KEYCODES_QUANTUM,
@@ -277,7 +280,10 @@ describe('Core keycode system', () => {
     expect(KEYCODES_SPECIAL.length).toBe(2)
     expect(KEYCODES_BASIC.length).toBeGreaterThan(50)
     expect(KEYCODES_SHIFTED.length).toBe(21)
-    expect(KEYCODES_ISO.length).toBe(9)
+    expect(KEYCODES_ISO.length).toBe(2)
+    expect(KEYCODES_JIS.length).toBe(5)
+    expect(KEYCODES_INTERNATIONAL.length).toBe(5)
+    expect(KEYCODES_LANGUAGE.length).toBe(5)
     expect(KEYCODES_BOOT.length).toBe(3)
     expect(KEYCODES_MODIFIERS.length).toBeGreaterThan(30)
     expect(KEYCODES_QUANTUM.length).toBeGreaterThan(30)
@@ -377,6 +383,22 @@ describe('serialize()', () => {
     expect(serialize(keycodesV6.kc.KC_QUES)).toBe('LSFT(KC_SLASH)')
     const lsftB = keycodesV6.kc['LSFT(kc)'] | keycodesV6.kc.KC_B
     expect(serialize(lsftB)).toBe('LSFT(KC_B)')
+  })
+
+  it('serializes International keycodes as JIS names (JIS wins in RAWCODES_MAP)', () => {
+    expect(serialize(0x87)).toBe('KC_RO')
+    expect(serialize(0x88)).toBe('KC_KANA')
+    expect(serialize(0x89)).toBe('KC_JYEN')
+    expect(serialize(0x8a)).toBe('KC_HENK')
+    expect(serialize(0x8b)).toBe('KC_MHEN')
+  })
+
+  it('serializes Language keycodes', () => {
+    expect(serialize(0x90)).toBe('KC_LANG1')
+    expect(serialize(0x91)).toBe('KC_LANG2')
+    expect(serialize(0x92)).toBe('KC_LANG3')
+    expect(serialize(0x93)).toBe('KC_LANG4')
+    expect(serialize(0x94)).toBe('KC_LANG5')
   })
 
   it('returns hex for unknown codes', () => {
@@ -893,6 +915,26 @@ describe('AnyKeycode expression evaluator', () => {
     recreateKeycodes()
     const expected = keycodesV6.kc.QK_LSFT | keycodesV6.kc.KC_A
     expect(deserialize('LSFT(KC_A)')).toBe(expected)
+  })
+
+  it('deserializes International keycode aliases', () => {
+    expect(deserialize('KC_INT1')).toBe(0x87)
+    expect(deserialize('KC_INT2')).toBe(0x88)
+    expect(deserialize('KC_INT3')).toBe(0x89)
+    expect(deserialize('KC_INT4')).toBe(0x8a)
+    expect(deserialize('KC_INT5')).toBe(0x8b)
+  })
+
+  it('deserializes Language keycodes and aliases', () => {
+    expect(deserialize('KC_LANG1')).toBe(0x90)
+    expect(deserialize('KC_LANG2')).toBe(0x91)
+    expect(deserialize('KC_LANG3')).toBe(0x92)
+    expect(deserialize('KC_LANG4')).toBe(0x93)
+    expect(deserialize('KC_LANG5')).toBe(0x94)
+    expect(deserialize('KC_LNG1')).toBe(0x90)
+    expect(deserialize('KC_LNG2')).toBe(0x91)
+    expect(deserialize('KC_HAEN')).toBe(0x90)
+    expect(deserialize('KC_HANJ')).toBe(0x91)
   })
 })
 

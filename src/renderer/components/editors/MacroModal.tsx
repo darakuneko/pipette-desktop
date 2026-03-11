@@ -7,6 +7,7 @@ import { ModalCloseButton } from './ModalCloseButton'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 interface Props {
   index: number
@@ -32,6 +33,8 @@ interface Props {
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   quickSelect?: boolean
+  splitKeyMode?: SplitKeyMode
+  basicViewType?: BasicViewType
 }
 
 export function MacroModal({
@@ -57,6 +60,8 @@ export function MacroModal({
   onRemoveFromHub,
   onRenameOnHub,
   quickSelect,
+  splitKeyMode,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
@@ -110,6 +115,8 @@ export function MacroModal({
             onRemoveFromHub={onRemoveFromHub}
             onRenameOnHub={onRenameOnHub}
             quickSelect={quickSelect}
+            splitKeyMode={splitKeyMode}
+            basicViewType={basicViewType}
           />
         </div>
       </div>

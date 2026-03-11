@@ -1145,6 +1145,7 @@ export function SettingsModal({
                     >
                       <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
                       <option value="iso">{t('settings.basicViewTypeIso')}</option>
+                      <option value="jis">{t('settings.basicViewTypeJis')}</option>
                       <option value="list">{t('settings.basicViewTypeList')}</option>
                     </select>
                   </div>

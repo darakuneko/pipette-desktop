@@ -64,17 +64,11 @@ const ENCODER_DIR_SCALE = 0.45
 const ENCODER_LABEL_MAX = 16
 const ENCODER_LABEL_SCALE = 0.5
 
-// Latin fallback labels for keycodes whose visual labels contain only non-Latin1 chars
-const QMK_ALIAS_FALLBACK: Record<string, string> = {
-  KC_LANG1: 'HAEN',
-  KC_LANG2: 'HANJ',
-}
-
 function pdfKeyLabel(rawLabel: string, qmkId: string): string {
   const sanitized = sanitizeLabel(rawLabel)
   if (sanitized.trim()) return sanitized
   if (!rawLabel) return ''
-  return QMK_ALIAS_FALLBACK[qmkId] ?? qmkId.replace(/^KC_/, '')
+  return qmkId.replace(/^KC_/, '')
 }
 
 function fitText(doc: jsPDF, text: string, maxWidth: number, maxSize: number): number {

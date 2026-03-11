@@ -16,6 +16,9 @@ import {
   KEYCODES_BASIC_SYSTEM,
   KEYCODES_SHIFTED,
   KEYCODES_ISO,
+  KEYCODES_JIS,
+  KEYCODES_INTERNATIONAL,
+  KEYCODES_LANGUAGE,
   KEYCODES_LAYERS,
   KEYCODES_LAYERS_SPECIAL,
   KEYCODES_LAYERS_MO,
@@ -114,14 +117,17 @@ function basicCharactersGroup(extra?: { layoutRow: number }): KeycodeGroup {
 function getBasicGroupsList(): KeycodeGroup[] {
   return [
     basicCharactersGroup(),
+    { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
     { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
     { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
     { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 1 },
     { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV, layoutRow: 1 },
-    { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 3 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 3 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 3 },
+    { labelKey: 'keycodes.international', keycodes: KEYCODES_INTERNATIONAL, layoutRow: 3 },
+    { labelKey: 'keycodes.language', keycodes: KEYCODES_LANGUAGE, layoutRow: 3 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
   ]
@@ -132,15 +138,18 @@ function getBasicGroupsAnsi(): KeycodeGroup[] {
   return [
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
-    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
+    basicCharactersGroup({ layoutRow: 1 }),
+    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 1 },
+    { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 1 },
     { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
-    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 1 },
-    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 1 },
+    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
+    { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 2 },
+    { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 2 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 2 },
+    { labelKey: 'keycodes.international', keycodes: KEYCODES_INTERNATIONAL, layoutRow: 2 },
+    { labelKey: 'keycodes.language', keycodes: KEYCODES_LANGUAGE, layoutRow: 2 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 2 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 2 },
-    basicCharactersGroup(),
-    { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 3 },
-    { labelKey: 'keycodes.group.modifiers', keycodes: KEYCODES_BASIC_MODS, layoutRow: 3 },
   ]
 }
 
@@ -150,10 +159,13 @@ function getBasicGroupsIso(): KeycodeGroup[] {
     { labelKey: 'keycodes.group.numpad', keycodes: KEYCODES_BASIC_NUMPAD },
     { labelKey: 'keycodes.group.navigation', keycodes: KEYCODES_BASIC_NAV },
     basicCharactersGroup({ layoutRow: 1 }),
-    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED, layoutRow: 1 },
-    { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS] },
+    { labelKey: 'keycodes.group.function', keycodes: [...KEYCODES_BASIC_FUNCTION, ...KEYCODES_MEDIA_FKEYS], layoutRow: 1 },
+    { labelKey: 'keycodes.group.shifted', keycodes: KEYCODES_SHIFTED },
     { labelKey: 'keycodes.group.internal', keycodes: KEYCODES_SPECIAL, layoutRow: 2 },
     { labelKey: 'keycodes.iso', keycodes: KEYCODES_ISO, layoutRow: 2 },
+    { labelKey: 'keycodes.jis', keycodes: KEYCODES_JIS, layoutRow: 2 },
+    { labelKey: 'keycodes.international', keycodes: KEYCODES_INTERNATIONAL, layoutRow: 2 },
+    { labelKey: 'keycodes.language', keycodes: KEYCODES_LANGUAGE, layoutRow: 2 },
     { labelKey: 'keycodes.group.lock', keycodes: KEYCODES_BASIC_LOCK, layoutRow: 3 },
     { labelKey: 'keycodes.group.system', keycodes: KEYCODES_BASIC_SYSTEM, layoutRow: 3 },
     { labelKey: 'keycodes.group.editing', keycodes: KEYCODES_BASIC_EDITING, layoutRow: 4 },
@@ -165,10 +177,10 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
   {
     id: 'basic',
     labelKey: 'keycodes.basic',
-    getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO, ...KEYCODES_MEDIA_FKEYS],
+    getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO, ...KEYCODES_JIS, ...KEYCODES_INTERNATIONAL, ...KEYCODES_LANGUAGE, ...KEYCODES_MEDIA_FKEYS],
     getGroups: (viewType?: string) => {
       if (viewType === 'ansi') return getBasicGroupsAnsi()
-      if (viewType === 'iso') return getBasicGroupsIso()
+      if (viewType === 'iso' || viewType === 'jis') return getBasicGroupsIso()
       return getBasicGroupsList()
     },
   },

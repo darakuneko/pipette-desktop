@@ -17,6 +17,7 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 interface Props {
   index: number
@@ -36,6 +37,8 @@ interface Props {
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   quickSelect?: boolean
+  splitKeyMode?: SplitKeyMode
+  basicViewType?: BasicViewType
 }
 
 const TAPPING_TERM_MIN = 0
@@ -58,6 +61,8 @@ export function TapDanceModal({
   index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
   quickSelect,
+  splitKeyMode,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
@@ -243,6 +248,8 @@ export function TapDanceModal({
                   maskOnly={maskedSelection.maskOnly}
                   lmMode={maskedSelection.lmMode}
                   tabContentOverride={tabContentOverride}
+                  splitKeyMode={splitKeyMode}
+                  basicViewType={basicViewType}
                   onClose={() => {
                     if (selectedField) {
                       setEditedEntry((prev) => ({ ...prev, [selectedField]: preEditValueRef.current }))

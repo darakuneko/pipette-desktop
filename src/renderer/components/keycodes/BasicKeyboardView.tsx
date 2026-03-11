@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ANSI_LAYOUTS, ISO_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
+import { getLayoutsForViewType, type DisplayLayoutDef } from './display-keyboard-defs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeGrid } from './KeycodeGrid'
@@ -10,6 +10,10 @@ import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeGroup } from './categ
 import {
   KEYCODES_SPECIAL,
   KEYCODES_BASIC,
+  KEYCODES_ISO,
+  KEYCODES_JIS,
+  KEYCODES_INTERNATIONAL,
+  KEYCODES_LANGUAGE,
   type Keycode,
   findKeycode,
 } from '../../../shared/keycodes/keycodes'
@@ -95,7 +99,7 @@ export function BasicKeyboardView({
 
   const visCheck = isVisible ?? defaultIsVisible
 
-  const layouts = viewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
+  const layouts = getLayoutsForViewType(viewType)
 
   const selectedLayout = useMemo<DisplayLayoutDef | null>(() => {
     for (const def of layouts) {
@@ -111,7 +115,7 @@ export function BasicKeyboardView({
   }, [selectedLayout, visCheck, viewType])
 
   const flatKeycodes = useMemo(() => {
-    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC].filter(visCheck)
+    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_ISO, ...KEYCODES_JIS, ...KEYCODES_INTERNATIONAL, ...KEYCODES_LANGUAGE].filter(visCheck)
   }, [visCheck])
 
   function renderKeycodeGrid(keycodes: Keycode[]) {
@@ -145,6 +149,7 @@ export function BasicKeyboardView({
             pickerSelectedKeycodes={pickerSelectedKeycodes}
             splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
+            isVisible={visCheck}
           />
           {remainingRows.length > 0 && (
             <div className="mt-1">

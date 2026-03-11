@@ -709,7 +709,7 @@ export const KEYBOARD_LAYOUTS: KeyboardLayoutDef[] = [
       KC_SCOLON: '+\n;',
       KC_QUOTE: '*\n:',
       KC_NONUS_HASH: '}\n]',
-      KC_GRAVE: 'HAN/\nZEN',
+      KC_GRAVE: '半角\n全角',
     },
   },
 

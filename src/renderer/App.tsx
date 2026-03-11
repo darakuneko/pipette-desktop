@@ -1461,6 +1461,8 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           quickSelect={devicePrefs.quickSelect}
+          splitKeyMode={devicePrefs.splitKeyMode}
+          basicViewType={devicePrefs.basicViewType}
           onClose={() => { setShowComboModal(false); setComboInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
@@ -1483,6 +1485,8 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           quickSelect={devicePrefs.quickSelect}
+          splitKeyMode={devicePrefs.splitKeyMode}
+          basicViewType={devicePrefs.basicViewType}
           onClose={() => { setShowAltRepeatKeyModal(false); setAltRepeatKeyInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
@@ -1505,6 +1509,8 @@ export function App() {
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           quickSelect={devicePrefs.quickSelect}
+          splitKeyMode={devicePrefs.splitKeyMode}
+          basicViewType={devicePrefs.basicViewType}
           onClose={() => { setShowKeyOverrideModal(false); setKeyOverrideInitialIndex(undefined) }}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}

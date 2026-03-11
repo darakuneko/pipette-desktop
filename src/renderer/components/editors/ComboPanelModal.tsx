@@ -18,6 +18,7 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 const COMBO_TIMEOUT_QSID = 2
 const COMBO_TIMEOUT_WIDTH = 2
@@ -45,6 +46,8 @@ interface Props {
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   quickSelect?: boolean
+  splitKeyMode?: SplitKeyMode
+  basicViewType?: BasicViewType
 }
 
 type KeycodeFieldName = 'key1' | 'key2' | 'key3' | 'key4' | 'output'
@@ -102,6 +105,8 @@ export function ComboPanelModal({
   onRemoveFromHub,
   onRenameOnHub,
   quickSelect,
+  splitKeyMode,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -380,6 +385,8 @@ export function ComboPanelModal({
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
                       tabContentOverride={tabContentOverride}
+                      splitKeyMode={splitKeyMode}
+                      basicViewType={basicViewType}
                       onClose={() => {
                         if (selectedField) {
                           setEditedEntry((prev) => prev ? { ...prev, [selectedField]: preEditValueRef.current } : prev)

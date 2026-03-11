@@ -17,6 +17,15 @@ vi.mock('react-i18next', () => ({
       return map[key] ?? key
     },
   }),
+  initReactI18next: { type: '3rdParty', init: () => {} },
+}))
+
+vi.mock('../../../i18n', () => ({
+  default: { changeLanguage: vi.fn() },
+}))
+
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { defaultBasicViewType: 'list', defaultSplitKeyMode: 'split' }, loading: false, set: vi.fn() }),
 }))
 
 vi.mock('../MacroRecorder', () => ({

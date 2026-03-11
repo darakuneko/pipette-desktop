@@ -26,6 +26,7 @@ import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 interface Props {
   macroCount: number
@@ -52,6 +53,8 @@ interface Props {
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
   quickSelect?: boolean
+  splitKeyMode?: SplitKeyMode
+  basicViewType?: BasicViewType
 }
 
 function parseMacroBuffer(
@@ -99,6 +102,8 @@ export function MacroEditor({
   onRemoveFromHub,
   onRenameOnHub,
   quickSelect,
+  splitKeyMode,
+  basicViewType,
 }: Props) {
   const { t } = useTranslation()
   const { guardAll, clearPending } = useUnlockGate({ unlocked, onUnlock })
@@ -509,6 +514,8 @@ export function MacroEditor({
               maskOnly={maskedSelection.maskOnly}
               lmMode={maskedSelection.lmMode}
               tabContentOverride={tabContentOverride}
+              splitKeyMode={splitKeyMode}
+              basicViewType={basicViewType}
               onClose={revertAndDeselect}
             />
           </div>

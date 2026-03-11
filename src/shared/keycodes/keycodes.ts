@@ -308,6 +308,9 @@ export const KEYCODES_SHIFTED: Keycode[] = [
 export const KEYCODES_ISO: Keycode[] = [
   K('KC_NONUS_HASH', '~\n#', 'Non-US # and ~', { alias: ['KC_NUHS'] }),
   K('KC_NONUS_BSLASH', '|\n\\', 'Non-US \\ and |', { alias: ['KC_NUBS'] }),
+]
+
+export const KEYCODES_JIS: Keycode[] = [
   K('KC_RO', '_\n\\', 'JIS \\ and _', { alias: ['KC_INT1'] }),
   K('KC_KANA', '\u30AB\u30BF\u30AB\u30CA\n\u3072\u3089\u304C\u306A', 'JIS Katakana/Hiragana', {
     alias: ['KC_INT2'],
@@ -315,12 +318,22 @@ export const KEYCODES_ISO: Keycode[] = [
   K('KC_JYEN', '|\n\u00A5', { alias: ['KC_INT3'] }),
   K('KC_HENK', '\u5909\u63DB', 'JIS Henkan', { alias: ['KC_INT4'] }),
   K('KC_MHEN', '\u7121\u5909\u63DB', 'JIS Muhenkan', { alias: ['KC_INT5'] }),
-  K('KC_LANG1', '\uD55C\uC601\n\u304B\u306A', 'Korean Han/Yeong / JP Mac Kana', {
-    alias: ['KC_HAEN'],
-  }),
-  K('KC_LANG2', '\u6F22\u5B57\n\u82F1\u6570', 'Korean Hanja / JP Mac Eisu', {
-    alias: ['KC_HANJ'],
-  }),
+]
+
+export const KEYCODES_INTERNATIONAL: Keycode[] = [
+  K('KC_INT1', 'INT1', 'International 1'),
+  K('KC_INT2', 'INT2', 'International 2'),
+  K('KC_INT3', 'INT3', 'International 3'),
+  K('KC_INT4', 'INT4', 'International 4'),
+  K('KC_INT5', 'INT5', 'International 5'),
+]
+
+export const KEYCODES_LANGUAGE: Keycode[] = [
+  K('KC_LANG1', 'LANG1', 'Language 1', { alias: ['KC_LNG1', 'KC_HAEN'] }),
+  K('KC_LANG2', 'LANG2', 'Language 2', { alias: ['KC_LNG2', 'KC_HANJ'] }),
+  K('KC_LANG3', 'LANG3', 'Language 3', { alias: ['KC_LNG3'] }),
+  K('KC_LANG4', 'LANG4', 'Language 4', { alias: ['KC_LNG4'] }),
+  K('KC_LANG5', 'LANG5', 'Language 5', { alias: ['KC_LNG5'] }),
 ]
 
 export let KEYCODES_LAYERS: Keycode[] = []
@@ -1671,6 +1684,9 @@ function buildAnyKeycodeNames(): Map<string, number> {
     ...KEYCODES_BASIC,
     ...KEYCODES_SHIFTED,
     ...KEYCODES_ISO,
+    ...KEYCODES_INTERNATIONAL,
+    ...KEYCODES_LANGUAGE,
+    ...KEYCODES_JIS,
     ...KEYCODES_BACKLIGHT,
     ...KEYCODES_MEDIA,
     ...KEYCODES_USER,
@@ -1889,6 +1905,9 @@ export function recreateKeycodes(): void {
     ...KEYCODES_BASIC,
     ...KEYCODES_SHIFTED,
     ...KEYCODES_ISO,
+    ...KEYCODES_INTERNATIONAL,
+    ...KEYCODES_LANGUAGE,
+    ...KEYCODES_JIS,
     ...KEYCODES_LAYERS,
     ...KEYCODES_BOOT,
     ...KEYCODES_MODIFIERS,
