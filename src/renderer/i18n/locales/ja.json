@@ -498,7 +498,7 @@
     "defaultLayerPanelOpen": "レイヤーリスト展開",
     "defaultBasicViewType": "Basic タブ表示",
     "defaultSplitKeyMode": "Split Key",
-    "defaultQuickSelect": "Instant Key Selection",
+    "defaultQuickSelect": "キーの即時選択",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -528,7 +528,7 @@
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
     "splitKeyMode": "Split Key",
-    "quickSelect": "Instant Key Selection"
+    "quickSelect": "キーの即時選択"
   },
   "hub": {
     "uploadToHub": "アップロード",
