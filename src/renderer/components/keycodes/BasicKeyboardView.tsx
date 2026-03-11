@@ -12,6 +12,8 @@ import {
   KEYCODES_BASIC,
   KEYCODES_ISO,
   KEYCODES_JIS,
+  KEYCODES_INTERNATIONAL,
+  KEYCODES_LANGUAGE,
   type Keycode,
   findKeycode,
 } from '../../../shared/keycodes/keycodes'
@@ -113,7 +115,7 @@ export function BasicKeyboardView({
   }, [selectedLayout, visCheck, viewType])
 
   const flatKeycodes = useMemo(() => {
-    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_ISO, ...KEYCODES_JIS].filter(visCheck)
+    return [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_ISO, ...KEYCODES_JIS, ...KEYCODES_INTERNATIONAL, ...KEYCODES_LANGUAGE].filter(visCheck)
   }, [visCheck])
 
   function renderKeycodeGrid(keycodes: Keycode[]) {

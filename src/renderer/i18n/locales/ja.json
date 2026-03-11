@@ -263,6 +263,8 @@
     "basic": "Basic",
     "iso": "ISO",
     "jis": "JIS",
+    "international": "International",
+    "language": "Language",
     "layers": "Layers",
     "quantum": "Behavior",
     "modifiers": "Modifiers",
