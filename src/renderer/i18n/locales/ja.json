@@ -490,12 +490,12 @@
     "dataSync": "データ同期",
     "defaults": "新しいキーボードのデフォルト設定",
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
-    "defaultLayout": "デフォルトキーラベル",
-    "defaultAutoAdvance": "デフォルト自動移動",
-    "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
-    "defaultBasicViewType": "デフォルト Basic タブ表示",
-    "defaultSplitKeyMode": "デフォルト Split Key",
-    "defaultQuickSelect": "デフォルト Quick Select",
+    "defaultLayout": "キーラベル",
+    "defaultAutoAdvance": "自動移動",
+    "defaultLayerPanelOpen": "レイヤーリスト展開",
+    "defaultBasicViewType": "Basic タブ表示",
+    "defaultSplitKeyMode": "Split Key",
+    "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -524,7 +524,7 @@
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
     "splitKeyMode": "Split Key",
-    "quickSelect": "Quick Select"
+    "quickSelect": "Instant Key Selection"
   },
   "hub": {
     "uploadToHub": "アップロード",

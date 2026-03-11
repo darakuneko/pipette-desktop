@@ -490,12 +490,12 @@
     "dataSync": "Data Sync",
     "defaults": "Defaults for New Keyboards",
     "defaultsDescription": "Applied when a new keyboard connects.",
-    "defaultLayout": "Default Key Labels",
-    "defaultAutoAdvance": "Default Auto Move",
-    "defaultLayerPanelOpen": "Default Layer List Open",
-    "defaultBasicViewType": "Default Basic Tab View",
-    "defaultSplitKeyMode": "Default Split Key",
-    "defaultQuickSelect": "Default Quick Select",
+    "defaultLayout": "Key Labels",
+    "defaultAutoAdvance": "Auto Move",
+    "defaultLayerPanelOpen": "Layer List Open",
+    "defaultBasicViewType": "Basic Tab View",
+    "defaultSplitKeyMode": "Split Key",
+    "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -524,7 +524,7 @@
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
     "splitKeyMode": "Split Key",
-    "quickSelect": "Quick Select"
+    "quickSelect": "Instant Key Selection"
   },
   "hub": {
     "uploadToHub": "Upload",
