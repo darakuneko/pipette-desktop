@@ -9,7 +9,7 @@ export interface WindowState {
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
-export type BasicViewType = 'ansi' | 'iso' | 'list'
+export type BasicViewType = 'ansi' | 'iso' | 'jis' | 'list'
 export type SplitKeyMode = 'split' | 'flat'
 
 export interface AppConfig {

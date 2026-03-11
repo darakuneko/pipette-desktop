@@ -499,6 +499,7 @@
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
+    "basicViewTypeJis": "JIS",
     "security": "Security",
     "autoLockTime": "Auto Lock Time",
     "autoLockDescription": "Lock after inactivity.",

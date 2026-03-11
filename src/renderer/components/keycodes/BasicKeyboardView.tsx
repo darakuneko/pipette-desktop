@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ANSI_LAYOUTS, ISO_LAYOUTS, type DisplayLayoutDef } from './display-keyboard-defs'
+import { getLayoutsForViewType, type DisplayLayoutDef } from './display-keyboard-defs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { DisplayKeyboard } from './DisplayKeyboard'
 import { KeycodeGrid } from './KeycodeGrid'
@@ -95,7 +95,7 @@ export function BasicKeyboardView({
 
   const visCheck = isVisible ?? defaultIsVisible
 
-  const layouts = viewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
+  const layouts = getLayoutsForViewType(viewType)
 
   const selectedLayout = useMemo<DisplayLayoutDef | null>(() => {
     for (const def of layouts) {

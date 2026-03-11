@@ -499,6 +499,7 @@
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
+    "basicViewTypeJis": "JIS",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
     "autoLockDescription": "無操作時に自動ロック。",

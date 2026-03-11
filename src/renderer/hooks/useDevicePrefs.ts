@@ -51,7 +51,7 @@ function isValidTypingTestResult(item: unknown): item is TypingTestResult {
   return typeof r.date === 'string' && typeof r.wpm === 'number' && typeof r.accuracy === 'number'
 }
 
-const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'list'])
+const VALID_BASIC_VIEW_TYPES: ReadonlySet<string> = new Set(['ansi', 'iso', 'jis', 'list'])
 const LEGACY_BASIC_VIEW_MAP: Record<string, string> = { keyboard: 'ansi' }
 const VALID_SPLIT_KEY_MODES: ReadonlySet<string> = new Set(['split', 'flat'])
 

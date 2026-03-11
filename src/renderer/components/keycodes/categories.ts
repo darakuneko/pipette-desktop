@@ -168,7 +168,7 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
     getKeycodes: () => [...KEYCODES_SPECIAL, ...KEYCODES_BASIC, ...KEYCODES_SHIFTED, ...KEYCODES_ISO, ...KEYCODES_MEDIA_FKEYS],
     getGroups: (viewType?: string) => {
       if (viewType === 'ansi') return getBasicGroupsAnsi()
-      if (viewType === 'iso') return getBasicGroupsIso()
+      if (viewType === 'iso' || viewType === 'jis') return getBasicGroupsIso()
       return getBasicGroupsList()
     },
   },

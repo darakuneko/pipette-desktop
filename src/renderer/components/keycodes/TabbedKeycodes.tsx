@@ -6,7 +6,7 @@ import { findKeycode, type Keycode, getKeycodeRevision, isBasic, getAvailableLMM
 import { parseKle } from '../../../shared/kle/kle-parser'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
-import { ANSI_LAYOUTS, ISO_LAYOUTS } from './display-keyboard-defs'
+import { getLayoutsForViewType } from './display-keyboard-defs'
 import { X } from 'lucide-react'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
@@ -144,7 +144,7 @@ export function TabbedKeycodes({
 
     // For keyboard views (ANSI/ISO), order by physical layout position
     if (cat.id === 'basic' && basicViewType != null && basicViewType !== 'list' && !maskOnly && !lmMode) {
-      const layouts = basicViewType === 'iso' ? ISO_LAYOUTS : ANSI_LAYOUTS
+      const layouts = getLayoutsForViewType(basicViewType)
       // Largest layout has the most keys — extract QMK IDs in physical row-major order
       const kleLayout = parseKle(layouts[0].kle)
       const layoutKeycodes: Keycode[] = []
