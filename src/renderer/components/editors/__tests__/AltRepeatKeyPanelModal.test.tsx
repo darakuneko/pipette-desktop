@@ -46,11 +46,12 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
-  TabbedKeycodes: ({ onKeycodeSelect }: { onKeycodeSelect?: (kc: { qmkId: string }) => void }) => (
+  TabbedKeycodes: ({ onKeycodeSelect, onConfirm }: { onKeycodeSelect?: (kc: { qmkId: string }) => void; onConfirm?: () => void }) => (
     <div data-testid="tabbed-keycodes">
       <button data-testid="pick-kc-a" onClick={() => onKeycodeSelect?.({ qmkId: 'KC_7' })}>
         KC_A
       </button>
+      {onConfirm && <button data-testid="confirm-picker" onClick={onConfirm}>Confirm</button>}
     </div>
   ),
 }))
@@ -217,7 +218,7 @@ describe('AltRepeatKeyPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
-    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
+    fireEvent.click(screen.getByTestId('confirm-picker'))
     expect(screen.getByTestId('ar-modal-save')).toBeEnabled()
   })
 
@@ -229,7 +230,7 @@ describe('AltRepeatKeyPanelModal', () => {
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     act(() => { vi.advanceTimersByTime(300) })
     fireEvent.click(screen.getByTestId('pick-kc-a'))
-    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
+    fireEvent.click(screen.getByTestId('confirm-picker'))
     fireEvent.click(screen.getByTestId('ar-modal-save'))
     vi.useRealTimers()
     await waitFor(() => {

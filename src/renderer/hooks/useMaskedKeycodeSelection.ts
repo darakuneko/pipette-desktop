@@ -9,10 +9,16 @@ interface Options {
   onCommit: () => void              // Close the picker / deselect the field
   resetKey?: unknown
   initialValue?: number             // Current field value — auto-detect mask on mount
+  quickSelect?: boolean             // When true, single click behaves like double-click (select-and-commit)
 }
 
 interface Result {
   handleKeycodeSelect: (kc: Keycode) => void
+  selectAndCommit: (kc: Keycode) => void
+  /** Single-click handler: resolves to selectAndCommit when quickSelect is on */
+  pickerSelect: (kc: Keycode) => void
+  /** Double-click handler: undefined when quickSelect is on (single click already commits) */
+  pickerDoubleClick: ((kc: Keycode) => void) | undefined
   maskOnly: boolean
   lmMode: boolean
   activeMask: number | null
@@ -23,7 +29,7 @@ interface Result {
   enterMaskMode: (code: number, part: 'outer' | 'inner') => void
 }
 
-export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initialValue }: Options): Result {
+export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initialValue, quickSelect }: Options): Result {
   const [activeMask, setActiveMask] = useState<number | null>(null)
   const [editingPart, setEditingPart] = useState<'outer' | 'inner' | null>(null)
   const activeMaskRef = useRef(activeMask)
@@ -107,8 +113,49 @@ export function useMaskedKeycodeSelection({ onUpdate, onCommit, resetKey, initia
     [],
   )
 
+  const selectAndCommit = useCallback(
+    (kc: Keycode) => {
+      const mask = activeMaskRef.current
+      const part = editingPartRef.current
+
+      // Mask active + editing inner: compose masked value and commit
+      if (mask !== null && part === 'inner') {
+        const innerCode = deserialize(kc.qmkId)
+        const final = isLMKeycode(mask)
+          ? (mask & ~resolve('QMK_LM_MASK')) | (innerCode & resolve('QMK_LM_MASK'))
+          : (mask & 0xff00) | (innerCode & 0x00ff)
+        if (onUpdateRef.current(final) !== false) {
+          onCommitRef.current()
+          resetState()
+        }
+        return
+      }
+
+      // Masked keycode selected: enter mask mode (don't commit — user must pick inner key)
+      if (kc.masked) {
+        const maskCode = deserialize(kc.qmkId)
+        if (onUpdateRef.current(maskCode) !== false) {
+          setActiveMask(maskCode)
+          setEditingPart('inner')
+        }
+        return
+      }
+
+      // Normal key: update and commit
+      if (onUpdateRef.current(deserialize(kc.qmkId)) !== false) {
+        onCommitRef.current()
+        resetState()
+      }
+    },
+    [],
+  )
+
   const maskOnly = editingPart === 'inner' && activeMask !== null && !isLMKeycode(activeMask)
   const lmMode = editingPart === 'inner' && activeMask !== null && isLMKeycode(activeMask)
 
-  return { handleKeycodeSelect, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
+  // Stable derived handlers: single-click confirms immediately when quickSelect is on
+  const pickerSelect = quickSelect ? selectAndCommit : handleKeycodeSelect
+  const pickerDoubleClick = quickSelect ? undefined : selectAndCommit
+
+  return { handleKeycodeSelect, selectAndCommit, pickerSelect, pickerDoubleClick, maskOnly, lmMode, activeMask, editingPart, clearMask, confirm, setEditingPart, enterMaskMode }
 }

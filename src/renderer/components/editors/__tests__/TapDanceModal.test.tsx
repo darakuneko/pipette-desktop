@@ -41,7 +41,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
 }))
 
 vi.mock('../../keycodes/TabbedKeycodes', () => ({
-  TabbedKeycodes: ({ onKeycodeSelect, onClose }: { onKeycodeSelect?: (kc: { qmkId: string }) => void; onClose?: () => void }) => (
+  TabbedKeycodes: ({ onKeycodeSelect, onClose, onConfirm }: { onKeycodeSelect?: (kc: { qmkId: string }) => void; onClose?: () => void; onConfirm?: () => void }) => (
     <div data-testid="tabbed-keycodes">
       <button data-testid="pick-kc-a" onClick={() => onKeycodeSelect?.({ qmkId: 'KC_4' })}>
         KC_A
@@ -49,6 +49,7 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
       {onClose && (
         <button data-testid="tabbed-keycodes-close" onClick={onClose}>Close</button>
       )}
+      {onConfirm && <button data-testid="confirm-picker" onClick={onConfirm}>Confirm</button>}
     </div>
   ),
 }))
@@ -159,7 +160,7 @@ describe('TapDanceModal', () => {
     )
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     fireEvent.click(screen.getByTestId('pick-kc-a'))
-    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
+    fireEvent.click(screen.getByTestId('confirm-picker'))
     expect(screen.getByTestId('td-modal-save')).toBeEnabled()
   })
 
@@ -170,7 +171,7 @@ describe('TapDanceModal', () => {
     // Edit onTap
     fireEvent.click(screen.getAllByTestId('keycode-field')[0])
     fireEvent.click(screen.getByTestId('pick-kc-a'))
-    fireEvent.click(screen.getByTestId('mask-confirm-btn'))
+    fireEvent.click(screen.getByTestId('confirm-picker'))
     // Save
     fireEvent.click(screen.getByTestId('td-modal-save'))
     expect(onSave).toHaveBeenCalledWith(2, expect.objectContaining({ onTap: 4 }))

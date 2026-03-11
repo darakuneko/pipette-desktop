@@ -509,6 +509,97 @@ describe('useMaskedKeycodeSelection', () => {
     expect(result.current.editingPart).toBe('inner') // auto-detected
   })
 
+  // --- selectAndCommit() tests ---
+
+  it('selectAndCommit selects normal key and commits immediately', () => {
+    const onUpdate = vi.fn()
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useMaskedKeycodeSelection({ onUpdate, onCommit }))
+
+    act(() => {
+      result.current.selectAndCommit(fakeKeycode('KC_A'))
+    })
+
+    expect(onUpdate).toHaveBeenCalledWith(deserialize('KC_A'))
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(result.current.activeMask).toBeNull()
+    expect(result.current.editingPart).toBeNull()
+  })
+
+  it('selectAndCommit composes masked value in inner mode and commits', () => {
+    const onUpdate = vi.fn()
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useMaskedKeycodeSelection({ onUpdate, onCommit }))
+
+    // Enter mask mode
+    act(() => {
+      result.current.handleKeycodeSelect(fakeKeycode('LSFT(kc)', true))
+    })
+    expect(result.current.editingPart).toBe('inner')
+
+    // Double-click a basic key while in inner mode
+    act(() => {
+      result.current.selectAndCommit(fakeKeycode('KC_A'))
+    })
+
+    const mask = deserialize('LSFT(kc)')
+    const inner = deserialize('KC_A')
+    expect(onUpdate).toHaveBeenLastCalledWith((mask & 0xff00) | (inner & 0x00ff))
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(result.current.activeMask).toBeNull()
+    expect(result.current.editingPart).toBeNull()
+  })
+
+  it('selectAndCommit enters mask mode for masked keycode without committing', () => {
+    const onUpdate = vi.fn()
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useMaskedKeycodeSelection({ onUpdate, onCommit }))
+
+    act(() => {
+      result.current.selectAndCommit(fakeKeycode('LSFT(kc)', true))
+    })
+
+    expect(onUpdate).toHaveBeenCalledWith(deserialize('LSFT(kc)'))
+    expect(onCommit).not.toHaveBeenCalled()
+    expect(result.current.activeMask).toBe(deserialize('LSFT(kc)'))
+    expect(result.current.editingPart).toBe('inner')
+  })
+
+  it('selectAndCommit respects onUpdate veto (returns false) and does not commit', () => {
+    const onUpdate = vi.fn().mockReturnValue(false)
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useMaskedKeycodeSelection({ onUpdate, onCommit }))
+
+    act(() => {
+      result.current.selectAndCommit(fakeKeycode('KC_A'))
+    })
+
+    expect(onUpdate).toHaveBeenCalledWith(deserialize('KC_A'))
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('selectAndCommit respects onUpdate veto in inner mask mode', () => {
+    const onUpdate = vi.fn()
+    const onCommit = vi.fn()
+    const { result } = renderHook(() => useMaskedKeycodeSelection({ onUpdate, onCommit }))
+
+    // Enter mask mode
+    act(() => {
+      result.current.handleKeycodeSelect(fakeKeycode('LSFT(kc)', true))
+    })
+
+    // Veto the inner key selection
+    onUpdate.mockReturnValue(false)
+    act(() => {
+      result.current.selectAndCommit(fakeKeycode('KC_A'))
+    })
+
+    expect(onCommit).not.toHaveBeenCalled()
+    // Mask state should be preserved
+    expect(result.current.activeMask).not.toBeNull()
+    expect(result.current.editingPart).toBe('inner')
+  })
+
   // --- confirm() tests ---
 
   it('confirm() calls onCommit and resets state', () => {

@@ -12,7 +12,6 @@ import { useMaskedKeycodeSelection } from '../../hooks/useMaskedKeycodeSelection
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
-import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -36,6 +35,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 const TAPPING_TERM_MIN = 0
@@ -57,6 +57,7 @@ const keycodeFields: { key: KeycodeFieldName; labelKey: string }[] = [
 export function TapDanceModal({
   index, entry, onSave, onClose, isDummy, tapDanceEntries, deserializedMacros,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult, onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const [editedEntry, setEditedEntry] = useState<TapDanceEntry>(entry)
@@ -116,12 +117,11 @@ export function TapDanceModal({
     },
     resetKey: selectedField,
     initialValue: selectedField ? editedEntry[selectedField] : undefined,
+    quickSelect,
   })
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
     setEditedEntry((prev) => ({ ...prev, [field]: code }))
-    setPopoverState(null)
-    setSelectedField(null)
   }, [])
 
   const handleFieldDoubleClick = useCallback(
@@ -131,6 +131,11 @@ export function TapDanceModal({
     },
     [selectedField],
   )
+
+  const confirmPopover = useCallback(() => {
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
 
   const popoverField = popoverState?.field ?? null
 
@@ -206,8 +211,8 @@ export function TapDanceModal({
                       onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                       label={t(labelKey)}
                     />
-                    {selectedField === key && (
-                      <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                    {selectedField === key && !popoverState && !quickSelect && editedEntry[key] !== preEditValueRef.current && (
+                      <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
                     )}
                   </div>
                 )
@@ -232,7 +237,9 @@ export function TapDanceModal({
             {selectedField && (
               <div className="mt-3">
                 <TabbedKeycodes
-                  onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                  onKeycodeSelect={maskedSelection.pickerSelect}
+                  onKeycodeDoubleClick={maskedSelection.pickerDoubleClick}
+                  onConfirm={maskedSelection.confirm}
                   maskOnly={maskedSelection.maskOnly}
                   lmMode={maskedSelection.lmMode}
                   tabContentOverride={tabContentOverride}
@@ -254,6 +261,8 @@ export function TapDanceModal({
                 onKeycodeSelect={handlePopoverKeycodeSelect}
                 onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                 onClose={() => setPopoverState(null)}
+                onConfirm={confirmPopover}
+                quickSelect={quickSelect}
               />
             )}
 

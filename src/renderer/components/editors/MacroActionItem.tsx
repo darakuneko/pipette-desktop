@@ -23,8 +23,8 @@ interface Props {
   onKeycodeDoubleClick: (keycodeIndex: number, rect: DOMRect) => void
   onKeycodeAdd: () => void
   onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
-  selectButton?: React.ReactNode
   focusMode?: boolean
+  showConfirmHint?: boolean
 }
 
 export function defaultAction(type: ActionType): MacroAction {
@@ -56,8 +56,8 @@ export function MacroActionItem({
   onKeycodeDoubleClick,
   onKeycodeAdd,
   onMaskPartClick,
-  selectButton,
   focusMode,
+  showConfirmHint,
 }: Props) {
   const { t } = useTranslation()
 
@@ -107,7 +107,6 @@ export function MacroActionItem({
                 />
               )
             })}
-            {selectButton}
             <button
               type="button"
               data-testid="macro-add-keycode"
@@ -157,7 +156,9 @@ export function MacroActionItem({
           onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(selectedKeycodeIndex, part) : undefined}
           onDoubleClick={(rect) => onKeycodeDoubleClick(selectedKeycodeIndex, rect)}
         />
-        {selectButton}
+        {showConfirmHint && (
+          <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
+        )}
       </div>
     )
   }

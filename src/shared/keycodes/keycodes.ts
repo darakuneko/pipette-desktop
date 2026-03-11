@@ -678,6 +678,9 @@ export const KEYCODES_QUANTUM_MAGIC: Keycode[] = [
   K('MAGIC_UNSWAP_BACKSLASH_BACKSPACE', 'Unswap\n\\\nBS', 'Unswap \\ and Backspace', {
     alias: ['BS_NORM'],
   }),
+]
+
+export const KEYCODES_QUANTUM_MODE: Keycode[] = [
   K('MAGIC_HOST_NKRO', 'NKRO\nOn', 'Enable N-key rollover', { alias: ['NK_ON'] }),
   K('MAGIC_UNHOST_NKRO', 'NKRO\nOff', 'Disable N-key rollover', { alias: ['NK_OFF'] }),
   K('MAGIC_TOGGLE_NKRO', 'NKRO\nToggle', 'Toggle N-key rollover', { alias: ['NK_TOGG'] }),
@@ -770,7 +773,7 @@ export const KEYCODES_QUANTUM_REPEAT: Keycode[] = [
 ]
 
 export const KEYCODES_QUANTUM_CAPS_WORD: Keycode[] = [
-  K('QK_CAPS_WORD_TOGGLE', 'Caps\nWord', 'Capitalizes until end of current word', {
+  K('QK_CAPS_WORD_TOGGLE', 'Caps\nWord\nToggle', 'Capitalizes until end of current word', {
     alias: ['CW_TOGG'],
     requiresFeature: 'caps_word',
   }),

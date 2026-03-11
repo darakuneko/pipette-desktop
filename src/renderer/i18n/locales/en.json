@@ -71,6 +71,7 @@
       "copySelected": "Paste Selected ({{count}})",
       "clickToPaste": "Click a key to paste",
       "pickerHint": "Ctrl+click: multi-select / Shift+click: range select → click a key to paste",
+      "pickerDoubleClickHint": "Double-click the same key again or press Enter to close",
       "keyPopover": {
         "keyTab": "Key",
         "codeTab": "Code",
@@ -85,7 +86,9 @@
         "shT": "SH_T",
         "lm": "LM",
         "layerLabel": "Layer",
-        "keySelected": "Selected: {{key}}"
+        "keySelected": "Selected: {{key}}",
+        "clickToClose": "Click to apply and close, or press Enter",
+        "undo": "Undo"
       }
     },
     "layout": {
@@ -260,12 +263,16 @@
     "basic": "Basic",
     "iso": "ISO/JIS",
     "layers": "Layers",
-    "quantum": "Quantum",
+    "quantum": "Behavior",
     "modifiers": "Modifiers",
     "backlight": "Lighting",
-    "media": "Media",
+    "media": "System",
     "tapDance": "Tap-Hold / Tap Dance",
     "macro": "Macro",
+    "combo": "Combo",
+    "keyOverride": "Key Override",
+    "altRepeatKey": "Alt Repeat Key",
+    "settingsNote": "These features apply to the entire keyboard and cannot be assigned to individual keys.",
     "user": "User",
     "midi": "MIDI",
     "group": {
@@ -284,8 +291,12 @@
       "magic": "Magic",
       "audio": "Audio & Music",
       "haptic": "Haptic",
+      "mode": "Mode",
       "autoShift": "Auto Shift",
       "combo": "Combo",
+      "comboKeys": "Key",
+      "keyOverrideKeys": "Key",
+      "altRepeatKeyKeys": "Key",
       "keyOverride": "Key Override",
       "repeat": "Repeat",
       "capsWord": "Caps Word",
@@ -479,11 +490,12 @@
     "dataSync": "Data Sync",
     "defaults": "Defaults for New Keyboards",
     "defaultsDescription": "Applied when a new keyboard connects.",
-    "defaultLayout": "Default Key Labels",
-    "defaultAutoAdvance": "Default Auto Move",
-    "defaultLayerPanelOpen": "Default Layer List Open",
-    "defaultBasicViewType": "Default Basic Tab View",
-    "defaultSplitKeyMode": "Default Split Key",
+    "defaultLayout": "Key Labels",
+    "defaultAutoAdvance": "Auto Move",
+    "defaultLayerPanelOpen": "Layer List Open",
+    "defaultBasicViewType": "Basic Tab View",
+    "defaultSplitKeyMode": "Split Key",
+    "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -511,7 +523,8 @@
     "tabTools": "Settings",
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
-    "splitKeyMode": "Split Key"
+    "splitKeyMode": "Split Key",
+    "quickSelect": "Instant Key Selection"
   },
   "hub": {
     "uploadToHub": "Upload",

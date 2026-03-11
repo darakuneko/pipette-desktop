@@ -71,6 +71,7 @@
       "copySelected": "選択キーを貼り付け ({{count}})",
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
+      "pickerDoubleClickHint": "同じキーを再度ダブルクリックするか、Enterキーを押すと閉じます",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",
@@ -85,7 +86,9 @@
         "shT": "SH_T",
         "lm": "LM",
         "layerLabel": "レイヤー",
-        "keySelected": "選択済み: {{key}}"
+        "keySelected": "選択済み: {{key}}",
+        "clickToClose": "クリックして適用して閉じる、またはEnterキーで確定",
+        "undo": "元に戻す"
       }
     },
     "layout": {
@@ -260,12 +263,16 @@
     "basic": "Basic",
     "iso": "ISO/JIS",
     "layers": "Layers",
-    "quantum": "Quantum",
+    "quantum": "Behavior",
     "modifiers": "Modifiers",
     "backlight": "Lighting",
-    "media": "Media",
+    "media": "System",
     "tapDance": "Tap-Hold / Tap Dance",
     "macro": "Macro",
+    "combo": "Combo",
+    "keyOverride": "Key Override",
+    "altRepeatKey": "Alt Repeat Key",
+    "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません。",
     "user": "User",
     "midi": "MIDI",
     "group": {
@@ -284,8 +291,12 @@
       "magic": "Magic",
       "audio": "Audio & Music",
       "haptic": "Haptic",
+      "mode": "Mode",
       "autoShift": "Auto Shift",
       "combo": "Combo",
+      "comboKeys": "Key",
+      "keyOverrideKeys": "Key",
+      "altRepeatKeyKeys": "Key",
       "keyOverride": "Key Override",
       "repeat": "Repeat",
       "capsWord": "Caps Word",
@@ -479,11 +490,12 @@
     "dataSync": "データ同期",
     "defaults": "新しいキーボードのデフォルト設定",
     "defaultsDescription": "新しいキーボードが接続されたときに適用されます。",
-    "defaultLayout": "デフォルトキーラベル",
-    "defaultAutoAdvance": "デフォルト自動移動",
-    "defaultLayerPanelOpen": "デフォルトレイヤーリスト展開",
-    "defaultBasicViewType": "デフォルト Basic タブ表示",
-    "defaultSplitKeyMode": "デフォルト Split Key",
+    "defaultLayout": "キーラベル",
+    "defaultAutoAdvance": "自動移動",
+    "defaultLayerPanelOpen": "レイヤーリスト展開",
+    "defaultBasicViewType": "Basic タブ表示",
+    "defaultSplitKeyMode": "Split Key",
+    "defaultQuickSelect": "Instant Key Selection",
     "basicViewTypeList": "LIST",
     "basicViewTypeAnsi": "ANSI",
     "basicViewTypeIso": "ISO",
@@ -511,7 +523,8 @@
     "tabTools": "設定",
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
-    "splitKeyMode": "Split Key"
+    "splitKeyMode": "Split Key",
+    "quickSelect": "Instant Key Selection"
   },
   "hub": {
     "uploadToHub": "アップロード",

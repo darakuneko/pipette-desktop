@@ -31,6 +31,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 export function MacroModal({
@@ -55,6 +56,7 @@ export function MacroModal({
   onUpdateOnHub,
   onRemoveFromHub,
   onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
@@ -107,6 +109,7 @@ export function MacroModal({
             onUpdateOnHub={onUpdateOnHub}
             onRemoveFromHub={onRemoveFromHub}
             onRenameOnHub={onRenameOnHub}
+            quickSelect={quickSelect}
           />
         </div>
       </div>

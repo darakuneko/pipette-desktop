@@ -8,6 +8,7 @@ import { SplitKey, getShiftedKeycode } from './SplitKey'
 interface Props {
   keycodes: Keycode[]
   onClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onDoubleClick?: (keycode: Keycode) => void
   onHover?: (keycode: Keycode, rect: DOMRect) => void
   onHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
@@ -38,6 +39,7 @@ export function getSplitRemapProps(qmkId: string, remapLabel?: (qmkId: string) =
 export function KeycodeGrid({
   keycodes,
   onClick,
+  onDoubleClick,
   onHover,
   onHoverEnd,
   highlightedKeycodes,
@@ -61,6 +63,7 @@ export function KeycodeGrid({
                 base={kc}
                 shifted={shifted}
                 onClick={onClick}
+                onDoubleClick={onDoubleClick}
                 onHover={onHover}
                 onHoverEnd={onHoverEnd}
                 highlightedKeycodes={highlightedKeycodes}
@@ -76,6 +79,7 @@ export function KeycodeGrid({
             key={kc.qmkId}
             keycode={kc}
             onClick={onClick}
+            onDoubleClick={onDoubleClick}
             onHover={onHover}
             onHoverEnd={onHoverEnd}
             highlighted={highlightedKeycodes?.has(kc.qmkId)}

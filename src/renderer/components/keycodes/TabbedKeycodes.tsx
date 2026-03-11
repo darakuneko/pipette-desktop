@@ -29,6 +29,8 @@ interface TooltipState {
 
 interface Props {
   onKeycodeSelect?: (keycode: Keycode) => void
+  onKeycodeDoubleClick?: (keycode: Keycode) => void
+  onConfirm?: () => void // Confirm current selection (Enter key)
   onKeycodeMultiSelect?: (keycode: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => void
   pickerSelectedKeycodes?: Set<string>
   onBackgroundClick?: () => void
@@ -48,6 +50,8 @@ interface Props {
 
 export function TabbedKeycodes({
   onKeycodeSelect,
+  onKeycodeDoubleClick,
+  onConfirm,
   onKeycodeMultiSelect,
   pickerSelectedKeycodes,
   onBackgroundClick,
@@ -69,6 +73,17 @@ export function TabbedKeycodes({
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const tooltipRef = useRef<HTMLDivElement>(null)
+  // Guard against spurious double-clicks right after mount (layout shift can
+  // cause the second click of an external double-click to land on a key tile)
+  const mountTimeRef = useRef(Date.now())
+  const MOUNT_DBLCLICK_GUARD_MS = 400
+  const guardedDoubleClick = useMemo(() => {
+    if (!onKeycodeDoubleClick) return undefined
+    return (keycode: Keycode) => {
+      if (Date.now() - mountTimeRef.current < MOUNT_DBLCLICK_GUARD_MS) return
+      onKeycodeDoubleClick(keycode)
+    }
+  }, [onKeycodeDoubleClick])
 
   // Clamp tooltip horizontally after render so it never overflows the container
   useLayoutEffect(() => {
@@ -78,6 +93,20 @@ export function TabbedKeycodes({
     const clampedLeft = Math.max(0, Math.min(tooltip.left - w / 2, tooltip.containerWidth - w))
     el.style.left = `${clampedLeft}px`
   }, [tooltip])
+
+  // Enter key confirms current selection and closes the picker
+  useEffect(() => {
+    if (!onConfirm) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter') return
+      const el = e.target as HTMLElement | null
+      if (el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.tagName === 'BUTTON' || el?.isContentEditable) return
+      e.preventDefault()
+      onConfirm()
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [onConfirm])
 
   const handleBackgroundClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -207,6 +236,7 @@ export function TabbedKeycodes({
       <KeycodeGrid
         keycodes={keycodes}
         onClick={handleKeycodeClick}
+        onDoubleClick={guardedDoubleClick}
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
@@ -247,6 +277,7 @@ export function TabbedKeycodes({
           viewType={basicViewType}
           splitKeyMode={splitKeyMode}
           onKeycodeClick={handleKeycodeClick}
+          onKeycodeDoubleClick={guardedDoubleClick}
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}
           highlightedKeycodes={highlightedKeycodes}

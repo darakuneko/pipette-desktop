@@ -73,14 +73,13 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
 
   const handleDoubleClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
-      if (isMasked) return
       if (clickTimer.current) {
         clearTimeout(clickTimer.current)
         clickTimer.current = null
       }
       onDoubleClick?.(e.currentTarget.getBoundingClientRect())
     },
-    [onDoubleClick, isMasked],
+    [onDoubleClick],
   )
 
   const handleKeyWidgetClick = useCallback(
@@ -88,6 +87,13 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       onMaskPartClick?.(maskClicked ? 'inner' : 'outer')
     },
     [onMaskPartClick],
+  )
+
+  const handleKeyWidgetDoubleClick = useCallback(
+    (_key: KleKey, rect: DOMRect, _maskClicked: boolean) => {
+      onDoubleClick?.(rect)
+    },
+    [onDoubleClick],
   )
 
   return (
@@ -99,7 +105,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       data-testid="keycode-field"
       className={`flex shrink-0 rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border'}`}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
+      onDoubleClick={isMasked ? undefined : handleDoubleClick}
     >
       <svg
         width={KEYCODE_FIELD_SIZE}
@@ -113,6 +119,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
           selectedMaskPart={selectedMaskPart}
           selectedFill={false}
           onClick={isMasked ? handleKeyWidgetClick : undefined}
+          onDoubleClick={isMasked ? handleKeyWidgetDoubleClick : undefined}
           hoverMaskParts={isMasked}
         />
       </svg>

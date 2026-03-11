@@ -14,7 +14,6 @@ import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { ConfirmButton } from './ConfirmButton'
 import { KeycodeField } from './KeycodeField'
-import { MaskKeyPreview } from './MaskKeyPreview'
 import { ModalCloseButton } from './ModalCloseButton'
 import { ModifierPicker } from './ModifierPicker'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
@@ -25,6 +24,7 @@ import type { FavHubEntryResult } from './FavoriteHubActions'
 interface Props {
   entries: AltRepeatKeyEntry[]
   onSetEntry: (index: number, entry: AltRepeatKeyEntry) => Promise<void>
+  initialIndex?: number
   unlocked?: boolean
   onUnlock?: () => void
   tapDanceEntries?: TapDanceEntry[]
@@ -39,6 +39,7 @@ interface Props {
   onUpdateOnHub?: (entryId: string) => void
   onRemoveFromHub?: (entryId: string) => void
   onRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  quickSelect?: boolean
 }
 
 type KeycodeFieldName = 'lastKey' | 'altKey'
@@ -79,6 +80,7 @@ function tileStyle(configured: boolean, enabled: boolean): string {
 export function AltRepeatKeyPanelModal({
   entries,
   onSetEntry,
+  initialIndex,
   unlocked,
   onUnlock,
   tapDanceEntries,
@@ -92,10 +94,11 @@ export function AltRepeatKeyPanelModal({
   onUpdateOnHub,
   onRemoveFromHub,
   onRenameOnHub,
+  quickSelect,
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
   const [editedEntry, setEditedEntry] = useState<AltRepeatKeyEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
@@ -170,8 +173,6 @@ export function AltRepeatKeyPanelModal({
 
   const updateField = useCallback((field: KeycodeFieldName, code: number) => {
     updateEntry(field, code)
-    setPopoverState(null)
-    setSelectedField(null)
   }, [updateEntry])
 
   const maskedSelection = useMaskedKeycodeSelection({
@@ -185,6 +186,7 @@ export function AltRepeatKeyPanelModal({
     },
     resetKey: selectedField,
     initialValue: selectedField && editedEntry ? editedEntry[selectedField] : undefined,
+    quickSelect,
   })
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
@@ -196,6 +198,11 @@ export function AltRepeatKeyPanelModal({
     },
     [selectedField],
   )
+
+  const confirmPopover = useCallback(() => {
+    setPopoverState(null)
+    setSelectedField(null)
+  }, [])
 
   const popoverField = popoverState?.field ?? null
 
@@ -328,8 +335,8 @@ export function AltRepeatKeyPanelModal({
                           onDoubleClick={selectedField ? (rect) => handleFieldDoubleClick(key, rect) : undefined}
                           label={t(labelKey)}
                         />
-                        {selectedField === key && (
-                          <MaskKeyPreview onConfirm={maskedSelection.confirm} />
+                        {selectedField === key && !popoverState && !quickSelect && editedEntry[key] !== preEditValueRef.current && (
+                          <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
                         )}
                       </div>
                     )
@@ -339,7 +346,9 @@ export function AltRepeatKeyPanelModal({
                 {selectedField && (
                   <div className="mt-3">
                     <TabbedKeycodes
-                      onKeycodeSelect={maskedSelection.handleKeycodeSelect}
+                      onKeycodeSelect={maskedSelection.pickerSelect}
+                      onKeycodeDoubleClick={maskedSelection.pickerDoubleClick}
+                      onConfirm={maskedSelection.confirm}
                       maskOnly={maskedSelection.maskOnly}
                       lmMode={maskedSelection.lmMode}
                       tabContentOverride={tabContentOverride}
@@ -361,6 +370,8 @@ export function AltRepeatKeyPanelModal({
                     onKeycodeSelect={handlePopoverKeycodeSelect}
                     onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
                     onClose={() => setPopoverState(null)}
+                    onConfirm={confirmPopover}
+                    quickSelect={quickSelect}
                   />
                 )}
 
