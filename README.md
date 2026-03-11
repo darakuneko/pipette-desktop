@@ -17,7 +17,7 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 ## Screenshot
 
 <p align="center">
-  <img width="1200" alt="keymap-editor" src="docs/screenshots/39-layer-panel-collapsed.png" />
+  <img width="1200" alt="keymap-editor" src="docs/screenshots/layer-panel-collapsed.png" />
 </p>
 
 ## Installation
@@ -68,12 +68,12 @@ For complete instructions with screenshots:
 
 ### Keyboard Configuration
 
-- **Keymap Editor** — Layer-based key assignment with drag & drop, auto-advance, and a searchable keycode palette with Mod Mask/Mod-Tap wrapper modes
+- **Keymap Editor** — Layer-based key assignment with drag & drop, auto-advance, and a searchable keycode palette with Mod Mask/Mod-Tap wrapper modes. Basic tab supports ANSI, ISO, JIS, and List views with International (INT1–5) and Language (LANG1–5) keycode groups. Reorganized key picker tabs (System, Behavior, dedicated Combo/Key Override/Alt Repeat Key tabs) with instant key selection and popover undo
 - **Layout Editor** — Physical layout switching via slide-out panel (split backspace, bottom row variants, etc.)
 - **Tap Dance** — Multi-tap key behaviors (tap, hold, double-tap, tap+hold, custom tapping term) with inline favorites
-- **Combo** — Simultaneous key-press to trigger output keys; 2-screen flow (tile grid → detail editor with inline favorites)
-- **Key Override** — Replace key output when specific modifiers are held; 2-screen flow with inline favorites
-- **Alternate Repeat Key** — Context-aware alternate repeat key bindings; 2-screen flow with inline favorites
+- **Combo** — Simultaneous key-press to trigger output keys; inline tile grid with detail editor modal and inline favorites
+- **Key Override** — Replace key output when specific modifiers are held; inline tile grid with detail editor modal and inline favorites
+- **Alternate Repeat Key** — Context-aware alternate repeat key bindings; inline tile grid with detail editor modal and inline favorites
 - **Macro Editor** — Create and record macros with text, tap, hold, release, and delay actions (v1/v2 protocol) with inline favorites
 - **RGB Lighting** — QMK Backlight, RGBLight, and VialRGB configuration
 - **QMK Settings** — Dynamic firmware settings with boolean/integer fields
