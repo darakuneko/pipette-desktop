@@ -51,7 +51,7 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 ![Keymap Editor Overview](screenshots/03-keymap-editor-overview.png)
 
 - Top area: Physical keyboard layout (shows the current keycode assigned to each key)
-- Left side: Toolbar (dual mode, zoom, etc.)
+- Left side: Toolbar (split edit, zoom, etc.)
 - Bottom area: Keycode palette (tabbed interface) with overlay panel toggle
 - Right side (when open): Keycodes Overlay Panel (tools, save, layout options)
 - Bottom bar: Status bar
@@ -375,13 +375,13 @@ The toolbar on the left side of the keymap editor provides the following feature
 
 ![Toolbar](screenshots/toolbar.png)
 
-### 4.1 Dual Mode (Split Edit)
+### 4.1 Split Edit
 
 Displays two keyboard layouts side by side for comparing and copying keys between layers.
 
-![Dual Mode](screenshots/dual-mode.png)
+![Split Edit](screenshots/split-edit.png)
 
-- Click the button to toggle dual mode
+- Click the button to toggle split edit
 - Useful for copying key settings between layers
 
 ### 4.2 Zoom
