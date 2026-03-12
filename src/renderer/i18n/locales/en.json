@@ -65,7 +65,7 @@
       "layerN": "Layer {{n}}",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-      "dualMode": "Split Edit",
+      "splitEdit": "Split Edit",
       "copyLayer": "Copy Layer",
       "copyLayerConfirm": "Overwrite {{target}} with {{source}}?",
       "copySelected": "Paste Selected ({{count}})",

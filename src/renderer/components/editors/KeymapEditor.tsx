@@ -274,8 +274,8 @@ const COPY_BTN_BASE = 'rounded border px-1.5 py-0.5 text-xs leading-none disable
 
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
 
-function paneContainerClass(isActive: boolean, isDualMode: boolean): string {
-  if (!isDualMode) return `${PANE_BASE} border border-edge-subtle`
+function paneContainerClass(isActive: boolean, isSplitEdit: boolean): string {
+  if (!isSplitEdit) return `${PANE_BASE} border border-edge-subtle`
   if (isActive) return `${PANE_BASE} border-2 border-accent`
   return `${PANE_BASE} border-2 border-edge-subtle cursor-pointer`
 }
@@ -288,7 +288,7 @@ function hasModifierKey(e: React.MouseEvent): boolean {
 interface KeyboardPaneProps {
   paneId: 'primary' | 'secondary'
   isActive: boolean
-  isDualMode: boolean
+  isSplitEdit: boolean
   keys: KleKey[]
   keycodes: Map<string, string>
   encoderKeycodes: Map<string, [string, string]>
@@ -320,7 +320,7 @@ interface KeyboardPaneProps {
 function KeyboardPane({
   paneId,
   isActive,
-  isDualMode,
+  isSplitEdit,
   keys,
   keycodes,
   encoderKeycodes,
@@ -353,10 +353,10 @@ function KeyboardPane({
     <div
       ref={contentRef}
       data-testid={`${paneId}-pane`}
-      className={paneContainerClass(isActive, isDualMode)}
+      className={paneContainerClass(isActive, isSplitEdit)}
       onClick={(e) => {
         e.stopPropagation()
-        if (isDualMode && !isActive) onActivate?.()
+        if (isSplitEdit && !isActive) onActivate?.()
         else if (isActive && !hasModifierKey(e)) onDeselect?.()
       }}
     >
@@ -378,7 +378,7 @@ function KeyboardPane({
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}
           onEncoderClick={isActive ? onEncoderClick : undefined}
           onEncoderDoubleClick={isActive ? onEncoderDoubleClick : undefined}
-          readOnly={isDualMode ? !isActive : false}
+          readOnly={isSplitEdit ? !isActive : false}
         />
       </div>
       {isActive && !onCopyLayer && pasteHint && (
@@ -390,7 +390,7 @@ function KeyboardPane({
         <span data-testid={layerLabelTestId} className="text-content-muted">
           {layerLabel}
         </span>
-        {isActive && isDualMode && onCopyLayer && (
+        {isActive && isSplitEdit && onCopyLayer && (
           <button
             type="button"
             data-testid="copy-layer-button"
@@ -603,8 +603,8 @@ interface Props {
   onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
-  dualMode?: boolean
-  onDualModeChange?: (enabled: boolean) => void
+  splitEdit?: boolean
+  onSplitEditChange?: (enabled: boolean) => void
   activePane?: 'primary' | 'secondary'
   onActivePaneChange?: (pane: 'primary' | 'secondary') => void
   primaryLayer?: number
@@ -701,8 +701,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   onLayerPanelOpenChange,
   scale: scaleProp = 1,
   onScaleChange,
-  dualMode,
-  onDualModeChange,
+  splitEdit,
+  onSplitEditChange,
   activePane = 'primary',
   onActivePaneChange,
   primaryLayer: primaryLayerProp,
@@ -1271,8 +1271,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const effectivePrimaryLayer = primaryLayerProp ?? currentLayer
   const effectiveSecondaryLayer = secondaryLayerProp ?? currentLayer
 
-  // Inactive pane shows the opposite pane's layer; undefined when not in dual mode.
-  const inactivePaneLayer = dualMode
+  // Inactive pane shows the opposite pane's layer; undefined when not in split edit.
+  const inactivePaneLayer = splitEdit
     ? (activePane === 'primary' ? effectiveSecondaryLayer : effectivePrimaryLayer)
     : undefined
 
@@ -1401,13 +1401,13 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     clearSingleSelection()
   }, [activePane])
 
-  // Clear multi-selection when dual mode is turned off
+  // Clear multi-selection when split edit is turned off
   useEffect(() => {
-    if (!dualMode) {
+    if (!splitEdit) {
       clearMultiSelection()
       setCopyLayerPending(false)
     }
-  }, [dualMode, clearMultiSelection])
+  }, [splitEdit, clearMultiSelection])
 
   /** Run an async copy operation with a re-entrancy guard. */
   const runCopy = useCallback(async (fn: () => Promise<void>) => {
@@ -1570,7 +1570,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         && selectionSourcePane !== activePane
         && multiSelectedKeys.size > 0
         && effectivePrimaryLayer !== effectiveSecondaryLayer
-      if (dualMode && hasSelectionFromOtherPane) {
+      if (splitEdit && hasSelectionFromOtherPane) {
         handleClickToPaste(key)
         return
       }
@@ -1588,7 +1588,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       setSelectedMaskPart(maskClicked)
       setSelectedEncoder(null)
     },
-    [dualMode, activePane, selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, selectionSourcePane, effectivePrimaryLayer, effectiveSecondaryLayer, handleClickToPaste, pickerSelectedKeycodes, handlePickerPaste, clearPickerSelection],
+    [splitEdit, activePane, selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, selectionSourcePane, effectivePrimaryLayer, effectiveSecondaryLayer, handleClickToPaste, pickerSelectedKeycodes, handlePickerPaste, clearPickerSelection],
   )
 
   const handleEncoderClick = useCallback((_key: KleKey, dir: number) => {
@@ -1859,7 +1859,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   // Map active/inactive data to primary/secondary panes.
   // The active pane always uses the current-layer keycodes; the inactive pane
   // uses the precomputed inactive-layer keycodes.
-  const primaryIsCurrent = !dualMode || activePane === 'primary'
+  const primaryIsCurrent = !splitEdit || activePane === 'primary'
   const primaryKeycodes = primaryIsCurrent ? layerKeycodes : inactiveLayerKeycodes
   const primaryEncoderKeycodes = primaryIsCurrent ? layerEncoderKeycodes : inactiveEncoderKeycodes
   const primaryRemapped = primaryIsCurrent ? remappedKeys : inactiveRemappedKeys
@@ -1868,7 +1868,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const secondaryRemapped = primaryIsCurrent ? inactiveRemappedKeys : remappedKeys
 
   // Paste readiness: either from picker multi-select or from pane-to-pane selection
-  const canCopy = !!dualMode && effectivePrimaryLayer !== effectiveSecondaryLayer
+  const canCopy = !!splitEdit && effectivePrimaryLayer !== effectiveSecondaryLayer
   const panePasteReady = canCopy
     && selectionSourcePane != null
     && selectionSourcePane !== activePane
@@ -1886,15 +1886,15 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       {/* Spacer to push dual/zoom to vertical center */}
       <div className="flex-1" />
 
-      {/* Dual mode + zoom — vertically centered */}
-      {!typingTestMode && onDualModeChange && (
-        <IconTooltip label={t('editor.keymap.dualMode')}>
+      {/* Split edit + zoom — vertically centered */}
+      {!typingTestMode && onSplitEditChange && (
+        <IconTooltip label={t('editor.keymap.splitEdit')}>
           <button
             type="button"
-            data-testid="dual-mode-button"
-            aria-label={t('editor.keymap.dualMode')}
-            className={toggleButtonClass(dualMode ?? false)}
-            onClick={() => onDualModeChange(!dualMode)}
+            data-testid="split-edit-button"
+            aria-label={t('editor.keymap.splitEdit')}
+            className={toggleButtonClass(splitEdit ?? false)}
+            onClick={() => onSplitEditChange(!splitEdit)}
           >
             <Columns2 size={16} aria-hidden="true" />
           </button>
@@ -2022,7 +2022,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   <KeyboardPane
                     paneId="primary"
                     isActive={false}
-                    isDualMode={false}
+                    isSplitEdit={false}
                     keys={layout.keys}
                     keycodes={typingTestKeycodes}
                     encoderKeycodes={typingTestEncoderKeycodes}
@@ -2050,7 +2050,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               <KeyboardPane
                 paneId="primary"
                 isActive={activePane === 'primary'}
-                isDualMode={dualMode ?? false}
+                isSplitEdit={splitEdit ?? false}
                 keys={layout.keys}
                 keycodes={primaryKeycodes}
                 encoderKeycodes={primaryEncoderKeycodes}
@@ -2071,7 +2071,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 onEncoderClick={handleEncoderClick}
                 onEncoderDoubleClick={handleEncoderDoubleClick}
                 onCopyLayer={showCopyLayer && activePane === 'primary' ? handleCopyLayerClick : undefined}
-                copyLayerPending={activePane === 'primary' && dualMode && copyLayerPending ? copyLayerConfirmText : undefined}
+                copyLayerPending={activePane === 'primary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
                 isCopying={isCopying}
                 pasteHint={activePane === 'primary' ? pasteHintText : undefined}
                 onDeselect={handleDeselect}
@@ -2079,11 +2079,11 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 contentRef={keyboardContentRef}
               />
 
-              {dualMode && (
+              {splitEdit && (
                 <KeyboardPane
                   paneId="secondary"
                   isActive={activePane === 'secondary'}
-                  isDualMode={true}
+                  isSplitEdit={true}
                   keys={layout.keys}
                   keycodes={secondaryKeycodes}
                   encoderKeycodes={secondaryEncoderKeycodes}
@@ -2104,7 +2104,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onEncoderClick={handleEncoderClick}
                   onEncoderDoubleClick={handleEncoderDoubleClick}
                   onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
-                  copyLayerPending={activePane === 'secondary' && dualMode && copyLayerPending ? copyLayerConfirmText : undefined}
+                  copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
                   isCopying={isCopying}
                   pasteHint={activePane === 'secondary' ? pasteHintText : undefined}
                   onDeselect={handleDeselect}
@@ -2115,7 +2115,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
           )}
         </div>
         {/* Counterbalance toolbar width so keyboard centers in full width (single pane only) */}
-        {!dualMode && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
+        {!splitEdit && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (

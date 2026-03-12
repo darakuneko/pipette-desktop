@@ -272,27 +272,27 @@ export function App() {
   const handleTypingTestModeChange = useCallback((enabled: boolean) => {
     setTypingTestMode(enabled)
     if (enabled) {
-      setDualMode(false)
+      setSplitEdit(false)
       setActivePane('primary')
     }
   }, [])
 
-  const [dualMode, setDualMode] = useState(false)
+  const [splitEdit, setSplitEdit] = useState(false)
   const [activePane, setActivePane] = useState<'primary' | 'secondary'>('primary')
   const [primaryLayer, setPrimaryLayer] = useState(0)
   const [secondaryLayer, setSecondaryLayer] = useState(0)
 
-  const handleDualModeChange = useCallback((enabled: boolean) => {
-    setDualMode(enabled)
+  const handleSplitEditChange = useCallback((enabled: boolean) => {
+    setSplitEdit(enabled)
     setActivePane('primary')
     if (enabled) setSecondaryLayer(primaryLayer)
   }, [primaryLayer])
 
-  const currentLayer = dualMode && activePane === 'secondary' ? secondaryLayer : primaryLayer
+  const currentLayer = splitEdit && activePane === 'secondary' ? secondaryLayer : primaryLayer
   const setCurrentLayer = useCallback((l: number) => {
-    if (dualMode && activePane === 'secondary') setSecondaryLayer(l)
+    if (splitEdit && activePane === 'secondary') setSecondaryLayer(l)
     else setPrimaryLayer(l)
-  }, [dualMode, activePane])
+  }, [splitEdit, activePane])
 
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
   const [showLightingModal, setShowLightingModal] = useState(false)
@@ -966,7 +966,7 @@ export function App() {
       setTypingTestMode(false)
       setPrimaryLayer(0)
       setSecondaryLayer(0)
-      setDualMode(false)
+      setSplitEdit(false)
       setActivePane('primary')
       setKeymapScale(1)
       setShowUnlockDialog(false)
@@ -1331,8 +1331,8 @@ export function App() {
             onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             scale={keymapScale}
             onScaleChange={adjustKeymapScale}
-            dualMode={dualMode}
-            onDualModeChange={handleDualModeChange}
+            splitEdit={splitEdit}
+            onSplitEditChange={handleSplitEditChange}
             activePane={activePane}
             onActivePaneChange={setActivePane}
             primaryLayer={primaryLayer}
