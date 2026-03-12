@@ -14,8 +14,8 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
         'editor.keymap.dualMode': 'Dual View',
-        'editor.keymap.copyAll': 'Copy All',
-        'editor.keymap.copyAllConfirm': 'Confirm Copy All?',
+        'editor.keymap.copyLayer': 'Copy Layer',
+        'editor.keymap.copyLayerConfirm': 'Confirm Copy Layer?',
         'editor.keymap.clickToPaste': 'Click a key to paste',
         'editorSettings.title': 'Settings',
       }
