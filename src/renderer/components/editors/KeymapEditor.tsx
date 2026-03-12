@@ -308,8 +308,8 @@ interface KeyboardPaneProps {
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, dir: number) => void
   onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect) => void
-  onCopyAll?: () => void
-  copyAllPending?: string
+  onCopyLayer?: () => void
+  copyLayerPending?: string
   isCopying?: boolean
   pasteHint?: string
   onDeselect?: () => void
@@ -340,8 +340,8 @@ function KeyboardPane({
   onKeyDoubleClick,
   onEncoderClick,
   onEncoderDoubleClick,
-  onCopyAll,
-  copyAllPending,
+  onCopyLayer,
+  copyLayerPending,
   isCopying,
   pasteHint,
   onDeselect,
@@ -381,7 +381,7 @@ function KeyboardPane({
           readOnly={isDualMode ? !isActive : false}
         />
       </div>
-      {isActive && !onCopyAll && pasteHint && (
+      {isActive && !onCopyLayer && pasteHint && (
         <div data-testid="paste-hint" className="flex items-center justify-center py-1 text-xs text-content-muted">
           {pasteHint}
         </div>
@@ -390,17 +390,17 @@ function KeyboardPane({
         <span data-testid={layerLabelTestId} className="text-content-muted">
           {layerLabel}
         </span>
-        {isActive && isDualMode && onCopyAll && (
+        {isActive && isDualMode && onCopyLayer && (
           <button
             type="button"
-            data-testid="copy-all-button"
+            data-testid="copy-layer-button"
             disabled={isCopying}
-            className={copyAllPending
+            className={copyLayerPending
               ? `${COPY_BTN_BASE} border-danger text-danger hover:bg-danger/10`
               : `${COPY_BTN_BASE} border-edge text-content-secondary hover:text-content`}
-            onClick={(e) => { e.stopPropagation(); onCopyAll() }}
+            onClick={(e) => { e.stopPropagation(); onCopyLayer() }}
           >
-            {copyAllPending || t('editor.keymap.copyAll')}
+            {copyLayerPending || t('editor.keymap.copyLayer')}
           </button>
         )}
         <span className="flex items-center gap-1.5">
@@ -760,7 +760,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [selectionMode, setSelectionMode] = useState<'ctrl' | 'shift'>('ctrl')
   const [isCopying, setIsCopying] = useState(false)
   const isCopyingRef = useRef(false)
-  const [copyAllPending, setCopyAllPending] = useState(false)
+  const [copyLayerPending, setCopyLayerPending] = useState(false)
 
   const [pickerSelectedKeycodes, setPickerSelectedKeycodes] = useState<Keycode[]>([])
   const [pickerAnchor, setPickerAnchor] = useState<string | null>(null)
@@ -1393,7 +1393,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       clearMultiSelection()
       clearPickerSelection()
     }
-    setCopyAllPending(false)
+    setCopyLayerPending(false)
   }, [currentLayer, activePane, clearMultiSelection, clearPickerSelection])
 
   // Clear single selection when active pane changes; keep multi-selection for click-to-paste
@@ -1405,7 +1405,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   useEffect(() => {
     if (!dualMode) {
       clearMultiSelection()
-      setCopyAllPending(false)
+      setCopyLayerPending(false)
     }
   }, [dualMode, clearMultiSelection])
 
@@ -1635,7 +1635,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     clearSingleSelection()
     clearMultiSelection()
     clearPickerSelection()
-    setCopyAllPending(false)
+    setCopyLayerPending(false)
   }, [clearMultiSelection, clearPickerSelection])
 
   const handleDeselectClick = useCallback((e: React.MouseEvent) => {
@@ -1772,14 +1772,14 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     setPopoverState(null)
   }, [popoverUndoKeycode, handlePopoverRawKeycodeSelect])
 
-  const handleCopyAllClick = useCallback(async () => {
-    if (!copyAllPending) {
+  const handleCopyLayerClick = useCallback(async () => {
+    if (!copyLayerPending) {
       // First click -- show confirmation (stays until second click or deselect)
-      setCopyAllPending(true)
+      setCopyLayerPending(true)
       return
     }
     // Second click -- execute copy
-    setCopyAllPending(false)
+    setCopyLayerPending(false)
     if (inactivePaneLayer == null) return
     const src = currentLayer
     const tgt = inactivePaneLayer
@@ -1797,7 +1797,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
         }
       }
     })
-  }, [copyAllPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
+  }, [copyLayerPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
 
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
@@ -1873,10 +1873,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     && selectionSourcePane != null
     && selectionSourcePane !== activePane
     && multiSelectedKeys.size > 0
-  const showCopyAll = canCopy && !panePasteReady
+  const showCopyLayer = canCopy && !panePasteReady
   const pasteHintText: string | undefined = undefined
-  const copyAllConfirmText = inactivePaneLayer != null
-    ? t('editor.keymap.copyAllConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
+  const copyLayerConfirmText = inactivePaneLayer != null
+    ? t('editor.keymap.copyLayerConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
@@ -2070,8 +2070,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                 onKeyDoubleClick={handleKeyDoubleClick}
                 onEncoderClick={handleEncoderClick}
                 onEncoderDoubleClick={handleEncoderDoubleClick}
-                onCopyAll={showCopyAll && activePane === 'primary' ? handleCopyAllClick : undefined}
-                copyAllPending={activePane === 'primary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
+                onCopyLayer={showCopyLayer && activePane === 'primary' ? handleCopyLayerClick : undefined}
+                copyLayerPending={activePane === 'primary' && dualMode && copyLayerPending ? copyLayerConfirmText : undefined}
                 isCopying={isCopying}
                 pasteHint={activePane === 'primary' ? pasteHintText : undefined}
                 onDeselect={handleDeselect}
@@ -2103,8 +2103,8 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
                   onKeyDoubleClick={handleKeyDoubleClick}
                   onEncoderClick={handleEncoderClick}
                   onEncoderDoubleClick={handleEncoderDoubleClick}
-                  onCopyAll={showCopyAll && activePane === 'secondary' ? handleCopyAllClick : undefined}
-                  copyAllPending={activePane === 'secondary' && dualMode && copyAllPending ? copyAllConfirmText : undefined}
+                  onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
+                  copyLayerPending={activePane === 'secondary' && dualMode && copyLayerPending ? copyLayerConfirmText : undefined}
                   isCopying={isCopying}
                   pasteHint={activePane === 'secondary' ? pasteHintText : undefined}
                   onDeselect={handleDeselect}
