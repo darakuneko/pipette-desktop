@@ -13,8 +13,8 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
         'editor.keymap.dualMode': 'Dual View',
-        'editor.keymap.copyAll': 'Copy All',
-        'editor.keymap.copyAllConfirm': 'Confirm Copy All?',
+        'editor.keymap.copyLayer': 'Copy Layer',
+        'editor.keymap.copyLayerConfirm': 'Confirm Copy Layer?',
         'editor.keymap.clickToPaste': 'Click a key to paste',
         'editorSettings.title': 'Settings',
       }
@@ -268,15 +268,15 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(ms?.size ?? 0).toBe(0)
   })
 
-  it('shows Copy All button in dual mode active pane', () => {
+  it('shows Copy Layer button in dual mode active pane', () => {
     render(<KeymapEditor {...defaultProps} />)
-    expect(screen.getByTestId('copy-all-button')).toBeInTheDocument()
-    expect(screen.getByTestId('copy-all-button')).toHaveTextContent('Copy All')
+    expect(screen.getByTestId('copy-layer-button')).toBeInTheDocument()
+    expect(screen.getByTestId('copy-layer-button')).toHaveTextContent('Copy Layer')
   })
 
-  it('does not show Copy All button when not in dual mode', () => {
+  it('does not show Copy Layer button when not in dual mode', () => {
     render(<KeymapEditor {...defaultProps} dualMode={false} />)
-    expect(screen.queryByTestId('copy-all-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('copy-layer-button')).not.toBeInTheDocument()
   })
 
   it('does not show Copy Selected button (removed in favor of click-to-paste)', () => {
@@ -290,16 +290,16 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(screen.queryByTestId('copy-selected-button')).not.toBeInTheDocument()
   })
 
-  it('Copy All requires two clicks (confirmation)', async () => {
+  it('Copy Layer requires two clicks (confirmation)', async () => {
     render(<KeymapEditor {...defaultProps} />)
-    const btn = screen.getByTestId('copy-all-button')
+    const btn = screen.getByTestId('copy-layer-button')
 
     // First click: shows confirmation, does NOT call onSetKeysBulk
     await act(async () => {
       fireEvent.click(btn)
     })
     expect(onSetKeysBulk).not.toHaveBeenCalled()
-    expect(btn).toHaveTextContent('Confirm Copy All?')
+    expect(btn).toHaveTextContent('Confirm Copy Layer?')
 
     // Second click: executes copy
     await act(async () => {
@@ -317,7 +317,7 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(entries.length).toBe(4)
   })
 
-  it('Copy All copies encoder keys along with regular keys', async () => {
+  it('Copy Layer copies encoder keys along with regular keys', async () => {
     const onSetEncoder = vi.fn().mockResolvedValue(undefined)
     const encoderLayout = new Map<string, number>([
       ['0,0,0', 100], // Layer 0, encoder 0, CW
@@ -333,7 +333,7 @@ describe('KeymapEditor — multi-select & copy', () => {
         onSetEncoder={onSetEncoder}
       />,
     )
-    const btn = screen.getByTestId('copy-all-button')
+    const btn = screen.getByTestId('copy-layer-button')
     await act(async () => { fireEvent.click(btn) })
     await act(async () => { fireEvent.click(btn) })
 
@@ -342,7 +342,7 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 1, 101)
   })
 
-  it('Copy All writes 0 for missing encoder entries on source layer', async () => {
+  it('Copy Layer writes 0 for missing encoder entries on source layer', async () => {
     const onSetEncoder = vi.fn().mockResolvedValue(undefined)
     const encoderLayout = new Map<string, number>([
       ['1,0,0', 200], // Only target layer has entries
@@ -356,7 +356,7 @@ describe('KeymapEditor — multi-select & copy', () => {
         onSetEncoder={onSetEncoder}
       />,
     )
-    const btn = screen.getByTestId('copy-all-button')
+    const btn = screen.getByTestId('copy-layer-button')
     await act(async () => { fireEvent.click(btn) })
     await act(async () => { fireEvent.click(btn) })
 
@@ -365,21 +365,21 @@ describe('KeymapEditor — multi-select & copy', () => {
     expect(onSetEncoder).toHaveBeenCalledWith(1, 0, 1, 0)
   })
 
-  it('Copy All confirmation resets on deselect (background click)', async () => {
+  it('Copy Layer confirmation resets on deselect (background click)', async () => {
     render(<KeymapEditor {...defaultProps} />)
-    const btn = screen.getByTestId('copy-all-button')
+    const btn = screen.getByTestId('copy-layer-button')
 
     // First click: pending confirmation
     await act(async () => { fireEvent.click(btn) })
-    expect(btn).toHaveTextContent('Confirm Copy All?')
+    expect(btn).toHaveTextContent('Confirm Copy Layer?')
 
     // Click pane background to deselect
     const pane = screen.getByTestId('primary-pane')
     await act(async () => { fireEvent.click(pane) })
 
     // Confirmation should be reset
-    const btn2 = screen.getByTestId('copy-all-button')
-    expect(btn2).toHaveTextContent('Copy All')
+    const btn2 = screen.getByTestId('copy-layer-button')
+    expect(btn2).toHaveTextContent('Copy Layer')
   })
 
   it('copies from active layer to inactive layer (source/target correct)', async () => {
@@ -394,7 +394,7 @@ describe('KeymapEditor — multi-select & copy', () => {
       />,
     )
 
-    const btn = screen.getByTestId('copy-all-button')
+    const btn = screen.getByTestId('copy-layer-button')
     // Two clicks: first to confirm, second to execute
     await act(async () => { fireEvent.click(btn) })
     await act(async () => { fireEvent.click(btn) })
@@ -419,7 +419,7 @@ describe('KeymapEditor — multi-select & copy', () => {
         currentLayer={0}
       />,
     )
-    expect(screen.queryByTestId('copy-all-button')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('copy-layer-button')).not.toBeInTheDocument()
   })
 
   it('does not clear multiSelectedKeys when Ctrl is held on pane background click', () => {

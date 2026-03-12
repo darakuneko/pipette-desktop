@@ -13,8 +13,8 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
         'editor.keymap.dualMode': 'Dual View',
-        'editor.keymap.copyAll': 'Copy All',
-        'editor.keymap.copyAllConfirm': 'Confirm Copy All?',
+        'editor.keymap.copyLayer': 'Copy Layer',
+        'editor.keymap.copyLayerConfirm': 'Confirm Copy Layer?',
         'editor.keymap.clickToPaste': 'Click a key to paste',
         'editorSettings.title': 'Settings',
       }
@@ -386,7 +386,7 @@ describe('KeymapEditor — click-to-paste', () => {
     ])
   })
 
-  it('hides Copy All and shows paste hint when paste-ready on target pane', () => {
+  it('hides Copy Layer and shows paste hint when paste-ready on target pane', () => {
     const { rerender } = render(<KeymapEditor {...defaultProps} />)
     const onKeyClick = getActiveOnKeyClick()!
 
@@ -399,19 +399,19 @@ describe('KeymapEditor — click-to-paste', () => {
     // Switch to secondary pane (target)
     rerender(<KeymapEditor {...defaultProps} activePane="secondary" currentLayer={1} />)
 
-    // On target pane with selection, Copy All is hidden
-    expect(screen.queryByTestId('copy-all-button')).not.toBeInTheDocument()
+    // On target pane with selection, Copy Layer is hidden
+    expect(screen.queryByTestId('copy-layer-button')).not.toBeInTheDocument()
   })
 
-  it('shows Copy All (not paste hint) when no selection exists', () => {
+  it('shows Copy Layer (not paste hint) when no selection exists', () => {
     render(<KeymapEditor {...defaultProps} />)
 
-    // No selection — Copy All should be visible, no paste hint
-    expect(screen.getByTestId('copy-all-button')).toBeInTheDocument()
+    // No selection — Copy Layer should be visible, no paste hint
+    expect(screen.getByTestId('copy-layer-button')).toBeInTheDocument()
     expect(screen.queryByTestId('paste-hint')).not.toBeInTheDocument()
   })
 
-  it('restores Copy All after paste clears selection', async () => {
+  it('restores Copy Layer after paste clears selection', async () => {
     const { rerender } = render(<KeymapEditor {...defaultProps} />)
     const onKeyClick = getActiveOnKeyClick()!
 
@@ -428,8 +428,8 @@ describe('KeymapEditor — click-to-paste', () => {
       secondaryClick({ row: 0, col: 0 } as KleKey, false, { ctrlKey: false, shiftKey: false })
     })
 
-    // After paste, selection is cleared — Copy All should be back
-    expect(screen.getByTestId('copy-all-button')).toBeInTheDocument()
+    // After paste, selection is cleared — Copy Layer should be back
+    expect(screen.getByTestId('copy-layer-button')).toBeInTheDocument()
     expect(screen.queryByTestId('paste-hint')).not.toBeInTheDocument()
   })
 })
