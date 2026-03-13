@@ -1406,34 +1406,44 @@ describe('serializeForCExport', () => {
       expect(serializeForCExport(lmCode)).toMatch(/^0x[0-9a-f]+$/)
     })
 
-    it('Pipette-only Modifier Mask keycodes return hex', () => {
-      const pipetteOnlyMasks: [string, number][] = [
+    it('vial-qmk undefined Modifier Mask keycodes return hex', () => {
+      const notInVialQmk: [string, number][] = [
         ['LCSG(kc)', 0xb00],
         ['LSAG(kc)', 0xe00],
-        ['RCS(kc)', 0x1300],
         ['RCA(kc)', 0x1500],
-        ['RSA(kc)', 0x1600],
         ['RMEH(kc)', 0x1700],
-        ['RSG(kc)', 0x1a00],
         ['RCSG(kc)', 0x1b00],
-        ['RAG(kc)', 0x1c00],
         ['RCAG(kc)', 0x1d00],
         ['RSAG(kc)', 0x1e00],
         ['RHYPR(kc)', 0x1f00],
       ]
-      for (const [, hex] of pipetteOnlyMasks) {
+      for (const [, hex] of notInVialQmk) {
         const withA = hex | 0x04
         expect(serializeForCExport(withA)).toBe(toHex(withA))
       }
     })
 
-    it('Pipette-only Mod-Tap keycodes return hex', () => {
-      const pipetteOnlyModTaps = [
-        'LCSG_T(kc)', 'LSAG_T(kc)',
-        'RCS_T(kc)', 'RCA_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
-        'RCSG_T(kc)', 'RSAG_T(kc)', 'RMEH_T(kc)', 'RALL_T(kc)',
+    it('vial-qmk compilable Modifier Mask keycodes return named format', () => {
+      const inVialQmk: [string, number][] = [
+        ['RCS(kc)', 0x1300],
+        ['RSA(kc)', 0x1600],
+        ['RSG(kc)', 0x1a00],
+        ['RAG(kc)', 0x1c00],
       ]
-      for (const qmkId of pipetteOnlyModTaps) {
+      for (const [name, hex] of inVialQmk) {
+        const withA = hex | 0x04
+        const expected = name.replace('kc', 'KC_A')
+        expect(serializeForCExport(withA)).toBe(expected)
+      }
+    })
+
+    it('vial-qmk undefined Mod-Tap keycodes return hex', () => {
+      const notInVialQmk = [
+        'LCSG_T(kc)', 'LSAG_T(kc)',
+        'RCA_T(kc)', 'RCSG_T(kc)', 'RSAG_T(kc)',
+        'RMEH_T(kc)', 'RALL_T(kc)', 'RCAG_T(kc)',
+      ]
+      for (const qmkId of notInVialQmk) {
         const outerCode = kc[qmkId]
         if (outerCode === undefined) continue
         const withA = outerCode | 0x04
@@ -1441,22 +1451,39 @@ describe('serializeForCExport', () => {
       }
     })
 
-    it('Swap Hands non-masked keycodes return hex', () => {
-      for (const qmkId of ['SH_TOGG', 'SH_TT', 'SH_MON', 'SH_MOFF', 'SH_OFF', 'SH_ON', 'SH_OS']) {
-        const code = kc[qmkId]
-        if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+    it('vial-qmk compilable Mod-Tap keycodes return named format', () => {
+      const inVialQmk = [
+        'RCS_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
+      ]
+      for (const qmkId of inVialQmk) {
+        const outerCode = kc[qmkId]
+        if (outerCode === undefined) continue
+        const withA = outerCode | 0x04
+        const expected = qmkId.replace('kc', 'KC_A')
+        expect(serializeForCExport(withA)).toBe(expected)
       }
     })
 
-    it('Swap Hands Tap masked keycode returns hex', () => {
+    it('Swap Hands non-masked keycodes return named format', () => {
+      for (const qmkId of ['SH_TOGG', 'SH_TT', 'SH_MON', 'SH_MOFF', 'SH_OFF', 'SH_ON', 'SH_OS']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(qmkId)
+      }
+    })
+
+    it('Swap Hands Tap masked keycode returns named format', () => {
       const shTBase = kc['SH_T(kc)']
       if (shTBase === undefined) return
       const withA = shTBase | 0x04
-      expect(serializeForCExport(withA)).toBe(toHex(withA))
+      // v5: SH_T(KC_A) collides with SH_MOFF (same code), serialize resolves to SH_MOFF
+      const expected = proto === 6 ? 'SH_T(KC_A)' : 'SH_MOFF'
+      expect(serializeForCExport(withA)).toBe(expected)
     })
 
-    it('Sequencer keycodes return hex', () => {
+    it('Sequencer keycodes return hex when MIDI keycodes not loaded', () => {
+      // SQ_ keycodes are in KEYCODES_MIDI which is empty until createMidiKeycodes() is called.
+      // Without MIDI loaded, SQ_ codes are not in RAWCODES_MAP so serialize falls back to hex.
       for (const qmkId of ['SQ_ON', 'SQ_OFF', 'SQ_TOGG']) {
         const code = kc[qmkId]
         if (code === undefined) continue
@@ -1464,25 +1491,30 @@ describe('serializeForCExport', () => {
       }
     })
 
-    it('LED Matrix keycodes return hex', () => {
+    it('LED Matrix keycodes return named format', () => {
       for (const qmkId of ['LM_ON', 'LM_OFF', 'LM_TOGG']) {
         const code = kc[qmkId]
         if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+        expect(serializeForCExport(code)).toBe(qmkId)
       }
     })
 
-    it('Joystick keycodes return hex', () => {
+    it('Joystick keycodes return named format', () => {
       const code = kc['JS_0']
       if (code === undefined) return
-      expect(serializeForCExport(code)).toBe(toHex(code))
+      expect(serializeForCExport(code)).toBe('JS_0')
     })
 
-    it('Key Override keycodes return hex', () => {
-      for (const qmkId of ['QK_KEY_OVERRIDE_TOGGLE', 'QK_KEY_OVERRIDE_ON', 'QK_KEY_OVERRIDE_OFF']) {
+    it('Key Override keycodes return short alias format', () => {
+      const expected: Record<string, string> = {
+        QK_KEY_OVERRIDE_TOGGLE: 'KO_TOGG',
+        QK_KEY_OVERRIDE_ON: 'KO_ON',
+        QK_KEY_OVERRIDE_OFF: 'KO_OFF',
+      }
+      for (const [qmkId, cExport] of Object.entries(expected)) {
         const code = kc[qmkId]
         if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+        expect(serializeForCExport(code)).toBe(cExport)
       }
     })
 
@@ -1493,10 +1525,96 @@ describe('serializeForCExport', () => {
       expect(serializeForCExport(lctlTa)).toBe('LCTL_T(KC_A)')
     })
 
-    it('normal keycodes match serialize()', () => {
+    it('keycodes without cExportId match serialize()', () => {
       expect(serializeForCExport(kc.KC_A)).toBe(serialize(kc.KC_A))
       expect(serializeForCExport(kc.KC_NO)).toBe(serialize(kc.KC_NO))
-      expect(serializeForCExport(kc.KC_ENTER)).toBe(serialize(kc.KC_ENTER))
+    })
+
+    it('keycodes with cExportId use short alias', () => {
+      expect(serializeForCExport(kc.KC_ENTER)).toBe('KC_ENT')
+      expect(serializeForCExport(kc.KC_SPACE)).toBe('KC_SPC')
+      expect(serializeForCExport(kc.KC_APPLICATION)).toBe('KC_APP')
+    })
+
+    it('cExportId remaps legacy names to standard QMK names', () => {
+      // Basic keys
+      expect(serializeForCExport(kc.KC_LSHIFT)).toBe('KC_LSFT')
+      expect(serializeForCExport(kc.KC_RSHIFT)).toBe('KC_RSFT')
+      expect(serializeForCExport(kc.KC_LCTRL)).toBe('KC_LCTL')
+      expect(serializeForCExport(kc.KC_RCTRL)).toBe('KC_RCTL')
+      expect(serializeForCExport(kc.KC_BSPACE)).toBe('KC_BSPC')
+      expect(serializeForCExport(kc.KC_CAPSLOCK)).toBe('KC_CAPS')
+      expect(serializeForCExport(kc.KC_NUMLOCK)).toBe('KC_NUM')
+      expect(serializeForCExport(kc.KC_SCROLLLOCK)).toBe('KC_SCRL')
+      expect(serializeForCExport(kc.KC_PSCREEN)).toBe('KC_PSCR')
+      expect(serializeForCExport(kc.KC_PGDOWN)).toBe('KC_PGDN')
+      expect(serializeForCExport(kc.KC_LBRACKET)).toBe('KC_LBRC')
+      expect(serializeForCExport(kc.KC_RBRACKET)).toBe('KC_RBRC')
+      expect(serializeForCExport(kc.KC_BSLASH)).toBe('KC_BSLS')
+      expect(serializeForCExport(kc.KC_SCOLON)).toBe('KC_SCLN')
+      expect(serializeForCExport(kc.KC_NONUS_BSLASH)).toBe('KC_NUBS')
+
+      // JIS / International
+      expect(serializeForCExport(kc.KC_RO)).toBe('KC_INT1')
+      expect(serializeForCExport(kc.KC_KANA)).toBe('KC_INT2')
+      expect(serializeForCExport(kc.KC_JYEN)).toBe('KC_INT3')
+      expect(serializeForCExport(kc.KC_HENK)).toBe('KC_INT4')
+      expect(serializeForCExport(kc.KC_MHEN)).toBe('KC_INT5')
+
+      // Language
+      expect(serializeForCExport(kc.KC_LANG1)).toBe('KC_LNG1')
+      expect(serializeForCExport(kc.KC_LANG2)).toBe('KC_LNG2')
+
+      // Space Cadet
+      expect(serializeForCExport(kc.KC_GESC)).toBe('QK_GESC')
+      expect(serializeForCExport(kc.KC_LSPO)).toBe('SC_LSPO')
+      expect(serializeForCExport(kc.KC_RSPC)).toBe('SC_RSPC')
+      expect(serializeForCExport(kc.KC_SFTENT)).toBe('SC_SENT')
+
+      // Auto Shift
+      expect(serializeForCExport(kc.KC_ASDN)).toBe('AS_DOWN')
+      expect(serializeForCExport(kc.KC_ASUP)).toBe('AS_UP')
+      expect(serializeForCExport(kc.KC_ASTG)).toBe('AS_TOGG')
+
+      // Audio
+      expect(serializeForCExport(kc.AU_TOG)).toBe('AU_TOGG')
+      expect(serializeForCExport(kc.CLICKY_TOGGLE)).toBe('CK_TOGG')
+      expect(serializeForCExport(kc.MU_MOD)).toBe('MU_NEXT')
+
+      // Haptic
+      expect(serializeForCExport(kc.HPT_ON)).toBe('HF_ON')
+      expect(serializeForCExport(kc.HPT_OFF)).toBe('HF_OFF')
+      expect(serializeForCExport(kc.HPT_FBK)).toBe('HF_FDBK')
+
+      // Combo
+      expect(serializeForCExport(kc.CMB_ON)).toBe('CM_ON')
+      expect(serializeForCExport(kc.CMB_OFF)).toBe('CM_OFF')
+      expect(serializeForCExport(kc.CMB_TOG)).toBe('CM_TOGG')
+
+      // Backlight
+      expect(serializeForCExport(kc.BL_INC)).toBe('BL_UP')
+      expect(serializeForCExport(kc.BL_DEC)).toBe('BL_DOWN')
+
+      // Volume
+      expect(serializeForCExport(kc.KC__VOLDOWN)).toBe('KC_KB_VOLUME_DOWN')
+      expect(serializeForCExport(kc.KC__VOLUP)).toBe('KC_KB_VOLUME_UP')
+
+      // Dynamic Macro
+      expect(serializeForCExport(kc.DYN_REC_START1)).toBe('DM_REC1')
+      expect(serializeForCExport(kc.DYN_REC_START2)).toBe('DM_REC2')
+      expect(serializeForCExport(kc.DYN_REC_STOP)).toBe('DM_RSTP')
+      expect(serializeForCExport(kc.DYN_MACRO_PLAY1)).toBe('DM_PLY1')
+      expect(serializeForCExport(kc.DYN_MACRO_PLAY2)).toBe('DM_PLY2')
+
+      // Magic (sample)
+      expect(serializeForCExport(kc.MAGIC_SWAP_CONTROL_CAPSLOCK)).toBe('CL_SWAP')
+      expect(serializeForCExport(kc.MAGIC_NO_GUI)).toBe('GU_OFF')
+    })
+
+    it('cExportId remaps inner keycodes in masked combinations', () => {
+      // LSFT(KC_BSPACE) should become LSFT(KC_BSPC)
+      const lsftBspace = kc['LSFT(kc)'] | kc.KC_BSPACE
+      expect(serializeForCExport(lsftBspace)).toBe('LSFT(KC_BSPC)')
     })
 
     it('MO/TG/LT layer keycodes match serialize()', () => {
@@ -1505,6 +1623,79 @@ describe('serializeForCExport', () => {
       const lt1a = kc['LT1(kc)'] | kc.KC_A
       expect(serializeForCExport(lt1a)).toBe(serialize(lt1a))
     })
+  })
+
+  it('Sequencer keycodes return named format when MIDI is loaded (v6)', () => {
+    setProtocol(6)
+    recreateKeyboardKeycodes({
+      vialProtocol: 6,
+      layers: 4,
+      macroCount: 0,
+      tapDanceCount: 0,
+      customKeycodes: null,
+      midi: 'advanced',
+      supportedFeatures: new Set(),
+    })
+    const kc6 = keycodesV6.kc
+    for (const qmkId of ['SQ_ON', 'SQ_OFF', 'SQ_TOGG']) {
+      const code = kc6[qmkId]
+      if (code === undefined) continue
+      expect(serializeForCExport(code)).toBe(qmkId)
+    }
+  })
+
+  it('MIDI cExportId remaps legacy names when MIDI is loaded (v6)', () => {
+    setProtocol(6)
+    recreateKeyboardKeycodes({
+      vialProtocol: 6,
+      layers: 4,
+      macroCount: 0,
+      tapDanceCount: 0,
+      customKeycodes: null,
+      midi: 'advanced',
+      supportedFeatures: new Set(),
+    })
+    const kc6 = keycodesV6.kc
+
+    // Octave notes: MI_C_1 → MI_C1
+    expect(serializeForCExport(kc6.MI_C_1)).toBe('MI_C1')
+    expect(serializeForCExport(kc6.MI_Cs_3)).toBe('MI_Cs3')
+    expect(serializeForCExport(kc6.MI_B_5)).toBe('MI_B5')
+
+    // MI_ALLOFF → MI_AOFF
+    expect(serializeForCExport(kc6.MI_ALLOFF)).toBe('MI_AOFF')
+
+    // Octave: MI_OCT_N2 → MI_OCN2, MI_OCT_0 → MI_OC0
+    expect(serializeForCExport(kc6.MI_OCT_N2)).toBe('MI_OCN2')
+    expect(serializeForCExport(kc6.MI_OCT_0)).toBe('MI_OC0')
+    expect(serializeForCExport(kc6.MI_OCT_7)).toBe('MI_OC7')
+
+    // Transpose: MI_TRNS_N6 → MI_TRN6, MI_TRNS_0 → MI_TR0
+    expect(serializeForCExport(kc6.MI_TRNS_N6)).toBe('MI_TRN6')
+    expect(serializeForCExport(kc6.MI_TRNS_0)).toBe('MI_TR0')
+    expect(serializeForCExport(kc6.MI_TRNS_6)).toBe('MI_TR6')
+    expect(serializeForCExport(kc6.MI_TRNSD)).toBe('MI_TRSD')
+    expect(serializeForCExport(kc6.MI_TRNSU)).toBe('MI_TRSU')
+
+    // Velocity: MI_VEL_1 → MI_VL1
+    expect(serializeForCExport(kc6.MI_VEL_1)).toBe('MI_VL1')
+    expect(serializeForCExport(kc6.MI_VEL_10)).toBe('MI_VL10')
+
+    // Channel: MI_CHD → MI_CHND, MI_CHU → MI_CHNU
+    expect(serializeForCExport(kc6.MI_CHD)).toBe('MI_CHND')
+    expect(serializeForCExport(kc6.MI_CHU)).toBe('MI_CHNU')
+
+    // Control: MI_SUS → MI_SUST, MI_MODSD → MI_MODD, etc.
+    expect(serializeForCExport(kc6.MI_SUS)).toBe('MI_SUST')
+    expect(serializeForCExport(kc6.MI_MODSD)).toBe('MI_MODD')
+    expect(serializeForCExport(kc6.MI_MODSU)).toBe('MI_MODU')
+    expect(serializeForCExport(kc6.MI_BENDD)).toBe('MI_BNDD')
+    expect(serializeForCExport(kc6.MI_BENDU)).toBe('MI_BNDU')
+
+    // Unchanged MIDI names stay the same
+    expect(serializeForCExport(kc6.MI_OCTD)).toBe('MI_OCTD')
+    expect(serializeForCExport(kc6.MI_PORT)).toBe('MI_PORT')
+    expect(serializeForCExport(kc6.MI_CH1)).toBe('MI_CH1')
   })
 })
 
