@@ -39,7 +39,7 @@ import {
   KEYCODES_QUANTUM_KEY_OVERRIDE,
   KEYCODES_QUANTUM_REPEAT,
   KEYCODES_QUANTUM_CAPS_WORD,
-  KEYCODES_BACKLIGHT,
+  KEYCODES_LIGHTING,
   KEYCODES_LIGHTING_BL,
   KEYCODES_LIGHTING_RGB,
   KEYCODES_LIGHTING_MATRIX,
@@ -260,9 +260,9 @@ export const KEYCODE_CATEGORIES: KeycodeCategory[] = [
     ],
   },
   {
-    id: 'backlight',
-    labelKey: 'keycodes.backlight',
-    getKeycodes: () => KEYCODES_BACKLIGHT,
+    id: 'lighting',
+    labelKey: 'keycodes.lighting',
+    getKeycodes: () => KEYCODES_LIGHTING,
     getGroups: () => [
       { labelKey: 'keycodes.group.rgbMatrix', keycodes: KEYCODES_LIGHTING_MATRIX },
       { labelKey: 'keycodes.group.rgbLighting', keycodes: KEYCODES_LIGHTING_RGB },

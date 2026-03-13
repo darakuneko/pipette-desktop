@@ -880,7 +880,7 @@ export const KEYCODES_LIGHTING_LED_MATRIX: Keycode[] = [
   K('LM_SPDD', 'LED\nSpeed -', 'Decrease LED Matrix animation speed'),
 ]
 
-export const KEYCODES_BACKLIGHT: Keycode[] = [
+export const KEYCODES_LIGHTING: Keycode[] = [
   ...KEYCODES_LIGHTING_BL,
   ...KEYCODES_LIGHTING_RGB,
   ...KEYCODES_LIGHTING_MATRIX,
@@ -1687,7 +1687,7 @@ function buildAnyKeycodeNames(): Map<string, number> {
     ...KEYCODES_INTERNATIONAL,
     ...KEYCODES_LANGUAGE,
     ...KEYCODES_JIS,
-    ...KEYCODES_BACKLIGHT,
+    ...KEYCODES_LIGHTING,
     ...KEYCODES_MEDIA,
     ...KEYCODES_USER,
   ]) {
@@ -1912,7 +1912,7 @@ export function recreateKeycodes(): void {
     ...KEYCODES_BOOT,
     ...KEYCODES_MODIFIERS,
     ...KEYCODES_QUANTUM,
-    ...KEYCODES_BACKLIGHT,
+    ...KEYCODES_LIGHTING,
     ...KEYCODES_MEDIA,
     ...KEYCODES_TAP_DANCE,
     ...KEYCODES_MACRO,

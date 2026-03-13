@@ -39,7 +39,7 @@ import {
   KEYCODES_BOOT,
   KEYCODES_MODIFIERS,
   KEYCODES_QUANTUM,
-  KEYCODES_BACKLIGHT,
+  KEYCODES_LIGHTING,
   KEYCODES_MEDIA,
   KEYCODES_MIDI_BASIC,
   KEYCODES_MIDI_ADVANCED,
@@ -287,7 +287,7 @@ describe('Core keycode system', () => {
     expect(KEYCODES_BOOT.length).toBe(3)
     expect(KEYCODES_MODIFIERS.length).toBeGreaterThan(30)
     expect(KEYCODES_QUANTUM.length).toBeGreaterThan(30)
-    expect(KEYCODES_BACKLIGHT.length).toBeGreaterThan(20)
+    expect(KEYCODES_LIGHTING.length).toBeGreaterThan(20)
     expect(KEYCODES_MEDIA.length).toBeGreaterThan(40)
     expect(KEYCODES_MACRO_BASE.length).toBe(5)
     expect(KEYCODES_HIDDEN.length).toBe(256)

@@ -347,7 +347,7 @@ const KEYCODE_TABS = [
   { id: 'modifiers', label: 'Modifiers' },
   { id: 'system', label: 'System' },
   { id: 'midi', label: 'MIDI' },
-  { id: 'backlight', label: 'Lighting' },
+  { id: 'lighting', label: 'Lighting' },
   { id: 'tapDance', label: 'Tap-Hold / Tap Dance' },
   { id: 'macro', label: 'Macro' },
   { id: 'combo', label: 'Combo' },

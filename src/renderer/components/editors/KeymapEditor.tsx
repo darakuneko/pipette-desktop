@@ -1810,7 +1810,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       { tab: 'quantum', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => setShowMagicSettings(true), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'quantum', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => setShowAutoShiftSettings(true), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
       // Combo, Key Override, Alt Repeat Key settings are shown inline via tile grids in their tabs
-      { tab: 'backlight', key: 'lighting', label: t('editor.lighting.title'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
+      { tab: 'lighting', key: 'lighting', label: t('editor.lighting.title'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
     ]
 
     const content: Record<string, React.ReactNode> = {}
