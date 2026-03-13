@@ -268,7 +268,7 @@
     "layers": "Layers",
     "quantum": "Behavior",
     "modifiers": "Modifiers",
-    "backlight": "Lighting",
+    "lighting": "Lighting",
     "media": "System",
     "tapDance": "Tap-Hold / Tap Dance",
     "macro": "Macro",

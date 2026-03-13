@@ -247,7 +247,7 @@ Keycodes for mouse control, media playback, system utilities, and audio/haptic f
 
 Keycodes for backlight and RGB lighting controls.
 
-![Lighting Tab](screenshots/tab-backlight.png)
+![Lighting Tab](screenshots/tab-lighting.png)
 
 - RGB Matrix controls
 - RGB Lighting controls
