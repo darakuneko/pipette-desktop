@@ -38,7 +38,7 @@ import {
   KEYCODES_LANGUAGE,
   KEYCODES_BOOT,
   KEYCODES_MODIFIERS,
-  KEYCODES_QUANTUM,
+  KEYCODES_BEHAVIOR,
   KEYCODES_LIGHTING,
   KEYCODES_SYSTEM,
   KEYCODES_MIDI_BASIC,
@@ -49,8 +49,8 @@ import {
   isLMKeycode,
   KEYCODES_LM_MODS,
   getAvailableLMMods,
-  KEYCODES_QUANTUM_SWAP_HANDS,
-  KEYCODES_QUANTUM_SWAP_HANDS_TAP,
+  KEYCODES_BEHAVIOR_SWAP_HANDS,
+  KEYCODES_BEHAVIOR_SWAP_HANDS_TAP,
   KEYCODES_MIDI_SEQUENCER,
   KEYCODES_SYSTEM_JOYSTICK,
   KEYCODES_LIGHTING_LED_MATRIX,
@@ -286,7 +286,7 @@ describe('Core keycode system', () => {
     expect(KEYCODES_LANGUAGE.length).toBe(5)
     expect(KEYCODES_BOOT.length).toBe(3)
     expect(KEYCODES_MODIFIERS.length).toBeGreaterThan(30)
-    expect(KEYCODES_QUANTUM.length).toBeGreaterThan(30)
+    expect(KEYCODES_BEHAVIOR.length).toBeGreaterThan(30)
     expect(KEYCODES_LIGHTING.length).toBeGreaterThan(20)
     expect(KEYCODES_SYSTEM.length).toBeGreaterThan(40)
     expect(KEYCODES_MACRO_BASE.length).toBe(5)
@@ -1088,13 +1088,13 @@ describe('createCustomUserKeycodes()', () => {
 
 describe('Swap Hands keycodes', () => {
   it('has 7 static swap hands keycodes', () => {
-    expect(KEYCODES_QUANTUM_SWAP_HANDS).toHaveLength(7)
+    expect(KEYCODES_BEHAVIOR_SWAP_HANDS).toHaveLength(7)
   })
 
   it('has 1 masked SH_T(kc) keycode', () => {
-    expect(KEYCODES_QUANTUM_SWAP_HANDS_TAP).toHaveLength(1)
-    expect(KEYCODES_QUANTUM_SWAP_HANDS_TAP[0].masked).toBe(true)
-    expect(KEYCODES_QUANTUM_SWAP_HANDS_TAP[0].qmkId).toBe('SH_T(kc)')
+    expect(KEYCODES_BEHAVIOR_SWAP_HANDS_TAP).toHaveLength(1)
+    expect(KEYCODES_BEHAVIOR_SWAP_HANDS_TAP[0].masked).toBe(true)
+    expect(KEYCODES_BEHAVIOR_SWAP_HANDS_TAP[0].qmkId).toBe('SH_T(kc)')
   })
 
   it('v6 addresses are correct', () => {
