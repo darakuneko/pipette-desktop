@@ -40,7 +40,7 @@ import {
   KEYCODES_MODIFIERS,
   KEYCODES_QUANTUM,
   KEYCODES_LIGHTING,
-  KEYCODES_MEDIA,
+  KEYCODES_SYSTEM,
   KEYCODES_MIDI_BASIC,
   KEYCODES_MIDI_ADVANCED,
   KEYCODES_MACRO_BASE,
@@ -52,7 +52,7 @@ import {
   KEYCODES_QUANTUM_SWAP_HANDS,
   KEYCODES_QUANTUM_SWAP_HANDS_TAP,
   KEYCODES_MIDI_SEQUENCER,
-  KEYCODES_MEDIA_JOYSTICK,
+  KEYCODES_SYSTEM_JOYSTICK,
   KEYCODES_LIGHTING_LED_MATRIX,
   KEYCODES_MOD_MASK,
   isModMaskKeycode,
@@ -288,7 +288,7 @@ describe('Core keycode system', () => {
     expect(KEYCODES_MODIFIERS.length).toBeGreaterThan(30)
     expect(KEYCODES_QUANTUM.length).toBeGreaterThan(30)
     expect(KEYCODES_LIGHTING.length).toBeGreaterThan(20)
-    expect(KEYCODES_MEDIA.length).toBeGreaterThan(40)
+    expect(KEYCODES_SYSTEM.length).toBeGreaterThan(40)
     expect(KEYCODES_MACRO_BASE.length).toBe(5)
     expect(KEYCODES_HIDDEN.length).toBe(256)
     expect(KEYCODES_MIDI_BASIC.length).toBeGreaterThan(10)
@@ -1147,7 +1147,7 @@ describe('Sequencer keycodes', () => {
 
 describe('Joystick keycodes', () => {
   it('has 32 joystick keycodes', () => {
-    expect(KEYCODES_MEDIA_JOYSTICK).toHaveLength(32)
+    expect(KEYCODES_SYSTEM_JOYSTICK).toHaveLength(32)
   })
 
   it('v6 addresses are correct', () => {

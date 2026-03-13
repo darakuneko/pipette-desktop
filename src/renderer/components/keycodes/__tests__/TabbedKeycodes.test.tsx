@@ -14,7 +14,7 @@ const mockQuantumKeycodes = [
   { qmkId: 'QK_BOOT', label: 'Boot', hidden: false },
 ]
 
-const mockMediaKeycodes = [
+const mockSystemKeycodes = [
   { qmkId: 'KC_MUTE', label: 'Mute', hidden: false },
   { qmkId: 'KC_MS_U', label: 'Mouse Up', hidden: false },
 ]
@@ -25,7 +25,7 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'keycodes.basic': 'Basic',
         'keycodes.quantum': 'Quantum',
-        'keycodes.media': 'Media',
+        'keycodes.system': 'System',
       }
       return map[key] ?? key
     },
@@ -37,7 +37,7 @@ vi.mock('../categories', () => ({
   KEYCODE_CATEGORIES: [
     { id: 'basic', labelKey: 'keycodes.basic', getKeycodes: () => mockBasicKeycodes },
     { id: 'quantum', labelKey: 'keycodes.quantum', getKeycodes: () => mockQuantumKeycodes },
-    { id: 'media', labelKey: 'keycodes.media', getKeycodes: () => mockMediaKeycodes },
+    { id: 'system', labelKey: 'keycodes.system', getKeycodes: () => mockSystemKeycodes },
   ],
 }))
 
@@ -97,9 +97,9 @@ describe('TabbedKeycodes', () => {
 
   it('shows categories with basic keycodes when maskOnly is true', () => {
     render(<TabbedKeycodes maskOnly />)
-    // Basic and Media contain keycodes < 0xFF
+    // Basic and System contain keycodes < 0xFF
     expect(screen.getByText('Basic')).toBeInTheDocument()
-    expect(screen.getByText('Media')).toBeInTheDocument()
+    expect(screen.getByText('System')).toBeInTheDocument()
     // Quantum has only QK_BOOT (> 0xFF)
     expect(screen.queryByText('Quantum')).not.toBeInTheDocument()
   })
