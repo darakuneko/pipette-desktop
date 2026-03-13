@@ -125,7 +125,7 @@ test.describe('Lighting Editor', () => {
 
 function openComboModal(): Promise<boolean> {
   return openEditorModal({
-    keycodeTab: 'Quantum',
+    keycodeTab: 'Behavior',
     settingsBtnTestId: 'combo-settings-btn',
     backdropTestId: 'combo-modal-backdrop',
     featureName: 'Combo',
@@ -177,7 +177,7 @@ test.describe('Combo Editor', () => {
 
 function openKeyOverrideModal(): Promise<boolean> {
   return openEditorModal({
-    keycodeTab: 'Quantum',
+    keycodeTab: 'Behavior',
     settingsBtnTestId: 'key-override-settings-btn',
     backdropTestId: 'ko-modal-backdrop',
     featureName: 'Key Override',
@@ -229,7 +229,7 @@ test.describe('Key Override Editor', () => {
 
 function openAltRepeatKeyModal(): Promise<boolean> {
   return openEditorModal({
-    keycodeTab: 'Quantum',
+    keycodeTab: 'Behavior',
     settingsBtnTestId: 'alt-repeat-key-settings-btn',
     backdropTestId: 'ar-modal-backdrop',
     featureName: 'Alt Repeat Key',
