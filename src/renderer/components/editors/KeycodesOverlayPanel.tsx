@@ -272,13 +272,13 @@ export function KeycodesOverlayPanel({
             {(hasMatrixTester || matrixMode) && onToggleMatrix && (
               <div className={ROW_CLASS} data-testid="overlay-matrix-row">
                 <span className="text-[13px] font-medium text-content">
-                  {t('editor.matrixTester.title')}
+                  {t('editor.keyTester.title')}
                 </span>
                 <button
                   type="button"
                   role="switch"
                   aria-checked={matrixMode}
-                  aria-label={t('editor.matrixTester.title')}
+                  aria-label={t('editor.keyTester.title')}
                   className={toggleTrackClass(matrixMode)}
                   onClick={onToggleMatrix}
                   data-testid="overlay-matrix-toggle"

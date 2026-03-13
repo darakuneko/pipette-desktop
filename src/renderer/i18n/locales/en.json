@@ -183,7 +183,7 @@
       "settings": "Alt Repeat Key Settings",
       "selectEntry": "Select an entry to edit"
     },
-    "matrixTester": {
+    "keyTester": {
       "title": "Key Tester"
     },
     "typingTest": {
