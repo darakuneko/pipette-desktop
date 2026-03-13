@@ -1206,32 +1206,24 @@ export function serialize(code: number): string {
       return kc.qmkId
     }
   }
-  return '0x' + code.toString(16)
-}
-
-// Outer mask qmkIds not defined in vial-gui/vial-qmk
-const PIPETTE_ONLY_OUTER_MASKS = new Set([
-  // Modifier Masks (12)
-  'LCSG(kc)', 'LSAG(kc)',
-  'RCS(kc)', 'RCA(kc)', 'RSA(kc)', 'RMEH(kc)', 'RSG(kc)',
-  'RCSG(kc)', 'RAG(kc)', 'RCAG(kc)', 'RSAG(kc)', 'RHYPR(kc)',
-  // Mod-Tap (11)
-  'LCSG_T(kc)', 'LSAG_T(kc)',
-  'RCS_T(kc)', 'RCA_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
-  'RCSG_T(kc)', 'RSAG_T(kc)', 'RMEH_T(kc)', 'RALL_T(kc)',
-  // Swap Hands Tap (1)
-  'SH_T(kc)',
-])
-
-const PIPETTE_ONLY_PREFIXES = ['SH_', 'SQ_', 'LM_', 'JS_', 'PB_', 'QK_KEY_OVERRIDE_']
-
-function isPipetteOnlyNonMasked(qmkId: string): boolean {
-  return PIPETTE_ONLY_PREFIXES.some((p) => qmkId.startsWith(p))
+  return toHex(code)
 }
 
 function toHex(code: number): string {
   return '0x' + code.toString(16)
 }
+
+// Outer mask qmkIds not defined in vial-qmk (cannot compile in keymap.c)
+const NOT_IN_VIAL_QMK_OUTER_MASKS = new Set([
+  // Modifier Masks (8)
+  'LCSG(kc)', 'LSAG(kc)',
+  'RCA(kc)', 'RMEH(kc)',
+  'RCSG(kc)', 'RCAG(kc)', 'RSAG(kc)', 'RHYPR(kc)',
+  // Mod-Tap (8)
+  'LCSG_T(kc)', 'LSAG_T(kc)',
+  'RCA_T(kc)', 'RCSG_T(kc)', 'RSAG_T(kc)',
+  'RMEH_T(kc)', 'RALL_T(kc)', 'RCAG_T(kc)',
+])
 
 export function serializeForCExport(code: number): string {
   if (isLMKeycode(code)) return toHex(code)
@@ -1240,12 +1232,7 @@ export function serializeForCExport(code: number): string {
 
   if (masked.has(code & 0xff00)) {
     const outer = RAWCODES_MAP.get(code & 0xff00)
-    if (outer !== undefined && PIPETTE_ONLY_OUTER_MASKS.has(outer.qmkId)) {
-      return toHex(code)
-    }
-  } else {
-    const kc = RAWCODES_MAP.get(code)
-    if (kc !== undefined && isPipetteOnlyNonMasked(kc.qmkId)) {
+    if (outer !== undefined && NOT_IN_VIAL_QMK_OUTER_MASKS.has(outer.qmkId)) {
       return toHex(code)
     }
   }

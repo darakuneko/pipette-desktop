@@ -1406,34 +1406,44 @@ describe('serializeForCExport', () => {
       expect(serializeForCExport(lmCode)).toMatch(/^0x[0-9a-f]+$/)
     })
 
-    it('Pipette-only Modifier Mask keycodes return hex', () => {
-      const pipetteOnlyMasks: [string, number][] = [
+    it('vial-qmk undefined Modifier Mask keycodes return hex', () => {
+      const notInVialQmk: [string, number][] = [
         ['LCSG(kc)', 0xb00],
         ['LSAG(kc)', 0xe00],
-        ['RCS(kc)', 0x1300],
         ['RCA(kc)', 0x1500],
-        ['RSA(kc)', 0x1600],
         ['RMEH(kc)', 0x1700],
-        ['RSG(kc)', 0x1a00],
         ['RCSG(kc)', 0x1b00],
-        ['RAG(kc)', 0x1c00],
         ['RCAG(kc)', 0x1d00],
         ['RSAG(kc)', 0x1e00],
         ['RHYPR(kc)', 0x1f00],
       ]
-      for (const [, hex] of pipetteOnlyMasks) {
+      for (const [, hex] of notInVialQmk) {
         const withA = hex | 0x04
         expect(serializeForCExport(withA)).toBe(toHex(withA))
       }
     })
 
-    it('Pipette-only Mod-Tap keycodes return hex', () => {
-      const pipetteOnlyModTaps = [
-        'LCSG_T(kc)', 'LSAG_T(kc)',
-        'RCS_T(kc)', 'RCA_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
-        'RCSG_T(kc)', 'RSAG_T(kc)', 'RMEH_T(kc)', 'RALL_T(kc)',
+    it('vial-qmk compilable Modifier Mask keycodes return named format', () => {
+      const inVialQmk: [string, number][] = [
+        ['RCS(kc)', 0x1300],
+        ['RSA(kc)', 0x1600],
+        ['RSG(kc)', 0x1a00],
+        ['RAG(kc)', 0x1c00],
       ]
-      for (const qmkId of pipetteOnlyModTaps) {
+      for (const [name, hex] of inVialQmk) {
+        const withA = hex | 0x04
+        const expected = name.replace('kc', 'KC_A')
+        expect(serializeForCExport(withA)).toBe(expected)
+      }
+    })
+
+    it('vial-qmk undefined Mod-Tap keycodes return hex', () => {
+      const notInVialQmk = [
+        'LCSG_T(kc)', 'LSAG_T(kc)',
+        'RCA_T(kc)', 'RCSG_T(kc)', 'RSAG_T(kc)',
+        'RMEH_T(kc)', 'RALL_T(kc)', 'RCAG_T(kc)',
+      ]
+      for (const qmkId of notInVialQmk) {
         const outerCode = kc[qmkId]
         if (outerCode === undefined) continue
         const withA = outerCode | 0x04
@@ -1441,22 +1451,39 @@ describe('serializeForCExport', () => {
       }
     })
 
-    it('Swap Hands non-masked keycodes return hex', () => {
-      for (const qmkId of ['SH_TOGG', 'SH_TT', 'SH_MON', 'SH_MOFF', 'SH_OFF', 'SH_ON', 'SH_OS']) {
-        const code = kc[qmkId]
-        if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+    it('vial-qmk compilable Mod-Tap keycodes return named format', () => {
+      const inVialQmk = [
+        'RCS_T(kc)', 'RSA_T(kc)', 'RAG_T(kc)', 'RSG_T(kc)',
+      ]
+      for (const qmkId of inVialQmk) {
+        const outerCode = kc[qmkId]
+        if (outerCode === undefined) continue
+        const withA = outerCode | 0x04
+        const expected = qmkId.replace('kc', 'KC_A')
+        expect(serializeForCExport(withA)).toBe(expected)
       }
     })
 
-    it('Swap Hands Tap masked keycode returns hex', () => {
+    it('Swap Hands non-masked keycodes return named format', () => {
+      for (const qmkId of ['SH_TOGG', 'SH_TT', 'SH_MON', 'SH_MOFF', 'SH_OFF', 'SH_ON', 'SH_OS']) {
+        const code = kc[qmkId]
+        if (code === undefined) continue
+        expect(serializeForCExport(code)).toBe(qmkId)
+      }
+    })
+
+    it('Swap Hands Tap masked keycode returns named format', () => {
       const shTBase = kc['SH_T(kc)']
       if (shTBase === undefined) return
       const withA = shTBase | 0x04
-      expect(serializeForCExport(withA)).toBe(toHex(withA))
+      // v5: SH_T(KC_A) collides with SH_MOFF (same code), serialize resolves to SH_MOFF
+      const expected = proto === 6 ? 'SH_T(KC_A)' : 'SH_MOFF'
+      expect(serializeForCExport(withA)).toBe(expected)
     })
 
-    it('Sequencer keycodes return hex', () => {
+    it('Sequencer keycodes return hex when MIDI keycodes not loaded', () => {
+      // SQ_ keycodes are in KEYCODES_MIDI which is empty until createMidiKeycodes() is called.
+      // Without MIDI loaded, SQ_ codes are not in RAWCODES_MAP so serialize falls back to hex.
       for (const qmkId of ['SQ_ON', 'SQ_OFF', 'SQ_TOGG']) {
         const code = kc[qmkId]
         if (code === undefined) continue
@@ -1464,25 +1491,25 @@ describe('serializeForCExport', () => {
       }
     })
 
-    it('LED Matrix keycodes return hex', () => {
+    it('LED Matrix keycodes return named format', () => {
       for (const qmkId of ['LM_ON', 'LM_OFF', 'LM_TOGG']) {
         const code = kc[qmkId]
         if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+        expect(serializeForCExport(code)).toBe(qmkId)
       }
     })
 
-    it('Joystick keycodes return hex', () => {
+    it('Joystick keycodes return named format', () => {
       const code = kc['JS_0']
       if (code === undefined) return
-      expect(serializeForCExport(code)).toBe(toHex(code))
+      expect(serializeForCExport(code)).toBe('JS_0')
     })
 
-    it('Key Override keycodes return hex', () => {
+    it('Key Override keycodes return named format', () => {
       for (const qmkId of ['QK_KEY_OVERRIDE_TOGGLE', 'QK_KEY_OVERRIDE_ON', 'QK_KEY_OVERRIDE_OFF']) {
         const code = kc[qmkId]
         if (code === undefined) continue
-        expect(serializeForCExport(code)).toBe(toHex(code))
+        expect(serializeForCExport(code)).toBe(qmkId)
       }
     })
 
@@ -1505,6 +1532,25 @@ describe('serializeForCExport', () => {
       const lt1a = kc['LT1(kc)'] | kc.KC_A
       expect(serializeForCExport(lt1a)).toBe(serialize(lt1a))
     })
+  })
+
+  it('Sequencer keycodes return named format when MIDI is loaded (v6)', () => {
+    setProtocol(6)
+    recreateKeyboardKeycodes({
+      vialProtocol: 6,
+      layers: 4,
+      macroCount: 0,
+      tapDanceCount: 0,
+      customKeycodes: null,
+      midi: 'advanced',
+      supportedFeatures: new Set(),
+    })
+    const kc6 = keycodesV6.kc
+    for (const qmkId of ['SQ_ON', 'SQ_OFF', 'SQ_TOGG']) {
+      const code = kc6[qmkId]
+      if (code === undefined) continue
+      expect(serializeForCExport(code)).toBe(qmkId)
+    }
   })
 })
 
