@@ -1842,8 +1842,13 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     return content
   }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, t])
 
+  const comboSettings = useMemo(() => {
+    if (!supportedQsids || !qmkSettingsGet || !qmkSettingsSet || !qmkSettingsReset) return undefined
+    return { supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate }
+  }, [supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate])
+
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
-    comboEntries, onOpenCombo,
+    comboEntries, onOpenCombo, comboSettings,
     keyOverrideEntries, onOpenKeyOverride,
     altRepeatKeyEntries, onOpenAltRepeatKey,
   })

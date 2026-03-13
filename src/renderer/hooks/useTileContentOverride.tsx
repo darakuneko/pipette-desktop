@@ -5,10 +5,20 @@ import type { Keycode } from '../../shared/keycodes/keycodes'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../shared/types/protocol'
 import type { MacroAction } from '../../preload/macro'
 import { TdTileGrid, MacroTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepeatKeyTileGrid } from '../components/keycodes/TileGrids'
+import { QmkSettings } from '../components/editors/QmkSettings'
+
+interface ComboSettingsProps {
+  supportedQsids: Set<number>
+  qmkSettingsGet: (qsid: number) => Promise<number[]>
+  qmkSettingsSet: (qsid: number, data: number[]) => Promise<void>
+  qmkSettingsReset: () => Promise<void>
+  onSettingsUpdate?: (qsid: number, data: number[]) => void
+}
 
 interface SettingsTabOptions {
   comboEntries?: ComboEntry[]
   onOpenCombo?: (index?: number) => void
+  comboSettings?: ComboSettingsProps
   keyOverrideEntries?: KeyOverrideEntry[]
   onOpenKeyOverride?: (index?: number) => void
   altRepeatKeyEntries?: AltRepeatKeyEntry[]
@@ -37,7 +47,23 @@ export function useTileContentOverride(
       overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={onSelect} />
     }
     if (settings?.comboEntries?.length && settings.onOpenCombo) {
-      overrides.combo = <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />
+      overrides.combo = (
+        <>
+          <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />
+          {settings.comboSettings && (
+            <div className="mt-4 border-t border-edge pt-4">
+              <QmkSettings
+                tabName="Combo"
+                supportedQsids={settings.comboSettings.supportedQsids}
+                qmkSettingsGet={settings.comboSettings.qmkSettingsGet}
+                qmkSettingsSet={settings.comboSettings.qmkSettingsSet}
+                qmkSettingsReset={settings.comboSettings.qmkSettingsReset}
+                onSettingsUpdate={settings.comboSettings.onSettingsUpdate}
+              />
+            </div>
+          )}
+        </>
+      )
     }
     if (settings?.keyOverrideEntries?.length && settings.onOpenKeyOverride) {
       overrides.keyOverride = <KeyOverrideTileGrid entries={settings.keyOverrideEntries} onOpen={settings.onOpenKeyOverride} />
@@ -46,5 +72,5 @@ export function useTileContentOverride(
       overrides.altRepeatKey = <AltRepeatKeyTileGrid entries={settings.altRepeatKeyEntries} onOpen={settings.onOpenAltRepeatKey} />
     }
     return overrides
-  }, [tapDanceEntries, deserializedMacros, onSelect, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
+  }, [tapDanceEntries, deserializedMacros, onSelect, settings?.comboEntries, settings?.onOpenCombo, settings?.comboSettings, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
 }

@@ -263,6 +263,7 @@ export function App() {
   const hasIntegratedSettings =
     tapHoldSupported || mouseKeysSupported || magicSupported ||
     graveEscapeSupported || autoShiftSupported || oneShotKeysSupported
+  const hasAnySettings = hasIntegratedSettings || comboSettingsSupported
 
   const lightingSupported = !device.isDummy && LIGHTING_TYPES.has(keyboard.definition?.lighting ?? '')
 
@@ -1297,11 +1298,11 @@ export function App() {
             graveEscapeSupported={graveEscapeSupported}
             autoShiftSupported={autoShiftSupported}
             oneShotKeysSupported={oneShotKeysSupported}
-            supportedQsids={hasIntegratedSettings ? keyboard.supportedQsids : undefined}
-            qmkSettingsGet={hasIntegratedSettings ? api.qmkSettingsGet : undefined}
-            qmkSettingsSet={hasIntegratedSettings ? api.qmkSettingsSet : undefined}
-            qmkSettingsReset={hasIntegratedSettings ? api.qmkSettingsReset : undefined}
-            onSettingsUpdate={hasIntegratedSettings ? keyboard.updateQmkSettingsValue : undefined}
+            supportedQsids={hasAnySettings ? keyboard.supportedQsids : undefined}
+            qmkSettingsGet={hasAnySettings ? api.qmkSettingsGet : undefined}
+            qmkSettingsSet={hasAnySettings ? api.qmkSettingsSet : undefined}
+            qmkSettingsReset={hasAnySettings ? api.qmkSettingsReset : undefined}
+            onSettingsUpdate={hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             basicViewType={devicePrefs.basicViewType}
