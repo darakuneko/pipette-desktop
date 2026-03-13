@@ -13,12 +13,16 @@ vi.mock('react-i18next', () => ({
         'editor.combo.title': 'Combo',
         'editor.combo.output': 'Output',
         'editor.combo.timeout': 'Timeout (ms)',
+        'editor.combo.settings': 'Combo Settings',
         'editor.combo.selectEntry': 'Select an entry to edit',
         'common.noEntries': 'No entries',
         'common.notConfigured': 'N/C',
         'common.save': 'Save',
+        'common.undo': 'Undo',
+        'common.reset': 'Reset',
         'common.close': 'Close',
         'common.back': 'Back',
+        'common.loading': 'Loading...',
       }
       if (key === 'editor.combo.key') return `Key ${opts?.number}`
       if (key === 'editor.combo.editTitle') return `Combo - ${opts?.index}`
@@ -56,6 +60,12 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
 
 vi.mock('../FavoriteStoreContent', () => ({
   FavoriteStoreContent: () => <div data-testid="favorite-store-content" />,
+}))
+
+vi.mock('../QmkSettings', () => ({
+  QmkSettings: ({ tabName }: { tabName: string }) => (
+    <div data-testid="qmk-settings" data-tab-name={tabName}>QmkSettings: {tabName}</div>
+  ),
 }))
 
 const makeEntry = (overrides?: Partial<ComboEntry>): ComboEntry => ({
@@ -231,6 +241,41 @@ describe('ComboPanelModal', () => {
     )
     fireEvent.click(screen.getByTestId('combo-modal-backdrop'))
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  describe('Settings: Combo section', () => {
+    const supportedQsids = new Set([2])
+    const qmkSettingsGet = vi.fn().mockResolvedValue([0xc8, 0x00])
+    const qmkSettingsSet = vi.fn().mockResolvedValue(undefined)
+    const qmkSettingsReset = vi.fn().mockResolvedValue(undefined)
+    const onSettingsUpdate = vi.fn()
+
+    it('shows QmkSettings with tabName="Combo" when supportedQsids is provided', () => {
+      render(
+        <ComboPanelModal
+          entries={[makeEntry()]}
+          onSetEntry={onSetEntry}
+          onClose={onClose}
+          supportedQsids={supportedQsids}
+          qmkSettingsGet={qmkSettingsGet}
+          qmkSettingsSet={qmkSettingsSet}
+          qmkSettingsReset={qmkSettingsReset}
+          onSettingsUpdate={onSettingsUpdate}
+        />,
+      )
+      expect(screen.getByText('Combo Settings')).toBeInTheDocument()
+      const settings = screen.getByTestId('qmk-settings')
+      expect(settings).toBeInTheDocument()
+      expect(settings).toHaveAttribute('data-tab-name', 'Combo')
+    })
+
+    it('does not show Settings section when supportedQsids is not provided', () => {
+      render(
+        <ComboPanelModal entries={[makeEntry()]} onSetEntry={onSetEntry} onClose={onClose} />,
+      )
+      expect(screen.queryByText('Combo Settings')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('qmk-settings')).not.toBeInTheDocument()
+    })
   })
 
   it('does not close modal on Escape key', () => {
