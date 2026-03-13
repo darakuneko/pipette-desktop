@@ -14,7 +14,7 @@ vi.mock('react-i18next', () => ({
         'editorSettings.tabLayout': 'Layout',
         'layout.keyboardLayout': 'Layout',
         'editor.autoAdvance': 'Auto Move',
-        'editor.matrixTester.title': 'Key Tester',
+        'editor.keyTester.title': 'Key Tester',
         'settings.security': 'Security',
         'security.lock': 'Lock',
         'statusBar.locked': 'Locked',
