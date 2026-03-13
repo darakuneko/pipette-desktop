@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.layerN': `Layer ${opts?.n ?? ''}`,
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
-        'editor.keymap.dualMode': 'Dual View',
+        'editor.keymap.splitEdit': 'Split Edit',
         'editor.keymap.copyLayer': 'Copy Layer',
         'editor.keymap.copyLayerConfirm': 'Confirm Copy Layer?',
         'editor.keymap.clickToPaste': 'Click a key to paste',
@@ -83,7 +83,7 @@ const makeLayout = () => ({
 describe('KeymapEditor — multi-select & copy', () => {
   const onSetKey = vi.fn().mockResolvedValue(undefined)
   const onSetKeysBulk = vi.fn().mockResolvedValue(undefined)
-  const onDualModeChange = vi.fn()
+  const onSplitEditChange = vi.fn()
   const onActivePaneChange = vi.fn()
 
   const defaultProps = {
@@ -106,9 +106,9 @@ describe('KeymapEditor — multi-select & copy', () => {
     onSetKey,
     onSetKeysBulk,
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
-    onDualModeChange,
+    onSplitEditChange,
     onActivePaneChange,
-    dualMode: true,
+    splitEdit: true,
     activePane: 'primary' as const,
     primaryLayer: 0,
     secondaryLayer: 1,
@@ -121,12 +121,12 @@ describe('KeymapEditor — multi-select & copy', () => {
 
   function getActiveOnKeyClick() {
     // Get the onKeyClick from the active pane's KeyboardWidget
-    // In primary-active dual mode, the first widget gets the click handler
+    // In primary-active split edit, the first widget gets the click handler
     const widget = capturedWidgetProps.find((p) => p.onKeyClick != null)
     return widget?.onKeyClick as ((key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void) | undefined
   }
 
-  it('adds key to multiSelectedKeys on Ctrl+click in dual mode', () => {
+  it('adds key to multiSelectedKeys on Ctrl+click in split edit', () => {
     render(<KeymapEditor {...defaultProps} />)
     const onKeyClick = getActiveOnKeyClick()!
     expect(onKeyClick).toBeDefined()
@@ -252,7 +252,7 @@ describe('KeymapEditor — multi-select & copy', () => {
     }
   })
 
-  it('clears multiSelectedKeys when dualMode turns off', () => {
+  it('clears multiSelectedKeys when splitEdit turns off', () => {
     const { rerender } = render(<KeymapEditor {...defaultProps} />)
     const onKeyClick = getActiveOnKeyClick()!
 
@@ -261,21 +261,21 @@ describe('KeymapEditor — multi-select & copy', () => {
     })
 
     capturedWidgetProps = []
-    rerender(<KeymapEditor {...defaultProps} dualMode={false} />)
+    rerender(<KeymapEditor {...defaultProps} splitEdit={false} />)
 
     const lastWidget = capturedWidgetProps[capturedWidgetProps.length - 1]
     const ms = lastWidget?.multiSelectedKeys as Set<string> | undefined
     expect(ms?.size ?? 0).toBe(0)
   })
 
-  it('shows Copy Layer button in dual mode active pane', () => {
+  it('shows Copy Layer button in split edit active pane', () => {
     render(<KeymapEditor {...defaultProps} />)
     expect(screen.getByTestId('copy-layer-button')).toBeInTheDocument()
     expect(screen.getByTestId('copy-layer-button')).toHaveTextContent('Copy Layer')
   })
 
-  it('does not show Copy Layer button when not in dual mode', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={false} />)
+  it('does not show Copy Layer button when not in split edit', () => {
+    render(<KeymapEditor {...defaultProps} splitEdit={false} />)
     expect(screen.queryByTestId('copy-layer-button')).not.toBeInTheDocument()
   })
 

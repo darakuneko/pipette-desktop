@@ -387,15 +387,15 @@ async function captureSidebarTools(page: Page): Promise<void> {
 
   await captureNamed(page, 'toolbar', { fullPage: true })
 
-  const dualModeBtn = page.locator('[data-testid="dual-mode-button"]')
-  if (await isAvailable(dualModeBtn)) {
-    await dualModeBtn.click()
+  const splitEditBtn = page.locator('[data-testid="split-edit-button"]')
+  if (await isAvailable(splitEditBtn)) {
+    await splitEditBtn.click()
     await page.waitForTimeout(500)
-    await captureNamed(page, 'dual-mode', { fullPage: true })
-    await dualModeBtn.click()
+    await captureNamed(page, 'split-edit', { fullPage: true })
+    await splitEditBtn.click()
     await page.waitForTimeout(500)
   } else {
-    console.log('  [skip] dual-mode-button not found')
+    console.log('  [skip] split-edit-button not found')
   }
 
   const zoomInBtn = page.locator('[data-testid="zoom-in-button"]')
@@ -906,7 +906,7 @@ async function main(): Promise<void> {
     await captureKeymapEditor(page)          // 03
     await captureLayerNavigation(page)       // 04-06
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
-    await captureSidebarTools(page)          // toolbar, dual-mode, zoom, typing-test
+    await captureSidebarTools(page)          // toolbar, split-edit, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
     await captureEditorSettings(page)        // editor-settings-save
     await captureOverlayPanel(page)          // overlay-tools, overlay-save
