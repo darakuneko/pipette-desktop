@@ -52,14 +52,7 @@ export function useTileContentOverride(
           <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />
           {settings.comboSettings && (
             <div className="mt-4 border-t border-edge pt-4">
-              <QmkSettings
-                tabName="Combo"
-                supportedQsids={settings.comboSettings.supportedQsids}
-                qmkSettingsGet={settings.comboSettings.qmkSettingsGet}
-                qmkSettingsSet={settings.comboSettings.qmkSettingsSet}
-                qmkSettingsReset={settings.comboSettings.qmkSettingsReset}
-                onSettingsUpdate={settings.comboSettings.onSettingsUpdate}
-              />
+              <QmkSettings tabName="Combo" {...settings.comboSettings} />
             </div>
           )}
         </>
