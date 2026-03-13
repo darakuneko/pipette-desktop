@@ -1804,7 +1804,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
 
     const buttonDefs = [
       { tab: 'tapDance', key: 'tapHold', label: t('editor.keymap.tapHoldLabel'), onClick: () => setShowTapHoldSettings(true), testId: 'tap-hold-settings-btn', enabled: tapHoldSupported },
-      { tab: 'media', key: 'mouseKeys', label: t('editor.keymap.mouseKeysLabel'), onClick: () => setShowMouseKeysSettings(true), testId: 'mouse-keys-settings-btn', enabled: mouseKeysSupported },
+      { tab: 'system', key: 'mouseKeys', label: t('editor.keymap.mouseKeysLabel'), onClick: () => setShowMouseKeysSettings(true), testId: 'mouse-keys-settings-btn', enabled: mouseKeysSupported },
       { tab: 'modifiers', key: 'graveEscape', label: t('editor.keymap.graveEscapeLabel'), onClick: () => setShowGraveEscapeSettings(true), testId: 'grave-escape-settings-btn', enabled: graveEscapeSupported },
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => setShowOneShotKeysSettings(true), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'quantum', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => setShowMagicSettings(true), testId: 'magic-settings-btn', enabled: magicSupported },

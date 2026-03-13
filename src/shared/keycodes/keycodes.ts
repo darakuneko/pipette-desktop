@@ -887,7 +887,7 @@ export const KEYCODES_LIGHTING: Keycode[] = [
   ...KEYCODES_LIGHTING_LED_MATRIX,
 ]
 
-export const KEYCODES_MEDIA_FKEYS: Keycode[] = [
+export const KEYCODES_SYSTEM_FKEYS: Keycode[] = [
   K('KC_F13', 'F13'),
   K('KC_F14', 'F14'),
   K('KC_F15', 'F15'),
@@ -902,7 +902,7 @@ export const KEYCODES_MEDIA_FKEYS: Keycode[] = [
   K('KC_F24', 'F24'),
 ]
 
-export const KEYCODES_MEDIA_SYSTEM: Keycode[] = [
+export const KEYCODES_SYSTEM_CONTROL: Keycode[] = [
   K('KC_PWR', 'Power', 'System Power Down', { alias: ['KC_SYSTEM_POWER'] }),
   K('KC_SLEP', 'Sleep', 'System Sleep', { alias: ['KC_SYSTEM_SLEEP'] }),
   K('KC_WAKE', 'Wake', 'System Wake', { alias: ['KC_SYSTEM_WAKE'] }),
@@ -918,7 +918,7 @@ export const KEYCODES_MEDIA_SYSTEM: Keycode[] = [
   K('KC_FIND', 'Find'),
 ]
 
-export const KEYCODES_MEDIA_APP: Keycode[] = [
+export const KEYCODES_SYSTEM_APP: Keycode[] = [
   K('KC_CALC', 'Calc', 'Launch Calculator (Windows)', { alias: ['KC_CALCULATOR'] }),
   K('KC_MAIL', 'Mail', 'Launch Mail (Windows)'),
   K('KC_MSEL', 'Media\nPlayer', 'Launch Media Player (Windows)', {
@@ -946,7 +946,7 @@ export const KEYCODES_MEDIA_APP: Keycode[] = [
   }),
 ]
 
-export const KEYCODES_MEDIA_PLAYBACK: Keycode[] = [
+export const KEYCODES_SYSTEM_PLAYBACK: Keycode[] = [
   K('KC_MPRV', 'Media\nPrev', 'Previous Track', { alias: ['KC_MEDIA_PREV_TRACK'] }),
   K('KC_MNXT', 'Media\nNext', 'Next Track', { alias: ['KC_MEDIA_NEXT_TRACK'] }),
   K('KC_MUTE', 'Mute', 'Mute Audio', { alias: ['KC_AUDIO_MUTE'] }),
@@ -965,7 +965,7 @@ export const KEYCODES_MEDIA_PLAYBACK: Keycode[] = [
   K('KC_EJCT', 'Eject', 'Eject (macOS)', { alias: ['KC_MEDIA_EJECT'] }),
 ]
 
-export const KEYCODES_MEDIA_MOUSE: Keycode[] = [
+export const KEYCODES_SYSTEM_MOUSE: Keycode[] = [
   K('KC_MS_U', 'Mouse\nUp', 'Mouse Cursor Up', { alias: ['KC_MS_UP'] }),
   K('KC_MS_D', 'Mouse\nDown', 'Mouse Cursor Down', { alias: ['KC_MS_DOWN'] }),
   K('KC_MS_L', 'Mouse\nLeft', 'Mouse Cursor Left', { alias: ['KC_MS_LEFT'] }),
@@ -990,24 +990,24 @@ export const KEYCODES_MEDIA_MOUSE: Keycode[] = [
   }),
 ]
 
-export const KEYCODES_MEDIA_LOCK: Keycode[] = [
+export const KEYCODES_SYSTEM_LOCK: Keycode[] = [
   K('KC_LCAP', 'Locking\nCaps', 'Locking Caps Lock', { alias: ['KC_LOCKING_CAPS'] }),
   K('KC_LNUM', 'Locking\nNum', 'Locking Num Lock', { alias: ['KC_LOCKING_NUM'] }),
   K('KC_LSCR', 'Locking\nScroll', 'Locking Scroll Lock', { alias: ['KC_LOCKING_SCROLL'] }),
 ]
 
-export const KEYCODES_MEDIA_JOYSTICK: Keycode[] = Array.from({ length: 32 }, (_, i) =>
+export const KEYCODES_SYSTEM_JOYSTICK: Keycode[] = Array.from({ length: 32 }, (_, i) =>
   K(`JS_${i}`, `JS\n${i}`, `Joystick button ${i}`),
 )
 
-export const KEYCODES_MEDIA: Keycode[] = [
-  ...KEYCODES_MEDIA_FKEYS,
-  ...KEYCODES_MEDIA_SYSTEM,
-  ...KEYCODES_MEDIA_APP,
-  ...KEYCODES_MEDIA_PLAYBACK,
-  ...KEYCODES_MEDIA_MOUSE,
-  ...KEYCODES_MEDIA_LOCK,
-  ...KEYCODES_MEDIA_JOYSTICK,
+export const KEYCODES_SYSTEM: Keycode[] = [
+  ...KEYCODES_SYSTEM_FKEYS,
+  ...KEYCODES_SYSTEM_CONTROL,
+  ...KEYCODES_SYSTEM_APP,
+  ...KEYCODES_SYSTEM_PLAYBACK,
+  ...KEYCODES_SYSTEM_MOUSE,
+  ...KEYCODES_SYSTEM_LOCK,
+  ...KEYCODES_SYSTEM_JOYSTICK,
 ]
 
 export let KEYCODES_TAP_DANCE: Keycode[] = []
@@ -1688,7 +1688,7 @@ function buildAnyKeycodeNames(): Map<string, number> {
     ...KEYCODES_LANGUAGE,
     ...KEYCODES_JIS,
     ...KEYCODES_LIGHTING,
-    ...KEYCODES_MEDIA,
+    ...KEYCODES_SYSTEM,
     ...KEYCODES_USER,
   ]) {
     for (const alias of kc.alias) {
@@ -1913,7 +1913,7 @@ export function recreateKeycodes(): void {
     ...KEYCODES_MODIFIERS,
     ...KEYCODES_QUANTUM,
     ...KEYCODES_LIGHTING,
-    ...KEYCODES_MEDIA,
+    ...KEYCODES_SYSTEM,
     ...KEYCODES_TAP_DANCE,
     ...KEYCODES_MACRO,
     ...KEYCODES_USER,
