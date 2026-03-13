@@ -15,10 +15,13 @@ export interface KeycodeOptions {
   recorderAlias?: string[]
   alias?: string[]
   requiresFeature?: string
+  /** Preferred name for keymap.c export (standard QMK name). Falls back to qmkId. */
+  cExportId?: string
 }
 
 export class Keycode {
   readonly qmkId: string
+  readonly cExportId: string | undefined
   readonly label: string
   readonly tooltip: string | undefined
   readonly masked: boolean
@@ -29,6 +32,7 @@ export class Keycode {
 
   constructor(opts: KeycodeOptions) {
     this.qmkId = opts.qmkId
+    this.cExportId = opts.cExportId
     this.label = opts.label
     this.tooltip = opts.tooltip
     this.masked = opts.masked ?? false
@@ -81,6 +85,7 @@ function K(
         recorderAlias?: string[]
         alias?: string[]
         requiresFeature?: string
+        cExportId?: string
       },
   opts?: {
     masked?: boolean
@@ -88,6 +93,7 @@ function K(
     recorderAlias?: string[]
     alias?: string[]
     requiresFeature?: string
+    cExportId?: string
   },
 ): Keycode {
   if (typeof tooltipOrOpts === 'string') {
@@ -146,21 +152,22 @@ export const KEYCODES_BASIC_NUMBERS: Keycode[] = [
 ]
 
 export const KEYCODES_BASIC_SYMBOLS: Keycode[] = [
-  K('KC_MINUS', '_\n-', { printable: '-', recorderAlias: ['-'], alias: ['KC_MINS'] }),
-  K('KC_EQUAL', '+\n=', { printable: '=', recorderAlias: ['='], alias: ['KC_EQL'] }),
-  K('KC_LBRACKET', '{\n[', { printable: '[', recorderAlias: ['['], alias: ['KC_LBRC'] }),
-  K('KC_RBRACKET', '}\n]', { printable: ']', recorderAlias: [']'], alias: ['KC_RBRC'] }),
-  K('KC_BSLASH', '|\n\\', { printable: '\\', recorderAlias: ['\\'], alias: ['KC_BSLS'] }),
-  K('KC_SCOLON', ':\n;', { printable: ';', recorderAlias: [';'], alias: ['KC_SCLN'] }),
-  K('KC_QUOTE', '"\n\'', { printable: "'", recorderAlias: ["'"], alias: ['KC_QUOT'] }),
+  K('KC_MINUS', '_\n-', { printable: '-', recorderAlias: ['-'], alias: ['KC_MINS'], cExportId: 'KC_MINS' }),
+  K('KC_EQUAL', '+\n=', { printable: '=', recorderAlias: ['='], alias: ['KC_EQL'], cExportId: 'KC_EQL' }),
+  K('KC_LBRACKET', '{\n[', { printable: '[', recorderAlias: ['['], alias: ['KC_LBRC'], cExportId: 'KC_LBRC' }),
+  K('KC_RBRACKET', '}\n]', { printable: ']', recorderAlias: [']'], alias: ['KC_RBRC'], cExportId: 'KC_RBRC' }),
+  K('KC_BSLASH', '|\n\\', { printable: '\\', recorderAlias: ['\\'], alias: ['KC_BSLS'], cExportId: 'KC_BSLS' }),
+  K('KC_SCOLON', ':\n;', { printable: ';', recorderAlias: [';'], alias: ['KC_SCLN'], cExportId: 'KC_SCLN' }),
+  K('KC_QUOTE', '"\n\'', { printable: "'", recorderAlias: ["'"], alias: ['KC_QUOT'], cExportId: 'KC_QUOT' }),
   K('KC_GRAVE', '~\n`', {
     printable: '`',
     recorderAlias: ['`'],
     alias: ['KC_GRV', 'KC_ZKHK'],
+    cExportId: 'KC_GRV',
   }),
-  K('KC_COMMA', '<\n,', { printable: ',', recorderAlias: [','], alias: ['KC_COMM'] }),
+  K('KC_COMMA', '<\n,', { printable: ',', recorderAlias: [','], alias: ['KC_COMM'], cExportId: 'KC_COMM' }),
   K('KC_DOT', '>\n.', { printable: '.', recorderAlias: ['.'] }),
-  K('KC_SLASH', '?\n/', { printable: '/', recorderAlias: ['/'], alias: ['KC_SLSH'] }),
+  K('KC_SLASH', '?\n/', { printable: '/', recorderAlias: ['/'], alias: ['KC_SLSH'], cExportId: 'KC_SLSH' }),
 ]
 
 export const KEYCODES_BASIC_CHARACTERS: Keycode[] = [
@@ -170,21 +177,22 @@ export const KEYCODES_BASIC_CHARACTERS: Keycode[] = [
 ]
 
 export const KEYCODES_BASIC_EDITING: Keycode[] = [
-  K('KC_ENTER', 'Enter', { recorderAlias: ['enter'], alias: ['KC_ENT'] }),
-  K('KC_SPACE', 'Space', { recorderAlias: ['space'], alias: ['KC_SPC'] }),
+  K('KC_ENTER', 'Enter', { recorderAlias: ['enter'], alias: ['KC_ENT'], cExportId: 'KC_ENT' }),
+  K('KC_SPACE', 'Space', { recorderAlias: ['space'], alias: ['KC_SPC'], cExportId: 'KC_SPC' }),
   K('KC_TAB', 'Tab', { recorderAlias: ['tab'] }),
-  K('KC_BSPACE', 'Bksp', { recorderAlias: ['backspace'], alias: ['KC_BSPC'] }),
-  K('KC_ESCAPE', 'Esc', { recorderAlias: ['esc'], alias: ['KC_ESC'] }),
+  K('KC_BSPACE', 'Bksp', { recorderAlias: ['backspace'], alias: ['KC_BSPC'], cExportId: 'KC_BSPC' }),
+  K('KC_ESCAPE', 'Esc', { recorderAlias: ['esc'], alias: ['KC_ESC'], cExportId: 'KC_ESC' }),
 ]
 
 export const KEYCODES_BASIC_MODS: Keycode[] = [
   K('KC_LSHIFT', 'LShift', {
     recorderAlias: ['left shift', 'shift'],
     alias: ['KC_LSFT'],
+    cExportId: 'KC_LSFT',
   }),
-  K('KC_RSHIFT', 'RShift', { recorderAlias: ['right shift'], alias: ['KC_RSFT'] }),
-  K('KC_LCTRL', 'LCtrl', { recorderAlias: ['left ctrl', 'ctrl'], alias: ['KC_LCTL'] }),
-  K('KC_RCTRL', 'RCtrl', { recorderAlias: ['right ctrl'], alias: ['KC_RCTL'] }),
+  K('KC_RSHIFT', 'RShift', { recorderAlias: ['right shift'], alias: ['KC_RSFT'], cExportId: 'KC_RSFT' }),
+  K('KC_LCTRL', 'LCtrl', { recorderAlias: ['left ctrl', 'ctrl'], alias: ['KC_LCTL'], cExportId: 'KC_LCTL' }),
+  K('KC_RCTRL', 'RCtrl', { recorderAlias: ['right ctrl'], alias: ['KC_RCTL'], cExportId: 'KC_RCTL' }),
   K('KC_LALT', 'LAlt', { recorderAlias: ['alt'], alias: ['KC_LOPT'] }),
   K('KC_RALT', 'RAlt', { alias: ['KC_ALGR', 'KC_ROPT'] }),
   K('KC_LGUI', 'LGui', {
@@ -198,6 +206,7 @@ export const KEYCODES_BASIC_MODS: Keycode[] = [
   K('KC_APPLICATION', 'Menu', {
     recorderAlias: ['menu', 'left menu', 'right menu'],
     alias: ['KC_APP'],
+    cExportId: 'KC_APP',
   }),
 ]
 
@@ -205,13 +214,13 @@ export const KEYCODES_BASIC_NAV: Keycode[] = [
   K('KC_UP', 'Up', { recorderAlias: ['up'] }),
   K('KC_DOWN', 'Down', { recorderAlias: ['down'] }),
   K('KC_LEFT', 'Left', { recorderAlias: ['left'] }),
-  K('KC_RIGHT', 'Right', { recorderAlias: ['right'], alias: ['KC_RGHT'] }),
+  K('KC_RIGHT', 'Right', { recorderAlias: ['right'], alias: ['KC_RGHT'], cExportId: 'KC_RGHT' }),
   K('KC_HOME', 'Home', { recorderAlias: ['home'] }),
   K('KC_END', 'End', { recorderAlias: ['end'] }),
   K('KC_PGUP', 'Page\nUp', { recorderAlias: ['page up'] }),
-  K('KC_PGDOWN', 'Page\nDown', { recorderAlias: ['page down'], alias: ['KC_PGDN'] }),
-  K('KC_INSERT', 'Insert', { recorderAlias: ['insert'], alias: ['KC_INS'] }),
-  K('KC_DELETE', 'Del', { recorderAlias: ['delete'], alias: ['KC_DEL'] }),
+  K('KC_PGDOWN', 'Page\nDown', { recorderAlias: ['page down'], alias: ['KC_PGDN'], cExportId: 'KC_PGDN' }),
+  K('KC_INSERT', 'Insert', { recorderAlias: ['insert'], alias: ['KC_INS'], cExportId: 'KC_INS' }),
+  K('KC_DELETE', 'Del', { recorderAlias: ['delete'], alias: ['KC_DEL'], cExportId: 'KC_DEL' }),
 ]
 
 export const KEYCODES_BASIC_FUNCTION: Keycode[] = [
@@ -233,40 +242,43 @@ export const KEYCODES_BASIC_LOCK: Keycode[] = [
   K('KC_CAPSLOCK', 'Caps\nLock', {
     recorderAlias: ['caps lock'],
     alias: ['KC_CLCK', 'KC_CAPS'],
+    cExportId: 'KC_CAPS',
   }),
-  K('KC_NUMLOCK', 'Num\nLock', { recorderAlias: ['num lock'], alias: ['KC_NLCK'] }),
+  K('KC_NUMLOCK', 'Num\nLock', { recorderAlias: ['num lock'], alias: ['KC_NLCK'], cExportId: 'KC_NUM' }),
   K('KC_SCROLLLOCK', 'Scroll\nLock', {
     recorderAlias: ['scroll lock'],
     alias: ['KC_SLCK', 'KC_BRMD'],
+    cExportId: 'KC_SCRL',
   }),
 ]
 
 export const KEYCODES_BASIC_NUMPAD: Keycode[] = [
-  K('KC_KP_1', '1', { alias: ['KC_P1'] }),
-  K('KC_KP_2', '2', { alias: ['KC_P2'] }),
-  K('KC_KP_3', '3', { alias: ['KC_P3'] }),
-  K('KC_KP_4', '4', { alias: ['KC_P4'] }),
-  K('KC_KP_5', '5', { alias: ['KC_P5'] }),
-  K('KC_KP_6', '6', { alias: ['KC_P6'] }),
-  K('KC_KP_7', '7', { alias: ['KC_P7'] }),
-  K('KC_KP_8', '8', { alias: ['KC_P8'] }),
-  K('KC_KP_9', '9', { alias: ['KC_P9'] }),
-  K('KC_KP_0', '0', { alias: ['KC_P0'] }),
-  K('KC_KP_DOT', '.', { alias: ['KC_PDOT'] }),
-  K('KC_KP_PLUS', '+', { alias: ['KC_PPLS'] }),
-  K('KC_KP_MINUS', '-', { alias: ['KC_PMNS'] }),
-  K('KC_KP_ASTERISK', '*', { alias: ['KC_PAST'] }),
-  K('KC_KP_SLASH', '/', { alias: ['KC_PSLS'] }),
-  K('KC_KP_EQUAL', '=', { alias: ['KC_PEQL'] }),
-  K('KC_KP_COMMA', ',', { alias: ['KC_PCMM'] }),
-  K('KC_KP_ENTER', 'Num\nEnter', { alias: ['KC_PENT'] }),
+  K('KC_KP_1', '1', { alias: ['KC_P1'], cExportId: 'KC_P1' }),
+  K('KC_KP_2', '2', { alias: ['KC_P2'], cExportId: 'KC_P2' }),
+  K('KC_KP_3', '3', { alias: ['KC_P3'], cExportId: 'KC_P3' }),
+  K('KC_KP_4', '4', { alias: ['KC_P4'], cExportId: 'KC_P4' }),
+  K('KC_KP_5', '5', { alias: ['KC_P5'], cExportId: 'KC_P5' }),
+  K('KC_KP_6', '6', { alias: ['KC_P6'], cExportId: 'KC_P6' }),
+  K('KC_KP_7', '7', { alias: ['KC_P7'], cExportId: 'KC_P7' }),
+  K('KC_KP_8', '8', { alias: ['KC_P8'], cExportId: 'KC_P8' }),
+  K('KC_KP_9', '9', { alias: ['KC_P9'], cExportId: 'KC_P9' }),
+  K('KC_KP_0', '0', { alias: ['KC_P0'], cExportId: 'KC_P0' }),
+  K('KC_KP_DOT', '.', { alias: ['KC_PDOT'], cExportId: 'KC_PDOT' }),
+  K('KC_KP_PLUS', '+', { alias: ['KC_PPLS'], cExportId: 'KC_PPLS' }),
+  K('KC_KP_MINUS', '-', { alias: ['KC_PMNS'], cExportId: 'KC_PMNS' }),
+  K('KC_KP_ASTERISK', '*', { alias: ['KC_PAST'], cExportId: 'KC_PAST' }),
+  K('KC_KP_SLASH', '/', { alias: ['KC_PSLS'], cExportId: 'KC_PSLS' }),
+  K('KC_KP_EQUAL', '=', { alias: ['KC_PEQL'], cExportId: 'KC_PEQL' }),
+  K('KC_KP_COMMA', ',', { alias: ['KC_PCMM'], cExportId: 'KC_PCMM' }),
+  K('KC_KP_ENTER', 'Num\nEnter', { alias: ['KC_PENT'], cExportId: 'KC_PENT' }),
 ]
 
 export const KEYCODES_BASIC_SYSTEM: Keycode[] = [
-  K('KC_PSCREEN', 'Print\nScreen', { alias: ['KC_PSCR'] }),
+  K('KC_PSCREEN', 'Print\nScreen', { alias: ['KC_PSCR'], cExportId: 'KC_PSCR' }),
   K('KC_PAUSE', 'Pause', {
     recorderAlias: ['pause', 'break'],
     alias: ['KC_PAUS', 'KC_BRK', 'KC_BRMU'],
+    cExportId: 'KC_PAUS',
   }),
 ]
 
@@ -306,18 +318,19 @@ export const KEYCODES_SHIFTED: Keycode[] = [
 ]
 
 export const KEYCODES_ISO: Keycode[] = [
-  K('KC_NONUS_HASH', '~\n#', 'Non-US # and ~', { alias: ['KC_NUHS'] }),
-  K('KC_NONUS_BSLASH', '|\n\\', 'Non-US \\ and |', { alias: ['KC_NUBS'] }),
+  K('KC_NONUS_HASH', '~\n#', 'Non-US # and ~', { alias: ['KC_NUHS'], cExportId: 'KC_NUHS' }),
+  K('KC_NONUS_BSLASH', '|\n\\', 'Non-US \\ and |', { alias: ['KC_NUBS'], cExportId: 'KC_NUBS' }),
 ]
 
 export const KEYCODES_JIS: Keycode[] = [
-  K('KC_RO', '_\n\\', 'JIS \\ and _', { alias: ['KC_INT1'] }),
+  K('KC_RO', '_\n\\', 'JIS \\ and _', { alias: ['KC_INT1'], cExportId: 'KC_INT1' }),
   K('KC_KANA', '\u30AB\u30BF\u30AB\u30CA\n\u3072\u3089\u304C\u306A', 'JIS Katakana/Hiragana', {
     alias: ['KC_INT2'],
+    cExportId: 'KC_INT2',
   }),
-  K('KC_JYEN', '|\n\u00A5', { alias: ['KC_INT3'] }),
-  K('KC_HENK', '\u5909\u63DB', 'JIS Henkan', { alias: ['KC_INT4'] }),
-  K('KC_MHEN', '\u7121\u5909\u63DB', 'JIS Muhenkan', { alias: ['KC_INT5'] }),
+  K('KC_JYEN', '|\n\u00A5', { alias: ['KC_INT3'], cExportId: 'KC_INT3' }),
+  K('KC_HENK', '\u5909\u63DB', 'JIS Henkan', { alias: ['KC_INT4'], cExportId: 'KC_INT4' }),
+  K('KC_MHEN', '\u7121\u5909\u63DB', 'JIS Muhenkan', { alias: ['KC_INT5'], cExportId: 'KC_INT5' }),
 ]
 
 export const KEYCODES_INTERNATIONAL: Keycode[] = [
@@ -329,11 +342,11 @@ export const KEYCODES_INTERNATIONAL: Keycode[] = [
 ]
 
 export const KEYCODES_LANGUAGE: Keycode[] = [
-  K('KC_LANG1', 'LANG1', 'Language 1', { alias: ['KC_LNG1', 'KC_HAEN'] }),
-  K('KC_LANG2', 'LANG2', 'Language 2', { alias: ['KC_LNG2', 'KC_HANJ'] }),
-  K('KC_LANG3', 'LANG3', 'Language 3', { alias: ['KC_LNG3'] }),
-  K('KC_LANG4', 'LANG4', 'Language 4', { alias: ['KC_LNG4'] }),
-  K('KC_LANG5', 'LANG5', 'Language 5', { alias: ['KC_LNG5'] }),
+  K('KC_LANG1', 'LANG1', 'Language 1', { alias: ['KC_LNG1', 'KC_HAEN'], cExportId: 'KC_LNG1' }),
+  K('KC_LANG2', 'LANG2', 'Language 2', { alias: ['KC_LNG2', 'KC_HANJ'], cExportId: 'KC_LNG2' }),
+  K('KC_LANG3', 'LANG3', 'Language 3', { alias: ['KC_LNG3'], cExportId: 'KC_LNG3' }),
+  K('KC_LANG4', 'LANG4', 'Language 4', { alias: ['KC_LNG4'], cExportId: 'KC_LNG4' }),
+  K('KC_LANG5', 'LANG5', 'Language 5', { alias: ['KC_LNG5'], cExportId: 'KC_LNG5' }),
 ]
 
 export let KEYCODES_LAYERS: Keycode[] = []
@@ -354,7 +367,7 @@ export const KEYCODES_BOOT: Keycode[] = [
   K('QK_BOOT', 'Boot-\nloader', 'Put the keyboard into bootloader mode for flashing', {
     alias: ['RESET'],
   }),
-  K('QK_REBOOT', 'Reboot', 'Reboots the keyboard. Does not load the bootloader'),
+  K('QK_REBOOT', 'Reboot', 'Reboots the keyboard. Does not load the bootloader', { cExportId: 'QK_RBT' }),
   K(
     'QK_CLEAR_EEPROM',
     'Clear\nEEPROM',
@@ -558,14 +571,14 @@ export const KEYCODES_MOD_TAP: Keycode[] = [
 ]
 
 export const KEYCODES_MOD_SPECIAL: Keycode[] = [
-  K('KC_GESC', '~\nEsc', 'Esc normally, but ~ when Shift or GUI is pressed'),
-  K('KC_LSPO', 'LS\n(', 'Left Shift when held, ( when tapped'),
-  K('KC_RSPC', 'RS\n)', 'Right Shift when held, ) when tapped'),
-  K('KC_LCPO', 'LC\n(', 'Left Control when held, ( when tapped'),
-  K('KC_RCPC', 'RC\n)', 'Right Control when held, ) when tapped'),
-  K('KC_LAPO', 'LA\n(', 'Left Alt when held, ( when tapped'),
-  K('KC_RAPC', 'RA\n)', 'Right Alt when held, ) when tapped'),
-  K('KC_SFTENT', 'RS\nEnter', 'Right Shift when held, Enter when tapped'),
+  K('KC_GESC', '~\nEsc', 'Esc normally, but ~ when Shift or GUI is pressed', { cExportId: 'QK_GESC' }),
+  K('KC_LSPO', 'LS\n(', 'Left Shift when held, ( when tapped', { cExportId: 'SC_LSPO' }),
+  K('KC_RSPC', 'RS\n)', 'Right Shift when held, ) when tapped', { cExportId: 'SC_RSPC' }),
+  K('KC_LCPO', 'LC\n(', 'Left Control when held, ( when tapped', { cExportId: 'SC_LCPO' }),
+  K('KC_RCPC', 'RC\n)', 'Right Control when held, ) when tapped', { cExportId: 'SC_RCPC' }),
+  K('KC_LAPO', 'LA\n(', 'Left Alt when held, ( when tapped', { cExportId: 'SC_LAPO' }),
+  K('KC_RAPC', 'RA\n)', 'Right Alt when held, ) when tapped', { cExportId: 'SC_RAPC' }),
+  K('KC_SFTENT', 'RS\nEnter', 'Right Shift when held, Enter when tapped', { cExportId: 'SC_SENT' }),
 ]
 
 export const KEYCODES_MODIFIERS: Keycode[] = [
@@ -614,180 +627,181 @@ export function getAvailableLMMods(): Keycode[] {
 
 export const KEYCODES_BEHAVIOR_MAGIC: Keycode[] = [
   K('MAGIC_SWAP_CONTROL_CAPSLOCK', 'Swap\nCtrl\nCaps', 'Swap Caps Lock and Left Control', {
-    alias: ['CL_SWAP'],
+    alias: ['CL_SWAP'], cExportId: 'CL_SWAP',
   }),
   K(
     'MAGIC_UNSWAP_CONTROL_CAPSLOCK',
     'Unswap\nCtrl\nCaps',
     'Unswap Caps Lock and Left Control',
-    { alias: ['CL_NORM'] },
+    { alias: ['CL_NORM'], cExportId: 'CL_NORM' },
   ),
   K('MAGIC_CAPSLOCK_TO_CONTROL', 'Caps\nto\nCtrl', 'Treat Caps Lock as Control', {
-    alias: ['CL_CTRL'],
+    alias: ['CL_CTRL'], cExportId: 'CL_CTRL',
   }),
   K(
     'MAGIC_UNCAPSLOCK_TO_CONTROL',
     'Caps\nnot to\nCtrl',
     'Stop treating Caps Lock as Control',
-    { alias: ['CL_CAPS'] },
+    { alias: ['CL_CAPS'], cExportId: 'CL_CAPS' },
   ),
   K('MAGIC_SWAP_LCTL_LGUI', 'Swap\nLCtl\nLGui', 'Swap Left Control and GUI', {
-    alias: ['LCG_SWP'],
+    alias: ['LCG_SWP'], cExportId: 'CG_LSWP',
   }),
   K('MAGIC_UNSWAP_LCTL_LGUI', 'Unswap\nLCtl\nLGui', 'Unswap Left Control and GUI', {
-    alias: ['LCG_NRM'],
+    alias: ['LCG_NRM'], cExportId: 'CG_LNRM',
   }),
   K('MAGIC_SWAP_RCTL_RGUI', 'Swap\nRCtl\nRGui', 'Swap Right Control and GUI', {
-    alias: ['RCG_SWP'],
+    alias: ['RCG_SWP'], cExportId: 'CG_RSWP',
   }),
   K('MAGIC_UNSWAP_RCTL_RGUI', 'Unswap\nRCtl\nRGui', 'Unswap Right Control and GUI', {
-    alias: ['RCG_NRM'],
+    alias: ['RCG_NRM'], cExportId: 'CG_RNRM',
   }),
   K('MAGIC_SWAP_CTL_GUI', 'Swap\nCtl\nGui', 'Swap Control and GUI on both sides', {
-    alias: ['CG_SWAP'],
+    alias: ['CG_SWAP'], cExportId: 'CG_SWAP',
   }),
   K('MAGIC_UNSWAP_CTL_GUI', 'Unswap\nCtl\nGui', 'Unswap Control and GUI on both sides', {
-    alias: ['CG_NORM'],
+    alias: ['CG_NORM'], cExportId: 'CG_NORM',
   }),
   K(
     'MAGIC_TOGGLE_CTL_GUI',
     'Toggle\nCtl\nGui',
     'Toggle Control and GUI swap on both sides',
-    { alias: ['CG_TOGG'] },
+    { alias: ['CG_TOGG'], cExportId: 'CG_TOGG' },
   ),
   K('MAGIC_SWAP_LALT_LGUI', 'Swap\nLAlt\nLGui', 'Swap Left Alt and GUI', {
-    alias: ['LAG_SWP'],
+    alias: ['LAG_SWP'], cExportId: 'AG_LSWP',
   }),
   K('MAGIC_UNSWAP_LALT_LGUI', 'Unswap\nLAlt\nLGui', 'Unswap Left Alt and GUI', {
-    alias: ['LAG_NRM'],
+    alias: ['LAG_NRM'], cExportId: 'AG_LNRM',
   }),
   K('MAGIC_SWAP_RALT_RGUI', 'Swap\nRAlt\nRGui', 'Swap Right Alt and GUI', {
-    alias: ['RAG_SWP'],
+    alias: ['RAG_SWP'], cExportId: 'AG_RSWP',
   }),
   K('MAGIC_UNSWAP_RALT_RGUI', 'Unswap\nRAlt\nRGui', 'Unswap Right Alt and GUI', {
-    alias: ['RAG_NRM'],
+    alias: ['RAG_NRM'], cExportId: 'AG_RNRM',
   }),
   K('MAGIC_SWAP_ALT_GUI', 'Swap\nAlt\nGui', 'Swap Alt and GUI on both sides', {
-    alias: ['AG_SWAP'],
+    alias: ['AG_SWAP'], cExportId: 'AG_SWAP',
   }),
   K('MAGIC_UNSWAP_ALT_GUI', 'Unswap\nAlt\nGui', 'Unswap Alt and GUI on both sides', {
-    alias: ['AG_NORM'],
+    alias: ['AG_NORM'], cExportId: 'AG_NORM',
   }),
   K('MAGIC_TOGGLE_ALT_GUI', 'Toggle\nAlt\nGui', 'Toggle Alt and GUI swap on both sides', {
-    alias: ['AG_TOGG'],
+    alias: ['AG_TOGG'], cExportId: 'AG_TOGG',
   }),
-  K('MAGIC_NO_GUI', 'GUI\nOff', 'Disable the GUI keys', { alias: ['GUI_OFF'] }),
-  K('MAGIC_UNNO_GUI', 'GUI\nOn', 'Enable the GUI keys', { alias: ['GUI_ON'] }),
+  K('MAGIC_NO_GUI', 'GUI\nOff', 'Disable the GUI keys', { alias: ['GUI_OFF'], cExportId: 'GU_OFF' }),
+  K('MAGIC_UNNO_GUI', 'GUI\nOn', 'Enable the GUI keys', { alias: ['GUI_ON'], cExportId: 'GU_ON' }),
   K('MAGIC_TOGGLE_GUI', 'GUI\nToggle', 'Toggle the GUI keys on and off', {
-    alias: ['GUI_TOGG'],
+    alias: ['GUI_TOGG'], cExportId: 'GU_TOGG',
   }),
-  K('MAGIC_SWAP_GRAVE_ESC', 'Swap\n`\nEsc', 'Swap ` and Escape', { alias: ['GE_SWAP'] }),
+  K('MAGIC_SWAP_GRAVE_ESC', 'Swap\n`\nEsc', 'Swap ` and Escape', { alias: ['GE_SWAP'], cExportId: 'GE_SWAP' }),
   K('MAGIC_UNSWAP_GRAVE_ESC', 'Unswap\n`\nEsc', 'Unswap ` and Escape', {
-    alias: ['GE_NORM'],
+    alias: ['GE_NORM'], cExportId: 'GE_NORM',
   }),
   K('MAGIC_SWAP_BACKSLASH_BACKSPACE', 'Swap\n\\\nBS', 'Swap \\ and Backspace', {
-    alias: ['BS_SWAP'],
+    alias: ['BS_SWAP'], cExportId: 'BS_SWAP',
   }),
   K('MAGIC_UNSWAP_BACKSLASH_BACKSPACE', 'Unswap\n\\\nBS', 'Unswap \\ and Backspace', {
-    alias: ['BS_NORM'],
+    alias: ['BS_NORM'], cExportId: 'BS_NORM',
   }),
 ]
 
 export const KEYCODES_BEHAVIOR_MODE: Keycode[] = [
-  K('MAGIC_HOST_NKRO', 'NKRO\nOn', 'Enable N-key rollover', { alias: ['NK_ON'] }),
-  K('MAGIC_UNHOST_NKRO', 'NKRO\nOff', 'Disable N-key rollover', { alias: ['NK_OFF'] }),
-  K('MAGIC_TOGGLE_NKRO', 'NKRO\nToggle', 'Toggle N-key rollover', { alias: ['NK_TOGG'] }),
+  K('MAGIC_HOST_NKRO', 'NKRO\nOn', 'Enable N-key rollover', { alias: ['NK_ON'], cExportId: 'NK_ON' }),
+  K('MAGIC_UNHOST_NKRO', 'NKRO\nOff', 'Disable N-key rollover', { alias: ['NK_OFF'], cExportId: 'NK_OFF' }),
+  K('MAGIC_TOGGLE_NKRO', 'NKRO\nToggle', 'Toggle N-key rollover', { alias: ['NK_TOGG'], cExportId: 'NK_TOGG' }),
   K(
     'MAGIC_EE_HANDS_LEFT',
     'EEH\nLeft',
     'Set the master half of a split keyboard as the left hand (for EE_HANDS)',
-    { alias: ['EH_LEFT'] },
+    { alias: ['EH_LEFT'], cExportId: 'EH_LEFT' },
   ),
   K(
     'MAGIC_EE_HANDS_RIGHT',
     'EEH\nRight',
     'Set the master half of a split keyboard as the right hand (for EE_HANDS)',
-    { alias: ['EH_RGHT'] },
+    { alias: ['EH_RGHT'], cExportId: 'EH_RGHT' },
   ),
 ]
 
 export const KEYCODES_BEHAVIOR_AUDIO: Keycode[] = [
   K('AU_ON', 'Audio\nON', 'Audio mode on'),
   K('AU_OFF', 'Audio\nOFF', 'Audio mode off'),
-  K('AU_TOG', 'Audio\nToggle', 'Toggles Audio mode'),
-  K('CLICKY_TOGGLE', 'Clicky\nToggle', 'Toggles Audio clicky mode', { alias: ['CK_TOGG'] }),
-  K('CLICKY_UP', 'Clicky\nUp', 'Increases frequency of the clicks', { alias: ['CK_UP'] }),
+  K('AU_TOG', 'Audio\nToggle', 'Toggles Audio mode', { cExportId: 'AU_TOGG' }),
+  K('CLICKY_TOGGLE', 'Clicky\nToggle', 'Toggles Audio clicky mode', { alias: ['CK_TOGG'], cExportId: 'CK_TOGG' }),
+  K('CLICKY_UP', 'Clicky\nUp', 'Increases frequency of the clicks', { alias: ['CK_UP'], cExportId: 'CK_UP' }),
   K('CLICKY_DOWN', 'Clicky\nDown', 'Decreases frequency of the clicks', {
-    alias: ['CK_DOWN'],
+    alias: ['CK_DOWN'], cExportId: 'CK_DOWN',
   }),
-  K('CLICKY_RESET', 'Clicky\nReset', 'Resets frequency to default', { alias: ['CK_RST'] }),
+  K('CLICKY_RESET', 'Clicky\nReset', 'Resets frequency to default', { alias: ['CK_RST'], cExportId: 'CK_RST' }),
   K('MU_ON', 'Music\nOn', 'Turns on Music Mode'),
   K('MU_OFF', 'Music\nOff', 'Turns off Music Mode'),
-  K('MU_TOG', 'Music\nToggle', 'Toggles Music Mode'),
-  K('MU_MOD', 'Music\nCycle', 'Cycles through the music modes'),
+  K('MU_TOG', 'Music\nToggle', 'Toggles Music Mode', { cExportId: 'MU_TOGG' }),
+  K('MU_MOD', 'Music\nCycle', 'Cycles through the music modes', { cExportId: 'MU_NEXT' }),
 ]
 
 export const KEYCODES_BEHAVIOR_HAPTIC: Keycode[] = [
-  K('HPT_ON', 'Haptic\nOn', 'Turn haptic feedback on'),
-  K('HPT_OFF', 'Haptic\nOff', 'Turn haptic feedback off'),
-  K('HPT_TOG', 'Haptic\nToggle', 'Toggle haptic feedback on/off'),
-  K('HPT_RST', 'Haptic\nReset', 'Reset haptic feedback config to default'),
+  K('HPT_ON', 'Haptic\nOn', 'Turn haptic feedback on', { cExportId: 'HF_ON' }),
+  K('HPT_OFF', 'Haptic\nOff', 'Turn haptic feedback off', { cExportId: 'HF_OFF' }),
+  K('HPT_TOG', 'Haptic\nToggle', 'Toggle haptic feedback on/off', { cExportId: 'HF_TOGG' }),
+  K('HPT_RST', 'Haptic\nReset', 'Reset haptic feedback config to default', { cExportId: 'HF_RST' }),
   K(
     'HPT_FBK',
     'Haptic\nFeed\nback',
     'Toggle feedback to occur on keypress, release or both',
+    { cExportId: 'HF_FDBK' },
   ),
-  K('HPT_BUZ', 'Haptic\nBuzz', 'Toggle solenoid buzz on/off'),
-  K('HPT_MODI', 'Haptic\nNext', 'Go to next DRV2605L waveform'),
-  K('HPT_MODD', 'Haptic\nPrev', 'Go to previous DRV2605L waveform'),
-  K('HPT_CONT', 'Haptic\nCont.', 'Toggle continuous haptic mode on/off'),
-  K('HPT_CONI', 'Haptic\n+', 'Increase DRV2605L continous haptic strength'),
-  K('HPT_COND', 'Haptic\n-', 'Decrease DRV2605L continous haptic strength'),
-  K('HPT_DWLI', 'Haptic\nDwell+', 'Increase Solenoid dwell time'),
-  K('HPT_DWLD', 'Haptic\nDwell-', 'Decrease Solenoid dwell time'),
+  K('HPT_BUZ', 'Haptic\nBuzz', 'Toggle solenoid buzz on/off', { cExportId: 'HF_BUZZ' }),
+  K('HPT_MODI', 'Haptic\nNext', 'Go to next DRV2605L waveform', { cExportId: 'HF_NEXT' }),
+  K('HPT_MODD', 'Haptic\nPrev', 'Go to previous DRV2605L waveform', { cExportId: 'HF_PREV' }),
+  K('HPT_CONT', 'Haptic\nCont.', 'Toggle continuous haptic mode on/off', { cExportId: 'HF_CONT' }),
+  K('HPT_CONI', 'Haptic\n+', 'Increase DRV2605L continous haptic strength', { cExportId: 'HF_CONU' }),
+  K('HPT_COND', 'Haptic\n-', 'Decrease DRV2605L continous haptic strength', { cExportId: 'HF_COND' }),
+  K('HPT_DWLI', 'Haptic\nDwell+', 'Increase Solenoid dwell time', { cExportId: 'HF_DWLU' }),
+  K('HPT_DWLD', 'Haptic\nDwell-', 'Decrease Solenoid dwell time', { cExportId: 'HF_DWLD' }),
 ]
 
 export const KEYCODES_BEHAVIOR_AUTOSHIFT: Keycode[] = [
-  K('KC_ASDN', 'Auto-\nshift\nDown', 'Lower the Auto Shift timeout variable (down)'),
-  K('KC_ASUP', 'Auto-\nshift\nUp', 'Raise the Auto Shift timeout variable (up)'),
-  K('KC_ASRP', 'Auto-\nshift\nReport', 'Report your current Auto Shift timeout value'),
-  K('KC_ASON', 'Auto-\nshift\nOn', 'Turns on the Auto Shift Function'),
-  K('KC_ASOFF', 'Auto-\nshift\nOff', 'Turns off the Auto Shift Function'),
-  K('KC_ASTG', 'Auto-\nshift\nToggle', 'Toggles the state of the Auto Shift feature'),
+  K('KC_ASDN', 'Auto-\nshift\nDown', 'Lower the Auto Shift timeout variable (down)', { cExportId: 'AS_DOWN' }),
+  K('KC_ASUP', 'Auto-\nshift\nUp', 'Raise the Auto Shift timeout variable (up)', { cExportId: 'AS_UP' }),
+  K('KC_ASRP', 'Auto-\nshift\nReport', 'Report your current Auto Shift timeout value', { cExportId: 'AS_RPT' }),
+  K('KC_ASON', 'Auto-\nshift\nOn', 'Turns on the Auto Shift Function', { cExportId: 'AS_ON' }),
+  K('KC_ASOFF', 'Auto-\nshift\nOff', 'Turns off the Auto Shift Function', { cExportId: 'AS_OFF' }),
+  K('KC_ASTG', 'Auto-\nshift\nToggle', 'Toggles the state of the Auto Shift feature', { cExportId: 'AS_TOGG' }),
 ]
 
 export const KEYCODES_BEHAVIOR_COMBO: Keycode[] = [
-  K('CMB_ON', 'Combo\nOn', 'Turns on Combo feature'),
-  K('CMB_OFF', 'Combo\nOff', 'Turns off Combo feature'),
-  K('CMB_TOG', 'Combo\nToggle', 'Toggles Combo feature on and off'),
+  K('CMB_ON', 'Combo\nOn', 'Turns on Combo feature', { cExportId: 'CM_ON' }),
+  K('CMB_OFF', 'Combo\nOff', 'Turns off Combo feature', { cExportId: 'CM_OFF' }),
+  K('CMB_TOG', 'Combo\nToggle', 'Toggles Combo feature on and off', { cExportId: 'CM_TOGG' }),
 ]
 
 export const KEYCODES_BEHAVIOR_KEY_OVERRIDE: Keycode[] = [
   K('QK_KEY_OVERRIDE_TOGGLE', 'Key\nOverride\nToggle', 'Toggle key overrides', {
-    alias: ['KO_TOGG'],
+    alias: ['KO_TOGG'], cExportId: 'KO_TOGG',
   }),
   K('QK_KEY_OVERRIDE_ON', 'Key\nOverride\nOn', 'Turn on key overrides', {
-    alias: ['KO_ON'],
+    alias: ['KO_ON'], cExportId: 'KO_ON',
   }),
   K('QK_KEY_OVERRIDE_OFF', 'Key\nOverride\nOff', 'Turn off key overrides', {
-    alias: ['KO_OFF'],
+    alias: ['KO_OFF'], cExportId: 'KO_OFF',
   }),
 ]
 
 export const KEYCODES_BEHAVIOR_REPEAT: Keycode[] = [
   K('QK_REPEAT_KEY', 'Repeat', 'Repeats the last pressed key', {
-    alias: ['QK_REP'],
+    alias: ['QK_REP'], cExportId: 'QK_REP',
     requiresFeature: 'repeat_key',
   }),
   K('QK_ALT_REPEAT_KEY', 'Alt\nRepeat', 'Alt repeats the last pressed key', {
-    alias: ['QK_AREP'],
+    alias: ['QK_AREP'], cExportId: 'QK_AREP',
     requiresFeature: 'repeat_key',
   }),
 ]
 
 export const KEYCODES_BEHAVIOR_CAPS_WORD: Keycode[] = [
   K('QK_CAPS_WORD_TOGGLE', 'Caps\nWord\nToggle', 'Capitalizes until end of current word', {
-    alias: ['CW_TOGG'],
+    alias: ['CW_TOGG'], cExportId: 'CW_TOGG',
     requiresFeature: 'caps_word',
   }),
 ]
@@ -825,8 +839,8 @@ export const KEYCODES_LIGHTING_BL: Keycode[] = [
   K('BL_BRTG', 'BL\nBreath', 'Toggle backlight breathing'),
   K('BL_ON', 'BL On', 'Set the backlight to max brightness'),
   K('BL_OFF', 'BL Off', 'Turn the backlight off'),
-  K('BL_INC', 'BL +', 'Increase the backlight level'),
-  K('BL_DEC', 'BL - ', 'Decrease the backlight level'),
+  K('BL_INC', 'BL +', 'Increase the backlight level', { cExportId: 'BL_UP' }),
+  K('BL_DEC', 'BL - ', 'Decrease the backlight level', { cExportId: 'BL_DOWN' }),
 ]
 
 export const KEYCODES_LIGHTING_RGB: Keycode[] = [
@@ -952,8 +966,8 @@ export const KEYCODES_SYSTEM_PLAYBACK: Keycode[] = [
   K('KC_MUTE', 'Mute', 'Mute Audio', { alias: ['KC_AUDIO_MUTE'] }),
   K('KC_VOLD', 'Vol -', 'Volume Down', { alias: ['KC_AUDIO_VOL_DOWN'] }),
   K('KC_VOLU', 'Vol +', 'Volume Up', { alias: ['KC_AUDIO_VOL_UP'] }),
-  K('KC__VOLDOWN', 'Vol -\nAlt', 'Volume Down Alternate'),
-  K('KC__VOLUP', 'Vol +\nAlt', 'Volume Up Alternate'),
+  K('KC__VOLDOWN', 'Vol -\nAlt', 'Volume Down Alternate', { cExportId: 'KC_KB_VOLUME_DOWN' }),
+  K('KC__VOLUP', 'Vol +\nAlt', 'Volume Up Alternate', { cExportId: 'KC_KB_VOLUME_UP' }),
   K('KC_MSTP', 'Media\nStop', { alias: ['KC_MEDIA_STOP'] }),
   K('KC_MPLY', 'Media\nPlay', 'Play/Pause', { alias: ['KC_MEDIA_PLAY_PAUSE'] }),
   K('KC_MRWD', 'Prev\nTrack\n(macOS)', 'Previous Track / Rewind (macOS)', {
@@ -1016,11 +1030,11 @@ export let KEYCODES_MACRO: Keycode[] = []
 export let KEYCODES_MACRO_M: Keycode[] = []
 
 export const KEYCODES_MACRO_BASE: Keycode[] = [
-  K('DYN_REC_START1', 'DM1\nRec', 'Dynamic Macro 1 Rec Start', { alias: ['DM_REC1'] }),
-  K('DYN_REC_START2', 'DM2\nRec', 'Dynamic Macro 2 Rec Start', { alias: ['DM_REC2'] }),
-  K('DYN_REC_STOP', 'DM Rec\nStop', 'Dynamic Macro Rec Stop', { alias: ['DM_RSTP'] }),
-  K('DYN_MACRO_PLAY1', 'DM1\nPlay', 'Dynamic Macro 1 Play', { alias: ['DM_PLY1'] }),
-  K('DYN_MACRO_PLAY2', 'DM2\nPlay', 'Dynamic Macro 2 Play', { alias: ['DM_PLY2'] }),
+  K('DYN_REC_START1', 'DM1\nRec', 'Dynamic Macro 1 Rec Start', { alias: ['DM_REC1'], cExportId: 'DM_REC1' }),
+  K('DYN_REC_START2', 'DM2\nRec', 'Dynamic Macro 2 Rec Start', { alias: ['DM_REC2'], cExportId: 'DM_REC2' }),
+  K('DYN_REC_STOP', 'DM Rec\nStop', 'Dynamic Macro Rec Stop', { alias: ['DM_RSTP'], cExportId: 'DM_RSTP' }),
+  K('DYN_MACRO_PLAY1', 'DM1\nPlay', 'Dynamic Macro 1 Play', { alias: ['DM_PLY1'], cExportId: 'DM_PLY1' }),
+  K('DYN_MACRO_PLAY2', 'DM2\nPlay', 'Dynamic Macro 2 Play', { alias: ['DM_PLY2'], cExportId: 'DM_PLY2' }),
 ]
 
 export const KEYCODES_MIDI_BASIC: Keycode[] = [
@@ -1038,23 +1052,25 @@ export const KEYCODES_MIDI_BASIC: Keycode[] = [
   K('MI_B', 'MI\nB', 'Midi send note B'),
   ...Array.from({ length: 5 }, (_, oct) =>
     ['C', 'Cs', 'D', 'Ds', 'E', 'F', 'Fs', 'G', 'Gs', 'A', 'As', 'B'].map((note) =>
-      K(`MI_${note}_${oct + 1}`, `MI\n${note}${oct + 1}`, `Midi send note ${note}${oct + 1}`),
+      K(`MI_${note}_${oct + 1}`, `MI\n${note}${oct + 1}`, `Midi send note ${note}${oct + 1}`, {
+        cExportId: `MI_${note}${oct + 1}`,
+      }),
     ),
   ).flat(),
-  K('MI_ALLOFF', 'MI\nNotesOff', 'Midi send all notes OFF'),
+  K('MI_ALLOFF', 'MI\nNotesOff', 'Midi send all notes OFF', { cExportId: 'MI_AOFF' }),
 ]
 
 export const KEYCODES_MIDI_OCTAVE: Keycode[] = [
-  K('MI_OCT_N2', 'MI\nOct-2', 'Midi set octave to -2'),
-  K('MI_OCT_N1', 'MI\nOct-1', 'Midi set octave to -1'),
-  K('MI_OCT_0', 'MI\nOct0', 'Midi set octave to 0'),
-  K('MI_OCT_1', 'MI\nOct+1', 'Midi set octave to 1'),
-  K('MI_OCT_2', 'MI\nOct+2', 'Midi set octave to 2'),
-  K('MI_OCT_3', 'MI\nOct+3', 'Midi set octave to 3'),
-  K('MI_OCT_4', 'MI\nOct+4', 'Midi set octave to 4'),
-  K('MI_OCT_5', 'MI\nOct+5', 'Midi set octave to 5'),
-  K('MI_OCT_6', 'MI\nOct+6', 'Midi set octave to 6'),
-  K('MI_OCT_7', 'MI\nOct+7', 'Midi set octave to 7'),
+  K('MI_OCT_N2', 'MI\nOct-2', 'Midi set octave to -2', { cExportId: 'MI_OCN2' }),
+  K('MI_OCT_N1', 'MI\nOct-1', 'Midi set octave to -1', { cExportId: 'MI_OCN1' }),
+  K('MI_OCT_0', 'MI\nOct0', 'Midi set octave to 0', { cExportId: 'MI_OC0' }),
+  K('MI_OCT_1', 'MI\nOct+1', 'Midi set octave to 1', { cExportId: 'MI_OC1' }),
+  K('MI_OCT_2', 'MI\nOct+2', 'Midi set octave to 2', { cExportId: 'MI_OC2' }),
+  K('MI_OCT_3', 'MI\nOct+3', 'Midi set octave to 3', { cExportId: 'MI_OC3' }),
+  K('MI_OCT_4', 'MI\nOct+4', 'Midi set octave to 4', { cExportId: 'MI_OC4' }),
+  K('MI_OCT_5', 'MI\nOct+5', 'Midi set octave to 5', { cExportId: 'MI_OC5' }),
+  K('MI_OCT_6', 'MI\nOct+6', 'Midi set octave to 6', { cExportId: 'MI_OC6' }),
+  K('MI_OCT_7', 'MI\nOct+7', 'Midi set octave to 7', { cExportId: 'MI_OC7' }),
   K('MI_OCTD', 'MI\nOctDN', 'Midi move down an octave'),
   K('MI_OCTU', 'MI\nOctUP', 'Midi move up an octave'),
 ]
@@ -1063,19 +1079,23 @@ export const KEYCODES_MIDI_TRANSPOSE: Keycode[] = [
   ...Array.from({ length: 13 }, (_, i) => {
     const n = i - 6
     const sign = n < 0 ? '' : n > 0 ? '+' : ''
+    const cExportId = n < 0 ? `MI_TRN${Math.abs(n)}` : `MI_TR${n}`
     return K(
       `MI_TRNS_${n < 0 ? 'N' + Math.abs(n) : String(n)}`,
       `MI\nTrans${sign}${n}`,
       `Midi set transposition to ${n} semitones`,
+      { cExportId },
     )
   }),
-  K('MI_TRNSD', 'MI\nTransDN', 'Midi decrease transposition'),
-  K('MI_TRNSU', 'MI\nTransUP', 'Midi increase transposition'),
+  K('MI_TRNSD', 'MI\nTransDN', 'Midi decrease transposition', { cExportId: 'MI_TRSD' }),
+  K('MI_TRNSU', 'MI\nTransUP', 'Midi increase transposition', { cExportId: 'MI_TRSU' }),
 ]
 
 export const KEYCODES_MIDI_VELOCITY: Keycode[] = [
   ...Array.from({ length: 10 }, (_, i) =>
-    K(`MI_VEL_${i + 1}`, `MI\nVel${i + 1}`, `Midi set velocity to ${i + 1}`),
+    K(`MI_VEL_${i + 1}`, `MI\nVel${i + 1}`, `Midi set velocity to ${i + 1}`, {
+      cExportId: `MI_VL${i + 1}`,
+    }),
   ),
   K('MI_VELD', 'MI\nVelDN', 'Midi decrease velocity'),
   K('MI_VELU', 'MI\nVelUP', 'Midi increase velocity'),
@@ -1085,21 +1105,21 @@ export const KEYCODES_MIDI_CHANNEL: Keycode[] = [
   ...Array.from({ length: 16 }, (_, i) =>
     K(`MI_CH${i + 1}`, `MI\nCH${i + 1}`, `Midi set channel to ${i + 1}`),
   ),
-  K('MI_CHD', 'MI\nCHDN', 'Midi decrease channel'),
-  K('MI_CHU', 'MI\nCHUP', 'Midi increase channel'),
+  K('MI_CHD', 'MI\nCHDN', 'Midi decrease channel', { cExportId: 'MI_CHND' }),
+  K('MI_CHU', 'MI\nCHUP', 'Midi increase channel', { cExportId: 'MI_CHNU' }),
 ]
 
 export const KEYCODES_MIDI_CONTROL: Keycode[] = [
-  K('MI_SUS', 'MI\nSust', 'Midi Sustain'),
+  K('MI_SUS', 'MI\nSust', 'Midi Sustain', { cExportId: 'MI_SUST' }),
   K('MI_PORT', 'MI\nPort', 'Midi Portmento'),
   K('MI_SOST', 'MI\nSost', 'Midi Sostenuto'),
   K('MI_SOFT', 'MI\nSPedal', 'Midi Soft Pedal'),
   K('MI_LEG', 'MI\nLegat', 'Midi Legato'),
   K('MI_MOD', 'MI\nModul', 'Midi Modulation'),
-  K('MI_MODSD', 'MI\nModulDN', 'Midi decrease modulation speed'),
-  K('MI_MODSU', 'MI\nModulUP', 'Midi increase modulation speed'),
-  K('MI_BENDD', 'MI\nBendDN', 'Midi bend pitch down'),
-  K('MI_BENDU', 'MI\nBendUP', 'Midi bend pitch up'),
+  K('MI_MODSD', 'MI\nModulDN', 'Midi decrease modulation speed', { cExportId: 'MI_MODD' }),
+  K('MI_MODSU', 'MI\nModulUP', 'Midi increase modulation speed', { cExportId: 'MI_MODU' }),
+  K('MI_BENDD', 'MI\nBendDN', 'Midi bend pitch down', { cExportId: 'MI_BNDD' }),
+  K('MI_BENDU', 'MI\nBendUP', 'Midi bend pitch up', { cExportId: 'MI_BNDU' }),
 ]
 
 export const KEYCODES_MIDI_SEQUENCER: Keycode[] = [
@@ -1173,7 +1193,7 @@ function serializeLM(code: number): string | null {
   const mod = code & modMask
   const modName = getLMModValueMap().get(mod)
   if (modName) return `LM${layer}(${modName})`
-  return `LM${layer}(0x${mod.toString(16)})`
+  return `LM${layer}(${toHex(mod)})`
 }
 
 export function isLMKeycode(code: number): boolean {
@@ -1183,7 +1203,15 @@ export function isLMKeycode(code: number): boolean {
 
 // --- Serialize / Deserialize ---
 
-export function serialize(code: number): string {
+function toHex(code: number): string {
+  return '0x' + code.toString(16)
+}
+
+/** Shared serialization logic. getName controls how a Keycode is stringified. */
+function serializeInternal(
+  code: number,
+  getName: (kc: Keycode) => string,
+): string {
   // LM needs custom handling before standard masked path
   const lmResult = serializeLM(code)
   if (lmResult) return lmResult
@@ -1193,24 +1221,28 @@ export function serialize(code: number): string {
   if (!masked.has(code & 0xff00)) {
     const kc = RAWCODES_MAP.get(code)
     if (kc !== undefined) {
-      return kc.qmkId
+      return getName(kc)
     }
   } else {
     const outer = RAWCODES_MAP.get(code & 0xff00)
     const inner = RAWCODES_MAP.get(code & 0x00ff)
     if (outer !== undefined && inner !== undefined) {
-      return outer.qmkId.replace('kc', inner.qmkId)
+      return getName(outer).replace('kc', getName(inner))
     }
     const kc = RAWCODES_MAP.get(code)
     if (kc !== undefined) {
-      return kc.qmkId
+      return getName(kc)
     }
   }
   return toHex(code)
 }
 
-function toHex(code: number): string {
-  return '0x' + code.toString(16)
+function qmkName(kc: Keycode): string {
+  return kc.qmkId
+}
+
+export function serialize(code: number): string {
+  return serializeInternal(code, qmkName)
 }
 
 // Outer mask qmkIds not defined in vial-qmk (cannot compile in keymap.c)
@@ -1225,6 +1257,10 @@ const NOT_IN_VIAL_QMK_OUTER_MASKS = new Set([
   'RMEH_T(kc)', 'RALL_T(kc)', 'RCAG_T(kc)',
 ])
 
+function cExportName(kc: Keycode): string {
+  return kc.cExportId ?? kc.qmkId
+}
+
 export function serializeForCExport(code: number): string {
   if (isLMKeycode(code)) return toHex(code)
 
@@ -1237,7 +1273,7 @@ export function serializeForCExport(code: number): string {
     }
   }
 
-  return serialize(code)
+  return serializeInternal(code, cExportName)
 }
 
 export function deserialize(val: string | number): number {
