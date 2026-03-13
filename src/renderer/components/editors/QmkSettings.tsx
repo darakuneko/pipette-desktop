@@ -109,10 +109,9 @@ export function QmkSettings({
 
   const handleIntegerChange = useCallback(
     (field: QmkSettingsField, value: number) => {
-      const clamped = Math.max(
-        field.min ?? 0,
-        field.max !== undefined ? Math.min(field.max, value) : value,
-      )
+      const min = field.min ?? 0
+      const max = field.max ?? Infinity
+      const clamped = Math.max(min, Math.min(max, value))
       setEditedValues((prev) => {
         const next = new Map(prev)
         next.set(field.qsid, clamped)
