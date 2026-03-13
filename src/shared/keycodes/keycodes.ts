@@ -612,7 +612,7 @@ export function getAvailableLMMods(): Keycode[] {
   return KEYCODES_LM_MODS.filter((kc) => (resolve(kc.qmkId) & ~modMask) === 0)
 }
 
-export const KEYCODES_QUANTUM_MAGIC: Keycode[] = [
+export const KEYCODES_BEHAVIOR_MAGIC: Keycode[] = [
   K('MAGIC_SWAP_CONTROL_CAPSLOCK', 'Swap\nCtrl\nCaps', 'Swap Caps Lock and Left Control', {
     alias: ['CL_SWAP'],
   }),
@@ -693,7 +693,7 @@ export const KEYCODES_QUANTUM_MAGIC: Keycode[] = [
   }),
 ]
 
-export const KEYCODES_QUANTUM_MODE: Keycode[] = [
+export const KEYCODES_BEHAVIOR_MODE: Keycode[] = [
   K('MAGIC_HOST_NKRO', 'NKRO\nOn', 'Enable N-key rollover', { alias: ['NK_ON'] }),
   K('MAGIC_UNHOST_NKRO', 'NKRO\nOff', 'Disable N-key rollover', { alias: ['NK_OFF'] }),
   K('MAGIC_TOGGLE_NKRO', 'NKRO\nToggle', 'Toggle N-key rollover', { alias: ['NK_TOGG'] }),
@@ -711,7 +711,7 @@ export const KEYCODES_QUANTUM_MODE: Keycode[] = [
   ),
 ]
 
-export const KEYCODES_QUANTUM_AUDIO: Keycode[] = [
+export const KEYCODES_BEHAVIOR_AUDIO: Keycode[] = [
   K('AU_ON', 'Audio\nON', 'Audio mode on'),
   K('AU_OFF', 'Audio\nOFF', 'Audio mode off'),
   K('AU_TOG', 'Audio\nToggle', 'Toggles Audio mode'),
@@ -727,7 +727,7 @@ export const KEYCODES_QUANTUM_AUDIO: Keycode[] = [
   K('MU_MOD', 'Music\nCycle', 'Cycles through the music modes'),
 ]
 
-export const KEYCODES_QUANTUM_HAPTIC: Keycode[] = [
+export const KEYCODES_BEHAVIOR_HAPTIC: Keycode[] = [
   K('HPT_ON', 'Haptic\nOn', 'Turn haptic feedback on'),
   K('HPT_OFF', 'Haptic\nOff', 'Turn haptic feedback off'),
   K('HPT_TOG', 'Haptic\nToggle', 'Toggle haptic feedback on/off'),
@@ -747,7 +747,7 @@ export const KEYCODES_QUANTUM_HAPTIC: Keycode[] = [
   K('HPT_DWLD', 'Haptic\nDwell-', 'Decrease Solenoid dwell time'),
 ]
 
-export const KEYCODES_QUANTUM_AUTOSHIFT: Keycode[] = [
+export const KEYCODES_BEHAVIOR_AUTOSHIFT: Keycode[] = [
   K('KC_ASDN', 'Auto-\nshift\nDown', 'Lower the Auto Shift timeout variable (down)'),
   K('KC_ASUP', 'Auto-\nshift\nUp', 'Raise the Auto Shift timeout variable (up)'),
   K('KC_ASRP', 'Auto-\nshift\nReport', 'Report your current Auto Shift timeout value'),
@@ -756,13 +756,13 @@ export const KEYCODES_QUANTUM_AUTOSHIFT: Keycode[] = [
   K('KC_ASTG', 'Auto-\nshift\nToggle', 'Toggles the state of the Auto Shift feature'),
 ]
 
-export const KEYCODES_QUANTUM_COMBO: Keycode[] = [
+export const KEYCODES_BEHAVIOR_COMBO: Keycode[] = [
   K('CMB_ON', 'Combo\nOn', 'Turns on Combo feature'),
   K('CMB_OFF', 'Combo\nOff', 'Turns off Combo feature'),
   K('CMB_TOG', 'Combo\nToggle', 'Toggles Combo feature on and off'),
 ]
 
-export const KEYCODES_QUANTUM_KEY_OVERRIDE: Keycode[] = [
+export const KEYCODES_BEHAVIOR_KEY_OVERRIDE: Keycode[] = [
   K('QK_KEY_OVERRIDE_TOGGLE', 'Key\nOverride\nToggle', 'Toggle key overrides', {
     alias: ['KO_TOGG'],
   }),
@@ -774,7 +774,7 @@ export const KEYCODES_QUANTUM_KEY_OVERRIDE: Keycode[] = [
   }),
 ]
 
-export const KEYCODES_QUANTUM_REPEAT: Keycode[] = [
+export const KEYCODES_BEHAVIOR_REPEAT: Keycode[] = [
   K('QK_REPEAT_KEY', 'Repeat', 'Repeats the last pressed key', {
     alias: ['QK_REP'],
     requiresFeature: 'repeat_key',
@@ -785,14 +785,14 @@ export const KEYCODES_QUANTUM_REPEAT: Keycode[] = [
   }),
 ]
 
-export const KEYCODES_QUANTUM_CAPS_WORD: Keycode[] = [
+export const KEYCODES_BEHAVIOR_CAPS_WORD: Keycode[] = [
   K('QK_CAPS_WORD_TOGGLE', 'Caps\nWord\nToggle', 'Capitalizes until end of current word', {
     alias: ['CW_TOGG'],
     requiresFeature: 'caps_word',
   }),
 ]
 
-export const KEYCODES_QUANTUM_SWAP_HANDS: Keycode[] = [
+export const KEYCODES_BEHAVIOR_SWAP_HANDS: Keycode[] = [
   K('SH_TOGG', 'SH\nToggle', 'Toggle swap hands'),
   K('SH_TT', 'SH\nTT', 'Momentary swap when held, toggle when tapped'),
   K('SH_MON', 'SH\nMOn', 'Momentary swap hands on'),
@@ -802,21 +802,21 @@ export const KEYCODES_QUANTUM_SWAP_HANDS: Keycode[] = [
   K('SH_OS', 'SH\nOS', 'One-shot swap hands'),
 ]
 
-export const KEYCODES_QUANTUM_SWAP_HANDS_TAP: Keycode[] = [
+export const KEYCODES_BEHAVIOR_SWAP_HANDS_TAP: Keycode[] = [
   K('SH_T(kc)', 'SH_T\n(kc)', 'Swap hands when held, kc when tapped', { masked: true }),
 ]
 
-export const KEYCODES_QUANTUM: Keycode[] = [
-  ...KEYCODES_QUANTUM_MAGIC,
-  ...KEYCODES_QUANTUM_AUDIO,
-  ...KEYCODES_QUANTUM_HAPTIC,
-  ...KEYCODES_QUANTUM_AUTOSHIFT,
-  ...KEYCODES_QUANTUM_COMBO,
-  ...KEYCODES_QUANTUM_KEY_OVERRIDE,
-  ...KEYCODES_QUANTUM_CAPS_WORD,
-  ...KEYCODES_QUANTUM_REPEAT,
-  ...KEYCODES_QUANTUM_SWAP_HANDS,
-  ...KEYCODES_QUANTUM_SWAP_HANDS_TAP,
+export const KEYCODES_BEHAVIOR: Keycode[] = [
+  ...KEYCODES_BEHAVIOR_MAGIC,
+  ...KEYCODES_BEHAVIOR_AUDIO,
+  ...KEYCODES_BEHAVIOR_HAPTIC,
+  ...KEYCODES_BEHAVIOR_AUTOSHIFT,
+  ...KEYCODES_BEHAVIOR_COMBO,
+  ...KEYCODES_BEHAVIOR_KEY_OVERRIDE,
+  ...KEYCODES_BEHAVIOR_CAPS_WORD,
+  ...KEYCODES_BEHAVIOR_REPEAT,
+  ...KEYCODES_BEHAVIOR_SWAP_HANDS,
+  ...KEYCODES_BEHAVIOR_SWAP_HANDS_TAP,
 ]
 
 export const KEYCODES_LIGHTING_BL: Keycode[] = [
@@ -1911,7 +1911,7 @@ export function recreateKeycodes(): void {
     ...KEYCODES_LAYERS,
     ...KEYCODES_BOOT,
     ...KEYCODES_MODIFIERS,
-    ...KEYCODES_QUANTUM,
+    ...KEYCODES_BEHAVIOR,
     ...KEYCODES_LIGHTING,
     ...KEYCODES_SYSTEM,
     ...KEYCODES_TAP_DANCE,
