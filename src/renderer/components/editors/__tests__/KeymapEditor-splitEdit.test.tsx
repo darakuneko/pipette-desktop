@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.layerN': `Layer ${opts?.n ?? ''}`,
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
-        'editor.keymap.dualMode': 'Dual View',
+        'editor.keymap.splitEdit': 'Split Edit',
         'editorSettings.title': 'Settings',
       }
       return map[key] ?? key
@@ -68,8 +68,8 @@ const makeLayout = () => ({
   ],
 })
 
-describe('KeymapEditor — dual mode', () => {
-  const onDualModeChange = vi.fn()
+describe('KeymapEditor — split edit', () => {
+  const onSplitEditChange = vi.fn()
   const onActivePaneChange = vi.fn()
 
   const defaultProps = {
@@ -88,7 +88,7 @@ describe('KeymapEditor — dual mode', () => {
     onSetKey: vi.fn().mockResolvedValue(undefined),
     onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
-    onDualModeChange,
+    onSplitEditChange,
     onActivePaneChange,
   }
 
@@ -97,38 +97,38 @@ describe('KeymapEditor — dual mode', () => {
     capturedWidgetProps = []
   })
 
-  it('renders the dual mode toggle button', () => {
+  it('renders the split edit toggle button', () => {
     render(<KeymapEditor {...defaultProps} />)
-    expect(screen.getByTestId('dual-mode-button')).toBeInTheDocument()
-    expect(screen.getByTestId('dual-mode-button')).toHaveAttribute('aria-label', 'Dual View')
+    expect(screen.getByTestId('split-edit-button')).toBeInTheDocument()
+    expect(screen.getByTestId('split-edit-button')).toHaveAttribute('aria-label', 'Split Edit')
   })
 
-  it('calls onDualModeChange when toggle button is clicked', () => {
+  it('calls onSplitEditChange when toggle button is clicked', () => {
     render(<KeymapEditor {...defaultProps} />)
-    fireEvent.click(screen.getByTestId('dual-mode-button'))
-    expect(onDualModeChange).toHaveBeenCalledWith(true)
+    fireEvent.click(screen.getByTestId('split-edit-button'))
+    expect(onSplitEditChange).toHaveBeenCalledWith(true)
   })
 
-  it('calls onDualModeChange(false) when dualMode is already on', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
-    fireEvent.click(screen.getByTestId('dual-mode-button'))
-    expect(onDualModeChange).toHaveBeenCalledWith(false)
+  it('calls onSplitEditChange(false) when splitEdit is already on', () => {
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
+    fireEvent.click(screen.getByTestId('split-edit-button'))
+    expect(onSplitEditChange).toHaveBeenCalledWith(false)
   })
 
-  it('does not render secondary pane when dualMode is off', () => {
+  it('does not render secondary pane when splitEdit is off', () => {
     render(<KeymapEditor {...defaultProps} />)
     expect(screen.queryByTestId('secondary-pane')).not.toBeInTheDocument()
     expect(screen.getAllByTestId('keyboard-widget')).toHaveLength(1)
   })
 
-  it('renders two keyboard widgets when dualMode is on', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
+  it('renders two keyboard widgets when splitEdit is on', () => {
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
     expect(screen.getByTestId('secondary-pane')).toBeInTheDocument()
     expect(screen.getAllByTestId('keyboard-widget')).toHaveLength(2)
   })
 
   it('applies border-accent to the active primary pane', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
     const primaryPane = screen.getByTestId('primary-pane')
     expect(primaryPane.className).toContain('border-accent')
     const secondaryPane = screen.getByTestId('secondary-pane')
@@ -137,7 +137,7 @@ describe('KeymapEditor — dual mode', () => {
   })
 
   it('applies border-accent to the active secondary pane', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="secondary" primaryLayer={0} secondaryLayer={0} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="secondary" primaryLayer={0} secondaryLayer={0} />)
     const secondaryPane = screen.getByTestId('secondary-pane')
     expect(secondaryPane.className).toContain('border-accent')
     const primaryPane = screen.getByTestId('primary-pane')
@@ -145,19 +145,19 @@ describe('KeymapEditor — dual mode', () => {
   })
 
   it('calls onActivePaneChange when clicking the inactive pane', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
     fireEvent.click(screen.getByTestId('secondary-pane'))
     expect(onActivePaneChange).toHaveBeenCalledWith('secondary')
   })
 
   it('calls onActivePaneChange("primary") when clicking primary pane while secondary is active', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="secondary" primaryLayer={0} secondaryLayer={0} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="secondary" primaryLayer={0} secondaryLayer={0} />)
     fireEvent.click(screen.getByTestId('primary-pane'))
     expect(onActivePaneChange).toHaveBeenCalledWith('primary')
   })
 
   it('shows correct layer labels for each pane', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={1} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={1} />)
     expect(screen.getByTestId('layer-label')).toHaveTextContent('Layer 0')
     expect(screen.getByTestId('secondary-layer-label')).toHaveTextContent('Layer 1')
   })
@@ -166,7 +166,7 @@ describe('KeymapEditor — dual mode', () => {
     render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="primary"
         primaryLayer={0}
         secondaryLayer={1}
@@ -182,7 +182,7 @@ describe('KeymapEditor — dual mode', () => {
     render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="primary"
         primaryLayer={0}
         secondaryLayer={1}
@@ -203,8 +203,8 @@ describe('KeymapEditor — dual mode', () => {
     expect(secondaryKC.get('0,0')).toBe('KC_6')
   })
 
-  it('renders only one pane without border-accent when not in dual mode', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={false} />)
+  it('renders only one pane without border-accent when not in split edit', () => {
+    render(<KeymapEditor {...defaultProps} splitEdit={false} />)
     const primaryPane = screen.getByTestId('primary-pane')
     expect(primaryPane.className).toContain('border-edge-subtle')
     expect(primaryPane.className).not.toContain('border-accent')
@@ -216,7 +216,7 @@ describe('KeymapEditor — dual mode', () => {
     render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="primary"
         primaryLayer={0}
         secondaryLayer={0}
@@ -236,13 +236,13 @@ describe('KeymapEditor — dual mode', () => {
     expect(secondaryProps.readOnly).toBe(true)
   })
 
-  it('shows correct keycodes when dualMode=false and activePane="secondary"', () => {
+  it('shows correct keycodes when splitEdit=false and activePane="secondary"', () => {
     // Guard against blank-map regression: single pane should always show currentLayer keycodes
     capturedWidgetProps = []
     render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={false}
+        splitEdit={false}
         activePane={'secondary' as 'primary' | 'secondary'}
         currentLayer={0}
       />,
@@ -258,7 +258,7 @@ describe('KeymapEditor — dual mode', () => {
     render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="secondary"
         primaryLayer={0}
         secondaryLayer={1}
@@ -277,13 +277,13 @@ describe('KeymapEditor — dual mode', () => {
   })
 
   it('does not call onActivePaneChange when clicking the active pane', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
     fireEvent.click(screen.getByTestId('primary-pane'))
     expect(onActivePaneChange).not.toHaveBeenCalled()
   })
 
   it('does not call onActivePaneChange when clicking pane in single mode', () => {
-    render(<KeymapEditor {...defaultProps} dualMode={false} />)
+    render(<KeymapEditor {...defaultProps} splitEdit={false} />)
     fireEvent.click(screen.getByTestId('primary-pane'))
     expect(onActivePaneChange).not.toHaveBeenCalled()
   })
@@ -293,7 +293,7 @@ describe('KeymapEditor — dual mode', () => {
     const { rerender } = render(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="primary"
         primaryLayer={0}
         secondaryLayer={0}
@@ -309,7 +309,7 @@ describe('KeymapEditor — dual mode', () => {
     rerender(
       <KeymapEditor
         {...defaultProps}
-        dualMode={true}
+        splitEdit={true}
         activePane="secondary"
         primaryLayer={0}
         secondaryLayer={0}
