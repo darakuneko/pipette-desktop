@@ -587,7 +587,7 @@ Sync is configured in the **Settings** modal (gear icon on the device selection 
 
 ![Data Tab](screenshots/hub-settings-data-sync.png)
 
-The Data tab contains the following sections: Google Account, Data Sync, Pipette Hub, and Troubleshooting.
+The Data tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the separate Troubleshooting tab (see below).
 
 #### Google Account
 
@@ -618,11 +618,6 @@ The Data tab contains the following sections: Google Account, Data Sync, Pipette
 #### Sync Unavailable Alert
 
 - Displayed when the sync backend cannot be reached. Click **Retry** to attempt reconnection
-
-#### Reset Sync Data / Local Data
-
-- **Reset Sync Data**: Select targets (keyboard data, favorite data) and delete them from Google Drive
-- **Local Data**: Import/export local data, or reset selected local targets (keyboard data, favorites, app settings)
 
 #### Data Storage
 
