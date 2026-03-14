@@ -413,7 +413,8 @@
     "confirmOverwrite": "上書きしますか？",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
-    "exportPdf": ".pdf"
+    "exportPdf": ".pdf",
+    "versionPrefix": "v{{version}} - "
   },
   "sync": {
     "title": "設定",

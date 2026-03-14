@@ -8,6 +8,7 @@ export interface SnapshotMeta {
   updatedAt?: string // ISO 8601 — last update time
   deletedAt?: string // ISO 8601 — tombstone timestamp
   hubPostId?: string // Pipette Hub post ID (set after upload)
+  vilVersion?: number // VilFile format version (1 = legacy, 2 = current)
 }
 
 export interface SnapshotIndex {

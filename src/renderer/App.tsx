@@ -521,6 +521,7 @@ export function App() {
           keyboard.uid,
           entryId,
           JSON.stringify(migrated, null, 2),
+          migrated.version,
         ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
         return migrated
       }

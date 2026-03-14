@@ -565,7 +565,7 @@ export function LayoutStoreContent({
                   {/* Row 2: date + format tags */}
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-content-muted font-mono">
-                      {formatDate(entry.savedAt)}
+                      {entry.vilVersion != null && t('layoutStore.versionPrefix', { version: entry.vilVersion })}{formatDate(entry.savedAt)}
                     </span>
                     {hasEntryExport && (
                       <div className="flex gap-1">

@@ -43,8 +43,9 @@ export function useLayoutStore({
     setError(null)
     setSaving(true)
     try {
-      const json = JSON.stringify(serialize(), null, 2)
-      const result = await window.vialAPI.snapshotStoreSave(deviceUid, json, deviceName, label)
+      const vilFile = serialize()
+      const json = JSON.stringify(vilFile, null, 2)
+      const result = await window.vialAPI.snapshotStoreSave(deviceUid, json, deviceName, label, vilFile.version)
       if (!result.success) {
         setError(result.error === 'max entries reached' ? t('layoutStore.maxEntriesReached') : t('layoutStore.saveFailed'))
         return null
@@ -83,6 +84,7 @@ export function useLayoutStore({
           deviceUid,
           entryId,
           JSON.stringify(migrated, null, 2),
+          migrated.version,
         ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
         await applyVilFile(migrated)
         return true

@@ -114,6 +114,7 @@ export function setupSnapshotStore(): void {
       json: string,
       deviceName: string,
       label: string,
+      vilVersion?: number,
     ): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }> => {
       try {
         validateUid(uid)
@@ -142,6 +143,7 @@ export function setupSnapshotStore(): void {
             filename,
             savedAt: nowIso,
             updatedAt: nowIso,
+            vilVersion,
           }
 
           index.entries.unshift(entry)
@@ -182,6 +184,7 @@ export function setupSnapshotStore(): void {
       uid: string,
       entryId: string,
       json: string,
+      vilVersion?: number,
     ): Promise<{ success: boolean; error?: string }> => {
       try {
         validateUid(uid)
@@ -194,6 +197,7 @@ export function setupSnapshotStore(): void {
           const filePath = getSafeFilePath(uid, entry.filename)
           await writeFile(filePath, json, 'utf-8')
 
+          if (vilVersion != null) entry.vilVersion = vilVersion
           entry.updatedAt = new Date().toISOString()
           await writeIndex(uid, index)
 
