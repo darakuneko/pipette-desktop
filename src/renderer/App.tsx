@@ -253,6 +253,10 @@ export function App() {
     const uid = keyboard.uid
     const definition = keyboard.definition
 
+    // Show overlay immediately to avoid a flash of the keymap screen
+    setMigrating(true)
+    setMigrationProgress('loading.migrating')
+
     ;(async () => {
       try {
         const listResult = await window.vialAPI.snapshotStoreList(uid)
@@ -263,10 +267,6 @@ export function App() {
           (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
         )
         if (candidates.length === 0) return
-
-        // Show overlay only when there are actual candidates to migrate
-        setMigrating(true)
-        setMigrationProgress('loading.migrating')
 
         let migratedCount = 0
         for (const entry of candidates) {
