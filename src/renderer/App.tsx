@@ -34,7 +34,7 @@ import { generateKeymapPdf } from '../shared/pdf-export'
 import { generateAllLayoutOptionsPdf, generateCurrentLayoutPdf, type LayoutPdfInput } from '../shared/pdf-layout-export'
 import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
-import { isVilFile, isVilFileV1, migrateVilFileToV2, isKeyboardDefinition, recordToMap, deriveLayerCount } from '../shared/vil-file'
+import { isVilFile, isVilFileV1, migrateVilFileToV2, isKeyboardDefinition, recordToMap, deriveLayerCount, VILFILE_CURRENT_VERSION } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson, jsonToMacroActions } from '../preload/macro'
 import {
@@ -91,9 +91,12 @@ export function App() {
   const [dummyError, setDummyError] = useState<string | null>(null)
   const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  const [migrationProgress, setMigrationProgress] = useState<string | null>(null)
   const hasSyncedRef = useRef(false)
   const hasFavSyncedForDataRef = useRef(false)
   const hasKeyboardSyncedRef = useRef<string | null>(null)
+  const hasMigratedRef = useRef<string | null>(null)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
@@ -121,6 +124,7 @@ export function App() {
       if (!deviceSyncing) {
         hasSyncedRef.current = false
         hasKeyboardSyncedRef.current = null
+        hasMigratedRef.current = null
       }
       return
     }
@@ -144,6 +148,78 @@ export function App() {
   }, [device.connectedDevice, keyboard.uid, keyboard.loading,
       sync.loading, sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword,
       sync.syncNow, deviceSyncing])
+
+  // Auto-migrate v1 snapshots to v2 after reload + sync download complete
+  useEffect(() => {
+    if (!device.connectedDevice || device.isDummy) return
+    // Wait for reload and sync to finish
+    if (keyboard.loading || deviceSyncing || phase2SyncPending) return
+    if (!keyboard.uid || keyboard.uid === EMPTY_UID) return
+    if (!keyboard.definition) return
+    if (hasMigratedRef.current === keyboard.uid) return
+
+    hasMigratedRef.current = keyboard.uid
+    const uid = keyboard.uid
+    const definition = keyboard.definition
+
+    ;(async () => {
+      try {
+        const listResult = await window.vialAPI.snapshotStoreList(uid)
+        if (!listResult.success || !listResult.entries) return
+
+        // Pre-filter by metadata, but verify with actual file content
+        const candidates = listResult.entries.filter(
+          (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
+        )
+        if (candidates.length === 0) return
+
+        // Show overlay only when there are actual candidates to migrate
+        setMigrating(true)
+        setMigrationProgress('loading.migrating')
+
+        let migratedCount = 0
+        for (const entry of candidates) {
+          setMigrationProgress(t('loading.migratingEntry', {
+            current: migratedCount + 1,
+            total: candidates.length,
+          }))
+
+          const loadResult = await window.vialAPI.snapshotStoreLoad(uid, entry.id)
+          if (!loadResult.success || !loadResult.data) continue
+
+          try {
+            const parsed: unknown = JSON.parse(loadResult.data)
+            if (!isVilFile(parsed) || !isVilFileV1(parsed)) continue
+
+            const upgraded = migrateVilFileToV2(parsed, definition)
+            await window.vialAPI.snapshotStoreUpdate(
+              uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
+            )
+            migratedCount++
+          } catch {
+            console.warn(`[Migration] Failed to migrate snapshot ${entry.id}`)
+          }
+        }
+
+        if (migratedCount > 0) {
+          await layoutStore.refreshEntries()
+          // Sync upload migrated files
+          if (sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword) {
+            setMigrationProgress('loading.migrationSync')
+            await sync.syncNow('upload', { keyboard: uid })
+          }
+        }
+      } catch (err) {
+        console.warn('[Migration] Snapshot migration failed:', err)
+      } finally {
+        setMigrating(false)
+        setMigrationProgress(null)
+      }
+    })()
+  }, [device.connectedDevice, device.isDummy, keyboard.loading, keyboard.uid,
+      keyboard.definition, deviceSyncing, phase2SyncPending,
+      layoutStore.refreshEntries, sync.config.autoSync, sync.authStatus.authenticated,
+      sync.hasPassword, sync.syncNow, t])
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels
@@ -1250,13 +1326,13 @@ export function App() {
         </>
       )}
 
-      {(keyboard.loading || deviceSyncing || phase2SyncPending) && (
+      {(keyboard.loading || deviceSyncing || phase2SyncPending || migrating) && (
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
-          loadingProgress={keyboard.loading ? keyboard.loadingProgress : undefined}
+          loadingProgress={keyboard.loading ? keyboard.loadingProgress : migrating ? migrationProgress ?? undefined : undefined}
           syncProgress={deviceSyncing ? sync.progress : undefined}
-          syncOnly={!keyboard.loading}
+          syncOnly={!keyboard.loading && !migrating}
         />
       )}
 

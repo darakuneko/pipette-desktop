@@ -38,7 +38,10 @@
     "keymap": "Loading keymap",
     "macros": "Loading macros",
     "dynamicEntries": "Loading features",
-    "settings": "Loading settings"
+    "settings": "Loading settings",
+    "migrating": "Migrating snapshots",
+    "migratingEntry": "Migrating snapshots ({{current}}/{{total}})",
+    "migrationSync": "Syncing migrated data"
   },
   "editor": {
     "autoAdvance": "Auto Move",
