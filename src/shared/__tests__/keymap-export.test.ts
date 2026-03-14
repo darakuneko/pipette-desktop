@@ -315,4 +315,49 @@ describe('generateKeymapC', () => {
     const result = generateKeymapC(createBasicInput())
     expect(result.endsWith('\n')).toBe(true)
   })
+
+  it('generates enum for custom keycodes when provided', () => {
+    const result = generateKeymapC(createBasicInput({
+      customKeycodes: [
+        { name: 'CUSTOM_1', title: 'Custom One', shortName: 'C1' },
+        { name: 'CUSTOM_2', title: 'Custom Two', shortName: 'C2' },
+      ],
+    }))
+
+    expect(result).toContain('enum custom_keycodes {')
+    expect(result).toContain('CUSTOM_1 = QK_KB_0,')
+    expect(result).toContain('CUSTOM_2,')
+    expect(result).toContain('};')
+    // Enum should appear between #include and keymaps array
+    const includeIdx = result.indexOf('#include QMK_KEYBOARD_H')
+    const enumIdx = result.indexOf('enum custom_keycodes')
+    const keymapsIdx = result.indexOf('const uint16_t PROGMEM keymaps')
+    expect(enumIdx).toBeGreaterThan(includeIdx)
+    expect(enumIdx).toBeLessThan(keymapsIdx)
+  })
+
+  it('does not generate enum when customKeycodes is undefined', () => {
+    const result = generateKeymapC(createBasicInput())
+
+    expect(result).not.toContain('enum custom_keycodes')
+  })
+
+  it('does not generate enum when customKeycodes is empty', () => {
+    const result = generateKeymapC(createBasicInput({ customKeycodes: [] }))
+
+    expect(result).not.toContain('enum custom_keycodes')
+  })
+
+  it('handles custom keycodes with missing name field', () => {
+    const result = generateKeymapC(createBasicInput({
+      customKeycodes: [
+        { title: 'No Name', shortName: 'NN' },
+        { name: 'HAS_NAME', title: 'Has Name', shortName: 'HN' },
+      ],
+    }))
+
+    // Entry without name should use USER00 fallback
+    expect(result).toContain('USER00 = QK_KB_0,')
+    expect(result).toContain('HAS_NAME,')
+  })
 })

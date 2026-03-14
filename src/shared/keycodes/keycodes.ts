@@ -1992,6 +1992,7 @@ export function createCustomUserKeycodes(
         label: c.shortName ?? `USER${String(x).padStart(2, '0')}`,
         tooltip: c.title ?? `USER${String(x).padStart(2, '0')}`,
         alias: [c.name ?? `USER${String(x).padStart(2, '0')}`],
+        cExportId: c.name,
       }),
     )
   }
