@@ -1082,6 +1082,32 @@ describe('createCustomUserKeycodes()', () => {
     expect(kc1!.label).toBe('USER01')
     expect(kc1!.tooltip).toBe('USER01')
   })
+
+  it('sets cExportId to custom name for keymap.c export', () => {
+    const customs: CustomKeycodeDefinition[] = [
+      { name: 'MY_KEY', title: 'My Custom Key', shortName: 'MK' },
+      { name: 'OTHER_KEY', title: 'Other Key', shortName: 'OK' },
+    ]
+    createCustomUserKeycodes(customs)
+    const kc0 = findByQmkId('USER00')
+    expect(kc0).toBeDefined()
+    expect(kc0!.cExportId).toBe('MY_KEY')
+
+    const kc1 = findByQmkId('USER01')
+    expect(kc1).toBeDefined()
+    expect(kc1!.cExportId).toBe('OTHER_KEY')
+  })
+
+  it('falls back cExportId to USER## when name is missing', () => {
+    const customs: CustomKeycodeDefinition[] = [
+      {}, // no name
+    ]
+    createCustomUserKeycodes(customs)
+    const kc0 = findByQmkId('USER00')
+    expect(kc0).toBeDefined()
+    // When name is missing, cExportId should be undefined so it falls back to qmkId (USER00)
+    expect(kc0!.cExportId).toBeUndefined()
+  })
 })
 
 // --- New keycode categories ---
