@@ -1812,7 +1812,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => setShowOneShotKeysSettings(true), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'behavior', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => setShowMagicSettings(true), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'behavior', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => setShowAutoShiftSettings(true), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
-      { tab: 'combo', key: 'combo', label: t('editor.keymap.comboLabel'), onClick: () => setShowComboSettings(true), testId: 'combo-settings-btn', enabled: !!comboSettingsSupported },
+      { tab: 'combo', key: 'combo', label: t('editor.keymap.comboLabel'), onClick: () => setShowComboSettings(true), testId: 'combo-settings-btn', enabled: comboSettingsSupported },
       { tab: 'lighting', key: 'lighting', label: t('editor.lighting.title'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
     ]
 

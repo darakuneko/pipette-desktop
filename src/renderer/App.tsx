@@ -260,10 +260,10 @@ export function App() {
   const autoShiftSupported = visibleSettingsNames.has('Auto Shift')
   const oneShotKeysSupported = visibleSettingsNames.has('One Shot Keys')
   const comboSettingsSupported = visibleSettingsNames.has('Combo')
-  const hasIntegratedSettings =
+  const hasAnySettings =
     tapHoldSupported || mouseKeysSupported || magicSupported ||
-    graveEscapeSupported || autoShiftSupported || oneShotKeysSupported
-  const hasAnySettings = hasIntegratedSettings || comboSettingsSupported
+    graveEscapeSupported || autoShiftSupported || oneShotKeysSupported ||
+    comboSettingsSupported
 
   const lightingSupported = !device.isDummy && LIGHTING_TYPES.has(keyboard.definition?.lighting ?? '')
 
