@@ -98,6 +98,8 @@ export function App() {
   const hasFavSyncedForDataRef = useRef(false)
   const hasKeyboardSyncedRef = useRef<string | null>(null)
   const hasMigratedRef = useRef<string | null>(null)
+  const pendingHubMigrationRef = useRef<Array<{ label: string; hubPostId: string; upgraded: VilFile }>>([])
+  const [hubMigrationReady, setHubMigrationReady] = useState(false)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
@@ -252,73 +254,6 @@ export function App() {
     setMigrationChecking(true)
   }, [device.connectedDevice, device.isDummy, keyboard.loading, keyboard.uid,
       keyboard.definition, deviceSyncing, phase2SyncPending])
-
-  // Auto-migrate v1 snapshots to v2 after reload + sync download complete
-  useEffect(() => {
-    if (!migrationChecking) return
-    if (hasMigratedRef.current === keyboard.uid) return
-
-    hasMigratedRef.current = keyboard.uid
-    const uid = keyboard.uid!
-    const definition = keyboard.definition!
-
-    ;(async () => {
-      try {
-        const listResult = await window.vialAPI.snapshotStoreList(uid)
-        if (!listResult.success || !listResult.entries) return
-
-        // Pre-filter by metadata, but verify with actual file content
-        const candidates = listResult.entries.filter(
-          (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
-        )
-        if (candidates.length === 0) return
-
-        setMigrating(true)
-        setMigrationProgress('loading.migrating')
-
-        let migratedCount = 0
-        for (const entry of candidates) {
-          setMigrationProgress(t('loading.migratingEntry', {
-            current: migratedCount + 1,
-            total: candidates.length,
-          }))
-
-          const loadResult = await window.vialAPI.snapshotStoreLoad(uid, entry.id)
-          if (!loadResult.success || !loadResult.data) continue
-
-          try {
-            const parsed: unknown = JSON.parse(loadResult.data)
-            if (!isVilFile(parsed) || !isVilFileV1(parsed)) continue
-
-            const upgraded = migrateVilFileToV2(parsed, definition)
-            await window.vialAPI.snapshotStoreUpdate(
-              uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
-            )
-            migratedCount++
-          } catch {
-            console.warn(`[Migration] Failed to migrate snapshot ${entry.id}`)
-          }
-        }
-
-        if (migratedCount > 0) {
-          await layoutStore.refreshEntries()
-          // Sync upload migrated files
-          if (sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword) {
-            setMigrationProgress('loading.migrationSync')
-            await sync.syncNow('upload', { keyboard: uid })
-          }
-        }
-      } catch (err) {
-        console.warn('[Migration] Snapshot migration failed:', err)
-      } finally {
-        setMigrationChecking(false)
-        setMigrating(false)
-        setMigrationProgress(null)
-      }
-    })()
-  }, [migrationChecking, keyboard.uid, keyboard.definition,
-      layoutStore.refreshEntries, sync.config.autoSync, sync.authStatus.authenticated,
-      sync.hasPassword, sync.syncNow, t])
 
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
   const [showUnlockDialog, setShowUnlockDialog] = useState(false)
@@ -900,6 +835,118 @@ export function App() {
       }
     }
   }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
+
+  // Auto-migrate v1 snapshots to v2 after reload + sync download complete.
+  // Placed after buildHubPostParams/hubCanUpload to avoid TDZ in dependency array.
+  useEffect(() => {
+    if (!migrationChecking) return
+    if (hasMigratedRef.current === keyboard.uid) return
+
+    hasMigratedRef.current = keyboard.uid
+    const uid = keyboard.uid!
+    const definition = keyboard.definition!
+
+    ;(async () => {
+      try {
+        const listResult = await window.vialAPI.snapshotStoreList(uid)
+        if (!listResult.success || !listResult.entries) return
+
+        // Pre-filter by metadata, but verify with actual file content
+        const candidates = listResult.entries.filter(
+          (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
+        )
+        if (candidates.length === 0) return
+
+        setMigrating(true)
+        setMigrationProgress('loading.migrating')
+
+        let migratedCount = 0
+        const hubUpdateEntries: Array<{ label: string; hubPostId: string; upgraded: VilFile }> = []
+
+        for (const entry of candidates) {
+          setMigrationProgress(t('loading.migratingEntry', {
+            current: migratedCount + 1,
+            total: candidates.length,
+          }))
+
+          const loadResult = await window.vialAPI.snapshotStoreLoad(uid, entry.id)
+          if (!loadResult.success || !loadResult.data) continue
+
+          try {
+            const parsed: unknown = JSON.parse(loadResult.data)
+            if (!isVilFile(parsed) || !isVilFileV1(parsed)) continue
+
+            const upgraded = migrateVilFileToV2(parsed, definition)
+            await window.vialAPI.snapshotStoreUpdate(
+              uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
+            )
+            migratedCount++
+
+            // Collect entries with Hub posts for batch update
+            if (entry.hubPostId) {
+              hubUpdateEntries.push({ label: entry.label, hubPostId: entry.hubPostId, upgraded })
+            }
+          } catch {
+            console.warn(`[Migration] Failed to migrate snapshot ${entry.id}`)
+          }
+        }
+
+        if (migratedCount > 0) {
+          await layoutStore.refreshEntries()
+
+          // Defer Hub updates — hubCanUpload may not be ready yet at startup.
+          // A separate effect picks these up once Hub auth is established.
+          if (hubUpdateEntries.length > 0) {
+            pendingHubMigrationRef.current = hubUpdateEntries
+            setHubMigrationReady(true)
+          }
+        }
+      } catch (err) {
+        console.warn('[Migration] Snapshot migration failed:', err)
+      } finally {
+        setMigrationChecking(false)
+        setMigrating(false)
+        setMigrationProgress(null)
+      }
+    })()
+  // hasMigratedRef guards against re-triggering; layoutStore.entries is intentionally
+  // excluded — refreshEntries() inside the effect would otherwise cause a false cycle.
+  }, [migrationChecking, keyboard.uid, keyboard.definition,
+      layoutStore.refreshEntries, t])
+
+  // Update Hub posts after migration — runs when hubCanUpload becomes true.
+  // Separated from the migration effect to handle the race where Hub auth
+  // is established after local migration completes.
+  useEffect(() => {
+    if (!hubMigrationReady || !hubCanUpload) return
+    const entries = pendingHubMigrationRef.current
+    if (entries.length === 0) return
+
+    pendingHubMigrationRef.current = []
+    setHubMigrationReady(false)
+
+    ;(async () => {
+      try {
+        const results = await Promise.allSettled(
+          entries.map(async ({ label, hubPostId, upgraded }) => {
+            const postParams = await buildHubPostParams({ label }, upgraded)
+            const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: hubPostId })
+            if (!result.success) {
+              console.warn(`[Migration] Hub update returned error for "${label}":`, result.error)
+            }
+          }),
+        )
+        for (const r of results) {
+          if (r.status === 'rejected') {
+            console.warn('[Migration] Hub update failed:', r.reason)
+          }
+        }
+        await refreshHubPosts()
+      } catch (err) {
+        console.warn('[Migration] Hub post update failed:', err)
+      }
+    })()
+  }, [hubMigrationReady, hubCanUpload, buildHubPostParams, refreshHubPosts])
 
   // --- Favorite Hub upload handlers ---
 
