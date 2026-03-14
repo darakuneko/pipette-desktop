@@ -290,11 +290,12 @@ Combo keycodes for simultaneous key-press combinations.
 
 ![Combo Tab](screenshots/tab-combo.png)
 
-The Combo tab displays a **tile grid preview** showing all entries and a settings area with a note: "These features apply to the entire keyboard, not just the current layer."
+The Combo tab displays a **tile grid preview** showing all entries, and an embedded **QMK Settings** section for combo-related timeout configuration (e.g., `COMBO_TERM`). A note reads: "These features apply to the entire keyboard, not just the current layer."
 
 - Each tile shows the combo number and a summary (e.g., "A + B → C")
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
+- The embedded QMK Settings panel allows adjusting combo timeout values without leaving the Combo tab
 
 ### 3.9 Key Override
 
@@ -334,7 +335,8 @@ User-defined keycodes.
 
 ![User Tab](screenshots/tab-user.png)
 
-- Custom keycodes defined in firmware
+- Custom keycodes defined in firmware (e.g., `CUSTOM_1`, `CUSTOM_2`)
+- When exporting `keymap.c`, custom keycodes use their configured names instead of generic `USER00`/`USER01` identifiers, and an `enum custom_keycodes` block is generated automatically
 
 ### 3.13 Keycodes Overlay Panel
 
@@ -484,7 +486,7 @@ The Combo tab shows a grid of numbered tiles (0--31). Configured entries display
 
 ![Combo Detail](screenshots/combo-detail.png)
 
-- Left panel: Combo editor with Key 1--4 and Output fields. Timeout (ms) and Save button for the global combo timeout.
+- Left panel: Combo editor with Key 1--4 and Output fields. The combo timeout settings are configured via the embedded QMK Settings on the Combo tab (§3.8).
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
