@@ -105,7 +105,7 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 ![Key Popover — Key Tab](screenshots/key-popover-key.png)
 
 - The search input is pre-filled with the current keycode name
-- Type to search by name, QMK ID, or alias — results are ranked by relevance
+- Type to search by name, keycode name, or alias — results are ranked by relevance
 - Click a result to assign it immediately
 - The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.)
 
