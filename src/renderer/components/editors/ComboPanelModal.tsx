@@ -20,18 +20,11 @@ import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
-const COMBO_TIMEOUT_QSID = 2
-const COMBO_TIMEOUT_WIDTH = 2
-const COMBO_TIMEOUT_MAX = 10000
-
 interface Props {
   entries: ComboEntry[]
   onSetEntry: (index: number, entry: ComboEntry) => Promise<void>
   unlocked?: boolean
   onUnlock?: () => void
-  qmkSettingsGet?: (qsid: number) => Promise<number[]>
-  qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
-  onSettingsUpdate?: (qsid: number, data: number[]) => void
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
   initialIndex?: number
@@ -89,9 +82,6 @@ export function ComboPanelModal({
   onSetEntry,
   unlocked,
   onUnlock,
-  qmkSettingsGet,
-  qmkSettingsSet,
-  onSettingsUpdate,
   tapDanceEntries,
   deserializedMacros,
   initialIndex,
@@ -111,8 +101,6 @@ export function ComboPanelModal({
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
-  const [comboTimeout, setComboTimeout] = useState<number | null>(null)
-  const [savedTimeout, setSavedTimeout] = useState<number | null>(null)
   const [editedEntry, setEditedEntry] = useState<ComboEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
@@ -123,24 +111,6 @@ export function ComboPanelModal({
     serialize: () => editedEntry,
     apply: (data) => setEditedEntry(data as ComboEntry),
   })
-
-  // Load combo timeout
-  useEffect(() => {
-    if (!qmkSettingsGet) return
-    let cancelled = false
-    qmkSettingsGet(COMBO_TIMEOUT_QSID).then((data) => {
-      if (cancelled) return
-      let value = 0
-      for (let i = 0; i < COMBO_TIMEOUT_WIDTH && i < data.length; i++) {
-        value |= data[i] << (8 * i)
-      }
-      setComboTimeout(value)
-      setSavedTimeout(value)
-    }).catch(() => {
-      // device may not support this setting
-    })
-    return () => { cancelled = true }
-  }, [qmkSettingsGet])
 
   const clearAction = useConfirmAction(useCallback(() => {
     setEditedEntry((prev) => prev ? { key1: 0, key2: 0, key3: 0, key4: 0, output: 0 } : prev)
@@ -182,17 +152,6 @@ export function ComboPanelModal({
   const handleBack = useCallback(() => {
     setSelectedIndex(null)
   }, [])
-
-  const handleTimeoutSave = useCallback(async () => {
-    if (comboTimeout === null || !qmkSettingsSet) return
-    const bytes: number[] = []
-    for (let i = 0; i < COMBO_TIMEOUT_WIDTH; i++) {
-      bytes.push((comboTimeout >> (8 * i)) & 0xff)
-    }
-    await qmkSettingsSet(COMBO_TIMEOUT_QSID, bytes)
-    onSettingsUpdate?.(COMBO_TIMEOUT_QSID, bytes)
-    setSavedTimeout(comboTimeout)
-  }, [comboTimeout, qmkSettingsSet, onSettingsUpdate])
 
   const handleEntrySave = useCallback(async () => {
     if (selectedIndex === null || !editedEntry) return
@@ -308,32 +267,6 @@ export function ComboPanelModal({
               )
             })}
           </div>
-          {qmkSettingsGet && comboTimeout !== null && (
-            <div className="shrink-0 mt-4 flex items-center gap-3">
-              <label className="text-sm">{t('editor.combo.timeout')}</label>
-              <input
-                type="number"
-                min={0}
-                max={COMBO_TIMEOUT_MAX}
-                value={comboTimeout}
-                onChange={(e) => {
-                  const v = parseInt(e.target.value, 10) || 0
-                  setComboTimeout(Math.max(0, Math.min(COMBO_TIMEOUT_MAX, v)))
-                }}
-                className="w-28 rounded border border-edge px-2 py-1 text-sm"
-                data-testid="combo-timeout-input"
-              />
-              <button
-                type="button"
-                data-testid="combo-timeout-save"
-                className="rounded bg-accent px-3 py-1 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                disabled={comboTimeout === savedTimeout}
-                onClick={handleTimeoutSave}
-              >
-                {t('common.save')}
-              </button>
-            </div>
-          )}
         </div>
       )
     }
