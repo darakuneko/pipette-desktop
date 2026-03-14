@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppConfig } from './hooks/useAppConfig'
 import { useDeviceConnection } from './hooks/useDeviceConnection'
@@ -91,6 +91,7 @@ export function App() {
   const [dummyError, setDummyError] = useState<string | null>(null)
   const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
+  const [migrationChecking, setMigrationChecking] = useState(false)
   const [migrating, setMigrating] = useState(false)
   const [migrationProgress, setMigrationProgress] = useState<string | null>(null)
   const hasSyncedRef = useRef(false)
@@ -240,22 +241,26 @@ export function App() {
     currentDefinition: keyboard.definition,
   })
 
-  // Auto-migrate v1 snapshots to v2 after reload + sync download complete
-  useEffect(() => {
+  // Keep overlay visible between loading and migration check (prevents keymap flash).
+  // useLayoutEffect fires before paint, so the browser never renders the keymap screen.
+  useLayoutEffect(() => {
     if (!device.connectedDevice || device.isDummy) return
-    // Wait for reload and sync to finish
     if (keyboard.loading || deviceSyncing || phase2SyncPending) return
     if (!keyboard.uid || keyboard.uid === EMPTY_UID) return
     if (!keyboard.definition) return
     if (hasMigratedRef.current === keyboard.uid) return
+    setMigrationChecking(true)
+  }, [device.connectedDevice, device.isDummy, keyboard.loading, keyboard.uid,
+      keyboard.definition, deviceSyncing, phase2SyncPending])
+
+  // Auto-migrate v1 snapshots to v2 after reload + sync download complete
+  useEffect(() => {
+    if (!migrationChecking) return
+    if (hasMigratedRef.current === keyboard.uid) return
 
     hasMigratedRef.current = keyboard.uid
-    const uid = keyboard.uid
-    const definition = keyboard.definition
-
-    // Show overlay immediately to avoid a flash of the keymap screen
-    setMigrating(true)
-    setMigrationProgress('loading.migrating')
+    const uid = keyboard.uid!
+    const definition = keyboard.definition!
 
     ;(async () => {
       try {
@@ -267,6 +272,9 @@ export function App() {
           (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
         )
         if (candidates.length === 0) return
+
+        setMigrating(true)
+        setMigrationProgress('loading.migrating')
 
         let migratedCount = 0
         for (const entry of candidates) {
@@ -303,12 +311,12 @@ export function App() {
       } catch (err) {
         console.warn('[Migration] Snapshot migration failed:', err)
       } finally {
+        setMigrationChecking(false)
         setMigrating(false)
         setMigrationProgress(null)
       }
     })()
-  }, [device.connectedDevice, device.isDummy, keyboard.loading, keyboard.uid,
-      keyboard.definition, deviceSyncing, phase2SyncPending,
+  }, [migrationChecking, keyboard.uid, keyboard.definition,
       layoutStore.refreshEntries, sync.config.autoSync, sync.authStatus.authenticated,
       sync.hasPassword, sync.syncNow, t])
 
@@ -1327,13 +1335,13 @@ export function App() {
         </>
       )}
 
-      {(keyboard.loading || deviceSyncing || phase2SyncPending || migrating) && (
+      {(keyboard.loading || deviceSyncing || phase2SyncPending || migrationChecking || migrating) && (
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
           loadingProgress={keyboard.loading ? keyboard.loadingProgress : migrating ? migrationProgress ?? undefined : undefined}
           syncProgress={deviceSyncing ? sync.progress : undefined}
-          syncOnly={!keyboard.loading && !migrating}
+          syncOnly={!keyboard.loading && !migrating && !migrationChecking}
         />
       )}
 
