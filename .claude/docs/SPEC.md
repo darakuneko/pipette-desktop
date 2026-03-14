@@ -771,7 +771,7 @@ Combo (同時押し) の設定画面。vial_protocol >= 4 かつ combo_count > 0
   - Key 1-4: トリガーキー (16bit キーコード、未使用は `KC_NO`)
   - Output Key: 出力キー (16bit キーコード)
 - **即時保存**: キー変更時に即座にデバイスへ送信
-- **QMK Settings 埋め込み**: Combo タブ内に QmkSettings コンポーネントを埋め込み、Combo 関連のタイムアウト設定（`COMBO_TERM` 等）を同一画面で変更可能
+- **Settings: Configuration**: Combo タブ下部の Configuration ボタンから設定モーダルを開き、Combo 関連のタイムアウト設定（`COMBO_TERM` 等）を変更可能
 
 ### 5.7 Key Override Editor
 

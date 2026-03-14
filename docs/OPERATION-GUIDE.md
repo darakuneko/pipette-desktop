@@ -290,12 +290,12 @@ Combo keycodes for simultaneous key-press combinations.
 
 ![Combo Tab](screenshots/tab-combo.png)
 
-The Combo tab displays a **tile grid preview** showing all entries, and an embedded **QMK Settings** section for combo-related timeout configuration (e.g., `COMBO_TERM`). A note reads: "These features apply to the entire keyboard, not just the current layer."
+The Combo tab displays a **tile grid preview** showing all entries. A note reads: "These features apply to the entire keyboard, not just the current layer."
 
 - Each tile shows the combo number and a summary (e.g., "A + B → C")
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
-- The embedded QMK Settings panel allows adjusting combo timeout values without leaving the Combo tab
+- **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
 
 ### 3.9 Key Override
 
@@ -459,11 +459,11 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 
 ## 5. Detail Setting Editors
 
-Open detail setting modals from their dedicated keycode tabs. Lighting opens via its settings button; Combo, Key Override, and Alt Repeat Key open by clicking a tile on their respective tabs.
+Open detail setting modals from their dedicated keycode tabs. Lighting and Combo open via **Settings: Configuration** buttons at the bottom of their tabs; Combo, Key Override, and Alt Repeat Key detail editors open by clicking a tile on their respective tabs.
 
 ### 5.1 Lighting Settings
 
-Open from the Lighting tab settings button. Configure RGB lighting colors and effects.
+Open from the **Settings: Configuration** button on the Lighting tab. Configure RGB lighting colors and effects.
 
 ![Lighting Settings](screenshots/lighting-modal.png)
 
@@ -486,7 +486,7 @@ The Combo tab shows a grid of numbered tiles (0--31). Configured entries display
 
 ![Combo Detail](screenshots/combo-detail.png)
 
-- Left panel: Combo editor with Key 1--4 and Output fields. The combo timeout settings are configured via the embedded QMK Settings on the Combo tab (§3.8).
+- Left panel: Combo editor with Key 1--4 and Output fields.
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
