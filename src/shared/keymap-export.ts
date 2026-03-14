@@ -2,6 +2,7 @@
 // Generate QMK-compatible keymap.c from current keymap state
 
 import type { KleKey } from './kle/types'
+import type { CustomKeycodeDefinition } from './keycodes/keycodes'
 import { filterVisibleKeys } from './kle/filter-keys'
 
 export interface KeymapExportInput {
@@ -12,6 +13,7 @@ export interface KeymapExportInput {
   encoderCount: number
   layoutOptions: Map<number, number>
   serializeKeycode: (code: number) => string
+  customKeycodes?: CustomKeycodeDefinition[]
 }
 
 function groupKeysByRow(keys: KleKey[]): KleKey[][] {
@@ -73,6 +75,17 @@ function generateEncoderLayer(
   return `    [${layer}] = { ${entries.join(', ')} }`
 }
 
+function generateCustomKeycodeEnum(customKeycodes: CustomKeycodeDefinition[]): string | null {
+  if (customKeycodes.length === 0) return null
+
+  const entries = customKeycodes.map((c, i) => {
+    const name = c.name ?? `USER${String(i).padStart(2, '0')}`
+    return i === 0 ? `    ${name} = QK_KB_0,` : `    ${name},`
+  })
+
+  return [`enum custom_keycodes {`, ...entries, `};`].join('\n')
+}
+
 export function generateKeymapC(input: KeymapExportInput): string {
   const {
     layers,
@@ -82,6 +95,7 @@ export function generateKeymapC(input: KeymapExportInput): string {
     encoderCount,
     layoutOptions,
     serializeKeycode,
+    customKeycodes,
   } = input
 
   const visibleKeys = filterVisibleKeys(keys, layoutOptions)
@@ -95,10 +109,18 @@ export function generateKeymapC(input: KeymapExportInput): string {
     `/* SPDX-License-Identifier: GPL-2.0-or-later */`,
     `#include QMK_KEYBOARD_H`,
     '',
+  ]
+
+  const enumBlock = customKeycodes ? generateCustomKeycodeEnum(customKeycodes) : null
+  if (enumBlock) {
+    sections.push(enumBlock, '')
+  }
+
+  sections.push(
     `const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {`,
     `${layerBlocks.join(',\n')},`,
     `};`,
-  ]
+  )
 
   if (encoderCount > 0) {
     const encoderBlocks = Array.from({ length: layers }, (_, l) =>

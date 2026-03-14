@@ -160,6 +160,7 @@ export function App() {
       encoderCount: keyboard.encoderCount,
       layoutOptions: decodedLayoutOptions,
       serializeKeycode: serializeForCExport,
+      customKeycodes: keyboard.definition?.customKeycodes,
     }),
     [
       keyboard.layers,
@@ -168,6 +169,7 @@ export function App() {
       keyboard.encoderLayout,
       keyboard.encoderCount,
       decodedLayoutOptions,
+      keyboard.definition?.customKeycodes,
     ],
   )
 
@@ -534,6 +536,7 @@ export function App() {
         ? decodeLayoutOptions(vilData.layoutOptions, labels)
         : new Map<number, number>(),
       serializeKeycode,
+      customKeycodes: keyboard.definition?.customKeycodes,
       tapDance: vilData.tapDance,
       combo: vilData.combo,
       keyOverride: vilData.keyOverride,
