@@ -60,6 +60,8 @@
       "autoShiftLabel": "Auto Shift",
       "oneShotKeysSettings": "One Shot Keys Settings",
       "oneShotKeysLabel": "One Shot Keys",
+      "comboSettings": "Combo Settings",
+      "comboLabel": "Combo",
       "previousLayers": "Previous layers",
       "nextLayers": "Next layers",
       "layerN": "Layer {{n}}",

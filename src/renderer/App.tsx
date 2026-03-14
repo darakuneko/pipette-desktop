@@ -1298,6 +1298,7 @@ export function App() {
             graveEscapeSupported={graveEscapeSupported}
             autoShiftSupported={autoShiftSupported}
             oneShotKeysSupported={oneShotKeysSupported}
+            comboSettingsSupported={comboSettingsSupported}
             supportedQsids={hasAnySettings ? keyboard.supportedQsids : undefined}
             qmkSettingsGet={hasAnySettings ? api.qmkSettingsGet : undefined}
             qmkSettingsSet={hasAnySettings ? api.qmkSettingsSet : undefined}
@@ -1455,11 +1456,6 @@ export function App() {
           initialIndex={comboInitialIndex}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
-          supportedQsids={comboSettingsSupported ? keyboard.supportedQsids : undefined}
-          qmkSettingsGet={comboSettingsSupported ? api.qmkSettingsGet : undefined}
-          qmkSettingsSet={comboSettingsSupported ? api.qmkSettingsSet : undefined}
-          qmkSettingsReset={comboSettingsSupported ? api.qmkSettingsReset : undefined}
-          onSettingsUpdate={comboSettingsSupported ? keyboard.updateQmkSettingsValue : undefined}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           quickSelect={devicePrefs.quickSelect}

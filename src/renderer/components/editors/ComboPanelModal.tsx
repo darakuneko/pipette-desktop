@@ -19,18 +19,12 @@ import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
-import { QmkSettings } from './QmkSettings'
 
 interface Props {
   entries: ComboEntry[]
   onSetEntry: (index: number, entry: ComboEntry) => Promise<void>
   unlocked?: boolean
   onUnlock?: () => void
-  supportedQsids?: Set<number>
-  qmkSettingsGet?: (qsid: number) => Promise<number[]>
-  qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
-  qmkSettingsReset?: () => Promise<void>
-  onSettingsUpdate?: (qsid: number, data: number[]) => void
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
   initialIndex?: number
@@ -88,11 +82,6 @@ export function ComboPanelModal({
   onSetEntry,
   unlocked,
   onUnlock,
-  supportedQsids,
-  qmkSettingsGet,
-  qmkSettingsSet,
-  qmkSettingsReset,
-  onSettingsUpdate,
   tapDanceEntries,
   deserializedMacros,
   initialIndex,
@@ -122,9 +111,6 @@ export function ComboPanelModal({
     serialize: () => editedEntry,
     apply: (data) => setEditedEntry(data as ComboEntry),
   })
-
-  const comboSettingsSupported = supportedQsids !== undefined &&
-    qmkSettingsGet !== undefined && qmkSettingsSet !== undefined && qmkSettingsReset !== undefined
 
   const clearAction = useConfirmAction(useCallback(() => {
     setEditedEntry((prev) => prev ? { key1: 0, key2: 0, key3: 0, key4: 0, output: 0 } : prev)
@@ -281,19 +267,6 @@ export function ComboPanelModal({
               )
             })}
           </div>
-          {comboSettingsSupported && (
-            <div className="shrink-0 mt-4 border-t border-edge pt-4">
-              <h4 className="mb-3 text-sm font-semibold">{t('editor.combo.settings')}</h4>
-              <QmkSettings
-                tabName="Combo"
-                supportedQsids={supportedQsids!}
-                qmkSettingsGet={qmkSettingsGet!}
-                qmkSettingsSet={qmkSettingsSet!}
-                qmkSettingsReset={qmkSettingsReset!}
-                onSettingsUpdate={onSettingsUpdate}
-              />
-            </div>
-          )}
         </div>
       )
     }

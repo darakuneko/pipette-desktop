@@ -570,6 +570,7 @@ interface Props {
   graveEscapeSupported?: boolean
   autoShiftSupported?: boolean
   oneShotKeysSupported?: boolean
+  comboSettingsSupported?: boolean
   supportedQsids?: Set<number>
   qmkSettingsGet?: (qsid: number) => Promise<number[]>
   qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
@@ -668,6 +669,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   graveEscapeSupported,
   autoShiftSupported,
   oneShotKeysSupported,
+  comboSettingsSupported,
   supportedQsids,
   qmkSettingsGet,
   qmkSettingsSet,
@@ -738,6 +740,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
   const [showGraveEscapeSettings, setShowGraveEscapeSettings] = useState(false)
   const [showAutoShiftSettings, setShowAutoShiftSettings] = useState(false)
   const [showOneShotKeysSettings, setShowOneShotKeysSettings] = useState(false)
+  const [showComboSettings, setShowComboSettings] = useState(false)
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const layerPanelCollapsed = layerPanelOpenProp === false
   const toggleLayerPanel = useCallback(() => {
@@ -1809,7 +1812,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => setShowOneShotKeysSettings(true), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'behavior', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => setShowMagicSettings(true), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'behavior', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => setShowAutoShiftSettings(true), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
-      // Combo, Key Override, Alt Repeat Key settings are shown inline via tile grids in their tabs
+      { tab: 'combo', key: 'combo', label: t('editor.keymap.comboLabel'), onClick: () => setShowComboSettings(true), testId: 'combo-settings-btn', enabled: !!comboSettingsSupported },
       { tab: 'lighting', key: 'lighting', label: t('editor.lighting.title'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
     ]
 
@@ -1840,15 +1843,10 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     }
 
     return content
-  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, onOpenLighting, t])
-
-  const comboSettings = useMemo(() => {
-    if (!supportedQsids || !qmkSettingsGet || !qmkSettingsSet || !qmkSettingsReset) return undefined
-    return { supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate }
-  }, [supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate])
+  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t])
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
-    comboEntries, onOpenCombo, comboSettings,
+    comboEntries, onOpenCombo,
     keyOverrideEntries, onOpenKeyOverride,
     altRepeatKeyEntries, onOpenAltRepeatKey,
   })
@@ -2366,6 +2364,20 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
               qmkSettingsReset={qmkSettingsReset}
               onSettingsUpdate={onSettingsUpdate}
               onClose={() => setShowOneShotKeysSettings(false)}
+            />
+          )}
+
+          {showComboSettings && comboSettingsSupported && (
+            <SettingsModal
+              title={t('editor.keymap.comboSettings')}
+              testidPrefix="combo-settings"
+              tabName="Combo"
+              supportedQsids={supportedQsids}
+              qmkSettingsGet={qmkSettingsGet}
+              qmkSettingsSet={qmkSettingsSet}
+              qmkSettingsReset={qmkSettingsReset}
+              onSettingsUpdate={onSettingsUpdate}
+              onClose={() => setShowComboSettings(false)}
             />
           )}
         </>
