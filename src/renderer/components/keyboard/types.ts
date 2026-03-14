@@ -4,7 +4,7 @@ import type { KleKey } from '../../../shared/kle/types'
 
 export interface KeyWidgetProps {
   kleKey: KleKey
-  keycode: string // QMK ID for display label
+  keycode: string // keycode name for display label
   maskKeycode?: string // Inner keycode for masked keys
   selected?: boolean
   multiSelected?: boolean
@@ -27,8 +27,8 @@ export interface EncoderWidgetProps {
 
 export interface KeyboardWidgetProps {
   keys: KleKey[]
-  keycodes: Map<string, string> // "row,col" -> QMK ID
-  maskKeycodes?: Map<string, string> // "row,col" -> inner QMK ID (for masked keys)
+  keycodes: Map<string, string> // "row,col" -> keycode name
+  maskKeycodes?: Map<string, string> // "row,col" -> inner keycode name (for masked keys)
   encoderKeycodes?: Map<string, [string, string]> // "idx" -> [CW, CCW]
   selectedKey?: { row: number; col: number } | null
   selectedEncoder?: { idx: number; dir: number } | null

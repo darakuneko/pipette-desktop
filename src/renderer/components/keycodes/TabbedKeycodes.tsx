@@ -149,7 +149,7 @@ export function TabbedKeycodes({
     // For keyboard views (ANSI/ISO/JIS), order by physical layout position
     if (cat.id === 'basic' && resolvedBasicViewType != null && resolvedBasicViewType !== 'list' && !lmMode) {
       const layouts = getLayoutsForViewType(resolvedBasicViewType)
-      // Largest layout has the most keys — extract QMK IDs in physical row-major order
+      // Largest layout has the most keys — extract keycode names in physical row-major order
       const kleLayout = parseKle(layouts[0].kle)
       const layoutKeycodes: Keycode[] = []
       const layoutIds = new Set<string>()

@@ -33,10 +33,10 @@ const SHIFTED_MAP: Record<string, string> = {
   KC_JYEN: 'KC_PIPE',
 }
 
-/** Set of all QMK IDs that appear as shifted counterparts */
+/** Set of all keycode names that appear as shifted counterparts */
 const SHIFTED_IDS: ReadonlySet<string> = new Set(Object.values(SHIFTED_MAP))
 
-/** Check if a QMK ID is a shifted keycode (e.g. KC_AT, KC_EXLM) */
+/** Check if a keycode name is a shifted keycode (e.g. KC_AT, KC_EXLM) */
 export function isShiftedKeycode(qmkId: string): boolean {
   return SHIFTED_IDS.has(qmkId)
 }
