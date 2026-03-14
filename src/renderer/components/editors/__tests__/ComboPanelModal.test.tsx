@@ -12,7 +12,6 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'editor.combo.title': 'Combo',
         'editor.combo.output': 'Output',
-        'editor.combo.timeout': 'Timeout (ms)',
         'editor.combo.selectEntry': 'Select an entry to edit',
         'common.noEntries': 'No entries',
         'common.notConfigured': 'N/C',

@@ -59,7 +59,7 @@
         {
             "name": "Combo",
             "fields": [
-                { "type": "integer", "title": "Time out period for combos", "qsid": 2, "min": 0, "max": 10000, "width": 2 }
+                { "type": "integer", "title": "Time out period", "qsid": 2, "min": 0, "max": 10000, "width": 2 }
             ]
         },
         {
