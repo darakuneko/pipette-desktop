@@ -242,8 +242,6 @@ export function App() {
     setMatrixState({ matrixMode, hasMatrixTester })
   }, [])
 
-  const comboTimeoutSupported = !device.isDummy && keyboard.supportedQsids.has(2)
-
   // Collect visible settings tab names for per-feature support checks
   const visibleSettingsNames = useMemo(() => {
     if (device.isDummy || keyboard.supportedQsids.size === 0) return new Set<string>()
@@ -261,9 +259,11 @@ export function App() {
   const graveEscapeSupported = visibleSettingsNames.has('Grave Escape')
   const autoShiftSupported = visibleSettingsNames.has('Auto Shift')
   const oneShotKeysSupported = visibleSettingsNames.has('One Shot Keys')
-  const hasIntegratedSettings =
+  const comboSettingsSupported = visibleSettingsNames.has('Combo')
+  const hasAnySettings =
     tapHoldSupported || mouseKeysSupported || magicSupported ||
-    graveEscapeSupported || autoShiftSupported || oneShotKeysSupported
+    graveEscapeSupported || autoShiftSupported || oneShotKeysSupported ||
+    comboSettingsSupported
 
   const lightingSupported = !device.isDummy && LIGHTING_TYPES.has(keyboard.definition?.lighting ?? '')
 
@@ -1298,11 +1298,12 @@ export function App() {
             graveEscapeSupported={graveEscapeSupported}
             autoShiftSupported={autoShiftSupported}
             oneShotKeysSupported={oneShotKeysSupported}
-            supportedQsids={hasIntegratedSettings ? keyboard.supportedQsids : undefined}
-            qmkSettingsGet={hasIntegratedSettings ? api.qmkSettingsGet : undefined}
-            qmkSettingsSet={hasIntegratedSettings ? api.qmkSettingsSet : undefined}
-            qmkSettingsReset={hasIntegratedSettings ? api.qmkSettingsReset : undefined}
-            onSettingsUpdate={hasIntegratedSettings ? keyboard.updateQmkSettingsValue : undefined}
+            comboSettingsSupported={comboSettingsSupported}
+            supportedQsids={hasAnySettings ? keyboard.supportedQsids : undefined}
+            qmkSettingsGet={hasAnySettings ? api.qmkSettingsGet : undefined}
+            qmkSettingsSet={hasAnySettings ? api.qmkSettingsSet : undefined}
+            qmkSettingsReset={hasAnySettings ? api.qmkSettingsReset : undefined}
+            onSettingsUpdate={hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             basicViewType={devicePrefs.basicViewType}
@@ -1455,9 +1456,6 @@ export function App() {
           initialIndex={comboInitialIndex}
           unlocked={keyboard.unlockStatus.unlocked}
           onUnlock={() => setShowUnlockDialog(true)}
-          qmkSettingsGet={comboTimeoutSupported ? api.qmkSettingsGet : undefined}
-          qmkSettingsSet={comboTimeoutSupported ? api.qmkSettingsSet : undefined}
-          onSettingsUpdate={comboTimeoutSupported ? keyboard.updateQmkSettingsValue : undefined}
           tapDanceEntries={keyboard.tapDanceEntries}
           deserializedMacros={deserializedMacros}
           quickSelect={devicePrefs.quickSelect}

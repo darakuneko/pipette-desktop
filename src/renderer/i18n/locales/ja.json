@@ -19,6 +19,7 @@
     "noEntries": "このデバイスにはエントリが設定されていません",
     "notConfigured": "未設定",
     "settingsLabel": "設定:",
+    "configuration": "Configuration",
     "saving": "保存中...",
     "back": "戻る"
   },
@@ -60,6 +61,8 @@
       "autoShiftLabel": "Auto Shift",
       "oneShotKeysSettings": "One Shot Keys Settings",
       "oneShotKeysLabel": "One Shot Keys",
+      "comboSettings": "Combo",
+      "comboLabel": "Combo",
       "previousLayers": "前のレイヤー",
       "nextLayers": "次のレイヤー",
       "layerN": "Layer {{n}}",
