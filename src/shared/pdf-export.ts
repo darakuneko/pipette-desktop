@@ -389,7 +389,7 @@ function pdfKeycodeLabel(code: number, input: PdfExportInput): string {
 }
 
 /**
- * QMK ID-based label for macro badges. Shows full QMK name (e.g. LCTL_T(KC_3))
+ * Keycode-name-based label for macro badges. Shows full QMK name (e.g. LCTL_T(KC_3))
  * instead of the visual key cap label, matching pipette-hub's macro card format.
  */
 function pdfMacroLabel(code: number, input: PdfExportInput): string {

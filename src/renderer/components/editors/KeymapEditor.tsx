@@ -1229,7 +1229,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     hasMatrixTester,
   }), [handleMatrixToggle, handleTypingTestToggle, matrixMode, hasMatrixTester])
 
-  // Build keycodes map for a given layer: "row,col" -> serialized QMK ID
+  // Build keycodes map for a given layer: "row,col" -> serialized keycode name
   // Also build a set of position keys whose keycode is remapped in the current layout
   const buildKeycodesForLayer = useCallback((layer: number) => {
     const keycodes = new Map<string, string>()
@@ -1308,7 +1308,7 @@ export const KeymapEditor = forwardRef<KeymapEditorHandle, Props>(function Keyma
     [buildEncoderKeycodesForLayer, typingTest.effectiveLayer, typingTestMode],
   )
 
-  // Get selected key's current QMK ID string
+  // Get selected key's current keycode name string
   const selectedKeycode = useMemo(() => {
     if (selectedKey) {
       const code = keymap.get(`${currentLayer},${selectedKey.row},${selectedKey.col}`) ?? 0

@@ -32,7 +32,7 @@ interface Props {
   remapLabel?: (qmkId: string) => string
 }
 
-/** Collect all QMK IDs present in a KLE layout definition */
+/** Collect all keycode names present in a KLE layout definition */
 function collectLayoutQmkIds(kle: unknown[][]): Set<string> {
   const layout = parseKle(kle)
   const ids = new Set<string>()
