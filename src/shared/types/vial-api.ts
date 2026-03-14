@@ -104,6 +104,7 @@ export interface VialAPI {
   snapshotStoreList(uid: string): Promise<{ success: boolean; entries?: SnapshotMeta[]; error?: string }>
   snapshotStoreSave(uid: string, json: string, deviceName: string, label: string): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }>
   snapshotStoreLoad(uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
+  snapshotStoreUpdate(uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }>
   snapshotStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   snapshotStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
 

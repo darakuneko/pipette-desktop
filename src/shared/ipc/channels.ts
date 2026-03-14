@@ -30,6 +30,7 @@ export const IpcChannels = {
   SNAPSHOT_STORE_LIST: 'snapshot-store:list',
   SNAPSHOT_STORE_SAVE: 'snapshot-store:save',
   SNAPSHOT_STORE_LOAD: 'snapshot-store:load',
+  SNAPSHOT_STORE_UPDATE: 'snapshot-store:update',
   SNAPSHOT_STORE_RENAME: 'snapshot-store:rename',
   SNAPSHOT_STORE_DELETE: 'snapshot-store:delete',
 

@@ -25,7 +25,7 @@ import {
   ECHO_DETECTED_MSG,
   EMPTY_UID,
 } from '../../shared/constants/protocol'
-import { mapToRecord, recordToMap } from '../../shared/vil-file'
+import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions, type MacroAction } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
@@ -759,6 +759,7 @@ export function useKeyboard() {
     const macrosSrc = s.parsedMacros
       ?? splitMacroBuffer(s.macroBuffer, s.macroCount).map((m) => deserializeMacro(m, s.vialProtocol))
     return {
+      version: VILFILE_CURRENT_VERSION,
       uid: s.uid,
       keymap: mapToRecord(s.keymap),
       encoderLayout: mapToRecord(s.encoderLayout),
@@ -771,6 +772,7 @@ export function useKeyboard() {
       altRepeatKey: s.altRepeatKeyEntries,
       qmkSettings: s.qmkSettingsValues,
       layerNames: s.layerNames,
+      definition: s.definition ?? undefined,
     }
   }, [])
 

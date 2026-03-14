@@ -7,7 +7,7 @@ import { useDeviceConnection } from './hooks/useDeviceConnection'
 import { useKeyboard } from './hooks/useKeyboard'
 import { useFileIO } from './hooks/useFileIO'
 import { useLayoutStore } from './hooks/useLayoutStore'
-import { useSideloadJson, isKeyboardDefinition } from './hooks/useSideloadJson'
+import { useSideloadJson } from './hooks/useSideloadJson'
 import { useTheme } from './hooks/useTheme'
 import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useAutoLock } from './hooks/useAutoLock'
@@ -34,7 +34,7 @@ import { generateKeymapPdf } from '../shared/pdf-export'
 import { generateAllLayoutOptionsPdf, generateCurrentLayoutPdf, type LayoutPdfInput } from '../shared/pdf-layout-export'
 import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
-import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
+import { isVilFile, isVilFileV1, migrateVilFileToV2, isKeyboardDefinition, recordToMap, deriveLayerCount } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson, jsonToMacroActions } from '../preload/macro'
 import {
@@ -226,6 +226,7 @@ export function App() {
     deviceName,
     serialize: keyboard.serialize,
     applyVilFile: keyboard.applyVilFile,
+    currentDefinition: keyboard.definition,
   })
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
   const [showUnlockDialog, setShowUnlockDialog] = useState(false)
@@ -512,11 +513,23 @@ export function App() {
       if (!result.success || !result.data) return null
       const parsed: unknown = JSON.parse(result.data)
       if (!isVilFile(parsed)) return null
+
+      // Auto-migrate v1 → v2 on read
+      if (isVilFileV1(parsed) && keyboard.definition) {
+        const migrated = migrateVilFileToV2(parsed, keyboard.definition)
+        window.vialAPI.snapshotStoreUpdate(
+          keyboard.uid,
+          entryId,
+          JSON.stringify(migrated, null, 2),
+        ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
+        return migrated
+      }
+
       return parsed
     } catch {
       return null
     }
-  }, [keyboard.uid])
+  }, [keyboard.uid, keyboard.definition])
 
   const entryExportName = useCallback((entryId: string): string => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)

@@ -176,6 +176,37 @@ export function setupSnapshotStore(): void {
   )
 
   secureHandle(
+    IpcChannels.SNAPSHOT_STORE_UPDATE,
+    async (
+      _event,
+      uid: string,
+      entryId: string,
+      json: string,
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        validateUid(uid)
+        return await withWriteLock(uid, async () => {
+          const index = await readIndex(uid)
+          const entry = index.entries.find((e) => e.id === entryId)
+          if (!entry) return { success: false, error: 'Entry not found' }
+          if (entry.deletedAt) return { success: false, error: 'Entry has been deleted' }
+
+          const filePath = getSafeFilePath(uid, entry.filename)
+          await writeFile(filePath, json, 'utf-8')
+
+          entry.updatedAt = new Date().toISOString()
+          await writeIndex(uid, index)
+
+          notifyChange(`keyboards/${uid}/snapshots`)
+          return { success: true }
+        })
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
+  secureHandle(
     IpcChannels.SNAPSHOT_STORE_RENAME,
     async (_event, uid: string, entryId: string, newLabel: string) =>
       updateEntry(uid, entryId, (entry) => { entry.label = newLabel }),

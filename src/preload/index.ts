@@ -151,6 +151,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SAVE, uid, json, deviceName, label),
   snapshotStoreLoad: (uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_LOAD, uid, entryId),
+  snapshotStoreUpdate: (uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_UPDATE, uid, entryId, json),
   snapshotStoreRename: (uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_RENAME, uid, entryId, newLabel),
   snapshotStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>

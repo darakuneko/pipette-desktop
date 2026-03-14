@@ -2,15 +2,17 @@
 
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { VilFile } from '../../shared/types/protocol'
+import type { KeyboardDefinition, VilFile } from '../../shared/types/protocol'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
-import { isVilFile } from '../../shared/vil-file'
+import { isVilFile, isVilFileV1, migrateVilFileToV2 } from '../../shared/vil-file'
 
 export interface UseLayoutStoreOptions {
   deviceUid: string
   deviceName: string
   serialize: () => VilFile
   applyVilFile: (vil: VilFile) => Promise<void>
+  /** Current device definition — used for v1→v2 auto-migration */
+  currentDefinition: KeyboardDefinition | null
 }
 
 export function useLayoutStore({
@@ -18,6 +20,7 @@ export function useLayoutStore({
   deviceName,
   serialize,
   applyVilFile,
+  currentDefinition,
 }: UseLayoutStoreOptions) {
   const { t } = useTranslation()
   const [entries, setEntries] = useState<SnapshotMeta[]>([])
@@ -72,6 +75,19 @@ export function useLayoutStore({
         return false
       }
 
+      // Auto-migrate v1 → v2: embed current device definition and persist
+      if (isVilFileV1(parsed) && currentDefinition) {
+        const migrated = migrateVilFileToV2(parsed, currentDefinition)
+        // Fire-and-forget: persist migrated file without blocking the load
+        window.vialAPI.snapshotStoreUpdate(
+          deviceUid,
+          entryId,
+          JSON.stringify(migrated, null, 2),
+        ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
+        await applyVilFile(migrated)
+        return true
+      }
+
       await applyVilFile(parsed)
       return true
     } catch {
@@ -80,7 +96,7 @@ export function useLayoutStore({
     } finally {
       setLoading(false)
     }
-  }, [deviceUid, applyVilFile, t])
+  }, [deviceUid, applyVilFile, currentDefinition, t])
 
   const renameEntry = useCallback(async (entryId: string, newLabel: string): Promise<boolean> => {
     setError(null)
