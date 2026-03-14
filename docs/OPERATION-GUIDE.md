@@ -105,7 +105,7 @@ Double-click a key on the keyboard layout to open the Key Popover — a quick wa
 ![Key Popover — Key Tab](screenshots/key-popover-key.png)
 
 - The search input is pre-filled with the current keycode name
-- Type to search by name, QMK ID, or alias — results are ranked by relevance
+- Type to search by name, keycode name, or alias — results are ranked by relevance
 - Click a result to assign it immediately
 - The popover also appears when double-clicking key fields in detail editors (Tap Dance, Combo, Key Override, etc.)
 
@@ -290,11 +290,12 @@ Combo keycodes for simultaneous key-press combinations.
 
 ![Combo Tab](screenshots/tab-combo.png)
 
-The Combo tab displays a **tile grid preview** showing all entries and a settings area with a note: "These features apply to the entire keyboard, not just the current layer."
+The Combo tab displays a **tile grid preview** showing all entries. A note reads: "These features apply to the entire keyboard, not just the current layer."
 
 - Each tile shows the combo number and a summary (e.g., "A + B → C")
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
+- **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
 
 ### 3.9 Key Override
 
@@ -334,7 +335,8 @@ User-defined keycodes.
 
 ![User Tab](screenshots/tab-user.png)
 
-- Custom keycodes defined in firmware
+- Custom keycodes defined in firmware (e.g., `CUSTOM_1`, `CUSTOM_2`)
+- When exporting `keymap.c`, custom keycodes use their configured names instead of generic `USER00`/`USER01` identifiers, and an `enum custom_keycodes` block is generated automatically
 
 ### 3.13 Keycodes Overlay Panel
 
@@ -457,11 +459,11 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 
 ## 5. Detail Setting Editors
 
-Open detail setting modals from their dedicated keycode tabs. Lighting opens via its settings button; Combo, Key Override, and Alt Repeat Key open by clicking a tile on their respective tabs.
+Open detail setting modals from their dedicated keycode tabs. Lighting and Combo open via **Settings: Configuration** buttons at the bottom of their tabs; Combo, Key Override, and Alt Repeat Key detail editors open by clicking a tile on their respective tabs.
 
 ### 5.1 Lighting Settings
 
-Open from the Lighting tab settings button. Configure RGB lighting colors and effects.
+Open from the **Settings: Configuration** button on the Lighting tab. Configure RGB lighting colors and effects.
 
 ![Lighting Settings](screenshots/lighting-modal.png)
 
@@ -484,7 +486,7 @@ The Combo tab shows a grid of numbered tiles (0--31). Configured entries display
 
 ![Combo Detail](screenshots/combo-detail.png)
 
-- Left panel: Combo editor with Key 1--4 and Output fields. Timeout (ms) and Save button for the global combo timeout.
+- Left panel: Combo editor with Key 1--4 and Output fields.
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
@@ -585,7 +587,7 @@ Sync is configured in the **Settings** modal (gear icon on the device selection 
 
 ![Data Tab](screenshots/hub-settings-data-sync.png)
 
-The Data tab contains the following sections: Google Account, Data Sync, Pipette Hub, and Troubleshooting.
+The Data tab contains the following sections: Google Account, Data Sync, and Pipette Hub. Additional troubleshooting and data management options are available in the separate Troubleshooting tab (see below).
 
 #### Google Account
 
@@ -616,11 +618,6 @@ The Data tab contains the following sections: Google Account, Data Sync, Pipette
 #### Sync Unavailable Alert
 
 - Displayed when the sync backend cannot be reached. Click **Retry** to attempt reconnection
-
-#### Reset Sync Data / Local Data
-
-- **Reset Sync Data**: Select targets (keyboard data, favorite data) and delete them from Google Drive
-- **Local Data**: Import/export local data, or reset selected local targets (keyboard data, favorites, app settings)
 
 #### Data Storage
 
