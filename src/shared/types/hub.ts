@@ -7,6 +7,7 @@ export interface HubUploadPostParams {
   title: string
   keyboardName: string
   vilJson: string
+  pipetteJson: string
   keymapC: string
   pdfBase64: string
   thumbnailBase64: string
