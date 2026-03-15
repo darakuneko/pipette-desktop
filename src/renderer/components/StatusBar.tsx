@@ -50,7 +50,7 @@ export function StatusBar({
         {loadedLabel && (
           <>
             <span className="text-edge">|</span>
-            <span className="text-content-muted" data-testid="loaded-label">{loadedLabel}</span>
+            <span data-testid="loaded-label">{loadedLabel}</span>
           </>
         )}
         <span className="text-edge">|</span>

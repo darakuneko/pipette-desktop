@@ -76,9 +76,15 @@ export function useLayoutStore({
         return false
       }
 
-      // Auto-migrate v1 → v2: embed current device definition and persist
+      // Auto-migrate v1 → v2: embed current device definition + protocol metadata
       if (isVilFileV1(parsed) && currentDefinition) {
-        const migrated = migrateVilFileToV2(parsed, currentDefinition)
+        const current = serialize()
+        const migrated = migrateVilFileToV2(parsed, {
+          definition: currentDefinition,
+          viaProtocol: current.viaProtocol,
+          vialProtocol: current.vialProtocol,
+          featureFlags: current.featureFlags,
+        })
         // Fire-and-forget: persist migrated file without blocking the load
         window.vialAPI.snapshotStoreUpdate(
           deviceUid,

@@ -30,7 +30,14 @@
     "selectDevices": "Select Devices",
     "connectedTo": "Connected to {{name}}",
     "udevHelp": "If no devices are found on Linux, ensure udev rules are installed. See the project README for details.",
-    "loadDummy": "Load from JSON file…"
+    "loadDummy": "Load from JSON file…",
+    "keyboardTab": "Keyboard",
+    "fileTab": "File",
+    "loadPipetteFile": "Load .pipette file…",
+    "loadPipetteFileDescription": "Open a .pipette file for offline editing. All features except lighting and matrix tester are available.",
+    "noSavedFiles": "No saved files",
+    "selectKeyboard": "Select Keyboard",
+    "fileCount": "{{count}} saves"
   },
   "loading": {
     "protocol": "Reading device info",
@@ -253,7 +260,11 @@
     "loadFailed": "Failed to load layout file",
     "saveFailed": "Failed to save layout file",
     "exampleUid": "Please configure a unique UID.",
-    "dummyMode": "Running in dummy mode — no keyboard connected.",
+    "dummyMode": "Dummy mode",
+    "pipetteFileMode": "File editing mode",
+    "unsavedChanges": "Unsaved changes",
+    "noSavedFiles": "No saved files",
+    "vilV1NotSupported": "Legacy data format. Connect the keyboard and open the keymap to migrate.",
     "protocolVersion": "This keyboard's VIA protocol version is not supported. Please update your firmware.",
     "exportKeymapCFailed": "Failed to export keymap.c file",
     "exportPdfFailed": "Failed to export Keymap PDF",

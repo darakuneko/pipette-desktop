@@ -15,6 +15,14 @@ vi.mock('react-i18next', () => ({
         'app.connecting': 'Connecting{{dots}}',
         'app.deviceNotConnected': 'No keyboard connected',
         'app.loadDummy': 'Load from JSON file…',
+        'app.keyboardTab': 'Keyboard',
+        'app.fileTab': 'File',
+        'app.loadPipetteFile': 'Load .pipette file…',
+        'app.loadPipetteFileDescription': 'Open a .pipette file for offline editing.',
+        'app.selectKeyboard': 'Select Keyboard',
+        'app.noSavedFiles': 'No saved files',
+        'app.fileCount': '{{count}} saves',
+        'common.back': 'Back',
       }
       let result = map[key] ?? key
       if (params) {
@@ -50,6 +58,7 @@ describe('DeviceSelector', () => {
     error: null,
     onConnect: vi.fn(),
     onLoadDummy: vi.fn(),
+    onLoadPipetteFile: vi.fn(),
   }
 
   it('renders title and section label', () => {
@@ -86,12 +95,15 @@ describe('DeviceSelector', () => {
     expect(onConnect).toHaveBeenCalledWith(mockDevice)
   })
 
-  it('disables all buttons when connecting', () => {
+  it('disables action buttons when connecting (tabs remain enabled)', () => {
     render(<DeviceSelector {...defaultProps} devices={[mockDevice]} connecting={true} onOpenSettings={vi.fn()} />)
-    const buttons = screen.getAllByRole('button')
-    for (const button of buttons) {
-      expect(button).toBeDisabled()
-    }
+    // Action buttons should be disabled
+    expect(screen.getByTestId('device-button')).toBeDisabled()
+    expect(screen.getByTestId('dummy-button')).toBeDisabled()
+    expect(screen.getByTestId('settings-button')).toBeDisabled()
+    // Tab buttons are navigation-only and remain enabled
+    expect(screen.getByTestId('tab-keyboard')).not.toBeDisabled()
+    expect(screen.getByTestId('tab-file')).not.toBeDisabled()
   })
 
   it('shows connecting indicator on device when connecting', () => {
@@ -167,5 +179,85 @@ describe('DeviceSelector', () => {
     render(<DeviceSelector {...defaultProps} devices={[mockDevice]} connecting={true} onOpenData={vi.fn()} onOpenSettings={vi.fn()} />)
     expect(screen.getByTestId('data-button')).toBeDisabled()
     expect(screen.getByTestId('settings-button')).toBeDisabled()
+  })
+
+  it('renders keyboard and file tabs', () => {
+    render(<DeviceSelector {...defaultProps} />)
+    expect(screen.getByTestId('tab-keyboard')).toBeInTheDocument()
+    expect(screen.getByTestId('tab-file')).toBeInTheDocument()
+  })
+
+  it('shows keyboard tab content by default', () => {
+    render(<DeviceSelector {...defaultProps} />)
+    expect(screen.getByTestId('device-list')).toBeInTheDocument()
+    expect(screen.getByTestId('dummy-button')).toBeInTheDocument()
+    expect(screen.queryByTestId('file-tab-content')).not.toBeInTheDocument()
+  })
+
+  it('switches to file tab and shows pipette file button', () => {
+    render(<DeviceSelector {...defaultProps} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    expect(screen.getByTestId('file-tab-content')).toBeInTheDocument()
+    expect(screen.getByTestId('pipette-file-button')).toBeInTheDocument()
+    expect(screen.queryByTestId('device-list')).not.toBeInTheDocument()
+  })
+
+  it('calls onLoadPipetteFile when pipette file button clicked', () => {
+    const onLoadPipetteFile = vi.fn()
+    render(<DeviceSelector {...defaultProps} onLoadPipetteFile={onLoadPipetteFile} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    fireEvent.click(screen.getByTestId('pipette-file-button'))
+    expect(onLoadPipetteFile).toHaveBeenCalledOnce()
+  })
+
+  it('renders keyboard list in file tab', () => {
+    const keyboards = [
+      { uid: 'uid1', name: 'Bento', entryCount: 2 },
+      { uid: 'uid2', name: 'Zoom65', entryCount: 1 },
+    ]
+    render(<DeviceSelector {...defaultProps} pipetteFileKeyboards={keyboards} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    const kbButtons = screen.getAllByTestId('pipette-keyboard-entry')
+    expect(kbButtons).toHaveLength(2)
+    expect(kbButtons[0]).toHaveTextContent('Bento')
+    expect(kbButtons[1]).toHaveTextContent('Zoom65')
+  })
+
+  it('navigates to entries when keyboard clicked, then back', () => {
+    const keyboards = [{ uid: 'uid1', name: 'Bento', entryCount: 1 }]
+    const entries = [
+      { uid: 'uid1', entryId: 'e1', label: 'My Layout', keyboardName: 'Bento', savedAt: '2026-03-15T10:00:00Z' },
+    ]
+    render(<DeviceSelector {...defaultProps} pipetteFileKeyboards={keyboards} pipetteFileEntries={entries} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    fireEvent.click(screen.getByTestId('pipette-keyboard-entry'))
+    expect(screen.getByTestId('pipette-file-list')).toBeInTheDocument()
+    expect(screen.getByTestId('pipette-file-entry')).toHaveTextContent('My Layout')
+    // Back button
+    fireEvent.click(screen.getByTestId('file-back-button'))
+    expect(screen.getByTestId('pipette-keyboard-list')).toBeInTheDocument()
+  })
+
+  it('calls onOpenPipetteFileEntry when entry clicked', () => {
+    const onOpen = vi.fn()
+    const keyboards = [{ uid: 'uid1', name: 'Bento', entryCount: 1 }]
+    const entry = { uid: 'uid1', entryId: 'e1', label: 'My Layout', keyboardName: 'Bento', savedAt: '2026-03-15T10:00:00Z' }
+    render(<DeviceSelector {...defaultProps} pipetteFileKeyboards={keyboards} pipetteFileEntries={[entry]} onOpenPipetteFileEntry={onOpen} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    fireEvent.click(screen.getByTestId('pipette-keyboard-entry'))
+    fireEvent.click(screen.getByTestId('pipette-file-entry'))
+    expect(onOpen).toHaveBeenCalledWith(entry)
+  })
+
+  it('hides keyboards that match connected device names', () => {
+    const keyboards = [
+      { uid: 'uid1', name: 'Bento', entryCount: 2 },
+      { uid: 'uid2', name: 'Zoom65', entryCount: 1 },
+    ]
+    render(<DeviceSelector {...defaultProps} pipetteFileKeyboards={keyboards} connectedDeviceNames={['Bento']} />)
+    fireEvent.click(screen.getByTestId('tab-file'))
+    const kbButtons = screen.getAllByTestId('pipette-keyboard-entry')
+    expect(kbButtons).toHaveLength(1)
+    expect(kbButtons[0]).toHaveTextContent('Zoom65')
   })
 })

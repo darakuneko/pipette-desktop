@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ModalCloseButton } from './ModalCloseButton'
@@ -275,6 +275,8 @@ export function LayoutStoreContent({
 }: LayoutStoreContentProps) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState(defaultSaveLabel ?? '')
+  // Sync save label when a layout is loaded (defaultSaveLabel changes)
+  useEffect(() => { setSaveLabel(defaultSaveLabel ?? '') }, [defaultSaveLabel])
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
