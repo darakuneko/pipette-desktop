@@ -1532,11 +1532,11 @@ export function App() {
       {!keyboard.loading && (
         <>
           {device.isDummy && (
-            <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
-              {device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}
+            <div className="flex items-center justify-between border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
+              <span>{device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}</span>
               {device.isPipetteFile && keyboard.activityCount > pipetteFileSavedActivityRef.current && (
-                <span className="ml-2 text-danger" data-testid="unsaved-indicator">
-                  — {t('error.unsavedChanges')}
+                <span className="text-danger" data-testid="unsaved-indicator">
+                  {t('error.unsavedChanges')}
                 </span>
               )}
             </div>
