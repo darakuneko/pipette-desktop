@@ -98,7 +98,7 @@ export function App() {
   const hasFavSyncedForDataRef = useRef(false)
   const hasKeyboardSyncedRef = useRef<string | null>(null)
   const hasMigratedRef = useRef<string | null>(null)
-  const pendingHubMigrationRef = useRef<Array<{ label: string; hubPostId: string; upgraded: VilFile }>>([])
+  const pendingHubMigrationRef = useRef<Array<{ id: string; label: string; hubPostId: string; upgraded: VilFile }>>([])
   const [hubMigrationReady, setHubMigrationReady] = useState(false)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
@@ -861,7 +861,7 @@ export function App() {
         setMigrationProgress('loading.migrating')
 
         let migratedCount = 0
-        const hubUpdateEntries: Array<{ label: string; hubPostId: string; upgraded: VilFile }> = []
+        const hubUpdateEntries: Array<{ id: string; label: string; hubPostId: string; upgraded: VilFile }> = []
 
         for (const entry of candidates) {
           setMigrationProgress(t('loading.migratingEntry', {
@@ -884,7 +884,7 @@ export function App() {
 
             // Collect entries with Hub posts for batch update
             if (entry.hubPostId) {
-              hubUpdateEntries.push({ label: entry.label, hubPostId: entry.hubPostId, upgraded })
+              hubUpdateEntries.push({ id: entry.id, label: entry.label, hubPostId: entry.hubPostId, upgraded })
             }
           } catch {
             console.warn(`[Migration] Failed to migrate snapshot ${entry.id}`)
@@ -927,12 +927,15 @@ export function App() {
 
     ;(async () => {
       try {
+        const succeededIds: string[] = []
         const results = await Promise.allSettled(
-          entries.map(async ({ label, hubPostId, upgraded }) => {
+          entries.map(async ({ id, label, hubPostId, upgraded }) => {
             const postParams = await buildHubPostParams({ label }, upgraded)
             const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: hubPostId })
             if (!result.success) {
               console.warn(`[Migration] Hub update returned error for "${label}":`, result.error)
+            } else {
+              succeededIds.push(id)
             }
           }),
         )
@@ -942,11 +945,21 @@ export function App() {
           }
         }
         await refreshHubPosts()
+
+        // Show "Updated" on migrated entries
+        if (succeededIds.length > 0) {
+          setHubUploadResult({
+            kind: 'success',
+            message: t('hub.updateSuccess'),
+            entryId: succeededIds[0],
+            entryIds: succeededIds,
+          })
+        }
       } catch (err) {
         console.warn('[Migration] Hub post update failed:', err)
       }
     })()
-  }, [hubMigrationReady, hubCanUpload, buildHubPostParams, refreshHubPosts])
+  }, [hubMigrationReady, hubCanUpload, buildHubPostParams, refreshHubPosts, t])
 
   // --- Favorite Hub upload handlers ---
 

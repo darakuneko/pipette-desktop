@@ -20,6 +20,8 @@ export interface HubEntryResult {
   kind: 'success' | 'error'
   message: string
   entryId: string
+  /** Additional entry IDs sharing the same result (e.g. batch migration) */
+  entryIds?: string[]
 }
 
 interface Props extends LayoutStoreContentProps {
@@ -658,7 +660,7 @@ export function LayoutStoreContent({
                           {t('hub.needsDisplayName')}
                         </div>
                       )}
-                      {hubUploadResult && hubUploadResult.entryId === entry.id && (
+                      {hubUploadResult && (hubUploadResult.entryId === entry.id || hubUploadResult.entryIds?.includes(entry.id)) && (
                         <div
                           className={`mt-1 flex items-center text-[11px] font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
                           data-testid="layout-store-hub-result"
