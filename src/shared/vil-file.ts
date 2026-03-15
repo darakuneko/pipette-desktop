@@ -1,12 +1,61 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { VilFile } from './types/protocol'
+import type { KeyboardDefinition, VilFile } from './types/protocol'
 
-/** Runtime type guard for VilFile JSON data */
+/** Runtime type guard for plain objects */
+export function isRecord(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+/** Runtime type guard for KeyboardDefinition JSON data */
+export function isKeyboardDefinition(data: unknown): data is KeyboardDefinition {
+  if (!isRecord(data)) return false
+
+  const matrix = data.matrix
+  if (
+    !isRecord(matrix) ||
+    typeof matrix.rows !== 'number' ||
+    typeof matrix.cols !== 'number'
+  ) {
+    return false
+  }
+
+  const layouts = data.layouts
+  if (!isRecord(layouts) || !Array.isArray(layouts.keymap)) {
+    return false
+  }
+
+  if ('dynamic_keymap' in data && data.dynamic_keymap != null) {
+    if (!isRecord(data.dynamic_keymap)) return false
+    const lc = data.dynamic_keymap.layer_count
+    if (lc != null && (typeof lc !== 'number' || !Number.isInteger(lc) || lc < 1 || lc > 32)) {
+      return false
+    }
+  }
+
+  return true
+}
+
+/** Current VilFile format version */
+export const VILFILE_CURRENT_VERSION = 2
+
+/**
+ * Runtime type guard for VilFile JSON data.
+ *
+ * Accepts both v1 (no version field) and v2 (version: 2 with definition).
+ * When version is 2, the definition field must be a valid KeyboardDefinition.
+ */
 export function isVilFile(data: unknown): data is VilFile {
   if (typeof data !== 'object' || data === null) return false
   const obj = data as Record<string, unknown>
-  return (
+
+  // Version field: must be undefined (v1) or a positive integer
+  if (obj.version !== undefined && (typeof obj.version !== 'number' || !Number.isInteger(obj.version) || obj.version < 1)) {
+    return false
+  }
+
+  // Core fields required in all versions
+  const coreValid =
     typeof obj.uid === 'string' &&
     typeof obj.keymap === 'object' &&
     obj.keymap !== null &&
@@ -23,7 +72,26 @@ export function isVilFile(data: unknown): data is VilFile {
     (obj.layerNames === undefined ||
       (Array.isArray(obj.layerNames) && obj.layerNames.every((n) => typeof n === 'string'))) &&
     (obj.macroJson === undefined || obj.macroJson === null || Array.isArray(obj.macroJson))
-  )
+
+  if (!coreValid) return false
+
+  // v2: definition is mandatory
+  if (obj.version === 2 && obj.definition === undefined) return false
+
+  // All versions: if definition is present, it must be valid
+  if (obj.definition !== undefined && !isKeyboardDefinition(obj.definition)) return false
+
+  return true
+}
+
+/** Check whether a VilFile needs migration to v2 (i.e. is a legacy v1 file) */
+export function isVilFileV1(vil: VilFile): boolean {
+  return vil.version === undefined || vil.version < VILFILE_CURRENT_VERSION
+}
+
+/** Migrate a v1 VilFile to v2 by embedding a KeyboardDefinition */
+export function migrateVilFileToV2(vil: VilFile, definition: KeyboardDefinition): VilFile {
+  return { ...vil, version: VILFILE_CURRENT_VERSION, definition }
 }
 
 /** Convert Map<string, number> to plain Record for JSON serialization */

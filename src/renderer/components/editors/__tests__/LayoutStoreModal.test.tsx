@@ -1097,6 +1097,22 @@ describe('LayoutStoreModal', () => {
       expect(hubRows[1].contains(result)).toBe(true)
     })
 
+    it('shows hub result on multiple entries via entryIds', () => {
+      render(
+        <LayoutStoreModal
+          entries={MOCK_ENTRIES}
+          {...DEFAULT_PROPS}
+          onUploadToHub={vi.fn()}
+          hubUploadResult={{ kind: 'success', message: 'Updated', entryId: 'entry-1', entryIds: ['entry-1', 'entry-2'] }}
+        />,
+      )
+
+      const results = screen.getAllByTestId('layout-store-hub-result')
+      expect(results).toHaveLength(2)
+      expect(results[0].textContent).toBe('Updated')
+      expect(results[1].textContent).toBe('Updated')
+    })
+
     it('does not show hub result when no hub props', () => {
       render(
         <LayoutStoreModal

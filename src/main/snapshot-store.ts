@@ -114,6 +114,7 @@ export function setupSnapshotStore(): void {
       json: string,
       deviceName: string,
       label: string,
+      vilVersion?: number,
     ): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }> => {
       try {
         validateUid(uid)
@@ -142,6 +143,7 @@ export function setupSnapshotStore(): void {
             filename,
             savedAt: nowIso,
             updatedAt: nowIso,
+            vilVersion,
           }
 
           index.entries.unshift(entry)
@@ -169,6 +171,39 @@ export function setupSnapshotStore(): void {
         const filePath = getSafeFilePath(uid, entry.filename)
         const data = await readFile(filePath, 'utf-8')
         return { success: true, data }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.SNAPSHOT_STORE_UPDATE,
+    async (
+      _event,
+      uid: string,
+      entryId: string,
+      json: string,
+      vilVersion?: number,
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        validateUid(uid)
+        return await withWriteLock(uid, async () => {
+          const index = await readIndex(uid)
+          const entry = index.entries.find((e) => e.id === entryId)
+          if (!entry) return { success: false, error: 'Entry not found' }
+          if (entry.deletedAt) return { success: false, error: 'Entry has been deleted' }
+
+          const filePath = getSafeFilePath(uid, entry.filename)
+          await writeFile(filePath, json, 'utf-8')
+
+          if (vilVersion != null) entry.vilVersion = vilVersion
+          entry.updatedAt = new Date().toISOString()
+          await writeIndex(uid, index)
+
+          notifyChange(`keyboards/${uid}/snapshots`)
+          return { success: true }
+        })
       } catch (err) {
         return { success: false, error: String(err) }
       }

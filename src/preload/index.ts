@@ -147,10 +147,12 @@ const vialAPI = {
   // --- Snapshot Store (internal save/load via IPC) ---
   snapshotStoreList: (uid: string): Promise<{ success: boolean; entries?: SnapshotMeta[]; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_LIST, uid),
-  snapshotStoreSave: (uid: string, json: string, deviceName: string, label: string): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SAVE, uid, json, deviceName, label),
+  snapshotStoreSave: (uid: string, json: string, deviceName: string, label: string, vilVersion?: number): Promise<{ success: boolean; entry?: SnapshotMeta; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SAVE, uid, json, deviceName, label, vilVersion),
   snapshotStoreLoad: (uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_LOAD, uid, entryId),
+  snapshotStoreUpdate: (uid: string, entryId: string, json: string, vilVersion?: number): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_UPDATE, uid, entryId, json, vilVersion),
   snapshotStoreRename: (uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_RENAME, uid, entryId, newLabel),
   snapshotStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
