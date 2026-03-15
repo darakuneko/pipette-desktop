@@ -19,6 +19,7 @@ export interface HubPostResponse {
 
 export interface HubUploadFiles {
   vil: { name: string; data: Buffer }
+  pipette: { name: string; data: Buffer }
   c: { name: string; data: Buffer }
   pdf: { name: string; data: Buffer }
   thumbnail: { name: string; data: Buffer }
@@ -157,6 +158,7 @@ function buildMultipartBody(
   mp.appendField('title', title)
   mp.appendField('keyboard_name', keyboardName)
   mp.appendFile('vil', files.vil.name, files.vil.data, 'application/json')
+  mp.appendFile('pipette', files.pipette.name, files.pipette.data, 'application/json')
   mp.appendFile('c', files.c.name, files.c.data, 'text/plain')
   mp.appendFile('pdf', files.pdf.name, files.pdf.data, 'application/pdf')
   mp.appendFile('thumbnail', files.thumbnail.name, files.thumbnail.data, 'image/jpeg')

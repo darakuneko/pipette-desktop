@@ -714,6 +714,7 @@ export function App() {
       title: entry.label || deviceName,
       keyboardName: deviceName,
       vilJson: vilToVialGuiJson(vilData, buildVilExportContext(vilData)),
+      pipetteJson: JSON.stringify(vilData, null, 2),
       keymapC: generateKeymapC({ ...params, serializeKeycode: serializeForCExport }),
       pdfBase64,
       thumbnailBase64,
