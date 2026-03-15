@@ -24,12 +24,13 @@ const TAB_INACTIVE =
   'text-content-muted hover:text-content-secondary'
 
 const LIST_CLASS =
-  'min-h-[340px] max-h-[340px] space-y-2 overflow-y-auto pb-2'
+  'min-h-[340px] max-h-[340px] space-y-2 overflow-y-auto pb-2 pr-1'
 
 function formatDate(iso: string): string {
   try {
     const d = new Date(iso)
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+    const pad = (n: number) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
   } catch {
     return iso
   }
@@ -275,7 +276,7 @@ export function DeviceSelector({
         {tab === 'file' && selectedFileUid && (
           <div data-testid="file-entries-content">
             <div className="mb-5">
-              <div className="mb-2.5 flex items-center gap-1.5">
+              <div className="mb-2.5 flex items-center justify-between pl-0.5">
                 <button
                   type="button"
                   data-testid="file-back-button"
@@ -286,7 +287,7 @@ export function DeviceSelector({
                   {t('common.back')}
                 </button>
                 <span className="text-[10px] font-semibold uppercase tracking-widest text-content-muted">
-                  / {selectedKeyboardName}
+                  {selectedKeyboardName}
                 </span>
               </div>
 
@@ -304,7 +305,7 @@ export function DeviceSelector({
                       <div className="font-semibold text-content">
                         {entry.label || entry.keyboardName}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-content-muted">
+                      <div className="mt-0.5 font-mono text-[11px] tracking-wide text-content-muted">
                         {formatDate(entry.savedAt)}
                       </div>
                     </div>
@@ -313,6 +314,18 @@ export function DeviceSelector({
                 ))}
               </div>
             </div>
+
+            <div className="mb-4 border-t border-edge-subtle" />
+
+            <button
+              type="button"
+              data-testid="pipette-file-button-entry"
+              className="flex w-full items-center gap-3 rounded-lg border border-dashed border-edge p-3 text-sm text-content-muted transition-colors hover:border-edge-strong hover:bg-surface-dim hover:text-content-secondary disabled:opacity-50"
+              onClick={onLoadPipetteFile}
+              disabled={connecting}
+            >
+              {t('app.loadPipetteFile')}
+            </button>
           </div>
         )}
 
