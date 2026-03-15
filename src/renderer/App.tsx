@@ -562,6 +562,17 @@ export function App() {
     }
   }, [layoutStore, clearFileStatus])
 
+  // Back-fill QMK settings from live keyboard state when a snapshot was
+  // saved before Phase 8b introduced settings preloading.
+  const backfillQmkSettings = useCallback((vil: VilFile): boolean => {
+    if (Object.keys(vil.qmkSettings).length === 0 &&
+        Object.keys(keyboard.qmkSettingsValues).length > 0) {
+      vil.qmkSettings = { ...keyboard.qmkSettingsValues }
+      return true
+    }
+    return false
+  }, [keyboard.qmkSettingsValues])
+
   const loadEntryVilData = useCallback(async (entryId: string): Promise<VilFile | null> => {
     try {
       const result = await window.vialAPI.snapshotStoreLoad(keyboard.uid, entryId)
@@ -569,28 +580,37 @@ export function App() {
       const parsed: unknown = JSON.parse(result.data)
       if (!isVilFile(parsed)) return null
 
+      let vil = parsed
+      let dirty = false
+
       // Auto-migrate v1 → v2 on read
       if (isVilFileV1(parsed) && keyboard.definition) {
-        const migrated = migrateVilFileToV2(parsed, {
+        vil = migrateVilFileToV2(parsed, {
           definition: keyboard.definition,
           viaProtocol: keyboard.viaProtocol,
           vialProtocol: keyboard.vialProtocol,
           featureFlags: keyboard.dynamicCounts.featureFlags,
         })
+        dirty = true
+      }
+
+      // Back-fill empty QMK settings (v1 or v2 saved before Phase 8b)
+      if (backfillQmkSettings(vil)) dirty = true
+
+      if (dirty) {
         window.vialAPI.snapshotStoreUpdate(
           keyboard.uid,
           entryId,
-          JSON.stringify(migrated, null, 2),
-          migrated.version,
-        ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
-        return migrated
+          JSON.stringify(vil, null, 2),
+          vil.version ?? 1,
+        ).then((r) => { if (!r.success) console.warn('[Snapshot] update failed:', r.error) })
       }
 
-      return parsed
+      return vil
     } catch {
       return null
     }
-  }, [keyboard.uid, keyboard.definition])
+  }, [keyboard.uid, keyboard.definition, backfillQmkSettings])
 
   const entryExportName = useCallback((entryId: string): string => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -916,6 +936,7 @@ export function App() {
               vialProtocol: keyboard.vialProtocol,
               featureFlags: keyboard.dynamicCounts.featureFlags,
             })
+            backfillQmkSettings(upgraded)
             await window.vialAPI.snapshotStoreUpdate(
               uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
             )
