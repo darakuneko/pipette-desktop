@@ -121,8 +121,17 @@ export interface QmkSettingsTab {
   fields: QmkSettingsField[]
 }
 
-/** .vil file format for save/restore */
+/**
+ * .vil / .pipette file format for save/restore.
+ *
+ * Version history:
+ *   v1 (implicit) — original format, no `version` field, no `definition`.
+ *   v2 — adds `version: 2` and embeds `KeyboardDefinition` so the snapshot
+ *         can render a virtual keyboard without a physical device connected.
+ */
 export interface VilFile {
+  /** Format version. Absent in legacy v1 files; 2 for current format. */
+  version?: number
   uid: string
   keymap: Record<string, number>
   encoderLayout: Record<string, number>
@@ -135,4 +144,6 @@ export interface VilFile {
   altRepeatKey: AltRepeatKeyEntry[]
   qmkSettings: Record<string, number[]>
   layerNames?: string[]
+  /** Keyboard definition embedded in v2 snapshots for offline rendering. */
+  definition?: KeyboardDefinition
 }

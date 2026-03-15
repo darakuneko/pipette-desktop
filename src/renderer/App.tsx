@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppConfig } from './hooks/useAppConfig'
 import { useDeviceConnection } from './hooks/useDeviceConnection'
 import { useKeyboard } from './hooks/useKeyboard'
 import { useFileIO } from './hooks/useFileIO'
 import { useLayoutStore } from './hooks/useLayoutStore'
-import { useSideloadJson, isKeyboardDefinition } from './hooks/useSideloadJson'
+import { useSideloadJson } from './hooks/useSideloadJson'
 import { useTheme } from './hooks/useTheme'
 import { useDevicePrefs } from './hooks/useDevicePrefs'
 import { useAutoLock } from './hooks/useAutoLock'
@@ -34,7 +34,7 @@ import { generateKeymapPdf } from '../shared/pdf-export'
 import { generateAllLayoutOptionsPdf, generateCurrentLayoutPdf, type LayoutPdfInput } from '../shared/pdf-layout-export'
 import { parseLayoutLabels } from '../shared/layout-options'
 import { generatePdfThumbnail } from './utils/pdf-thumbnail'
-import { isVilFile, recordToMap, deriveLayerCount } from '../shared/vil-file'
+import { isVilFile, isVilFileV1, migrateVilFileToV2, isKeyboardDefinition, recordToMap, deriveLayerCount, VILFILE_CURRENT_VERSION } from '../shared/vil-file'
 import { vilToVialGuiJson } from '../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, deserializeAllMacros, macroActionsToJson, jsonToMacroActions } from '../preload/macro'
 import {
@@ -91,9 +91,15 @@ export function App() {
   const [dummyError, setDummyError] = useState<string | null>(null)
   const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
+  const [migrationChecking, setMigrationChecking] = useState(false)
+  const [migrating, setMigrating] = useState(false)
+  const [migrationProgress, setMigrationProgress] = useState<string | null>(null)
   const hasSyncedRef = useRef(false)
   const hasFavSyncedForDataRef = useRef(false)
   const hasKeyboardSyncedRef = useRef<string | null>(null)
+  const hasMigratedRef = useRef<string | null>(null)
+  const pendingHubMigrationRef = useRef<Array<{ id: string; label: string; hubPostId: string; upgraded: VilFile }>>([])
+  const [hubMigrationReady, setHubMigrationReady] = useState(false)
   const [resettingData, setResettingData] = useState(false)
   const [hubUploading, setHubUploading] = useState<string | null>(null)
   const hubUploadingRef = useRef(false)
@@ -121,6 +127,7 @@ export function App() {
       if (!deviceSyncing) {
         hasSyncedRef.current = false
         hasKeyboardSyncedRef.current = null
+        hasMigratedRef.current = null
       }
       return
     }
@@ -144,6 +151,13 @@ export function App() {
   }, [device.connectedDevice, keyboard.uid, keyboard.loading,
       sync.loading, sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword,
       sync.syncNow, deviceSyncing])
+
+  // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
+  // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
+  const phase2SyncPending = !deviceSyncing &&
+    !!device.connectedDevice && !!keyboard.uid && keyboard.uid !== EMPTY_UID &&
+    hasKeyboardSyncedRef.current !== keyboard.uid &&
+    sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !sync.loading
 
   const decodedLayoutOptions = useMemo(() => {
     const labels = keyboard.definition?.layouts?.labels
@@ -226,7 +240,21 @@ export function App() {
     deviceName,
     serialize: keyboard.serialize,
     applyVilFile: keyboard.applyVilFile,
+    currentDefinition: keyboard.definition,
   })
+
+  // Keep overlay visible between loading and migration check (prevents keymap flash).
+  // useLayoutEffect fires before paint, so the browser never renders the keymap screen.
+  useLayoutEffect(() => {
+    if (!device.connectedDevice || device.isDummy) return
+    if (keyboard.loading || deviceSyncing || phase2SyncPending) return
+    if (!keyboard.uid || keyboard.uid === EMPTY_UID) return
+    if (!keyboard.definition) return
+    if (hasMigratedRef.current === keyboard.uid) return
+    setMigrationChecking(true)
+  }, [device.connectedDevice, device.isDummy, keyboard.loading, keyboard.uid,
+      keyboard.definition, deviceSyncing, phase2SyncPending])
+
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
   const [showUnlockDialog, setShowUnlockDialog] = useState(false)
   const [unlockMacroWarning, setUnlockMacroWarning] = useState(false)
@@ -512,11 +540,24 @@ export function App() {
       if (!result.success || !result.data) return null
       const parsed: unknown = JSON.parse(result.data)
       if (!isVilFile(parsed)) return null
+
+      // Auto-migrate v1 → v2 on read
+      if (isVilFileV1(parsed) && keyboard.definition) {
+        const migrated = migrateVilFileToV2(parsed, keyboard.definition)
+        window.vialAPI.snapshotStoreUpdate(
+          keyboard.uid,
+          entryId,
+          JSON.stringify(migrated, null, 2),
+          migrated.version,
+        ).then((r) => { if (!r.success) console.warn('[Snapshot] v1→v2 migration failed:', r.error) })
+        return migrated
+      }
+
       return parsed
     } catch {
       return null
     }
-  }, [keyboard.uid])
+  }, [keyboard.uid, keyboard.definition])
 
   const entryExportName = useCallback((entryId: string): string => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -795,6 +836,131 @@ export function App() {
     }
   }, [layoutStore, getHubPostId, persistHubPostId, hubReady, runHubOperation, loadEntryVilData, buildHubPostParams, refreshHubPosts, t])
 
+  // Auto-migrate v1 snapshots to v2 after reload + sync download complete.
+  // Placed after buildHubPostParams/hubCanUpload to avoid TDZ in dependency array.
+  useEffect(() => {
+    if (!migrationChecking) return
+    if (hasMigratedRef.current === keyboard.uid) return
+
+    hasMigratedRef.current = keyboard.uid
+    const uid = keyboard.uid!
+    const definition = keyboard.definition!
+
+    ;(async () => {
+      try {
+        const listResult = await window.vialAPI.snapshotStoreList(uid)
+        if (!listResult.success || !listResult.entries) return
+
+        // Pre-filter by metadata, but verify with actual file content
+        const candidates = listResult.entries.filter(
+          (e) => e.vilVersion == null || e.vilVersion < VILFILE_CURRENT_VERSION,
+        )
+        if (candidates.length === 0) return
+
+        setMigrating(true)
+        setMigrationProgress('loading.migrating')
+
+        let migratedCount = 0
+        const hubUpdateEntries: Array<{ id: string; label: string; hubPostId: string; upgraded: VilFile }> = []
+
+        for (const entry of candidates) {
+          setMigrationProgress(t('loading.migratingEntry', {
+            current: migratedCount + 1,
+            total: candidates.length,
+          }))
+
+          const loadResult = await window.vialAPI.snapshotStoreLoad(uid, entry.id)
+          if (!loadResult.success || !loadResult.data) continue
+
+          try {
+            const parsed: unknown = JSON.parse(loadResult.data)
+            if (!isVilFile(parsed) || !isVilFileV1(parsed)) continue
+
+            const upgraded = migrateVilFileToV2(parsed, definition)
+            await window.vialAPI.snapshotStoreUpdate(
+              uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
+            )
+            migratedCount++
+
+            // Collect entries with Hub posts for batch update
+            if (entry.hubPostId) {
+              hubUpdateEntries.push({ id: entry.id, label: entry.label, hubPostId: entry.hubPostId, upgraded })
+            }
+          } catch {
+            console.warn(`[Migration] Failed to migrate snapshot ${entry.id}`)
+          }
+        }
+
+        if (migratedCount > 0) {
+          await layoutStore.refreshEntries()
+
+          // Defer Hub updates — hubCanUpload may not be ready yet at startup.
+          // A separate effect picks these up once Hub auth is established.
+          if (hubUpdateEntries.length > 0) {
+            pendingHubMigrationRef.current = hubUpdateEntries
+            setHubMigrationReady(true)
+          }
+        }
+      } catch (err) {
+        console.warn('[Migration] Snapshot migration failed:', err)
+      } finally {
+        setMigrationChecking(false)
+        setMigrating(false)
+        setMigrationProgress(null)
+      }
+    })()
+  // hasMigratedRef guards against re-triggering; layoutStore.entries is intentionally
+  // excluded — refreshEntries() inside the effect would otherwise cause a false cycle.
+  }, [migrationChecking, keyboard.uid, keyboard.definition,
+      layoutStore.refreshEntries, t])
+
+  // Update Hub posts after migration — runs when hubCanUpload becomes true.
+  // Separated from the migration effect to handle the race where Hub auth
+  // is established after local migration completes.
+  useEffect(() => {
+    if (!hubMigrationReady || !hubCanUpload) return
+    const entries = pendingHubMigrationRef.current
+    if (entries.length === 0) return
+
+    pendingHubMigrationRef.current = []
+    setHubMigrationReady(false)
+
+    ;(async () => {
+      try {
+        const succeededIds: string[] = []
+        const results = await Promise.allSettled(
+          entries.map(async ({ id, label, hubPostId, upgraded }) => {
+            const postParams = await buildHubPostParams({ label }, upgraded)
+            const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: hubPostId })
+            if (!result.success) {
+              console.warn(`[Migration] Hub update returned error for "${label}":`, result.error)
+            } else {
+              succeededIds.push(id)
+            }
+          }),
+        )
+        for (const r of results) {
+          if (r.status === 'rejected') {
+            console.warn('[Migration] Hub update failed:', r.reason)
+          }
+        }
+        await refreshHubPosts()
+
+        // Show "Updated" on migrated entries
+        if (succeededIds.length > 0) {
+          setHubUploadResult({
+            kind: 'success',
+            message: t('hub.updateSuccess'),
+            entryId: succeededIds[0],
+            entryIds: succeededIds,
+          })
+        }
+      } catch (err) {
+        console.warn('[Migration] Hub post update failed:', err)
+      }
+    })()
+  }, [hubMigrationReady, hubCanUpload, buildHubPostParams, refreshHubPosts, t])
+
   // --- Favorite Hub upload handlers ---
 
   const persistFavHubPostId = useCallback(async (type: FavoriteType, entryId: string, postId: string | null) => {
@@ -906,13 +1072,6 @@ export function App() {
       favHubUploadingRef.current = false
     }
   }, [hubReady, markAccountDeactivated, t])
-
-  // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
-  // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
-  const phase2SyncPending = !deviceSyncing &&
-    !!device.connectedDevice && !!keyboard.uid && keyboard.uid !== EMPTY_UID &&
-    hasKeyboardSyncedRef.current !== keyboard.uid &&
-    sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !sync.loading
 
   const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
   const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
@@ -1236,13 +1395,13 @@ export function App() {
         </>
       )}
 
-      {(keyboard.loading || deviceSyncing || phase2SyncPending) && (
+      {(keyboard.loading || deviceSyncing || phase2SyncPending || migrationChecking || migrating) && (
         <ConnectingOverlay
           deviceName={device.connectedDevice.productName || 'Unknown'}
           deviceId={formatDeviceId(device.connectedDevice)}
-          loadingProgress={keyboard.loading ? keyboard.loadingProgress : undefined}
+          loadingProgress={keyboard.loading ? keyboard.loadingProgress : migrating ? migrationProgress ?? undefined : undefined}
           syncProgress={deviceSyncing ? sync.progress : undefined}
-          syncOnly={!keyboard.loading}
+          syncOnly={!keyboard.loading && !migrating && !migrationChecking}
         />
       )}
 
