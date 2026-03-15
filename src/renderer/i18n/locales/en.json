@@ -1,6 +1,7 @@
 {
   "common": {
     "save": "Save",
+    "saved": "Saved",
     "select": "Select",
     "clickToSelect": "Click to select",
     "cancel": "Cancel",
@@ -261,7 +262,7 @@
     "saveFailed": "Failed to save layout file",
     "exampleUid": "Please configure a unique UID.",
     "dummyMode": "Dummy mode",
-    "pipetteFileMode": "File editing mode",
+    "pipetteFileMode": "File Mode",
     "unsavedChanges": "Unsaved changes",
     "noSavedFiles": "No saved files",
     "vilV1NotSupported": "Legacy data format. Connect the keyboard and open the keymap to migrate.",
