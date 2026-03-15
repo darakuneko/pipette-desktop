@@ -111,6 +111,8 @@ export function App() {
   const [fileLoadError, setFileLoadError] = useState<string | null>(null)
   const [pipetteFileKeyboards, setPipetteFileKeyboards] = useState<PipetteFileKeyboard[]>([])
   const [pipetteFileEntries, setPipetteFileEntries] = useState<PipetteFileEntry[]>([])
+  // Track unsaved changes in pipette-file mode
+  const pipetteFileSavedActivityRef = useRef(0)
   const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
   const [migrationChecking, setMigrationChecking] = useState(false)
@@ -501,8 +503,11 @@ export function App() {
 
   const handleExportVil = useCallback(async () => {
     const ok = await fileIO.saveLayout()
-    if (ok) showFileSuccess('export')
-  }, [fileIO.saveLayout, showFileSuccess])
+    if (ok) {
+      showFileSuccess('export')
+      pipetteFileSavedActivityRef.current = keyboard.activityCount
+    }
+  }, [fileIO.saveLayout, showFileSuccess, keyboard.activityCount])
 
   const handleExportKeymapC = useCallback(async () => {
     const ok = await fileIO.exportKeymapC()
@@ -844,6 +849,7 @@ export function App() {
     await layoutStore.deleteEntry(overwriteEntryId)
     const newEntryId = await layoutStore.saveLayout(label)
     if (!newEntryId) return
+    pipetteFileSavedActivityRef.current = keyboard.activityCount
 
     if (existingPostId) {
       await persistHubPostId(newEntryId, existingPostId)
@@ -1282,6 +1288,7 @@ export function App() {
     const name = vil.definition?.name ?? fallbackName
     device.connectPipetteFile(name)
     keyboard.loadPipetteFile(vil)
+    pipetteFileSavedActivityRef.current = 0 // reset — activityCount resets on loadPipetteFile
     setLastLoadedLabel(loadedLabel ?? '')
     if (vil.uid) {
       await devicePrefs.applyDevicePrefs(vil.uid)
@@ -1466,7 +1473,11 @@ export function App() {
         fileStatus={fileStatus}
         isDummy={effectiveIsDummy}
         defaultSaveLabel={lastLoadedLabel}
-        onSave={layoutStore.saveLayout}
+        onSave={async (label: string) => {
+          const id = await layoutStore.saveLayout(label)
+          if (id) pipetteFileSavedActivityRef.current = keyboard.activityCount
+          return id
+        }}
         onLoad={handleLoadEntry}
         onRename={handleRenameEntry}
         onDelete={handleDeleteEntry}
@@ -1505,6 +1516,11 @@ export function App() {
           {device.isDummy && (
             <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
               {device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}
+              {device.isPipetteFile && keyboard.activityCount > pipetteFileSavedActivityRef.current && (
+                <span className="ml-2 text-danger" data-testid="unsaved-indicator">
+                  — {t('error.unsavedChanges')}
+                </span>
+              )}
             </div>
           )}
 

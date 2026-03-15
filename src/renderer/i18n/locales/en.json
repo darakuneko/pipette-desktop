@@ -262,6 +262,7 @@
     "exampleUid": "Please configure a unique UID.",
     "dummyMode": "Dummy mode",
     "pipetteFileMode": "File editing mode",
+    "unsavedChanges": "Unsaved changes",
     "noSavedFiles": "No saved files",
     "vilV1NotSupported": "Legacy data format. Connect the keyboard and open the keymap to migrate.",
     "protocolVersion": "This keyboard's VIA protocol version is not supported. Please update your firmware.",

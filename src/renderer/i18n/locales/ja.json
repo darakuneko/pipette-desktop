@@ -261,6 +261,7 @@
     "exampleUid": "固有のUIDを設定してください。",
     "dummyMode": "ダミーモード",
     "pipetteFileMode": "ファイル編集モード",
+    "unsavedChanges": "未保存の変更があります",
     "vilV1NotSupported": "古いデータフォーマットです。キーボードを接続し、キーマップを開くとマイグレーションされます。",
     "noSavedFiles": "保存済みファイルはありません",
     "protocolVersion": "このキーボードのVIAプロトコルバージョンはサポートされていません。ファームウェアを更新してください。",
