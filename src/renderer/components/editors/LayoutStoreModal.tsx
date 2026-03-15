@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ModalCloseButton } from './ModalCloseButton'
@@ -277,10 +277,18 @@ export function LayoutStoreContent({
   const [saveLabel, setSaveLabel] = useState(defaultSaveLabel ?? '')
   // Sync save label when a layout is loaded (defaultSaveLabel changes)
   useEffect(() => { setSaveLabel(defaultSaveLabel ?? '') }, [defaultSaveLabel])
+  const [showSaved, setShowSaved] = useState(false)
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
   const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
+
+  function flashSaved(): void {
+    setShowSaved(true)
+    clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setShowSaved(false), 2000)
+  }
 
   function handleSaveSubmit(e: React.FormEvent): void {
     e.preventDefault()
@@ -299,7 +307,7 @@ export function LayoutStoreContent({
       if (onOverwriteSave) {
         onOverwriteSave(confirmOverwriteId, trimmed)
         setConfirmOverwriteId(null)
-        setSaveLabel('')
+        flashSaved()
         return
       }
       onDelete(confirmOverwriteId)
@@ -307,7 +315,7 @@ export function LayoutStoreContent({
     }
 
     onSave(trimmed)
-    setSaveLabel('')
+    flashSaved()
   }
 
   function commitRename(entryId: string): void {
@@ -391,16 +399,21 @@ export function LayoutStoreContent({
                   )}
                 </form>
               )}
-              {hasCurrentExport && (
-                <div className={`flex justify-end gap-1${!isDummy ? ' mt-2' : ''}`}>
-                  <FormatButtons
-                    className={FORMAT_BTN}
-                    testIdPrefix="layout-store-current-export"
-                    disabled={fileDisabled}
-                    onVil={onExportVil}
-                    onKeymapC={onExportKeymapC}
-                    onPdf={onExportPdf}
-                  />
+              {(hasCurrentExport || showSaved) && (
+                <div className={`flex items-center gap-1${!isDummy ? ' mt-2' : ''}`}>
+                  {showSaved && (
+                    <span className="text-[11px] font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                  )}
+                  <div className="ml-auto flex gap-1">
+                    <FormatButtons
+                      className={FORMAT_BTN}
+                      testIdPrefix="layout-store-current-export"
+                      disabled={fileDisabled}
+                      onVil={onExportVil}
+                      onKeymapC={onExportKeymapC}
+                      onPdf={onExportPdf}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -455,18 +468,23 @@ export function LayoutStoreContent({
           )}
 
           {/* Export Current State section */}
-          {hasCurrentExport && (
+          {(hasCurrentExport || showSaved) && (
             <div className={`${sectionGap}${fixedSection}`} data-testid="layout-store-current-section">
               <SectionHeader label={t('layoutStore.export')} />
-              <div className="flex justify-end gap-2">
-                <FormatButtons
-                  className={EXPORT_BTN}
-                  testIdPrefix="layout-store-current-export"
-                  disabled={fileDisabled}
-                  onVil={onExportVil}
-                  onKeymapC={onExportKeymapC}
-                  onPdf={onExportPdf}
-                />
+              <div className="flex items-center gap-2">
+                {showSaved && (
+                  <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                )}
+                <div className="ml-auto flex gap-2">
+                  <FormatButtons
+                    className={EXPORT_BTN}
+                    testIdPrefix="layout-store-current-export"
+                    disabled={fileDisabled}
+                    onVil={onExportVil}
+                    onKeymapC={onExportKeymapC}
+                    onPdf={onExportPdf}
+                  />
+                </div>
               </div>
             </div>
           )}
