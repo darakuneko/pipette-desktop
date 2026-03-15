@@ -107,6 +107,7 @@ describe('useLayoutStore – saveLayout', () => {
       JSON.stringify(VALID_VIL, null, 2),
       'Test Keyboard',
       'My Label',
+      VALID_VIL.version,
     )
   })
 

@@ -20,6 +20,7 @@
     "preview": "electron-vite preview",
     "rebuild": "electron-builder install-app-deps",
     "lint": "eslint src/",
+    "lint:tdz": "npx tsx scripts/check-hook-deps-tdz.ts",
     "format": "prettier --write src/",
     "test": "vitest run",
     "test:watch": "vitest",

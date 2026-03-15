@@ -38,7 +38,10 @@
     "keymap": "キーマップを読み込み中",
     "macros": "マクロを読み込み中",
     "dynamicEntries": "機能を読み込み中",
-    "settings": "設定を読み込み中"
+    "settings": "設定を読み込み中",
+    "migrating": "スナップショットを移行中",
+    "migratingEntry": "スナップショットを移行中 ({{current}}/{{total}})",
+    "migrationSync": "移行データを同期中"
   },
   "editor": {
     "autoAdvance": "自動移動",
@@ -413,7 +416,8 @@
     "confirmOverwrite": "上書きしますか？",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
-    "exportPdf": ".pdf"
+    "exportPdf": ".pdf",
+    "versionPrefix": "v{{version}} - "
   },
   "sync": {
     "title": "設定",

@@ -20,6 +20,8 @@ export interface HubEntryResult {
   kind: 'success' | 'error'
   message: string
   entryId: string
+  /** Additional entry IDs sharing the same result (e.g. batch migration) */
+  entryIds?: string[]
 }
 
 interface Props extends LayoutStoreContentProps {
@@ -565,7 +567,7 @@ export function LayoutStoreContent({
                   {/* Row 2: date + format tags */}
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-content-muted font-mono">
-                      {formatDate(entry.savedAt)}
+                      {entry.vilVersion != null && t('layoutStore.versionPrefix', { version: entry.vilVersion })}{formatDate(entry.savedAt)}
                     </span>
                     {hasEntryExport && (
                       <div className="flex gap-1">
@@ -658,7 +660,7 @@ export function LayoutStoreContent({
                           {t('hub.needsDisplayName')}
                         </div>
                       )}
-                      {hubUploadResult && hubUploadResult.entryId === entry.id && (
+                      {hubUploadResult && (hubUploadResult.entryId === entry.id || hubUploadResult.entryIds?.includes(entry.id)) && (
                         <div
                           className={`mt-1 flex items-center text-[11px] font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
                           data-testid="layout-store-hub-result"

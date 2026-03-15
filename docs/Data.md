@@ -58,8 +58,15 @@ Complete point-in-time captures of a keyboard's state. Each snapshot contains:
 | Alternate Repeat Keys | All alt repeat key mappings |
 | QMK Settings | All firmware settings |
 | Layer names | Custom layer names |
+| Keyboard definition | Physical key layout and matrix info (v2+) |
 
 Snapshots are created manually via "Save Current State" and stored as `.pipette` files. They can be restored to the keyboard or exported as `.vil` files.
+
+The `.pipette` format has two versions:
+- **v1** (legacy): No `version` field, no keyboard definition embedded.
+- **v2** (current): Includes `version: 2` and embeds the `KeyboardDefinition` (physical key layout, matrix dimensions) so the snapshot can render a virtual keyboard without a physical device connected.
+
+Legacy v1 files are automatically migrated to v2 when loaded with a connected device.
 
 ### Favorites
 
