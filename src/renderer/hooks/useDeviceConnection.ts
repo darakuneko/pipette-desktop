@@ -9,6 +9,7 @@ export interface DeviceConnectionState {
   connecting: boolean
   error: string | null
   isDummy: boolean
+  isPipetteFile: boolean
 }
 
 /** Polling interval for device auto-detection and disconnect monitoring (ms) */
@@ -33,6 +34,7 @@ export function useDeviceConnection() {
     connecting: false,
     error: null,
     isDummy: false,
+    isPipetteFile: false,
   })
   const mountedRef = useRef(true)
   const connectedDeviceRef = useRef<DeviceInfo | null>(null)
@@ -111,6 +113,30 @@ export function useDeviceConnection() {
         ...s,
         connectedDevice: dummyDevice,
         isDummy: true,
+        isPipetteFile: false,
+        connecting: false,
+        error: null,
+      }))
+    }
+  }, [])
+
+  const connectPipetteFile = useCallback((deviceName: string) => {
+    const pipetteFileDevice: DeviceInfo = {
+      vendorId: 0,
+      productId: 0,
+      productName: deviceName,
+      serialNumber: '',
+      type: 'vial',
+    }
+    // Update refs immediately to avoid stale-ref races
+    connectedDeviceRef.current = pipetteFileDevice
+    isDummyRef.current = true
+    if (mountedRef.current) {
+      setState((s) => ({
+        ...s,
+        connectedDevice: pipetteFileDevice,
+        isDummy: true,
+        isPipetteFile: true,
         connecting: false,
         error: null,
       }))
@@ -128,7 +154,7 @@ export function useDeviceConnection() {
       }
     } finally {
       if (mountedRef.current) {
-        setState((s) => ({ ...s, connectedDevice: null, isDummy: false }))
+        setState((s) => ({ ...s, connectedDevice: null, isDummy: false, isPipetteFile: false }))
       }
     }
   }, [])
@@ -150,7 +176,7 @@ export function useDeviceConnection() {
       connectedDeviceRef.current = null
       isDummyRef.current = false
       if (mountedRef.current) {
-        setState((s) => ({ ...s, connectedDevice: null, isDummy: false }))
+        setState((s) => ({ ...s, connectedDevice: null, isDummy: false, isPipetteFile: false }))
       }
     }
 
@@ -203,6 +229,7 @@ export function useDeviceConnection() {
     refreshDevices,
     connectDevice,
     connectDummy,
+    connectPipetteFile,
     disconnectDevice,
   }
 }

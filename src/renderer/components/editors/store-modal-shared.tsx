@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 export const ACTION_BTN =
-  'text-xs font-medium text-content-muted hover:text-content cursor-pointer bg-transparent border-none px-2 py-1 rounded'
+  'text-xs font-medium text-content hover:text-content cursor-pointer bg-transparent border-none px-2 py-1 rounded'
 export const DELETE_BTN =
   'text-xs font-medium text-danger hover:text-danger cursor-pointer bg-transparent border-none px-2 py-1 rounded'
 export const CONFIRM_DELETE_BTN =

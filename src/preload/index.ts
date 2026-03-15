@@ -133,8 +133,8 @@ const vialAPI = {
   // --- File I/O (IPC to main for native file dialogs) ---
   saveLayout: (json: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_SAVE_LAYOUT, json, deviceName),
-  loadLayout: (title?: string): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.FILE_LOAD_LAYOUT, title),
+  loadLayout: (title?: string, extensions?: string[]): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FILE_LOAD_LAYOUT, title, extensions),
   exportKeymapC: (content: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_KEYMAP_C, content, deviceName),
   exportPdf: (base64Data: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>

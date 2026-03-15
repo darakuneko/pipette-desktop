@@ -89,9 +89,29 @@ export function isVilFileV1(vil: VilFile): boolean {
   return vil.version === undefined || vil.version < VILFILE_CURRENT_VERSION
 }
 
-/** Migrate a v1 VilFile to v2 by embedding a KeyboardDefinition */
-export function migrateVilFileToV2(vil: VilFile, definition: KeyboardDefinition): VilFile {
-  return { ...vil, version: VILFILE_CURRENT_VERSION, definition }
+/** Additional protocol metadata to embed during v1→v2 migration */
+export interface MigrationContext {
+  definition: KeyboardDefinition
+  viaProtocol?: number
+  vialProtocol?: number
+  featureFlags?: number
+}
+
+/** Migrate a v1 VilFile to v2 by embedding a KeyboardDefinition and protocol metadata */
+export function migrateVilFileToV2(vil: VilFile, definitionOrContext: KeyboardDefinition | MigrationContext): VilFile {
+  if ('definition' in definitionOrContext) {
+    const ctx = definitionOrContext
+    return {
+      ...vil,
+      version: VILFILE_CURRENT_VERSION,
+      definition: ctx.definition,
+      viaProtocol: ctx.viaProtocol,
+      vialProtocol: ctx.vialProtocol,
+      featureFlags: ctx.featureFlags,
+    }
+  }
+  // Legacy caller: just definition
+  return { ...vil, version: VILFILE_CURRENT_VERSION, definition: definitionOrContext }
 }
 
 /** Convert Map<string, number> to plain Record for JSON serialization */
