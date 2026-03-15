@@ -853,7 +853,8 @@ export function useKeyboard() {
     names[layer] = name
     saveLayerNamesRef.current?.(names)
     setState((s) => ({ ...s, layerNames: names }))
-  }, [])
+    bumpActivity()
+  }, [bumpActivity])
 
   const serialize = useCallback((): VilFile => {
     const s = stateRef.current
@@ -1016,7 +1017,8 @@ export function useKeyboard() {
       ...s,
       qmkSettingsValues: { ...s.qmkSettingsValues, [String(qsid)]: data },
     }))
-  }, [])
+    bumpActivity()
+  }, [bumpActivity])
 
   const pipetteFileQmkSettingsReset = useCallback(async (): Promise<void> => {
     setState((s) => ({
@@ -1025,7 +1027,8 @@ export function useKeyboard() {
         Object.entries(qmkSettingsBaselineRef.current).map(([k, v]) => [k, [...v]]),
       ),
     }))
-  }, [])
+    bumpActivity()
+  }, [bumpActivity])
 
   return {
     ...state,

@@ -503,11 +503,8 @@ export function App() {
 
   const handleExportVil = useCallback(async () => {
     const ok = await fileIO.saveLayout()
-    if (ok) {
-      showFileSuccess('export')
-      pipetteFileSavedActivityRef.current = keyboard.activityCount
-    }
-  }, [fileIO.saveLayout, showFileSuccess, keyboard.activityCount])
+    if (ok) showFileSuccess('export')
+  }, [fileIO.saveLayout, showFileSuccess])
 
   const handleExportKeymapC = useCallback(async () => {
     const ok = await fileIO.exportKeymapC()
@@ -1288,7 +1285,7 @@ export function App() {
     const name = vil.definition?.name ?? fallbackName
     device.connectPipetteFile(name)
     keyboard.loadPipetteFile(vil)
-    pipetteFileSavedActivityRef.current = 0 // reset — activityCount resets on loadPipetteFile
+    pipetteFileSavedActivityRef.current = keyboard.activityCount
     setLastLoadedLabel(loadedLabel ?? '')
     if (vil.uid) {
       await devicePrefs.applyDevicePrefs(vil.uid)
