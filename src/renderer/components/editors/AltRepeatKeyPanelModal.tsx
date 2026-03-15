@@ -145,7 +145,7 @@ export function AltRepeatKeyPanelModal({
     })
   }, [selectedIndex, editedEntry, onSetEntry, guard, handleClose])
 
-  const updateEntry = useCallback((field: KeycodeFieldName, code: number) => {
+  const updateEntry = useCallback((field: keyof AltRepeatKeyEntry, code: number) => {
     setEditedEntry((prev) => {
       if (!prev) return prev
       const next = { ...prev, [field]: code }
@@ -313,7 +313,7 @@ export function AltRepeatKeyPanelModal({
                   <div className="mt-2 space-y-2" data-testid="ar-advanced-fields">
                     <ModifierPicker
                       value={editedEntry.allowedMods}
-                      onChange={(v) => setEditedEntry((prev) => prev ? { ...prev, allowedMods: v } : prev)}
+                      onChange={(v) => updateEntry('allowedMods', v)}
                       label={t('editor.altRepeatKey.allowedMods')}
                       horizontal
                     />
