@@ -30,7 +30,13 @@
     "selectDevices": "デバイスを選択",
     "connectedTo": "{{name}} に接続中",
     "udevHelp": "Linuxでデバイスが見つからない場合は、udevルールがインストールされていることを確認してください。詳細はプロジェクトのREADMEを参照してください。",
-    "loadDummy": "JSONファイルから読み込み…"
+    "loadDummy": "JSONファイルから読み込み…",
+    "keyboardTab": "キーボード",
+    "fileTab": "ファイル",
+    "loadPipetteFile": ".pipetteファイルを読み込み…",
+    "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できます。ライティングとマトリクステスター以外の全機能が利用可能です。",
+    "selectKeyboard": "キーボードを選択",
+    "fileCount": "{{count}} 件"
   },
   "loading": {
     "protocol": "デバイス情報を読み取り中",
@@ -253,7 +259,10 @@
     "loadFailed": "レイアウトファイルの読み込みに失敗しました",
     "saveFailed": "レイアウトファイルの保存に失敗しました",
     "exampleUid": "固有のUIDを設定してください。",
-    "dummyMode": "ダミーモードで動作中 — キーボード未接続",
+    "dummyMode": "ダミーモード",
+    "pipetteFileMode": "ファイル編集モード",
+    "vilV1NotSupported": "古いデータフォーマットです。キーボードを接続し、キーマップを開くとマイグレーションされます。",
+    "noSavedFiles": "保存済みファイルはありません",
     "protocolVersion": "このキーボードのVIAプロトコルバージョンはサポートされていません。ファームウェアを更新してください。",
     "exportKeymapCFailed": "keymap.c ファイルのエクスポートに失敗しました",
     "exportPdfFailed": "キーマップPDFのエクスポートに失敗しました",

@@ -144,6 +144,12 @@ export interface VilFile {
   altRepeatKey: AltRepeatKeyEntry[]
   qmkSettings: Record<string, number[]>
   layerNames?: string[]
+  /** VIA protocol version. */
+  viaProtocol?: number
+  /** Vial protocol version — determines keycode address table (v5 vs v6). */
+  vialProtocol?: number
+  /** Feature flags bitmask (caps_word, layer_lock). */
+  featureFlags?: number
   /** Keyboard definition embedded in v2 snapshots for offline rendering. */
   definition?: KeyboardDefinition
 }

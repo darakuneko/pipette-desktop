@@ -94,7 +94,7 @@ export interface VialAPI {
 
   // File I/O (IPC to main for native file dialogs)
   saveLayout(json: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
-  loadLayout(title?: string): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }>
+  loadLayout(title?: string, extensions?: string[]): Promise<{ success: boolean; data?: string; filePath?: string; error?: string }>
   exportKeymapC(content: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportPdf(base64Data: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportCsv(content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>

@@ -25,7 +25,7 @@ import {
   ECHO_DETECTED_MSG,
   EMPTY_UID,
 } from '../../shared/constants/protocol'
-import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
+import { mapToRecord, recordToMap, deriveLayerCount, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions, type MacroAction } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
@@ -151,6 +151,8 @@ export function useKeyboard() {
   stateRef.current = state
   const [activityCount, setActivityCount] = useState(0)
   const bumpActivity = useCallback(() => setActivityCount((c) => c + 1), [])
+  // Baseline QMK settings snapshot for pipette-file reset (captured at load time)
+  const qmkSettingsBaselineRef = useRef<Record<string, number[]>>({})
 
   const reload = useCallback(async (): Promise<string | null> => {
     const progress = (key: string) =>
@@ -506,6 +508,105 @@ export function useKeyboard() {
     setState(newState)
   }, [])
 
+  const loadPipetteFile = useCallback((vil: VilFile) => {
+    if (!vil.definition) {
+      throw new Error('Loading a .vil file requires a v2 file with an embedded definition')
+    }
+
+    const definition = vil.definition
+    const newState = emptyState()
+    newState.isDummy = true
+    // Use protocol versions from file if available, otherwise default to latest
+    newState.viaProtocol = vil.viaProtocol ?? 9
+    newState.vialProtocol = vil.vialProtocol ?? 9
+    newState.definition = definition
+    newState.rows = definition.matrix.rows
+    newState.cols = definition.matrix.cols
+    newState.layoutOptions = vil.layoutOptions
+    newState.unlockStatus = { unlocked: true, inProgress: false, keys: [] }
+
+    // Parse KLE layout
+    if (definition.layouts?.keymap) {
+      newState.layout = parseKle(definition.layouts.keymap)
+      const indices = new Set<number>()
+      for (const key of newState.layout.keys) {
+        if (key.encoderIdx >= 0) indices.add(key.encoderIdx)
+      }
+      newState.encoderCount = indices.size
+    }
+
+    // Apply keymap and encoder layout from vil data
+    newState.keymap = recordToMap(vil.keymap)
+    newState.encoderLayout = recordToMap(vil.encoderLayout)
+
+    // Apply macros
+    newState.macroBuffer = vil.macros
+    newState.macroBufferSize = vil.macros.length > 0 ? vil.macros.length : 900
+    newState.parsedMacros = vil.macroJson
+      ? vil.macroJson.map((m) => jsonToMacroActions(JSON.stringify(m)) ?? [])
+      : null
+    // Derive macro count from parsed macros or split buffer
+    if (newState.parsedMacros) {
+      newState.macroCount = newState.parsedMacros.length
+    } else if (vil.macros.length > 0) {
+      newState.macroCount = splitMacroBuffer(vil.macros, 128).length
+    } else {
+      newState.macroCount = 16
+    }
+
+    // Derive layer count from keymap data
+    newState.layers = deriveLayerCount(vil.keymap, newState.rows, newState.cols)
+    newState.layerNames = Array.from({ length: newState.layers }, (_, i) =>
+      vil.layerNames && i < vil.layerNames.length ? vil.layerNames[i] : '',
+    )
+
+    // Apply dynamic entries
+    newState.tapDanceEntries = vil.tapDance
+    newState.comboEntries = vil.combo
+    newState.keyOverrideEntries = vil.keyOverride
+    newState.altRepeatKeyEntries = vil.altRepeatKey
+    const featureFlags = vil.featureFlags ?? 0
+    newState.dynamicCounts = {
+      tapDance: vil.tapDance.length,
+      combo: vil.combo.length,
+      keyOverride: vil.keyOverride.length,
+      altRepeatKey: vil.altRepeatKey.length,
+      featureFlags,
+    }
+
+    // Apply QMK settings (deep-copy baseline for reset support)
+    newState.qmkSettingsValues = vil.qmkSettings
+    qmkSettingsBaselineRef.current = Object.fromEntries(
+      Object.entries(vil.qmkSettings).map(([k, v]) => [k, [...v]]),
+    )
+    const qsidKeys = Object.keys(vil.qmkSettings)
+    newState.supportedQsids = new Set(qsidKeys.map(Number).filter((n) => !Number.isNaN(n)))
+
+    // Set UID from vil file
+    newState.uid = vil.uid
+
+    // Recreate keycodes — derive supportedFeatures from saved data (same logic as reload)
+    const supportedFeatures = new Set<string>()
+    if (featureFlags & 0x01) supportedFeatures.add('caps_word')
+    if (featureFlags & 0x02) supportedFeatures.add('layer_lock')
+    if (newState.vialProtocol >= VIAL_PROTOCOL_KEY_OVERRIDE) {
+      supportedFeatures.add('persistent_default_layer')
+    }
+    if (vil.altRepeatKey.length > 0) supportedFeatures.add('repeat_key')
+
+    recreateKeyboardKeycodes({
+      vialProtocol: newState.vialProtocol,
+      layers: newState.layers,
+      macroCount: newState.macroCount,
+      tapDanceCount: vil.tapDance.length,
+      customKeycodes: definition.customKeycodes ?? null,
+      midi: definition.vial?.midi ?? '',
+      supportedFeatures,
+    })
+
+    setState(newState)
+  }, [])
+
   const setKey = useCallback(
     async (layer: number, row: number, col: number, keycode: number) => {
       if (!stateRef.current.isDummy) {
@@ -772,6 +873,9 @@ export function useKeyboard() {
       altRepeatKey: s.altRepeatKeyEntries,
       qmkSettings: s.qmkSettingsValues,
       layerNames: s.layerNames,
+      viaProtocol: s.viaProtocol,
+      vialProtocol: s.vialProtocol,
+      featureFlags: s.dynamicCounts.featureFlags,
       definition: s.definition ?? undefined,
     }
   }, [])
@@ -890,6 +994,7 @@ export function useKeyboard() {
 
   const reset = useCallback(() => {
     setState(emptyState())
+    qmkSettingsBaselineRef.current = {}
   }, [])
 
   const refreshUnlockStatus = useCallback(async () => {
@@ -901,6 +1006,27 @@ export function useKeyboard() {
     }
   }, [])
 
+  // Pipette-file QMK settings wrappers (read/write local state, no HID)
+  const pipetteFileQmkSettingsGet = useCallback(async (qsid: number): Promise<number[]> => {
+    return stateRef.current.qmkSettingsValues[String(qsid)] ?? []
+  }, [])
+
+  const pipetteFileQmkSettingsSet = useCallback(async (qsid: number, data: number[]): Promise<void> => {
+    setState((s) => ({
+      ...s,
+      qmkSettingsValues: { ...s.qmkSettingsValues, [String(qsid)]: data },
+    }))
+  }, [])
+
+  const pipetteFileQmkSettingsReset = useCallback(async (): Promise<void> => {
+    setState((s) => ({
+      ...s,
+      qmkSettingsValues: Object.fromEntries(
+        Object.entries(qmkSettingsBaselineRef.current).map(([k, v]) => [k, [...v]]),
+      ),
+    }))
+  }, [])
+
   return {
     ...state,
     activityCount,
@@ -908,6 +1034,10 @@ export function useKeyboard() {
     reset,
     refreshUnlockStatus,
     loadDummy,
+    loadPipetteFile,
+    pipetteFileQmkSettingsGet,
+    pipetteFileQmkSettingsSet,
+    pipetteFileQmkSettingsReset,
     setKey,
     setKeysBulk,
     setEncoder,

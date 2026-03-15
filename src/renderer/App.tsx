@@ -54,6 +54,22 @@ import type { FavoriteType, SavedFavoriteMeta } from '../shared/types/favorite-s
 import type { FavHubEntryResult } from './components/editors/FavoriteHubActions'
 import settingsDefs from '../shared/qmk-settings-defs.json'
 
+/** Keyboard with saved pipette files, shown in the File tab */
+export interface PipetteFileKeyboard {
+  uid: string
+  name: string
+  entryCount: number
+}
+
+/** Entry from locally-saved v2 files shown in the File tab */
+export interface PipetteFileEntry {
+  uid: string
+  entryId: string
+  label: string
+  keyboardName: string
+  savedAt: string
+}
+
 // Lighting types that require the RGBConfigurator modal
 const LIGHTING_TYPES = new Set(['qmk_backlight', 'qmk_rgblight', 'qmk_backlight_rgblight', 'vialrgb'])
 
@@ -73,6 +89,10 @@ export function App() {
   const sync = useSync()
   const startupNotification = useStartupNotification()
 
+  // Pipette-file sessions have full data, so they should NOT be treated as
+  // dummy (features are enabled).  Used throughout for downstream gates.
+  const effectiveIsDummy = device.isDummy && !device.isPipetteFile
+
   const deserializedMacros = useMemo(
     () => keyboard.parsedMacros
       ?? (keyboard.macroBuffer && keyboard.macroCount
@@ -88,7 +108,9 @@ export function App() {
 
   const [showSettings, setShowSettings] = useState(false)
   const [showDataModal, setShowDataModal] = useState(false)
-  const [dummyError, setDummyError] = useState<string | null>(null)
+  const [fileLoadError, setFileLoadError] = useState<string | null>(null)
+  const [pipetteFileKeyboards, setPipetteFileKeyboards] = useState<PipetteFileKeyboard[]>([])
+  const [pipetteFileEntries, setPipetteFileEntries] = useState<PipetteFileEntry[]>([])
   const [deviceLoadError, setDeviceLoadError] = useState<string | null>(null)
   const [deviceSyncing, setDeviceSyncing] = useState(false)
   const [migrationChecking, setMigrationChecking] = useState(false)
@@ -108,8 +130,9 @@ export function App() {
   const favHubUploadingRef = useRef(false)
   const [favHubUploadResult, setFavHubUploadResult] = useState<FavHubEntryResult | null>(null)
   const [lastLoadedLabel, setLastLoadedLabel] = useState('')
-  // Clear loaded label when device identity changes (USB unplug/replug, device switch)
-  useEffect(() => { setLastLoadedLabel('') }, [keyboard.uid])
+  // Clear loaded label when device identity changes (USB unplug/replug, device switch).
+  // Skip for pipette-file sessions — openPipetteVil sets the label after uid changes.
+  useEffect(() => { if (!device.isPipetteFile) setLastLoadedLabel('') }, [keyboard.uid, device.isPipetteFile])
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
   const [hubMyPostsPagination, setHubMyPostsPagination] = useState<HubPaginationMeta | undefined>()
   const [hubKeyboardPosts, setHubKeyboardPosts] = useState<HubMyPost[]>([])
@@ -132,6 +155,9 @@ export function App() {
       return
     }
 
+    // Skip auto-sync for pipette-file sessions (file-backed, no cloud sync needed)
+    if (device.isPipetteFile) return
+
     // Wait for UID (available ~22ms into reload)
     if (!keyboard.uid || keyboard.uid === EMPTY_UID) {
       hasKeyboardSyncedRef.current = null
@@ -148,13 +174,13 @@ export function App() {
     sync.syncNow('download', { favorites: true as const, keyboard: keyboard.uid })
       .catch(() => { hasSyncedRef.current = false; hasKeyboardSyncedRef.current = null })
       .finally(() => setDeviceSyncing(false))
-  }, [device.connectedDevice, keyboard.uid, keyboard.loading,
+  }, [device.connectedDevice, device.isPipetteFile, keyboard.uid, keyboard.loading,
       sync.loading, sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword,
       sync.syncNow, deviceSyncing])
 
   // True when keyboard sync is about to trigger but useEffect hasn't fired yet.
   // Bridges the 1-frame gap between UID publish and setDeviceSyncing(true).
-  const phase2SyncPending = !deviceSyncing &&
+  const phase2SyncPending = !deviceSyncing && !device.isPipetteFile &&
     !!device.connectedDevice && !!keyboard.uid && keyboard.uid !== EMPTY_UID &&
     hasKeyboardSyncedRef.current !== keyboard.uid &&
     sync.config.autoSync && sync.authStatus.authenticated && sync.hasPassword && !sync.loading
@@ -274,14 +300,14 @@ export function App() {
 
   // Collect visible settings tab names for per-feature support checks
   const visibleSettingsNames = useMemo(() => {
-    if (device.isDummy || keyboard.supportedQsids.size === 0) return new Set<string>()
+    if (effectiveIsDummy || keyboard.supportedQsids.size === 0) return new Set<string>()
     const tabs = (settingsDefs as { tabs: QmkSettingsTab[] }).tabs
     return new Set(
       tabs
         .filter((tab) => tab.fields.some((f) => keyboard.supportedQsids.has(f.qsid)))
         .map((tab) => tab.name),
     )
-  }, [keyboard.supportedQsids, device.isDummy])
+  }, [keyboard.supportedQsids, effectiveIsDummy])
 
   const tapHoldSupported = visibleSettingsNames.has('Tap-Hold')
   const mouseKeysSupported = visibleSettingsNames.has('Mouse keys')
@@ -402,7 +428,7 @@ export function App() {
   }, [appConfig.config.hubEnabled, sync.authStatus.authenticated, clearHubPostsState, markAccountDeactivated])
 
   const refreshHubKeyboardPosts = useCallback(async () => {
-    if (!appConfig.config.hubEnabled || !sync.authStatus.authenticated || !deviceName || device.isDummy) {
+    if (!appConfig.config.hubEnabled || !sync.authStatus.authenticated || !deviceName || effectiveIsDummy) {
       setHubKeyboardPosts([])
       return
     }
@@ -412,7 +438,7 @@ export function App() {
     } catch {
       setHubKeyboardPosts([])
     }
-  }, [appConfig.config.hubEnabled, sync.authStatus.authenticated, deviceName, device.isDummy])
+  }, [appConfig.config.hubEnabled, sync.authStatus.authenticated, deviceName, effectiveIsDummy])
 
   const refreshHubPosts = useCallback(async () => {
     // Fetch keyboard posts first so they are ready before hubConnected
@@ -543,7 +569,12 @@ export function App() {
 
       // Auto-migrate v1 → v2 on read
       if (isVilFileV1(parsed) && keyboard.definition) {
-        const migrated = migrateVilFileToV2(parsed, keyboard.definition)
+        const migrated = migrateVilFileToV2(parsed, {
+          definition: keyboard.definition,
+          viaProtocol: keyboard.viaProtocol,
+          vialProtocol: keyboard.vialProtocol,
+          featureFlags: keyboard.dynamicCounts.featureFlags,
+        })
         window.vialAPI.snapshotStoreUpdate(
           keyboard.uid,
           entryId,
@@ -876,7 +907,12 @@ export function App() {
             const parsed: unknown = JSON.parse(loadResult.data)
             if (!isVilFile(parsed) || !isVilFileV1(parsed)) continue
 
-            const upgraded = migrateVilFileToV2(parsed, definition)
+            const upgraded = migrateVilFileToV2(parsed, {
+              definition,
+              viaProtocol: keyboard.viaProtocol,
+              vialProtocol: keyboard.vialProtocol,
+              featureFlags: keyboard.dynamicCounts.featureFlags,
+            })
             await window.vialAPI.snapshotStoreUpdate(
               uid, entry.id, JSON.stringify(upgraded, null, 2), upgraded.version,
             )
@@ -1073,9 +1109,9 @@ export function App() {
     }
   }, [hubReady, markAccountDeactivated, t])
 
-  const comboSupported = !device.isDummy && keyboard.dynamicCounts.combo > 0
-  const altRepeatKeySupported = !device.isDummy && keyboard.dynamicCounts.altRepeatKey > 0
-  const keyOverrideSupported = !device.isDummy && keyboard.dynamicCounts.keyOverride > 0
+  const comboSupported = !effectiveIsDummy && keyboard.dynamicCounts.combo > 0
+  const altRepeatKeySupported = !effectiveIsDummy && keyboard.dynamicCounts.altRepeatKey > 0
+  const keyOverrideSupported = !effectiveIsDummy && keyboard.dynamicCounts.keyOverride > 0
 
   const handleDeleteEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -1148,7 +1184,7 @@ export function App() {
 
   const handleConnect = useCallback(
     async (dev: DeviceInfo) => {
-      setDummyError(null)
+      setFileLoadError(null)
       setDeviceLoadError(null)
       const success = await device.connectDevice(dev)
       if (success) {
@@ -1186,24 +1222,115 @@ export function App() {
     }
   }, [sync.config.autoSync, sync.authStatus.authenticated, sync.hasPassword, sync.syncNow, deviceSyncing])
 
+  // Fetch locally-saved v2 .vil entries for the File tab.
+  // Called when File tab becomes active (not just on mount).
+  // Includes entries with vilVersion >= 2 or undefined (may be v2 with unbackfilled metadata).
+  const refreshPipetteFileEntries = useCallback(async () => {
+    try {
+      const keyboards = await window.vialAPI.listStoredKeyboards()
+      const kbList: PipetteFileKeyboard[] = []
+      const entries: PipetteFileEntry[] = []
+      for (const kb of keyboards) {
+        const result = await window.vialAPI.snapshotStoreList(kb.uid)
+        if (!result.success || !result.entries) continue
+        let count = 0
+        for (const e of result.entries) {
+          if (e.vilVersion == null || e.vilVersion >= VILFILE_CURRENT_VERSION) {
+            entries.push({
+              uid: kb.uid,
+              entryId: e.id,
+              label: e.label,
+              keyboardName: kb.name,
+              savedAt: e.updatedAt ?? e.savedAt,
+            })
+            count++
+          }
+        }
+        if (count > 0) {
+          kbList.push({ uid: kb.uid, name: kb.name, entryCount: count })
+        }
+      }
+      entries.sort((a, b) => b.savedAt.localeCompare(a.savedAt))
+      setPipetteFileKeyboards(kbList)
+      setPipetteFileEntries(entries)
+    } catch {
+      // Non-critical — file tab just shows empty list
+    }
+  }, [])
+
   const handleLoadDummy = useCallback(async () => {
-    setDummyError(null)
+    setFileLoadError(null)
     try {
       const result = await window.vialAPI.sideloadJson(t('app.loadDummy'))
       if (!result.success) {
-        if (result.error !== 'cancelled') setDummyError(t('error.sideloadFailed'))
+        if (result.error !== 'cancelled') setFileLoadError(t('error.sideloadFailed'))
         return
       }
       if (!isKeyboardDefinition(result.data)) {
-        setDummyError(t('error.sideloadInvalidDefinition'))
+        setFileLoadError(t('error.sideloadInvalidDefinition'))
         return
       }
       device.connectDummy()
       keyboard.loadDummy(result.data)
     } catch {
-      setDummyError(t('error.sideloadFailed'))
+      setFileLoadError(t('error.sideloadFailed'))
     }
   }, [device, keyboard, t])
+
+  // Shared helper: validate and open a parsed v2 VilFile for file editing
+  const openPipetteVil = useCallback(async (vil: VilFile, fallbackName: string, loadedLabel?: string) => {
+    const name = vil.definition?.name ?? fallbackName
+    device.connectPipetteFile(name)
+    keyboard.loadPipetteFile(vil)
+    setLastLoadedLabel(loadedLabel ?? '')
+    if (vil.uid) {
+      await devicePrefs.applyDevicePrefs(vil.uid)
+    }
+  }, [device, keyboard, devicePrefs])
+
+  const handleOpenPipetteFileEntry = useCallback(async (entry: PipetteFileEntry) => {
+    setFileLoadError(null)
+    try {
+      const result = await window.vialAPI.snapshotStoreLoad(entry.uid, entry.entryId)
+      if (!result.success || !result.data) {
+        setFileLoadError(t('error.loadFailed'))
+        return
+      }
+      const parsed: unknown = JSON.parse(result.data)
+      if (!isVilFile(parsed) || isVilFileV1(parsed)) {
+        setFileLoadError(t('error.vilV1NotSupported'))
+        return
+      }
+      await openPipetteVil(parsed, entry.keyboardName, entry.label || entry.keyboardName)
+    } catch {
+      setFileLoadError(t('error.loadFailed'))
+    }
+  }, [openPipetteVil, t])
+
+  const handleLoadPipetteFile = useCallback(async () => {
+    setFileLoadError(null)
+    try {
+      const result = await window.vialAPI.loadLayout(t('app.loadPipetteFile'), ['pipette'])
+      if (!result.success) {
+        if (result.error !== 'cancelled') setFileLoadError(t('error.loadFailed'))
+        return
+      }
+      if (!result.data) {
+        setFileLoadError(t('error.loadFailed'))
+        return
+      }
+      const parsed: unknown = JSON.parse(result.data)
+      if (!isVilFile(parsed) || isVilFileV1(parsed)) {
+        setFileLoadError(t('error.vilV1NotSupported'))
+        return
+      }
+      // Derive label from file path (e.g. "/path/to/MyKeyboard.pipette" → "MyKeyboard")
+      const fileName = result.filePath?.split('/').pop()?.split('\\').pop()?.replace(/\.[^.]+$/, '') ?? ''
+      await openPipetteVil(parsed, 'Keyboard', fileName)
+    } catch {
+      setFileLoadError(t('error.loadFailed'))
+    }
+  }, [openPipetteVil, t])
 
   // Not connected: show device selector
   if (!device.connectedDevice) {
@@ -1217,9 +1344,15 @@ export function App() {
         <DeviceSelector
           devices={device.devices}
           connecting={device.connecting}
-          error={dummyError || device.error}
+          error={fileLoadError || device.error}
           onConnect={handleConnect}
           onLoadDummy={handleLoadDummy}
+          onLoadPipetteFile={handleLoadPipetteFile}
+          pipetteFileKeyboards={pipetteFileKeyboards}
+          pipetteFileEntries={pipetteFileEntries}
+          connectedDeviceNames={device.devices.map((d) => d.productName)}
+          onOpenPipetteFileEntry={handleOpenPipetteFileEntry}
+          onRefreshPipetteFileEntries={refreshPipetteFileEntries}
           onOpenSettings={() => setShowSettings(true)}
           onOpenData={handleOpenDataModal}
           syncStatus={sync.syncStatus}
@@ -1331,7 +1464,7 @@ export function App() {
         loading={layoutStore.loading}
         saving={layoutStore.saving}
         fileStatus={fileStatus}
-        isDummy={device.isDummy}
+        isDummy={effectiveIsDummy}
         defaultSaveLabel={lastLoadedLabel}
         onSave={layoutStore.saveLayout}
         onLoad={handleLoadEntry}
@@ -1340,9 +1473,9 @@ export function App() {
         onExportVil={handleExportVil}
         onExportKeymapC={handleExportKeymapC}
         onExportPdf={handleExportPdf}
-        onExportEntryVil={!device.isDummy ? handleExportEntryVil : undefined}
-        onExportEntryKeymapC={!device.isDummy ? handleExportEntryKeymapC : undefined}
-        onExportEntryPdf={!device.isDummy ? handleExportEntryPdf : undefined}
+        onExportEntryVil={!effectiveIsDummy ? handleExportEntryVil : undefined}
+        onExportEntryKeymapC={!effectiveIsDummy ? handleExportEntryKeymapC : undefined}
+        onExportEntryPdf={!effectiveIsDummy ? handleExportEntryPdf : undefined}
         onOverwriteSave={handleOverwriteSave}
         onUploadToHub={hubCanUpload ? handleUploadToHub : undefined}
         onUpdateOnHub={hubCanUpload ? handleUpdateOnHub : undefined}
@@ -1371,7 +1504,7 @@ export function App() {
         <>
           {device.isDummy && (
             <div className="border-b border-warning/30 bg-warning/10 px-4 py-2 text-sm text-warning">
-              {t('error.dummyMode')}
+              {device.isPipetteFile ? t('error.pipetteFileMode') : t('error.dummyMode')}
             </div>
           )}
 
@@ -1462,9 +1595,9 @@ export function App() {
             oneShotKeysSupported={oneShotKeysSupported}
             comboSettingsSupported={comboSettingsSupported}
             supportedQsids={hasAnySettings ? keyboard.supportedQsids : undefined}
-            qmkSettingsGet={hasAnySettings ? api.qmkSettingsGet : undefined}
-            qmkSettingsSet={hasAnySettings ? api.qmkSettingsSet : undefined}
-            qmkSettingsReset={hasAnySettings ? api.qmkSettingsReset : undefined}
+            qmkSettingsGet={hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsGet : api.qmkSettingsGet) : undefined}
+            qmkSettingsSet={hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
+            qmkSettingsReset={hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
             onSettingsUpdate={hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
@@ -1485,11 +1618,11 @@ export function App() {
             onOpenKeyOverride={keyOverrideSupported ? (index?: number) => { setKeyOverrideInitialIndex(index); setShowKeyOverrideModal(true) } : undefined}
             altRepeatKeyEntries={altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
             onOpenAltRepeatKey={altRepeatKeySupported ? (index?: number) => { setAltRepeatKeyInitialIndex(index); setShowAltRepeatKeyModal(true) } : undefined}
-            layerNames={!device.isDummy ? keyboard.layerNames : undefined}
-            onSetLayerName={!device.isDummy ? keyboard.setLayerName : undefined}
+            layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
+            onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
             toolsExtra={toolsExtra}
             dataPanel={dataPanel}
-            onOverlayOpen={!device.isDummy ? layoutStore.refreshEntries : undefined}
+            onOverlayOpen={!effectiveIsDummy ? layoutStore.refreshEntries : undefined}
             layerPanelOpen={devicePrefs.layerPanelOpen}
             onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             scale={keymapScale}
@@ -1509,7 +1642,7 @@ export function App() {
             onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
             deviceName={deviceName}
-            isDummy={device.isDummy}
+            isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={handleExportLayoutPdfAll}
             onExportLayoutPdfCurrent={handleExportLayoutPdfCurrent}
             favHubOrigin={hubReady ? hubOrigin : undefined}
