@@ -103,6 +103,7 @@ describe('hub-ipc', () => {
     title: 'My Keymap',
     keyboardName: 'TestBoard',
     vilJson: '{"keymap":{}}',
+    pipetteJson: '{"version":2}',
     keymapC: 'const uint16_t keymaps[]',
     pdfBase64: 'cGRmLWRhdGE=',
     thumbnailBase64: Buffer.from('fake-jpeg').toString('base64'),

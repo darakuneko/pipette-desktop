@@ -149,6 +149,7 @@ const MB = 1024 * 1024
 const FILE_SIZE_LIMITS: Record<string, { max: number; label: string }> = {
   thumbnail: { max: 2 * MB, label: 'thumbnail' },
   vil: { max: 10 * MB, label: 'vil' },
+  pipette: { max: 10 * MB, label: 'pipette' },
   c: { max: 10 * MB, label: 'keymap C' },
   pdf: { max: 10 * MB, label: 'PDF' },
 }
@@ -166,6 +167,7 @@ function buildFiles(params: HubUploadPostParams): HubUploadFiles {
   const baseName = params.keyboardName.replace(/[^a-zA-Z0-9_-]/g, '_')
   const files: HubUploadFiles = {
     vil: { name: `${baseName}.vil`, data: Buffer.from(params.vilJson, 'utf-8') },
+    pipette: { name: `${baseName}.pipette`, data: Buffer.from(params.pipetteJson, 'utf-8') },
     c: { name: `${baseName}.c`, data: Buffer.from(params.keymapC, 'utf-8') },
     pdf: { name: `${baseName}.pdf`, data: Buffer.from(params.pdfBase64, 'base64') },
     thumbnail: { name: `${baseName}.jpg`, data: Buffer.from(params.thumbnailBase64, 'base64') },
