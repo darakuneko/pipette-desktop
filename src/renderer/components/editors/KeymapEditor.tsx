@@ -590,11 +590,11 @@ interface Props {
   onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
   onOpenLighting?: () => void
   comboEntries?: import('../../../shared/types/protocol').ComboEntry[]
-  onOpenCombo?: (index?: number) => void
+  onOpenCombo?: (index: number) => void
   keyOverrideEntries?: import('../../../shared/types/protocol').KeyOverrideEntry[]
-  onOpenKeyOverride?: (index?: number) => void
+  onOpenKeyOverride?: (index: number) => void
   altRepeatKeyEntries?: import('../../../shared/types/protocol').AltRepeatKeyEntry[]
-  onOpenAltRepeatKey?: (index?: number) => void
+  onOpenAltRepeatKey?: (index: number) => void
   toolsExtra?: React.ReactNode
   dataPanel?: React.ReactNode
   onOverlayOpen?: () => void
