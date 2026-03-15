@@ -8,11 +8,11 @@ import { TdTileGrid, MacroTileGrid, ComboTileGrid, KeyOverrideTileGrid, AltRepea
 
 interface SettingsTabOptions {
   comboEntries?: ComboEntry[]
-  onOpenCombo?: (index?: number) => void
+  onOpenCombo?: (index: number) => void
   keyOverrideEntries?: KeyOverrideEntry[]
-  onOpenKeyOverride?: (index?: number) => void
+  onOpenKeyOverride?: (index: number) => void
   altRepeatKeyEntries?: AltRepeatKeyEntry[]
-  onOpenAltRepeatKey?: (index?: number) => void
+  onOpenAltRepeatKey?: (index: number) => void
 }
 
 /**

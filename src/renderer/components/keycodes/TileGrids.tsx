@@ -18,7 +18,7 @@ interface SettingsTileGridProps<T extends Record<string, unknown>> {
   entries: T[]
   fields: ReadonlyArray<{ key: keyof T & string; prefix: string }>
   isConfigured: (entry: T) => boolean
-  onOpen: (index?: number) => void
+  onOpen: (index: number) => void
   testIdPrefix: string
 }
 
@@ -190,14 +190,14 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
   )
 }
 
-export function ComboTileGrid({ entries, onOpenCombo }: { entries: ComboEntry[]; onOpenCombo: (index?: number) => void }) {
+export function ComboTileGrid({ entries, onOpenCombo }: { entries: ComboEntry[]; onOpenCombo: (index: number) => void }) {
   return <SettingsTileGrid entries={entries} fields={COMBO_FIELDS} isConfigured={(e) => e.key1 !== 0 || e.key2 !== 0} onOpen={onOpenCombo} testIdPrefix="combo" />
 }
 
-export function KeyOverrideTileGrid({ entries, onOpen }: { entries: KeyOverrideEntry[]; onOpen: (index?: number) => void }) {
+export function KeyOverrideTileGrid({ entries, onOpen }: { entries: KeyOverrideEntry[]; onOpen: (index: number) => void }) {
   return <SettingsTileGrid entries={entries} fields={KEY_OVERRIDE_FIELDS} isConfigured={(e) => e.enabled || e.triggerKey !== 0 || e.replacementKey !== 0} onOpen={onOpen} testIdPrefix="ko" />
 }
 
-export function AltRepeatKeyTileGrid({ entries, onOpen }: { entries: AltRepeatKeyEntry[]; onOpen: (index?: number) => void }) {
+export function AltRepeatKeyTileGrid({ entries, onOpen }: { entries: AltRepeatKeyEntry[]; onOpen: (index: number) => void }) {
   return <SettingsTileGrid entries={entries} fields={ALT_REPEAT_KEY_FIELDS} isConfigured={(e) => e.enabled || e.lastKey !== 0 || e.altKey !== 0} onOpen={onOpen} testIdPrefix="arep" />
 }

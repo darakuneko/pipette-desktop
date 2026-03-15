@@ -1648,11 +1648,11 @@ export function App() {
             onMatrixModeChange={handleMatrixModeChange}
             onOpenLighting={lightingSupported ? () => setShowLightingModal(true) : undefined}
             comboEntries={comboSupported ? keyboard.comboEntries : undefined}
-            onOpenCombo={comboSupported ? (index?: number) => { setComboInitialIndex(index); setShowComboModal(true) } : undefined}
+            onOpenCombo={comboSupported ? (index: number) => { setComboInitialIndex(index); setShowComboModal(true) } : undefined}
             keyOverrideEntries={keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
-            onOpenKeyOverride={keyOverrideSupported ? (index?: number) => { setKeyOverrideInitialIndex(index); setShowKeyOverrideModal(true) } : undefined}
+            onOpenKeyOverride={keyOverrideSupported ? (index: number) => { setKeyOverrideInitialIndex(index); setShowKeyOverrideModal(true) } : undefined}
             altRepeatKeyEntries={altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
-            onOpenAltRepeatKey={altRepeatKeySupported ? (index?: number) => { setAltRepeatKeyInitialIndex(index); setShowAltRepeatKeyModal(true) } : undefined}
+            onOpenAltRepeatKey={altRepeatKeySupported ? (index: number) => { setAltRepeatKeyInitialIndex(index); setShowAltRepeatKeyModal(true) } : undefined}
             layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
             onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
             toolsExtra={toolsExtra}
@@ -1779,7 +1779,7 @@ export function App() {
         </div>
       )}
 
-      {showComboModal && comboSupported && (
+      {showComboModal && comboSupported && comboInitialIndex !== undefined && (
         <ComboPanelModal
           entries={keyboard.comboEntries}
           onSetEntry={keyboard.setComboEntry}
@@ -1803,7 +1803,7 @@ export function App() {
         />
       )}
 
-      {showAltRepeatKeyModal && altRepeatKeySupported && (
+      {showAltRepeatKeyModal && altRepeatKeySupported && altRepeatKeyInitialIndex !== undefined && (
         <AltRepeatKeyPanelModal
           entries={keyboard.altRepeatKeyEntries}
           onSetEntry={keyboard.setAltRepeatKeyEntry}
@@ -1827,7 +1827,7 @@ export function App() {
         />
       )}
 
-      {showKeyOverrideModal && keyOverrideSupported && (
+      {showKeyOverrideModal && keyOverrideSupported && keyOverrideInitialIndex !== undefined && (
         <KeyOverridePanelModal
           entries={keyboard.keyOverrideEntries}
           onSetEntry={keyboard.setKeyOverrideEntry}
