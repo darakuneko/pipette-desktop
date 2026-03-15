@@ -365,7 +365,7 @@ describe('LayoutStoreModal', () => {
     expect(screen.getByTestId('layout-store-save-submit')).toBeDisabled()
   })
 
-  it('clears input after save submit', () => {
+  it('preserves input label after save submit and shows saved indicator', () => {
     render(
       <LayoutStoreModal
         entries={[]}
@@ -377,7 +377,8 @@ describe('LayoutStoreModal', () => {
     fireEvent.change(input, { target: { value: 'Test Label' } })
     fireEvent.submit(input.closest('form')!)
 
-    expect(input.value).toBe('')
+    expect(input.value).toBe('Test Label')
+    expect(screen.getByTestId('layout-store-saved')).toBeInTheDocument()
   })
 
   it('shows overwrite confirmation when saving with existing label', () => {
@@ -1573,7 +1574,7 @@ describe('LayoutStoreModal', () => {
       expect(onSave).toHaveBeenCalledWith('First Layout')
     })
 
-    it('clears save input and confirmation state after onOverwriteSave', () => {
+    it('preserves save input and clears confirmation state after onOverwriteSave', () => {
       const onOverwriteSave = vi.fn()
       render(
         <LayoutStoreModal
@@ -1588,11 +1589,13 @@ describe('LayoutStoreModal', () => {
       fireEvent.submit(input.closest('form')!)
       fireEvent.click(screen.getByTestId('layout-store-overwrite-confirm'))
 
-      // Input should be cleared
-      expect(input.value).toBe('')
+      // Input should preserve the label
+      expect(input.value).toBe('First Layout')
       // Confirmation state should be reset (save button visible again)
       expect(screen.getByTestId('layout-store-save-submit')).toBeInTheDocument()
       expect(screen.queryByTestId('layout-store-overwrite-confirm')).not.toBeInTheDocument()
+      // Saved indicator should be shown
+      expect(screen.getByTestId('layout-store-saved')).toBeInTheDocument()
     })
   })
 })
