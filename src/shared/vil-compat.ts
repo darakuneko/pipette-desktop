@@ -8,6 +8,7 @@ import type {
   AltRepeatKeyEntry,
 } from './types/protocol'
 import { serialize as serializeKeycode, deserialize as deserializeKeycode } from './keycodes/keycodes'
+import { MAX_SETTING_WIDTH } from './qmk-settings-normalize'
 
 // --- Helpers ---
 
@@ -248,8 +249,13 @@ function vialGuiToAltRepeatKey(
 function qmkSettingsToVialGui(settings: Record<string, number[]>): Record<string, number> {
   const result: Record<string, number> = {}
   for (const [key, bytes] of Object.entries(settings)) {
+    // Defensive: clamp to MAX_SETTING_WIDTH to prevent overflow from raw
+    // HID data.  Normally data is already trimmed by
+    // normalizeQmkSettingData(), but legacy .vil files or imported data
+    // may contain untrimmed arrays.
+    const len = Math.min(bytes.length, MAX_SETTING_WIDTH)
     let value = 0
-    for (let i = 0; i < bytes.length; i++) {
+    for (let i = 0; i < len; i++) {
       value |= (bytes[i] & 0xff) << (i * 8)
     }
     result[key] = value

@@ -31,6 +31,7 @@ import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActi
 import { parseKle } from '../../shared/kle/kle-parser'
 import type { KeyboardLayout } from '../../shared/kle/types'
 import { recreateKeyboardKeycodes } from '../../shared/keycodes/keycodes'
+import { normalizeQmkSettingData } from '../../shared/qmk-settings-normalize'
 
 export interface BulkKeyEntry {
   layer: number
@@ -388,7 +389,7 @@ export function useKeyboard() {
         supportedFeatures,
       })
 
-      // Phase 8: QMK Settings discovery (matches Python reload_settings)
+      // Phase 8a: QMK Settings discovery (matches Python reload_settings)
       // Wrapped in a timeout so a hung HID call cannot block reload forever.
       progress('loading.settings')
       if (newState.vialProtocol >= VIAL_PROTOCOL_QMK_SETTINGS) {
@@ -421,6 +422,53 @@ export function useKeyboard() {
           } else {
             console.error('[KB] QMK settings discovery failed:', err)
           }
+        }
+
+        // Phase 8b: Fetch current values for each supported QSID.
+        // Uses a separate timeout so a hung get call does not poison the
+        // entire reload.  Per-QSID failures are tolerated — partial data
+        // is better than none for Hub upload / .vil export.
+        // NOTE: Like Phase 8a, the fetch loop is sequential (not
+        // individually timed) because HID commands are serialised anyway.
+        // A cancelled flag prevents late completions from mutating the
+        // snapshot after a timeout.
+        if (newState.supportedQsids.size > 0) {
+          const values: Record<string, number[]> = {}
+          let cancelled = false
+          let timer: ReturnType<typeof setTimeout> | undefined
+          try {
+            await Promise.race([
+              (async () => {
+                for (const qsid of newState.supportedQsids) {
+                  if (cancelled) break
+                  try {
+                    const data = await api.qmkSettingsGet(qsid)
+                    if (!cancelled) {
+                      values[String(qsid)] = normalizeQmkSettingData(qsid, data)
+                    }
+                  } catch {
+                    console.warn(`[KB] Failed to read QMK setting ${qsid}, skipping`)
+                  }
+                }
+              })(),
+              new Promise<void>((_, reject) => {
+                timer = setTimeout(() => reject(new Error('QMK settings value fetch timeout')), 5000)
+              }),
+            ])
+          } catch {
+            cancelled = true
+            console.warn('[KB] QMK settings value fetch timed out, using partial data')
+          } finally {
+            clearTimeout(timer)
+          }
+          newState.qmkSettingsValues = values
+          qmkSettingsBaselineRef.current = Object.fromEntries(
+            Object.entries(values).map(([k, v]) => [k, [...v]]),
+          )
+        } else {
+          // No supported QSIDs — clear stale baseline from prior reload
+          newState.qmkSettingsValues = {}
+          qmkSettingsBaselineRef.current = {}
         }
       }
 
@@ -834,9 +882,10 @@ export function useKeyboard() {
   }, [bumpActivity])
 
   const updateQmkSettingsValue = useCallback((qsid: number, data: number[]) => {
+    const normalized = normalizeQmkSettingData(qsid, data)
     setState((s) => ({
       ...s,
-      qmkSettingsValues: { ...s.qmkSettingsValues, [String(qsid)]: data },
+      qmkSettingsValues: { ...s.qmkSettingsValues, [String(qsid)]: normalized },
     }))
     bumpActivity()
   }, [bumpActivity])
