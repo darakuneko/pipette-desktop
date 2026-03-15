@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AltRepeatKeyEntry, TapDanceEntry } from '../../../shared/types/protocol'
 import { AltRepeatKeyOptions } from '../../../shared/types/protocol'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserialize, codeToLabel } from '../../../shared/keycodes/keycodes'
+import { deserialize } from '../../../shared/keycodes/keycodes'
 import type { MacroAction } from '../../../preload/macro'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
@@ -25,7 +25,7 @@ import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-conf
 interface Props {
   entries: AltRepeatKeyEntry[]
   onSetEntry: (index: number, entry: AltRepeatKeyEntry) => Promise<void>
-  initialIndex?: number
+  initialIndex: number
   unlocked?: boolean
   onUnlock?: () => void
   tapDanceEntries?: TapDanceEntry[]
@@ -58,26 +58,8 @@ const optionEntries = Object.entries(AltRepeatKeyOptions).filter(
 )
 
 
-const AR_FIELDS = [
-  { key: 'lastKey', prefix: 'LK' },
-  { key: 'altKey', prefix: 'AK' },
-] as const
-
 function isConfigured(entry: AltRepeatKeyEntry): boolean {
   return entry.lastKey !== 0
-}
-
-const TILE_STYLE_ACTIVE =
-  'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
-const TILE_STYLE_DISABLED =
-  'justify-start border-picker-item-border bg-picker-item-bg text-picker-item-text hover:bg-picker-item-hover'
-const TILE_STYLE_EMPTY =
-  'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
-
-function tileStyle(configured: boolean, enabled: boolean): string {
-  if (configured && enabled) return TILE_STYLE_ACTIVE
-  if (configured) return TILE_STYLE_DISABLED
-  return TILE_STYLE_EMPTY
 }
 
 export function AltRepeatKeyPanelModal({
@@ -103,7 +85,7 @@ export function AltRepeatKeyPanelModal({
 }: Props) {
   const { t } = useTranslation()
   const { guard, clearPending } = useUnlockGate({ unlocked, onUnlock })
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(initialIndex ?? null)
+  const selectedIndex = initialIndex
   const [editedEntry, setEditedEntry] = useState<AltRepeatKeyEntry | null>(null)
   const [selectedField, setSelectedField] = useState<KeycodeFieldName | null>(null)
   const [popoverState, setPopoverState] = useState<{ field: KeycodeFieldName; anchorRect: DOMRect } | null>(null)
@@ -124,7 +106,7 @@ export function AltRepeatKeyPanelModal({
   }, []))
 
   const revertAction = useConfirmAction(useCallback(() => {
-    if (selectedIndex === null || !entries[selectedIndex]) return
+    if (!entries[selectedIndex]) return
     clearPending()
     setEditedEntry(entries[selectedIndex])
     setSelectedField(null)
@@ -137,11 +119,10 @@ export function AltRepeatKeyPanelModal({
     setPopoverState(null)
     clearAction.reset()
     revertAction.reset()
-    if (selectedIndex !== null && entries[selectedIndex]) {
+    if (entries[selectedIndex]) {
       setEditedEntry(entries[selectedIndex])
     } else {
       setEditedEntry(null)
-      if (selectedIndex !== null) setSelectedIndex(null)
     }
   }, [selectedIndex, entries])
 
@@ -154,18 +135,15 @@ export function AltRepeatKeyPanelModal({
     onClose()
   }, [clearPending, onClose])
 
-  const handleBack = useCallback(() => {
-    setSelectedIndex(null)
-  }, [])
 
   const handleEntrySave = useCallback(async () => {
-    if (selectedIndex === null || !editedEntry) return
+    if (!editedEntry) return
     const codes = [editedEntry.lastKey, editedEntry.altKey]
     await guard(codes, async () => {
       await onSetEntry(selectedIndex, editedEntry)
-      setSelectedIndex(null)
+      handleClose()
     })
-  }, [selectedIndex, editedEntry, onSetEntry, guard])
+  }, [selectedIndex, editedEntry, onSetEntry, guard, handleClose])
 
   const updateEntry = useCallback((field: KeycodeFieldName, code: number) => {
     setEditedEntry((prev) => {
@@ -238,63 +216,12 @@ export function AltRepeatKeyPanelModal({
   const canEnable = editedEntry !== null && isConfigured(editedEntry)
 
   const hasChanges =
-    selectedIndex !== null &&
     editedEntry !== null &&
     JSON.stringify(entries[selectedIndex]) !== JSON.stringify(editedEntry)
 
-  const hasEntries = entries.length > 0
-  const isEditing = selectedIndex !== null
-
-  const headerTitle = isEditing
-    ? t('editor.altRepeatKey.editTitle', { index: selectedIndex })
-    : t('editor.altRepeatKey.title')
+  const headerTitle = t('editor.altRepeatKey.editTitle', { index: selectedIndex })
 
   function renderBody(): React.ReactNode {
-    if (!hasEntries) {
-      return (
-        <div className="text-sm text-content-muted" data-testid="editor-alt-repeat-key">
-          {t('common.noEntries')}
-        </div>
-      )
-    }
-
-    if (!isEditing) {
-      return (
-        <div className="flex-1 min-h-0 px-6 pb-6" data-testid="editor-alt-repeat-key">
-          <div className="mt-1 grid h-full grid-cols-6 auto-rows-fr gap-2">
-            {entries.map((entry, i) => {
-              const configured = isConfigured(entry)
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  data-testid={`ar-tile-${i}`}
-                  className={`relative flex min-h-0 flex-col items-start rounded-md border p-1.5 pl-2 text-[11px] leading-tight transition-colors ${tileStyle(configured, entry.enabled)}`}
-                  onClick={() => setSelectedIndex(i)}
-                >
-                  <span className="absolute top-1 left-1.5 text-[10px] text-content-secondary/60">{i}</span>
-                  {configured ? (
-                    <span className="mt-3 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0.5 overflow-hidden">
-                      {AR_FIELDS.map(({ key, prefix }) => (
-                        <Fragment key={key}>
-                          <span className="text-left text-content-secondary/60">{prefix}</span>
-                          <span className="truncate text-left">{entry[key] !== 0 ? codeToLabel(entry[key]) : ''}</span>
-                        </Fragment>
-                      ))}
-                    </span>
-                  ) : (
-                    <span className="w-full text-center text-content-secondary/60">
-                      {t('common.notConfigured')}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )
-    }
-
     return (
       <div className="flex min-h-0 flex-1 overflow-hidden" data-testid="editor-alt-repeat-key">
         {/* Left panel: detail editor */}
@@ -442,19 +369,6 @@ export function AltRepeatKeyPanelModal({
             )}
           </div>
 
-          {/* Fixed footer: Back */}
-          {!selectedField && editedEntry && (
-            <div className="shrink-0 px-6 py-3">
-              <button
-                type="button"
-                data-testid="ar-back-btn"
-                className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt"
-                onClick={handleBack}
-              >
-                {t('common.back')}
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Right panel: favorites (hidden when picker is open) */}
@@ -499,11 +413,11 @@ export function AltRepeatKeyPanelModal({
       onClick={handleClose}
     >
       <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${hasEntries ? 'w-[1050px] max-w-[95vw] h-[80vh] flex flex-col' : 'p-6'}`}
+        className="overflow-hidden rounded-lg bg-surface-alt shadow-xl w-[1050px] max-w-[95vw] h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
         {!selectedField && (
-          <div className={`flex items-center justify-between shrink-0 ${hasEntries ? 'px-6 pt-6 pb-4' : 'mb-4'}`}>
+          <div className="flex items-center justify-between shrink-0 px-6 pt-6 pb-4">
             <h3 className="text-lg font-semibold">{headerTitle}</h3>
             <ModalCloseButton testid="ar-modal-close" onClick={handleClose} />
           </div>
