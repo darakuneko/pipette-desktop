@@ -354,12 +354,9 @@ export function App() {
 
   const [fileSuccessKind, setFileSuccessKind] = useState<'import' | 'export' | null>(null)
   const [showLightingModal, setShowLightingModal] = useState(false)
-  const [showComboModal, setShowComboModal] = useState(false)
-  const [comboInitialIndex, setComboInitialIndex] = useState<number | undefined>(undefined)
-  const [showAltRepeatKeyModal, setShowAltRepeatKeyModal] = useState(false)
-  const [altRepeatKeyInitialIndex, setAltRepeatKeyInitialIndex] = useState<number | undefined>(undefined)
-  const [showKeyOverrideModal, setShowKeyOverrideModal] = useState(false)
-  const [keyOverrideInitialIndex, setKeyOverrideInitialIndex] = useState<number | undefined>(undefined)
+  const [comboInitialIndex, setComboInitialIndex] = useState<number | null>(null)
+  const [altRepeatKeyInitialIndex, setAltRepeatKeyInitialIndex] = useState<number | null>(null)
+  const [keyOverrideInitialIndex, setKeyOverrideInitialIndex] = useState<number | null>(null)
 
   const showFileSuccess = useCallback((kind: 'import' | 'export') => {
     setFileSuccessKind(kind)
@@ -1175,9 +1172,9 @@ export function App() {
   // Close modals when their feature support is lost
   useEffect(() => {
     if (!lightingSupported) setShowLightingModal(false)
-    if (!comboSupported) setShowComboModal(false)
-    if (!altRepeatKeySupported) setShowAltRepeatKeyModal(false)
-    if (!keyOverrideSupported) setShowKeyOverrideModal(false)
+    if (!comboSupported) setComboInitialIndex(null)
+    if (!altRepeatKeySupported) setAltRepeatKeyInitialIndex(null)
+    if (!keyOverrideSupported) setKeyOverrideInitialIndex(null)
   }, [lightingSupported, comboSupported, altRepeatKeySupported, keyOverrideSupported])
 
   const handleDisconnect = useCallback(async () => {
@@ -1648,11 +1645,11 @@ export function App() {
             onMatrixModeChange={handleMatrixModeChange}
             onOpenLighting={lightingSupported ? () => setShowLightingModal(true) : undefined}
             comboEntries={comboSupported ? keyboard.comboEntries : undefined}
-            onOpenCombo={comboSupported ? (index: number) => { setComboInitialIndex(index); setShowComboModal(true) } : undefined}
+            onOpenCombo={comboSupported ? (index: number) => setComboInitialIndex(index) : undefined}
             keyOverrideEntries={keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
-            onOpenKeyOverride={keyOverrideSupported ? (index: number) => { setKeyOverrideInitialIndex(index); setShowKeyOverrideModal(true) } : undefined}
+            onOpenKeyOverride={keyOverrideSupported ? (index: number) => setKeyOverrideInitialIndex(index) : undefined}
             altRepeatKeyEntries={altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
-            onOpenAltRepeatKey={altRepeatKeySupported ? (index: number) => { setAltRepeatKeyInitialIndex(index); setShowAltRepeatKeyModal(true) } : undefined}
+            onOpenAltRepeatKey={altRepeatKeySupported ? (index: number) => setAltRepeatKeyInitialIndex(index) : undefined}
             layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
             onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
             toolsExtra={toolsExtra}
@@ -1779,7 +1776,7 @@ export function App() {
         </div>
       )}
 
-      {showComboModal && comboSupported && comboInitialIndex !== undefined && (
+      {comboSupported && comboInitialIndex !== null && (
         <ComboPanelModal
           entries={keyboard.comboEntries}
           onSetEntry={keyboard.setComboEntry}
@@ -1791,7 +1788,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
-          onClose={() => { setShowComboModal(false); setComboInitialIndex(undefined) }}
+          onClose={() => setComboInitialIndex(null)}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
@@ -1803,7 +1800,7 @@ export function App() {
         />
       )}
 
-      {showAltRepeatKeyModal && altRepeatKeySupported && altRepeatKeyInitialIndex !== undefined && (
+      {altRepeatKeySupported && altRepeatKeyInitialIndex !== null && (
         <AltRepeatKeyPanelModal
           entries={keyboard.altRepeatKeyEntries}
           onSetEntry={keyboard.setAltRepeatKeyEntry}
@@ -1815,7 +1812,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
-          onClose={() => { setShowAltRepeatKeyModal(false); setAltRepeatKeyInitialIndex(undefined) }}
+          onClose={() => setAltRepeatKeyInitialIndex(null)}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
@@ -1827,7 +1824,7 @@ export function App() {
         />
       )}
 
-      {showKeyOverrideModal && keyOverrideSupported && keyOverrideInitialIndex !== undefined && (
+      {keyOverrideSupported && keyOverrideInitialIndex !== null && (
         <KeyOverridePanelModal
           entries={keyboard.keyOverrideEntries}
           onSetEntry={keyboard.setKeyOverrideEntry}
@@ -1839,7 +1836,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
-          onClose={() => { setShowKeyOverrideModal(false); setKeyOverrideInitialIndex(undefined) }}
+          onClose={() => setKeyOverrideInitialIndex(null)}
           hubOrigin={hubReady ? hubOrigin : undefined}
           hubNeedsDisplayName={hubReady && !hubCanUpload}
           hubUploading={favHubUploading}
