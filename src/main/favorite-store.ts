@@ -255,6 +255,62 @@ export function setupFavoriteStore(): void {
     },
   )
 
+  // --- Export Current (live state without saving first) ---
+  secureHandle(
+    IpcChannels.FAVORITE_STORE_EXPORT_CURRENT,
+    async (event, scope: unknown, dataJson: unknown): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (!win) return { success: false, error: 'No window' }
+
+        if (!isValidFavoriteType(scope)) return { success: false, error: 'Invalid scope' }
+        if (typeof dataJson !== 'string') return { success: false, error: 'Invalid data' }
+
+        const parsed = JSON.parse(dataJson) as Record<string, unknown>
+        if (parsed.data == null) return { success: false, error: 'Missing data field' }
+
+        const exportKey = FAV_TYPE_TO_EXPORT_KEY[scope]
+        const serializedData = serializeFavData(scope, parsed.data, serializeKeycode)
+
+        const now = new Date()
+        const ts = now.toISOString().replace(/:/g, '').replace(/\.\d+Z$/, '').replace('T', '-')
+        const defaultFilename = `pipette-fav-${exportKey}-current-${ts}.json`
+
+        const result = await dialog.showSaveDialog(win, {
+          title: 'Export Favorites',
+          defaultPath: defaultFilename,
+          filters: [
+            { name: 'JSON', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { success: false, error: 'cancelled' }
+        }
+
+        const exportFile = {
+          app: 'pipette' as const,
+          version: 2 as const,
+          scope: 'fav' as const,
+          exportedAt: now.toISOString(),
+          categories: {
+            [exportKey]: [{
+              label: 'Current',
+              savedAt: now.toISOString(),
+              data: serializedData,
+            }],
+          },
+        }
+
+        await writeFile(result.filePath, JSON.stringify(exportFile, null, 2), 'utf-8')
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
   // --- Set Hub Post ID ---
   secureHandle(
     IpcChannels.FAVORITE_STORE_SET_HUB_POST_ID,
@@ -274,6 +330,52 @@ export function setupFavoriteStore(): void {
         await writeIndex(type, found.index)
         notifyChange(`favorites/${type}`)
         return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
+  // --- Import to Current (read file, return first matching entry data without saving) ---
+  secureHandle(
+    IpcChannels.FAVORITE_STORE_IMPORT_TO_CURRENT,
+    async (event, scope: unknown): Promise<{ success: boolean; data?: unknown; error?: string }> => {
+      try {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        if (!win) return { success: false, error: 'No window' }
+
+        if (!isValidFavoriteType(scope)) return { success: false, error: 'Invalid scope' }
+
+        const result = await dialog.showOpenDialog(win, {
+          title: 'Import Favorites',
+          filters: [
+            { name: 'JSON', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: ['openFile'],
+        })
+
+        if (result.canceled || result.filePaths.length === 0) {
+          return { success: false, error: 'cancelled' }
+        }
+
+        const raw = await readFile(result.filePaths[0], 'utf-8')
+        const parsed: unknown = JSON.parse(raw)
+
+        if (!isValidFavExportFile(parsed)) {
+          return { success: false, error: 'Invalid export file format' }
+        }
+
+        const exportKey = FAV_TYPE_TO_EXPORT_KEY[scope]
+        const entries = parsed.categories[exportKey]
+        if (!entries || entries.length === 0) {
+          return { success: false, error: 'No matching data found for this type' }
+        }
+
+        const firstEntry = entries[0]
+        const normalizedData = deserializeFavData(scope, firstEntry.data, deserializeKeycode)
+
+        return { success: true, data: normalizedData }
       } catch (err) {
         return { success: false, error: String(err) }
       }

@@ -30,9 +30,9 @@ export interface LayoutStoreContentProps {
   onRename: (entryId: string, newLabel: string) => void
   onDelete: (entryId: string) => void
   onImportVil?: () => void
-  onExportVil?: () => void
-  onExportKeymapC?: () => void
-  onExportPdf?: () => void
+  onExportVil?: () => Promise<boolean>
+  onExportKeymapC?: () => Promise<boolean>
+  onExportPdf?: () => Promise<boolean>
   onSideloadJson?: () => void
   onExportEntryVil?: (entryId: string) => void
   onExportEntryKeymapC?: (entryId: string) => void
