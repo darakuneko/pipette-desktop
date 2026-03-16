@@ -33,6 +33,8 @@ export interface UseFavoriteStoreReturn {
   loadFavorite: (entryId: string) => Promise<boolean>
   renameEntry: (entryId: string, newLabel: string) => Promise<boolean>
   deleteEntry: (entryId: string) => Promise<boolean>
+  exportCurrent: () => Promise<boolean>
+  importCurrent: () => Promise<boolean>
   exportFavorites: () => Promise<boolean>
   exportEntry: (entryId: string) => Promise<boolean>
   importFavorites: () => Promise<boolean>
@@ -146,6 +148,47 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     }
   }, [favoriteType, refreshEntries])
 
+  const exportCurrent = useCallback(async (): Promise<boolean> => {
+    if (!enabled) return false
+    setError(null)
+    setExporting(true)
+    try {
+      const data = serialize()
+      const json = JSON.stringify({ type: favoriteType, data })
+      const result = await window.vialAPI.favoriteStoreExportCurrent(favoriteType, json)
+      if (!result.success) {
+        if (result.error !== 'cancelled') {
+          setError(t('favoriteStore.exportFailed'))
+        }
+        return false
+      }
+      return true
+    } catch {
+      setError(t('favoriteStore.exportFailed'))
+      return false
+    } finally {
+      setExporting(false)
+    }
+  }, [enabled, favoriteType, serialize, t])
+
+  const importCurrent = useCallback(async (): Promise<boolean> => {
+    setError(null)
+    try {
+      const result = await window.vialAPI.favoriteStoreImportToCurrent(favoriteType)
+      if (!result.success || result.data === undefined) {
+        if (result.error !== 'cancelled') {
+          setError(t('favoriteStore.importFailed'))
+        }
+        return false
+      }
+      apply(result.data)
+      return true
+    } catch {
+      setError(t('favoriteStore.importFailed'))
+      return false
+    }
+  }, [favoriteType, apply, t])
+
   const doExport = useCallback(async (entryId?: string): Promise<boolean> => {
     setError(null)
     setExporting(true)
@@ -215,6 +258,8 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     loadFavorite,
     renameEntry,
     deleteEntry,
+    exportCurrent,
+    importCurrent,
     exportFavorites,
     exportEntry,
     importFavorites,

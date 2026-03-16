@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
@@ -38,6 +38,10 @@ export interface FavoriteStoreContentProps {
   onExport: () => void
   onExportEntry: (entryId: string) => void
   onImport: () => void
+  // Export current live state as .pipette-fav JSON
+  onExportCurrent?: () => Promise<boolean>
+  // Import from .pipette-fav JSON into current state
+  onImportCurrent?: () => Promise<boolean>
   // Hub integration (optional)
   hubOrigin?: string
   hubNeedsDisplayName?: boolean
@@ -65,6 +69,8 @@ export function FavoriteStoreContent({
   onExport,
   onExportEntry,
   onImport,
+  onExportCurrent,
+  onImportCurrent,
   hubOrigin,
   hubNeedsDisplayName,
   hubUploading,
@@ -79,6 +85,34 @@ export function FavoriteStoreContent({
   const [saveLabel, setSaveLabel] = useState('')
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showExported, setShowExported] = useState(false)
+  const [showImported, setShowImported] = useState(false)
+  const exportedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const importedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  function flashExported(): void {
+    setShowExported(true)
+    clearTimeout(exportedTimerRef.current)
+    exportedTimerRef.current = setTimeout(() => setShowExported(false), 2000)
+  }
+
+  function flashImported(): void {
+    setShowImported(true)
+    clearTimeout(importedTimerRef.current)
+    importedTimerRef.current = setTimeout(() => setShowImported(false), 2000)
+  }
+
+  async function handleExportCurrent(): Promise<void> {
+    if (!onExportCurrent) return
+    const ok = await onExportCurrent()
+    if (ok) flashExported()
+  }
+
+  async function handleImportCurrent(): Promise<void> {
+    if (!onImportCurrent) return
+    const ok = await onImportCurrent()
+    if (ok) flashImported()
+  }
 
   // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
   useEffect(() => {
@@ -140,6 +174,32 @@ export function FavoriteStoreContent({
               {t('common.save')}
             </button>
           </form>
+          {(onExportCurrent || onImportCurrent || showExported || showImported) && (
+            <div className="flex items-center gap-1 mt-2">
+              {showImported && (
+                <span className="text-[11px] font-medium text-emerald-500" data-testid="favorite-store-imported">
+                  {t('common.imported')}
+                </span>
+              )}
+              {showExported && (
+                <span className="text-[11px] font-medium text-emerald-500" data-testid="favorite-store-exported">
+                  {t('common.exported')}
+                </span>
+              )}
+              <div className="ml-auto flex items-center gap-1">
+                {onImportCurrent && (
+                  <button type="button" className={ACTION_BTN} onClick={() => void handleImportCurrent()} data-testid="favorite-store-import-current">
+                    {t('favoriteStore.importCurrent')}
+                  </button>
+                )}
+                {onExportCurrent && (
+                  <button type="button" className={ACTION_BTN} onClick={() => void handleExportCurrent()} data-testid="favorite-store-export-current">
+                    {t('favoriteStore.exportCurrent')}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Synced Data header */}

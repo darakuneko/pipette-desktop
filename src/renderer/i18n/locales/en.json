@@ -22,7 +22,9 @@
     "settingsLabel": "Settings:",
     "configuration": "Configuration",
     "saving": "Saving...",
-    "back": "Back"
+    "back": "Back",
+    "exported": "Exported",
+    "imported": "Imported"
   },
   "app": {
     "title": "Pipette",
@@ -626,6 +628,8 @@
     "importFailed": "Failed to import favorites",
     "importSuccess": "Imported {{imported}} entries",
     "importPartial": "Imported {{imported}} entries ({{skipped}} skipped)",
-    "importEmpty": "No entries were imported"
+    "importEmpty": "No entries were imported",
+    "exportCurrent": "Export",
+    "importCurrent": "Import"
   }
 }

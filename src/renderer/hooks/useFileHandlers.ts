@@ -45,20 +45,20 @@ export function useFileHandlers(options: Options) {
     if (ok) showFileSuccess('import')
   }, [fileIO.loadLayout, showFileSuccess])
 
-  const handleExportVil = useCallback(async () => {
+  const handleExportVil = useCallback(async (): Promise<boolean> => {
     const ok = await fileIO.saveLayout()
-    if (ok) showFileSuccess('export')
-  }, [fileIO.saveLayout, showFileSuccess])
+    return ok
+  }, [fileIO.saveLayout])
 
-  const handleExportKeymapC = useCallback(async () => {
+  const handleExportKeymapC = useCallback(async (): Promise<boolean> => {
     const ok = await fileIO.exportKeymapC()
-    if (ok) showFileSuccess('export')
-  }, [fileIO.exportKeymapC, showFileSuccess])
+    return ok
+  }, [fileIO.exportKeymapC])
 
-  const handleExportPdf = useCallback(async () => {
+  const handleExportPdf = useCallback(async (): Promise<boolean> => {
     const ok = await fileIO.exportPdf()
-    if (ok) showFileSuccess('export')
-  }, [fileIO.exportPdf, showFileSuccess])
+    return ok
+  }, [fileIO.exportPdf])
 
   const exportLayoutPdf = useCallback(async (
     generator: (input: LayoutPdfInput) => string,
@@ -90,9 +90,8 @@ export function useFileHandlers(options: Options) {
 
   const fileStatus: FileStatus = useMemo(() => {
     if (fileIO.loading) return 'importing'
-    if (fileIO.saving) return 'exporting'
     if (fileSuccessKind === 'import') return { kind: 'success', message: t('fileIO.importSuccess') }
-    if (fileSuccessKind === 'export') return { kind: 'success', message: t('fileIO.exportSuccess') }
+    // Export status is shown inline on the .vil/.c/.pdf button row, not as fileStatus
     return 'idle'
   }, [fileIO.loading, fileIO.saving, fileSuccessKind, t])
 
