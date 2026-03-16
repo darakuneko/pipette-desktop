@@ -431,6 +431,8 @@ export function MacroEditor({
             onExport={favStore.exportFavorites}
             onExportEntry={favStore.exportEntry}
             onImport={favStore.importFavorites}
+            onExportCurrent={favStore.exportCurrent}
+            onImportCurrent={favStore.importCurrent}
             exporting={favStore.exporting}
             importing={favStore.importing}
             importResult={favStore.importResult}

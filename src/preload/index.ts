@@ -171,8 +171,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_DELETE, type, entryId),
   favoriteStoreExport: (scope: string, entryId?: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT, scope, entryId),
+  favoriteStoreExportCurrent: (scope: string, data: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT_CURRENT, scope, data),
   favoriteStoreImport: (): Promise<FavoriteImportResult> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT),
+  favoriteStoreImportToCurrent: (scope: string): Promise<{ success: boolean; data?: unknown; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT_TO_CURRENT, scope),
 
   // --- Pipette Settings Store (internal save/load via IPC) ---
   pipetteSettingsGet: (uid: string): Promise<PipetteSettings | null> =>

@@ -22,7 +22,9 @@
     "settingsLabel": "設定:",
     "configuration": "Configuration",
     "saving": "保存中...",
-    "back": "戻る"
+    "back": "戻る",
+    "exported": "エクスポート済み",
+    "imported": "インポート済み"
   },
   "app": {
     "title": "Pipette",
@@ -625,6 +627,8 @@
     "importFailed": "お気に入りのインポートに失敗しました",
     "importSuccess": "{{imported}} 件インポートしました",
     "importPartial": "{{imported}} 件インポートしました（{{skipped}} 件スキップ）",
-    "importEmpty": "インポートされたエントリはありません"
+    "importEmpty": "インポートされたエントリはありません",
+    "exportCurrent": "エクスポート",
+    "importCurrent": "インポート"
   }
 }

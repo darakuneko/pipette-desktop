@@ -81,7 +81,9 @@ export function LayoutStoreContent({
   // Sync save label when a layout is loaded (defaultSaveLabel changes)
   useEffect(() => { setSaveLabel(defaultSaveLabel ?? '') }, [defaultSaveLabel])
   const [showSaved, setShowSaved] = useState(false)
+  const [showExported, setShowExported] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const exportedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
@@ -91,6 +93,12 @@ export function LayoutStoreContent({
     setShowSaved(true)
     clearTimeout(savedTimerRef.current)
     savedTimerRef.current = setTimeout(() => setShowSaved(false), 2000)
+  }
+
+  function flashExported(): void {
+    setShowExported(true)
+    clearTimeout(exportedTimerRef.current)
+    exportedTimerRef.current = setTimeout(() => setShowExported(false), 2000)
   }
 
   function handleSaveSubmit(e: React.FormEvent): void {
@@ -202,19 +210,22 @@ export function LayoutStoreContent({
                   )}
                 </form>
               )}
-              {(hasCurrentExport || showSaved) && (
+              {(hasCurrentExport || showSaved || showExported) && (
                 <div className={`flex items-center gap-1${!isDummy ? ' mt-2' : ''}`}>
                   {showSaved && (
                     <span className="text-[11px] font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                  )}
+                  {showExported && (
+                    <span className="text-[11px] font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
                   )}
                   <div className="ml-auto flex gap-1">
                     <FormatButtons
                       className={FORMAT_BTN}
                       testIdPrefix="layout-store-current-export"
                       disabled={fileDisabled}
-                      onVil={onExportVil}
-                      onKeymapC={onExportKeymapC}
-                      onPdf={onExportPdf}
+                      onVil={onExportVil ? async () => { if (await onExportVil()) flashExported() } : undefined}
+                      onKeymapC={onExportKeymapC ? async () => { if (await onExportKeymapC()) flashExported() } : undefined}
+                      onPdf={onExportPdf ? async () => { if (await onExportPdf()) flashExported() } : undefined}
                     />
                   </div>
                 </div>
@@ -271,21 +282,24 @@ export function LayoutStoreContent({
           )}
 
           {/* Export Current State section */}
-          {(hasCurrentExport || showSaved) && (
+          {(hasCurrentExport || showSaved || showExported) && (
             <div className={`${sectionGap}${fixedSection}`} data-testid="layout-store-current-section">
               <SectionHeader label={t('layoutStore.export')} />
               <div className="flex items-center gap-2">
                 {showSaved && (
                   <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
                 )}
+                {showExported && (
+                  <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
+                )}
                 <div className="ml-auto flex gap-2">
                   <FormatButtons
                     className={EXPORT_BTN}
                     testIdPrefix="layout-store-current-export"
                     disabled={fileDisabled}
-                    onVil={onExportVil}
-                    onKeymapC={onExportKeymapC}
-                    onPdf={onExportPdf}
+                    onVil={onExportVil ? async () => { if (await onExportVil()) flashExported() } : undefined}
+                    onKeymapC={onExportKeymapC ? async () => { if (await onExportKeymapC()) flashExported() } : undefined}
+                    onPdf={onExportPdf ? async () => { if (await onExportPdf()) flashExported() } : undefined}
                   />
                 </div>
               </div>
