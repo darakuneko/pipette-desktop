@@ -6,7 +6,7 @@ import { Settings, Database, ChevronRight, ChevronLeft } from 'lucide-react'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { DeviceInfo } from '../../shared/types/protocol'
 import type { SyncStatusType } from '../../shared/types/sync'
-import type { PipetteFileKeyboard, PipetteFileEntry } from '../App'
+import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
 
 const DEVICE_ENTRY_CLASS =
   'flex w-full items-center gap-3.5 rounded-lg border border-edge p-3.5 text-left transition-colors hover:border-accent hover:bg-accent/10 disabled:opacity-50'
