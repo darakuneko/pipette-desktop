@@ -67,20 +67,22 @@ async function updateEntry(
   entryId: string,
   mutate: (entry: SnapshotMeta) => void,
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    validateUid(uid)
-    const index = await readIndex(uid)
-    const entry = index.entries.find((e) => e.id === entryId)
-    if (!entry) return { success: false, error: 'Entry not found' }
+  return withWriteLock(uid, async () => {
+    try {
+      validateUid(uid)
+      const index = await readIndex(uid)
+      const entry = index.entries.find((e) => e.id === entryId)
+      if (!entry) return { success: false, error: 'Entry not found' }
 
-    mutate(entry)
-    entry.updatedAt = new Date().toISOString()
-    await writeIndex(uid, index)
-    notifyChange(`keyboards/${uid}/snapshots`)
-    return { success: true }
-  } catch (err) {
-    return { success: false, error: String(err) }
-  }
+      mutate(entry)
+      entry.updatedAt = new Date().toISOString()
+      await writeIndex(uid, index)
+      notifyChange(`keyboards/${uid}/snapshots`)
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: String(err) }
+    }
+  })
 }
 
 // Simple per-uid write serialization to prevent race conditions
