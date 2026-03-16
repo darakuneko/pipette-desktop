@@ -1,0 +1,139 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
+import type { BulkKeyEntry } from '../../hooks/useKeyboard'
+import type { MacroAction } from '../../../preload/macro'
+import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
+import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
+import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestConfig } from '../../typing-test/types'
+import type { FavHubEntryResult } from './FavoriteHubActions'
+
+export const MIN_SCALE = 0.3
+export const MAX_SCALE = 2.0
+
+/** Collapsed width of the layer list panel / toolbar column (3.125rem). */
+export const PANEL_COLLAPSED_WIDTH = '3.125rem'
+
+/** Maps KeyboardEvent.code to a resolved key when e.key is 'Process' (IME active). */
+export const PROCESS_CODE_TO_KEY = new Map<string, string>([
+  ['Space', ' '],
+  ['Enter', 'Enter'],
+  ['NumpadEnter', 'Enter'],
+  ['Backspace', 'Backspace'],
+])
+
+export const EMPTY_KEYCODES = new Map<string, string>()
+export const EMPTY_REMAPPED = new Set<string>()
+export const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
+
+export type PopoverState =
+  | { anchorRect: DOMRect; kind: 'key'; row: number; col: number; maskClicked: boolean }
+  | { anchorRect: DOMRect; kind: 'encoder'; idx: number; dir: number }
+
+export interface KeymapEditorHandle {
+  toggleMatrix: () => void
+  toggleTypingTest: () => void
+  matrixMode: boolean
+  hasMatrixTester: boolean
+}
+
+export interface KeymapEditorProps {
+  layout: KeyboardLayout | null
+  layers: number
+  currentLayer: number
+  onLayerChange?: (layer: number) => void
+  keymap: Map<string, number> // "layer,row,col" -> keycode
+  encoderLayout: Map<string, number> // "layer,idx,dir" -> keycode
+  encoderCount: number
+  layoutOptions: Map<number, number>
+  layoutLabels?: (string | string[])[]
+  packedLayoutOptions?: number
+  onSetLayoutOptions?: (options: number) => Promise<void>
+  remapLabel?: (qmkId: string) => string
+  isRemapped?: (qmkId: string) => boolean
+  onSetKey: (layer: number, row: number, col: number, keycode: number) => Promise<void>
+  onSetKeysBulk: (entries: BulkKeyEntry[]) => Promise<void>
+  onSetEncoder: (layer: number, idx: number, dir: number, keycode: number) => Promise<void>
+  rows?: number
+  cols?: number
+  getMatrixState?: () => Promise<number[]>
+  unlocked?: boolean
+  onUnlock?: (options?: { macroWarning?: boolean }) => void
+  tapDanceEntries?: TapDanceEntry[]
+  onSetTapDanceEntry?: (index: number, entry: TapDanceEntry) => Promise<void>
+  macroCount?: number
+  macroBufferSize?: number
+  macroBuffer?: number[]
+  vialProtocol?: number
+  parsedMacros?: MacroAction[][] | null
+  onSaveMacros?: (buffer: number[], parsedMacros?: MacroAction[][]) => Promise<void>
+  tapHoldSupported?: boolean
+  mouseKeysSupported?: boolean
+  magicSupported?: boolean
+  graveEscapeSupported?: boolean
+  autoShiftSupported?: boolean
+  oneShotKeysSupported?: boolean
+  comboSettingsSupported?: boolean
+  supportedQsids?: Set<number>
+  qmkSettingsGet?: (qsid: number) => Promise<number[]>
+  qmkSettingsSet?: (qsid: number, data: number[]) => Promise<void>
+  qmkSettingsReset?: () => Promise<void>
+  onSettingsUpdate?: (qsid: number, data: number[]) => void
+  autoAdvance?: boolean
+  onAutoAdvanceChange?: (enabled: boolean) => void
+  basicViewType?: BasicViewType
+  onBasicViewTypeChange?: (type: BasicViewType) => void
+  splitKeyMode?: SplitKeyMode
+  onSplitKeyModeChange?: (mode: SplitKeyMode) => void
+  quickSelect?: boolean
+  onQuickSelectChange?: (enabled: boolean) => void
+  keyboardLayout?: KeyboardLayoutId
+  onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
+  onLock?: () => void
+  onMatrixModeChange?: (matrixMode: boolean, hasMatrixTester: boolean) => void
+  onOpenLighting?: () => void
+  comboEntries?: ComboEntry[]
+  onOpenCombo?: (index: number) => void
+  keyOverrideEntries?: KeyOverrideEntry[]
+  onOpenKeyOverride?: (index: number) => void
+  altRepeatKeyEntries?: AltRepeatKeyEntry[]
+  onOpenAltRepeatKey?: (index: number) => void
+  toolsExtra?: React.ReactNode
+  dataPanel?: React.ReactNode
+  onOverlayOpen?: () => void
+  layerNames?: string[]
+  onSetLayerName?: (layer: number, name: string) => void
+  layerPanelOpen?: boolean
+  onLayerPanelOpenChange?: (open: boolean) => void
+  scale?: number
+  onScaleChange?: (delta: number) => void
+  splitEdit?: boolean
+  onSplitEditChange?: (enabled: boolean) => void
+  activePane?: 'primary' | 'secondary'
+  onActivePaneChange?: (pane: 'primary' | 'secondary') => void
+  primaryLayer?: number
+  secondaryLayer?: number
+  typingTestMode?: boolean
+  onTypingTestModeChange?: (enabled: boolean) => void
+  onSaveTypingTestResult?: (result: TypingTestResult) => void
+  typingTestHistory?: TypingTestResult[]
+  typingTestConfig?: TypingTestConfig
+  typingTestLanguage?: string
+  onTypingTestConfigChange?: (config: TypingTestConfig) => void
+  onTypingTestLanguageChange?: (lang: string) => void
+  deviceName?: string
+  isDummy?: boolean
+  onExportLayoutPdfAll?: () => void
+  onExportLayoutPdfCurrent?: () => void
+  // Hub favorite props (forwarded to TapDanceModal / MacroModal)
+  favHubOrigin?: string
+  favHubNeedsDisplayName?: boolean
+  favHubUploading?: string | null
+  favHubUploadResult?: FavHubEntryResult | null
+  onFavUploadToHub?: (type: string, entryId: string) => void
+  onFavUpdateOnHub?: (type: string, entryId: string) => void
+  onFavRemoveFromHub?: (type: string, entryId: string) => void
+  onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+}
