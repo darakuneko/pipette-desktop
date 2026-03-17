@@ -70,7 +70,7 @@ A **breadcrumb navigation** at the top of the content area shows the current pat
 
 The keymap editor consists of two main areas: the keyboard layout display and the keycode palette.
 
-![Keymap Editor Overview](screenshots/03-keymap-editor-overview.png)
+![Keymap Editor Overview](screenshots/02-keymap-editor-overview.png)
 
 - Top area: Physical keyboard layout (shows the current keycode assigned to each key)
 - Left side: Toolbar (split edit, zoom, etc.)
@@ -100,11 +100,11 @@ This setting can be toggled per-keyboard in the Keycodes Overlay Panel (§3.13),
 
 Layer switching buttons are located on the left side of the keyboard layout.
 
-![Layer 0](screenshots/04-layer-0.png)
+![Layer 0](screenshots/03-layer-0.png)
 
-![Layer 1](screenshots/05-layer-1.png)
+![Layer 1](screenshots/04-layer-1.png)
 
-![Layer 2](screenshots/06-layer-2.png)
+![Layer 2](screenshots/05-layer-2.png)
 
 - Click layer number buttons to switch between layers
 - Layer 0 is the default layer

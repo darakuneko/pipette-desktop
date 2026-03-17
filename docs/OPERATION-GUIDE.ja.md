@@ -70,7 +70,7 @@ File タブでは、物理キーボードを接続せずに `.pipette` ファイ
 
 キーマップエディタはキーボードレイアウト表示とキーコードパレットの 2 つの領域で構成されます。
 
-![キーマップエディタ全体](screenshots/03-keymap-editor-overview.png)
+![キーマップエディタ全体](screenshots/02-keymap-editor-overview.png)
 
 - 画面上部: キーボードの物理レイアウト (各キーに現在のキーコードを表示)
 - 画面左側: ツールバー (デュアルモード、ズームなど)
@@ -100,11 +100,11 @@ File タブでは、物理キーボードを接続せずに `.pipette` ファイ
 
 キーボードレイアウトの左側にレイヤー切替ボタンがあります。
 
-![Layer 0](screenshots/04-layer-0.png)
+![Layer 0](screenshots/03-layer-0.png)
 
-![Layer 1](screenshots/05-layer-1.png)
+![Layer 1](screenshots/04-layer-1.png)
 
-![Layer 2](screenshots/06-layer-2.png)
+![Layer 2](screenshots/05-layer-2.png)
 
 - レイヤー番号ボタンをクリックしてレイヤーを切り替えます
 - Layer 0 がデフォルトレイヤーです
