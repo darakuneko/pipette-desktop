@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BTN_SECONDARY, BTN_DANGER_OUTLINE, toggleSetItem } from './settings-modal-shared'
 import type { UseSyncReturn } from '../../hooks/useSync'
@@ -12,11 +12,24 @@ export interface SyncDataResetSectionProps {
   disabled: boolean
   onResetStart?: () => void
   onResetEnd?: () => void
+  /** When true, filter out items that exist locally (show cloud-only orphans) */
+  excludeLocalData?: boolean
 }
 
-export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetStart, onResetEnd }: SyncDataResetSectionProps) {
+export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetStart, onResetEnd, excludeLocalData }: SyncDataResetSectionProps) {
   const { t } = useTranslation()
-  const [scanResult, setScanResult] = useState<SyncDataScanResult | null>(null)
+  const localKeyboardUids = useMemo(() => new Set(storedKeyboards.map((kb) => kb.uid)), [storedKeyboards])
+  const [rawScanResult, setRawScanResult] = useState<SyncDataScanResult | null>(null)
+
+  // Filter scan result: when excludeLocalData is true, remove items that exist locally
+  const scanResult = useMemo(() => {
+    if (!rawScanResult || !excludeLocalData) return rawScanResult
+    return {
+      keyboards: rawScanResult.keyboards.filter((uid) => !localKeyboardUids.has(uid)),
+      favorites: [], // All favorites exist locally, so cloud-only = none
+      undecryptable: rawScanResult.undecryptable,
+    }
+  }, [rawScanResult, excludeLocalData, localKeyboardUids])
   const [scanning, setScanning] = useState(false)
   const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
   const [favoritesSelected, setFavoritesSelected] = useState(false)
@@ -36,18 +49,26 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
 
   const handleScan = useCallback(async () => {
     setScanning(true)
-    setScanResult(null)
+    setRawScanResult(null)
     resetSelections()
     setError(null)
     try {
       const result = await sync.scanRemote()
-      setScanResult(result)
+      setRawScanResult(result)
     } catch {
       setError(t('statusBar.sync.error'))
     } finally {
       setScanning(false)
     }
   }, [sync, resetSelections, t])
+
+  // Auto-scan on mount
+  const autoScannedRef = useRef(false)
+  useEffect(() => {
+    if (autoScannedRef.current || disabled) return
+    autoScannedRef.current = true
+    void handleScan()
+  }, [handleScan, disabled])
 
   const toggleUndecryptable = useCallback((fileId: string) => {
     setSelectedUndecryptable((prev) => toggleSetItem(prev, fileId, !prev.has(fileId)))
@@ -94,9 +115,9 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
       resetSelections()
       try {
         const result = await sync.scanRemote()
-        setScanResult(result)
+        setRawScanResult(result)
       } catch {
-        setScanResult(null)
+        setRawScanResult(null)
         setError(t('statusBar.sync.error'))
       }
     } catch {

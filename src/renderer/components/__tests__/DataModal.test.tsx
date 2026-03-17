@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { DataModal } from '../DataModal'
+import { resetDataNavCache } from '../data-modal/useDataNavTree'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
 
@@ -94,37 +95,57 @@ function makeProps(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
 describe('DataModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockListStoredKeyboards.mockResolvedValue([])
+    resetDataNavCache()
   })
 
-  describe('tabs', () => {
-    it('renders favorite tabs, local, and sync when hub is not enabled', () => {
+  describe('navigation', () => {
+    it('renders tree with Local and Cloud sections when hub is not enabled', () => {
       render(<DataModal {...makeProps()} />)
 
-      expect(screen.getByTestId('data-modal-tab-tapDance')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-macro')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-combo')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-keyOverride')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-altRepeatKey')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
-      expect(screen.queryByTestId('data-modal-tab-hubPost')).not.toBeInTheDocument()
+      expect(screen.getByTestId('data-nav-tree')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-local')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-cloud')).toBeInTheDocument()
+
+      // Expand Local to see children
+      fireEvent.click(screen.getByTestId('nav-local'))
+      expect(screen.getByTestId('nav-local-keyboards')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-local-application')).toBeInTheDocument()
+
+      // Hub node should not appear when not enabled
+      fireEvent.click(screen.getByTestId('nav-cloud'))
+      expect(screen.queryByTestId('nav-cloud-hub')).not.toBeInTheDocument()
     })
 
-    it('renders tabs including hubPost when hub is enabled and authenticated', () => {
+    it('renders Hub node when hub is enabled and authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true, hubAuthenticated: true })} />)
 
-      expect(screen.getByTestId('data-modal-tab-tapDance')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-hubPost')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
+      // Expand Cloud to see Hub
+      fireEvent.click(screen.getByTestId('nav-cloud'))
+      expect(screen.getByTestId('nav-cloud-hub')).toBeInTheDocument()
     })
 
-    it('does not show hubPost tab when hub is enabled but not authenticated', () => {
+    it('does not show Hub node when hub is enabled but not authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true })} />)
 
-      expect(screen.queryByTestId('data-modal-tab-hubPost')).not.toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
-      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
+      // Expand Cloud
+      fireEvent.click(screen.getByTestId('nav-cloud'))
+      expect(screen.queryByTestId('nav-cloud-hub')).not.toBeInTheDocument()
+      expect(screen.getByTestId('nav-cloud-sync')).toBeInTheDocument()
+    })
+
+    it('shows favorite type nodes when Favorites branch is expanded', () => {
+      render(<DataModal {...makeProps()} />)
+
+      // Expand Local, then Favorites
+      fireEvent.click(screen.getByTestId('nav-local'))
+      fireEvent.click(screen.getByTestId('nav-local-favorites'))
+
+      expect(screen.getByTestId('nav-fav-tapDance')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-fav-macro')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-fav-combo')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-fav-keyOverride')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-fav-altRepeatKey')).toBeInTheDocument()
     })
   })
 
@@ -155,8 +176,15 @@ describe('DataModal', () => {
   })
 
   describe('favorite tab content', () => {
+    function navigateToFav() {
+      fireEvent.click(screen.getByTestId('nav-local'))
+      fireEvent.click(screen.getByTestId('nav-local-favorites'))
+      fireEvent.click(screen.getByTestId('nav-fav-tapDance'))
+    }
+
     it('shows empty state when no entries exist', async () => {
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
 
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-empty')).toBeInTheDocument()
@@ -173,6 +201,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
 
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
@@ -182,6 +211,7 @@ describe('DataModal', () => {
 
     it('shows import and export buttons', async () => {
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
 
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-import-btn')).toBeInTheDocument()
@@ -196,6 +226,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
 
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
@@ -212,6 +243,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
       })
@@ -232,6 +264,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
       })
@@ -253,6 +286,7 @@ describe('DataModal', () => {
 
       it('shows confirm flash on card after Enter rename', async () => {
         vi.useFakeTimers()
+        mockListStoredKeyboards.mockResolvedValue([])
         mockFavoriteStoreList.mockResolvedValueOnce({
           success: true,
           entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
@@ -260,6 +294,7 @@ describe('DataModal', () => {
         mockFavoriteStoreRename.mockResolvedValueOnce({ success: true })
 
         render(<DataModal {...makeProps()} />)
+        navigateToFav()
         await vi.waitFor(() => {
           expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
         })
@@ -280,12 +315,14 @@ describe('DataModal', () => {
 
       it('does not flash when Enter is pressed without changes', async () => {
         vi.useFakeTimers()
+        mockListStoredKeyboards.mockResolvedValue([])
         mockFavoriteStoreList.mockResolvedValueOnce({
           success: true,
           entries: [{ id: 'e1', label: 'Entry 1', savedAt: Date.now() }],
         })
 
         render(<DataModal {...makeProps()} />)
+        navigateToFav()
         await vi.waitFor(() => {
           expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
         })
@@ -309,6 +346,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps()} />)
+      navigateToFav()
 
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
@@ -333,6 +371,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps({ onFavRenameOnHub })} />)
+      navigateToFav()
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
       })
@@ -361,6 +400,7 @@ describe('DataModal', () => {
       })
 
       render(<DataModal {...makeProps({ onFavRenameOnHub })} />)
+      navigateToFav()
       await waitFor(() => {
         expect(screen.getByTestId('data-modal-fav-list')).toBeInTheDocument()
       })
@@ -377,13 +417,18 @@ describe('DataModal', () => {
     })
   })
 
-  describe('hub post tab', () => {
+  describe('hub post content', () => {
     const HUB_PROPS = { hubEnabled: true, hubAuthenticated: true } as const
+
+    function navigateToHub() {
+      fireEvent.click(screen.getByTestId('nav-cloud'))
+      fireEvent.click(screen.getByTestId('nav-cloud-hub'))
+    }
 
     it('shows no posts message when authenticated with no posts', () => {
       render(<DataModal {...makeProps(HUB_PROPS)} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       expect(screen.getByTestId('hub-no-posts')).toBeInTheDocument()
     })
 
@@ -394,7 +439,7 @@ describe('DataModal', () => {
       ]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
 
       expect(screen.getByTestId('hub-post-p1')).toBeInTheDocument()
       expect(screen.getByTestId('hub-post-p2')).toBeInTheDocument()
@@ -407,7 +452,7 @@ describe('DataModal', () => {
       const pagination = { total: 25, page: 1, per_page: 10, total_pages: 3 }
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubPostsPagination: pagination })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
 
       expect(screen.getByTestId('hub-pagination')).toBeInTheDocument()
       expect(screen.getByTestId('hub-page-prev')).toBeDisabled()
@@ -420,7 +465,7 @@ describe('DataModal', () => {
       const pagination = { total: 25, page: 1, per_page: 10, total_pages: 3 }
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubPostsPagination: pagination, onHubRefresh })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-page-next'))
 
       expect(onHubRefresh).toHaveBeenCalledWith({ page: 2, per_page: 10 })
@@ -431,7 +476,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-title-p1'))
 
       const input = screen.getByTestId('hub-rename-input-p1')
@@ -448,7 +493,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-title-p1'))
       expect(screen.getByTestId('hub-rename-input-p1')).toBeInTheDocument()
 
@@ -461,7 +506,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-title-p1'))
       const input = screen.getByTestId('hub-rename-input-p1')
       fireEvent.change(input, { target: { value: 'Changed Title' } })
@@ -483,7 +528,7 @@ describe('DataModal', () => {
         const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
         render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
-        fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+        navigateToHub()
         fireEvent.click(screen.getByTestId('hub-title-p1'))
         const input = screen.getByTestId('hub-rename-input-p1')
         fireEvent.change(input, { target: { value: 'New Title' } })
@@ -511,7 +556,7 @@ describe('DataModal', () => {
         const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
         render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
-        fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+        navigateToHub()
         fireEvent.click(screen.getByTestId('hub-title-p1'))
         const input = screen.getByTestId('hub-rename-input-p1')
         fireEvent.keyDown(input, { key: 'Enter' })
@@ -529,7 +574,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubRename })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-title-p1'))
       const input = screen.getByTestId('hub-rename-input-p1')
       fireEvent.change(input, { target: { value: 'New Name' } })
@@ -545,7 +590,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubDelete })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-delete-p1'))
       expect(screen.getByTestId('hub-confirm-delete-p1')).toBeInTheDocument()
 
@@ -560,7 +605,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubDelete })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-delete-p1'))
       fireEvent.click(screen.getByTestId('hub-cancel-delete-p1'))
 
@@ -573,7 +618,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, onHubDelete })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-delete-p1'))
       fireEvent.click(screen.getByTestId('hub-confirm-delete-p1'))
 
@@ -586,7 +631,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubOrigin: 'https://hub.example.com' })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       expect(screen.getByTestId('hub-open-p1')).toBeInTheDocument()
     })
 
@@ -594,7 +639,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       expect(screen.queryByTestId('hub-open-p1')).not.toBeInTheDocument()
     })
 
@@ -602,7 +647,7 @@ describe('DataModal', () => {
       const posts = [{ id: 'p1', title: 'My Layout', keyboard_name: 'TestBoard', created_at: '2025-01-15T10:30:00Z' }]
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubOrigin: 'https://hub.example.com' })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
       fireEvent.click(screen.getByTestId('hub-open-p1'))
 
       expect(mockOpenExternal).toHaveBeenCalledWith('https://hub.example.com/post/p1')
@@ -613,7 +658,7 @@ describe('DataModal', () => {
       const pagination = { total: 1, page: 1, per_page: 10, total_pages: 1 }
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubPostsPagination: pagination })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
 
       expect(screen.getByTestId('hub-post-list')).toBeInTheDocument()
       expect(screen.queryByTestId('hub-pagination')).not.toBeInTheDocument()
@@ -624,46 +669,48 @@ describe('DataModal', () => {
       const pagination = { total: 25, page: 3, per_page: 10, total_pages: 3 }
       render(<DataModal {...makeProps({ ...HUB_PROPS, hubPosts: posts, hubPostsPagination: pagination })} />)
 
-      fireEvent.click(screen.getByTestId('data-modal-tab-hubPost'))
+      navigateToHub()
 
       expect(screen.getByTestId('hub-page-next')).toBeDisabled()
       expect(screen.getByTestId('hub-page-prev')).not.toBeDisabled()
     })
   })
 
-  describe('local tab', () => {
+  describe('application content', () => {
     beforeEach(() => {
       mockListStoredKeyboards.mockResolvedValue([])
     })
 
-    function renderAndSwitchToLocal(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
+    function renderAndSwitchToApplication(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
       const result = render(<DataModal {...makeProps(overrides)} />)
-      fireEvent.click(screen.getByTestId('data-modal-tab-local'))
+      fireEvent.click(screen.getByTestId('nav-local'))
+      fireEvent.click(screen.getByTestId('nav-local-application'))
       return result
     }
 
-    it('renders local tab content', () => {
-      renderAndSwitchToLocal()
+    it('renders application content', () => {
+      renderAndSwitchToApplication()
       expect(screen.getByTestId('local-tab-content')).toBeInTheDocument()
     })
 
     it('renders import and export buttons', () => {
-      renderAndSwitchToLocal()
+      renderAndSwitchToApplication()
       expect(screen.getByTestId('local-data-import')).toBeInTheDocument()
       expect(screen.getByTestId('local-data-export')).toBeInTheDocument()
     })
   })
 
-  describe('sync tab', () => {
+  describe('sync content', () => {
     function renderAndSwitchToSync(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
       const result = render(<DataModal {...makeProps(overrides)} />)
-      fireEvent.click(screen.getByTestId('data-modal-tab-sync'))
+      fireEvent.click(screen.getByTestId('nav-cloud'))
+      fireEvent.click(screen.getByTestId('nav-cloud-sync'))
       return result
     }
 
-    it('renders sync tab content', () => {
+    it('renders sync content', () => {
       renderAndSwitchToSync()
-      expect(screen.getByTestId('sync-tab-content')).toBeInTheDocument()
+      expect(screen.getByTestId('sync-data-scan')).toBeInTheDocument()
     })
   })
 })
