@@ -12,6 +12,7 @@ export interface JsonEditorModalProps<T> {
   onClose: () => void
   testIdPrefix: string
   warning?: string
+  exportFileName?: string
 }
 
 export function JsonEditorModal<T>({
@@ -22,6 +23,7 @@ export function JsonEditorModal<T>({
   onClose,
   testIdPrefix,
   warning,
+  exportFileName,
 }: JsonEditorModalProps<T>) {
   const { t } = useTranslation()
   const [text, setText] = useState(initialText)
@@ -67,6 +69,10 @@ export function JsonEditorModal<T>({
     }
   }, [text, parse, onApply, onClose, t])
 
+  const handleExport = useCallback(async () => {
+    await window.vialAPI.exportJson(text, exportFileName)
+  }, [text, exportFileName])
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
@@ -99,6 +105,16 @@ export function JsonEditorModal<T>({
           </p>
         )}
         <div className="mt-4 flex justify-end gap-2">
+          {exportFileName && (
+            <button
+              type="button"
+              onClick={handleExport}
+              className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
+              data-testid={`${testIdPrefix}-export`}
+            >
+              {t('layoutStore.export')}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}

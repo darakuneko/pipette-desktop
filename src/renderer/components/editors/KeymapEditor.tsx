@@ -602,6 +602,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleComboJsonApply}
           onClose={() => setShowComboJsonEditor(false)}
           testIdPrefix="combo-json-editor"
+          exportFileName="combo"
         />
       )}
 
@@ -613,6 +614,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleKoJsonApply}
           onClose={() => setShowKoJsonEditor(false)}
           testIdPrefix="ko-json-editor"
+          exportFileName="key-override"
         />
       )}
 
@@ -624,6 +626,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleArkJsonApply}
           onClose={() => setShowArkJsonEditor(false)}
           testIdPrefix="ark-json-editor"
+          exportFileName="alt-repeat-key"
         />
       )}
 
@@ -636,6 +639,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onClose={() => setShowMacroJsonEditor(false)}
           testIdPrefix="macro-json-editor"
           warning={t('editor.macro.unlockWarning')}
+          exportFileName="macro"
         />
       )}
 

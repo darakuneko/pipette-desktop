@@ -95,6 +95,7 @@ export function TapDanceJsonEditor({ entries, onApply, onClose }: Props) {
       onApply={onApply}
       onClose={onClose}
       testIdPrefix="tap-dance-json-editor"
+      exportFileName="tap-dance"
     />
   )
 }
