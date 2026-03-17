@@ -4,6 +4,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { DataModal } from '../DataModal'
+import type { UseSyncReturn } from '../../hooks/useSync'
+import { DEFAULT_APP_CONFIG } from '../../../shared/types/sync'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -23,6 +25,11 @@ const mockFavoriteStoreDelete = vi.fn().mockResolvedValue({ success: true })
 const mockFavoriteStoreExport = vi.fn().mockResolvedValue({ success: true })
 const mockFavoriteStoreImport = vi.fn().mockResolvedValue({ success: true, imported: 1, skipped: 0 })
 const mockOpenExternal = vi.fn().mockResolvedValue(undefined)
+const mockListStoredKeyboards = vi.fn().mockResolvedValue([])
+const mockResetKeyboardData = vi.fn().mockResolvedValue({ success: true })
+const mockResetLocalTargets = vi.fn().mockResolvedValue({ success: true })
+const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
+const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -32,13 +39,49 @@ Object.defineProperty(window, 'vialAPI', {
     favoriteStoreExport: mockFavoriteStoreExport,
     favoriteStoreImport: mockFavoriteStoreImport,
     openExternal: mockOpenExternal,
+    listStoredKeyboards: mockListStoredKeyboards,
+    resetKeyboardData: mockResetKeyboardData,
+    resetLocalTargets: mockResetLocalTargets,
+    exportLocalData: mockExportLocalData,
+    importLocalData: mockImportLocalData,
   },
   writable: true,
 })
 
+function makeSyncMock(overrides?: Partial<UseSyncReturn>): UseSyncReturn {
+  return {
+    config: { ...DEFAULT_APP_CONFIG },
+    authStatus: { authenticated: false },
+    hasPassword: false,
+    hasPendingChanges: false,
+    progress: null,
+    lastSyncResult: null,
+    syncStatus: 'none',
+    loading: false,
+    hasRemotePassword: null,
+    checkingRemotePassword: false,
+    syncUnavailable: false,
+    retryRemoteCheck: vi.fn(),
+    startAuth: vi.fn().mockResolvedValue(undefined),
+    signOut: vi.fn().mockResolvedValue(undefined),
+    setConfig: vi.fn().mockResolvedValue(undefined),
+    setPassword: vi.fn().mockResolvedValue({ success: true }),
+    changePassword: vi.fn().mockResolvedValue({ success: true }),
+    resetSyncTargets: vi.fn().mockResolvedValue({ success: true }),
+    validatePassword: vi.fn().mockResolvedValue({ score: 4, feedback: [] }),
+    syncNow: vi.fn().mockResolvedValue(undefined),
+    refreshStatus: vi.fn().mockResolvedValue(undefined),
+    listUndecryptable: vi.fn().mockResolvedValue([]),
+    scanRemote: vi.fn().mockResolvedValue({ keyboards: [], favorites: [], undecryptable: [] }),
+    deleteFiles: vi.fn().mockResolvedValue({ success: true }),
+    ...overrides,
+  }
+}
+
 function makeProps(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
   return {
     onClose: vi.fn(),
+    sync: makeSyncMock(),
     hubEnabled: false,
     hubAuthenticated: false,
     hubPosts: [] as { id: string; title: string; keyboard_name: string; created_at: string }[],
@@ -54,7 +97,7 @@ describe('DataModal', () => {
   })
 
   describe('tabs', () => {
-    it('renders 5 favorite tabs when hub is not enabled', () => {
+    it('renders favorite tabs, local, and sync when hub is not enabled', () => {
       render(<DataModal {...makeProps()} />)
 
       expect(screen.getByTestId('data-modal-tab-tapDance')).toBeInTheDocument()
@@ -62,20 +105,26 @@ describe('DataModal', () => {
       expect(screen.getByTestId('data-modal-tab-combo')).toBeInTheDocument()
       expect(screen.getByTestId('data-modal-tab-keyOverride')).toBeInTheDocument()
       expect(screen.getByTestId('data-modal-tab-altRepeatKey')).toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
       expect(screen.queryByTestId('data-modal-tab-hubPost')).not.toBeInTheDocument()
     })
 
-    it('renders 6 tabs including hubPost when hub is enabled and authenticated', () => {
+    it('renders tabs including hubPost when hub is enabled and authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true, hubAuthenticated: true })} />)
 
       expect(screen.getByTestId('data-modal-tab-tapDance')).toBeInTheDocument()
       expect(screen.getByTestId('data-modal-tab-hubPost')).toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
     })
 
     it('does not show hubPost tab when hub is enabled but not authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true })} />)
 
       expect(screen.queryByTestId('data-modal-tab-hubPost')).not.toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-local')).toBeInTheDocument()
+      expect(screen.getByTestId('data-modal-tab-sync')).toBeInTheDocument()
     })
   })
 
@@ -579,6 +628,42 @@ describe('DataModal', () => {
 
       expect(screen.getByTestId('hub-page-next')).toBeDisabled()
       expect(screen.getByTestId('hub-page-prev')).not.toBeDisabled()
+    })
+  })
+
+  describe('local tab', () => {
+    beforeEach(() => {
+      mockListStoredKeyboards.mockResolvedValue([])
+    })
+
+    function renderAndSwitchToLocal(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
+      const result = render(<DataModal {...makeProps(overrides)} />)
+      fireEvent.click(screen.getByTestId('data-modal-tab-local'))
+      return result
+    }
+
+    it('renders local tab content', () => {
+      renderAndSwitchToLocal()
+      expect(screen.getByTestId('local-tab-content')).toBeInTheDocument()
+    })
+
+    it('renders import and export buttons', () => {
+      renderAndSwitchToLocal()
+      expect(screen.getByTestId('local-data-import')).toBeInTheDocument()
+      expect(screen.getByTestId('local-data-export')).toBeInTheDocument()
+    })
+  })
+
+  describe('sync tab', () => {
+    function renderAndSwitchToSync(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
+      const result = render(<DataModal {...makeProps(overrides)} />)
+      fireEvent.click(screen.getByTestId('data-modal-tab-sync'))
+      return result
+    }
+
+    it('renders sync tab content', () => {
+      renderAndSwitchToSync()
+      expect(screen.getByTestId('sync-tab-content')).toBeInTheDocument()
     })
   })
 })

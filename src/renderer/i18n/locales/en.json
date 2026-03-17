@@ -463,10 +463,10 @@
     "resetSyncData": "Sync Data",
     "resetConfirm": "This will delete all synced data from Google Drive appDataFolder. This action cannot be undone.",
     "resetTarget": {
-      "keyboards": "All Keyboard Data",
-      "keyboardData": "Keyboard Data",
-      "favorites": "Favorite Data",
-      "appSettings": "Application Data",
+      "keyboards": "All Keyboards",
+      "keyboardData": "Keyboard",
+      "favorites": "Favorite",
+      "appSettings": "Application",
       "undecryptable": "Undecryptable Files"
     },
     "deleteSelected": "Delete Selected",
@@ -539,7 +539,9 @@
     }
   },
   "dataModal": {
-    "title": "Data"
+    "title": "Data",
+    "tabLocal": "Local",
+    "tabSync": "Sync"
   },
   "editorSettings": {
     "title": "Menu",
@@ -575,6 +577,7 @@
     "disable": "Disconnect",
     "confirmDisconnect": "Disconnect?",
     "myPosts": "My Posts",
+    "hub": "Hub",
     "hubPosts": "Hub Posts",
     "noPosts": "No posts yet",
     "requiresAuth": "Connect your Google account in the Data tab to use Hub features.",

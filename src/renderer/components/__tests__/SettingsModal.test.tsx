@@ -40,23 +40,10 @@ vi.mock('../editors/ModalCloseButton', () => ({
   ),
 }))
 
-const mockResetLocalTargets = vi.fn().mockResolvedValue({ success: true })
-const mockResetKeyboardData = vi.fn().mockResolvedValue({ success: true })
-const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
-const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockOpenExternal = vi.fn().mockResolvedValue(undefined)
 const mockNotificationFetch = vi.fn().mockResolvedValue({ success: true, notifications: [] })
-const mockListStoredKeyboards = vi.fn().mockResolvedValue([
-  { uid: 'test-uid-1', name: 'TestKeyboard1' },
-  { uid: 'test-uid-2', name: 'TestKeyboard2' },
-])
 Object.defineProperty(window, 'vialAPI', {
   value: {
-    listStoredKeyboards: mockListStoredKeyboards,
-    resetKeyboardData: mockResetKeyboardData,
-    resetLocalTargets: mockResetLocalTargets,
-    exportLocalData: mockExportLocalData,
-    importLocalData: mockImportLocalData,
     openExternal: mockOpenExternal,
     notificationFetch: mockNotificationFetch,
   },
@@ -141,12 +128,6 @@ describe('SettingsModal', () => {
   function renderAndSwitchToData(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
     const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)
     fireEvent.click(screen.getByTestId('settings-tab-data'))
-    return result
-  }
-
-  function renderAndSwitchToTroubleshooting(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
-    const result = render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} {...props} />)
-    fireEvent.click(screen.getByTestId('settings-tab-troubleshooting'))
     return result
   }
 
@@ -240,24 +221,10 @@ describe('SettingsModal', () => {
     expect(screen.getByTestId('sync-now')).toBeDisabled()
   })
 
-  it('disables scan button when not fully configured', () => {
-    renderAndSwitchToTroubleshooting()
-
-    expect(screen.getByTestId('sync-data-scan')).toBeDisabled()
-  })
-
   it('enables sync-now when fully configured (reset requires checkbox selection)', () => {
     renderAndSwitchToData({ sync: makeSyncMock(FULLY_CONFIGURED) })
 
     expect(screen.getByTestId('sync-now')).not.toBeDisabled()
-  })
-
-  it('does not show checkboxes before scan', () => {
-    renderAndSwitchToTroubleshooting({ sync: makeSyncMock(FULLY_CONFIGURED) })
-
-    expect(screen.queryByTestId('sync-target-keyboard-0xABCD')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('sync-target-favorites')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('sync-reset-data')).not.toBeInTheDocument()
   })
 
   it('calls syncNow with favorites scope when sync button clicked (no keyboard)', async () => {
@@ -284,60 +251,6 @@ describe('SettingsModal', () => {
       expect(sync.syncNow).toHaveBeenCalledWith('upload', 'favorites')
       expect(sync.syncNow).toHaveBeenCalledWith('upload', { keyboard: '0xABCD' })
     })
-  })
-
-  it('shows confirmation before resetting sync targets', async () => {
-    const sync = makeSyncMock({
-      ...FULLY_CONFIGURED,
-      scanRemote: vi.fn().mockResolvedValue({ keyboards: ['0xABCD'], favorites: ['tapDance'], undecryptable: [] }),
-    })
-    renderAndSwitchToTroubleshooting({ sync })
-
-    // Scan first
-    fireEvent.click(screen.getByTestId('sync-data-scan'))
-    await waitFor(() => {
-      expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-    })
-
-    // Select a keyboard checkbox
-    fireEvent.click(screen.getByTestId('sync-target-keyboard-0xABCD').querySelector('input')!)
-    expect(screen.getByTestId('sync-reset-data')).not.toBeDisabled()
-
-    fireEvent.click(screen.getByTestId('sync-reset-data'))
-
-    expect(screen.getByTestId('sync-reset-data-warning')).toBeInTheDocument()
-    expect(screen.getByTestId('sync-reset-data-confirm')).toBeInTheDocument()
-    expect(screen.getByTestId('sync-reset-data-cancel')).toBeInTheDocument()
-    expect(sync.resetSyncTargets).not.toHaveBeenCalled()
-
-    fireEvent.click(screen.getByTestId('sync-reset-data-confirm'))
-    await waitFor(() => {
-      expect(sync.resetSyncTargets).toHaveBeenCalledWith({ keyboards: ['0xABCD'], favorites: false })
-    })
-  })
-
-  it('cancels reset data confirmation', async () => {
-    const sync = makeSyncMock({
-      ...FULLY_CONFIGURED,
-      scanRemote: vi.fn().mockResolvedValue({ keyboards: ['0xABCD'], favorites: [], undecryptable: [] }),
-    })
-    renderAndSwitchToTroubleshooting({ sync })
-
-    // Scan first
-    fireEvent.click(screen.getByTestId('sync-data-scan'))
-    await waitFor(() => {
-      expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-    })
-
-    // Select a target first
-    fireEvent.click(screen.getByTestId('sync-target-keyboard-0xABCD').querySelector('input')!)
-    fireEvent.click(screen.getByTestId('sync-reset-data'))
-    expect(screen.getByTestId('sync-reset-data-warning')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByTestId('sync-reset-data-cancel'))
-    expect(screen.queryByTestId('sync-reset-data-warning')).not.toBeInTheDocument()
-    expect(screen.getByTestId('sync-reset-data')).toBeInTheDocument()
-    expect(sync.resetSyncTargets).not.toHaveBeenCalled()
   })
 
   it('calls onClose when backdrop is clicked', () => {
@@ -502,30 +415,6 @@ describe('SettingsModal', () => {
     })
   })
 
-  it('disables change password button while busy', async () => {
-    let resolveImport: (value: { success: boolean }) => void
-    const importPromise = new Promise<{ success: boolean }>((resolve) => { resolveImport = resolve })
-    mockImportLocalData.mockReturnValueOnce(importPromise)
-
-    render(<SettingsModal sync={makeSyncMock(FULLY_CONFIGURED)} {...defaultProps} onClose={onClose} />)
-
-    // Switch to troubleshooting tab to trigger import
-    fireEvent.click(screen.getByTestId('settings-tab-troubleshooting'))
-    fireEvent.click(screen.getByTestId('local-data-import'))
-
-    // Switch to data tab to verify password button is disabled
-    fireEvent.click(screen.getByTestId('settings-tab-data'))
-    await waitFor(() => {
-      expect(screen.getByTestId('sync-password-change-btn')).toBeDisabled()
-    })
-
-    resolveImport!({ success: true })
-
-    await waitFor(() => {
-      expect(screen.getByTestId('sync-password-change-btn')).not.toBeDisabled()
-    })
-  })
-
   it('hides change password controls and shows busy banner while saving', async () => {
     let resolveChange: (value: { success: boolean }) => void
     const changePromise = new Promise<{ success: boolean }>((resolve) => { resolveChange = resolve })
@@ -677,189 +566,13 @@ describe('SettingsModal', () => {
     })
   })
 
-  it('shows confirmation before resetting local data', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    // Wait for stored keyboards to load
-    await waitFor(() => {
-      expect(screen.getByTestId('local-target-keyboard-test-uid-1')).toBeInTheDocument()
-    })
-
-    // Select an individual keyboard
-    fireEvent.click(screen.getByTestId('local-target-keyboard-test-uid-1').querySelector('input')!)
-    fireEvent.click(screen.getByTestId('reset-local-data'))
-
-    expect(screen.getByTestId('reset-local-data-warning')).toBeInTheDocument()
-    expect(screen.getByTestId('reset-local-data-confirm')).toBeInTheDocument()
-    expect(screen.getByTestId('reset-local-data-cancel')).toBeInTheDocument()
-    expect(mockResetKeyboardData).not.toHaveBeenCalled()
-  })
-
-  it('cancels reset local data confirmation', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-target-keyboard-test-uid-1')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByTestId('local-target-keyboard-test-uid-1').querySelector('input')!)
-    fireEvent.click(screen.getByTestId('reset-local-data'))
-    expect(screen.getByTestId('reset-local-data-warning')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByTestId('reset-local-data-cancel'))
-    expect(screen.queryByTestId('reset-local-data-warning')).not.toBeInTheDocument()
-    expect(screen.getByTestId('reset-local-data')).toBeInTheDocument()
-    expect(mockResetKeyboardData).not.toHaveBeenCalled()
-  })
-
-  it('calls resetKeyboardData for selected keyboards and resetLocalTargets for other targets', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-target-keyboard-test-uid-1')).toBeInTheDocument()
-    })
-
-    fireEvent.click(screen.getByTestId('local-target-keyboard-test-uid-1').querySelector('input')!)
-    fireEvent.click(screen.getByTestId('local-target-appSettings').querySelector('input')!)
-    fireEvent.click(screen.getByTestId('reset-local-data'))
-    fireEvent.click(screen.getByTestId('reset-local-data-confirm'))
-
-    await waitFor(() => {
-      expect(mockResetKeyboardData).toHaveBeenCalledWith('test-uid-1')
-      expect(mockResetLocalTargets).toHaveBeenCalledWith({ keyboards: false, favorites: false, appSettings: true })
-    })
-  })
-
-  it('disables delete button when no local targets are selected', () => {
-    renderAndSwitchToTroubleshooting()
-
-    expect(screen.getByTestId('reset-local-data')).toBeDisabled()
-  })
-
-  it('shows sync reset checkboxes after scan', async () => {
-    const sync = makeSyncMock({
-      ...FULLY_CONFIGURED,
-      scanRemote: vi.fn().mockResolvedValue({ keyboards: ['0xABCD'], favorites: ['tapDance'], undecryptable: [] }),
-    })
-    renderAndSwitchToTroubleshooting({ sync })
-
-    fireEvent.click(screen.getByTestId('sync-data-scan'))
-    await waitFor(() => {
-      expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-      expect(screen.getByTestId('sync-target-favorites')).toBeInTheDocument()
-    })
-  })
-
-  it('renders local reset checkboxes with individual keyboards', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-target-keyboard-test-uid-1')).toBeInTheDocument()
-      expect(screen.getByTestId('local-target-keyboard-test-uid-2')).toBeInTheDocument()
-    })
-    expect(screen.getByTestId('local-target-favorites')).toBeInTheDocument()
-    expect(screen.getByTestId('local-target-appSettings')).toBeInTheDocument()
-  })
-
-  it('renders import and export buttons', () => {
-    renderAndSwitchToTroubleshooting()
-
-    expect(screen.getByTestId('local-data-import')).toBeInTheDocument()
-    expect(screen.getByTestId('local-data-export')).toBeInTheDocument()
-  })
-
-  it('calls exportLocalData when export button is clicked', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    fireEvent.click(screen.getByTestId('local-data-export'))
-
-    await waitFor(() => {
-      expect(mockExportLocalData).toHaveBeenCalledOnce()
-    })
-  })
-
-  it('calls importLocalData when import button is clicked', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    fireEvent.click(screen.getByTestId('local-data-import'))
-
-    await waitFor(() => {
-      expect(mockImportLocalData).toHaveBeenCalledOnce()
-    })
-  })
-
-  it('shows success message after import completes', async () => {
-    renderAndSwitchToTroubleshooting()
-
-    fireEvent.click(screen.getByTestId('local-data-import'))
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-data-import-result')).toHaveTextContent('sync.importComplete')
-    })
-  })
-
-  it('shows error message when import fails', async () => {
-    mockImportLocalData.mockResolvedValueOnce({ success: false, error: 'bad file' })
-    renderAndSwitchToTroubleshooting()
-
-    fireEvent.click(screen.getByTestId('local-data-import'))
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-data-import-result')).toHaveTextContent('sync.importFailed')
-    })
-  })
-
-  it('disables sync and reset buttons when syncing', () => {
-    const syncMock = makeSyncMock({
-      ...FULLY_CONFIGURED,
-      syncStatus: 'syncing',
-      progress: { direction: 'download', status: 'syncing' },
-    })
-
-    render(<SettingsModal sync={syncMock} {...defaultProps} onClose={onClose} />)
-
-    // Data tab: sync-now disabled
-    fireEvent.click(screen.getByTestId('settings-tab-data'))
-    expect(screen.getByTestId('sync-now')).toBeDisabled()
-
-    // Troubleshooting tab: scan button and local reset disabled
-    fireEvent.click(screen.getByTestId('settings-tab-troubleshooting'))
-    expect(screen.getByTestId('sync-data-scan')).toBeDisabled()
-    expect(screen.getByTestId('reset-local-data')).toBeDisabled()
-  })
-
-  it('disables import, export, and checkboxes when busy', async () => {
-    let resolveImport: (value: { success: boolean }) => void
-    const importPromise = new Promise<{ success: boolean }>((resolve) => { resolveImport = resolve })
-    mockImportLocalData.mockReturnValueOnce(importPromise)
-
-    renderAndSwitchToTroubleshooting()
-
-    fireEvent.click(screen.getByTestId('local-data-import'))
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-data-import')).toBeDisabled()
-      expect(screen.getByTestId('local-data-export')).toBeDisabled()
-      expect(screen.getByTestId('local-target-favorites').querySelector('input')).toBeDisabled()
-    })
-
-    resolveImport!({ success: true })
-
-    await waitFor(() => {
-      expect(screen.getByTestId('local-data-import')).not.toBeDisabled()
-      expect(screen.getByTestId('local-data-export')).not.toBeDisabled()
-      expect(screen.getByTestId('local-target-favorites').querySelector('input')).not.toBeDisabled()
-    })
-  })
-
   describe('tabs', () => {
-    it('renders Tools, Data, Notification, Troubleshooting, and About tabs', () => {
+    it('renders Tools, Data, Notification, and About tabs', () => {
       render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
 
       expect(screen.getByTestId('settings-tab-tools')).toBeInTheDocument()
       expect(screen.getByTestId('settings-tab-data')).toBeInTheDocument()
       expect(screen.getByTestId('settings-tab-notification')).toBeInTheDocument()
-      expect(screen.getByTestId('settings-tab-troubleshooting')).toBeInTheDocument()
       expect(screen.getByTestId('settings-tab-about')).toBeInTheDocument()
     })
 
@@ -879,15 +592,6 @@ describe('SettingsModal', () => {
       expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
     })
 
-    it('switches to Troubleshooting tab showing local data content', () => {
-      render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
-
-      fireEvent.click(screen.getByTestId('settings-tab-troubleshooting'))
-
-      expect(screen.getByTestId('troubleshooting-tab-content')).toBeInTheDocument()
-      expect(screen.getByTestId('local-data-import')).toBeInTheDocument()
-      expect(screen.queryByTestId('sync-sign-in')).not.toBeInTheDocument()
-    })
   })
 
   describe('Defaults section (Tools tab)', () => {
@@ -1417,145 +1121,6 @@ describe('SettingsModal', () => {
       expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
       expect(screen.queryByTestId('sync-sign-in')).not.toBeInTheDocument()
       expect(screen.queryByTestId('hub-enable-toggle')).not.toBeInTheDocument()
-    })
-  })
-
-  describe('SyncDataResetSection', () => {
-    it('scan button triggers syncScanRemote', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({ keyboards: [], favorites: [], undecryptable: [] }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(sync.scanRemote).toHaveBeenCalledOnce()
-      })
-    })
-
-    it('shows empty message when scan finds no data', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({ keyboards: [], favorites: [], undecryptable: [] }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-data-empty')).toBeInTheDocument()
-      })
-    })
-
-    it('shows categories after scan', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({
-          keyboards: ['0xABCD'],
-          favorites: ['tapDance'],
-          undecryptable: [{ fileId: 'f1', fileName: 'bad.enc', syncUnit: null }],
-        }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-        expect(screen.getByTestId('sync-target-favorites')).toBeInTheDocument()
-        expect(screen.getByTestId('sync-data-undecryptable-count')).toBeInTheDocument()
-        expect(screen.getByTestId('undecryptable-file-f1')).toBeInTheDocument()
-      })
-    })
-
-    it('hides keyboard section when no keyboards in scan result', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({ keyboards: [], favorites: ['tapDance'], undecryptable: [] }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-target-favorites')).toBeInTheDocument()
-      })
-      expect(screen.queryByTestId('sync-target-keyboard-0xABCD')).not.toBeInTheDocument()
-    })
-
-    it('shows multiple keyboards individually', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({
-          keyboards: ['0xABCD', '0xEF01'],
-          favorites: [],
-          undecryptable: [],
-        }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-        expect(screen.getByTestId('sync-target-keyboard-0xEF01')).toBeInTheDocument()
-      })
-    })
-
-    it('delete triggers correct combination of resetSyncTargets + deleteFiles', async () => {
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote: vi.fn().mockResolvedValue({
-          keyboards: ['0xABCD'],
-          favorites: [],
-          undecryptable: [{ fileId: 'f1', fileName: 'bad.enc', syncUnit: null }],
-        }),
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      // Scan
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-      })
-
-      // Select keyboard + undecryptable file
-      fireEvent.click(screen.getByTestId('sync-target-keyboard-0xABCD').querySelector('input')!)
-      fireEvent.click(screen.getByTestId('undecryptable-file-f1').querySelector('input')!)
-
-      // Click delete -> confirm
-      fireEvent.click(screen.getByTestId('sync-reset-data'))
-      expect(screen.getByTestId('sync-reset-data-warning')).toBeInTheDocument()
-      fireEvent.click(screen.getByTestId('sync-reset-data-confirm'))
-
-      await waitFor(() => {
-        expect(sync.resetSyncTargets).toHaveBeenCalledWith({ keyboards: ['0xABCD'], favorites: false })
-        expect(sync.deleteFiles).toHaveBeenCalledWith(['f1'])
-      })
-    })
-
-    it('re-scans after deletion', async () => {
-      const scanRemote = vi.fn()
-        .mockResolvedValueOnce({ keyboards: ['0xABCD'], favorites: [], undecryptable: [] })
-        .mockResolvedValueOnce({ keyboards: [], favorites: [], undecryptable: [] })
-      const sync = makeSyncMock({
-        ...FULLY_CONFIGURED,
-        scanRemote,
-      })
-      renderAndSwitchToTroubleshooting({ sync })
-
-      // Scan
-      fireEvent.click(screen.getByTestId('sync-data-scan'))
-      await waitFor(() => {
-        expect(screen.getByTestId('sync-target-keyboard-0xABCD')).toBeInTheDocument()
-      })
-
-      // Select and delete
-      fireEvent.click(screen.getByTestId('sync-target-keyboard-0xABCD').querySelector('input')!)
-      fireEvent.click(screen.getByTestId('sync-reset-data'))
-      fireEvent.click(screen.getByTestId('sync-reset-data-confirm'))
-
-      await waitFor(() => {
-        // Second scan after deletion
-        expect(scanRemote).toHaveBeenCalledTimes(2)
-      })
     })
   })
 

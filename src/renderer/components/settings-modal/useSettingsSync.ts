@@ -3,7 +3,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { UseSyncReturn } from '../../hooks/useSync'
-import type { LocalResetTargets, StoredKeyboardInfo } from '../../../shared/types/sync'
 import type { AppNotification } from '../../../shared/types/notification'
 import type { ModalTabId } from '../editors/modal-tabs'
 
@@ -12,8 +11,6 @@ export interface UseSettingsSyncOptions {
   connectedKeyboardUid?: string
   hubEnabled: boolean
   onHubEnabledChange: (enabled: boolean) => void
-  onResetStart?: () => void
-  onResetEnd?: () => void
   activeTab: ModalTabId
 }
 
@@ -22,8 +19,6 @@ export function useSettingsSync({
   connectedKeyboardUid,
   hubEnabled,
   onHubEnabledChange,
-  onResetStart,
-  onResetEnd,
   activeTab,
 }: UseSettingsSyncOptions) {
   const { t } = useTranslation()
@@ -34,27 +29,15 @@ export function useSettingsSync({
   const [passwordError, setPasswordError] = useState<string | null>(null)
   const [changingPassword, setChangingPassword] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [localTargets, setLocalTargets] = useState<LocalResetTargets>({ keyboards: false, favorites: false, appSettings: false })
-  const [confirmingLocalReset, setConfirmingLocalReset] = useState(false)
   const [authenticating, setAuthenticating] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [confirmingGoogleDisconnect, setConfirmingGoogleDisconnect] = useState(false)
   const [confirmingHubDisconnect, setConfirmingHubDisconnect] = useState(false)
-  const [importResult, setImportResult] = useState<'success' | 'error' | null>(null)
-  const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
-  const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
-  const storedKeyboardsFetchedRef = useRef(false)
   const [recentNotifications, setRecentNotifications] = useState<AppNotification[]>([])
   const [notificationLoading, setNotificationLoading] = useState(false)
   const notificationFetchedRef = useRef(false)
   const authInFlight = useRef(false)
   const validationSeq = useRef(0)
-
-  useEffect(() => {
-    if (activeTab !== 'troubleshooting' || storedKeyboardsFetchedRef.current) return
-    storedKeyboardsFetchedRef.current = true
-    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
-  }, [activeTab])
 
   useEffect(() => {
     if (activeTab !== 'notification' || notificationFetchedRef.current) return
@@ -181,59 +164,7 @@ export function useSettingsSync({
     }
   }, [sync, handleSyncNow])
 
-  const handleResetLocalTargets = useCallback(async () => {
-    setBusy(true)
-    onResetStart?.()
-    try {
-      const keyboardUids = Array.from(selectedKeyboardUids)
-      const deletedUids = new Set<string>()
-      for (const uid of keyboardUids) {
-        try {
-          await window.vialAPI.resetKeyboardData(uid)
-          deletedUids.add(uid)
-        } catch { /* continue deleting other keyboards */ }
-      }
-      const hasNonKeyboardTargets = localTargets.favorites || localTargets.appSettings
-      if (hasNonKeyboardTargets) {
-        await window.vialAPI.resetLocalTargets({ keyboards: false, favorites: localTargets.favorites, appSettings: localTargets.appSettings })
-      }
-      if (deletedUids.size > 0 || hasNonKeyboardTargets) {
-        setConfirmingLocalReset(false)
-        setLocalTargets({ keyboards: false, favorites: false, appSettings: false })
-        setSelectedKeyboardUids((prev) => {
-          const next = new Set(prev)
-          for (const uid of deletedUids) next.delete(uid)
-          return next
-        })
-        setStoredKeyboards((prev) => prev.filter((kb) => !deletedUids.has(kb.uid)))
-      }
-    } finally {
-      setBusy(false)
-      onResetEnd?.()
-    }
-  }, [localTargets, selectedKeyboardUids, onResetStart, onResetEnd])
-
-  const handleExport = useCallback(async () => {
-    setBusy(true)
-    try {
-      await window.vialAPI.exportLocalData()
-    } finally {
-      setBusy(false)
-    }
-  }, [])
-
-  const handleImport = useCallback(async () => {
-    setBusy(true)
-    try {
-      const result = await window.vialAPI.importLocalData()
-      setImportResult(result.success ? 'success' : 'error')
-    } finally {
-      setBusy(false)
-    }
-  }, [])
-
-  const isSyncing = sync.syncStatus === 'syncing'
-  const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || isSyncing || sync.syncUnavailable
+  const syncDisabled = busy || !sync.authStatus.authenticated || !sync.hasPassword || sync.syncStatus === 'syncing' || sync.syncUnavailable
 
   return {
     password,
@@ -243,21 +174,12 @@ export function useSettingsSync({
     changingPassword,
     setChangingPassword,
     busy,
-    localTargets,
-    setLocalTargets,
-    confirmingLocalReset,
-    setConfirmingLocalReset,
     authenticating,
     authError,
     confirmingGoogleDisconnect,
     setConfirmingGoogleDisconnect,
     confirmingHubDisconnect,
     setConfirmingHubDisconnect,
-    importResult,
-    storedKeyboards,
-    selectedKeyboardUids,
-    setSelectedKeyboardUids,
-    isSyncing,
     syncDisabled,
     handleSignIn,
     handleGoogleDisconnect,
@@ -267,9 +189,6 @@ export function useSettingsSync({
     handleSetPassword,
     handleSyncNow,
     handleAutoSyncToggle,
-    handleResetLocalTargets,
-    handleExport,
-    handleImport,
     recentNotifications,
     notificationLoading,
   }

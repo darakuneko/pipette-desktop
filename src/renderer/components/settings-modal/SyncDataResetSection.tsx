@@ -111,10 +111,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
 
   return (
     <section className="mb-6">
-      <div className="mb-2 flex items-center justify-between">
-        <h4 className="text-sm font-medium text-content-secondary">
-          {t('sync.resetSyncData')}
-        </h4>
+      <div className="mb-2 flex items-center justify-end">
         <button
           type="button"
           className={BTN_SECONDARY}

@@ -462,10 +462,10 @@
     "resetSyncData": "同期データ",
     "resetConfirm": "Google Drive appDataFolder上の同期データがすべて削除されます。この操作は取り消せません。",
     "resetTarget": {
-      "keyboards": "すべてのキーボードデータ",
-      "keyboardData": "キーボードデータ",
-      "favorites": "お気に入りデータ",
-      "appSettings": "アプリケーションデータ",
+      "keyboards": "すべてのキーボード",
+      "keyboardData": "キーボード",
+      "favorites": "お気に入り",
+      "appSettings": "アプリケーション",
       "undecryptable": "復号できないファイル"
     },
     "deleteSelected": "選択を削除",
@@ -538,7 +538,9 @@
     }
   },
   "dataModal": {
-    "title": "データ"
+    "title": "データ",
+    "tabLocal": "ローカル",
+    "tabSync": "同期"
   },
   "editorSettings": {
     "title": "メニュー",
@@ -574,6 +576,7 @@
     "disable": "切断",
     "confirmDisconnect": "切断しますか？",
     "myPosts": "マイ投稿",
+    "hub": "Hub",
     "hubPosts": "Hub 投稿",
     "noPosts": "投稿はまだありません",
     "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください。",

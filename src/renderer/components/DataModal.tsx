@@ -4,19 +4,25 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useFavoriteManage } from '../hooks/useFavoriteManage'
 import { useInlineRename } from '../hooks/useInlineRename'
+import { useTroubleshooting } from '../hooks/useTroubleshooting'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { ModalTabBar, ModalTabPanel } from './editors/modal-tabs'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, formatDate } from './editors/store-modal-shared'
 import { FavoriteHubActions } from './editors/FavoriteHubActions'
 import type { FavHubEntryResult } from './editors/FavoriteHubActions'
+import { SyncDataResetSection } from './settings-modal/SyncDataResetSection'
+import { LocalDataResetGroup } from './settings-modal/LocalDataResetGroup'
+import { BTN_SECONDARY as SETTINGS_BTN_SECONDARY, toggleSetItem } from './settings-modal/settings-modal-shared'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from './hub-post-shared'
 import type { DataModalTabId, TabDef } from './editors/modal-tabs'
 import type { FavoriteType } from '../../shared/types/favorite-store'
 import type { FavoriteImportResultState } from '../hooks/useFavoriteStore'
 import type { HubMyPost, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
+import type { UseSyncReturn } from '../hooks/useSync'
 
 interface Props {
   onClose: () => void
+  sync: UseSyncReturn
   hubEnabled: boolean
   hubAuthenticated: boolean
   hubPosts: HubMyPost[]
@@ -33,6 +39,8 @@ interface Props {
   onFavUpdateOnHub?: (type: FavoriteType, entryId: string) => void
   onFavRemoveFromHub?: (type: FavoriteType, entryId: string) => void
   onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  onResetStart?: () => void
+  onResetEnd?: () => void
 }
 
 const FAV_TABS: TabDef<DataModalTabId>[] = [
@@ -43,7 +51,9 @@ const FAV_TABS: TabDef<DataModalTabId>[] = [
   { id: 'altRepeatKey', labelKey: 'editor.altRepeatKey.title' },
 ]
 
-const HUB_TAB: TabDef<DataModalTabId> = { id: 'hubPost', labelKey: 'hub.hubPosts' }
+const HUB_TAB: TabDef<DataModalTabId> = { id: 'hubPost', labelKey: 'hub.hub' }
+const LOCAL_TAB: TabDef<DataModalTabId> = { id: 'local', labelKey: 'dataModal.tabLocal' }
+const SYNC_TAB: TabDef<DataModalTabId> = { id: 'sync', labelKey: 'dataModal.tabSync' }
 
 function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) => string, result: FavoriteImportResultState): string {
   if (result.imported === 0) return t('favoriteStore.importEmpty')
@@ -53,7 +63,6 @@ function formatImportMessage(t: (key: string, opts?: Record<string, unknown>) =>
 
 interface FavoriteTabContentProps {
   favoriteType: FavoriteType
-  active: boolean
   hubOrigin?: string
   hubNeedsDisplayName?: boolean
   hubUploading?: string | null
@@ -66,7 +75,6 @@ interface FavoriteTabContentProps {
 
 function FavoriteTabContent({
   favoriteType,
-  active,
   hubOrigin,
   hubNeedsDisplayName,
   hubUploading,
@@ -83,11 +91,10 @@ function FavoriteTabContent({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (active && !hasInitialized.current) {
-      hasInitialized.current = true
-      void manage.refreshEntries()
-    }
-  }, [active, manage.refreshEntries])
+    if (hasInitialized.current) return
+    hasInitialized.current = true
+    void manage.refreshEntries()
+  }, [manage.refreshEntries])
 
   // Refresh entries when hub operation completes (upload/update/remove changes hubPostId)
   useEffect(() => {
@@ -255,6 +262,7 @@ function FavoriteTabContent({
 
 export function DataModal({
   onClose,
+  sync,
   hubEnabled,
   hubAuthenticated,
   hubPosts,
@@ -270,10 +278,17 @@ export function DataModal({
   onFavUpdateOnHub,
   onFavRemoveFromHub,
   onFavRenameOnHub,
+  onResetStart,
+  onResetEnd,
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
-  const tabs = showHubTab ? [...FAV_TABS, HUB_TAB] : FAV_TABS
+  const tabs: TabDef<DataModalTabId>[] = [
+    ...FAV_TABS,
+    ...(showHubTab ? [HUB_TAB] : []),
+    LOCAL_TAB,
+    SYNC_TAB,
+  ]
   const [activeTab, setActiveTab] = useState<DataModalTabId>('tapDance')
   const [hubPage, setHubPage] = useState(1)
 
@@ -311,8 +326,15 @@ export function DataModal({
     }
   }, [onHubDelete, hubPosts.length, hubPage, handleHubPageChange, refreshHubPage])
 
+  const troubleshoot = useTroubleshooting({
+    sync,
+    active: activeTab === 'local' || activeTab === 'sync',
+    onResetStart,
+    onResetEnd,
+  })
+
   const isFavTab = (id: DataModalTabId): id is FavoriteType =>
-    id !== 'hubPost'
+    id !== 'hubPost' && id !== 'local' && id !== 'sync'
 
   function renderHubPostList(): React.ReactNode {
     const totalPages = hubPostsPagination?.total_pages ?? 1
@@ -373,7 +395,7 @@ export function DataModal({
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="data-modal-backdrop"
-      onClick={onClose}
+      onClick={troubleshoot.busy ? undefined : onClose}
     >
       <div
         role="dialog"
@@ -386,7 +408,7 @@ export function DataModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
           <h2 id="data-modal-title" className="text-lg font-bold text-content">{t('dataModal.title')}</h2>
-          <ModalCloseButton testid="data-modal-close" onClick={onClose} />
+          {!troubleshoot.busy && <ModalCloseButton testid="data-modal-close" onClick={onClose} />}
         </div>
 
         <ModalTabBar<DataModalTabId>
@@ -402,7 +424,6 @@ export function DataModal({
             <FavoriteTabContent
               key={activeTab}
               favoriteType={activeTab}
-              active={isFavTab(activeTab)}
               hubOrigin={hubOrigin}
               hubNeedsDisplayName={hubNeedsDisplayName}
               hubUploading={hubFavUploading}
@@ -423,6 +444,71 @@ export function DataModal({
                 )}
                 {renderHubPostList()}
               </section>
+            </div>
+          )}
+          {activeTab === 'local' && (
+            <div className="pt-4 space-y-6" data-testid="local-tab-content">
+              <section>
+                <div className="flex items-center justify-between mb-3">
+                  {troubleshoot.importResult ? (
+                    <span
+                      className={`text-sm ${troubleshoot.importResult === 'success' ? 'text-accent' : 'text-danger'}`}
+                      data-testid="local-data-import-result"
+                    >
+                      {troubleshoot.importResult === 'success' ? t('sync.importComplete') : t('sync.importFailed')}
+                    </span>
+                  ) : (
+                    <span />
+                  )}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={SETTINGS_BTN_SECONDARY}
+                      onClick={troubleshoot.handleImport}
+                      disabled={troubleshoot.busy}
+                      data-testid="local-data-import"
+                    >
+                      {t('sync.import')}
+                    </button>
+                    <button
+                      type="button"
+                      className={SETTINGS_BTN_SECONDARY}
+                      onClick={troubleshoot.handleExport}
+                      disabled={troubleshoot.busy}
+                      data-testid="local-data-export"
+                    >
+                      {t('sync.export')}
+                    </button>
+                  </div>
+                </div>
+                <LocalDataResetGroup
+                  storedKeyboards={troubleshoot.storedKeyboards}
+                  selectedKeyboardUids={troubleshoot.selectedKeyboardUids}
+                  onToggleKeyboard={(uid, checked) => {
+                    troubleshoot.setSelectedKeyboardUids((prev) => toggleSetItem(prev, uid, checked))
+                  }}
+                  localTargets={troubleshoot.localTargets}
+                  onToggleTarget={(key, checked) => troubleshoot.setLocalTargets((prev) => ({ ...prev, [key]: checked }))}
+                  disabled={troubleshoot.busy || troubleshoot.isSyncing}
+                  confirming={troubleshoot.confirmingLocalReset}
+                  onRequestConfirm={() => troubleshoot.setConfirmingLocalReset(true)}
+                  onCancelConfirm={() => troubleshoot.setConfirmingLocalReset(false)}
+                  onConfirm={troubleshoot.handleResetLocalTargets}
+                  busy={troubleshoot.busy}
+                  confirmDisabled={troubleshoot.busy || troubleshoot.isSyncing}
+                />
+              </section>
+            </div>
+          )}
+          {activeTab === 'sync' && (
+            <div className="pt-4 space-y-6" data-testid="sync-tab-content">
+              <SyncDataResetSection
+                sync={sync}
+                storedKeyboards={troubleshoot.storedKeyboards}
+                disabled={troubleshoot.syncDisabled}
+                onResetStart={onResetStart}
+                onResetEnd={onResetEnd}
+              />
             </div>
           )}
         </ModalTabPanel>

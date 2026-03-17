@@ -8,7 +8,6 @@ import { useSettingsSync } from './useSettingsSync'
 import { SettingsToolsTab } from './SettingsToolsTab'
 import { SettingsDataTab } from './SettingsDataTab'
 import { SettingsNotificationTab } from './SettingsNotificationTab'
-import { SettingsTroubleshootingTab } from './SettingsTroubleshootingTab'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { ModalTabBar, ModalTabPanel } from '../editors/modal-tabs'
 import { AboutTabContent } from '../AboutTabContent'
@@ -33,8 +32,6 @@ export function SettingsModal({
   onDefaultQuickSelectChange,
   autoLockTime,
   onAutoLockTimeChange,
-  onResetStart,
-  onResetEnd,
   onClose,
   hubEnabled,
   onHubEnabledChange,
@@ -53,8 +50,6 @@ export function SettingsModal({
     connectedKeyboardUid,
     hubEnabled,
     onHubEnabledChange,
-    onResetStart,
-    onResetEnd,
     activeTab,
   })
 
@@ -147,27 +142,6 @@ export function SettingsModal({
             <SettingsNotificationTab
               recentNotifications={syncState.recentNotifications}
               notificationLoading={syncState.notificationLoading}
-            />
-          )}
-          {activeTab === 'troubleshooting' && (
-            <SettingsTroubleshootingTab
-              sync={sync}
-              storedKeyboards={syncState.storedKeyboards}
-              syncDisabled={syncState.syncDisabled}
-              busy={syncState.busy}
-              isSyncing={syncState.isSyncing}
-              importResult={syncState.importResult}
-              selectedKeyboardUids={syncState.selectedKeyboardUids}
-              setSelectedKeyboardUids={syncState.setSelectedKeyboardUids}
-              localTargets={syncState.localTargets}
-              setLocalTargets={syncState.setLocalTargets}
-              confirmingLocalReset={syncState.confirmingLocalReset}
-              setConfirmingLocalReset={syncState.setConfirmingLocalReset}
-              handleResetLocalTargets={syncState.handleResetLocalTargets}
-              handleExport={syncState.handleExport}
-              handleImport={syncState.handleImport}
-              onResetStart={onResetStart}
-              onResetEnd={onResetEnd}
             />
           )}
           {activeTab === 'about' && <AboutTabContent />}
