@@ -421,20 +421,18 @@ async function captureLayerNavigation(page: Page): Promise<void> {
 
   await capture(page, 'layer-0', { fullPage: true })
 
-  const editorContent = page.locator('[data-testid="editor-content"]')
-
   for (const layerNum of [1, 2]) {
-    const btn = editorContent.locator('button', { hasText: new RegExp(`^${layerNum}$`) })
+    const btn = page.locator(`[data-testid="layer-panel-layer-num-${layerNum}"]`)
     if (await isAvailable(btn)) {
-      await btn.first().click()
-      await page.waitForTimeout(500)
+      await btn.click()
+      await page.waitForTimeout(1000)
       await capture(page, `layer-${layerNum}`, { fullPage: true })
     }
   }
 
-  const layer0Btn = editorContent.locator('button', { hasText: /^0$/ })
+  const layer0Btn = page.locator('[data-testid="layer-panel-layer-num-0"]')
   if (await isAvailable(layer0Btn)) {
-    await layer0Btn.first().click()
+    await layer0Btn.click()
     await page.waitForTimeout(500)
   }
 }
