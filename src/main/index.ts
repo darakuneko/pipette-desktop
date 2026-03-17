@@ -92,6 +92,19 @@ function createWindow(): void {
 
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
 
+  // Native context menu for editable text fields (textarea, input)
+  win.webContents.on('context-menu', (_event, params) => {
+    if (!params.isEditable) return
+    const menu = Menu.buildFromTemplate([
+      { role: 'cut' },
+      { role: 'copy' },
+      { role: 'paste' },
+      { type: 'separator' },
+      { role: 'selectAll' },
+    ])
+    menu.popup()
+  })
+
   if (process.env.ELECTRON_RENDERER_URL) {
     win.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
