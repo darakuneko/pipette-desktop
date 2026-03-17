@@ -141,6 +141,7 @@ export interface VialAPI {
   syncHasPendingChanges(): Promise<boolean>
   syncListUndecryptable(): Promise<UndecryptableFile[]>
   syncScanRemote(): Promise<SyncDataScanResult>
+  syncFetchRemoteBundle(syncUnit: string): Promise<unknown>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncCheckPasswordExists(): Promise<boolean>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void

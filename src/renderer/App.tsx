@@ -310,8 +310,6 @@ export function App() {
             onDefaultQuickSelectChange={devicePrefs.setDefaultQuickSelect}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
-            onResetStart={() => lifecycle.setResettingData(true)}
-            onResetEnd={() => lifecycle.setResettingData(false)}
             onClose={() => lifecycle.setShowSettings(false)}
             hubEnabled={appConfig.config.hubEnabled}
             onHubEnabledChange={(enabled) => appConfig.set('hubEnabled', enabled)}
@@ -326,6 +324,7 @@ export function App() {
         {lifecycle.showDataModal && (
           <DataModal
             onClose={() => lifecycle.setShowDataModal(false)}
+            sync={sync}
             hubEnabled={appConfig.config.hubEnabled}
             hubAuthenticated={sync.authStatus.authenticated}
             hubPosts={hub.hubMyPosts}
@@ -341,6 +340,8 @@ export function App() {
             onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
             onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
+            onResetStart={() => lifecycle.setResettingData(true)}
+            onResetEnd={() => lifecycle.setResettingData(false)}
           />
         )}
         {startupNotification.visible && (

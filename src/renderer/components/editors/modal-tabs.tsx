@@ -2,9 +2,9 @@
 
 import { useTranslation } from 'react-i18next'
 
-export type ModalTabId = 'tools' | 'data' | 'notification' | 'troubleshooting' | 'about'
+export type ModalTabId = 'tools' | 'data' | 'notification' | 'about'
 
-export type DataModalTabId = 'tapDance' | 'macro' | 'combo' | 'keyOverride' | 'altRepeatKey' | 'hubPost'
+export type DataModalTabId = 'tapDance' | 'macro' | 'combo' | 'keyOverride' | 'altRepeatKey' | 'hubPost' | 'local' | 'sync'
 
 const TAB_BASE = 'px-4 py-2 text-[13px] font-medium transition-colors border-b-2'
 
