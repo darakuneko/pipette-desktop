@@ -245,16 +245,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // --- Macro JSON editor ---
   const [showMacroJsonEditor, setShowMacroJsonEditor] = useState(false)
+  const macroJsonGate = useUnlockGate({ unlocked, onUnlock })
   const handleMacroJsonApply = useCallback(
     async (macros: MacroAction[][]) => {
       if (!onSaveMacros || !macroBufferSize) return
-      const buffer = serializeAllMacros(macros, vialProtocol ?? 0)
-      if (buffer.length > macroBufferSize) {
-        throw new Error(t('editor.macro.memoryUsage', { used: buffer.length, total: macroBufferSize }))
-      }
-      await onSaveMacros(buffer, macros)
+      await macroJsonGate.guardAll(async () => {
+        const buffer = serializeAllMacros(macros, vialProtocol ?? 0)
+        if (buffer.length > macroBufferSize) {
+          throw new Error(t('editor.macro.memoryUsage', { used: buffer.length, total: macroBufferSize }))
+        }
+        await onSaveMacros(buffer, macros)
+      })
     },
-    [onSaveMacros, macroBufferSize, vialProtocol, t],
+    [onSaveMacros, macroBufferSize, vialProtocol, t, macroJsonGate],
   )
 
   const visibleModals = useMemo(() => ({
