@@ -6,10 +6,13 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { serialize, isMask } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
+import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
+import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { deserializeAllMacros } from '../../../preload/macro'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
+import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
 
@@ -148,6 +151,28 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const openSettings = useCallback((key: string) => setShowSettings((prev) => ({ ...prev, [key]: true })), [])
   const closeSettings = useCallback((key: string) => setShowSettings((prev) => ({ ...prev, [key]: false })), [])
 
+  // --- Tap Dance JSON editor ---
+  const [showTdJsonEditor, setShowTdJsonEditor] = useState(false)
+  const tdJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleTdJsonApply = useCallback(
+    async (entries: TapDanceEntry[]) => {
+      if (!onSetTapDanceEntry || !tapDanceEntries) return
+      const allCodes = entries.flatMap((e) => [e.onTap, e.onHold, e.onDoubleTap, e.onTapHold])
+      await tdJsonGate.guard(allCodes, async () => {
+        for (let i = 0; i < entries.length; i++) {
+          const prev = tapDanceEntries[i]
+          const next = entries[i]
+          if (prev.onTap !== next.onTap || prev.onHold !== next.onHold ||
+              prev.onDoubleTap !== next.onDoubleTap || prev.onTapHold !== next.onTapHold ||
+              prev.tappingTerm !== next.tappingTerm) {
+            await onSetTapDanceEntry(i, next)
+          }
+        }
+      })
+    },
+    [onSetTapDanceEntry, tapDanceEntries, tdJsonGate],
+  )
+
   const visibleModals = useMemo(() => ({
     tapHold: !!showSettings.tapHold && !!tapHoldSupported,
     mouseKeys: !!showSettings.mouseKeys && !!mouseKeysSupported,
@@ -239,6 +264,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
     const buttonDefs = [
+      { tab: 'tapDance', key: 'tdJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowTdJsonEditor(true), testId: 'tap-dance-json-editor-btn', enabled: !!tapDanceEntries && tapDanceEntries.length > 0 },
       { tab: 'tapDance', key: 'tapHold', label: t('editor.keymap.tapHoldLabel'), onClick: () => openSettings('tapHold'), testId: 'tap-hold-settings-btn', enabled: tapHoldSupported },
       { tab: 'system', key: 'mouseKeys', label: t('editor.keymap.mouseKeysLabel'), onClick: () => openSettings('mouseKeys'), testId: 'mouse-keys-settings-btn', enabled: mouseKeysSupported },
       { tab: 'modifiers', key: 'graveEscape', label: t('editor.keymap.graveEscapeLabel'), onClick: () => openSettings('graveEscape'), testId: 'grave-escape-settings-btn', enabled: graveEscapeSupported },
@@ -260,7 +286,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       )
     }
     return content
-  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t, openSettings])
+  }, [tapDanceEntries, tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t, openSettings])
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
     comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey,
@@ -467,6 +493,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('macro', entryId) : undefined}
           onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('macro', entryId) : undefined}
           onRenameOnHub={onFavRenameOnHub} />
+      )}
+
+      {showTdJsonEditor && tapDanceEntries && tapDanceEntries.length > 0 && (
+        <TapDanceJsonEditor
+          entries={tapDanceEntries}
+          onApply={handleTdJsonApply}
+          onClose={() => setShowTdJsonEditor(false)}
+        />
       )}
 
       {supportedQsids && qmkSettingsGet && qmkSettingsSet && qmkSettingsReset && (

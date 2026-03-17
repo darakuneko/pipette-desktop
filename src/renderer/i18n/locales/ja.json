@@ -162,7 +162,13 @@
       "onTapHold": "On Tap Hold",
       "tappingTerm": "Tapping Term (ms)",
       "hint": "キーマップでこのアクションを設定するには TD({{index}}) を使用してください",
-      "editTitle": "TD({{index}})"
+      "editTitle": "TD({{index}})",
+      "editJson": "Edit JSON",
+      "jsonEditorTitle": "Tap Dance 編集 (JSON)",
+      "invalidJson": "無効なJSON形式",
+      "unknownKeycode": "不明なキーコード: {{keycode}}",
+      "invalidTappingTerm": "Tapping termは0〜10000の数値で指定してください",
+      "applyFailed": "変更の適用に失敗しました"
     },
     "combo": {
       "title": "Combo",
