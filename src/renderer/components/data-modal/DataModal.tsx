@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { BTN_SECONDARY as SETTINGS_BTN_SECONDARY } from '../settings-modal/settings-modal-shared'
-import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from '../hub-post-shared'
+import { HubPostRow, DEFAULT_PER_PAGE } from '../hub-post-shared'
 import { DataNavTree } from './DataNavTree'
 import { DataNavBreadcrumb } from './DataNavBreadcrumb'
 import { FavoriteTabContent } from './FavoriteTabContent'
@@ -73,10 +73,16 @@ export function DataModal({
 
   // Reset to null if hub tab becomes hidden while active
   useEffect(() => {
-    if (!showHubTab && nav.activePath?.page === 'hub') {
+    if (!showHubTab && nav.activePath?.page === 'hub-keyboard') {
       nav.setActivePath(null)
     }
   }, [showHubTab, nav.activePath?.page, nav.setActivePath])
+
+  // Extract unique keyboard names from hub posts
+  const hubKeyboardNames = useMemo(() => {
+    const names = new Set(hubPosts.map((p) => p.keyboard_name))
+    return [...names].sort()
+  }, [hubPosts])
 
   // Hub pagination
   const [hubPage, setHubPage] = useState(1)
@@ -162,55 +168,30 @@ export function DataModal({
       )
     }
 
-    if (path.page === 'hub') {
-      return renderHubContent()
+    if (path.page === 'hub-keyboard') {
+      const filtered = hubPosts.filter((p) => p.keyboard_name === path.keyboardName)
+      return renderHubContent(filtered)
     }
 
     return null
   }
 
-  function renderHubContent(): React.ReactNode {
-    const totalPages = hubPostsPagination?.total_pages ?? 1
-    const hasPosts = hubPosts.length > 0
-    const showPagination = totalPages > 1
+  function renderHubContent(posts: typeof hubPosts): React.ReactNode {
+    const hasPosts = posts.length > 0
 
     return (
       <div className="space-y-4">
-        {onHubRefresh && (
-          <div className="flex justify-end">
-            <HubRefreshButton onRefresh={() => refreshHubPage(hubPage)} />
-          </div>
-        )}
-        {!hasPosts && !showPagination ? (
+        {!hasPosts ? (
           <p className="text-sm text-content-muted" data-testid="hub-no-posts">
             {t('hub.noPosts')}
           </p>
         ) : (
           <div data-testid="hub-post-list">
-            {hasPosts ? (
-              <div className="space-y-1">
-                {hubPosts.map((post) => (
-                  <HubPostRow key={post.id} post={post} onRename={handleHubRenameWithPageRefresh} onDelete={handleHubDeleteWithPageAdjust} hubOrigin={hubOrigin} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-content-muted" data-testid="hub-no-posts">
-                {t('hub.noPosts')}
-              </p>
-            )}
-            {showPagination && (
-              <div className="mt-2 flex items-center justify-center gap-3" data-testid="hub-pagination">
-                <button type="button" className={BTN_SECONDARY} onClick={() => handleHubPageChange(hubPage - 1)} disabled={hubPage <= 1} data-testid="hub-page-prev">
-                  {t('hub.pagePrev')}
-                </button>
-                <span className="text-xs text-content-muted" data-testid="hub-page-info">
-                  {t('hub.pageInfo', { current: hubPage, total: totalPages })}
-                </span>
-                <button type="button" className={BTN_SECONDARY} onClick={() => handleHubPageChange(hubPage + 1)} disabled={hubPage >= totalPages} data-testid="hub-page-next">
-                  {t('hub.pageNext')}
-                </button>
-              </div>
-            )}
+            <div className="space-y-1">
+              {posts.map((post) => (
+                <HubPostRow key={post.id} post={post} onRename={handleHubRenameWithPageRefresh} onDelete={handleHubDeleteWithPageAdjust} hubOrigin={hubOrigin} />
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -248,6 +229,7 @@ export function DataModal({
               isExpanded={nav.isExpanded}
               onToggle={nav.toggleExpand}
               showHubTab={showHubTab}
+              hubKeyboardNames={hubKeyboardNames}
               syncScanResult={nav.syncScanResult}
               syncScanning={nav.syncScanning}
             />

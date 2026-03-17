@@ -12,6 +12,7 @@ interface Props {
   isExpanded: (nodeId: string) => boolean
   onToggle: (nodeId: string) => void
   showHubTab: boolean
+  hubKeyboardNames: string[]
   syncScanResult: SyncDataScanResult | null
   syncScanning: boolean
 }
@@ -31,6 +32,7 @@ function isActivePath(a: DataNavPath | null, b: DataNavPath): boolean {
   if (a.page === 'favorite' && b.page === 'favorite') return a.favoriteType === b.favoriteType
   if (a.page === 'sync-keyboard' && b.page === 'sync-keyboard') return a.uid === b.uid
   if (a.page === 'sync-favorite' && b.page === 'sync-favorite') return a.favoriteType === b.favoriteType
+  if (a.page === 'hub-keyboard' && b.page === 'hub-keyboard') return a.keyboardName === b.keyboardName
   return true
 }
 
@@ -100,7 +102,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, syncScanResult, syncScanning }: Props) {
+export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -221,13 +223,38 @@ export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpande
 
       {/* ── Hub ── */}
       {showHubTab && (
-        <Leaf
+        <Branch
           label={t('dataModal.hub')}
           depth={0}
-          active={isActivePath(activePath, { section: 'cloud', page: 'hub' })}
-          onClick={() => onNavigate({ section: 'cloud', page: 'hub' })}
+          open={isExpanded('hub')}
+          onToggle={() => onToggle('hub')}
           testId="nav-cloud-hub"
-        />
+        >
+          {hubKeyboardNames.length === 0 ? (
+            <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }} data-testid="nav-hub-empty">
+              {t('hub.noPosts')}
+            </div>
+          ) : (
+            <Branch
+              label={t('dataModal.keyboards')}
+              depth={1}
+              open={isExpanded('hub-keyboards')}
+              onToggle={() => onToggle('hub-keyboards')}
+              testId="nav-hub-keyboards"
+            >
+              {hubKeyboardNames.map((name) => (
+                <Leaf
+                  key={name}
+                  label={name}
+                  depth={2}
+                  active={isActivePath(activePath, { section: 'hub', page: 'hub-keyboard', keyboardName: name })}
+                  onClick={() => onNavigate({ section: 'hub', page: 'hub-keyboard', keyboardName: name })}
+                  testId={`nav-hub-kb-${name}`}
+                />
+              ))}
+            </Branch>
+          )}
+        </Branch>
       )}
     </div>
   )
