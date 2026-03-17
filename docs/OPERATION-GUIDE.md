@@ -19,6 +19,17 @@ When you launch the app, a list of connected Vial-compatible keyboards is displa
 - If multiple keyboards are connected, select one from the list
 - On Linux, udev rules may need to be configured if no devices are found
 
+**File Tab**
+
+![File Tab](screenshots/file-tab.png)
+
+The File tab allows offline editing of `.pipette` files without a physical keyboard connected:
+
+- Browse previously saved keyboards and select an entry to load
+- Load an external `.pipette` file from disk
+- A virtual keyboard is created from the embedded definition in the file
+- An unsaved changes indicator is shown when edits have not been saved
+
 ### 1.2 Connecting a Keyboard
 
 Click a keyboard name in the list to open the keymap editor. A connecting overlay shows loading progress while the keyboard data is read.
@@ -459,7 +470,7 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 
 ## 5. Detail Setting Editors
 
-Open detail setting modals from their dedicated keycode tabs. Lighting and Combo open via **Settings: Configuration** buttons at the bottom of their tabs; Combo, Key Override, and Alt Repeat Key detail editors open by clicking a tile on their respective tabs.
+Open detail setting modals from their dedicated keycode tabs. Lighting opens via a **Settings: Configuration** button at the bottom of its tab; Combo, Key Override, and Alt Repeat Key detail editors open by clicking an entry on their respective tabs.
 
 ### 5.1 Lighting Settings
 
@@ -474,13 +485,13 @@ Open from the **Settings: Configuration** button on the Lighting tab. Configure 
 
 ### 5.2 Combo
 
-Configure simultaneous key press combinations to trigger different keys. The Combo tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
+Configure simultaneous key press combinations to trigger different keys. The Combo tab displays an inline tile grid; clicking an entry opens the detail editor modal directly.
 
-**Tile Grid Overview (Combo tab)**
+**Tile Grid (Combo tab)**
 
 ![Combo List](screenshots/combo-modal.png)
 
-The Combo tab shows a grid of numbered tiles (0--31). Configured entries display a summary. Click a tile to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the grid.
+The Combo tab shows entries as a numbered list (0--31). Configured entries display a summary (e.g., "A + B → C"). Click an entry to open the detail editor. Combo keycodes (Combo On, Combo Off, Combo Toggle) are shown below the list. A **Settings: Configuration** button at the bottom opens a settings modal for QMK Combo timeout configuration (e.g., Combo time out period).
 
 **Detail Editor**
 
@@ -490,17 +501,16 @@ The Combo tab shows a grid of numbered tiles (0--31). Configured entries display
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview within the modal
 
 ### 5.3 Key Override
 
-Replace specific key inputs with different keys. The Key Override tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
+Replace specific key inputs with different keys. The Key Override tab displays an inline tile grid; clicking an entry opens the detail editor modal directly.
 
-**Tile Grid Overview (Key Override tab)**
+**Tile Grid (Key Override tab)**
 
 ![Key Override List](screenshots/key-override-modal.png)
 
-Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
+Shows entries as a numbered list. Configured entries display a summary. Click an entry to open the detail editor.
 
 **Detail Editor**
 
@@ -510,17 +520,16 @@ Shows a grid of numbered tiles. Configured entries display a summary. Click a ti
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview within the modal
 
 ### 5.4 Alt Repeat Key
 
-Configure alternative actions for the Repeat Key. The Alt Repeat Key tab displays an inline tile grid overview; clicking a tile opens the detail editor modal.
+Configure alternative actions for the Repeat Key. The Alt Repeat Key tab displays an inline tile grid; clicking an entry opens the detail editor modal directly.
 
-**Tile Grid Overview (Alt Repeat Key tab)**
+**Tile Grid (Alt Repeat Key tab)**
 
 ![Alt Repeat Key List](screenshots/alt-repeat-key-modal.png)
 
-Shows a grid of numbered tiles. Configured entries display a summary. Click a tile to open the detail editor.
+Shows entries as a numbered list. Configured entries display a summary. Click an entry to open the detail editor.
 
 **Detail Editor**
 
@@ -530,7 +539,6 @@ Shows a grid of numbered tiles. Configured entries display a summary. Click a ti
 - Right panel: Inline favorites panel (Save Current State / Synced Data / Import / Export All)
 - **Clear** resets all fields; **Revert** restores the last saved state. Both use two-step confirmation.
 - **Save** writes changes to the keyboard
-- **Back** returns to the tile grid overview within the modal
 
 ### 5.5 Favorites
 
@@ -541,6 +549,7 @@ Each editor modal (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) includ
 The inline favorites panel provides:
 
 - **Save Current State**: Enter a label and click Save to store the current entry configuration
+  - **Import** / **Export** buttons: Import a `.pipette-fav` file to apply to the current entry, or export the current entry settings as a `.pipette-fav` file without saving to the store. Inline "Imported" / "Exported" feedback is shown after each action.
 - **Synced Data**: Previously saved entries are listed with Load, Rename, Delete, and Export actions
 - **Import** / **Export All**: Footer buttons for bulk import/export of favorites
 
@@ -572,7 +581,7 @@ Open the editor settings panel from the save button (floppy disk icon) in the ke
 
 The editor settings panel now provides a single **Save** panel with the following features:
 
-- **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries)
+- **Export Current State**: Download keymap as `.vil`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for Tap Dance, Macro, Combo, Key Override, and Alt Repeat Key entries). An "Exported" inline feedback message appears after a successful export.
 - **Save Current State**: Save a snapshot of the current keyboard state with a label. Enter a name in the Label field and click Save. If the Label field is left empty, the Save button is disabled. Saved snapshots appear in the Synced Data list below and can be loaded or deleted later
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
@@ -681,6 +690,8 @@ To upload a keymap to Hub:
 - **Open in Browser**: Opens the Hub page for this keymap
 - **Update**: Re-uploads the current keyboard state to update the existing Hub post
 - **Remove**: Removes the keymap from Hub
+
+> **Note**: Hub uploads include a `.pipette` file alongside the standard export formats, allowing other users to load the full keyboard state directly.
 
 ### 7.3 Uploading Favorite Entries
 
