@@ -11,6 +11,7 @@ export interface JsonEditorModalProps<T> {
   onApply: (value: T) => void | Promise<void>
   onClose: () => void
   testIdPrefix: string
+  warning?: string
 }
 
 export function JsonEditorModal<T>({
@@ -20,6 +21,7 @@ export function JsonEditorModal<T>({
   onApply,
   onClose,
   testIdPrefix,
+  warning,
 }: JsonEditorModalProps<T>) {
   const { t } = useTranslation()
   const [text, setText] = useState(initialText)
@@ -81,6 +83,9 @@ export function JsonEditorModal<T>({
           <h3 className="text-lg font-semibold">{title}</h3>
           <ModalCloseButton testid={`${testIdPrefix}-close`} onClick={onClose} />
         </div>
+        {warning && (
+          <p className="mb-3 text-xs text-warning" data-testid={`${testIdPrefix}-warning`}>{warning}</p>
+        )}
         <textarea
           value={text}
           onChange={handleChange}

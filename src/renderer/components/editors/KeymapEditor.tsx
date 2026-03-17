@@ -635,6 +635,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleMacroJsonApply}
           onClose={() => setShowMacroJsonEditor(false)}
           testIdPrefix="macro-json-editor"
+          warning={t('editor.macro.unlockWarning')}
         />
       )}
 
