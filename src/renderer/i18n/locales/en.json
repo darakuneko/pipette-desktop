@@ -165,7 +165,7 @@
       "hint": "Use TD({{index}}) to set up this action in the keymap",
       "editTitle": "TD({{index}})",
       "editJson": "Edit JSON",
-      "jsonEditorTitle": "Edit Tap Dance (JSON)",
+      "jsonEditorTitle": "Edit JSON",
       "invalidJson": "Invalid JSON format",
       "unknownKeycode": "Unknown keycode: {{keycode}}",
       "invalidTappingTerm": "Tapping term must be a number between 0 and 10000",

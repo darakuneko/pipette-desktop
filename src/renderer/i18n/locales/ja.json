@@ -164,7 +164,7 @@
       "hint": "キーマップでこのアクションを設定するには TD({{index}}) を使用してください",
       "editTitle": "TD({{index}})",
       "editJson": "Edit JSON",
-      "jsonEditorTitle": "Tap Dance 編集 (JSON)",
+      "jsonEditorTitle": "Edit JSON",
       "invalidJson": "無効なJSON形式",
       "unknownKeycode": "不明なキーコード: {{keycode}}",
       "invalidTappingTerm": "Tapping termは0〜10000の数値で指定してください",

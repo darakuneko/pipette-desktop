@@ -10,7 +10,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => {
       const map: Record<string, string> = {
-        'editor.tapDance.jsonEditorTitle': 'Edit Tap Dance (JSON)',
+        'editor.tapDance.jsonEditorTitle': 'Edit JSON',
         'editor.tapDance.invalidJson': 'Invalid JSON format',
         'editor.tapDance.invalidTappingTerm': 'Tapping term must be a number between 0 and 10000',
         'editor.tapDance.applyFailed': 'Failed to apply changes',
@@ -53,7 +53,7 @@ describe('TapDanceJsonEditor', () => {
     render(
       <TapDanceJsonEditor entries={[makeEntry()]} onApply={onApply} onClose={onClose} />,
     )
-    expect(screen.getByText('Edit Tap Dance (JSON)')).toBeInTheDocument()
+    expect(screen.getByText('Edit JSON')).toBeInTheDocument()
   })
 
   it('renders textarea with JSON content', () => {
