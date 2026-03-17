@@ -358,7 +358,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => openSettings('oneShotKeys'), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'behavior', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => openSettings('magic'), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'behavior', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => openSettings('autoShift'), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
-      { tab: 'macro', key: 'macroJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowMacroJsonEditor(true), testId: 'macro-json-editor-btn', enabled: !!deserializedMacros && deserializedMacros.length > 0 },
+      { tab: 'macro', key: 'macroJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => void macroJsonGate.guardAll(async () => setShowMacroJsonEditor(true)), testId: 'macro-json-editor-btn', enabled: !!deserializedMacros && deserializedMacros.length > 0 },
       { tab: 'combo', key: 'comboJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowComboJsonEditor(true), testId: 'combo-json-editor-btn', enabled: !!comboEntries && comboEntries.length > 0 },
       { tab: 'combo', key: 'combo', label: t('common.configuration'), onClick: () => openSettings('combo'), testId: 'combo-settings-btn', enabled: comboSettingsSupported },
       { tab: 'keyOverride', key: 'koJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowKoJsonEditor(true), testId: 'ko-json-editor-btn', enabled: !!keyOverrideEntries && keyOverrideEntries.length > 0 },
