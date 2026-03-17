@@ -614,7 +614,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleKoJsonApply}
           onClose={() => setShowKoJsonEditor(false)}
           testIdPrefix="ko-json-editor"
-          exportFileName="key-override"
+          exportFileName="ko"
         />
       )}
 
@@ -626,7 +626,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onApply={handleArkJsonApply}
           onClose={() => setShowArkJsonEditor(false)}
           testIdPrefix="ark-json-editor"
-          exportFileName="alt-repeat-key"
+          exportFileName="ark"
         />
       )}
 

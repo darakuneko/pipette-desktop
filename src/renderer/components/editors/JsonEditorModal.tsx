@@ -70,7 +70,9 @@ export function JsonEditorModal<T>({
   }, [text, parse, onApply, onClose, t])
 
   const handleExport = useCallback(async () => {
-    await window.vialAPI.exportJson(text, exportFileName)
+    const ts = new Date().toISOString().replace(/:/g, '').replace(/\.\d+Z$/, '').replace('T', '-')
+    const filename = `pipette-fav-${exportFileName}-current-all-${ts}`
+    await window.vialAPI.exportJson(text, filename)
   }, [text, exportFileName])
 
   return (
