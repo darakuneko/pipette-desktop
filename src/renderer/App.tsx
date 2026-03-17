@@ -554,10 +554,13 @@ export function App() {
             onOpenLighting={editorUI.lightingSupported ? () => editorUI.setShowLightingModal(true) : undefined}
             comboEntries={editorUI.comboSupported ? keyboard.comboEntries : undefined}
             onOpenCombo={editorUI.comboSupported ? (index: number) => editorUI.setComboInitialIndex(index) : undefined}
+            onSetComboEntry={editorUI.comboSupported ? keyboard.setComboEntry : undefined}
             keyOverrideEntries={editorUI.keyOverrideSupported ? keyboard.keyOverrideEntries : undefined}
             onOpenKeyOverride={editorUI.keyOverrideSupported ? (index: number) => editorUI.setKeyOverrideInitialIndex(index) : undefined}
+            onSetKeyOverrideEntry={editorUI.keyOverrideSupported ? keyboard.setKeyOverrideEntry : undefined}
             altRepeatKeyEntries={editorUI.altRepeatKeySupported ? keyboard.altRepeatKeyEntries : undefined}
             onOpenAltRepeatKey={editorUI.altRepeatKeySupported ? (index: number) => editorUI.setAltRepeatKeyInitialIndex(index) : undefined}
+            onSetAltRepeatKeyEntry={editorUI.altRepeatKeySupported ? keyboard.setAltRepeatKeyEntry : undefined}
             layerNames={!effectiveIsDummy ? keyboard.layerNames : undefined}
             onSetLayerName={!effectiveIsDummy ? keyboard.setLayerName : undefined}
             toolsExtra={toolsExtra}

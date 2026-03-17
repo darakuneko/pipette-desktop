@@ -36,20 +36,31 @@ Click a keyboard name in the list to open the keymap editor. A connecting overla
 
 If Cloud Sync is configured, sync progress is also displayed during connection (favorites first, then keyboard-specific data).
 
-### 1.3 Data Modal
+### 1.3 Data
 
-The Data button on the device selection screen opens the Data modal for centralized management of favorites and Hub posts.
+The Data button on the device selection screen opens the Data panel for centralized management of keyboards, favorites, sync data, and Hub posts.
 
-![Data Modal — Favorites](screenshots/02-data-modal.png)
+![Data — Favorites](screenshots/data-sidebar-favorites.png)
 
-- **Favorites tabs**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type has its own tab
-- Per-entry actions: click to rename, delete, or **Export** individual entries
-- **Hub actions**: When Hub is connected, each entry shows **Upload to Hub** / **Update on Hub** / **Remove from Hub** buttons (same as the inline favorites panel)
+The left sidebar provides a **tree navigation** with the following structure:
+
+- **Local**
+  - **Keyboards**: Browse saved keyboard snapshots. Click a keyboard to view, load, export, or delete entries
+  - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
+  - **Application**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
+- **Sync** (when Cloud Sync is configured): Shows remote-only data not available locally. Scan and delete orphaned sync data from Google Drive
+- **Hub** (when Hub is connected): Manage Hub posts grouped by keyboard name
+
+![Data — Keyboard Saves](screenshots/data-sidebar-keyboard-saves.png)
+
+![Data — Application](screenshots/data-sidebar-application.png)
+
+Per-entry actions in the favorites list:
+- Click to rename, delete, or **Export** individual entries
+- **Hub actions**: When Hub is connected, each entry shows **Upload to Hub** / **Update on Hub** / **Remove from Hub** buttons
 - **Import** / **Export All** buttons at the footer for bulk operations
 
-![Data Modal — Hub Posts](screenshots/02-data-modal-hub-posts.png)
-
-- **Hub Posts** tab: Manage your Pipette Hub uploads (visible when Hub is connected)
+A **breadcrumb navigation** at the top of the content area shows the current path (e.g., "Local › Favorites › Tap Dance")
 
 ---
 
@@ -279,6 +290,7 @@ The Tap Dance section displays a **tile grid preview** showing all entries at a 
 - Configured entries display their tap/hold actions; unconfigured tiles show the number only
 - Click a tile to open the Tap Dance edit modal directly to that entry
 - Configure tap, hold, double-tap, and other actions for each entry
+- **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ### 3.7 Macro
 
@@ -294,6 +306,7 @@ The Macro section displays a **tile grid preview** showing all entries at a glan
 - Configured entries display a summary of key actions; unconfigured tiles show the number only
 - Click a tile to open the Macro edit modal directly to that entry
 - Record sequences of key inputs as macros
+- **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ### 3.8 Combo
 
@@ -307,6 +320,7 @@ The Combo tab displays a **tile grid preview** showing all entries. A note reads
 - Click a tile to open the Combo edit modal directly to that entry (§5.2)
 - Combo keycodes (CMB_000–CMB_031) can be assigned to keys for triggering combos
 - **Settings: Configuration** button at the bottom opens a settings modal for combo-related timeout configuration (e.g., Combo time out period)
+- **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ### 3.9 Key Override
 
@@ -318,6 +332,7 @@ The Key Override tab displays a **tile grid preview** showing all entries and a 
 
 - Each tile shows the override number and a summary
 - Click a tile to open the Key Override edit modal directly to that entry (§5.3)
+- **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ### 3.10 Alt Repeat Key
 
@@ -329,6 +344,7 @@ The Alt Repeat Key tab displays a **tile grid preview** showing all entries and 
 
 - Each tile shows the entry number and a summary
 - Click a tile to open the Alt Repeat Key edit modal directly to that entry (§5.4)
+- **Edit JSON** button at the bottom opens a JSON editor for bulk editing all entries (see §5.6)
 
 ### 3.11 Behavior
 
@@ -569,6 +585,23 @@ When Pipette Hub is connected, each saved entry also shows Hub actions:
 - **Remove from Hub**: Delete the entry from Pipette Hub (two-step confirmation)
 - **Open in Browser**: Open the individual Hub post page in your browser
 
+### 5.6 JSON Editor
+
+Each feature tab (Tap Dance, Macro, Combo, Key Override, Alt Repeat Key) provides an **Edit JSON** button at the bottom of the tab. This opens a JSON editor modal for bulk editing all entries as raw JSON text.
+
+![JSON Editor — Tap Dance](screenshots/json-editor-tap-dance.png)
+
+- **Text area**: Edit all entries as a JSON array. Changes are validated in real time — parse errors are shown below the editor
+- **Export** (left): Save the current JSON as a `.pipette-fav` file for backup or sharing
+- **Cancel** (right): Close without saving
+- **Save** (right): Apply the parsed JSON and write changes to the keyboard
+
+![JSON Editor — Macro](screenshots/json-editor-macro.png)
+
+For Macros, a warning is displayed indicating that keyboard unlock is required to save changes.
+
+> **Note**: The JSON editor modifies all entries at once. Use with caution — invalid JSON will be rejected, but valid JSON with incorrect values may cause unexpected behavior.
+
 > **Note**: Favorites are not tied to a specific keyboard — saved entries can be loaded on any compatible keyboard. When Cloud Sync is enabled, favorites are also synced across devices (see §6.1). Favorites can also be managed from the Data modal on the device selection screen (see §1.3).
 
 ---
@@ -634,15 +667,12 @@ Synced data is stored in [Google Drive appDataFolder](https://developers.google.
 
 See the [Data Guide](Data.md) for details on what is synced and how your data is protected.
 
-#### Settings — Troubleshooting
+#### Data Management
 
-![Settings — Troubleshooting](screenshots/settings-troubleshooting.png)
+Troubleshooting and data management functions are available in the **Data** panel (see §1.3):
 
-The Troubleshooting tab in the Settings modal (on the device selection screen) provides:
-
-- **Scan Remote Data**: Scan Google Drive for all sync files, with counts and details
-- **Per-keyboard Reset**: Select and delete specific keyboard sync data from Google Drive
-- **Local Data**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
+- **Local > Application**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
+- **Sync**: Scan remote data on Google Drive and delete orphaned sync files
 
 #### Settings — Defaults
 

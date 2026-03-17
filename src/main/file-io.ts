@@ -100,6 +100,18 @@ export function setupFileIO(): void {
     })
   })
 
+  secureHandle(IpcChannels.FILE_EXPORT_JSON, async (event, content: string, defaultName?: string) => {
+    const filename = defaultName ? `${sanitizeFilename(defaultName)}.json` : 'export.json'
+    return saveFileWithDialog(event, content, {
+      title: 'Export JSON',
+      defaultPath: filename,
+      filters: [
+        { name: 'JSON', extensions: ['json'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+    })
+  })
+
   secureHandle(IpcChannels.FILE_LOAD_LAYOUT, async (event, title?: unknown, extensions?: unknown) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return { success: false, error: 'No window' }

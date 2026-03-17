@@ -84,7 +84,7 @@ export function MacroTextEditor({ initialJson, onApply, onClose }: Props) {
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
+            className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim"
             data-testid="macro-text-editor-cancel"
           >
             {t('common.cancel')}
@@ -93,10 +93,10 @@ export function MacroTextEditor({ initialJson, onApply, onClose }: Props) {
             type="button"
             onClick={handleApply}
             disabled={error}
-            className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+            className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
             data-testid="macro-text-editor-apply"
           >
-            {t('common.apply')}
+            {t('common.save')}
           </button>
         </div>
       </div>
