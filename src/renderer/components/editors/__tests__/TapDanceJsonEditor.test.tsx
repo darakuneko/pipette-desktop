@@ -16,6 +16,7 @@ vi.mock('react-i18next', () => ({
         'editor.tapDance.applyFailed': 'Failed to apply changes',
         'common.cancel': 'Cancel',
         'common.apply': 'Apply',
+        'common.save': 'Save',
         'common.close': 'Close',
       }
       if (key === 'editor.tapDance.unknownKeycode') return `Unknown keycode: ${opts?.keycode}`

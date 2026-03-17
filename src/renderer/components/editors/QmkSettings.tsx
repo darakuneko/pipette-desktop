@@ -202,7 +202,7 @@ export function QmkSettings({
         <button
           type="button"
           data-testid="qmk-save"
-          className="rounded bg-accent px-4 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
           onClick={handleSave}
           disabled={!hasChanges}
         >
@@ -211,7 +211,7 @@ export function QmkSettings({
         <button
           type="button"
           data-testid="qmk-undo"
-          className="rounded border border-edge px-4 py-1.5 text-sm hover:bg-surface-dim disabled:opacity-50"
+          className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim disabled:opacity-50"
           onClick={handleUndo}
           disabled={!hasChanges}
         >
@@ -220,7 +220,7 @@ export function QmkSettings({
         <button
           type="button"
           data-testid="qmk-reset"
-          className="rounded border border-danger/30 px-4 py-1.5 text-sm text-danger hover:bg-danger/10"
+          className="rounded border border-danger/30 px-4 py-2 text-sm text-danger hover:bg-danger/10"
           onClick={handleReset}
         >
           {t('common.reset')}

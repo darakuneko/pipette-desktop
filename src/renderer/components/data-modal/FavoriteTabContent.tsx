@@ -187,7 +187,7 @@ export function FavoriteTabContent({
             <button
               type="button"
               disabled={manage.importing || manage.exporting}
-              className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim disabled:opacity-50"
               onClick={() => void manage.importFavorites()}
               data-testid="data-modal-fav-import-btn"
             >
@@ -196,7 +196,7 @@ export function FavoriteTabContent({
             <button
               type="button"
               disabled={manage.exporting || manage.importing}
-              className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim disabled:opacity-50"
               onClick={() => void manage.exportAll()}
               data-testid="data-modal-fav-export-all-btn"
             >

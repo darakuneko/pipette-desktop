@@ -63,7 +63,7 @@ export function JsonEditorModal<T>({
       await onApply(result.value as T)
       onClose()
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('common.apply'))
+      setError(e instanceof Error ? e.message : t('common.save'))
     } finally {
       setApplying(false)
     }
@@ -111,7 +111,7 @@ export function JsonEditorModal<T>({
             <button
               type="button"
               onClick={handleExport}
-              className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim"
               data-testid={`${testIdPrefix}-export`}
             >
               {t('layoutStore.export')}
@@ -121,7 +121,7 @@ export function JsonEditorModal<T>({
             <button
               type="button"
               onClick={onClose}
-              className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim"
               data-testid={`${testIdPrefix}-cancel`}
             >
               {t('common.cancel')}
@@ -130,10 +130,10 @@ export function JsonEditorModal<T>({
               type="button"
               onClick={handleApply}
               disabled={!!error || applying}
-              className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+              className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
               data-testid={`${testIdPrefix}-apply`}
             >
-              {t('common.apply')}
+              {t('common.save')}
             </button>
           </div>
         </div>

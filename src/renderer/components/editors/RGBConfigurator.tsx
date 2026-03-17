@@ -476,7 +476,7 @@ export function RGBConfigurator({
               console.error('[Lighting] save failed:', err)
             }
           }}
-          className="rounded bg-accent px-4 py-1.5 text-sm text-content-inverse hover:bg-accent-hover"
+          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
         >
           {t('common.save')}
         </button>
@@ -486,7 +486,7 @@ export function RGBConfigurator({
             type="button"
             data-testid="lighting-undo"
             onClick={restoreSavedValues}
-            className="rounded border border-edge px-4 py-1.5 text-sm hover:bg-surface-hover"
+            className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim"
           >
             {t('common.undo')}
           </button>
