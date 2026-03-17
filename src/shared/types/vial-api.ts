@@ -98,6 +98,7 @@ export interface VialAPI {
   exportKeymapC(content: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportPdf(base64Data: string, deviceName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   exportCsv(content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
+  exportJson(content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }>
   sideloadJson(title?: string): Promise<{ success: boolean; data?: unknown; error?: string }>
 
   // Snapshot Store (internal save/load)

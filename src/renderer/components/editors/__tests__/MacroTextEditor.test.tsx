@@ -13,6 +13,7 @@ vi.mock('react-i18next', () => ({
         'editor.macro.invalidJson': 'Invalid JSON format',
         'common.cancel': 'Cancel',
         'common.apply': 'Apply',
+        'common.save': 'Save',
       }
       return map[key] ?? key
     },

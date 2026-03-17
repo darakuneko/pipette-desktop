@@ -6,10 +6,15 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { serialize, isMask } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
+import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
-import { deserializeAllMacros } from '../../../preload/macro'
+import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
+import { deserializeAllMacros, serializeAllMacros, type MacroAction } from '../../../preload/macro'
 import { TapDanceModal } from './TapDanceModal'
 import { MacroModal } from './MacroModal'
+import { TapDanceJsonEditor } from './TapDanceJsonEditor'
+import { JsonEditorModal } from './JsonEditorModal'
+import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
 
@@ -74,8 +79,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
   quickSelect, onQuickSelectChange, keyboardLayout = 'qwerty', onKeyboardLayoutChange,
   onLock, onMatrixModeChange, onOpenLighting,
-  comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride,
-  altRepeatKeyEntries, onOpenAltRepeatKey, toolsExtra, dataPanel, onOverlayOpen,
+  comboEntries, onOpenCombo, onSetComboEntry,
+  keyOverrideEntries, onOpenKeyOverride, onSetKeyOverrideEntry,
+  altRepeatKeyEntries, onOpenAltRepeatKey, onSetAltRepeatKeyEntry,
+  toolsExtra, dataPanel, onOverlayOpen,
   layerNames, onSetLayerName,
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
@@ -147,6 +154,111 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
   const openSettings = useCallback((key: string) => setShowSettings((prev) => ({ ...prev, [key]: true })), [])
   const closeSettings = useCallback((key: string) => setShowSettings((prev) => ({ ...prev, [key]: false })), [])
+
+  // --- Tap Dance JSON editor ---
+  const [showTdJsonEditor, setShowTdJsonEditor] = useState(false)
+  const tdJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleTdJsonApply = useCallback(
+    async (entries: TapDanceEntry[]) => {
+      if (!onSetTapDanceEntry || !tapDanceEntries) return
+      const allCodes = entries.flatMap((e) => [e.onTap, e.onHold, e.onDoubleTap, e.onTapHold])
+      await tdJsonGate.guard(allCodes, async () => {
+        for (let i = 0; i < entries.length; i++) {
+          const prev = tapDanceEntries[i]
+          const next = entries[i]
+          if (prev.onTap !== next.onTap || prev.onHold !== next.onHold ||
+              prev.onDoubleTap !== next.onDoubleTap || prev.onTapHold !== next.onTapHold ||
+              prev.tappingTerm !== next.tappingTerm) {
+            await onSetTapDanceEntry(i, next)
+          }
+        }
+      })
+    },
+    [onSetTapDanceEntry, tapDanceEntries, tdJsonGate],
+  )
+
+  // --- Combo JSON editor ---
+  const [showComboJsonEditor, setShowComboJsonEditor] = useState(false)
+  const comboJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleComboJsonApply = useCallback(
+    async (entries: ComboEntry[]) => {
+      if (!onSetComboEntry || !comboEntries) return
+      const allCodes = entries.flatMap((e) => [e.key1, e.key2, e.key3, e.key4, e.output])
+      await comboJsonGate.guard(allCodes, async () => {
+        for (let i = 0; i < entries.length; i++) {
+          const prev = comboEntries[i]
+          const next = entries[i]
+          if (prev.key1 !== next.key1 || prev.key2 !== next.key2 || prev.key3 !== next.key3 ||
+              prev.key4 !== next.key4 || prev.output !== next.output) {
+            await onSetComboEntry(i, next)
+          }
+        }
+      })
+    },
+    [onSetComboEntry, comboEntries, comboJsonGate],
+  )
+
+  // --- Key Override JSON editor ---
+  const [showKoJsonEditor, setShowKoJsonEditor] = useState(false)
+  const koJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleKoJsonApply = useCallback(
+    async (entries: KeyOverrideEntry[]) => {
+      if (!onSetKeyOverrideEntry || !keyOverrideEntries) return
+      const allCodes = entries.flatMap((e) => [e.triggerKey, e.replacementKey])
+      await koJsonGate.guard(allCodes, async () => {
+        for (let i = 0; i < entries.length; i++) {
+          const prev = keyOverrideEntries[i]
+          const next = entries[i]
+          if (prev.triggerKey !== next.triggerKey || prev.replacementKey !== next.replacementKey ||
+              prev.layers !== next.layers || prev.triggerMods !== next.triggerMods ||
+              prev.negativeMods !== next.negativeMods || prev.suppressedMods !== next.suppressedMods ||
+              prev.options !== next.options || prev.enabled !== next.enabled) {
+            await onSetKeyOverrideEntry(i, next)
+          }
+        }
+      })
+    },
+    [onSetKeyOverrideEntry, keyOverrideEntries, koJsonGate],
+  )
+
+  // --- Alt Repeat Key JSON editor ---
+  const [showArkJsonEditor, setShowArkJsonEditor] = useState(false)
+  const arkJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleArkJsonApply = useCallback(
+    async (entries: AltRepeatKeyEntry[]) => {
+      if (!onSetAltRepeatKeyEntry || !altRepeatKeyEntries) return
+      const allCodes = entries.flatMap((e) => [e.lastKey, e.altKey])
+      await arkJsonGate.guard(allCodes, async () => {
+        for (let i = 0; i < entries.length; i++) {
+          const prev = altRepeatKeyEntries[i]
+          const next = entries[i]
+          if (prev.lastKey !== next.lastKey || prev.altKey !== next.altKey ||
+              prev.allowedMods !== next.allowedMods || prev.options !== next.options ||
+              prev.enabled !== next.enabled) {
+            await onSetAltRepeatKeyEntry(i, next)
+          }
+        }
+      })
+    },
+    [onSetAltRepeatKeyEntry, altRepeatKeyEntries, arkJsonGate],
+  )
+
+  // --- Macro JSON editor ---
+  const [showMacroJsonEditor, setShowMacroJsonEditor] = useState(false)
+  const macroJsonGate = useUnlockGate({ unlocked, onUnlock })
+  const handleMacroJsonApply = useCallback(
+    async (macros: MacroAction[][]) => {
+      if (!onSaveMacros || !macroBufferSize) return
+      await macroJsonGate.guardAll(async () => {
+        const buffer = serializeAllMacros(macros, vialProtocol ?? 0)
+        if (buffer.length > macroBufferSize) {
+          throw new Error(t('editor.macro.memoryUsage', { used: buffer.length, total: macroBufferSize }))
+        }
+        await onSaveMacros(buffer, macros)
+      })
+    },
+    [onSaveMacros, macroBufferSize, vialProtocol, t, macroJsonGate],
+  )
 
   const visibleModals = useMemo(() => ({
     tapHold: !!showSettings.tapHold && !!tapHoldSupported,
@@ -239,13 +351,18 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
     const buttonDefs = [
+      { tab: 'tapDance', key: 'tdJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowTdJsonEditor(true), testId: 'tap-dance-json-editor-btn', enabled: !!tapDanceEntries && tapDanceEntries.length > 0 },
       { tab: 'tapDance', key: 'tapHold', label: t('editor.keymap.tapHoldLabel'), onClick: () => openSettings('tapHold'), testId: 'tap-hold-settings-btn', enabled: tapHoldSupported },
       { tab: 'system', key: 'mouseKeys', label: t('editor.keymap.mouseKeysLabel'), onClick: () => openSettings('mouseKeys'), testId: 'mouse-keys-settings-btn', enabled: mouseKeysSupported },
       { tab: 'modifiers', key: 'graveEscape', label: t('editor.keymap.graveEscapeLabel'), onClick: () => openSettings('graveEscape'), testId: 'grave-escape-settings-btn', enabled: graveEscapeSupported },
       { tab: 'modifiers', key: 'oneShotKeys', label: t('editor.keymap.oneShotKeysLabel'), onClick: () => openSettings('oneShotKeys'), testId: 'one-shot-keys-settings-btn', enabled: oneShotKeysSupported },
       { tab: 'behavior', key: 'magic', label: t('editor.keymap.magicLabel'), onClick: () => openSettings('magic'), testId: 'magic-settings-btn', enabled: magicSupported },
       { tab: 'behavior', key: 'autoshift', label: t('editor.keymap.autoShiftLabel'), onClick: () => openSettings('autoShift'), testId: 'auto-shift-settings-btn', enabled: autoShiftSupported },
+      { tab: 'macro', key: 'macroJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => void macroJsonGate.guardAll(async () => setShowMacroJsonEditor(true)), testId: 'macro-json-editor-btn', enabled: !!deserializedMacros && deserializedMacros.length > 0 },
+      { tab: 'combo', key: 'comboJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowComboJsonEditor(true), testId: 'combo-json-editor-btn', enabled: !!comboEntries && comboEntries.length > 0 },
       { tab: 'combo', key: 'combo', label: t('common.configuration'), onClick: () => openSettings('combo'), testId: 'combo-settings-btn', enabled: comboSettingsSupported },
+      { tab: 'keyOverride', key: 'koJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowKoJsonEditor(true), testId: 'ko-json-editor-btn', enabled: !!keyOverrideEntries && keyOverrideEntries.length > 0 },
+      { tab: 'altRepeatKey', key: 'arkJsonEditor', label: t('editor.tapDance.editJson'), onClick: () => setShowArkJsonEditor(true), testId: 'ark-json-editor-btn', enabled: !!altRepeatKeyEntries && altRepeatKeyEntries.length > 0 },
       { tab: 'lighting', key: 'lighting', label: t('common.configuration'), onClick: onOpenLighting, testId: 'lighting-settings-btn', enabled: !!onOpenLighting },
     ]
     const content: Record<string, React.ReactNode> = {}
@@ -260,7 +377,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       )
     }
     return content
-  }, [tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t, openSettings])
+  }, [tapDanceEntries, comboEntries, keyOverrideEntries, altRepeatKeyEntries, deserializedMacros, tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t, openSettings])
 
   const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
     comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey,
@@ -467,6 +584,63 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onUpdateOnHub={onFavUpdateOnHub ? (entryId) => onFavUpdateOnHub('macro', entryId) : undefined}
           onRemoveFromHub={onFavRemoveFromHub ? (entryId) => onFavRemoveFromHub('macro', entryId) : undefined}
           onRenameOnHub={onFavRenameOnHub} />
+      )}
+
+      {showTdJsonEditor && tapDanceEntries && tapDanceEntries.length > 0 && (
+        <TapDanceJsonEditor
+          entries={tapDanceEntries}
+          onApply={handleTdJsonApply}
+          onClose={() => setShowTdJsonEditor(false)}
+        />
+      )}
+
+      {showComboJsonEditor && comboEntries && comboEntries.length > 0 && (
+        <JsonEditorModal<ComboEntry[]>
+          title={t('editor.tapDance.editJson')}
+          initialText={comboToJson(comboEntries)}
+          parse={(text) => parseCombo(text, comboEntries.length, t)}
+          onApply={handleComboJsonApply}
+          onClose={() => setShowComboJsonEditor(false)}
+          testIdPrefix="combo-json-editor"
+          exportFileName="combo"
+        />
+      )}
+
+      {showKoJsonEditor && keyOverrideEntries && keyOverrideEntries.length > 0 && (
+        <JsonEditorModal<KeyOverrideEntry[]>
+          title={t('editor.tapDance.editJson')}
+          initialText={keyOverrideToJson(keyOverrideEntries)}
+          parse={(text) => parseKeyOverride(text, keyOverrideEntries.length, t)}
+          onApply={handleKoJsonApply}
+          onClose={() => setShowKoJsonEditor(false)}
+          testIdPrefix="ko-json-editor"
+          exportFileName="ko"
+        />
+      )}
+
+      {showArkJsonEditor && altRepeatKeyEntries && altRepeatKeyEntries.length > 0 && (
+        <JsonEditorModal<AltRepeatKeyEntry[]>
+          title={t('editor.tapDance.editJson')}
+          initialText={altRepeatKeyToJson(altRepeatKeyEntries)}
+          parse={(text) => parseAltRepeatKey(text, altRepeatKeyEntries.length, t)}
+          onApply={handleArkJsonApply}
+          onClose={() => setShowArkJsonEditor(false)}
+          testIdPrefix="ark-json-editor"
+          exportFileName="ark"
+        />
+      )}
+
+      {showMacroJsonEditor && deserializedMacros && deserializedMacros.length > 0 && (
+        <JsonEditorModal<MacroAction[][]>
+          title={t('editor.tapDance.editJson')}
+          initialText={macroToJson(deserializedMacros)}
+          parse={(text) => parseMacro(text, deserializedMacros.length, t)}
+          onApply={handleMacroJsonApply}
+          onClose={() => setShowMacroJsonEditor(false)}
+          testIdPrefix="macro-json-editor"
+          warning={t('editor.macro.unlockWarning')}
+          exportFileName="macro"
+        />
       )}
 
       {supportedQsids && qmkSettingsGet && qmkSettingsSet && qmkSettingsReset && (

@@ -112,7 +112,7 @@ export function PasswordSection({
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+            className="rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
             onClick={onSetPassword}
             disabled={!password || (passwordScore !== null && passwordScore < 4) || sync.syncUnavailable}
             data-testid="sync-password-save"
@@ -122,7 +122,7 @@ export function PasswordSection({
           {changingPassword && (
             <button
               type="button"
-              className="rounded border border-edge px-4 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+              className="rounded border border-edge px-4 py-2 text-sm text-content-secondary hover:bg-surface-dim"
               onClick={onCancelChange}
               data-testid="sync-password-reset-cancel"
             >

@@ -96,10 +96,13 @@ export interface KeymapEditorProps {
   onOpenLighting?: () => void
   comboEntries?: ComboEntry[]
   onOpenCombo?: (index: number) => void
+  onSetComboEntry?: (index: number, entry: ComboEntry) => Promise<void>
   keyOverrideEntries?: KeyOverrideEntry[]
   onOpenKeyOverride?: (index: number) => void
+  onSetKeyOverrideEntry?: (index: number, entry: KeyOverrideEntry) => Promise<void>
   altRepeatKeyEntries?: AltRepeatKeyEntry[]
   onOpenAltRepeatKey?: (index: number) => void
+  onSetAltRepeatKeyEntry?: (index: number, entry: AltRepeatKeyEntry) => Promise<void>
   toolsExtra?: React.ReactNode
   dataPanel?: React.ReactNode
   onOverlayOpen?: () => void
