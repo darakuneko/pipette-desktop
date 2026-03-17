@@ -282,7 +282,7 @@ function restoreFavorites(backups: Map<string, string | null>, favBase: string):
 }
 
 async function captureDataModal(page: Page): Promise<void> {
-  console.log('\n--- Phase 1.5: Data Modal ---')
+  console.log('\n--- Phase 1.5: Data Modal (Tree Sidebar) ---')
 
   const dataBtn = page.locator('[data-testid="data-button"]')
   if (!(await isAvailable(dataBtn))) {
@@ -301,15 +301,62 @@ async function captureDataModal(page: Page): Promise<void> {
     return
   }
 
-  // Wait for entries to load
-  const entries = page.locator('[data-testid="data-modal-fav-entry"]')
-  try {
-    await entries.first().waitFor({ state: 'visible', timeout: 5000 })
-  } catch {
-    console.log('  [warn] No favorite entries loaded')
+  // Expand Local branch and navigate to Favorites > Tap Dance
+  const navLocal = page.locator('[data-testid="nav-local"]')
+  if (await isAvailable(navLocal)) {
+    await navLocal.click()
+    await page.waitForTimeout(300)
+
+    const navFavorites = page.locator('[data-testid="nav-local-favorites"]')
+    if (await isAvailable(navFavorites)) {
+      await navFavorites.click()
+      await page.waitForTimeout(300)
+
+      const navTd = page.locator('[data-testid="nav-fav-tapDance"]')
+      if (await isAvailable(navTd)) {
+        await navTd.click()
+        await page.waitForTimeout(500)
+      }
+    }
+  }
+  await captureNamed(page, 'data-sidebar-favorites', { fullPage: true })
+
+  // Navigate to Keyboards (first keyboard if available)
+  const navKeyboards = page.locator('[data-testid="nav-local-keyboards"]')
+  if (await isAvailable(navKeyboards)) {
+    await navKeyboards.click()
+    await page.waitForTimeout(300)
+
+    // Click first keyboard leaf if available
+    const kbLeaf = page.locator('[data-testid^="nav-kb-"]').first()
+    if (await isAvailable(kbLeaf)) {
+      await kbLeaf.click()
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'data-sidebar-keyboard-saves', { fullPage: true })
+    }
   }
 
-  await capture(page, 'data-modal', { fullPage: true })
+  // Navigate to Application
+  const navApp = page.locator('[data-testid="nav-local-application"]')
+  if (await isAvailable(navApp)) {
+    await navApp.click()
+    await page.waitForTimeout(500)
+    await captureNamed(page, 'data-sidebar-application', { fullPage: true })
+  }
+
+  // Navigate to Hub (if available)
+  const navHub = page.locator('[data-testid="nav-cloud-hub"]')
+  if (await isAvailable(navHub)) {
+    await navHub.click()
+    await page.waitForTimeout(300)
+
+    const hubKbs = page.locator('[data-testid="nav-hub-keyboards"]')
+    if (await isAvailable(hubKbs)) {
+      await hubKbs.click()
+      await page.waitForTimeout(300)
+    }
+    await captureNamed(page, 'data-sidebar-hub', { fullPage: true })
+  }
 
   await page.locator('[data-testid="data-modal-close"]').click()
   await page.waitForTimeout(300)
@@ -333,16 +380,6 @@ async function captureSettingsModal(page: Page): Promise<void> {
   if (!(await isAvailable(settingsModal))) {
     console.log('  [skip] settings-modal not found')
     return
-  }
-
-  // Switch to Troubleshooting tab
-  const troubleshootingTab = page.locator('[data-testid="settings-tab-troubleshooting"]')
-  if (await isAvailable(troubleshootingTab)) {
-    await troubleshootingTab.click()
-    await page.waitForTimeout(300)
-    await captureNamed(page, 'settings-troubleshooting', { fullPage: true })
-  } else {
-    console.log('  [skip] troubleshooting tab not found')
   }
 
   // Switch to Tools tab to capture defaults section
@@ -624,6 +661,57 @@ async function captureModalEditors(page: Page): Promise<void> {
       await page.keyboard.press('Escape')
     }
     await page.waitForTimeout(300)
+  }
+}
+
+// --- Phase 6.5: JSON Editor Modals ---
+
+async function captureJsonEditors(page: Page): Promise<void> {
+  console.log('\n--- Phase 6.5: JSON Editor Modals ---')
+
+  // Dismiss any lingering modals/overlays
+  await dismissNotificationModal(page)
+  await page.evaluate(() => {
+    document.querySelectorAll('.fixed.inset-0').forEach((el) => el.remove())
+  })
+  await page.waitForTimeout(300)
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+
+  // Tap Dance JSON editor
+  const tdTab = editorContent.locator('button', { hasText: /^Tap-Hold \/ Tap Dance$/ })
+  if (await isAvailable(tdTab)) {
+    await tdTab.first().click()
+    await page.waitForTimeout(300)
+
+    const jsonBtn = page.locator('[data-testid="tap-dance-json-editor-btn"]')
+    if (await isAvailable(jsonBtn)) {
+      await jsonBtn.click()
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'json-editor-tap-dance', { fullPage: true })
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    } else {
+      console.log('  [skip] tap-dance-json-editor-btn not found')
+    }
+  }
+
+  // Macro JSON editor (shows unlock warning)
+  const macroTab = editorContent.locator('button', { hasText: /^Macro$/ })
+  if (await isAvailable(macroTab)) {
+    await macroTab.first().click()
+    await page.waitForTimeout(300)
+
+    const jsonBtn = page.locator('[data-testid="macro-json-editor-btn"]')
+    if (await isAvailable(jsonBtn)) {
+      await jsonBtn.click()
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'json-editor-macro', { fullPage: true })
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(300)
+    } else {
+      console.log('  [skip] macro-json-editor-btn not found')
+    }
   }
 }
 
@@ -974,6 +1062,7 @@ async function main(): Promise<void> {
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
     await captureSidebarTools(page)          // toolbar, split-edit, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
+    await captureJsonEditors(page)           // json-editor-tap-dance, json-editor-macro
     await captureEditorSettings(page)        // editor-settings-save
     await captureOverlayPanel(page)          // overlay-tools, overlay-save
     await captureStatusBar(page)             // status-bar
