@@ -106,7 +106,7 @@ export function JsonEditorModal<T>({
             {error}
           </p>
         )}
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex items-center">
           {exportFileName && (
             <button
               type="button"
@@ -117,23 +117,25 @@ export function JsonEditorModal<T>({
               {t('layoutStore.export')}
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
-            data-testid={`${testIdPrefix}-cancel`}
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={handleApply}
-            disabled={!!error || applying}
-            className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-            data-testid={`${testIdPrefix}-apply`}
-          >
-            {t('common.apply')}
-          </button>
+          <div className="ml-auto flex gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
+              data-testid={`${testIdPrefix}-cancel`}
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              type="button"
+              onClick={handleApply}
+              disabled={!!error || applying}
+              className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+              data-testid={`${testIdPrefix}-apply`}
+            >
+              {t('common.apply')}
+            </button>
+          </div>
         </div>
       </div>
     </div>
