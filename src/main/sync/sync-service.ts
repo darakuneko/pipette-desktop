@@ -174,6 +174,23 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
   }
 }
 
+/** Download and decrypt a remote sync unit bundle without merging into local. */
+export async function fetchRemoteBundle(syncUnit: string): Promise<SyncBundle | null> {
+  const result = await fetchValidatedDataFiles()
+  if (!result) return null
+  const { password, dataFiles } = result
+  const targetName = driveFileName(syncUnit)
+  const file = dataFiles.find((f) => f.name === targetName)
+  if (!file) return null
+  try {
+    const envelope = await downloadFile(file.id)
+    const plaintext = await decrypt(envelope, password)
+    return JSON.parse(plaintext) as SyncBundle
+  } catch {
+    return null
+  }
+}
+
 // --- Non-destructive password change ---
 
 export async function changePassword(newPassword: string): Promise<void> {

@@ -551,7 +551,7 @@
     "application": "アプリケーション",
     "settings": "設定",
     "saves": "セーブ",
-    "sync": "同期",
+    "sync": "Sync - ローカルにないデータ",
     "hub": "Hub",
     "noKeyboards": "保存済みキーボードなし",
     "noSettings": "設定が見つかりません",

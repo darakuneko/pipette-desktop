@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
-import { SyncDataResetSection } from '../settings-modal/SyncDataResetSection'
+import { SyncKeyboardContent } from './SyncKeyboardContent'
 import { BTN_SECONDARY as SETTINGS_BTN_SECONDARY } from '../settings-modal/settings-modal-shared'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from '../hub-post-shared'
 import { DataNavTree } from './DataNavTree'
@@ -62,11 +62,12 @@ export function DataModal({
 }: Props) {
   const { t } = useTranslation()
   const showHubTab = hubEnabled && hubAuthenticated
-  const nav = useDataNavTree({ showHubTab })
+  const syncEnabled = sync.authStatus.authenticated && sync.hasPassword
+  const nav = useDataNavTree({ showHubTab, syncEnabled })
 
   const troubleshoot = useTroubleshooting({
     sync,
-    active: nav.activePath?.section === 'local' || nav.activePath?.page === 'sync',
+    active: nav.activePath?.section === 'local',
     onResetStart,
     onResetEnd,
   })
@@ -141,16 +142,23 @@ export function DataModal({
       return <KeyboardSavesContent key={path.uid} uid={path.uid} name={path.name} hubOrigin={hubOrigin} />
     }
 
-    if (path.page === 'sync') {
+    if (path.page === 'sync-keyboard') {
       return (
-        <SyncDataResetSection
+        <SyncKeyboardContent
+          key={path.uid}
+          uid={path.uid}
+          name={path.name}
           sync={sync}
-          storedKeyboards={troubleshoot.storedKeyboards}
-          disabled={troubleshoot.syncDisabled}
-          onResetStart={onResetStart}
-          onResetEnd={onResetEnd}
-          excludeLocalData
+          onDeleted={() => { nav.setActivePath(null); void nav.handleSyncScan() }}
         />
+      )
+    }
+
+    if (path.page === 'sync-favorite') {
+      return (
+        <div className="py-4 text-center text-[13px] text-content-muted">
+          {t(`editor.${path.favoriteType}.title`)}
+        </div>
       )
     }
 
@@ -240,6 +248,8 @@ export function DataModal({
               isExpanded={nav.isExpanded}
               onToggle={nav.toggleExpand}
               showHubTab={showHubTab}
+              syncScanResult={nav.syncScanResult}
+              syncScanning={nav.syncScanning}
             />
           </div>
 

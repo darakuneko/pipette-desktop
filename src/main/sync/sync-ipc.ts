@@ -29,6 +29,7 @@ import {
   resetPasswordCheckCache,
   listUndecryptableFiles,
   scanRemoteData,
+  fetchRemoteBundle,
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
@@ -439,6 +440,11 @@ export function setupSyncIpc(): void {
   secureHandle(IpcChannels.SYNC_LIST_UNDECRYPTABLE, () => listUndecryptableFiles())
 
   secureHandle(IpcChannels.SYNC_SCAN_REMOTE, (): Promise<SyncDataScanResult> => scanRemoteData())
+
+  secureHandle(IpcChannels.SYNC_FETCH_REMOTE_BUNDLE, (_event, syncUnit: string) => {
+    if (typeof syncUnit !== 'string' || !syncUnit) return Promise.resolve(null)
+    return fetchRemoteBundle(syncUnit)
+  })
 
   secureHandle(IpcChannels.SYNC_DELETE_FILES, (_event, fileIds: string[]) =>
     wrapIpc('Delete files failed', async () => {

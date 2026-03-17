@@ -552,7 +552,7 @@
     "application": "Application",
     "settings": "Settings",
     "saves": "Saves",
-    "sync": "Sync",
+    "sync": "Sync - Not available locally",
     "hub": "Hub",
     "noKeyboards": "No stored keyboards",
     "noSettings": "No settings found",

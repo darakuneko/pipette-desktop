@@ -232,6 +232,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_LIST_UNDECRYPTABLE),
   syncScanRemote: (): Promise<SyncDataScanResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_SCAN_REMOTE),
+  syncFetchRemoteBundle: (syncUnit: string): Promise<unknown> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_FETCH_REMOTE_BUNDLE, syncUnit),
   syncDeleteFiles: (fileIds: string[]): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
   syncCheckPasswordExists: (): Promise<boolean> =>

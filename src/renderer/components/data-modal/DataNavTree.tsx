@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import type { DataNavPath } from './data-modal-types'
-import type { StoredKeyboardInfo } from '../../../shared/types/sync'
+import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 
 interface Props {
@@ -12,6 +12,8 @@ interface Props {
   isExpanded: (nodeId: string) => boolean
   onToggle: (nodeId: string) => void
   showHubTab: boolean
+  syncScanResult: SyncDataScanResult | null
+  syncScanning: boolean
 }
 
 const FAVORITE_TYPES: { type: FavoriteType; labelKey: string }[] = [
@@ -27,6 +29,8 @@ function isActivePath(a: DataNavPath | null, b: DataNavPath): boolean {
   if (a.section !== b.section || a.page !== b.page) return false
   if (a.page === 'keyboard' && b.page === 'keyboard') return a.uid === b.uid
   if (a.page === 'favorite' && b.page === 'favorite') return a.favoriteType === b.favoriteType
+  if (a.page === 'sync-keyboard' && b.page === 'sync-keyboard') return a.uid === b.uid
+  if (a.page === 'sync-favorite' && b.page === 'sync-favorite') return a.favoriteType === b.favoriteType
   return true
 }
 
@@ -96,7 +100,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab }: Props) {
+export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, syncScanResult, syncScanning }: Props) {
   const { t } = useTranslation()
 
   return (
@@ -169,31 +173,60 @@ export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpande
         />
       </Branch>
 
-      {/* ── Cloud ── */}
+      {/* ── Sync ── */}
       <Branch
-        label={t('dataModal.cloud')}
+        label={t('dataModal.sync')}
         depth={0}
-        open={isExpanded('cloud')}
-        onToggle={() => onToggle('cloud')}
-        testId="nav-cloud"
+        open={isExpanded('sync')}
+        onToggle={() => onToggle('sync')}
+        testId="nav-sync"
       >
-        <Leaf
-          label={t('dataModal.sync')}
-          depth={1}
-          active={isActivePath(activePath, { section: 'cloud', page: 'sync' })}
-          onClick={() => onNavigate({ section: 'cloud', page: 'sync' })}
-          testId="nav-cloud-sync"
-        />
-        {showHubTab && (
-          <Leaf
-            label={t('dataModal.hub')}
-            depth={1}
-            active={isActivePath(activePath, { section: 'cloud', page: 'hub' })}
-            onClick={() => onNavigate({ section: 'cloud', page: 'hub' })}
-            testId="nav-cloud-hub"
-          />
+        {syncScanning ? (
+          <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }}>
+            {t('sync.scanning')}
+          </div>
+        ) : !syncScanResult ? (
+          <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }}>
+            {t('sync.noRemoteData')}
+          </div>
+        ) : (
+          <>
+            {/* Sync Keyboards */}
+            {syncScanResult.keyboards.length > 0 && (
+              <Branch
+                label={t('dataModal.keyboards')}
+                depth={1}
+                open={isExpanded('sync-keyboards')}
+                onToggle={() => onToggle('sync-keyboards')}
+                testId="nav-sync-keyboards"
+              >
+                {syncScanResult.keyboards.map((uid) => (
+                  <Leaf
+                    key={uid}
+                    label={storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid}
+                    depth={2}
+                    active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name: '' })}
+                    onClick={() => onNavigate({ section: 'sync', page: 'sync-keyboard', uid, name: storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid })}
+                    testId={`nav-sync-kb-${uid}`}
+                  />
+                ))}
+              </Branch>
+            )}
+
+          </>
         )}
       </Branch>
+
+      {/* ── Hub ── */}
+      {showHubTab && (
+        <Leaf
+          label={t('dataModal.hub')}
+          depth={0}
+          active={isActivePath(activePath, { section: 'cloud', page: 'hub' })}
+          onClick={() => onNavigate({ section: 'cloud', page: 'hub' })}
+          testId="nav-cloud-hub"
+        />
+      )}
     </div>
   )
 }

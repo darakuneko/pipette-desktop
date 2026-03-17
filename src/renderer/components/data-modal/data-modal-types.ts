@@ -7,7 +7,8 @@ export type DataNavPath =
   | { section: 'local'; page: 'keyboard'; uid: string; name: string }
   | { section: 'local'; page: 'favorite'; favoriteType: FavoriteType }
   | { section: 'local'; page: 'application' }
-  | { section: 'cloud'; page: 'sync' }
+  | { section: 'sync'; page: 'sync-keyboard'; uid: string; name: string }
+  | { section: 'sync'; page: 'sync-favorite'; favoriteType: string }
   | { section: 'cloud'; page: 'hub' }
 
 /** Compute breadcrumb segments from a navigation path. */
@@ -22,10 +23,12 @@ export function breadcrumbSegments(
       return [t('dataModal.local'), t('dataModal.favorites'), t(`editor.${path.favoriteType}.title`)]
     case 'application':
       return [t('dataModal.local'), t('dataModal.application')]
-    case 'sync':
-      return [t('dataModal.cloud'), t('dataModal.sync')]
+    case 'sync-keyboard':
+      return [t('dataModal.sync'), t('dataModal.keyboards'), path.name]
+    case 'sync-favorite':
+      return [t('dataModal.sync'), t('dataModal.favorites'), t(`editor.${path.favoriteType}.title`)]
     case 'hub':
-      return [t('dataModal.cloud'), t('dataModal.hub')]
+      return [t('dataModal.hub')]
   }
 }
 
@@ -41,8 +44,10 @@ export function navTitle(
       return t(`editor.${path.favoriteType}.title`)
     case 'application':
       return t('dataModal.application')
-    case 'sync':
-      return t('dataModal.sync')
+    case 'sync-keyboard':
+      return path.name
+    case 'sync-favorite':
+      return t(`editor.${path.favoriteType}.title`)
     case 'hub':
       return t('dataModal.hub')
   }

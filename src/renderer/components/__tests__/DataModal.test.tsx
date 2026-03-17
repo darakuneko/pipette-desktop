@@ -100,38 +100,33 @@ describe('DataModal', () => {
   })
 
   describe('navigation', () => {
-    it('renders tree with Local and Cloud sections when hub is not enabled', () => {
+    it('renders tree with Local, Sync, and conditionally Hub', () => {
       render(<DataModal {...makeProps()} />)
 
       expect(screen.getByTestId('data-nav-tree')).toBeInTheDocument()
       expect(screen.getByTestId('nav-local')).toBeInTheDocument()
-      expect(screen.getByTestId('nav-cloud')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-sync')).toBeInTheDocument()
 
       // Expand Local to see children
       fireEvent.click(screen.getByTestId('nav-local'))
       expect(screen.getByTestId('nav-local-keyboards')).toBeInTheDocument()
       expect(screen.getByTestId('nav-local-application')).toBeInTheDocument()
 
-      // Hub node should not appear when not enabled
-      fireEvent.click(screen.getByTestId('nav-cloud'))
+      // Hub should not appear when not enabled
       expect(screen.queryByTestId('nav-cloud-hub')).not.toBeInTheDocument()
     })
 
     it('renders Hub node when hub is enabled and authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true, hubAuthenticated: true })} />)
 
-      // Expand Cloud to see Hub
-      fireEvent.click(screen.getByTestId('nav-cloud'))
       expect(screen.getByTestId('nav-cloud-hub')).toBeInTheDocument()
     })
 
     it('does not show Hub node when hub is enabled but not authenticated', () => {
       render(<DataModal {...makeProps({ hubEnabled: true })} />)
 
-      // Expand Cloud
-      fireEvent.click(screen.getByTestId('nav-cloud'))
       expect(screen.queryByTestId('nav-cloud-hub')).not.toBeInTheDocument()
-      expect(screen.getByTestId('nav-cloud-sync')).toBeInTheDocument()
+      expect(screen.getByTestId('nav-sync')).toBeInTheDocument()
     })
 
     it('shows favorite type nodes when Favorites branch is expanded', () => {
@@ -421,7 +416,6 @@ describe('DataModal', () => {
     const HUB_PROPS = { hubEnabled: true, hubAuthenticated: true } as const
 
     function navigateToHub() {
-      fireEvent.click(screen.getByTestId('nav-cloud'))
       fireEvent.click(screen.getByTestId('nav-cloud-hub'))
     }
 
@@ -700,17 +694,10 @@ describe('DataModal', () => {
     })
   })
 
-  describe('sync content', () => {
-    function renderAndSwitchToSync(overrides?: Partial<Parameters<typeof DataModal>[0]>) {
-      const result = render(<DataModal {...makeProps(overrides)} />)
-      fireEvent.click(screen.getByTestId('nav-cloud'))
-      fireEvent.click(screen.getByTestId('nav-cloud-sync'))
-      return result
-    }
-
-    it('renders sync content', () => {
-      renderAndSwitchToSync()
-      expect(screen.getByTestId('sync-data-scan')).toBeInTheDocument()
+  describe('sync tree', () => {
+    it('renders sync branch in sidebar', () => {
+      render(<DataModal {...makeProps()} />)
+      expect(screen.getByTestId('nav-sync')).toBeInTheDocument()
     })
   })
 })
