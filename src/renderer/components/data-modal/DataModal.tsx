@@ -4,7 +4,6 @@ import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
-import { SyncKeyboardContent } from './SyncKeyboardContent'
 import { BTN_SECONDARY as SETTINGS_BTN_SECONDARY } from '../settings-modal/settings-modal-shared'
 import { HubPostRow, HubRefreshButton, DEFAULT_PER_PAGE, BTN_SECONDARY } from '../hub-post-shared'
 import { DataNavTree } from './DataNavTree'
@@ -139,13 +138,14 @@ export function DataModal({
     }
 
     if (path.page === 'keyboard') {
-      return <KeyboardSavesContent key={path.uid} uid={path.uid} name={path.name} hubOrigin={hubOrigin} />
+      return <KeyboardSavesContent key={path.uid} source="local" uid={path.uid} name={path.name} hubOrigin={hubOrigin} />
     }
 
     if (path.page === 'sync-keyboard') {
       return (
-        <SyncKeyboardContent
-          key={path.uid}
+        <KeyboardSavesContent
+          key={`sync-${path.uid}`}
+          source="sync"
           uid={path.uid}
           name={path.name}
           sync={sync}
