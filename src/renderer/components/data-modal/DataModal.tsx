@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
@@ -78,11 +78,38 @@ export function DataModal({
     }
   }, [showHubTab, nav.activePath?.page, nav.setActivePath])
 
-  // Extract unique keyboard names from hub posts
+  // Load local hubPostIds to filter hub posts not available locally
+  const [localHubPostIds, setLocalHubPostIds] = useState<Set<string>>(new Set())
+  const hubPostIdsLoadedRef = useRef(false)
+  useEffect(() => {
+    if (hubPostIdsLoadedRef.current || nav.storedKeyboards.length === 0) return
+    hubPostIdsLoadedRef.current = true
+    async function load() {
+      const results = await Promise.allSettled(
+        nav.storedKeyboards.map((kb) => window.vialAPI.snapshotStoreList(kb.uid)),
+      )
+      const ids = new Set<string>()
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value.success && r.value.entries) {
+          for (const entry of r.value.entries) {
+            if (entry.hubPostId) ids.add(entry.hubPostId)
+          }
+        }
+      }
+      setLocalHubPostIds(ids)
+    }
+    void load()
+  }, [nav.storedKeyboards])
+
+  // Filter hub posts: exclude posts that exist locally (matched by hubPostId)
+  const hubPostsFiltered = useMemo(() =>
+    hubPosts.filter((p) => !localHubPostIds.has(p.id)),
+  [hubPosts, localHubPostIds])
+
   const hubKeyboardNames = useMemo(() => {
-    const names = new Set(hubPosts.map((p) => p.keyboard_name))
+    const names = new Set(hubPostsFiltered.map((p) => p.keyboard_name))
     return [...names].sort()
-  }, [hubPosts])
+  }, [hubPostsFiltered])
 
   // Hub pagination
   const [hubPage, setHubPage] = useState(1)
@@ -169,7 +196,7 @@ export function DataModal({
     }
 
     if (path.page === 'hub-keyboard') {
-      const filtered = hubPosts.filter((p) => p.keyboard_name === path.keyboardName)
+      const filtered = hubPostsFiltered.filter((p) => p.keyboard_name === path.keyboardName)
       return renderHubContent(filtered)
     }
 
