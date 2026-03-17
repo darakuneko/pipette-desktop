@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { QmkSettingsTab, QmkSettingsField } from '../../../shared/types/protocol'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { ConfirmButton } from './ConfirmButton'
 import settingsDefs from '../../../shared/qmk-settings-defs.json'
 
 interface Props {
@@ -155,6 +157,9 @@ export function QmkSettings({
     setEditedValues(new Map(vals))
   }, [qmkSettingsReset, qmkSettingsGet, allQsids, supportedQsids, tabs, onSettingsUpdate])
 
+  const resetAction = useConfirmAction(handleReset)
+  const revertAction = useConfirmAction(handleUndo)
+
   if (loading) {
     return <div className="p-4 text-content-muted">{t('common.loading')}</div>
   }
@@ -198,32 +203,29 @@ export function QmkSettings({
           ))}
       </div>
 
-      <div className="flex gap-2 pt-2">
+      <div className="flex justify-end gap-2 pt-2">
+        <ConfirmButton
+          testId="qmk-reset"
+          confirming={resetAction.confirming}
+          onClick={() => { revertAction.reset(); resetAction.trigger() }}
+          labelKey="common.reset"
+          confirmLabelKey="common.confirmReset"
+        />
+        <ConfirmButton
+          testId="qmk-revert"
+          confirming={revertAction.confirming}
+          onClick={() => { resetAction.reset(); revertAction.trigger() }}
+          labelKey="common.revert"
+          confirmLabelKey="common.confirmRevert"
+        />
         <button
           type="button"
           data-testid="qmk-save"
-          className="rounded bg-accent px-4 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
           onClick={handleSave}
           disabled={!hasChanges}
         >
           {t('common.save')}
-        </button>
-        <button
-          type="button"
-          data-testid="qmk-undo"
-          className="rounded border border-edge px-4 py-1.5 text-sm hover:bg-surface-dim disabled:opacity-50"
-          onClick={handleUndo}
-          disabled={!hasChanges}
-        >
-          {t('common.undo')}
-        </button>
-        <button
-          type="button"
-          data-testid="qmk-reset"
-          className="rounded border border-danger/30 px-4 py-1.5 text-sm text-danger hover:bg-danger/10"
-          onClick={handleReset}
-        >
-          {t('common.reset')}
         </button>
       </div>
     </div>

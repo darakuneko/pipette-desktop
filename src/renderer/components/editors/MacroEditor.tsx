@@ -371,7 +371,6 @@ export function MacroEditor({
                 onClick={() => { revertAction.reset(); clearAction.trigger() }}
                 labelKey="common.clear"
                 confirmLabelKey="common.confirmClear"
-                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
               />
               <ConfirmButton
                 testId="macro-revert"
@@ -379,12 +378,11 @@ export function MacroEditor({
                 onClick={() => { clearAction.reset(); revertAction.trigger() }}
                 labelKey="common.revert"
                 confirmLabelKey="common.confirmRevert"
-                className="rounded-lg border px-4 py-2 text-[13px] font-semibold"
               />
               <button
                 type="button"
                 data-testid="macro-save"
-                className="rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
                 onClick={handleSave}
                 disabled={!dirty || hasInvalidText}
               >

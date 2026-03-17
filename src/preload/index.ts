@@ -141,6 +141,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_PDF, base64Data, deviceName),
   exportCsv: (content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FILE_EXPORT_CSV, content, defaultName),
+  exportJson: (content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FILE_EXPORT_JSON, content, defaultName),
   sideloadJson: (title?: string): Promise<{ success: boolean; data?: unknown; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SIDELOAD_JSON, title),
 

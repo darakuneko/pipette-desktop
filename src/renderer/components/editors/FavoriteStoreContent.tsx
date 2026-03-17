@@ -168,7 +168,7 @@ export function FavoriteStoreContent({
             <button
               type="submit"
               disabled={!canSubmitSave}
-              className="shrink-0 rounded-lg bg-accent px-4 py-2 text-[13px] font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+              className="shrink-0 rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
               data-testid="favorite-store-save-submit"
             >
               {t('common.save')}
@@ -343,7 +343,7 @@ export function FavoriteStoreContent({
             <button
               type="button"
               disabled={importing || exporting}
-              className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim disabled:opacity-50"
               onClick={onImport}
               data-testid="favorite-store-import-btn"
             >
@@ -352,7 +352,7 @@ export function FavoriteStoreContent({
             <button
               type="button"
               disabled={exporting || importing}
-              className="rounded-lg border border-edge bg-surface px-4 py-2 text-[13px] font-semibold text-content hover:bg-surface-alt disabled:opacity-50"
+              className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim disabled:opacity-50"
               onClick={onExport}
               data-testid="favorite-store-export-btn"
             >

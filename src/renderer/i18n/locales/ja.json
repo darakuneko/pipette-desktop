@@ -132,7 +132,8 @@
       "addKeycode": "キーコード追加",
       "asciiOnly": "ASCII文字（英数字・記号）のみ対応しています",
       "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください。",
-      "unlockWarning": "パスワードや機密情報をマクロに保存しないでください。再生・共有される可能性があります。"
+      "unlockWarning": "パスワードや機密情報をマクロに保存しないでください。再生・共有される可能性があります。",
+      "invalidMacroEntry": "インデックス{{index}}のマクロが無効です"
     },
     "lighting": {
       "title": "Lighting",
@@ -162,7 +163,13 @@
       "onTapHold": "On Tap Hold",
       "tappingTerm": "Tapping Term (ms)",
       "hint": "キーマップでこのアクションを設定するには TD({{index}}) を使用してください",
-      "editTitle": "TD({{index}})"
+      "editTitle": "TD({{index}})",
+      "editJson": "Edit JSON",
+      "jsonEditorTitle": "Edit JSON",
+      "invalidJson": "無効なJSON形式",
+      "unknownKeycode": "不明なキーコード: {{keycode}}",
+      "invalidTappingTerm": "Tapping termは0〜10000の数値で指定してください",
+      "applyFailed": "変更の適用に失敗しました"
     },
     "combo": {
       "title": "Combo",
@@ -171,7 +178,10 @@
       "editTitle": "Combo - {{index}}",
       "timeout": "Timeout (ms)",
       "selectEntry": "エントリを選択してください",
-      "settings": "Combo Settings"
+      "settings": "Combo Settings",
+      "invalidJson": "無効なJSON形式",
+      "unknownKeycode": "不明なキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリが無効です"
     },
     "keyOverride": {
       "title": "Key Override",
@@ -188,7 +198,10 @@
       "editTitle": "Key Override - {{index}}",
       "modsOnly": "Mods",
       "settings": "Key Override Settings",
-      "selectEntry": "編集するエントリを選択"
+      "selectEntry": "編集するエントリを選択",
+      "invalidJson": "無効なJSON形式",
+      "unknownKeycode": "不明なキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリが無効です"
     },
     "altRepeatKey": {
       "title": "Alt Repeat Key",
@@ -199,7 +212,10 @@
       "enabled": "Enabled",
       "editTitle": "Alt Repeat Key - {{index}}",
       "settings": "Alt Repeat Key Settings",
-      "selectEntry": "編集するエントリを選択"
+      "selectEntry": "編集するエントリを選択",
+      "invalidJson": "無効なJSON形式",
+      "unknownKeycode": "不明なキーコード: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリが無効です"
     },
     "keyTester": {
       "title": "キーテスター"
