@@ -3,6 +3,8 @@
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HSVColorPicker, hsvToRgb, rgbToHsv, rgbToHex, hexToRgb } from './HSVColorPicker'
+import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { ConfirmButton } from './ConfirmButton'
 import { QMK_RGBLIGHT_EFFECTS, VIALRGB_EFFECTS } from '../../../shared/constants/lighting'
 
 interface Props {
@@ -212,6 +214,8 @@ export function RGBConfigurator({
   const isDirty = (Object.keys(savedRef.current) as (keyof LightingSnapshot)[]).some(
     (k) => currentValues[k] !== savedRef.current[k],
   )
+
+  const revertAction = useConfirmAction(restoreSavedValues)
 
   async function restoreSavedValues(): Promise<void> {
     const s = savedRef.current
@@ -464,7 +468,16 @@ export function RGBConfigurator({
         </p>
       )}
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
+        {isDirty && (
+          <ConfirmButton
+            testId="lighting-revert"
+            confirming={revertAction.confirming}
+            onClick={() => revertAction.trigger()}
+            labelKey="common.revert"
+            confirmLabelKey="common.confirmRevert"
+          />
+        )}
         <button
           type="button"
           data-testid="lighting-save"
@@ -480,17 +493,6 @@ export function RGBConfigurator({
         >
           {t('common.save')}
         </button>
-
-        {isDirty && (
-          <button
-            type="button"
-            data-testid="lighting-undo"
-            onClick={restoreSavedValues}
-            className="rounded border border-edge px-4 py-2 text-sm hover:bg-surface-dim"
-          >
-            {t('common.undo')}
-          </button>
-        )}
       </div>
     </div>
   )
