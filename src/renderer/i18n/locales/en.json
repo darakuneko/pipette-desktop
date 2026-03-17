@@ -567,6 +567,7 @@
     "importExportDesc": "Import/Export all local data (keyboards, favorites, settings)",
     "deleteAll": "Delete All Data",
     "deleteAllConfirm": "This will delete all data including synced data.",
+    "syncNoOrphans": "All synced data is available locally",
     "resetAppSettings": "Reset application settings"
   },
   "editorSettings": {

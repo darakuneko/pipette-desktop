@@ -189,31 +189,33 @@ export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpande
           <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }}>
             {t('sync.noRemoteData')}
           </div>
+        ) : syncScanResult.keyboards.length === 0 ? (
+          <div
+            className="text-[11px] text-content-muted py-1"
+            style={{ paddingLeft: '36px' }}
+            data-testid="nav-sync-empty"
+          >
+            {t('dataModal.syncNoOrphans')}
+          </div>
         ) : (
-          <>
-            {/* Sync Keyboards */}
-            {syncScanResult.keyboards.length > 0 && (
-              <Branch
-                label={t('dataModal.keyboards')}
-                depth={1}
-                open={isExpanded('sync-keyboards')}
-                onToggle={() => onToggle('sync-keyboards')}
-                testId="nav-sync-keyboards"
-              >
-                {syncScanResult.keyboards.map((uid) => (
-                  <Leaf
-                    key={uid}
-                    label={storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid}
-                    depth={2}
-                    active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name: '' })}
-                    onClick={() => onNavigate({ section: 'sync', page: 'sync-keyboard', uid, name: storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid })}
-                    testId={`nav-sync-kb-${uid}`}
-                  />
-                ))}
-              </Branch>
-            )}
-
-          </>
+          <Branch
+            label={t('dataModal.keyboards')}
+            depth={1}
+            open={isExpanded('sync-keyboards')}
+            onToggle={() => onToggle('sync-keyboards')}
+            testId="nav-sync-keyboards"
+          >
+            {syncScanResult.keyboards.map((uid) => (
+              <Leaf
+                key={uid}
+                label={storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid}
+                depth={2}
+                active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name: '' })}
+                onClick={() => onNavigate({ section: 'sync', page: 'sync-keyboard', uid, name: storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid })}
+                testId={`nav-sync-kb-${uid}`}
+              />
+            ))}
+          </Branch>
         )}
       </Branch>
 
