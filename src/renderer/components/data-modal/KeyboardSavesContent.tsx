@@ -55,6 +55,20 @@ export function KeyboardSavesContent({ uid, name, hubOrigin }: Props) {
     setEntries([])
   }, [uid])
 
+  const handleUploadToHub = useCallback(async (entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId)
+    if (!entry) return
+    await actions.handleUploadToHub(entryId, entry.label)
+    void loadEntries()
+  }, [entries, actions, loadEntries])
+
+  const handleUpdateOnHub = useCallback(async (entryId: string) => {
+    const entry = entries.find((e) => e.id === entryId)
+    if (!entry?.hubPostId) return
+    await actions.handleUpdateOnHub(entryId, entry.hubPostId, entry.label)
+    void loadEntries()
+  }, [entries, actions, loadEntries])
+
   const handleRemoveFromHub = useCallback(async (entryId: string) => {
     const entry = entries.find((e) => e.id === entryId)
     if (!entry?.hubPostId) return
@@ -98,6 +112,8 @@ export function KeyboardSavesContent({ uid, name, hubOrigin }: Props) {
                 hubOrigin={hubOrigin}
                 confirmHubRemoveId={confirmHubRemoveId}
                 setConfirmHubRemoveId={setConfirmHubRemoveId}
+                onUploadToHub={isV2 ? (id) => void handleUploadToHub(id) : undefined}
+                onUpdateOnHub={isV2 ? (id) => void handleUpdateOnHub(id) : undefined}
                 onRemoveFromHub={isV2 ? (id) => void handleRemoveFromHub(id) : undefined}
               />
             )
