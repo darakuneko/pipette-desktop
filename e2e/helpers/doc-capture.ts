@@ -155,11 +155,74 @@ async function connectDevice(page: Page): Promise<boolean> {
   return true
 }
 
+// --- Dummy snapshot data for File tab ---
+
+const DUMMY_SNAPSHOTS = [
+  {
+    uid: 'doc-dummy-uid-1',
+    name: 'Corne',
+    entries: [
+      { id: 'doc-snap-1', label: 'Default', filename: 'Corne_2026-03-10T12-00-00.pipette', savedAt: '2026-03-10T12:00:00.000Z', updatedAt: '2026-03-15T09:30:00.000Z', vilVersion: 2 },
+      { id: 'doc-snap-2', label: 'Gaming', filename: 'Corne_2026-03-12T14-30-00.pipette', savedAt: '2026-03-12T14:30:00.000Z', vilVersion: 2 },
+    ],
+  },
+  {
+    uid: 'doc-dummy-uid-2',
+    name: 'Sofle',
+    entries: [
+      { id: 'doc-snap-3', label: 'Work', filename: 'Sofle_2026-03-08T09-00-00.pipette', savedAt: '2026-03-08T09:00:00.000Z', vilVersion: 2 },
+    ],
+  },
+]
+
+function seedDummySnapshots(snapshotBase: string): Map<string, string | null> {
+  const backups = new Map<string, string | null>()
+  for (const kb of DUMMY_SNAPSHOTS) {
+    const dir = join(snapshotBase, kb.uid, 'snapshots')
+    mkdirSync(dir, { recursive: true })
+    const indexPath = join(dir, 'index.json')
+    backups.set(indexPath, existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null)
+    writeFileSync(indexPath, JSON.stringify({ uid: kb.uid, entries: kb.entries }, null, 2), 'utf-8')
+  }
+  return backups
+}
+
+function restoreSnapshots(backups: Map<string, string | null>): void {
+  for (const [path, original] of backups) {
+    if (original != null) {
+      writeFileSync(path, original, 'utf-8')
+    } else {
+      try { unlinkSync(path) } catch { /* ignore */ }
+    }
+  }
+}
+
 // --- Phase 1: Device Selection ---
 
 async function captureDeviceSelection(page: Page): Promise<void> {
   console.log('\n--- Phase 1: Device Selection ---')
   await capture(page, 'device-selection', { fullPage: true })
+
+  // File tab
+  const fileTab = page.locator('[data-testid="tab-file"]')
+  if (await isAvailable(fileTab)) {
+    await fileTab.click()
+    // Wait for keyboard list to load (async IPC fetch)
+    const kbList = page.locator('[data-testid="pipette-keyboard-list"]')
+    try {
+      await kbList.waitFor({ state: 'visible', timeout: 5000 })
+    } catch {
+      console.log('  [warn] File tab keyboard list did not appear')
+    }
+    await page.waitForTimeout(500)
+    await captureNamed(page, 'file-tab', { fullPage: true })
+    // Switch back to keyboard tab
+    const kbTab = page.locator('[data-testid="tab-keyboard"]')
+    if (await isAvailable(kbTab)) {
+      await kbTab.click()
+      await page.waitForTimeout(300)
+    }
+  }
 }
 
 // --- Phase 1.5: Data Modal (from device selector) ---
@@ -443,8 +506,8 @@ async function captureSidebarTools(page: Page): Promise<void> {
 // --- Phase 6: Modal Editors ---
 
 // Tile-based editor captures (Combo, Key Override, Alt Repeat Key)
-// Overview: inline tile grid on the dedicated tab (no modal)
-// Detail: modal that opens when clicking a tile
+// Tab view: inline tile grid on the dedicated tab (no modal)
+// Detail: clicking a tile opens the detail editor modal directly (no back button or internal tile grid)
 interface TileEditorCapture {
   name: string
   keycodeTab: string
@@ -522,8 +585,8 @@ async function captureModalEditors(page: Page): Promise<void> {
   }
 
   // Tile-based editors: Combo, Key Override, Alt Repeat Key
-  // Overview = inline tile grid on the dedicated tab (no modal)
-  // Detail = modal that opens when clicking a tile
+  // Tab view = inline tile grid on the dedicated tab
+  // Detail = clicking a tile opens the detail editor modal directly
   const editorContent = page.locator('[data-testid="editor-content"]')
   for (const editor of TILE_EDITOR_CAPTURES) {
     const tabBtn = editorContent.locator('button', { hasText: new RegExp(`^${escapeRegex(editor.keycodeTab)}$`) })
@@ -534,7 +597,7 @@ async function captureModalEditors(page: Page): Promise<void> {
     await tabBtn.first().click()
     await page.waitForTimeout(300)
 
-    // Capture the tab view (inline tile grid overview — no modal)
+    // Capture the tab view (inline tile grid)
     await captureNamed(page, `${editor.name}-modal`, { fullPage: true })
 
     // Click tile to open detail editor modal
@@ -883,8 +946,11 @@ async function main(): Promise<void> {
   const favBase = join(userDataPath, 'sync', 'favorites')
   console.log(`userData: ${userDataPath}`)
 
-  // Seed dummy favorites into the correct directory and reload renderer to pick them up
+  // Seed dummy data into the correct directories
   const favBackups = seedDummyFavorites(favBase)
+  const kbBase = join(userDataPath, 'sync', 'keyboards')
+  const snapBackups = seedDummySnapshots(kbBase)
+  console.log(`Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards`)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -921,6 +987,7 @@ async function main(): Promise<void> {
   } finally {
     await app.close()
     restoreFavorites(favBackups, favBase)
+    restoreSnapshots(snapBackups)
   }
 }
 
