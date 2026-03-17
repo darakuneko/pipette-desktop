@@ -133,7 +133,8 @@
       "addKeycode": "Add keycode",
       "asciiOnly": "Only ASCII characters (A-Z, 0-9, symbols) are supported",
       "unlockClickAgain": "After unlocking, click the macro key again to open the editor.",
-      "unlockWarning": "Do not store passwords or sensitive information in macros, as they may be replayed or shared."
+      "unlockWarning": "Do not store passwords or sensitive information in macros, as they may be replayed or shared.",
+      "invalidMacroEntry": "Invalid macro at index {{index}}"
     },
     "lighting": {
       "title": "Lighting",
@@ -178,7 +179,10 @@
       "editTitle": "Combo - {{index}}",
       "timeout": "Timeout (ms)",
       "selectEntry": "Select an entry to edit",
-      "settings": "Combo Settings"
+      "settings": "Combo Settings",
+      "invalidJson": "Invalid JSON format",
+      "unknownKeycode": "Unknown keycode: {{keycode}}",
+      "invalidEntry": "Invalid entry at index {{index}}"
     },
     "keyOverride": {
       "title": "Key Override",
@@ -195,7 +199,10 @@
       "editTitle": "Key Override - {{index}}",
       "modsOnly": "Mods",
       "settings": "Key Override Settings",
-      "selectEntry": "Select an entry to edit"
+      "selectEntry": "Select an entry to edit",
+      "invalidJson": "Invalid JSON format",
+      "unknownKeycode": "Unknown keycode: {{keycode}}",
+      "invalidEntry": "Invalid entry at index {{index}}"
     },
     "altRepeatKey": {
       "title": "Alt Repeat Key",
@@ -206,7 +213,10 @@
       "enabled": "Enabled",
       "editTitle": "Alt Repeat Key - {{index}}",
       "settings": "Alt Repeat Key Settings",
-      "selectEntry": "Select an entry to edit"
+      "selectEntry": "Select an entry to edit",
+      "invalidJson": "Invalid JSON format",
+      "unknownKeycode": "Unknown keycode: {{keycode}}",
+      "invalidEntry": "Invalid entry at index {{index}}"
     },
     "keyTester": {
       "title": "Key Tester"

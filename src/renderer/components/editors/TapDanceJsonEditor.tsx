@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { serialize, deserialize } from '../../../shared/keycodes/keycodes'
-import { ModalCloseButton } from './ModalCloseButton'
+import { JsonEditorModal } from './JsonEditorModal'
 
 type TapDanceArray = [string, string, string, string, number]
 
@@ -24,35 +24,42 @@ function isValidKeycode(kc: string): boolean {
   return serialize(code) === kc || code !== 0 || kc === 'KC_NO'
 }
 
-interface ParseResult {
-  entries: TapDanceEntry[]
-  error: null
-}
-interface ParseError {
-  entries: null
-  error: string
-}
-
-function parseJson(json: string, expectedLength: number): ParseResult | ParseError {
+function parseJson(
+  json: string,
+  expectedLength: number,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): { error: string | null; value?: TapDanceEntry[] } {
   let parsed: unknown
   try {
     parsed = JSON.parse(json)
   } catch {
-    return { entries: null, error: 'invalidJson' }
+    return { error: t('editor.tapDance.invalidJson') }
   }
-  if (!Array.isArray(parsed) || parsed.length !== expectedLength) return { entries: null, error: 'invalidJson' }
+  if (!Array.isArray(parsed) || parsed.length !== expectedLength) {
+    return { error: t('editor.tapDance.invalidJson') }
+  }
   const entries: TapDanceEntry[] = []
   for (let idx = 0; idx < parsed.length; idx++) {
     const item = parsed[idx]
-    if (!Array.isArray(item) || item.length !== 5) return { entries: null, error: 'invalidJson' }
-    const [onTap, onHold, onDoubleTap, onTapHold, tappingTerm] = item as [unknown, unknown, unknown, unknown, unknown]
+    if (!Array.isArray(item) || item.length !== 5) {
+      return { error: t('editor.tapDance.invalidJson') }
+    }
+    const [onTap, onHold, onDoubleTap, onTapHold, tappingTerm] = item as [
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+      unknown,
+    ]
     if (typeof tappingTerm !== 'number' || tappingTerm < 0 || tappingTerm > 10000) {
-      return { entries: null, error: 'invalidTappingTerm' }
+      return { error: t('editor.tapDance.invalidTappingTerm') }
     }
     const keycodes = [onTap, onHold, onDoubleTap, onTapHold]
     for (const kc of keycodes) {
-      if (typeof kc !== 'string') return { entries: null, error: 'invalidJson' }
-      if (!isValidKeycode(kc)) return { entries: null, error: `unknownKeycode:${kc}` }
+      if (typeof kc !== 'string') return { error: t('editor.tapDance.invalidJson') }
+      if (!isValidKeycode(kc)) {
+        return { error: t('editor.tapDance.unknownKeycode', { keycode: kc }) }
+      }
     }
     entries.push({
       onTap: deserialize(onTap as string),
@@ -62,7 +69,7 @@ function parseJson(json: string, expectedLength: number): ParseResult | ParseErr
       tappingTerm: tappingTerm as number,
     })
   }
-  return { entries, error: null }
+  return { error: null, value: entries }
 }
 
 interface Props {
@@ -74,104 +81,20 @@ interface Props {
 export function TapDanceJsonEditor({ entries, onApply, onClose }: Props) {
   const { t } = useTranslation()
   const initialJson = useMemo(() => entriesToJson(entries), [entries])
-  const [text, setText] = useState(initialJson)
-  const [error, setError] = useState<string | null>(null)
-  const [applying, setApplying] = useState(false)
 
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', handler, true)
-    return () => window.removeEventListener('keydown', handler, true)
-  }, [onClose])
-
-  const formatError = useCallback((errorKey: string): string => {
-    if (errorKey.startsWith('unknownKeycode:')) {
-      return t('editor.tapDance.unknownKeycode', { keycode: errorKey.split(':')[1] })
-    }
-    return t(`editor.tapDance.${errorKey}`)
-  }, [t])
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const value = e.target.value
-      setText(value)
-      const result = parseJson(value, entries.length)
-      setError(result.error ? formatError(result.error) : null)
-    },
-    [entries.length, formatError],
+  const parse = useCallback(
+    (text: string) => parseJson(text, entries.length, t),
+    [entries.length, t],
   )
 
-  const handleApply = useCallback(async () => {
-    const result = parseJson(text, entries.length)
-    if (result.error) {
-      setError(formatError(result.error))
-      return
-    }
-    setApplying(true)
-    setError(null)
-    try {
-      await onApply(result.entries)
-      onClose()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t('editor.tapDance.applyFailed'))
-    } finally {
-      setApplying(false)
-    }
-  }, [text, entries.length, onApply, onClose, t])
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      data-testid="tap-dance-json-editor"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        className="w-[600px] max-w-[90vw] max-h-[80vh] overflow-y-auto rounded-lg bg-surface-alt p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{t('editor.tapDance.jsonEditorTitle')}</h3>
-          <ModalCloseButton testid="tap-dance-json-editor-close" onClick={onClose} />
-        </div>
-        <textarea
-          value={text}
-          onChange={handleChange}
-          rows={20}
-          className="w-full rounded border border-edge bg-surface-dim p-2 font-mono text-xs leading-relaxed"
-          data-testid="tap-dance-json-editor-textarea"
-        />
-        {error && (
-          <p className="mt-1 text-xs text-danger" data-testid="tap-dance-json-editor-error">
-            {error}
-          </p>
-        )}
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded border border-edge px-3 py-1.5 text-sm hover:bg-surface-dim"
-            data-testid="tap-dance-json-editor-cancel"
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            onClick={handleApply}
-            disabled={!!error || applying}
-            className="rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-            data-testid="tap-dance-json-editor-apply"
-          >
-            {t('common.apply')}
-          </button>
-        </div>
-      </div>
-    </div>
+    <JsonEditorModal<TapDanceEntry[]>
+      title={t('editor.tapDance.jsonEditorTitle')}
+      initialText={initialJson}
+      parse={parse}
+      onApply={onApply}
+      onClose={onClose}
+      testIdPrefix="tap-dance-json-editor"
+    />
   )
 }
