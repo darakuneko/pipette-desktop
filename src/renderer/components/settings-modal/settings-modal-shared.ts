@@ -42,7 +42,6 @@ export const TABS = [
   { id: 'tools' as const, labelKey: 'settings.tabTools' },
   { id: 'data' as const, labelKey: 'settings.tabData' },
   { id: 'notification' as const, labelKey: 'settings.tabNotification' },
-  { id: 'troubleshooting' as const, labelKey: 'settings.tabTroubleshooting' },
   { id: 'about' as const, labelKey: 'settings.tabAbout' },
 ]
 
@@ -65,8 +64,6 @@ export interface SettingsModalProps {
   onDefaultQuickSelectChange: (enabled: boolean) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
-  onResetStart?: () => void
-  onResetEnd?: () => void
   onClose: () => void
   hubEnabled: boolean
   onHubEnabledChange: (enabled: boolean) => void

@@ -63,8 +63,8 @@ export type { FormatButtonsProps }
 
 interface LayoutStoreEntryProps {
   entry: SnapshotMeta
-  entryHubPostId: string | undefined
-  rename: {
+  entryHubPostId?: string | undefined
+  rename?: {
     editingId: string | null
     editLabel: string
     confirmedId: string | null
@@ -74,9 +74,9 @@ interface LayoutStoreEntryProps {
   }
   confirmDeleteId: string | null
   setConfirmDeleteId: (id: string | null) => void
-  onCommitRename: (entryId: string) => void
-  onHandleRenameKeyDown: (e: React.KeyboardEvent, entryId: string) => void
-  onLoad: (entryId: string) => void
+  onCommitRename?: (entryId: string) => void
+  onHandleRenameKeyDown?: (e: React.KeyboardEvent, entryId: string) => void
+  onLoad?: (entryId: string) => void
   onDelete: (entryId: string) => void
   hasEntryExport: boolean
   hasHubActions: boolean
@@ -133,19 +133,19 @@ export function LayoutStoreEntry({
 
   return (
     <div
-      className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename.confirmedId === entry.id ? 'confirm-flash' : ''}`}
+      className={`rounded-lg border border-edge bg-surface/20 p-3 hover:border-content-muted/30 ${rename?.confirmedId === entry.id ? 'confirm-flash' : ''}`}
       data-testid="layout-store-entry"
     >
       {/* Top row: label + action buttons */}
       <div className="flex items-center justify-between mb-1">
         <div className="min-w-0 flex-1">
-          {rename.editingId === entry.id ? (
+          {rename && rename.editingId === entry.id ? (
             <input
               type="text"
               value={rename.editLabel}
               onChange={(e) => rename.setEditLabel(e.target.value)}
-              onBlur={() => onCommitRename(entry.id)}
-              onKeyDown={(e) => onHandleRenameKeyDown(e, entry.id)}
+              onBlur={() => onCommitRename?.(entry.id)}
+              onKeyDown={(e) => onHandleRenameKeyDown?.(e, entry.id)}
               maxLength={200}
               className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
               data-testid="layout-store-rename-input"
@@ -153,9 +153,9 @@ export function LayoutStoreEntry({
             />
           ) : (
             <div
-              className="truncate text-sm font-semibold text-content cursor-pointer"
+              className={`truncate text-sm font-semibold text-content ${rename ? 'cursor-pointer' : ''}`}
               data-testid="layout-store-entry-label"
-              onClick={() => rename.startRename(entry.id, entry.label)}
+              onClick={rename ? () => rename.startRename(entry.id, entry.label) : undefined}
             >
               {entry.label || t('layoutStore.noLabel')}
             </div>
@@ -184,14 +184,16 @@ export function LayoutStoreEntry({
             </>
           ) : (
             <>
-              <button
-                type="button"
-                className={ACTION_BTN}
-                onClick={() => onLoad(entry.id)}
-                data-testid="layout-store-load-btn"
-              >
-                {t('layoutStore.load')}
-              </button>
+              {onLoad && (
+                <button
+                  type="button"
+                  className={ACTION_BTN}
+                  onClick={() => onLoad(entry.id)}
+                  data-testid="layout-store-load-btn"
+                >
+                  {t('layoutStore.load')}
+                </button>
+              )}
               <button
                 type="button"
                 className={DELETE_BTN}

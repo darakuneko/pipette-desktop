@@ -67,6 +67,7 @@ export const IpcChannels = {
   SYNC_PENDING_STATUS: 'sync:pending-status',
   SYNC_LIST_UNDECRYPTABLE: 'sync:list-undecryptable',
   SYNC_SCAN_REMOTE: 'sync:scan-remote',
+  SYNC_FETCH_REMOTE_BUNDLE: 'sync:fetch-remote-bundle',
   SYNC_DELETE_FILES: 'sync:delete-files',
   SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
 
