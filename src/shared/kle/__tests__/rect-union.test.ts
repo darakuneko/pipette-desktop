@@ -64,6 +64,48 @@ describe('computeUnionPolygon', () => {
     expect(verts).toHaveLength(4)
   })
 
+  it('returns 6 vertices for BAE key with y2 offset (issue #60)', () => {
+    // BAE: primary w=1.5 h=2, secondary w2=2.25 h2=1 x2=-0.75 y2=1
+    // Simulates the exact pixel coordinates that trigger FP precision bug:
+    // r1b = 54*2 - spacing  vs  r2b = 54 + (54 - spacing)
+    // These differ by ~1e-14 in IEEE 754.
+    const KEY_UNIT = 54
+    const KEY_SPACING = KEY_UNIT * 0.2 / (3.2 + 0.2)
+    const s = KEY_UNIT
+    const gx = 0
+    const gy = 0
+    const gw = s * 1.5 - KEY_SPACING
+    const gh = s * 2 - KEY_SPACING
+    const gx2 = gx + s * (-0.75)
+    const gy2 = gy + s * 1
+    const gw2 = s * 2.25 - KEY_SPACING
+    const gh2 = s * 1 - KEY_SPACING
+
+    const verts = computeUnionPolygon(gx, gy, gw, gh, gx2, gy2, gw2, gh2)
+    // Must be 6-vertex L-shape, NOT 5-vertex (diagonal)
+    expect(verts).toHaveLength(6)
+    // Bottom-right corner must exist (was missing before fix)
+    const bottomRight = verts.find(
+      (v) => Math.abs(v[0] - (gx + gw)) < 1e-3 && Math.abs(v[1] - (gy + gh)) < 1e-3,
+    )
+    expect(bottomRight).toBeDefined()
+  })
+
+  it('snaps near-equal coordinates (FP noise) without merging distant ones', () => {
+    // L-shape where shared bottom differs by ~1e-14 (same mechanism as #60)
+    // Rect1: narrow tall (0,0)→(10,30), Rect2: wide lower (0,10)→(15,30+ε)
+    const verts = computeUnionPolygon(
+      0, 0, 10, 30,              // r1b = 30
+      0, 10, 15, 20 + 1e-14,     // r2b = 30 + 1e-14 (FP noise)
+    )
+    // Must produce clean 6-vertex L-shape, not 5-vertex diagonal
+    expect(verts).toHaveLength(6)
+
+    // Rects with genuinely different dimensions must NOT be snapped
+    const verts2 = computeUnionPolygon(0, 0, 10, 20, 0, 0, 15, 10.5)
+    expect(verts2).toHaveLength(6) // L-shape with distinct step position
+  })
+
   it('vertices are ordered clockwise (positive signed area in screen coords)', () => {
     const verts = computeUnionPolygon(0, 0, 2, 3, 0, 0, 3, 1)
     // Signed area via shoelace formula: positive = clockwise in y-down screen coords
