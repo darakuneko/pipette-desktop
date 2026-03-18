@@ -392,7 +392,7 @@ export function TabbedKeycodes({
           {keyboardPickerContent && (
             <div
               key="keyboard"
-              className={`col-start-1 row-start-1 flex flex-col overflow-auto ${activeTab === 'keyboard' ? '' : 'invisible'}`}
+              className={`col-start-1 row-start-1 flex min-h-0 flex-col ${activeTab === 'keyboard' ? '' : 'invisible'}`}
             >
               {keyboardPickerContent}
             </div>

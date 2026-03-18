@@ -526,65 +526,59 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const layoutPickerContent = (
     <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => e.stopPropagation()}>
-      <div className={`flex min-h-0 flex-1 justify-center overflow-auto ${pickerSource === 'file' && !pickerFileData ? 'items-start' : 'items-center'}`}>
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         {pickerSource === 'file' && !pickerFileData ? (
-          <div className="mx-auto flex min-h-0 w-full max-w-md flex-col overflow-y-auto px-3 pt-4 pb-2">
-            {fileBrowseView === 'list' ? (
-              <>
-                {storedKeyboards.length > 0 && (
-                  <div className="flex flex-col gap-1.5">
-                    {storedKeyboards.map((kb) => (
-                      <button key={kb.uid} type="button"
-                        className="flex items-center justify-between rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
-                        onClick={() => { setSelectedFileUid(kb.uid); setFileBrowseView('entries') }}>
-                        <span className="font-medium text-content">{kb.name}</span>
-                        <span className="text-xs text-content-muted">›</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-                {storedKeyboards.length === 0 && (
-                  <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoSavedFiles')}</p>
-                )}
-                <button type="button"
-                  className="mt-2 rounded-lg border border-dashed border-edge px-3 py-2 text-center text-xs text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content"
-                  onClick={handleLoadPickerFile}>
-                  {t('editor.keymap.pickerLoadFile')}
-                </button>
-              </>
-            ) : (
-              <>
-                <button type="button" className="mb-2 self-start text-xs text-content-secondary hover:text-content"
-                  onClick={() => { setFileBrowseView('list'); setSelectedFileUid(null) }}>
-                  ← {t('common.back')}
-                </button>
-                <div className="flex flex-col gap-1.5">
-                  {storedEntries.map((entry) => (
-                    <button key={entry.id} type="button"
-                      className="flex flex-col rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
-                      onClick={() => handleLoadSnapshotEntry(selectedFileUid!, entry.id)}>
-                      <span className="font-medium text-content">{entry.label || entry.filename}</span>
-                      <span className="text-[11px] text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
-                    </button>
-                  ))}
-                  {storedEntries.length === 0 && (
-                    <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoEntries')}</p>
-                  )}
-                </div>
-              </>
+          <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
+            <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+            {fileBrowseView === 'entries' && (
+              <button type="button" className="mb-2 self-start text-xs text-content-secondary hover:text-content"
+                onClick={() => { setFileBrowseView('list'); setSelectedFileUid(null) }}>
+                ← {t('common.back')}
+              </button>
             )}
+            {fileBrowseView === 'list' ? (
+              storedKeyboards.length > 0 ? storedKeyboards.map((kb) => (
+                <button key={kb.uid} type="button"
+                  className="flex items-center justify-between rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
+                  onClick={() => { setSelectedFileUid(kb.uid); setFileBrowseView('entries') }}>
+                  <span className="font-medium text-content">{kb.name}</span>
+                  <span className="text-xs text-content-muted">›</span>
+                </button>
+              )) : (
+                <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoSavedFiles')}</p>
+              )
+            ) : (
+              storedEntries.length > 0 ? storedEntries.map((entry) => (
+                <button key={entry.id} type="button"
+                  className="flex flex-col rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
+                  onClick={() => handleLoadSnapshotEntry(selectedFileUid!, entry.id)}>
+                  <span className="font-medium text-content">{entry.label || entry.filename}</span>
+                  <span className="text-[11px] text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
+                </button>
+              )) : (
+                <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoEntries')}</p>
+              )
+            )}
+            </div>
+            <button type="button"
+              className="mt-2 rounded-lg border border-dashed border-edge px-3 py-2 text-center text-xs text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content"
+              onClick={handleLoadPickerFile}>
+              {t('editor.keymap.pickerLoadFile')}
+            </button>
           </div>
         ) : (
-          <KeyboardPane
-            paneId="secondary" isActive={true} isSplitEdit={false}
-            keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
-            selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-            remappedKeys={pickerData.remapped}
-            layoutOptions={pickerData.layoutOpts} scale={scaleProp}
-            layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
-            layerLabelTestId="picker-layer-label"
-            onKeyClick={handlePickerKeyClick}
-          />
+          <div className="flex h-full min-h-0 items-center justify-center">
+            <KeyboardPane
+              paneId="secondary" isActive={true} isSplitEdit={false}
+              keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
+              selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+              remappedKeys={pickerData.remapped}
+              layoutOptions={pickerData.layoutOpts} scale={scaleProp}
+              layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
+              layerLabelTestId="picker-layer-label"
+              onKeyClick={handlePickerKeyClick}
+            />
+          </div>
         )}
       </div>
       <div className="flex shrink-0 items-center justify-between px-2 pb-1">
