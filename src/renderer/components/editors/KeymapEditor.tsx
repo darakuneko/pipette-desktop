@@ -16,7 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
-import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
+import { ZoomIn, ZoomOut, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
 
 // Extracted modules
 import type { KeymapEditorProps as Props, PopoverState } from './keymap-editor-types'
@@ -162,15 +162,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       // Only call onSplitEditChange when the split-edit enablement actually changes,
       // to avoid resetting activePane/secondaryLayer unnecessarily
       if (next && !splitEdit) onSplitEditChange?.(true)
+      if (next) onActivePaneChange?.('secondary')
       if (!next) onSplitEditChange?.(false)
       return next
     })
-  }, [splitEdit, onSplitEditChange])
-
-  const handleHorizontalSplitChange = useCallback((enabled: boolean) => {
-    setVerticalSplit(false)
-    onSplitEditChange?.(enabled)
-  }, [onSplitEditChange])
+  }, [splitEdit, onSplitEditChange, onActivePaneChange])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -450,13 +446,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const toolbar = (
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
       <div className="flex-1" />
-      {!typingTestMode && onSplitEditChange && (
-        <IconTooltip label={t('editor.keymap.splitEdit')}>
-          <button type="button" data-testid="split-edit-button" aria-label={t('editor.keymap.splitEdit')} className={toggleButtonClass(splitEdit ?? false)} onClick={() => handleHorizontalSplitChange(!splitEdit)}>
-            <Columns2 size={16} aria-hidden="true" />
-          </button>
-        </IconTooltip>
-      )}
       {!typingTestMode && onScaleChange && (
         <>
           <IconTooltip label={t('editor.keymap.zoomIn')}>
