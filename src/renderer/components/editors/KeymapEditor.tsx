@@ -525,7 +525,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     }`
 
   const layoutPickerContent = (
-    <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => e.stopPropagation()}>
+    <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
         {pickerSource === 'file' && !pickerFileData ? (
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
