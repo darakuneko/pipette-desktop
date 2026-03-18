@@ -91,6 +91,7 @@
       "clickToPaste": "Click a key to paste",
       "pickerHint": "Ctrl+click: multi-select / Shift+click: range select → click a key to paste",
       "pickerDoubleClickHint": "Double-click the same key again or press Enter to close",
+      "keyboardTab": "Keyboard",
       "keyPopover": {
         "keyTab": "Key",
         "codeTab": "Code",

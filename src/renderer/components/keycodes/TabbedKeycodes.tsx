@@ -43,6 +43,7 @@ interface Props {
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
+  keyboardPickerContent?: React.ReactNode // Keyboard layout picker shown in a "Keyboard" tab
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
@@ -64,6 +65,7 @@ export function TabbedKeycodes({
   tabBarRight,
   panelOverlay,
   showHint = false,
+  keyboardPickerContent,
   tabContentOverride,
   basicViewType,
   splitKeyMode,
@@ -199,7 +201,7 @@ export function TabbedKeycodes({
 
   // Reset active tab if it no longer exists in the filtered categories
   useEffect(() => {
-    if (categories.length > 0 && !categories.some((c) => c.id === activeTab)) {
+    if (categories.length > 0 && activeTab !== 'keyboard' && !categories.some((c) => c.id === activeTab)) {
       setActiveTab(categories[0].id)
       setTooltip(null)
     }
@@ -340,6 +342,20 @@ export function TabbedKeycodes({
               {t(cat.labelKey)}
             </button>
           ))}
+          {keyboardPickerContent && (
+            <button
+              key="keyboard"
+              type="button"
+              className={`whitespace-nowrap px-3 py-1.5 text-xs transition-colors border-b-2 ${
+                activeTab === 'keyboard'
+                  ? 'border-b-accent text-accent font-semibold'
+                  : 'border-b-transparent text-content-secondary hover:text-content'
+              }`}
+              onClick={() => { setActiveTab('keyboard'); setTooltip(null) }}
+            >
+              {t('editor.keymap.keyboardTab')}
+            </button>
+          )}
         </div>
         {(tabBarRight || onClose) && (
           <div className="ml-auto flex shrink-0 items-center gap-2 border-b-2 border-b-transparent py-1.5">
@@ -373,6 +389,14 @@ export function TabbedKeycodes({
               {renderCategoryContent(cat)}
             </div>
           ))}
+          {keyboardPickerContent && (
+            <div
+              key="keyboard"
+              className={`col-start-1 row-start-1 flex flex-col overflow-auto ${activeTab === 'keyboard' ? '' : 'invisible'}`}
+            >
+              {keyboardPickerContent}
+            </div>
+          )}
         </div>
 
         {tabFooterContent?.[activeTab] && (

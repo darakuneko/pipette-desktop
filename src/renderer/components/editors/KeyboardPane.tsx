@@ -9,7 +9,7 @@ const COPY_BTN_BASE = 'rounded border px-1.5 py-0.5 text-xs leading-none disable
 const PANE_BASE = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2'
 
 function paneContainerClass(isActive: boolean, isSplitEdit: boolean): string {
-  if (!isSplitEdit) return `${PANE_BASE} border border-edge-subtle`
+  if (!isSplitEdit) return `${PANE_BASE} border-2 border-edge-subtle`
   if (isActive) return `${PANE_BASE} border-2 border-accent`
   return `${PANE_BASE} border-2 border-edge-subtle cursor-pointer`
 }

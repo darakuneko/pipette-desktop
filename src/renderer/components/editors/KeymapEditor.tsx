@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef
 import { useTranslation } from 'react-i18next'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import { serialize, isMask } from '../../../shared/keycodes/keycodes'
+import { serialize, isMask, findKeycode } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
@@ -16,7 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
-import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
+import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
 
 // Extracted modules
 import type { KeymapEditorProps as Props, PopoverState } from './keymap-editor-types'
@@ -31,6 +31,7 @@ import { useKeymapMultiSelect } from './useKeymapMultiSelect'
 import { useLayoutOptionsPanel } from './useLayoutOptionsPanel'
 import { useKeymapSelectionHandlers } from './useKeymapSelectionHandlers'
 import { TypingTestPane } from './TypingTestPane'
+
 
 interface PopoverForStateProps {
   popoverState: NonNullable<PopoverState>
@@ -86,7 +87,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   layerNames, onSetLayerName,
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
-  splitEdit, onSplitEditChange, activePane = 'primary', onActivePaneChange,
+  splitEdit, onSplitEditChange: _onSplitEditChange, activePane = 'primary', onActivePaneChange,
   primaryLayer: primaryLayerProp, secondaryLayer: secondaryLayerProp,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
@@ -97,6 +98,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
+  const [pickerLayer, setPickerLayer] = useState(0)
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -347,6 +349,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     () => typingTestMode ? buildEncoderKeycodesForLayer(typingTest.effectiveLayer) : EMPTY_ENCODER_KEYCODES,
     [buildEncoderKeycodesForLayer, typingTest.effectiveLayer, typingTestMode])
 
+  // --- Layout picker keycodes ---
+  const { keycodes: pickerKeycodes, remapped: pickerRemapped } = useMemo(
+    () => buildKeycodesForLayer(pickerLayer), [buildKeycodesForLayer, pickerLayer])
+  const pickerEncoderKeycodes = useMemo(
+    () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
+
+  const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey) => {
+    const code = keymap.get(`${pickerLayer},${key.row},${key.col}`)
+    if (code == null) return
+    const kc = findKeycode(serialize(code))
+    if (kc) handleKeycodeSelect(kc)
+  }, [keymap, pickerLayer, handleKeycodeSelect])
+
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
@@ -405,18 +420,42 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     ? t('editor.keymap.copyLayerConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
 
+  // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
+  const layoutPickerContent = (
+    <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto">
+        <KeyboardPane
+          paneId="secondary" isActive={true} isSplitEdit={false}
+          keys={layout.keys} keycodes={pickerKeycodes} encoderKeycodes={pickerEncoderKeycodes}
+          selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+          remappedKeys={pickerRemapped}
+          layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+          layerLabel={layerLabel(pickerLayer)} layerLabelTestId="picker-layer-label"
+          onKeyClick={handlePickerKeyClick}
+        />
+      </div>
+      <div className="flex shrink-0 items-center gap-1 self-end px-2 pb-1">
+        {Array.from({ length: layers }, (_, i) => (
+          <button key={i} type="button"
+            className={`w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
+              pickerLayer === i
+                ? 'border-accent bg-accent text-content-inverse'
+                : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+            }`}
+            onClick={() => setPickerLayer(i)}
+          >
+            {layerNames?.[i] || i}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
   const toolbar = (
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
       <div className="flex-1" />
-      {!typingTestMode && onSplitEditChange && (
-        <IconTooltip label={t('editor.keymap.splitEdit')}>
-          <button type="button" data-testid="split-edit-button" aria-label={t('editor.keymap.splitEdit')} className={toggleButtonClass(splitEdit ?? false)} onClick={() => onSplitEditChange(!splitEdit)}>
-            <Columns2 size={16} aria-hidden="true" />
-          </button>
-        </IconTooltip>
-      )}
       {!typingTestMode && onScaleChange && (
         <>
           <IconTooltip label={t('editor.keymap.zoomIn')}>
@@ -522,6 +561,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
           )}
           <TabbedKeycodes
+            keyboardPickerContent={layoutPickerContent}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}

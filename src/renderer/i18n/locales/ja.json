@@ -90,6 +90,7 @@
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
       "pickerDoubleClickHint": "同じキーを再度ダブルクリックするか、Enterキーを押すと閉じます",
+      "keyboardTab": "Keyboard",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",
