@@ -138,6 +138,15 @@ label:has(> input[type="radio"]:not(:disabled)) {
   animation: blink 1s step-end infinite;
 }
 
+/* Panel content swap — fade + subtle slide */
+@keyframes fade-slide-in {
+  from { opacity: 0; transform: translateY(-6px); }
+}
+
+.animate-fade-slide-in {
+  animation: fade-slide-in 150ms ease-out;
+}
+
 @theme {
   /* Background */
   --color-surface: var(--surface);

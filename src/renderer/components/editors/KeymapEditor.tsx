@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -16,7 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
-import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
+import { Columns2, ZoomIn, ZoomOut, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
 
 // Extracted modules
 import type { KeymapEditorProps as Props, PopoverState } from './keymap-editor-types'
@@ -31,6 +31,7 @@ import { useKeymapMultiSelect } from './useKeymapMultiSelect'
 import { useLayoutOptionsPanel } from './useLayoutOptionsPanel'
 import { useKeymapSelectionHandlers } from './useKeymapSelectionHandlers'
 import { TypingTestPane } from './TypingTestPane'
+
 
 interface PopoverForStateProps {
   popoverState: NonNullable<PopoverState>
@@ -97,6 +98,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
+  const [verticalSplit, setVerticalSplit] = useState(false)
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -149,6 +151,26 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
+
+  // --- Vertical split toggle ---
+  // Reset verticalSplit when parent disables splitEdit (e.g. typing test mode)
+  useEffect(() => { if (!splitEdit) setVerticalSplit(false) }, [splitEdit])
+
+  const handleVerticalSplitToggle = useCallback(() => {
+    setVerticalSplit((prev) => {
+      const next = !prev
+      // Only call onSplitEditChange when the split-edit enablement actually changes,
+      // to avoid resetting activePane/secondaryLayer unnecessarily
+      if (next && !splitEdit) onSplitEditChange?.(true)
+      if (!next) onSplitEditChange?.(false)
+      return next
+    })
+  }, [splitEdit, onSplitEditChange])
+
+  const handleHorizontalSplitChange = useCallback((enabled: boolean) => {
+    setVerticalSplit(false)
+    onSplitEditChange?.(enabled)
+  }, [onSplitEditChange])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -405,6 +427,24 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     ? t('editor.keymap.copyLayerConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
 
+  const secondaryPane = splitEdit && (
+    <KeyboardPane
+      paneId="secondary" isActive={activePane === 'secondary'} isSplitEdit={true}
+      keys={layout.keys} keycodes={secondaryKeycodes} encoderKeycodes={secondaryEncoderKeycodes}
+      selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+      pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+      remappedKeys={secondaryRemapped} multiSelectedKeys={selectionSourcePane === 'secondary' ? multiSelectedKeys : undefined}
+      layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+      layerLabel={layerLabel(effectiveSecondaryLayer)} layerLabelTestId="secondary-layer-label"
+      onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
+      onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
+      onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
+      copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
+      isCopying={isCopying} onDeselect={handleDeselect}
+      onActivate={() => onActivePaneChange?.('secondary')}
+    />
+  )
+
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
 
   const toolbar = (
@@ -412,7 +452,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       <div className="flex-1" />
       {!typingTestMode && onSplitEditChange && (
         <IconTooltip label={t('editor.keymap.splitEdit')}>
-          <button type="button" data-testid="split-edit-button" aria-label={t('editor.keymap.splitEdit')} className={toggleButtonClass(splitEdit ?? false)} onClick={() => onSplitEditChange(!splitEdit)}>
+          <button type="button" data-testid="split-edit-button" aria-label={t('editor.keymap.splitEdit')} className={toggleButtonClass(splitEdit ?? false)} onClick={() => handleHorizontalSplitChange(!splitEdit)}>
             <Columns2 size={16} aria-hidden="true" />
           </button>
         </IconTooltip>
@@ -481,27 +521,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 isCopying={isCopying} onDeselect={handleDeselect}
                 onActivate={() => onActivePaneChange?.('primary')} contentRef={keyboardContentRef}
               />
-              {splitEdit && (
-                <KeyboardPane
-                  paneId="secondary" isActive={activePane === 'secondary'} isSplitEdit={true}
-                  keys={layout.keys} keycodes={secondaryKeycodes} encoderKeycodes={secondaryEncoderKeycodes}
-                  selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-                  pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                  remappedKeys={secondaryRemapped} multiSelectedKeys={selectionSourcePane === 'secondary' ? multiSelectedKeys : undefined}
-                  layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                  layerLabel={layerLabel(effectiveSecondaryLayer)} layerLabelTestId="secondary-layer-label"
-                  onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
-                  onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
-                  onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
-                  copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
-                  isCopying={isCopying} onDeselect={handleDeselect}
-                  onActivate={() => onActivePaneChange?.('secondary')}
-                />
-              )}
+              {!verticalSplit && secondaryPane}
             </>
           )}
         </div>
-        {!splitEdit && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
+        {(!splitEdit || verticalSplit) && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (
@@ -522,9 +546,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
           )}
           <TabbedKeycodes
+            contentOverride={verticalSplit ? secondaryPane : undefined}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
+            hintExtra={onSplitEditChange && (
+              <button type="button" data-testid="vertical-split-toggle"
+                aria-label={t('editor.keymap.verticalSplitEdit')}
+                className={`rounded p-0.5 transition-colors ${verticalSplit ? 'text-accent' : 'text-content-muted hover:bg-surface-dim hover:text-content'}`}
+                onClick={handleVerticalSplitToggle}
+              >
+                {verticalSplit ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
+              </button>
+            )}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
             tabBarRight={

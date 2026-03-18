@@ -43,6 +43,8 @@ interface Props {
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
+  hintExtra?: React.ReactNode // Extra content (e.g. panel toggle buttons) rendered centered on the hint line
+  contentOverride?: React.ReactNode // When set, replaces tabs + keycodes entirely (used for vertical split keyboard)
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
@@ -64,6 +66,8 @@ export function TabbedKeycodes({
   tabBarRight,
   panelOverlay,
   showHint = false,
+  hintExtra,
+  contentOverride,
   tabContentOverride,
   basicViewType,
   splitKeyMode,
@@ -323,6 +327,23 @@ export function TabbedKeycodes({
       className="relative flex flex-col rounded-[10px] border border-edge bg-picker-bg min-h-0 flex-1"
       onClick={handleBackgroundClick}
     >
+      {contentOverride ? (
+        /* Vertical split: show override content instead of tabs + keycodes */
+        <div key="override" className="relative flex min-h-0 flex-1 flex-col overflow-hidden animate-fade-slide-in">
+          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2">
+            {contentOverride}
+          </div>
+          {(showHint || hintExtra) && (
+            <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-1.5">
+              {showHint ? (
+                <p className="min-w-0 text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
+              ) : <span />}
+              {hintExtra ?? <span />}
+              <span />
+            </div>
+          )}
+        </div>
+      ) : <div key="tabs" className="flex min-h-0 flex-1 flex-col animate-fade-slide-in">
       {/* Tab bar */}
       <div className="flex border-b border-edge-subtle px-3 pt-1">
         <div className="flex gap-0.5 overflow-x-auto">
@@ -381,14 +402,19 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {showHint && (
-          <p className="px-3 pb-1.5 text-[11px] text-content-muted">
-            {t('editor.keymap.pickerHint')}
-          </p>
+        {(showHint || hintExtra) && (
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-1.5">
+            {showHint ? (
+              <p className="min-w-0 text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
+            ) : <span />}
+            {hintExtra ?? <span />}
+            <span />
+          </div>
         )}
 
         {panelOverlay}
       </div>
+      </div>}
 
       {/* Tooltip — rendered outside the scroll container to avoid clipping */}
       {tooltip && (
