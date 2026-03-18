@@ -43,8 +43,7 @@ interface Props {
   tabBarRight?: React.ReactNode // Content rendered at the right end of the tab bar
   panelOverlay?: React.ReactNode // Content rendered as a right-side overlay over the keycodes grid
   showHint?: boolean // Show multi-select usage hint at the bottom
-  hintExtra?: React.ReactNode // Extra content (e.g. panel toggle buttons) rendered centered on the hint line
-  contentOverride?: React.ReactNode // When set, replaces tabs + keycodes entirely (used for vertical split keyboard)
+  keyboardPickerContent?: React.ReactNode // Keyboard layout picker shown in a "Keyboard" tab
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
@@ -66,8 +65,7 @@ export function TabbedKeycodes({
   tabBarRight,
   panelOverlay,
   showHint = false,
-  hintExtra,
-  contentOverride,
+  keyboardPickerContent,
   tabContentOverride,
   basicViewType,
   splitKeyMode,
@@ -203,7 +201,7 @@ export function TabbedKeycodes({
 
   // Reset active tab if it no longer exists in the filtered categories
   useEffect(() => {
-    if (categories.length > 0 && !categories.some((c) => c.id === activeTab)) {
+    if (categories.length > 0 && activeTab !== 'keyboard' && !categories.some((c) => c.id === activeTab)) {
       setActiveTab(categories[0].id)
       setTooltip(null)
     }
@@ -327,23 +325,6 @@ export function TabbedKeycodes({
       className="relative flex flex-col rounded-[10px] border border-edge bg-picker-bg min-h-0 flex-1"
       onClick={handleBackgroundClick}
     >
-      {contentOverride ? (
-        /* Vertical split: show override content instead of tabs + keycodes */
-        <div key="override" className="relative flex min-h-0 flex-1 flex-col overflow-hidden animate-fade-slide-in">
-          <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-2">
-            {contentOverride}
-          </div>
-          {(showHint || hintExtra) && (
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-1.5">
-              {showHint ? (
-                <p className="min-w-0 text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
-              ) : <span />}
-              {hintExtra ?? <span />}
-              <span />
-            </div>
-          )}
-        </div>
-      ) : <div key="tabs" className="flex min-h-0 flex-1 flex-col animate-fade-slide-in">
       {/* Tab bar */}
       <div className="flex border-b border-edge-subtle px-3 pt-1">
         <div className="flex gap-0.5 overflow-x-auto">
@@ -361,6 +342,20 @@ export function TabbedKeycodes({
               {t(cat.labelKey)}
             </button>
           ))}
+          {keyboardPickerContent && (
+            <button
+              key="keyboard"
+              type="button"
+              className={`whitespace-nowrap px-3 py-1.5 text-xs transition-colors border-b-2 ${
+                activeTab === 'keyboard'
+                  ? 'border-b-accent text-accent font-semibold'
+                  : 'border-b-transparent text-content-secondary hover:text-content'
+              }`}
+              onClick={() => { setActiveTab('keyboard'); setTooltip(null) }}
+            >
+              {t('editor.keymap.keyboardTab')}
+            </button>
+          )}
         </div>
         {(tabBarRight || onClose) && (
           <div className="ml-auto flex shrink-0 items-center gap-2 border-b-2 border-b-transparent py-1.5">
@@ -394,6 +389,14 @@ export function TabbedKeycodes({
               {renderCategoryContent(cat)}
             </div>
           ))}
+          {keyboardPickerContent && (
+            <div
+              key="keyboard"
+              className={`col-start-1 row-start-1 flex flex-col overflow-auto ${activeTab === 'keyboard' ? '' : 'invisible'}`}
+            >
+              {keyboardPickerContent}
+            </div>
+          )}
         </div>
 
         {tabFooterContent?.[activeTab] && (
@@ -402,19 +405,14 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {(showHint || hintExtra) && (
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-1.5">
-            {showHint ? (
-              <p className="min-w-0 text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
-            ) : <span />}
-            {hintExtra ?? <span />}
-            <span />
-          </div>
+        {showHint && (
+          <p className="px-3 pb-1.5 text-[11px] text-content-muted">
+            {t('editor.keymap.pickerHint')}
+          </p>
         )}
 
         {panelOverlay}
       </div>
-      </div>}
 
       {/* Tooltip — rendered outside the scroll container to avoid clipping */}
       {tooltip && (

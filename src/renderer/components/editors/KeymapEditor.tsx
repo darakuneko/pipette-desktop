@@ -16,7 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
-import { ZoomIn, ZoomOut, SlidersHorizontal, ChevronUp, ChevronDown } from 'lucide-react'
+import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
 
 // Extracted modules
 import type { KeymapEditorProps as Props, PopoverState } from './keymap-editor-types'
@@ -98,7 +98,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
-  const [showLayoutPicker, setShowLayoutPicker] = useState(false)
   const [pickerLayer, setPickerLayer] = useState(0)
 
   // --- Input modes (matrix tester + typing test) ---
@@ -152,10 +151,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
-
-  const handleLayoutPickerToggle = useCallback(() => {
-    setShowLayoutPicker((prev) => !prev)
-  }, [])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -426,18 +421,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     : undefined
 
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
-  const layoutPickerContent = showLayoutPicker && (
-    <div className="flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
-      <KeyboardPane
-        paneId="secondary" isActive={true} isSplitEdit={false}
-        keys={layout.keys} keycodes={pickerKeycodes} encoderKeycodes={pickerEncoderKeycodes}
-        selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-        remappedKeys={pickerRemapped}
-        layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-        layerLabel={layerLabel(pickerLayer)} layerLabelTestId="picker-layer-label"
-        onKeyClick={handlePickerKeyClick}
-      />
-      <div className="flex items-center gap-1 self-end px-1">
+  const layoutPickerContent = (
+    <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto">
+        <KeyboardPane
+          paneId="secondary" isActive={true} isSplitEdit={false}
+          keys={layout.keys} keycodes={pickerKeycodes} encoderKeycodes={pickerEncoderKeycodes}
+          selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+          remappedKeys={pickerRemapped}
+          layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+          layerLabel={layerLabel(pickerLayer)} layerLabelTestId="picker-layer-label"
+          onKeyClick={handlePickerKeyClick}
+        />
+      </div>
+      <div className="flex shrink-0 items-center gap-1 self-end px-2 pb-1">
         {Array.from({ length: layers }, (_, i) => (
           <button key={i} type="button"
             className={`w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
@@ -564,19 +561,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
           )}
           <TabbedKeycodes
-            contentOverride={layoutPickerContent || undefined}
+            keyboardPickerContent={layoutPickerContent}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
-            hintExtra={
-              <button type="button" data-testid="layout-picker-toggle"
-                aria-label={t('editor.keymap.verticalSplitEdit')}
-                className={`rounded p-0.5 transition-colors ${showLayoutPicker ? 'text-accent' : 'text-content-muted hover:bg-surface-dim hover:text-content'}`}
-                onClick={handleLayoutPickerToggle}
-              >
-                {showLayoutPicker ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
-              </button>
-            }
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
             tabBarRight={
