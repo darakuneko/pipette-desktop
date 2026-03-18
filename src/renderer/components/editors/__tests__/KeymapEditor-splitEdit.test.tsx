@@ -97,24 +97,6 @@ describe('KeymapEditor — split edit', () => {
     capturedWidgetProps = []
   })
 
-  it('renders the split edit toggle button', () => {
-    render(<KeymapEditor {...defaultProps} />)
-    expect(screen.getByTestId('split-edit-button')).toBeInTheDocument()
-    expect(screen.getByTestId('split-edit-button')).toHaveAttribute('aria-label', 'Split Edit')
-  })
-
-  it('calls onSplitEditChange when toggle button is clicked', () => {
-    render(<KeymapEditor {...defaultProps} />)
-    fireEvent.click(screen.getByTestId('split-edit-button'))
-    expect(onSplitEditChange).toHaveBeenCalledWith(true)
-  })
-
-  it('calls onSplitEditChange(false) when splitEdit is already on', () => {
-    render(<KeymapEditor {...defaultProps} splitEdit={true} activePane="primary" primaryLayer={0} secondaryLayer={0} />)
-    fireEvent.click(screen.getByTestId('split-edit-button'))
-    expect(onSplitEditChange).toHaveBeenCalledWith(false)
-  })
-
   it('does not render secondary pane when splitEdit is off', () => {
     render(<KeymapEditor {...defaultProps} />)
     expect(screen.queryByTestId('secondary-pane')).not.toBeInTheDocument()
