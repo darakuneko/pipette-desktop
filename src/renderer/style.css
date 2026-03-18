@@ -147,6 +147,14 @@ label:has(> input[type="radio"]:not(:disabled)) {
   animation: fade-slide-in 150ms ease-out;
 }
 
+/* Keyboard picker: hover + selection colors matching Basic tab */
+.picker-hover-keys g[style*="cursor: pointer"]:hover > rect:first-child {
+  fill: var(--key-bg-hover) !important;
+}
+.picker-hover-keys {
+  --key-bg-multi-selected: color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
 @theme {
   /* Background */
   --color-surface: var(--surface);

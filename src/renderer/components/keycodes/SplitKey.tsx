@@ -50,12 +50,13 @@ export function getShiftedKeycode(qmkId: string): Keycode | null {
 export interface SplitKeyProps {
   base: Keycode
   shifted: Keycode
-  onClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onClick?: (keycode: Keycode, event: React.MouseEvent, index: number) => void
   onDoubleClick?: (keycode: Keycode) => void
   onHover?: (keycode: Keycode, rect: DOMRect) => void
   onHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
-  pickerSelectedKeycodes?: Set<string>
+  selected?: boolean
+  index: number
   baseDisplayLabel?: string
   shiftedDisplayLabel?: string
 }
@@ -76,14 +77,15 @@ function SplitKeyInner({
   onHover,
   onHoverEnd,
   highlightedKeycodes,
-  pickerSelectedKeycodes,
+  selected: isSelected,
+  index,
   baseDisplayLabel,
   shiftedDisplayLabel,
 }: SplitKeyProps) {
   const baseHighlighted = highlightedKeycodes?.has(base.qmkId)
-  const baseSelected = pickerSelectedKeycodes?.has(base.qmkId)
+  const baseSelected = isSelected
   const shiftHighlighted = highlightedKeycodes?.has(shifted.qmkId)
-  const shiftSelected = pickerSelectedKeycodes?.has(shifted.qmkId)
+  const shiftSelected = isSelected
 
   const anySelected = baseSelected || shiftSelected
   const anyHighlighted = baseHighlighted || shiftHighlighted
@@ -105,7 +107,7 @@ function SplitKeyInner({
       <button
         type="button"
         className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
-        onClick={(e) => onClick?.(shifted, e)}
+        onClick={(e) => onClick?.(shifted, e, index)}
         onDoubleClick={() => onDoubleClick?.(shifted)}
         onMouseEnter={(e) => onHover?.(hoverShifted, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}
@@ -115,7 +117,7 @@ function SplitKeyInner({
       <button
         type="button"
         className={`${SPLIT_HALF_BASE} rounded-b ${splitHalfClass(baseHighlighted, baseSelected, baseDisplayLabel != null)}`}
-        onClick={(e) => onClick?.(base, e)}
+        onClick={(e) => onClick?.(base, e, index)}
         onDoubleClick={() => onDoubleClick?.(base)}
         onMouseEnter={(e) => onHover?.(hoverBase, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}

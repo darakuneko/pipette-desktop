@@ -76,7 +76,7 @@ export function useKeymapSelectionHandlers({
     selectionAnchor, setSelectionAnchor,
     selectionSourcePane, setSelectionSourcePane,
     selectionMode, setSelectionMode,
-    pickerSelectedKeycodes,
+    pickerSelected,
     clearMultiSelection,
     clearPickerSelection,
   } = multiSelect
@@ -245,23 +245,24 @@ export function useKeymapSelectionHandlers({
   const handlePickerPaste = useCallback(async (targetKey: KleKey) => {
     const targetIdx = selectableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
     if (targetIdx < 0) return
-    const targetPositions = selectableKeys.slice(targetIdx, targetIdx + pickerSelectedKeycodes.length)
+    // Get keycodes ordered by index (Map iteration order = insertion order, but sort to be safe)
+    const sortedEntries = [...pickerSelected.entries()].sort((a, b) => a[0] - b[0])
+    const targetPositions = selectableKeys.slice(targetIdx, targetIdx + sortedEntries.length)
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
-        const code = deserialize(pickerSelectedKeycodes[i].qmkId)
-        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: code })
+        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: sortedEntries[i][1] })
       }
       await onSetKeysBulk(entries)
     })
     clearPickerSelection()
-  }, [pickerSelectedKeycodes, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
+  }, [pickerSelected, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
 
   // --- Click handlers ---
   const handleKeyClick = useCallback(
     (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
       const posKey = `${key.row},${key.col}`
-      if (pickerSelectedKeycodes.length > 0 && !event?.ctrlKey && !event?.shiftKey) { handlePickerPaste(key); return }
+      if (pickerSelected.size > 0 && !event?.ctrlKey && !event?.shiftKey) { handlePickerPaste(key); return }
       if (event?.ctrlKey && !selectedKey) {
         clearPickerSelection()
         setMultiSelectedKeys((prev) => { const next = new Set(prev); if (next.has(posKey)) next.delete(posKey); else next.add(posKey); return next })
@@ -285,7 +286,7 @@ export function useKeymapSelectionHandlers({
       setPopoverState((prev) => { if (!prev) return null; if (prev.kind !== 'key' || prev.row !== key.row || prev.col !== key.col) return null; return { ...prev, maskClicked } })
       setSelectedKey({ row: key.row, col: key.col }); setSelectedMaskPart(maskClicked); setSelectedEncoder(null)
     },
-    [splitEdit, activePane, selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, selectionSourcePane, effectivePrimaryLayer, effectiveSecondaryLayer, handleClickToPaste, pickerSelectedKeycodes, handlePickerPaste, clearPickerSelection, setMultiSelectedKeys, setSelectionAnchor, setSelectionSourcePane, setSelectionMode],
+    [splitEdit, activePane, selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, selectionSourcePane, effectivePrimaryLayer, effectiveSecondaryLayer, handleClickToPaste, pickerSelected, handlePickerPaste, clearPickerSelection, setMultiSelectedKeys, setSelectionAnchor, setSelectionSourcePane, setSelectionMode],
   )
 
   const handleEncoderClick = useCallback((_key: KleKey, dir: number) => {
@@ -304,6 +305,7 @@ export function useKeymapSelectionHandlers({
 
   // --- Deselect ---
   const handleDeselect = useCallback(() => {
+    console.log('[Deselect] called')
     clearSingleSelection(); clearMultiSelection(); clearPickerSelection(); setCopyLayerPending(false)
   }, [clearSingleSelection, clearMultiSelection, clearPickerSelection])
 

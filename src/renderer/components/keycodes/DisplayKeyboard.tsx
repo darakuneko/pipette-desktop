@@ -52,12 +52,12 @@ function computeSteppedKeyInfo(
 
 interface Props {
   kle: unknown[][]
-  onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent, index: number) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
-  pickerSelectedKeycodes?: Set<string>
+  pickerSelectedIndices?: Set<number>
   splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
   isVisible?: (kc: Keycode) => boolean
@@ -68,6 +68,8 @@ interface GridKey {
   shiftedKeycode: Keycode | null
   gridRow: number
   gridCol: number
+  /** Original index in the flat keycode list (for selection tracking). */
+  originalIndex: number
   gridRowSpan: number
   gridColSpan: number
   clipPath?: string
@@ -80,7 +82,7 @@ export function DisplayKeyboard({
   onKeycodeHover,
   onKeycodeHoverEnd,
   highlightedKeycodes,
-  pickerSelectedKeycodes,
+  pickerSelectedIndices,
   splitKeyMode,
   remapLabel,
   isVisible,
@@ -90,6 +92,7 @@ export function DisplayKeyboard({
     const keys: GridKey[] = []
     let maxCol = 0
     let maxRow = 0
+    let flatIndex = 0
 
     for (const key of layout.keys) {
       const qmkId = key.labels[0]
@@ -121,6 +124,7 @@ export function DisplayKeyboard({
         gridRowSpan: rowSpan,
         gridColSpan: colSpan,
         clipPath: stepped?.clipPath,
+        originalIndex: flatIndex++,
       })
 
       maxCol = Math.max(maxCol, col + colSpan)
@@ -140,7 +144,7 @@ export function DisplayKeyboard({
     >
       {gridKeys.map((gk) => {
         const keyVisible = !isVisible || isVisible(gk.keycode)
-        const isSelected = keyVisible ? pickerSelectedKeycodes?.has(gk.keycode.qmkId) : false
+        const isSelected = keyVisible ? pickerSelectedIndices?.has(gk.originalIndex) : false
         const isHighlighted = keyVisible ? highlightedKeycodes?.has(gk.keycode.qmkId) : false
 
         const buttonContent = !keyVisible ? (
@@ -154,13 +158,14 @@ export function DisplayKeyboard({
             onHover={onKeycodeHover}
             onHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
-            pickerSelectedKeycodes={pickerSelectedKeycodes}
+            selected={isSelected}
+            index={gk.originalIndex}
             {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
           />
         ) : (
           <KeycodeButton
             keycode={gk.keycode}
-            onClick={onKeycodeClick}
+            onClick={onKeycodeClick ? (k, e) => onKeycodeClick(k, e, gk.originalIndex) : undefined}
             onDoubleClick={onKeycodeDoubleClick}
             onHover={onKeycodeHover}
             onHoverEnd={onKeycodeHoverEnd}
