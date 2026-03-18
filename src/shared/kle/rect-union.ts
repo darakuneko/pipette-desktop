@@ -2,6 +2,10 @@
 // Compute the SVG path for the boolean union of two axis-aligned rounded rectangles.
 // Equivalent to QPainterPath.united() used in the Python Vial GUI reference.
 
+// Epsilon for snapping nearly-equal grid coordinates to eliminate FP noise.
+// Far above IEEE 754 noise (~1e-14) and far below visible threshold (~0.5 px).
+const GRID_SNAP_EPSILON = 1e-6
+
 // Direction vectors: 0=right, 1=down, 2=left, 3=up
 const STEP_COL = [1, 0, -1, 0]
 const STEP_ROW = [0, 1, 0, -1]
@@ -24,6 +28,19 @@ const EXTERIOR_OFFSET: [number, number][] = [
 
 // Turn priorities: right turn, straight, left turn, U-turn
 const TURN_ORDER = [1, 0, 3, 2]
+
+/** Merge sorted values that differ by less than GRID_SNAP_EPSILON. */
+function snapClose(arr: number[]): number[] {
+  if (arr.length < 2) return arr
+  const result = [arr[0]]
+  for (let i = 1; i < arr.length; i++) {
+    // Skip values within epsilon of the previous (snap to earlier value)
+    if (arr[i] - result[result.length - 1] >= GRID_SNAP_EPSILON) {
+      result.push(arr[i])
+    }
+  }
+  return result
+}
 
 /**
  * Compute the clockwise-ordered boundary vertices of the union of two
@@ -52,9 +69,16 @@ export function computeUnionPolygon(
 
   if (r1r <= r2l || r2r <= r1l || r1b <= r2t || r2b <= r1t) return []
 
-  // Unique sorted grid-line coordinates
-  const xs = [...new Set([r1l, r1r, r2l, r2r])].sort((a, b) => a - b)
-  const ys = [...new Set([r1t, r1b, r2t, r2b])].sort((a, b) => a - b)
+  // Unique sorted grid-line coordinates, snapped to eliminate FP noise.
+  // Without snapping, nearly-equal coordinates (e.g. 104.82352941176471 vs
+  // 104.8235294117647) create spuriously thin grid rows that break contour
+  // tracing and removeCollinear — see issue #60 (BAE key).
+  const xs = snapClose(
+    [...new Set([r1l, r1r, r2l, r2r])].sort((a, b) => a - b),
+  )
+  const ys = snapClose(
+    [...new Set([r1t, r1b, r2t, r2b])].sort((a, b) => a - b),
+  )
   const cols = xs.length - 1
   const rows = ys.length - 1
 
