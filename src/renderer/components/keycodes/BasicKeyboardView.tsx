@@ -22,12 +22,12 @@ import { parseKle } from '../../../shared/kle/kle-parser'
 interface Props {
   viewType: BasicViewType
   splitKeyMode?: SplitKeyMode
-  onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent) => void
+  onKeycodeClick?: (keycode: Keycode, event: React.MouseEvent, index: number) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
-  pickerSelectedKeycodes?: Set<string>
+  pickerSelectedIndices?: Set<string>
   isVisible?: (kc: Keycode) => boolean
   remapLabel?: (qmkId: string) => string
 }
@@ -77,7 +77,7 @@ export function BasicKeyboardView({
   onKeycodeHover,
   onKeycodeHoverEnd,
   highlightedKeycodes,
-  pickerSelectedKeycodes,
+  pickerSelectedIndices,
   isVisible,
   remapLabel,
 }: Props) {
@@ -127,7 +127,7 @@ export function BasicKeyboardView({
         onHover={onKeycodeHover}
         onHoverEnd={onKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
-        pickerSelectedKeycodes={pickerSelectedKeycodes}
+        pickerSelectedIndices={pickerSelectedIndices}
         isVisible={visCheck}
         splitKeyMode={splitKeyMode}
         remapLabel={remapLabel}
@@ -146,7 +146,7 @@ export function BasicKeyboardView({
             onKeycodeHover={onKeycodeHover}
             onKeycodeHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
-            pickerSelectedKeycodes={pickerSelectedKeycodes}
+            pickerSelectedIndices={pickerSelectedIndices}
             splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
             isVisible={visCheck}

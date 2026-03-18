@@ -14,6 +14,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   },
   keycodeTooltip: (qmkId: string) => (qmkId === 'KC_NO' ? undefined : `Tooltip: ${qmkId}`),
   isMask: () => false,
+  findKeycode: (qmkId: string) => ({ qmkId, label: qmkId }),
   findOuterKeycode: () => undefined,
   findInnerKeycode: () => undefined,
 }))

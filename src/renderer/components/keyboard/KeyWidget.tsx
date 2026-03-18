@@ -40,6 +40,8 @@ interface Props {
   remapped?: boolean
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
+  onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
+  onHoverEnd?: () => void
   hoverMaskParts?: boolean
   selectedFill?: boolean
   scale?: number
@@ -58,6 +60,8 @@ function KeyWidgetInner({
   remapped,
   onClick,
   onDoubleClick,
+  onHover,
+  onHoverEnd,
   hoverMaskParts,
   selectedFill = true,
   scale = 1,
@@ -194,8 +198,17 @@ function KeyWidgetInner({
       transform={groupTransform}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
-      onMouseEnter={hoverMaskParts && masked ? () => setHoveredPart('outer') : undefined}
-      onMouseLeave={hoverMaskParts && masked ? () => setHoveredPart(null) : undefined}
+      onMouseEnter={(e) => {
+        if (hoverMaskParts && masked) setHoveredPart('outer')
+        if (onHover && isClickable) {
+          const rect = (e.currentTarget as SVGGElement).getBoundingClientRect()
+          onHover(kleKey, keycode, rect)
+        }
+      }}
+      onMouseLeave={() => {
+        if (hoverMaskParts && masked) setHoveredPart(null)
+        onHoverEnd?.()
+      }}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
       {/* Key shape: unified path for ISO/stepped keys, simple rect for normal */}

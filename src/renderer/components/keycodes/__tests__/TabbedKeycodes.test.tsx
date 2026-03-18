@@ -59,6 +59,7 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   },
   getAvailableLMMods: () => [],
   findKeycode: () => undefined,
+  deserialize: () => 0,
   KEYCODES_SPECIAL: [],
   KEYCODES_BASIC: [],
   KEYCODES_SHIFTED: [],

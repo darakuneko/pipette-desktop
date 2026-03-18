@@ -76,6 +76,8 @@ interface Props {
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, direction: number) => void
   onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect) => void
+  onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
+  onKeyHoverEnd?: () => void
   readOnly?: boolean
   scale?: number
 }
@@ -98,6 +100,8 @@ function KeyboardWidgetInner({
   onKeyDoubleClick,
   onEncoderClick,
   onEncoderDoubleClick,
+  onKeyHover,
+  onKeyHoverEnd,
   readOnly = false,
   scale = 1,
 }: Props) {
@@ -188,6 +192,8 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
+            onHover={onKeyHover}
+            onHoverEnd={onKeyHoverEnd}
             scale={scale}
           />
         )
@@ -232,6 +238,8 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
+            onHover={onKeyHover}
+            onHoverEnd={onKeyHoverEnd}
             scale={scale}
           />
         )
