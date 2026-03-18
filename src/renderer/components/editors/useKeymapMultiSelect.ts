@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useMemo, useRef } from 'react'
-import type { Keycode } from '../../../shared/keycodes/keycodes'
 
 export interface UseKeymapMultiSelectOptions {
   /** Ref that tracks whether a single key or encoder is currently selected.
@@ -9,6 +8,9 @@ export interface UseKeymapMultiSelectOptions {
    *  the selection-handlers hook that owns selectedKey/selectedEncoder. */
   hasActiveSingleSelectionRef: React.RefObject<boolean>
 }
+
+/** A picker selection: index in the tab's ordered keycode list → keycode number. */
+export type PickerSelection = Map<number, number>
 
 export interface UseKeymapMultiSelectReturn {
   multiSelectedKeys: Set<string>
@@ -19,13 +21,24 @@ export interface UseKeymapMultiSelectReturn {
   setSelectionSourcePane: React.Dispatch<React.SetStateAction<'primary' | 'secondary' | null>>
   selectionMode: 'ctrl' | 'shift'
   setSelectionMode: React.Dispatch<React.SetStateAction<'ctrl' | 'shift'>>
-  pickerSelectedKeycodes: Keycode[]
-  setPickerSelectedKeycodes: React.Dispatch<React.SetStateAction<Keycode[]>>
-  pickerSelectedSet: Set<string>
+  /** Map of selected indices → keycode numbers (ordered by index). */
+  pickerSelected: PickerSelection
+  /** Derived set of selected indices for fast .has() checks. */
+  pickerSelectedIndices: Set<number>
   clearMultiSelection: () => void
   clearPickerSelection: () => void
-  handlePickerMultiSelect: (kc: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => void
+  /**
+   * Handle Ctrl+click / Shift+click on a picker keycode.
+   * @param index - position in the tab's ordered keycode list
+   * @param keycode - the keycode number at that position
+   * @param event - modifier key state
+   * @param tabKeycodeNumbers - ordered keycode numbers for the current tab (for Shift range fill)
+   */
+  handlePickerMultiSelect: (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => void
 }
+
+const EMPTY_MAP: PickerSelection = new Map()
+const EMPTY_INDICES: Set<number> = new Set()
 
 export function useKeymapMultiSelect({
   hasActiveSingleSelectionRef,
@@ -35,12 +48,12 @@ export function useKeymapMultiSelect({
   const [selectionSourcePane, setSelectionSourcePane] = useState<'primary' | 'secondary' | null>(null)
   const [selectionMode, setSelectionMode] = useState<'ctrl' | 'shift'>('ctrl')
 
-  const [pickerSelectedKeycodes, setPickerSelectedKeycodes] = useState<Keycode[]>([])
-  const [pickerAnchor, setPickerAnchor] = useState<string | null>(null)
+  const [pickerSelected, setPickerSelected] = useState<PickerSelection>(EMPTY_MAP)
+  const [pickerAnchorIndex, setPickerAnchorIndex] = useState<number | null>(null)
 
-  const pickerSelectedSet = useMemo(
-    () => new Set(pickerSelectedKeycodes.map((kc) => kc.qmkId)),
-    [pickerSelectedKeycodes],
+  const pickerSelectedIndices = useMemo(
+    () => pickerSelected.size === 0 ? EMPTY_INDICES : new Set(pickerSelected.keys()),
+    [pickerSelected],
   )
 
   /** Clear multi-selection only if non-empty (avoids unnecessary re-renders). */
@@ -51,17 +64,17 @@ export function useKeymapMultiSelect({
   }, [])
 
   const clearPickerSelection = useCallback(() => {
-    setPickerSelectedKeycodes((prev) => prev.length === 0 ? prev : [])
-    setPickerAnchor(null)
+    setPickerSelected((prev) => prev.size === 0 ? prev : EMPTY_MAP)
+    setPickerAnchorIndex(null)
   }, [])
 
-  // Mirror pickerAnchor into a ref so handlePickerMultiSelect can read
+  // Mirror pickerAnchorIndex into a ref so handlePickerMultiSelect can read
   // the latest value without listing it as a dependency (avoids stale closure).
-  const pickerAnchorRef = useRef<string | null>(null)
-  pickerAnchorRef.current = pickerAnchor
+  const pickerAnchorRef = useRef<number | null>(null)
+  pickerAnchorRef.current = pickerAnchorIndex
 
   const handlePickerMultiSelect = useCallback(
-    (kc: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => {
+    (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => {
       if (hasActiveSingleSelectionRef.current) return
 
       setMultiSelectedKeys((prev) => prev.size === 0 ? prev : new Set())
@@ -69,27 +82,29 @@ export function useKeymapMultiSelect({
       setSelectionSourcePane(null)
 
       if (event.ctrlKey) {
-        setPickerSelectedKeycodes((prev) => {
-          const exists = prev.some((k) => k.qmkId === kc.qmkId)
-          return exists ? prev.filter((k) => k.qmkId !== kc.qmkId) : [...prev, kc]
+        setPickerSelected((prev) => {
+          const next = new Map(prev)
+          next.set(index, keycode)
+          return next
         })
-        setPickerAnchor(kc.qmkId)
+        setPickerAnchorIndex(index)
       } else if (event.shiftKey) {
         const anchor = pickerAnchorRef.current
-        if (!anchor) {
-          // No anchor yet: select just the clicked keycode and set anchor
-          setPickerSelectedKeycodes([kc])
-          setPickerAnchor(kc.qmkId)
+        if (anchor == null) {
+          // No anchor yet: select just the clicked item and set anchor
+          setPickerSelected(new Map([[index, keycode]]))
+          setPickerAnchorIndex(index)
           return
         }
-        const anchorIdx = tabKeycodes.findIndex((k) => k.qmkId === anchor)
-        const currentIdx = tabKeycodes.findIndex((k) => k.qmkId === kc.qmkId)
-        if (anchorIdx >= 0 && currentIdx >= 0) {
-          const start = Math.min(anchorIdx, currentIdx)
-          const end = Math.max(anchorIdx, currentIdx)
-          // Replace entire selection with the range in tab (display) order
-          setPickerSelectedKeycodes(tabKeycodes.slice(start, end + 1))
+        const start = Math.min(anchor, index)
+        const end = Math.max(anchor, index)
+        const range = new Map<number, number>()
+        for (let i = start; i <= end; i++) {
+          if (i < tabKeycodeNumbers.length) {
+            range.set(i, tabKeycodeNumbers[i])
+          }
         }
+        setPickerSelected(range)
       }
     },
     [hasActiveSingleSelectionRef],
@@ -104,9 +119,8 @@ export function useKeymapMultiSelect({
     setSelectionSourcePane,
     selectionMode,
     setSelectionMode,
-    pickerSelectedKeycodes,
-    setPickerSelectedKeycodes,
-    pickerSelectedSet,
+    pickerSelected,
+    pickerSelectedIndices,
     clearMultiSelection,
     clearPickerSelection,
     handlePickerMultiSelect,

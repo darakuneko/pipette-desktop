@@ -116,8 +116,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [storedEntries, setStoredEntries] = useState<SnapshotMeta[]>([])
   const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
   const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
-  const [pickerSelectedPositions, setPickerSelectedPositions] = useState<Set<string>>(new Set())
-  const pickerAnchorPosRef = useRef<string | null>(null)
+  // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
 
   const handlePickerHover = useCallback((_key: import('../../../shared/kle/types').KleKey, keycode: string, rect: DOMRect) => {
@@ -182,7 +181,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   })
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
-  const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
+  const { multiSelectedKeys, selectionSourcePane, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
 
   // --- Layout picker: stored keyboards browsing ---
   useEffect(() => {
@@ -446,20 +445,17 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const pickerEncoderKeycodes = useMemo(
     () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
 
-  // Build ordered keycode + position lists for picker multi-select (Shift+click range)
-  const { pickerTabKeycodes, pickerOrderedPositions } = useMemo(() => {
+  // Build ordered keycode numbers for picker multi-select (Shift+click range)
+  const pickerTabKeycodeNumbers = useMemo(() => {
     const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
     const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
-    const keycodes: import('../../../shared/keycodes/keycodes').Keycode[] = []
-    const positions: string[] = []
+    const numbers: number[] = []
     for (const key of keys) {
       if (key.row == null || key.col == null) continue
       const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
-      if (code == null) continue
-      const kc = findKeycode(serialize(code))
-      if (kc) { keycodes.push(kc); positions.push(`${key.row},${key.col}`) }
+      if (code != null) numbers.push(code)
     }
-    return { pickerTabKeycodes: keycodes, pickerOrderedPositions: positions }
+    return numbers
   }, [pickerSource, pickerFileData, keymap, pickerLayer, layout])
 
   const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey, _maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
@@ -468,34 +464,21 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     if (code == null) return
     const kc = findKeycode(serialize(code))
     if (!kc) return
-    const posKey = `${key.row},${key.col}`
     const isModified = event && (event.ctrlKey || event.shiftKey)
     if (isModified && handlePickerMultiSelect) {
-      handlePickerMultiSelect(kc, { ctrlKey: event.ctrlKey, shiftKey: event.shiftKey }, pickerTabKeycodes)
-      if (event.shiftKey && pickerAnchorPosRef.current) {
-        // Shift+click: select range from anchor to current position
-        const anchorIdx = pickerOrderedPositions.indexOf(pickerAnchorPosRef.current)
-        const currentIdx = pickerOrderedPositions.indexOf(posKey)
-        if (anchorIdx >= 0 && currentIdx >= 0) {
-          const start = Math.min(anchorIdx, currentIdx)
-          const end = Math.max(anchorIdx, currentIdx)
-          setPickerSelectedPositions(new Set(pickerOrderedPositions.slice(start, end + 1)))
-        }
-      } else {
-        // Ctrl+click: toggle single position
-        pickerAnchorPosRef.current = posKey
-        setPickerSelectedPositions((prev) => {
-          const next = new Set(prev)
-          if (next.has(posKey)) next.delete(posKey); else next.add(posKey)
-          return next
-        })
+      // Find the index of this key in the picker's ordered list
+      const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+      let index = 0
+      for (const k of keys) {
+        if (k.row == null || k.col == null) continue
+        if (k.row === key.row && k.col === key.col) break
+        if (sourceKeymap.has(`${pickerLayer},${k.row},${k.col}`)) index++
       }
+      handlePickerMultiSelect(index, code, { ctrlKey: !!event.ctrlKey, shiftKey: !!event.shiftKey }, pickerTabKeycodeNumbers)
     } else {
       handleKeycodeSelect(kc)
-      setPickerSelectedPositions(new Set())
-      pickerAnchorPosRef.current = null
     }
-  }, [keymap, pickerLayer, pickerSource, pickerFileData, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodes, pickerOrderedPositions])
+  }, [keymap, pickerLayer, pickerSource, pickerFileData, layout, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodeNumbers])
 
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
@@ -544,6 +527,22 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     }
     return keycodes
   }, [pickerSource, pickerFileData, pickerLayer, remapLabel, pickerKeycodes])
+
+  // Convert picker selected indices to position strings for keyboard widget highlight
+  const pickerHighlightPositions = useMemo(() => {
+    if (pickerSelectedIndices.size === 0) return undefined
+    const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const positions = new Set<string>()
+    let idx = 0
+    for (const key of keys) {
+      if (key.row == null || key.col == null) continue
+      if (!sourceKeymap.has(`${pickerLayer},${key.row},${key.col}`)) continue
+      if (pickerSelectedIndices.has(idx)) positions.add(`${key.row},${key.col}`)
+      idx++
+    }
+    return positions.size > 0 ? positions : undefined
+  }, [pickerSelectedIndices, pickerSource, pickerFileData, layout, keymap, pickerLayer])
 
   if (!layout) return <div className="p-4 text-content-muted">{t('common.loading')}</div>
 
@@ -631,8 +630,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               paneId="secondary" isActive={true} isSplitEdit={false}
               keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-              remappedKeys={pickerData.remapped}
-              multiSelectedKeys={pickerSelectedPositions.size > 0 ? pickerSelectedPositions : undefined}
+              remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
               layoutOptions={pickerData.layoutOpts} scale={scaleProp}
               layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
               layerLabelTestId="picker-layer-label"
@@ -788,7 +786,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           <TabbedKeycodes
             keyboardPickerContent={layoutPickerContent}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
-            pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
+            pickerSelectedIndices={pickerSelectedIndices} onBackgroundClick={handleDeselect}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
