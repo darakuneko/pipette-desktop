@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
-import { serialize, isMask } from '../../../shared/keycodes/keycodes'
+import { serialize, isMask, findKeycode } from '../../../shared/keycodes/keycodes'
 import { useTileContentOverride } from '../../hooks/useTileContentOverride'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
@@ -98,7 +98,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
-  const [verticalSplit, setVerticalSplit] = useState(false)
+  const [showLayoutPicker, setShowLayoutPicker] = useState(false)
+  const [pickerLayer, setPickerLayer] = useState(0)
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -152,21 +153,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
 
-  // --- Vertical split toggle ---
-  // Reset verticalSplit when parent disables splitEdit (e.g. typing test mode)
-  useEffect(() => { if (!splitEdit) setVerticalSplit(false) }, [splitEdit])
-
-  const handleVerticalSplitToggle = useCallback(() => {
-    setVerticalSplit((prev) => {
-      const next = !prev
-      // Only call onSplitEditChange when the split-edit enablement actually changes,
-      // to avoid resetting activePane/secondaryLayer unnecessarily
-      if (next && !splitEdit) onSplitEditChange?.(true)
-      if (next) onActivePaneChange?.('secondary')
-      if (!next) onSplitEditChange?.(false)
-      return next
-    })
-  }, [splitEdit, onSplitEditChange, onActivePaneChange])
+  const handleLayoutPickerToggle = useCallback(() => {
+    setShowLayoutPicker((prev) => !prev)
+  }, [])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -365,6 +354,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     () => typingTestMode ? buildEncoderKeycodesForLayer(typingTest.effectiveLayer) : EMPTY_ENCODER_KEYCODES,
     [buildEncoderKeycodesForLayer, typingTest.effectiveLayer, typingTestMode])
 
+  // --- Layout picker keycodes ---
+  const { keycodes: pickerKeycodes, remapped: pickerRemapped } = useMemo(
+    () => buildKeycodesForLayer(pickerLayer), [buildKeycodesForLayer, pickerLayer])
+  const pickerEncoderKeycodes = useMemo(
+    () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
+
+  const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey) => {
+    const code = keymap.get(`${pickerLayer},${key.row},${key.col}`)
+    if (code == null) return
+    const kc = findKeycode(serialize(code))
+    if (kc) handleKeycodeSelect(kc)
+  }, [keymap, pickerLayer, handleKeycodeSelect])
+
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
     const btnClass = 'rounded border border-edge px-3 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim'
@@ -423,22 +425,33 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     ? t('editor.keymap.copyLayerConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
     : undefined
 
-  const secondaryPane = splitEdit && (
-    <KeyboardPane
-      paneId="secondary" isActive={activePane === 'secondary'} isSplitEdit={true}
-      keys={layout.keys} keycodes={secondaryKeycodes} encoderKeycodes={secondaryEncoderKeycodes}
-      selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-      pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-      remappedKeys={secondaryRemapped} multiSelectedKeys={selectionSourcePane === 'secondary' ? multiSelectedKeys : undefined}
-      layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-      layerLabel={layerLabel(effectiveSecondaryLayer)} layerLabelTestId="secondary-layer-label"
-      onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
-      onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
-      onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
-      copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
-      isCopying={isCopying} onDeselect={handleDeselect}
-      onActivate={() => onActivePaneChange?.('secondary')}
-    />
+  // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
+  const layoutPickerContent = showLayoutPicker && (
+    <div className="flex flex-col items-center gap-2" onClick={(e) => e.stopPropagation()}>
+      <KeyboardPane
+        paneId="secondary" isActive={true} isSplitEdit={false}
+        keys={layout.keys} keycodes={pickerKeycodes} encoderKeycodes={pickerEncoderKeycodes}
+        selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+        remappedKeys={pickerRemapped}
+        layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+        layerLabel={layerLabel(pickerLayer)} layerLabelTestId="picker-layer-label"
+        onKeyClick={handlePickerKeyClick}
+      />
+      <div className="flex items-center gap-1 self-end px-1">
+        {Array.from({ length: layers }, (_, i) => (
+          <button key={i} type="button"
+            className={`w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
+              pickerLayer === i
+                ? 'border-accent bg-accent text-content-inverse'
+                : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+            }`}
+            onClick={() => setPickerLayer(i)}
+          >
+            {layerNames?.[i] || i}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 
   const zoomButtonClass = `${toggleButtonClass(false)} disabled:opacity-30 disabled:pointer-events-none`
@@ -510,11 +523,27 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 isCopying={isCopying} onDeselect={handleDeselect}
                 onActivate={() => onActivePaneChange?.('primary')} contentRef={keyboardContentRef}
               />
-              {!verticalSplit && secondaryPane}
+              {splitEdit && (
+                <KeyboardPane
+                  paneId="secondary" isActive={activePane === 'secondary'} isSplitEdit={true}
+                  keys={layout.keys} keycodes={secondaryKeycodes} encoderKeycodes={secondaryEncoderKeycodes}
+                  selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+                  pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+                  remappedKeys={secondaryRemapped} multiSelectedKeys={selectionSourcePane === 'secondary' ? multiSelectedKeys : undefined}
+                  layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+                  layerLabel={layerLabel(effectiveSecondaryLayer)} layerLabelTestId="secondary-layer-label"
+                  onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
+                  onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
+                  onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
+                  copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
+                  isCopying={isCopying} onDeselect={handleDeselect}
+                  onActivate={() => onActivePaneChange?.('secondary')}
+                />
+              )}
             </>
           )}
         </div>
-        {(!splitEdit || verticalSplit) && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
+        {!splitEdit && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (
@@ -535,19 +564,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
           )}
           <TabbedKeycodes
-            contentOverride={verticalSplit ? secondaryPane : undefined}
+            contentOverride={layoutPickerContent || undefined}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
-            hintExtra={onSplitEditChange && (
-              <button type="button" data-testid="vertical-split-toggle"
+            hintExtra={
+              <button type="button" data-testid="layout-picker-toggle"
                 aria-label={t('editor.keymap.verticalSplitEdit')}
-                className={`rounded p-0.5 transition-colors ${verticalSplit ? 'text-accent' : 'text-content-muted hover:bg-surface-dim hover:text-content'}`}
-                onClick={handleVerticalSplitToggle}
+                className={`rounded p-0.5 transition-colors ${showLayoutPicker ? 'text-accent' : 'text-content-muted hover:bg-surface-dim hover:text-content'}`}
+                onClick={handleLayoutPickerToggle}
               >
-                {verticalSplit ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
+                {showLayoutPicker ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronUp size={14} aria-hidden="true" />}
               </button>
-            )}
+            }
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
             tabBarRight={
