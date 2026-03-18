@@ -115,6 +115,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [selectedFileUid, setSelectedFileUid] = useState<string | null>(null)
   const [storedEntries, setStoredEntries] = useState<SnapshotMeta[]>([])
   const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
+  const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
+  const pickerContainerRef = useRef<HTMLDivElement>(null)
+
+  const handlePickerHover = useCallback((_key: import('../../../shared/kle/types').KleKey, keycode: string, rect: DOMRect) => {
+    const containerRect = pickerContainerRef.current?.getBoundingClientRect()
+    if (!containerRect) return
+    setPickerTooltip({
+      keycode,
+      top: rect.top - containerRect.top,
+      left: rect.left - containerRect.left + rect.width / 2,
+    })
+  }, [])
+
+  const handlePickerHoverEnd = useCallback(() => { setPickerTooltip(null) }, [])
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -430,13 +444,48 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const pickerEncoderKeycodes = useMemo(
     () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
 
-  const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey) => {
+  // Build ordered keycode list for picker multi-select (Shift+click range)
+  const pickerTabKeycodes = useMemo(() => {
+    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+    const result: import('../../../shared/keycodes/keycodes').Keycode[] = []
+    for (const key of keys) {
+      if (key.row == null || key.col == null) continue
+      const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
+      if (code == null) continue
+      const kc = findKeycode(serialize(code))
+      if (kc) result.push(kc)
+    }
+    return result
+  }, [pickerSource, pickerFileData, keymap, pickerLayer, layout])
+
+  const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey, _maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
     const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
     const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
     if (code == null) return
     const kc = findKeycode(serialize(code))
-    if (kc) handleKeycodeSelect(kc)
-  }, [keymap, pickerLayer, pickerSource, pickerFileData, handleKeycodeSelect])
+    if (!kc) return
+    const isModified = event && (event.ctrlKey || event.shiftKey)
+    if (isModified && handlePickerMultiSelect) {
+      handlePickerMultiSelect(kc, { ctrlKey: event.ctrlKey, shiftKey: event.shiftKey }, pickerTabKeycodes)
+    } else {
+      handleKeycodeSelect(kc)
+    }
+  }, [keymap, pickerLayer, pickerSource, pickerFileData, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodes])
+
+  // Map pickerSelectedSet (qmkIds) to position keys for multi-select highlighting
+  const pickerMultiSelectedPositions = useMemo(() => {
+    if (!pickerSelectedSet || pickerSelectedSet.size === 0) return undefined
+    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const positions = new Set<string>()
+    for (const [key, code] of sourceKeymap) {
+      const [l, r, c] = key.split(',')
+      if (Number(l) !== pickerLayer) continue
+      const qmkId = serialize(code)
+      if (pickerSelectedSet.has(qmkId)) positions.add(`${r},${c}`)
+    }
+    return positions.size > 0 ? positions : undefined
+  }, [pickerSelectedSet, pickerSource, pickerFileData, keymap, pickerLayer])
 
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
@@ -567,17 +616,27 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             </button>
           </div>
         ) : (
-          <div className="flex h-full min-h-0 items-center justify-center">
+          <div ref={pickerContainerRef} className="picker-hover-keys relative flex h-full min-h-0 items-center justify-center">
             <KeyboardPane
               paneId="secondary" isActive={true} isSplitEdit={false}
               keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-              remappedKeys={pickerData.remapped}
+              remappedKeys={pickerData.remapped} multiSelectedKeys={pickerMultiSelectedPositions}
               layoutOptions={pickerData.layoutOpts} scale={scaleProp}
               layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
               layerLabelTestId="picker-layer-label"
               onKeyClick={handlePickerKeyClick}
+              onKeyHover={handlePickerHover}
+              onKeyHoverEnd={handlePickerHoverEnd}
             />
+            {pickerTooltip && (
+              <div
+                className="pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg"
+                style={{ top: pickerTooltip.top - 4, left: pickerTooltip.left, transform: 'translate(-50%, -100%)' }}
+              >
+                <div className="text-[10px] leading-snug text-content-muted whitespace-nowrap">{pickerTooltip.keycode}</div>
+              </div>
+            )}
           </div>
         )}
       </div>

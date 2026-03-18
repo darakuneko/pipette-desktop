@@ -42,6 +42,8 @@ export interface KeyboardPaneProps {
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, dir: number) => void
   onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect) => void
+  onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
+  onKeyHoverEnd?: () => void
   onCopyLayer?: () => void
   copyLayerPending?: string
   isCopying?: boolean
@@ -74,6 +76,8 @@ export function KeyboardPane({
   onKeyDoubleClick,
   onEncoderClick,
   onEncoderDoubleClick,
+  onKeyHover,
+  onKeyHoverEnd,
   onCopyLayer,
   copyLayerPending,
   isCopying,
@@ -112,6 +116,8 @@ export function KeyboardPane({
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}
           onEncoderClick={isActive ? onEncoderClick : undefined}
           onEncoderDoubleClick={isActive ? onEncoderDoubleClick : undefined}
+          onKeyHover={onKeyHover}
+          onKeyHoverEnd={onKeyHoverEnd}
           readOnly={isSplitEdit ? !isActive : false}
         />
       </div>

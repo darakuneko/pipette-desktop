@@ -147,6 +147,11 @@ label:has(> input[type="radio"]:not(:disabled)) {
   animation: fade-slide-in 150ms ease-out;
 }
 
+/* Keyboard picker: hover effect on clickable keys */
+.picker-hover-keys g[style*="cursor: pointer"]:hover > rect:first-child {
+  fill: var(--key-bg-hover) !important;
+}
+
 @theme {
   /* Background */
   --color-surface: var(--surface);
