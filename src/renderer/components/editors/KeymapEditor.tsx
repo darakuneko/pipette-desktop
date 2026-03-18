@@ -87,7 +87,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   layerNames, onSetLayerName,
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
-  splitEdit, onSplitEditChange, activePane = 'primary', onActivePaneChange,
+  splitEdit, onSplitEditChange: _onSplitEditChange, activePane = 'primary', onActivePaneChange,
   primaryLayer: primaryLayerProp, secondaryLayer: secondaryLayerProp,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
