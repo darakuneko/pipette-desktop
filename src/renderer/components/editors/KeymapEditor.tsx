@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, useImperativeHandle, forwardRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
@@ -17,6 +17,12 @@ import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
+import { parseKle } from '../../../shared/kle/kle-parser'
+import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
+import { isVilFile, isVilFileV1, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
+import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { StoredKeyboardInfo } from '../../../shared/types/sync'
+import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 
 // Extracted modules
 import type { KeymapEditorProps as Props, PopoverState } from './keymap-editor-types'
@@ -99,6 +105,16 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
   const [pickerLayer, setPickerLayer] = useState(0)
+  const [pickerSource, setPickerSource] = useState<'current' | 'file'>('current')
+  const [pickerFileData, setPickerFileData] = useState<{
+    layout: KeyboardLayout; keymap: Map<string, number>; layers: number
+    encoderKeycodes: Map<string, [string, string]>; layoutOptions: Map<number, number>
+    name: string; layerNames?: string[]
+  } | null>(null)
+  const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
+  const [selectedFileUid, setSelectedFileUid] = useState<string | null>(null)
+  const [storedEntries, setStoredEntries] = useState<SnapshotMeta[]>([])
+  const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
 
   // --- Input modes (matrix tester + typing test) ---
   const {
@@ -151,6 +167,65 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
+
+  // --- Layout picker: stored keyboards browsing ---
+  useEffect(() => {
+    if (pickerSource !== 'file') return
+    window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
+  }, [pickerSource])
+
+  useEffect(() => {
+    if (!selectedFileUid) { setStoredEntries([]); return }
+    window.vialAPI.snapshotStoreList(selectedFileUid).then((r) => {
+      if (r.success && r.entries) setStoredEntries(r.entries.filter((e) => !e.deletedAt && e.vilVersion !== 1))
+    }).catch(() => {})
+  }, [selectedFileUid])
+
+  // --- Layout picker file loading ---
+  const loadPickerFromJson = useCallback((jsonStr: string) => {
+    try {
+      const parsed = JSON.parse(jsonStr)
+      if (!isVilFile(parsed)) return false
+      if (isVilFileV1(parsed) || !parsed.definition) return false
+      const fileLayout = parseKle(parsed.definition.layouts.keymap)
+      const fileKeymap = recordToMap(parsed.keymap)
+      const fileLayers = deriveLayerCount(parsed.keymap)
+      const remap = remapLabel ?? ((id: string) => id)
+      const encoderKeycodes = new Map<string, [string, string]>()
+      if (parsed.encoderLayout) {
+        const encMap = recordToMap(parsed.encoderLayout)
+        const encCount = new Set([...encMap.keys()].map((k) => k.split(',')[1])).size
+        for (let i = 0; i < encCount; i++) {
+          for (let layer = 0; layer < fileLayers; layer++) {
+            const cw = encMap.get(`${layer},${i},0`) ?? 0
+            const ccw = encMap.get(`${layer},${i},1`) ?? 0
+            encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
+          }
+        }
+      }
+      setPickerFileData({
+        layout: fileLayout, keymap: fileKeymap, layers: fileLayers, encoderKeycodes,
+        layoutOptions: parsed.definition.layouts?.labels
+          ? decodeLayoutOptions(parsed.layoutOptions ?? 0, parsed.definition.layouts.labels) : new Map(),
+        name: parsed.definition.name ?? 'File', layerNames: parsed.layerNames,
+      })
+      setPickerLayer(0)
+      setFileBrowseView('list')
+      return true
+    } catch { return false }
+  }, [remapLabel])
+
+  const handleLoadPickerFile = useCallback(async () => {
+    const result = await window.vialAPI.loadLayout(t('editor.keymap.pickerLoadFile'), ['.pipette', '.vil'])
+    if (!result.success || !result.data) return
+    loadPickerFromJson(result.data)
+  }, [t, loadPickerFromJson])
+
+  const handleLoadSnapshotEntry = useCallback(async (uid: string, entryId: string) => {
+    const result = await window.vialAPI.snapshotStoreLoad(uid, entryId)
+    if (!result.success || !result.data) return
+    loadPickerFromJson(result.data)
+  }, [loadPickerFromJson])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -356,11 +431,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
 
   const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey) => {
-    const code = keymap.get(`${pickerLayer},${key.row},${key.col}`)
+    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
     if (code == null) return
     const kc = findKeycode(serialize(code))
     if (kc) handleKeycodeSelect(kc)
-  }, [keymap, pickerLayer, handleKeycodeSelect])
+  }, [keymap, pickerLayer, pickerSource, pickerFileData, handleKeycodeSelect])
 
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
@@ -398,6 +474,18 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey,
   })
 
+  // For file mode, build keycodes per-layer on the fly
+  const filePickerKeycodes = useMemo(() => {
+    if (pickerSource !== 'file' || !pickerFileData) return pickerKeycodes
+    const remap = remapLabel ?? ((id: string) => id)
+    const keycodes = new Map<string, string>()
+    for (const [key, code] of pickerFileData.keymap) {
+      const [l, r, c] = key.split(',')
+      if (Number(l) === pickerLayer) keycodes.set(`${r},${c}`, remap(serialize(code)))
+    }
+    return keycodes
+  }, [pickerSource, pickerFileData, pickerLayer, remapLabel, pickerKeycodes])
+
   if (!layout) return <div className="p-4 text-content-muted">{t('common.loading')}</div>
 
   function layerLabel(layer: number): string {
@@ -421,32 +509,103 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     : undefined
 
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
+  const pickerData = pickerSource === 'file' && pickerFileData
+    ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
+    : { keys: layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
+
+  const activPickerKeycodes = pickerSource === 'file' && pickerFileData ? filePickerKeycodes : pickerKeycodes
+
+  const layerBtnClass = (active: boolean) =>
+    `w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
+      active ? 'border-accent bg-accent text-content-inverse' : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+    }`
+  const sourceBtnClass = (active: boolean) =>
+    `rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+      active ? 'bg-surface-dim text-content' : 'text-content-muted hover:text-content hover:bg-surface-dim/50'
+    }`
+
   const layoutPickerContent = (
     <div className="flex min-h-0 flex-1 flex-col" onClick={(e) => e.stopPropagation()}>
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto">
-        <KeyboardPane
-          paneId="secondary" isActive={true} isSplitEdit={false}
-          keys={layout.keys} keycodes={pickerKeycodes} encoderKeycodes={pickerEncoderKeycodes}
-          selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
-          remappedKeys={pickerRemapped}
-          layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-          layerLabel={layerLabel(pickerLayer)} layerLabelTestId="picker-layer-label"
-          onKeyClick={handlePickerKeyClick}
-        />
+      <div className={`flex min-h-0 flex-1 justify-center overflow-auto ${pickerSource === 'file' && !pickerFileData ? 'items-start' : 'items-center'}`}>
+        {pickerSource === 'file' && !pickerFileData ? (
+          <div className="mx-auto flex min-h-0 w-full max-w-md flex-col overflow-y-auto px-3 pt-4 pb-2">
+            {fileBrowseView === 'list' ? (
+              <>
+                {storedKeyboards.length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    {storedKeyboards.map((kb) => (
+                      <button key={kb.uid} type="button"
+                        className="flex items-center justify-between rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
+                        onClick={() => { setSelectedFileUid(kb.uid); setFileBrowseView('entries') }}>
+                        <span className="font-medium text-content">{kb.name}</span>
+                        <span className="text-xs text-content-muted">›</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {storedKeyboards.length === 0 && (
+                  <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoSavedFiles')}</p>
+                )}
+                <button type="button"
+                  className="mt-2 rounded-lg border border-dashed border-edge px-3 py-2 text-center text-xs text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content"
+                  onClick={handleLoadPickerFile}>
+                  {t('editor.keymap.pickerLoadFile')}
+                </button>
+              </>
+            ) : (
+              <>
+                <button type="button" className="mb-2 self-start text-xs text-content-secondary hover:text-content"
+                  onClick={() => { setFileBrowseView('list'); setSelectedFileUid(null) }}>
+                  ← {t('common.back')}
+                </button>
+                <div className="flex flex-col gap-1.5">
+                  {storedEntries.map((entry) => (
+                    <button key={entry.id} type="button"
+                      className="flex flex-col rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
+                      onClick={() => handleLoadSnapshotEntry(selectedFileUid!, entry.id)}>
+                      <span className="font-medium text-content">{entry.label || entry.filename}</span>
+                      <span className="text-[11px] text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
+                    </button>
+                  ))}
+                  {storedEntries.length === 0 && (
+                    <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoEntries')}</p>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        ) : (
+          <KeyboardPane
+            paneId="secondary" isActive={true} isSplitEdit={false}
+            keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
+            selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
+            remappedKeys={pickerData.remapped}
+            layoutOptions={pickerData.layoutOpts} scale={scaleProp}
+            layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
+            layerLabelTestId="picker-layer-label"
+            onKeyClick={handlePickerKeyClick}
+          />
+        )}
       </div>
-      <div className="flex shrink-0 items-center gap-1 self-end px-2 pb-1">
-        {Array.from({ length: layers }, (_, i) => (
-          <button key={i} type="button"
-            className={`w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
-              pickerLayer === i
-                ? 'border-accent bg-accent text-content-inverse'
-                : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
-            }`}
-            onClick={() => setPickerLayer(i)}
-          >
-            {layerNames?.[i] || i}
+      <div className="flex shrink-0 items-center justify-between px-2 pb-1">
+        <div className="flex items-center gap-1">
+          <button type="button" className={sourceBtnClass(pickerSource === 'current')}
+            onClick={() => { setPickerSource('current'); setPickerLayer(0); setPickerFileData(null) }}>
+            {t('editor.keymap.pickerSourceCurrent')}
           </button>
-        ))}
+          <button type="button" className={sourceBtnClass(pickerSource === 'file')}
+            onClick={() => { setPickerSource('file'); setPickerLayer(0); setFileBrowseView(pickerFileData ? 'list' : 'list') }}>
+            {t('editor.keymap.pickerSourceFile')}
+          </button>
+        </div>
+        <div className="flex items-center gap-1">
+          {Array.from({ length: pickerData.totalLayers }, (_, i) => (
+            <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
+              onClick={() => setPickerLayer(i)}>
+              {pickerData.names?.[i] || i}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )

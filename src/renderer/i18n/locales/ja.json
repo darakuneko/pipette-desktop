@@ -91,6 +91,11 @@
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
       "pickerDoubleClickHint": "同じキーを再度ダブルクリックするか、Enterキーを押すと閉じます",
       "keyboardTab": "Keyboard",
+      "pickerSourceCurrent": "現在",
+      "pickerSourceFile": "ファイル",
+      "pickerLoadFile": "ファイルから読み込み…",
+      "pickerNoSavedFiles": "保存済みキーボードなし",
+      "pickerNoEntries": "保存済みキーマップなし",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",
