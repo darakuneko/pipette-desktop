@@ -594,8 +594,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             {t('editor.keymap.pickerSourceCurrent')}
           </button>
           <button type="button" className={sourceBtnClass(pickerSource === 'file')}
-            onClick={() => { setPickerSource('file'); setPickerLayer(0); setFileBrowseView(pickerFileData ? 'list' : 'list') }}>
-            {t('editor.keymap.pickerSourceFile')}
+            onClick={() => { setPickerSource('file'); setPickerLayer(0); setPickerFileData(null); setFileBrowseView('list') }}>
+            {pickerSource === 'file' && pickerFileData ? t('editor.keymap.pickerBackToFiles') : t('editor.keymap.pickerSourceFile')}
           </button>
         </div>
         <div className="flex items-center gap-1">

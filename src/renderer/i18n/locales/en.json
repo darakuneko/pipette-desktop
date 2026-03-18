@@ -97,6 +97,7 @@
       "pickerLoadFile": "Load from file…",
       "pickerNoSavedFiles": "No saved keyboards",
       "pickerNoEntries": "No saved keymaps",
+      "pickerBackToFiles": "← Files",
       "keyPopover": {
         "keyTab": "Key",
         "codeTab": "Code",

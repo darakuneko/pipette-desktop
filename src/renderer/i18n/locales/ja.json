@@ -96,6 +96,7 @@
       "pickerLoadFile": "ファイルから読み込み…",
       "pickerNoSavedFiles": "保存済みキーボードなし",
       "pickerNoEntries": "保存済みキーマップなし",
+      "pickerBackToFiles": "← ファイル",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",
