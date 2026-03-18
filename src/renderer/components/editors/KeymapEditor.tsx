@@ -592,14 +592,16 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             {pickerSource === 'file' && pickerFileData ? t('editor.keymap.pickerBackToFiles') : t('editor.keymap.pickerSourceFile')}
           </button>
         </div>
-        <div className="flex items-center gap-1">
-          {Array.from({ length: pickerData.totalLayers }, (_, i) => (
-            <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
-              onClick={() => setPickerLayer(i)}>
-              {pickerData.names?.[i] || i}
-            </button>
-          ))}
-        </div>
+        {!(pickerSource === 'file' && !pickerFileData) && (
+          <div className="flex items-center gap-1">
+            {Array.from({ length: pickerData.totalLayers }, (_, i) => (
+              <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
+                onClick={() => setPickerLayer(i)}>
+                {pickerData.names?.[i] || i}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
