@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { findKeycode, type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods } from '../../../shared/keycodes/keycodes'
+import { findKeycode, type Keycode, getKeycodeRevision, isBasic, getAvailableLMMods, deserialize } from '../../../shared/keycodes/keycodes'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import { useAppConfig } from '../../hooks/useAppConfig'
@@ -32,8 +32,8 @@ interface Props {
   onKeycodeSelect?: (keycode: Keycode) => void
   onKeycodeDoubleClick?: (keycode: Keycode) => void
   onConfirm?: () => void // Confirm current selection (Enter key)
-  onKeycodeMultiSelect?: (keycode: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => void
-  pickerSelectedKeycodes?: Set<string>
+  onKeycodeMultiSelect?: (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => void
+  pickerSelectedIndices?: Set<number>
   onBackgroundClick?: () => void
   onClose?: () => void
   highlightedKeycodes?: Set<string>
@@ -55,7 +55,7 @@ export function TabbedKeycodes({
   onKeycodeDoubleClick,
   onConfirm,
   onKeycodeMultiSelect,
-  pickerSelectedKeycodes,
+  pickerSelectedIndices,
   onBackgroundClick,
   onClose,
   highlightedKeycodes,
@@ -225,16 +225,21 @@ export function TabbedKeycodes({
     setTooltip(null)
   }, [])
 
+  const activeTabKeycodeNumbers = useMemo(
+    () => activeTabKeycodes.map((kc) => deserialize(kc.qmkId)),
+    [activeTabKeycodes],
+  )
+
   const handleKeycodeClick = useCallback(
-    (kc: Keycode, event: React.MouseEvent) => {
+    (kc: Keycode, event: React.MouseEvent, index: number) => {
       const isModified = event.ctrlKey || event.metaKey || event.shiftKey
       if (isModified && onKeycodeMultiSelect) {
-        onKeycodeMultiSelect(kc, { ctrlKey: event.ctrlKey || event.metaKey, shiftKey: event.shiftKey }, activeTabKeycodes)
+        onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: event.ctrlKey || event.metaKey, shiftKey: event.shiftKey }, activeTabKeycodeNumbers)
       } else {
         onKeycodeSelect?.(kc)
       }
     },
-    [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodes],
+    [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers],
   )
 
   function renderKeycodeGrid(keycodes: Keycode[]): React.ReactNode {
@@ -246,7 +251,7 @@ export function TabbedKeycodes({
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
-        pickerSelectedKeycodes={pickerSelectedKeycodes}
+        pickerSelectedIndices={pickerSelectedIndices}
         isVisible={isVisible}
         splitKeyMode={maskOnly ? 'flat' : resolvedSplitKeyMode}
         remapLabel={remapLabel}
@@ -287,7 +292,7 @@ export function TabbedKeycodes({
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}
           highlightedKeycodes={highlightedKeycodes}
-          pickerSelectedKeycodes={pickerSelectedKeycodes}
+          pickerSelectedIndices={pickerSelectedIndices}
           isVisible={isVisible}
           remapLabel={remapLabel}
         />
@@ -392,7 +397,7 @@ export function TabbedKeycodes({
           {keyboardPickerContent && (
             <div
               key="keyboard"
-              className={`col-start-1 row-start-1 flex flex-col overflow-auto ${activeTab === 'keyboard' ? '' : 'invisible'}`}
+              className={`col-start-1 row-start-1 flex min-h-0 flex-col ${activeTab === 'keyboard' ? '' : 'invisible'}`}
             >
               {keyboardPickerContent}
             </div>
