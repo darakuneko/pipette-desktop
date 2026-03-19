@@ -596,6 +596,8 @@ export function App() {
             onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
             onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
+            devices={device.devices}
+            connectedDevice={device.connectedDevice}
           />
         </div>
 

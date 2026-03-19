@@ -101,11 +101,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
   onFavUploadToHub, onFavUpdateOnHub, onFavRemoveFromHub, onFavRenameOnHub,
+  devices, connectedDevice,
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
   const [pickerLayer, setPickerLayer] = useState(0)
-  const [pickerSource, setPickerSource] = useState<'current' | 'file'>('current')
+  const [pickerSource, setPickerSource] = useState<'file' | 'device'>('device')
   const [pickerFileData, setPickerFileData] = useState<{
     layout: KeyboardLayout; keymap: Map<string, number>; layers: number
     encoderKeycodes: Map<string, [string, string]>; layoutOptions: Map<number, number>
@@ -115,6 +116,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [selectedFileUid, setSelectedFileUid] = useState<string | null>(null)
   const [storedEntries, setStoredEntries] = useState<SnapshotMeta[]>([])
   const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
+  const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
+  const [deviceBrowsing, setDeviceBrowsing] = useState(true)
   const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
   // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
@@ -241,6 +244,53 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     if (!result.success || !result.data) return
     loadPickerFromJson(result.data)
   }, [loadPickerFromJson])
+
+  // --- Device probe handler ---
+  const handleProbeDevice = useCallback(async (vendorId: number, productId: number, serialNumber: string) => {
+    setProbeStatus('probing')
+    try {
+      const result = await window.vialAPI.probeDevice(vendorId, productId, serialNumber)
+      const fileLayout = parseKle(result.definition.layouts.keymap)
+      const fileKeymap = new Map<string, number>(Object.entries(result.keymap))
+      const remap = remapLabel ?? ((id: string) => id)
+      const encoderKeycodes = new Map<string, [string, string]>()
+      const encMap = new Map<string, number>(Object.entries(result.encoderLayout))
+      for (let i = 0; i < result.encoderCount; i++) {
+        for (let layer = 0; layer < result.layers; layer++) {
+          const cw = encMap.get(`${layer},${i},0`) ?? 0
+          const ccw = encMap.get(`${layer},${i},1`) ?? 0
+          encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
+        }
+      }
+      setPickerFileData({
+        layout: fileLayout, keymap: fileKeymap, layers: result.layers, encoderKeycodes,
+        layoutOptions: result.definition.layouts?.labels
+          ? decodeLayoutOptions(result.layoutOptions, result.definition.layouts.labels) : new Map(),
+        name: result.name,
+      })
+      setPickerLayer(0)
+      setProbeStatus('idle')
+    } catch {
+      setProbeStatus('error')
+    }
+  }, [remapLabel])
+
+  // --- Device list for probe picker (includes connected device) ---
+  const isConnectedDevice = useCallback((d: import('../../../shared/types/protocol').DeviceInfo) => {
+    return !!connectedDevice && d.vendorId === connectedDevice.vendorId && d.productId === connectedDevice.productId && d.serialNumber === connectedDevice.serialNumber
+  }, [connectedDevice])
+
+  const handleDeviceSelect = useCallback((d: import('../../../shared/types/protocol').DeviceInfo) => {
+    if (isConnectedDevice(d)) {
+      // Connected device → use existing keymap/layout (clear pickerFileData)
+      setPickerFileData(null)
+      setPickerLayer(0)
+      setDeviceBrowsing(false)
+    } else {
+      setDeviceBrowsing(false)
+      handleProbeDevice(d.vendorId, d.productId, d.serialNumber)
+    }
+  }, [isConnectedDevice, handleProbeDevice])
 
   // --- QMK settings modals ---
   const [showSettings, setShowSettings] = useState<Record<string, boolean>>({})
@@ -447,8 +497,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // Build ordered keycode numbers for picker multi-select (Shift+click range)
   const pickerTabKeycodeNumbers = useMemo(() => {
-    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
-    const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+    const sourceKeymap = pickerFileData ? pickerFileData.keymap : keymap
+    const keys = pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
     const numbers: number[] = []
     for (const key of keys) {
       if (key.row == null || key.col == null) continue
@@ -456,10 +506,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       if (code != null) numbers.push(code)
     }
     return numbers
-  }, [pickerSource, pickerFileData, keymap, pickerLayer, layout])
+  }, [pickerFileData, keymap, pickerLayer, layout])
 
   const handlePickerKeyClick = useCallback((key: import('../../../shared/kle/types').KleKey, _maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
-    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const sourceKeymap = pickerFileData ? pickerFileData.keymap : keymap
     const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
     if (code == null) return
     const kc = findKeycode(serialize(code))
@@ -467,7 +517,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     const isModified = event && (event.ctrlKey || event.shiftKey)
     if (isModified && handlePickerMultiSelect) {
       // Find the index of this key in the picker's ordered list
-      const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+      const keys = pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
       let index = 0
       for (const k of keys) {
         if (k.row == null || k.col == null) continue
@@ -477,7 +527,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       handlePickerMultiSelect(index, code, { ctrlKey: !!event.ctrlKey, shiftKey: !!event.shiftKey }, pickerTabKeycodeNumbers)
     } else if (handlePickerMultiSelect && !selectedKey && !selectedEncoder) {
       // Normal click (no key selected): select single key and set anchor
-      const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+      const keys = pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
       let index = 0
       for (const k of keys) {
         if (k.row == null || k.col == null) continue
@@ -488,7 +538,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     } else {
       handleKeycodeSelect(kc)
     }
-  }, [keymap, pickerLayer, pickerSource, pickerFileData, layout, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodeNumbers])
+  }, [keymap, pickerLayer, pickerFileData, layout, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodeNumbers])
 
   // --- Tab footer ---
   const tabFooterContent = useMemo(() => {
@@ -526,9 +576,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey,
   })
 
-  // For file mode, build keycodes per-layer on the fly
+  // For file/device mode, build keycodes per-layer on the fly
   const filePickerKeycodes = useMemo(() => {
-    if (pickerSource !== 'file' || !pickerFileData) return pickerKeycodes
+    if (!pickerFileData) return pickerKeycodes
     const remap = remapLabel ?? ((id: string) => id)
     const keycodes = new Map<string, string>()
     for (const [key, code] of pickerFileData.keymap) {
@@ -536,13 +586,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       if (Number(l) === pickerLayer) keycodes.set(`${r},${c}`, remap(serialize(code)))
     }
     return keycodes
-  }, [pickerSource, pickerFileData, pickerLayer, remapLabel, pickerKeycodes])
+  }, [pickerFileData, pickerLayer, remapLabel, pickerKeycodes])
 
   // Convert picker selected indices to position strings for keyboard widget highlight
   const pickerHighlightPositions = useMemo(() => {
     if (pickerSelectedIndices.size === 0) return undefined
-    const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
-    const sourceKeymap = pickerSource === 'file' && pickerFileData ? pickerFileData.keymap : keymap
+    const keys = pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+    const sourceKeymap = pickerFileData ? pickerFileData.keymap : keymap
     const positions = new Set<string>()
     let idx = 0
     for (const key of keys) {
@@ -552,7 +602,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       idx++
     }
     return positions.size > 0 ? positions : undefined
-  }, [pickerSelectedIndices, pickerSource, pickerFileData, layout, keymap, pickerLayer])
+  }, [pickerSelectedIndices, pickerFileData, layout, keymap, pickerLayer])
 
   if (!layout) return <div className="p-4 text-content-muted">{t('common.loading')}</div>
 
@@ -577,11 +627,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     : undefined
 
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
-  const pickerData = pickerSource === 'file' && pickerFileData
+  const pickerData = pickerFileData
     ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
     : { keys: layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
 
-  const activPickerKeycodes = pickerSource === 'file' && pickerFileData ? filePickerKeycodes : pickerKeycodes
+  const activPickerKeycodes = pickerFileData ? filePickerKeycodes : pickerKeycodes
 
   const layerBtnClass = (active: boolean) =>
     `w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
@@ -592,10 +642,35 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       active ? 'bg-surface-dim text-content' : 'text-content-muted hover:text-content hover:bg-surface-dim/50'
     }`
 
+  const pickerBrowseMode = (pickerSource === 'device' && deviceBrowsing) || (pickerSource === 'file' && !pickerFileData)
+
   const layoutPickerContent = (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden">
-        {pickerSource === 'file' && !pickerFileData ? (
+        {pickerSource === 'device' && deviceBrowsing ? (
+          /* --- Device browse view --- */
+          <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
+            <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+              {probeStatus === 'probing' ? (
+                <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerProbing')}</p>
+              ) : probeStatus === 'error' ? (
+                <p className="py-4 text-center text-xs text-danger">{t('editor.keymap.pickerProbeError')}</p>
+              ) : devices?.length ? devices.map((d) => (
+                <button key={`${d.vendorId}:${d.productId}:${d.serialNumber}`} type="button"
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim ${isConnectedDevice(d) ? 'border-accent/40 bg-accent/5' : 'border-edge'}`}
+                  onClick={() => handleDeviceSelect(d)}>
+                  <span className="font-medium text-content">{d.productName || `${d.vendorId.toString(16)}:${d.productId.toString(16)}`}</span>
+                  <span className="text-xs text-content-muted">›</span>
+                </button>
+              )) : (
+                <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoDevices')}</p>
+              )}
+            </div>
+            {/* Spacer to match file browse view height (which has a "Load from file" button) */}
+            <div className="mt-2 h-[38px]" />
+          </div>
+        ) : pickerSource === 'file' && !pickerFileData ? (
+          /* --- File browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
             <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
             {fileBrowseView === 'entries' && (
@@ -635,6 +710,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             </button>
           </div>
         ) : (
+          /* --- Keyboard view (current / loaded file / probed device) --- */
           <div ref={pickerContainerRef} className="picker-hover-keys relative flex h-full min-h-0 items-center justify-center">
             <KeyboardPane
               paneId="secondary" isActive={true} isSplitEdit={false}
@@ -642,7 +718,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
               remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
               layoutOptions={pickerData.layoutOpts} scale={scaleProp}
-              layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerSource === 'file' && pickerFileData ? ` — ${pickerFileData.name}` : '')}
+              layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerFileData ? ` — ${pickerFileData.name}` : '')}
               layerLabelTestId="picker-layer-label"
               onKeyClick={handlePickerKeyClick}
               onKeyHover={handlePickerHover}
@@ -661,16 +737,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
       </div>
       <div className="flex shrink-0 items-center justify-between px-2 pb-1">
         <div className="flex items-center gap-1">
-          <button type="button" className={sourceBtnClass(pickerSource === 'current')}
-            onClick={() => { setPickerSource('current'); setPickerLayer(0); setPickerFileData(null) }}>
-            {t('editor.keymap.pickerSourceCurrent')}
+          <button type="button" className={sourceBtnClass(pickerSource === 'device')}
+            onClick={() => {
+              setPickerSource('device'); setPickerLayer(0); setPickerFileData(null); setDeviceBrowsing(true); setProbeStatus('idle')
+            }}>
+            {pickerSource === 'device' && !deviceBrowsing
+              ? t('editor.keymap.pickerBackToDevices')
+              : t('editor.keymap.pickerSourceDevice')}
           </button>
           <button type="button" className={sourceBtnClass(pickerSource === 'file')}
-            onClick={() => { setPickerSource('file'); setPickerLayer(0); setPickerFileData(null); setFileBrowseView('list') }}>
+            onClick={() => { setPickerSource('file'); setPickerLayer(0); setPickerFileData(null); setFileBrowseView('list'); setDeviceBrowsing(false) }}>
             {pickerSource === 'file' && pickerFileData ? t('editor.keymap.pickerBackToFiles') : t('editor.keymap.pickerSourceFile')}
           </button>
         </div>
-        {!(pickerSource === 'file' && !pickerFileData) && (
+        {!pickerBrowseMode && (
           <div className="flex items-center gap-1">
             {Array.from({ length: pickerData.totalLayers }, (_, i) => (
               <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
