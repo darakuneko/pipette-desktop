@@ -188,13 +188,7 @@ export function DeviceSelector({
                         {device.type !== 'vial' && ` (${device.type})`}
                       </div>
                     </div>
-                    {connecting ? (
-                      <span className="text-sm text-accent">
-                        {t('app.connecting', { dots: '...' })}
-                      </span>
-                    ) : (
-                      <ChevronRight size={16} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
-                    )}
+                    <ChevronRight size={16} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
                   </button>
                 ))}
 
