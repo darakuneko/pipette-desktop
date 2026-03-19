@@ -390,9 +390,14 @@ The Keyboard tab lets you copy keycodes from other connected keyboards or from s
 
 **Device List**
 
+![Keyboard Tab — Device List](screenshots/keyboard-tab-device-list.png)
+
 When you open the Keyboard tab, a list of all connected Vial-compatible keyboards is displayed. This list updates in real time as you plug in or unplug devices.
 
 - Click a device to load its keymap — the currently connected keyboard shows its live keymap instantly; other devices are probed via a temporary USB connection
+
+![Keyboard Tab — Keymap View](screenshots/keyboard-tab-keymap.png)
+
 - Once loaded, click any key on the displayed keyboard to assign that keycode to the selected key on the main keymap
 - Use Ctrl+click for multi-select, Shift+click for range select
 - Layer buttons at the bottom right let you browse different layers

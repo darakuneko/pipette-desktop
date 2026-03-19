@@ -478,6 +478,39 @@ async function captureKeycodeCategories(page: Page): Promise<void> {
   }
 }
 
+// --- Phase 4.5: Keyboard Tab (Device Picker) ---
+
+async function captureKeyboardTab(page: Page): Promise<void> {
+  console.log('\n--- Phase 4.5: Keyboard Tab (Device Picker) ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+  const keyboardTabBtn = editorContent.locator('button', { hasText: /^Keyboard$/ })
+  if (!(await isAvailable(keyboardTabBtn))) {
+    console.log('  [skip] Keyboard tab not found')
+    return
+  }
+  await keyboardTabBtn.first().click()
+  await page.waitForTimeout(500)
+
+  // Capture device list view
+  await captureNamed(page, 'keyboard-tab-device-list', { fullPage: true })
+
+  // Click the connected device to show its keymap
+  const deviceBtn = editorContent.locator('button', { hasText: new RegExp(escapeRegex(DEVICE_NAME)) })
+  if (await isAvailable(deviceBtn)) {
+    await deviceBtn.first().click()
+    await page.waitForTimeout(500)
+    await captureNamed(page, 'keyboard-tab-keymap', { fullPage: true })
+  }
+
+  // Switch back to Basic tab
+  const basicBtn = editorContent.locator('button', { hasText: /^Basic$/ })
+  if (await isAvailable(basicBtn)) {
+    await basicBtn.first().click()
+    await page.waitForTimeout(300)
+  }
+}
+
 // --- Phase 5: Toolbar / Sidebar ---
 
 async function captureSidebarTools(page: Page): Promise<void> {
@@ -1058,6 +1091,7 @@ async function main(): Promise<void> {
     await captureKeymapEditor(page)          // 03
     await captureLayerNavigation(page)       // 04-06
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
+    await captureKeyboardTab(page)           // keyboard-tab-device-list, keyboard-tab-keymap
     await captureSidebarTools(page)          // toolbar, split-edit, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
     await captureJsonEditors(page)           // json-editor-tap-dance, json-editor-macro
