@@ -106,9 +106,10 @@ describe('DeviceSelector', () => {
     expect(screen.getByTestId('tab-file')).not.toBeDisabled()
   })
 
-  it('shows connecting indicator on device when connecting', () => {
+  it('shows chevron instead of connecting text when connecting', () => {
     render(<DeviceSelector {...defaultProps} devices={[mockDevice]} connecting={true} />)
-    expect(screen.getByText('Connecting...')).toBeInTheDocument()
+    // connecting text removed — chevron always shown, loading overlay handles transition
+    expect(screen.queryByText('Connecting...')).not.toBeInTheDocument()
   })
 
   it('displays error message when error is present', () => {
