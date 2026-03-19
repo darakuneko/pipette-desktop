@@ -205,11 +205,12 @@ export function TabbedKeycodes({
 
   // Reset active tab if it no longer exists in the filtered categories
   useEffect(() => {
-    if (categories.length > 0 && activeTab !== 'keyboard' && !categories.some((c) => c.id === activeTab)) {
+    const keyboardHidden = activeTab === 'keyboard' && maskOnly
+    if (categories.length > 0 && (keyboardHidden || (activeTab !== 'keyboard' && !categories.some((c) => c.id === activeTab)))) {
       setActiveTab(categories[0].id)
       setTooltip(null)
     }
-  }, [categories, activeTab])
+  }, [categories, activeTab, maskOnly])
 
   const handleKeycodeHover = useCallback(
     (kc: Keycode, rect: DOMRect) => {
@@ -241,7 +242,7 @@ export function TabbedKeycodes({
         if (!pickerMultiSelectEnabled) onBackgroundClick?.()
         onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: event.ctrlKey || event.metaKey, shiftKey: event.shiftKey }, activeTabKeycodeNumbers)
       } else if (onKeycodeMultiSelect && pickerMultiSelectEnabled) {
-        onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: true, shiftKey: false }, activeTabKeycodeNumbers)
+        onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: false, shiftKey: false }, activeTabKeycodeNumbers)
       } else {
         onKeycodeSelect?.(kc)
       }
@@ -355,7 +356,7 @@ export function TabbedKeycodes({
               {t(cat.labelKey)}
             </button>
           ))}
-          {keyboardPickerContent && (
+          {keyboardPickerContent && !maskOnly && (
             <button
               key="keyboard"
               type="button"
@@ -402,7 +403,7 @@ export function TabbedKeycodes({
               {renderCategoryContent(cat)}
             </div>
           ))}
-          {keyboardPickerContent && (
+          {keyboardPickerContent && !maskOnly && (
             <div
               key="keyboard"
               className={`col-start-1 row-start-1 flex min-h-0 flex-col ${activeTab === 'keyboard' ? '' : 'invisible'}`}

@@ -187,6 +187,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
 
+  // --- Escape clears picker selection ---
+  useEffect(() => {
+    if (pickerSelectedIndices.size === 0) return
+    function onKeyDown(e: KeyboardEvent) { if (e.key === 'Escape') multiSelect.clearPickerSelection() }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [pickerSelectedIndices.size, multiSelect])
+
   // --- Layout picker: stored keyboards browsing ---
   useEffect(() => {
     if (pickerSource !== 'file') return
@@ -513,8 +521,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     const sourceKeymap = pickerFileData ? pickerFileData.keymap : keymap
     const code = sourceKeymap.get(`${pickerLayer},${key.row},${key.col}`)
     if (code == null) return
-    const kc = findKeycode(serialize(code))
-    if (!kc) return
+    // Always assign the full composite keycode (e.g. LT1(KC_SPC) as-is)
+    const qmkId = serialize(code)
+    const kc = findKeycode(qmkId) ?? { qmkId, label: qmkId, keycode: code }
     const isModified = event && (event.ctrlKey || event.shiftKey)
     if (isModified && handlePickerMultiSelect) {
       // Find the index of this key in the picker's ordered list
@@ -535,7 +544,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         if (k.row === key.row && k.col === key.col) break
         if (sourceKeymap.has(`${pickerLayer},${k.row},${k.col}`)) index++
       }
-      handlePickerMultiSelect(index, code, { ctrlKey: true, shiftKey: false }, pickerTabKeycodeNumbers)
+      handlePickerMultiSelect(index, code, { ctrlKey: false, shiftKey: false }, pickerTabKeycodeNumbers)
     } else {
       handleKeycodeSelect(kc)
     }
