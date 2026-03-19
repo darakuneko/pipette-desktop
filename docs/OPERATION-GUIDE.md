@@ -30,6 +30,25 @@ The File tab allows offline editing of `.pipette` files without a physical keybo
 - A virtual keyboard is created from the embedded definition in the file
 - An unsaved changes indicator is shown when edits have not been saved
 
+**Feature Availability: Device vs File Mode**
+
+| Feature | Device (USB) | File (.pipette) |
+|---------|:------------:|:---------------:|
+| Keymap editing | Yes | Yes |
+| Macro / Tap Dance editing | Yes | Yes |
+| Combo / Key Override / Alt Repeat Key | Yes | Yes |
+| QMK Settings | Yes (device) | Yes (local data) |
+| Typing Test | Yes | Yes |
+| Export (.vil / .c / .pdf) | Yes | Yes |
+| Lighting control | Yes | No |
+| Matrix Tester | Yes | No |
+| Lock / Unlock | Yes | No |
+| Snapshot save / load | Yes | No |
+| Hub upload | Yes | No |
+| JSON sideload | Yes | No |
+| Device probe (Keyboard tab) | Yes | No |
+| Cloud Sync | Yes | No |
+
 ### 1.2 Connecting a Keyboard
 
 Click a keyboard name in the list to open the keymap editor. A connecting overlay shows loading progress while the keyboard data is read.
@@ -94,7 +113,7 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 - **ON** (default): A single click on a keycode immediately assigns it and closes the selection. Fast workflow for quick edits.
 - **OFF**: A single click selects a keycode (highlighted), double-click or press Enter to confirm and assign. A hint is shown at the bottom of the palette. Useful when you want to browse keycodes before committing.
 
-This setting can be toggled per-keyboard in the Keycodes Overlay Panel (§3.13), and the global default can be set in Settings → Defaults (§6.1).
+This setting can be toggled per-keyboard in the Keycodes Overlay Panel (§3.14), and the global default can be set in Settings → Defaults (§6.1).
 
 ### 2.3 Layer Switching
 
@@ -189,7 +208,7 @@ Select keycodes from different categories using the tabbed palette at the bottom
 
 ### 3.1 Basic
 
-Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports four view types, selectable from the Keycodes Overlay Panel (§3.13):
+Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports four view types, selectable from the Keycodes Overlay Panel (§3.14):
 
 **ANSI Keyboard View** (default)
 
@@ -365,7 +384,32 @@ User-defined keycodes.
 - Custom keycodes defined in firmware (e.g., `CUSTOM_1`, `CUSTOM_2`)
 - When exporting `keymap.c`, custom keycodes use their configured names instead of generic `USER00`/`USER01` identifiers, and an `enum custom_keycodes` block is generated automatically
 
-### 3.13 Keycodes Overlay Panel
+### 3.13 Keyboard (Device Picker)
+
+The Keyboard tab lets you copy keycodes from other connected keyboards or from saved files.
+
+**Device List**
+
+When you open the Keyboard tab, a list of all connected Vial-compatible keyboards is displayed. This list updates in real time as you plug in or unplug devices.
+
+- Click a device to load its keymap — the currently connected keyboard shows its live keymap instantly; other devices are probed via a temporary USB connection
+- Once loaded, click any key on the displayed keyboard to assign that keycode to the selected key on the main keymap
+- Use Ctrl+click for multi-select, Shift+click for range select
+- Layer buttons at the bottom right let you browse different layers
+- Zoom controls (+ / numeric input / −) adjust the picker keyboard size independently from the main view
+- Press Escape to clear the picker selection
+
+**File Source**
+
+Click the **File** button at the bottom to switch to the file source. This shows saved keyboard snapshots and allows loading `.pipette` files — the same keycode picking workflow applies.
+
+**Composite Keycodes**
+
+When clicking a composite key (e.g., `LT1(KC_SPC)`) in the picker, the full keycode is assigned as-is. Inner/outer parts are not split — the complete keycode is copied to the target key.
+
+> **Note**: The Keyboard tab is hidden when editing the inner part of a mask key (e.g., choosing the `KC_SPC` inside `LT1(KC_SPC)`), since composite keycodes cannot be assigned to the inner byte.
+
+### 3.14 Keycodes Overlay Panel
 
 The Keycodes Overlay Panel provides quick access to editor tools and save functions. Toggle it with the panel button at the right end of the keycode tab bar.
 
@@ -608,7 +652,7 @@ For Macros, a warning is displayed indicating that keyboard unlock is required t
 
 ## 6. Editor Settings Panel
 
-Open the editor settings panel from the save button (floppy disk icon) in the keycode tab bar, or use the Save tab in the Keycodes Overlay Panel (§3.13).
+Open the editor settings panel from the save button (floppy disk icon) in the keycode tab bar, or use the Save tab in the Keycodes Overlay Panel (§3.14).
 
 ![Editor Settings — Save](screenshots/editor-settings-save.png)
 
@@ -619,7 +663,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
-> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.13). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
+> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.14). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
 
 ### 6.1 Cloud Sync (Google Drive appDataFolder)
 
