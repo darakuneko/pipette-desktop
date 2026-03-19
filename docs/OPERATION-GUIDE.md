@@ -30,6 +30,8 @@ The File tab allows offline editing of `.pipette` files without a physical keybo
 - A virtual keyboard is created from the embedded definition in the file
 - An unsaved changes indicator is shown when edits have not been saved
 
+> **Use case:** You want to tweak your keyboard's keymap, but the keyboard isn't with you right now. If you've previously saved its data, you can load it from the File tab, make your edits offline, and later connect the keyboard and load the modified data to apply your changes.
+
 **Feature Availability: Device vs File Mode**
 
 | Feature | Device (USB) | File (.pipette) |
@@ -387,6 +389,8 @@ User-defined keycodes.
 ### 3.13 Keyboard (Device Picker)
 
 The Keyboard tab lets you copy keycodes from other connected keyboards or from saved files.
+
+> **Use case:** While editing a keyboard, you wonder how another keyboard's keymap is set up — but that keyboard isn't connected right now. If you've previously saved its data (via the Save panel), you can load it from the **File** source in this tab to browse its keymap and copy keycodes directly into your current layout.
 
 **Device List**
 
