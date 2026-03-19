@@ -118,6 +118,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
   const [pickerSelectedPositions, setPickerSelectedPositions] = useState<Set<string>>(new Set())
   const pickerAnchorPosRef = useRef<string | null>(null)
+  const hadPickerSelection = useRef(false)
   const pickerContainerRef = useRef<HTMLDivElement>(null)
 
   const handlePickerHover = useCallback((_key: import('../../../shared/kle/types').KleKey, keycode: string, rect: DOMRect) => {
@@ -183,6 +184,17 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedSet, handlePickerMultiSelect } = multiSelect
+
+  // Sync: clear Keyboard tab positions when hook-level picker selection is cleared
+  const pickerSetSize = pickerSelectedSet.size
+  useEffect(() => {
+    if (pickerSetSize > 0) hadPickerSelection.current = true
+    else if (hadPickerSelection.current) {
+      hadPickerSelection.current = false
+      setPickerSelectedPositions((prev) => prev.size === 0 ? prev : new Set())
+      pickerAnchorPosRef.current = null
+    }
+  }, [pickerSetSize])
 
   // --- Layout picker: stored keyboards browsing ---
   useEffect(() => {
@@ -491,9 +503,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         })
       }
     } else {
-      handleKeycodeSelect(kc)
-      setPickerSelectedPositions(new Set())
-      pickerAnchorPosRef.current = null
+      // Normal click: select single position and set anchor for subsequent Shift/Ctrl clicks
+      pickerAnchorPosRef.current = posKey
+      setPickerSelectedPositions(new Set([posKey]))
+      handlePickerMultiSelect(kc, { ctrlKey: true, shiftKey: false }, pickerTabKeycodes)
     }
   }, [keymap, pickerLayer, pickerSource, pickerFileData, handleKeycodeSelect, handlePickerMultiSelect, pickerTabKeycodes, pickerOrderedPositions])
 
@@ -789,6 +802,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             keyboardPickerContent={layoutPickerContent}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
             pickerSelectedKeycodes={pickerSelectedSet} onBackgroundClick={handleDeselect}
+            onTabChange={() => { handleDeselect(); setPickerSelectedPositions(new Set()); pickerAnchorPosRef.current = null }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
