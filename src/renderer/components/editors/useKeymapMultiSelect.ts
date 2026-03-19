@@ -62,17 +62,13 @@ export function useKeymapMultiSelect({
 
   const handlePickerMultiSelect = useCallback(
     (kc: Keycode, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodes: Keycode[]) => {
-      if (hasActiveSingleSelectionRef.current) return
 
       setMultiSelectedKeys((prev) => prev.size === 0 ? prev : new Set())
       setSelectionAnchor(null)
       setSelectionSourcePane(null)
 
       if (event.ctrlKey) {
-        setPickerSelectedKeycodes((prev) => {
-          const exists = prev.some((k) => k.qmkId === kc.qmkId)
-          return exists ? prev.filter((k) => k.qmkId !== kc.qmkId) : [...prev, kc]
-        })
+        setPickerSelectedKeycodes((prev) => [...prev, kc])
         setPickerAnchor(kc.qmkId)
       } else if (event.shiftKey) {
         const anchor = pickerAnchorRef.current

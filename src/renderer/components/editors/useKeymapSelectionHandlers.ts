@@ -35,6 +35,8 @@ export interface UseKeymapSelectionOptions {
   onUnlock?: (options?: { macroWarning?: boolean }) => void
   // Multi-select
   multiSelect: UseKeymapMultiSelectReturn
+  /** Resolve picker selection to ordered keycode numbers for paste (position-based, avoids qmkId dedup). */
+  resolvePickerKeycodes?: () => number[]
   // TD/Macro
   tapDanceEntries?: TapDanceEntry[]
   onSetTapDanceEntry?: (index: number, entry: TapDanceEntry) => Promise<void>
@@ -63,6 +65,7 @@ export function useKeymapSelectionHandlers({
   unlocked,
   onUnlock,
   multiSelect,
+  resolvePickerKeycodes,
   tapDanceEntries,
   onSetTapDanceEntry,
   macroCount,
@@ -245,17 +248,20 @@ export function useKeymapSelectionHandlers({
   const handlePickerPaste = useCallback(async (targetKey: KleKey) => {
     const targetIdx = selectableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
     if (targetIdx < 0) return
-    const targetPositions = selectableKeys.slice(targetIdx, targetIdx + pickerSelectedKeycodes.length)
+    // Use position-based resolver when available (handles duplicate qmkIds like KC_NO)
+    const resolved = resolvePickerKeycodes?.()
+    const keycodes = resolved && resolved.length > 0 ? resolved : pickerSelectedKeycodes.map((kc) => deserialize(kc.qmkId))
+    if (keycodes.length === 0) return
+    const targetPositions = selectableKeys.slice(targetIdx, targetIdx + keycodes.length)
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
-        const code = deserialize(pickerSelectedKeycodes[i].qmkId)
-        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: code })
+        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: keycodes[i] })
       }
       await onSetKeysBulk(entries)
     })
     clearPickerSelection()
-  }, [pickerSelectedKeycodes, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
+  }, [pickerSelectedKeycodes, resolvePickerKeycodes, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
 
   // --- Click handlers ---
   const handleKeyClick = useCallback(

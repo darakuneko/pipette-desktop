@@ -168,7 +168,7 @@ describe('KeymapEditor — picker paste', () => {
     expect(selected.size).toBe(1)
   })
 
-  it('toggles picker selection off on second Ctrl+click', () => {
+  it('accumulates on second Ctrl+click of same keycode', () => {
     render(<KeymapEditor {...defaultProps} />)
     const multiSelect = getOnKeycodeMultiSelect()!
 
@@ -181,8 +181,8 @@ describe('KeymapEditor — picker paste', () => {
     })
 
     const selected = getPickerSelectedSet()!
-    expect(selected.has('KC_10')).toBe(false)
-    expect(selected.size).toBe(0)
+    expect(selected.has('KC_10')).toBe(true)
+    expect(selected.size).toBe(1) // Set deduplicates by qmkId, but underlying array has 2 entries
   })
 
   it('selects range on Shift+click after Ctrl anchor', () => {
@@ -272,7 +272,7 @@ describe('KeymapEditor — picker paste', () => {
     expect(selected.size).toBe(0)
   })
 
-  it('does not allow picker multi-select when a key is selected', () => {
+  it('allows picker multi-select even when a key is selected (deselects key first)', () => {
     render(<KeymapEditor {...defaultProps} />)
 
     // Select a key first
@@ -281,14 +281,15 @@ describe('KeymapEditor — picker paste', () => {
       onKeyClick({ row: 0, col: 0 } as KleKey, false)
     })
 
-    // Try picker multi-select
+    // Ctrl+click picker multi-select — should deselect key and start selection
     const multiSelect = getOnKeycodeMultiSelect()!
     act(() => {
       multiSelect(TAB_KEYCODES[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODES)
     })
 
     const selected = getPickerSelectedSet()!
-    expect(selected.size).toBe(0)
+    expect(selected.size).toBe(1)
+    expect(selected.has('KC_10')).toBe(true)
   })
 
   it('clears picker selection on normal keycode click', () => {
