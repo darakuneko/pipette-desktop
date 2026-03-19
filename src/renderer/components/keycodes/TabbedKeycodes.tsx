@@ -34,7 +34,9 @@ interface Props {
   onConfirm?: () => void // Confirm current selection (Enter key)
   onKeycodeMultiSelect?: (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => void
   pickerSelectedIndices?: Set<number>
+  pickerMultiSelectEnabled?: boolean
   onBackgroundClick?: () => void
+  onTabChange?: () => void
   onClose?: () => void
   highlightedKeycodes?: Set<string>
   maskOnly?: boolean // When true, only show keycodes with value < 0xFF (for mask inner byte editing)
@@ -56,7 +58,9 @@ export function TabbedKeycodes({
   onConfirm,
   onKeycodeMultiSelect,
   pickerSelectedIndices,
+  pickerMultiSelectEnabled = false,
   onBackgroundClick,
+  onTabChange,
   onClose,
   highlightedKeycodes,
   maskOnly = false,
@@ -234,15 +238,18 @@ export function TabbedKeycodes({
     (kc: Keycode, event: React.MouseEvent, index: number) => {
       const isModified = event.ctrlKey || event.metaKey || event.shiftKey
       if (isModified && onKeycodeMultiSelect) {
+        if (!pickerMultiSelectEnabled) onBackgroundClick?.()
         onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: event.ctrlKey || event.metaKey, shiftKey: event.shiftKey }, activeTabKeycodeNumbers)
+      } else if (onKeycodeMultiSelect && pickerMultiSelectEnabled) {
+        onKeycodeMultiSelect(index, deserialize(kc.qmkId), { ctrlKey: true, shiftKey: false }, activeTabKeycodeNumbers)
       } else {
         onKeycodeSelect?.(kc)
       }
     },
-    [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers],
+    [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers, pickerMultiSelectEnabled, onBackgroundClick],
   )
 
-  function renderKeycodeGrid(keycodes: Keycode[]): React.ReactNode {
+  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): React.ReactNode {
     return (
       <KeycodeGrid
         keycodes={keycodes}
@@ -251,7 +258,7 @@ export function TabbedKeycodes({
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
-        pickerSelectedIndices={pickerSelectedIndices}
+        pickerSelectedIndices={(!tabId || tabId === activeTab) ? pickerSelectedIndices : undefined}
         isVisible={isVisible}
         splitKeyMode={maskOnly ? 'flat' : resolvedSplitKeyMode}
         remapLabel={remapLabel}
@@ -259,7 +266,7 @@ export function TabbedKeycodes({
     )
   }
 
-  function renderGroup(group: KeycodeGroup, hint?: string): React.ReactNode {
+  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string): React.ReactNode {
     return (
       <div key={group.labelKey}>
         <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
@@ -270,17 +277,18 @@ export function TabbedKeycodes({
             {group.sections
               .filter((s) => s.some(isVisible))
               .map((section, i) => (
-                <div key={i}>{renderKeycodeGrid(section)}</div>
+                <div key={i}>{renderKeycodeGrid(section, tabId)}</div>
               ))}
           </div>
         ) : (
-          renderKeycodeGrid(group.keycodes)
+          renderKeycodeGrid(group.keycodes, tabId)
         )}
       </div>
     )
   }
 
   function renderCategoryContent(category: KeycodeCategory): React.ReactNode {
+    const isActive = category.id === activeTab
     // Keyboard view for basic tab (ANSI, ISO, or JIS)
     if (category.id === 'basic' && resolvedBasicViewType !== 'list' && resolvedBasicViewType != null && !lmMode) {
       return (
@@ -292,7 +300,7 @@ export function TabbedKeycodes({
           onKeycodeHover={handleKeycodeHover}
           onKeycodeHoverEnd={handleKeycodeHoverEnd}
           highlightedKeycodes={highlightedKeycodes}
-          pickerSelectedIndices={pickerSelectedIndices}
+          pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
           isVisible={isVisible}
           remapLabel={remapLabel}
         />
@@ -307,13 +315,13 @@ export function TabbedKeycodes({
 
     // No override, no groups — fall back to flat keycode grid
     if (!override && !groups?.length) {
-      return renderKeycodeGrid(category.getKeycodes().filter(isVisible))
+      return renderKeycodeGrid(category.getKeycodes().filter(isVisible), category.id)
     }
 
     const rows = groupByLayoutRow(groups ?? [])
     const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
-        {row.map((group) => renderGroup(group))}
+        {row.map((group) => renderGroup(group, category.id))}
       </div>
     ))
 
@@ -342,7 +350,7 @@ export function TabbedKeycodes({
                   ? 'border-b-accent text-accent font-semibold'
                   : 'border-b-transparent text-content-secondary hover:text-content'
               }`}
-              onClick={() => { setActiveTab(cat.id); setTooltip(null) }}
+              onClick={() => { onTabChange?.(); setActiveTab(cat.id); setTooltip(null) }}
             >
               {t(cat.labelKey)}
             </button>
@@ -356,7 +364,7 @@ export function TabbedKeycodes({
                   ? 'border-b-accent text-accent font-semibold'
                   : 'border-b-transparent text-content-secondary hover:text-content'
               }`}
-              onClick={() => { setActiveTab('keyboard'); setTooltip(null) }}
+              onClick={() => { onTabChange?.(); setActiveTab('keyboard'); setTooltip(null) }}
             >
               {t('editor.keymap.keyboardTab')}
             </button>

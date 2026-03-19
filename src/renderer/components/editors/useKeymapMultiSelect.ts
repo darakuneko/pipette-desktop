@@ -75,7 +75,6 @@ export function useKeymapMultiSelect({
 
   const handlePickerMultiSelect = useCallback(
     (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => {
-      if (hasActiveSingleSelectionRef.current) return
 
       setMultiSelectedKeys((prev) => prev.size === 0 ? prev : new Set())
       setSelectionAnchor(null)
