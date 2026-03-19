@@ -250,7 +250,7 @@ export function TabbedKeycodes({
     [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers, pickerMultiSelectEnabled, onBackgroundClick],
   )
 
-  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): React.ReactNode {
+  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string, indexOffset = 0): React.ReactNode {
     return (
       <KeycodeGrid
         keycodes={keycodes}
@@ -263,11 +263,13 @@ export function TabbedKeycodes({
         isVisible={isVisible}
         splitKeyMode={maskOnly ? 'flat' : resolvedSplitKeyMode}
         remapLabel={remapLabel}
+        indexOffset={indexOffset}
       />
     )
   }
 
-  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string): React.ReactNode {
+  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string, groupOffset = 0): React.ReactNode {
+    let sectionOffset = groupOffset
     return (
       <div key={group.labelKey}>
         <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
@@ -277,12 +279,14 @@ export function TabbedKeycodes({
           <div className="space-y-1">
             {group.sections
               .filter((s) => s.some(isVisible))
-              .map((section, i) => (
-                <div key={i}>{renderKeycodeGrid(section, tabId)}</div>
-              ))}
+              .map((section, i) => {
+                const offset = sectionOffset
+                sectionOffset += section.filter(isVisible).length
+                return <div key={i}>{renderKeycodeGrid(section, tabId, offset)}</div>
+              })}
           </div>
         ) : (
-          renderKeycodeGrid(group.keycodes, tabId)
+          renderKeycodeGrid(group.keycodes, tabId, groupOffset)
         )}
       </div>
     )
@@ -320,9 +324,17 @@ export function TabbedKeycodes({
     }
 
     const rows = groupByLayoutRow(groups ?? [])
+    let cumulativeOffset = 0
     const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
-        {row.map((group) => renderGroup(group, category.id))}
+        {row.map((group) => {
+          const offset = cumulativeOffset
+          const count = group.sections
+            ? group.sections.reduce((sum, s) => sum + s.filter(isVisible).length, 0)
+            : group.keycodes.filter(isVisible).length
+          cumulativeOffset += count
+          return renderGroup(group, category.id, undefined, offset)
+        })}
       </div>
     ))
 
