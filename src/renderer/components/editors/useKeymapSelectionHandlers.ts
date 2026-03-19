@@ -305,7 +305,6 @@ export function useKeymapSelectionHandlers({
 
   // --- Deselect ---
   const handleDeselect = useCallback(() => {
-    console.log('[Deselect] called')
     clearSingleSelection(); clearMultiSelection(); clearPickerSelection(); setCopyLayerPending(false)
   }, [clearSingleSelection, clearMultiSelection, clearPickerSelection])
 

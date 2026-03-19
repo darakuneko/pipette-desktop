@@ -39,6 +39,7 @@ export function useDeviceConnection() {
   const mountedRef = useRef(true)
   const connectedDeviceRef = useRef<DeviceInfo | null>(null)
   const isDummyRef = useRef(false)
+  const pollPausedRef = useRef(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -186,6 +187,12 @@ export function useDeviceConnection() {
     async function poll(): Promise<void> {
       if (!mountedRef.current || cancelled) return
 
+      // Skip all USB activity while paused (e.g. during unlock dialog)
+      if (pollPausedRef.current) {
+        if (!cancelled) timerId = setTimeout(poll, POLL_INTERVAL_MS)
+        return
+      }
+
       // Always refresh device list (for device picker to detect plug/unplug)
       try {
         const devices = await withTimeout(
@@ -224,6 +231,9 @@ export function useDeviceConnection() {
     }
   }, []) // stable — uses refs internally
 
+  const pausePoll = useCallback(() => { pollPausedRef.current = true }, [])
+  const resumePoll = useCallback(() => { pollPausedRef.current = false }, [])
+
   return {
     ...state,
     refreshDevices,
@@ -231,5 +241,7 @@ export function useDeviceConnection() {
     connectDummy,
     connectPipetteFile,
     disconnectDevice,
+    pausePoll,
+    resumePoll,
   }
 }
