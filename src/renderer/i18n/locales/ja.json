@@ -41,7 +41,7 @@
     "fileTab": "ファイル",
     "loadPipetteFile": ".pipetteファイルを読み込み…",
     "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できます。ライティングとマトリクステスター以外の全機能が利用可能です。",
-    "selectKeyboard": "キーボードを選択",
+    "selectKeyboard": "ローカル保存ファイルを選択",
     "fileCount": "{{count}} 件"
   },
   "loading": {
@@ -102,6 +102,8 @@
       "pickerProbing": "キーボードを読み取り中...",
       "pickerProbeError": "キーボードの読み取りに失敗しました",
       "pickerBackToDevices": "← デバイス",
+      "pickerCurrentState": "現在の状態",
+      "pickerSavedFiles": "ローカル保存されたセーブファイル",
       "keyPopover": {
         "keyTab": "キー",
         "codeTab": "コード",

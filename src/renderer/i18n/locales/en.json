@@ -42,7 +42,7 @@
     "loadPipetteFile": "Load .pipette file…",
     "loadPipetteFileDescription": "Open a .pipette file for offline editing. All features except lighting and matrix tester are available.",
     "noSavedFiles": "No saved files",
-    "selectKeyboard": "Select Keyboard",
+    "selectKeyboard": "Select locally saved file",
     "fileCount": "{{count}} saves"
   },
   "loading": {
@@ -103,6 +103,8 @@
       "pickerProbing": "Reading keyboard...",
       "pickerProbeError": "Failed to read keyboard",
       "pickerBackToDevices": "← Devices",
+      "pickerCurrentState": "Current State",
+      "pickerSavedFiles": "Locally saved files",
       "keyPopover": {
         "keyTab": "Key",
         "codeTab": "Code",

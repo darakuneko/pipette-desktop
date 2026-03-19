@@ -651,6 +651,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           /* --- Device browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
             <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+              <span className="mb-1 text-xs text-content-secondary">{t('editor.keymap.pickerCurrentState')}</span>
               {probeStatus === 'probing' ? (
                 <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerProbing')}</p>
               ) : probeStatus === 'error' ? (
@@ -672,6 +673,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           /* --- File browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
             <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+            {fileBrowseView === 'list' && (
+              <span className="mb-1 text-xs text-content-secondary">{t('editor.keymap.pickerSavedFiles')}</span>
+            )}
             {fileBrowseView === 'entries' && (
               <button type="button" className="mb-2 self-start text-xs text-content-secondary hover:text-content"
                 onClick={() => { setFileBrowseView('list'); setSelectedFileUid(null) }}>
