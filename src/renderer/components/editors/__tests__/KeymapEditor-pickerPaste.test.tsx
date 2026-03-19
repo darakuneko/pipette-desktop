@@ -275,7 +275,7 @@ describe('KeymapEditor — picker paste', () => {
     expect(selected.size).toBe(0)
   })
 
-  it('does not allow picker multi-select when a key is selected', () => {
+  it('allows picker multi-select even when a key is selected', () => {
     render(<KeymapEditor {...defaultProps} />)
 
     // Select a key first
@@ -284,14 +284,15 @@ describe('KeymapEditor — picker paste', () => {
       onKeyClick({ row: 0, col: 0 } as KleKey, false)
     })
 
-    // Try picker multi-select
+    // Ctrl+click picker multi-select — should work (deselects key first)
     const multiSelect = getOnKeycodeMultiSelect()!
     act(() => {
       multiSelect(0, TAB_KEYCODE_NUMBERS[0], { ctrlKey: true, shiftKey: false }, TAB_KEYCODE_NUMBERS)
     })
 
     const selected = getPickerSelectedSet()!
-    expect(selected.size).toBe(0)
+    expect(selected.size).toBe(1)
+    expect(selected.has(0)).toBe(true)
   })
 
   it('clears picker selection on normal keycode click', () => {
