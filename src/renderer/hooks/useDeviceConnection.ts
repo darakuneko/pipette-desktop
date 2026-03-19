@@ -186,27 +186,27 @@ export function useDeviceConnection() {
     async function poll(): Promise<void> {
       if (!mountedRef.current || cancelled) return
 
+      // Always refresh device list (for device picker to detect plug/unplug)
+      try {
+        const devices = await withTimeout(
+          window.vialAPI.listDevices(),
+          POLL_TIMEOUT_MS,
+        )
+        if (mountedRef.current) {
+          setState((s) => ({ ...s, devices, error: null }))
+        }
+      } catch {
+        // Ignore polling errors (including timeouts) to avoid flooding the UI
+      }
+
       if (connectedDeviceRef.current) {
-        // Skip health check for dummy keyboards
+        // Health check for connected device (skip for dummy keyboards)
         if (!isDummyRef.current) {
           const open = await withTimeout(
             window.vialAPI.isDeviceOpen(),
             POLL_TIMEOUT_MS,
           ).catch(() => false)
           if (!open) await handleDisconnect()
-        }
-      } else {
-        // Refresh device list for auto-detection
-        try {
-          const devices = await withTimeout(
-            window.vialAPI.listDevices(),
-            POLL_TIMEOUT_MS,
-          )
-          if (mountedRef.current) {
-            setState((s) => ({ ...s, devices, error: null }))
-          }
-        } catch {
-          // Ignore polling errors (including timeouts) to avoid flooding the UI
         }
       }
 

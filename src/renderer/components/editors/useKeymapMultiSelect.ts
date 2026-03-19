@@ -80,7 +80,11 @@ export function useKeymapMultiSelect({
       setSelectionAnchor(null)
       setSelectionSourcePane(null)
 
-      if (event.ctrlKey) {
+      if (!event.ctrlKey && !event.shiftKey) {
+        // Single click: clear previous, select only this key
+        setPickerSelected(new Map([[index, keycode]]))
+        setPickerAnchorIndex(index)
+      } else if (event.ctrlKey) {
         setPickerSelected((prev) => {
           const next = new Map(prev)
           next.set(index, keycode)

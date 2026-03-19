@@ -5,6 +5,7 @@ import type {
   DeviceInfo,
   KeyboardDefinition,
   KeyboardId,
+  ProbeResult,
   TapDanceEntry,
   ComboEntry,
   KeyOverrideEntry,
@@ -27,6 +28,7 @@ export interface VialAPI {
   openDevice(vendorId: number, productId: number): Promise<boolean>
   closeDevice(): Promise<void>
   isDeviceOpen(): Promise<boolean>
+  probeDevice(vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult>
 
   // VIA Protocol
   getProtocolVersion(): Promise<number>

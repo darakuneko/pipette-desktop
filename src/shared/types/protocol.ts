@@ -153,3 +153,18 @@ export interface VilFile {
   /** Keyboard definition embedded in v2 snapshots for offline rendering. */
   definition?: KeyboardDefinition
 }
+
+/** Result of probing a connected keyboard device */
+export interface ProbeResult {
+  uid: string
+  name: string
+  vialProtocol: number
+  definition: KeyboardDefinition
+  layers: number
+  rows: number
+  cols: number
+  keymap: Record<string, number>      // "layer,row,col" → keycode
+  encoderLayout: Record<string, number> // "layer,idx,dir" → keycode
+  encoderCount: number
+  layoutOptions: number
+}

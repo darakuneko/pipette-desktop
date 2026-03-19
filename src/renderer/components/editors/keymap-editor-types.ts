@@ -4,7 +4,7 @@ import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
-import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
+import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
@@ -139,4 +139,8 @@ export interface KeymapEditorProps {
   onFavUpdateOnHub?: (type: string, entryId: string) => void
   onFavRemoveFromHub?: (type: string, entryId: string) => void
   onFavRenameOnHub?: (entryId: string, hubPostId: string, newLabel: string) => void
+  /** List of currently detected HID devices (for device probe picker) */
+  devices?: DeviceInfo[]
+  /** Currently connected (primary) device info */
+  connectedDevice?: DeviceInfo | null
 }

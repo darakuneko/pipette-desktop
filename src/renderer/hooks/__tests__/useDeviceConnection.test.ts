@@ -127,15 +127,14 @@ describe('useDeviceConnection', () => {
 
       mockListDevices.mockClear()
 
-      // Wait for the polling interval to call isDeviceOpen instead of listDevices
+      // Wait for the polling interval — both listDevices and isDeviceOpen are called
       await waitFor(
         () => {
           expect(mockIsDeviceOpen).toHaveBeenCalled()
+          expect(mockListDevices).toHaveBeenCalled()
         },
         { timeout: 5000, interval: 200 },
       )
-
-      expect(mockListDevices).not.toHaveBeenCalled()
     })
 
     it('detects disconnection via isDeviceOpen returning false', async () => {
