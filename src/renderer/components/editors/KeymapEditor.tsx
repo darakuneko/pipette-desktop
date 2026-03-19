@@ -475,8 +475,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         if (sourceKeymap.has(`${pickerLayer},${k.row},${k.col}`)) index++
       }
       handlePickerMultiSelect(index, code, { ctrlKey: !!event.ctrlKey, shiftKey: !!event.shiftKey }, pickerTabKeycodeNumbers)
-    } else if (handlePickerMultiSelect) {
-      // Normal click: select single key and set anchor for subsequent Shift/Ctrl clicks
+    } else if (handlePickerMultiSelect && !selectedKey && !selectedEncoder) {
+      // Normal click (no key selected): select single key and set anchor
       const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
       let index = 0
       for (const k of keys) {
