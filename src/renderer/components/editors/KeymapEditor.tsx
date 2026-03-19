@@ -666,8 +666,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoDevices')}</p>
               )}
             </div>
-            {/* Spacer to match file browse view height (which has a "Load from file" button) */}
-            <div className="mt-2 h-[38px]" />
+            <div className="mt-2 rounded-lg border border-dashed border-transparent px-3 py-2 text-center text-xs invisible">&#8203;</div>
           </div>
         ) : pickerSource === 'file' && !pickerFileData ? (
           /* --- File browse view --- */
