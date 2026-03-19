@@ -23,6 +23,7 @@ export const IpcChannels = {
   HID_SEND_RECEIVE: 'hid:sendReceive',
   HID_SEND: 'hid:send',
   HID_IS_DEVICE_OPEN: 'hid:isDeviceOpen',
+  HID_PROBE_DEVICE: 'hid:probeDevice',
 
   // LZMA decompression (preload → main → preload)
   LZMA_DECOMPRESS: 'lzma:decompress',

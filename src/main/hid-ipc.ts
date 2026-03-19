@@ -31,4 +31,8 @@ export function setupHidIpc(): void {
   )
 
   secureHandle(IpcChannels.HID_IS_DEVICE_OPEN, () => hidService.isDeviceOpen())
+
+  secureHandle(IpcChannels.HID_PROBE_DEVICE, (_event, vendorId: number, productId: number, serialNumber?: string) =>
+    hidService.probeDevice(vendorId, productId, serialNumber),
+  )
 }

@@ -290,6 +290,7 @@ export function App() {
           onOpenData={lifecycle.handleOpenDataModal}
           syncStatus={sync.syncStatus}
           deviceWarning={lifecycle.deviceLoadError}
+          onClearError={lifecycle.clearFileLoadError}
         />
         {lifecycle.showSettings && (
           <SettingsModal
@@ -596,6 +597,8 @@ export function App() {
             onFavUpdateOnHub={hub.hubCanUpload ? hub.handleFavUpdateOnHub : undefined}
             onFavRemoveFromHub={hub.hubReady ? hub.handleFavRemoveFromHub : undefined}
             onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
+            devices={device.devices}
+            connectedDevice={device.connectedDevice}
           />
         </div>
 

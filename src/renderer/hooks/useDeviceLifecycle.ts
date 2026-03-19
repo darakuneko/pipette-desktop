@@ -247,8 +247,11 @@ export function useDeviceLifecycle(options: Options) {
     }
   }, [openPipetteVil, t])
 
+  const clearFileLoadError = useCallback(() => setFileLoadError(null), [])
+
   return {
     fileLoadError,
+    clearFileLoadError,
     deviceLoadError,
     showSettings,
     setShowSettings,

@@ -8,7 +8,7 @@
 
 import { ipcRenderer } from 'electron'
 import { IpcChannels } from '../shared/ipc/channels'
-import type { DeviceInfo } from '../shared/types/protocol'
+import type { DeviceInfo, ProbeResult } from '../shared/types/protocol'
 
 // Cache device-open state to skip IPC round-trip when device is known closed
 let deviceOpen = false
@@ -65,4 +65,8 @@ export async function isDeviceOpen(): Promise<boolean> {
   const open = await ipcRenderer.invoke(IpcChannels.HID_IS_DEVICE_OPEN)
   if (!open) deviceOpen = false
   return open as boolean
+}
+
+export async function probeDevice(vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult> {
+  return ipcRenderer.invoke(IpcChannels.HID_PROBE_DEVICE, vendorId, productId, serialNumber)
 }

@@ -4,10 +4,11 @@ import {
   openHidDevice,
   closeHidDevice,
   isDeviceOpen,
+  probeDevice,
 } from './hid-transport'
 import * as protocol from './protocol'
 import { IpcChannels } from '../shared/ipc/channels'
-import type { DeviceInfo, KeyboardDefinition } from '../shared/types/protocol'
+import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
@@ -30,6 +31,8 @@ const vialAPI = {
     openHidDevice(vendorId, productId),
   closeDevice: (): Promise<void> => closeHidDevice(),
   isDeviceOpen: (): Promise<boolean> => isDeviceOpen(),
+  probeDevice: (vendorId: number, productId: number, serialNumber?: string): Promise<ProbeResult> =>
+    probeDevice(vendorId, productId, serialNumber),
 
   // --- VIA Protocol ---
   getProtocolVersion: (): Promise<number> => protocol.getProtocolVersion(),

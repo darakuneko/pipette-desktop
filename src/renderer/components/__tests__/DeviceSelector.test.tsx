@@ -15,7 +15,7 @@ vi.mock('react-i18next', () => ({
         'app.connecting': 'Connecting{{dots}}',
         'app.deviceNotConnected': 'No keyboard connected',
         'app.loadDummy': 'Load from JSON file…',
-        'app.keyboardTab': 'Keyboard',
+        'app.keyboardTab': 'Device',
         'app.fileTab': 'File',
         'app.loadPipetteFile': 'Load .pipette file…',
         'app.loadPipetteFileDescription': 'Open a .pipette file for offline editing.',
