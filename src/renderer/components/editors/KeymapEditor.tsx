@@ -475,6 +475,16 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         if (sourceKeymap.has(`${pickerLayer},${k.row},${k.col}`)) index++
       }
       handlePickerMultiSelect(index, code, { ctrlKey: !!event.ctrlKey, shiftKey: !!event.shiftKey }, pickerTabKeycodeNumbers)
+    } else if (handlePickerMultiSelect) {
+      // Normal click: select single key and set anchor for subsequent Shift/Ctrl clicks
+      const keys = pickerSource === 'file' && pickerFileData ? pickerFileData.layout.keys : layout?.keys ?? []
+      let index = 0
+      for (const k of keys) {
+        if (k.row == null || k.col == null) continue
+        if (k.row === key.row && k.col === key.col) break
+        if (sourceKeymap.has(`${pickerLayer},${k.row},${k.col}`)) index++
+      }
+      handlePickerMultiSelect(index, code, { ctrlKey: true, shiftKey: false }, pickerTabKeycodeNumbers)
     } else {
       handleKeycodeSelect(kc)
     }
@@ -664,7 +674,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           <div className="flex items-center gap-1">
             {Array.from({ length: pickerData.totalLayers }, (_, i) => (
               <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
-                onClick={() => setPickerLayer(i)}>
+                onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
                 {pickerData.names?.[i] || i}
               </button>
             ))}
@@ -786,7 +796,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           <TabbedKeycodes
             keyboardPickerContent={layoutPickerContent}
             onKeycodeSelect={handleKeycodeSelect} onKeycodeMultiSelect={handlePickerMultiSelect}
-            pickerSelectedIndices={pickerSelectedIndices} onBackgroundClick={handleDeselect}
+            pickerSelectedIndices={pickerSelectedIndices}
+            pickerMultiSelectEnabled={!selectedKey && !selectedEncoder}
+            onBackgroundClick={handleDeselect}
+            onTabChange={() => { handleDeselect(); multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
