@@ -290,6 +290,7 @@ export function App() {
           onOpenData={lifecycle.handleOpenDataModal}
           syncStatus={sync.syncStatus}
           deviceWarning={lifecycle.deviceLoadError}
+          onClearError={lifecycle.clearFileLoadError}
         />
         {lifecycle.showSettings && (
           <SettingsModal

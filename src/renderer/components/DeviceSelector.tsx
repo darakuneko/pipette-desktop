@@ -49,6 +49,7 @@ interface Props {
   onOpenData?: () => void
   syncStatus?: SyncStatusType
   deviceWarning?: string | null
+  onClearError?: () => void
 }
 
 export function DeviceSelector({
@@ -67,6 +68,7 @@ export function DeviceSelector({
   onOpenData,
   syncStatus,
   deviceWarning,
+  onClearError,
 }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<'keyboard' | 'file'>('keyboard')
@@ -146,7 +148,7 @@ export function DeviceSelector({
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'keyboard' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => setTab('keyboard')}
+            onClick={() => { setTab('keyboard'); onClearError?.() }}
             data-testid="tab-keyboard"
           >
             {t('app.keyboardTab')}
@@ -154,7 +156,7 @@ export function DeviceSelector({
           <button
             type="button"
             className={`${TAB_CLASS} ${tab === 'file' ? TAB_ACTIVE : TAB_INACTIVE}`}
-            onClick={() => setTab('file')}
+            onClick={() => { setTab('file'); onClearError?.() }}
             data-testid="tab-file"
           >
             {t('app.fileTab')}
@@ -272,7 +274,7 @@ export function DeviceSelector({
                   type="button"
                   data-testid="file-back-button"
                   className="flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-widest text-content-muted transition-colors hover:text-content-secondary"
-                  onClick={() => setSelectedFileUid(null)}
+                  onClick={() => { setSelectedFileUid(null); onClearError?.() }}
                 >
                   <ChevronLeft size={12} aria-hidden="true" />
                   {t('common.back')}

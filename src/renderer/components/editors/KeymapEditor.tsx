@@ -118,6 +118,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
   const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
   const [deviceBrowsing, setDeviceBrowsing] = useState(true)
+  const [pickerScale, setPickerScale] = useState(1)
   const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
   // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
@@ -720,7 +721,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
               remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
-              layoutOptions={pickerData.layoutOpts} scale={scaleProp}
+              layoutOptions={pickerData.layoutOpts} scale={pickerScale}
               layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerFileData ? ` — ${pickerFileData.name}` : '')}
               layerLabelTestId="picker-layer-label"
               onKeyClick={handlePickerKeyClick}
@@ -753,16 +754,32 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             {pickerSource === 'file' && pickerFileData ? t('editor.keymap.pickerBackToFiles') : t('editor.keymap.pickerSourceFile')}
           </button>
         </div>
-        {!pickerBrowseMode && (
-          <div className="flex items-center gap-1">
-            {Array.from({ length: pickerData.totalLayers }, (_, i) => (
-              <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
-                onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
-                {pickerData.names?.[i] || i}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
+          <button type="button" aria-label={t('editor.keymap.zoomIn')}
+            className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+            disabled={pickerScale >= MAX_SCALE}
+            onClick={() => setPickerScale((s) => Math.min(MAX_SCALE, +(s + 0.1).toFixed(1)))}>
+            <ZoomIn size={14} aria-hidden="true" />
+          </button>
+          <ScaleInput scale={pickerScale} onScaleChange={(delta) => setPickerScale((s) => {
+            const next = +(s + delta).toFixed(1)
+            return Math.max(MIN_SCALE, Math.min(MAX_SCALE, next))
+          })} />
+          <button type="button" aria-label={t('editor.keymap.zoomOut')}
+            className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+            disabled={pickerScale <= MIN_SCALE}
+            onClick={() => setPickerScale((s) => Math.max(MIN_SCALE, +(s - 0.1).toFixed(1)))}>
+            <ZoomOut size={14} aria-hidden="true" />
+          </button>
+        </div>
+        <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
+          {Array.from({ length: pickerData.totalLayers }, (_, i) => (
+            <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
+              onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
+              {pickerData.names?.[i] || i}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
