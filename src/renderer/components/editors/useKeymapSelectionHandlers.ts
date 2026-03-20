@@ -318,19 +318,24 @@ export function useKeymapSelectionHandlers({
     clearPickerSelection(); clearPending()
     const code = deserialize(kc.qmkId)
     if (selectedKey) {
+      const mapKey = `${currentLayer},${selectedKey.row},${selectedKey.col}`
+      const currentCode = keymap.get(mapKey) ?? 0
+      recordUndo(mapKey, currentCode)
       await guard([code], async () => {
-        const currentCode = keymap.get(`${currentLayer},${selectedKey.row},${selectedKey.col}`) ?? 0
         const finalCode = resolveKeycode(currentCode, code, isMaskKey)
         await onSetKey(currentLayer, selectedKey.row, selectedKey.col, finalCode)
         if (!isMaskKey && isMask(kc.qmkId) && autoAdvance) setSelectedMaskPart(true)
         else advanceToNextKey()
       })
     } else if (selectedEncoder) {
+      const mapKey = `${currentLayer},${selectedEncoder.idx},${selectedEncoder.dir}`
+      const currentCode = encoderLayout.get(mapKey) ?? 0
+      recordUndo(mapKey, currentCode)
       await guard([code], async () => { await onSetEncoder(currentLayer, selectedEncoder.idx, selectedEncoder.dir, code) })
     } else {
       openTdModal(code); openMacroModal(code)
     }
-  }, [selectedKey, selectedEncoder, currentLayer, keymap, isMaskKey, autoAdvance, onSetKey, onSetEncoder, advanceToNextKey, openTdModal, openMacroModal, guard, clearPending, clearPickerSelection])
+  }, [selectedKey, selectedEncoder, currentLayer, keymap, encoderLayout, isMaskKey, autoAdvance, onSetKey, onSetEncoder, advanceToNextKey, openTdModal, openMacroModal, guard, clearPending, clearPickerSelection, recordUndo])
 
   const handlePopoverKeycodeSelect = useCallback(async (kc: Keycode) => {
     clearPending()
