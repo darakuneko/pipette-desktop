@@ -913,7 +913,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             pickerSelectedIndices={pickerSelectedIndices}
             pickerMultiSelectEnabled={!selectedKey && !selectedEncoder}
             onBackgroundClick={handleDeselect}
-            onTabChange={() => { handleDeselect(); multiSelect.clearPickerSelection() }}
+            onTabChange={() => { multiSelect.clearPickerSelection() }}
             highlightedKeycodes={configuredKeycodes} maskOnly={isMaskKey} lmMode={isLMMask} showHint={!isMaskKey}
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
