@@ -181,6 +181,8 @@ Click an active mode button to toggle it off and revert to a basic keycode.
 
 **Undo**: If the selected key already has a keycode assigned, the popover shows an **Undo** button that displays the previous keycode. Click it to revert to the previous assignment.
 
+![Key Popover — Undo](screenshots/key-popover-undo.png)
+
 **Confirmation**: Press **Enter** to confirm the current selection and close the popover. Press **Escape** or click outside the popover to close it without changes.
 
 ### 2.5 Layout Options

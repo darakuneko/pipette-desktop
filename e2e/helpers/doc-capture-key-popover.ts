@@ -142,6 +142,26 @@ async function main(): Promise<void> {
     await page.waitForTimeout(300)
     await capture(page, '35-key-popover-lt')
 
+    // 36: Undo button visible after keycode change
+    // Switch back to Key tab default mode, select a different keycode to trigger undo recording
+    await page.locator('[data-testid="popover-mode-lt"]').click()
+    await page.waitForTimeout(200)
+    await page.locator('[data-testid="popover-tab-key"]').click()
+    await page.waitForTimeout(300)
+    // Click the first keycode result to trigger handlePopoverKeycodeSelect → recordUndo
+    const firstResult = page.locator('[data-testid^="popover-result-"]').first()
+    if (await isAvailable(firstResult)) {
+      await firstResult.click()
+      await page.waitForTimeout(500)
+    }
+    // Undo button should now be visible at the bottom of the popover
+    const undoBtn = page.locator('[data-testid="popover-undo"]')
+    if (await isAvailable(undoBtn)) {
+      await capture(page, '36-key-popover-undo')
+    } else {
+      console.warn('  [skip] undo button not visible — could not capture')
+    }
+
     // Close popover
     const closeBtn = page.locator('[data-testid="popover-close"]')
     if (await isAvailable(closeBtn)) {
