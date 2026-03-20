@@ -256,6 +256,7 @@ export function useKeymapSelectionHandlers({
       await onSetKeysBulk(entries)
     })
     clearPickerSelection()
+    setSelectedKey(null); setSelectedMaskPart(false); setSelectedEncoder(null)
   }, [pickerSelected, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
 
   // --- Click handlers ---
