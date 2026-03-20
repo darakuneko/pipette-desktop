@@ -101,7 +101,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
   onFavUploadToHub, onFavUpdateOnHub, onFavRemoveFromHub, onFavRenameOnHub,
-  devices, connectedDevice,
+  devices, connectedDevice, onDeviceListActiveChange,
 }, ref) {
   const { t } = useTranslation()
   const keyboardContentRef = useRef<HTMLDivElement>(null)
@@ -186,6 +186,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
   const { multiSelectedKeys, selectionSourcePane, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
+
+  // --- Notify parent when device list browsing state changes ---
+  useEffect(() => {
+    onDeviceListActiveChange?.(pickerSource === 'device' && deviceBrowsing)
+  }, [pickerSource, deviceBrowsing, onDeviceListActiveChange])
 
   // --- Escape clears picker selection ---
   useEffect(() => {

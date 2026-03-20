@@ -599,6 +599,7 @@ export function App() {
             onFavRenameOnHub={hub.hubReady ? hub.handleFavRenameOnHub : undefined}
             devices={device.devices}
             connectedDevice={device.connectedDevice}
+            onDeviceListActiveChange={device.setDeviceListActive}
           />
         </div>
 
@@ -634,12 +635,10 @@ export function App() {
           unlockStart={api.unlockStart}
           unlockPoll={api.unlockPoll}
           onComplete={async () => {
-            device.resumePoll()
             editorUI.setShowUnlockDialog(false)
             editorUI.setUnlockMacroWarning(false)
             await keyboard.refreshUnlockStatus()
           }}
-          onOpen={device.pausePoll}
           macroWarning={editorUI.unlockMacroWarning}
         />
       )}
