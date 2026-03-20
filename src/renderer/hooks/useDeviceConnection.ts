@@ -39,7 +39,7 @@ export function useDeviceConnection() {
   const mountedRef = useRef(true)
   const connectedDeviceRef = useRef<DeviceInfo | null>(null)
   const isDummyRef = useRef(false)
-  const pollPausedRef = useRef(false)
+  const deviceListActiveRef = useRef(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -187,23 +187,19 @@ export function useDeviceConnection() {
     async function poll(): Promise<void> {
       if (!mountedRef.current || cancelled) return
 
-      // Skip all USB activity while paused (e.g. during unlock dialog)
-      if (pollPausedRef.current) {
-        if (!cancelled) timerId = setTimeout(poll, POLL_INTERVAL_MS)
-        return
-      }
-
-      // Always refresh device list (for device picker to detect plug/unplug)
-      try {
-        const devices = await withTimeout(
-          window.vialAPI.listDevices(),
-          POLL_TIMEOUT_MS,
-        )
-        if (mountedRef.current) {
-          setState((s) => ({ ...s, devices, error: null }))
+      // Refresh device list only when device picker is actively browsing
+      if (deviceListActiveRef.current || !connectedDeviceRef.current) {
+        try {
+          const devices = await withTimeout(
+            window.vialAPI.listDevices(),
+            POLL_TIMEOUT_MS,
+          )
+          if (mountedRef.current) {
+            setState((s) => ({ ...s, devices, error: null }))
+          }
+        } catch {
+          // Ignore polling errors (including timeouts) to avoid flooding the UI
         }
-      } catch {
-        // Ignore polling errors (including timeouts) to avoid flooding the UI
       }
 
       if (connectedDeviceRef.current) {
@@ -231,8 +227,7 @@ export function useDeviceConnection() {
     }
   }, []) // stable — uses refs internally
 
-  const pausePoll = useCallback(() => { pollPausedRef.current = true }, [])
-  const resumePoll = useCallback(() => { pollPausedRef.current = false }, [])
+  const setDeviceListActive = useCallback((active: boolean) => { deviceListActiveRef.current = active }, [])
 
   return {
     ...state,
@@ -241,7 +236,6 @@ export function useDeviceConnection() {
     connectDummy,
     connectPipetteFile,
     disconnectDevice,
-    pausePoll,
-    resumePoll,
+    setDeviceListActive,
   }
 }
