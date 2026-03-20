@@ -15,10 +15,11 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
 ## Screenshot
-
 <p align="center">
   <img width="1200" alt="keymap-editor" src="docs/screenshots/layer-panel-collapsed.png" />
 </p>
+
+https://github.com/user-attachments/assets/0faa960a-fffe-43b0-b5d0-5f079241335b
 
 ## Installation
 
