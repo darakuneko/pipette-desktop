@@ -143,4 +143,6 @@ export interface KeymapEditorProps {
   devices?: DeviceInfo[]
   /** Currently connected (primary) device info */
   connectedDevice?: DeviceInfo | null
+  /** Notify parent when device list browsing state changes (for polling control) */
+  onDeviceListActiveChange?: (active: boolean) => void
 }

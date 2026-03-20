@@ -15,7 +15,6 @@ interface Props {
   unlockStart: () => Promise<void>
   unlockPoll: () => Promise<number[]>
   onComplete: () => void
-  onOpen?: () => void
   macroWarning?: boolean
 }
 
@@ -26,7 +25,6 @@ export function UnlockDialog({
   unlockStart,
   unlockPoll,
   onComplete,
-  onOpen,
   macroWarning,
 }: Props) {
   const { t } = useTranslation()
@@ -48,13 +46,9 @@ export function UnlockDialog({
   onCompleteRef.current = onComplete
   const busyRef = useRef(false)
 
-  const onOpenRef = useRef(onOpen)
-  onOpenRef.current = onOpen
-
   // Single useEffect: send unlockStart once, then poll via setInterval.
   // setInterval (like Python's QTimer) guarantees exactly one poll loop.
   useEffect(() => {
-    onOpenRef.current?.()
     let intervalId: ReturnType<typeof setInterval> | undefined
     let cancelled = false
 
