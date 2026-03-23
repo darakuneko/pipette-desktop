@@ -30,7 +30,7 @@ export const EMPTY_ENCODER_KEYCODES = new Map<string, [string, string]>()
 
 export type PopoverState =
   | { anchorRect: DOMRect; kind: 'key'; row: number; col: number; maskClicked: boolean }
-  | { anchorRect: DOMRect; kind: 'encoder'; idx: number; dir: number }
+  | { anchorRect: DOMRect; kind: 'encoder'; idx: number; dir: 0 | 1 }
 
 export interface KeymapEditorHandle {
   toggleMatrix: () => void
@@ -40,6 +40,7 @@ export interface KeymapEditorHandle {
 }
 
 export interface KeymapEditorProps {
+  keyboardUid?: string
   layout: KeyboardLayout | null
   layers: number
   currentLayer: number

@@ -10,6 +10,7 @@ import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { hasModifierKey } from './KeyboardPane'
 import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapMultiSelectReturn } from './useKeymapMultiSelect'
+import type { UseKeymapHistoryReturn, SingleHistoryEntry, HistoryEntry } from './useKeymapHistory'
 
 export interface UseKeymapSelectionOptions {
   // Core data
@@ -35,6 +36,8 @@ export interface UseKeymapSelectionOptions {
   onUnlock?: (options?: { macroWarning?: boolean }) => void
   // Multi-select
   multiSelect: UseKeymapMultiSelectReturn
+  // History
+  history: UseKeymapHistoryReturn
   // TD/Macro
   tapDanceEntries?: TapDanceEntry[]
   onSetTapDanceEntry?: (index: number, entry: TapDanceEntry) => Promise<void>
@@ -63,6 +66,7 @@ export function useKeymapSelectionHandlers({
   unlocked,
   onUnlock,
   multiSelect,
+  history,
   tapDanceEntries,
   onSetTapDanceEntry,
   macroCount,
@@ -83,7 +87,7 @@ export function useKeymapSelectionHandlers({
 
   // --- Single selection state ---
   const [selectedKey, setSelectedKey] = useState<{ row: number; col: number } | null>(null)
-  const [selectedEncoder, setSelectedEncoder] = useState<{ idx: number; dir: number } | null>(null)
+  const [selectedEncoder, setSelectedEncoder] = useState<{ idx: number; dir: 0 | 1 } | null>(null)
   const [selectedMaskPart, setSelectedMaskPart] = useState(false)
   const [popoverState, setPopoverState] = useState<PopoverState | null>(null)
 
@@ -92,16 +96,6 @@ export function useKeymapSelectionHandlers({
     setSelectedEncoder(null)
     setSelectedMaskPart(false)
     setPopoverState(null)
-  }, [])
-
-  // --- Undo map ---
-  const [undoMap, setUndoMap] = useState<Map<string, number>>(() => new Map())
-  useEffect(() => {
-    if (keymap.size === 0) setUndoMap(new Map())
-  }, [keymap])
-
-  const recordUndo = useCallback((mapKey: string, currentCode: number) => {
-    setUndoMap((prev) => { if (prev.get(mapKey) === currentCode) return prev; const next = new Map(prev); next.set(mapKey, currentCode); return next })
   }, [])
 
   // --- TD/Macro modal state ---
@@ -232,15 +226,22 @@ export function useKeymapSelectionHandlers({
     const targetPositions = selectableKeys.slice(targetIdx, targetIdx + orderedSourceKeys.length)
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
+      const histEntries: SingleHistoryEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
         const [srcR, srcC] = orderedSourceKeys[i].split(',').map(Number)
         const code = keymap.get(`${srcLayer},${srcR},${srcC}`)
-        if (code !== undefined) entries.push({ layer: tgtLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: code })
+        if (code !== undefined) {
+          const { row, col } = targetPositions[i]
+          const oldCode = keymap.get(`${tgtLayer},${row},${col}`) ?? 0
+          entries.push({ layer: tgtLayer, row, col, keycode: code })
+          histEntries.push({ kind: 'key', layer: tgtLayer, row, col, oldKeycode: oldCode, newKeycode: code })
+        }
       }
       await onSetKeysBulk(entries)
+      if (histEntries.length > 0) history.push({ kind: 'batch', entries: histEntries })
     })
     clearMultiSelection()
-  }, [effectivePrimaryLayer, effectiveSecondaryLayer, selectionSourcePane, selectionMode, selectableKeys, multiSelectedKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearMultiSelection])
+  }, [effectivePrimaryLayer, effectiveSecondaryLayer, selectionSourcePane, selectionMode, selectableKeys, multiSelectedKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearMultiSelection, history])
 
   const handlePickerPaste = useCallback(async (targetKey: KleKey) => {
     const targetIdx = selectableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
@@ -250,14 +251,20 @@ export function useKeymapSelectionHandlers({
     const targetPositions = selectableKeys.slice(targetIdx, targetIdx + sortedEntries.length)
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
+      const histEntries: SingleHistoryEntry[] = []
       for (let i = 0; i < targetPositions.length; i++) {
-        entries.push({ layer: currentLayer, row: targetPositions[i].row, col: targetPositions[i].col, keycode: sortedEntries[i][1] })
+        const { row, col } = targetPositions[i]
+        const newCode = sortedEntries[i][1]
+        const oldCode = keymap.get(`${currentLayer},${row},${col}`) ?? 0
+        entries.push({ layer: currentLayer, row, col, keycode: newCode })
+        histEntries.push({ kind: 'key', layer: currentLayer, row, col, oldKeycode: oldCode, newKeycode: newCode })
       }
       await onSetKeysBulk(entries)
+      if (histEntries.length > 0) history.push({ kind: 'batch', entries: histEntries })
     })
     clearPickerSelection()
     setSelectedKey(null); setSelectedMaskPart(false); setSelectedEncoder(null)
-  }, [pickerSelected, selectableKeys, currentLayer, onSetKeysBulk, runCopy, clearPickerSelection])
+  }, [pickerSelected, selectableKeys, currentLayer, keymap, onSetKeysBulk, runCopy, clearPickerSelection, history])
 
   // --- Click handlers ---
   const handleKeyClick = useCallback(
@@ -318,80 +325,153 @@ export function useKeymapSelectionHandlers({
     clearPickerSelection(); clearPending()
     const code = deserialize(kc.qmkId)
     if (selectedKey) {
-      const mapKey = `${currentLayer},${selectedKey.row},${selectedKey.col}`
-      const currentCode = keymap.get(mapKey) ?? 0
-      recordUndo(mapKey, currentCode)
+      const currentCode = keymap.get(`${currentLayer},${selectedKey.row},${selectedKey.col}`) ?? 0
       await guard([code], async () => {
         const finalCode = resolveKeycode(currentCode, code, isMaskKey)
         await onSetKey(currentLayer, selectedKey.row, selectedKey.col, finalCode)
+        history.push({ kind: 'key', layer: currentLayer, row: selectedKey.row, col: selectedKey.col, oldKeycode: currentCode, newKeycode: finalCode, maskPart: isMaskKey ? 'inner' : undefined })
         if (!isMaskKey && isMask(kc.qmkId) && autoAdvance) setSelectedMaskPart(true)
         else advanceToNextKey()
       })
     } else if (selectedEncoder) {
-      const mapKey = `${currentLayer},${selectedEncoder.idx},${selectedEncoder.dir}`
-      const currentCode = encoderLayout.get(mapKey) ?? 0
-      recordUndo(mapKey, currentCode)
-      await guard([code], async () => { await onSetEncoder(currentLayer, selectedEncoder.idx, selectedEncoder.dir, code) })
+      const currentCode = encoderLayout.get(`${currentLayer},${selectedEncoder.idx},${selectedEncoder.dir}`) ?? 0
+      await guard([code], async () => {
+        await onSetEncoder(currentLayer, selectedEncoder.idx, selectedEncoder.dir, code)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: selectedEncoder.idx, dir: selectedEncoder.dir, oldKeycode: currentCode, newKeycode: code })
+      })
     } else {
       openTdModal(code); openMacroModal(code)
     }
-  }, [selectedKey, selectedEncoder, currentLayer, keymap, encoderLayout, isMaskKey, autoAdvance, onSetKey, onSetEncoder, advanceToNextKey, openTdModal, openMacroModal, guard, clearPending, clearPickerSelection, recordUndo])
+  }, [selectedKey, selectedEncoder, currentLayer, keymap, encoderLayout, isMaskKey, autoAdvance, onSetKey, onSetEncoder, advanceToNextKey, openTdModal, openMacroModal, guard, clearPending, clearPickerSelection, history])
 
   const handlePopoverKeycodeSelect = useCallback(async (kc: Keycode) => {
     clearPending()
     if (!popoverState) return
     const code = deserialize(kc.qmkId)
     if (popoverState.kind === 'key') {
-      const mapKey = `${currentLayer},${popoverState.row},${popoverState.col}`
-      const currentCode = keymap.get(mapKey) ?? 0
+      const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
       const popoverMask = popoverState.maskClicked && isMask(serialize(currentCode))
-      recordUndo(mapKey, currentCode)
-      await guard([code], async () => { await onSetKey(currentLayer, popoverState.row, popoverState.col, resolveKeycode(currentCode, code, popoverMask)) })
+      await guard([code], async () => {
+        const newCode = resolveKeycode(currentCode, code, popoverMask)
+        await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode)
+        history.push({ kind: 'key', layer: currentLayer, row: popoverState.row, col: popoverState.col, oldKeycode: currentCode, newKeycode: newCode, maskPart: popoverMask ? 'inner' : undefined })
+      })
     } else {
-      const mapKey = `${currentLayer},${popoverState.idx},${popoverState.dir}`
-      const currentCode = encoderLayout.get(mapKey) ?? 0
-      recordUndo(mapKey, currentCode)
-      await guard([code], async () => { await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code) })
+      const currentCode = encoderLayout.get(`${currentLayer},${popoverState.idx},${popoverState.dir}`) ?? 0
+      await guard([code], async () => {
+        await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: popoverState.idx, dir: popoverState.dir, oldKeycode: currentCode, newKeycode: code })
+      })
     }
-  }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, recordUndo])
+  }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, history])
 
   const handlePopoverRawKeycodeSelect = useCallback(async (code: number) => {
     clearPending()
     if (!popoverState) return
     if (popoverState.kind === 'key') {
-      const mapKey = `${currentLayer},${popoverState.row},${popoverState.col}`
-      const currentCode = keymap.get(mapKey) ?? 0
-      recordUndo(mapKey, currentCode)
-      await guard([code], async () => { await onSetKey(currentLayer, popoverState.row, popoverState.col, code) })
+      const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
+      await guard([code], async () => {
+        await onSetKey(currentLayer, popoverState.row, popoverState.col, code)
+        history.push({ kind: 'key', layer: currentLayer, row: popoverState.row, col: popoverState.col, oldKeycode: currentCode, newKeycode: code })
+      })
     } else {
-      const mapKey = `${currentLayer},${popoverState.idx},${popoverState.dir}`
-      const currentCode = encoderLayout.get(mapKey) ?? 0
-      recordUndo(mapKey, currentCode)
-      await guard([code], async () => { await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code) })
+      const currentCode = encoderLayout.get(`${currentLayer},${popoverState.idx},${popoverState.dir}`) ?? 0
+      await guard([code], async () => {
+        await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: popoverState.idx, dir: popoverState.dir, oldKeycode: currentCode, newKeycode: code })
+      })
     }
-  }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, recordUndo])
+  }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, history])
 
   const handlePopoverModMaskChange = useCallback(async (newMask: number) => {
     if (!popoverState || popoverState.kind !== 'key') return
     const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
     const basicKey = extractBasicKey(currentCode)
     const newCode = buildModMaskKeycode(newMask, basicKey)
-    await guard([newCode], async () => { await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode) })
-  }, [popoverState, currentLayer, keymap, onSetKey, guard])
+    await guard([newCode], async () => {
+      await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode)
+      history.push({ kind: 'key', layer: currentLayer, row: popoverState.row, col: popoverState.col, oldKeycode: currentCode, newKeycode: newCode, maskPart: 'outer' })
+    })
+  }, [popoverState, currentLayer, keymap, onSetKey, guard, history])
 
+  // --- History-derived popover undo ---
   const popoverUndoKeycode = useMemo(() => {
     if (!popoverState) return undefined
-    const mapKey = popoverState.kind === 'key'
-      ? `${currentLayer},${popoverState.row},${popoverState.col}`
-      : `${currentLayer},${popoverState.idx},${popoverState.dir}`
-    return undoMap.get(mapKey)
-  }, [popoverState, currentLayer, undoMap])
+    const entry = history.peekUndo
+    if (!entry || entry.kind === 'batch') return undefined
+    if (popoverState.kind === 'key' && entry.kind === 'key' && entry.layer === currentLayer && entry.row === popoverState.row && entry.col === popoverState.col) return entry.oldKeycode
+    if (popoverState.kind === 'encoder' && entry.kind === 'encoder' && entry.layer === currentLayer && entry.idx === popoverState.idx && entry.dir === popoverState.dir) return entry.oldKeycode
+    return undefined
+  }, [popoverState, currentLayer, history.peekUndo])
+
+  // --- Undo / redo ---
+  const applyHistoryEntry = useCallback(async (entry: HistoryEntry, isUndo: boolean) => {
+    if (entry.kind === 'batch') {
+      const items = isUndo ? [...entry.entries].reverse() : entry.entries
+      const keyEntries: BulkKeyEntry[] = []
+      const encoderOps: { layer: number; idx: number; dir: number; code: number }[] = []
+      for (const e of items) {
+        const code = isUndo ? e.oldKeycode : e.newKeycode
+        if (e.kind === 'key') keyEntries.push({ layer: e.layer, row: e.row, col: e.col, keycode: code })
+        else encoderOps.push({ layer: e.layer, idx: e.idx, dir: e.dir, code })
+      }
+      if (keyEntries.length > 0) await onSetKeysBulk(keyEntries)
+      for (const op of encoderOps) await onSetEncoder(op.layer, op.idx, op.dir, op.code)
+    } else {
+      const code = isUndo ? entry.oldKeycode : entry.newKeycode
+      if (entry.kind === 'key') await guard([code], async () => { await onSetKey(entry.layer, entry.row, entry.col, code) })
+      else await guard([code], async () => { await onSetEncoder(entry.layer, entry.idx, entry.dir, code) })
+    }
+  }, [onSetKey, onSetKeysBulk, onSetEncoder, guard])
+
+  // In-flight guard to prevent concurrent undo/redo
+  const undoRedoInFlightRef = useRef(false)
+
+  const handleUndo = useCallback(async () => {
+    if (undoRedoInFlightRef.current) return
+    const entry = history.peekUndo
+    if (!entry) return
+    undoRedoInFlightRef.current = true
+    try {
+      await applyHistoryEntry(entry, true)
+      history.undo() // commit only after successful apply
+    } finally { undoRedoInFlightRef.current = false }
+    setPopoverState(null)
+  }, [history, applyHistoryEntry])
+
+  const handleRedo = useCallback(async () => {
+    if (undoRedoInFlightRef.current) return
+    const entry = history.peekRedo
+    if (!entry) return
+    undoRedoInFlightRef.current = true
+    try {
+      await applyHistoryEntry(entry, false)
+      history.redo() // commit only after successful apply
+    } finally { undoRedoInFlightRef.current = false }
+    setPopoverState(null)
+  }, [history, applyHistoryEntry])
 
   const handlePopoverUndo = useCallback(() => {
     if (popoverUndoKeycode == null) return
-    handlePopoverRawKeycodeSelect(popoverUndoKeycode)
-    setPopoverState(null)
-  }, [popoverUndoKeycode, handlePopoverRawKeycodeSelect])
+    void handleUndo()
+  }, [popoverUndoKeycode, handleUndo])
+
+  // --- Keyboard shortcuts for undo/redo ---
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as Element | null
+      if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) return
+      if (target?.closest?.('[contenteditable]')) return
+      const mod = e.ctrlKey || e.metaKey
+      if (!mod) return
+      const key = e.key.toLowerCase()
+      if (key === 'z' && !e.shiftKey) { e.preventDefault(); void handleUndo(); return }
+      if (key === 'z' && e.shiftKey) { e.preventDefault(); void handleRedo(); return }
+      if (key === 'y' && !e.shiftKey) { e.preventDefault(); void handleRedo(); return }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [handleUndo, handleRedo])
 
   // --- TD/Macro modal handlers ---
   const handleTdModalSave = useCallback(async (idx: number, entry: TapDanceEntry) => {
@@ -410,19 +490,27 @@ export function useKeymapSelectionHandlers({
     const src = currentLayer; const tgt = inactivePaneLayer
     await runCopy(async () => {
       const entries: BulkKeyEntry[] = []
+      const histEntries: SingleHistoryEntry[] = []
       for (const [key, code] of keymap) {
         const [l, r, c] = key.split(',').map(Number)
-        if (l === src) entries.push({ layer: tgt, row: r, col: c, keycode: code })
+        if (l === src) {
+          const oldCode = keymap.get(`${tgt},${r},${c}`) ?? 0
+          entries.push({ layer: tgt, row: r, col: c, keycode: code })
+          histEntries.push({ kind: 'key', layer: tgt, row: r, col: c, oldKeycode: oldCode, newKeycode: code })
+        }
       }
       await onSetKeysBulk(entries)
       for (let i = 0; i < encoderCount; i++) {
         for (let dir = 0; dir < 2; dir++) {
           const code = encoderLayout.get(`${src},${i},${dir}`) ?? 0
+          const oldCode = encoderLayout.get(`${tgt},${i},${dir}`) ?? 0
           await onSetEncoder(tgt, i, dir, code)
+          histEntries.push({ kind: 'encoder', layer: tgt, idx: i, dir: dir as 0 | 1, oldKeycode: oldCode, newKeycode: code })
         }
       }
+      if (histEntries.length > 0) history.push({ kind: 'batch', entries: histEntries })
     })
-  }, [copyLayerPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy])
+  }, [copyLayerPending, currentLayer, inactivePaneLayer, keymap, onSetKeysBulk, encoderLayout, encoderCount, onSetEncoder, runCopy, history])
 
   return {
     // Single selection
@@ -448,6 +536,8 @@ export function useKeymapSelectionHandlers({
     handlePopoverModMaskChange,
     popoverUndoKeycode,
     handlePopoverUndo,
+    handleUndo,
+    handleRedo,
     // Deselect
     handleDeselect,
     handleDeselectClick,

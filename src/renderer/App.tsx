@@ -311,6 +311,8 @@ export function App() {
             onDefaultQuickSelectChange={devicePrefs.setDefaultQuickSelect}
             autoLockTime={devicePrefs.autoLockTime}
             onAutoLockTimeChange={devicePrefs.setAutoLockTime}
+            maxKeymapHistory={appConfig.config.maxKeymapHistory}
+            onMaxKeymapHistoryChange={(n) => appConfig.set('maxKeymapHistory', n)}
             onClose={() => lifecycle.setShowSettings(false)}
             hubEnabled={appConfig.config.hubEnabled}
             onHubEnabledChange={(enabled) => appConfig.set('hubEnabled', enabled)}
@@ -496,6 +498,7 @@ export function App() {
         <div className="flex min-h-0 flex-1 flex-col overflow-auto p-4" data-testid="editor-content">
           <KeymapEditor
             ref={keymapEditorRef}
+            keyboardUid={keyboard.uid}
             layout={keyboard.layout}
             layers={keyboard.layers}
             currentLayer={editorUI.currentLayer}

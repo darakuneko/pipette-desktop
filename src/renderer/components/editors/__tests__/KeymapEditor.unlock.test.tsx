@@ -20,6 +20,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
 let capturedOnKeyClick: ((key: { row: number; col: number }) => void) | undefined
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({

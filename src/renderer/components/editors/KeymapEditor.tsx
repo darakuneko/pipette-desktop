@@ -16,7 +16,7 @@ import { TapDanceJsonEditor } from './TapDanceJsonEditor'
 import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
-import { ZoomIn, ZoomOut, SlidersHorizontal } from 'lucide-react'
+import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
 import { isVilFile, isVilFileV1, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
@@ -36,6 +36,8 @@ import { useInputModes } from './useInputModes'
 import { useKeymapMultiSelect } from './useKeymapMultiSelect'
 import { useLayoutOptionsPanel } from './useLayoutOptionsPanel'
 import { useKeymapSelectionHandlers } from './useKeymapSelectionHandlers'
+import { useKeymapHistory } from './useKeymapHistory'
+import { useAppConfig } from '../../hooks/useAppConfig'
 import { TypingTestPane } from './TypingTestPane'
 
 
@@ -73,7 +75,7 @@ function PopoverForState({
 }
 
 export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEditorHandle, Props>(function KeymapEditor({
-  layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
+  keyboardUid, layout, layers, currentLayer, onLayerChange, keymap, encoderLayout, encoderCount,
   layoutOptions, layoutLabels, packedLayoutOptions, onSetLayoutOptions,
   remapLabel, isRemapped, onSetKey, onSetKeysBulk, onSetEncoder,
   rows, cols, getMatrixState, unlocked, onUnlock,
@@ -164,6 +166,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     ? (activePane === 'primary' ? effectiveSecondaryLayer : effectivePrimaryLayer)
     : undefined
 
+  // --- Keymap history ---
+  const { config: appCfg } = useAppConfig()
+  const history = useKeymapHistory(appCfg.maxKeymapHistory)
+
+  // Clear history on keyboard/context switch or disconnect
+  const prevUidRef = useRef(keyboardUid)
+  useEffect(() => {
+    if (keyboardUid !== prevUidRef.current || keymap.size === 0) {
+      prevUidRef.current = keyboardUid
+      history.clear()
+    }
+  }, [keyboardUid, keymap, history])
+
   // --- Selection + handlers ---
   const {
     selectedKey, selectedEncoder, selectedMaskPart, popoverState, setPopoverState,
@@ -171,6 +186,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     handleKeyClick, handleEncoderClick, handleKeyDoubleClick, handleEncoderDoubleClick,
     handleKeycodeSelect, handlePopoverKeycodeSelect, handlePopoverRawKeycodeSelect,
     handlePopoverModMaskChange, popoverUndoKeycode, handlePopoverUndo,
+    handleUndo, handleRedo,
     handleDeselect, handleDeselectClick,
     isCopying, copyLayerPending, handleCopyLayerClick,
     tdModalIndex, macroModalIndex, handleTdModalSave, handleTdModalClose, handleMacroModalClose,
@@ -179,7 +195,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     splitEdit, activePane, effectivePrimaryLayer, effectiveSecondaryLayer,
     inactivePaneLayer, selectableKeys, autoAdvance,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
-    multiSelect,
+    multiSelect, history,
     tapDanceEntries, onSetTapDanceEntry,
     macroCount, macroBufferSize, macroBuffer, onSaveMacros,
   })
@@ -802,6 +818,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const toolbar = (
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
+      {!typingTestMode && (
+        <>
+          <IconTooltip label={t('editor.keymap.undo')}>
+            <button type="button" data-testid="undo-button" aria-label={t('editor.keymap.undo')} className={zoomButtonClass} disabled={!history.canUndo} onClick={() => void handleUndo()}>
+              <Undo2 size={16} aria-hidden="true" />
+            </button>
+          </IconTooltip>
+          <IconTooltip label={t('editor.keymap.redo')}>
+            <button type="button" data-testid="redo-button" aria-label={t('editor.keymap.redo')} className={zoomButtonClass} disabled={!history.canRedo} onClick={() => void handleRedo()}>
+              <Redo2 size={16} aria-hidden="true" />
+            </button>
+          </IconTooltip>
+        </>
+      )}
       <div className="flex-1" />
       {!typingTestMode && onScaleChange && (
         <>

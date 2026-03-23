@@ -27,6 +27,8 @@ export interface SettingsToolsTabProps {
   onDefaultQuickSelectChange: (enabled: boolean) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
+  maxKeymapHistory: number
+  onMaxKeymapHistoryChange: (n: number) => void
 }
 
 export function SettingsToolsTab({
@@ -46,6 +48,8 @@ export function SettingsToolsTab({
   onDefaultQuickSelectChange,
   autoLockTime,
   onAutoLockTimeChange,
+  maxKeymapHistory,
+  onMaxKeymapHistoryChange,
 }: SettingsToolsTabProps) {
   const { t } = useTranslation()
   const appConfig = useAppConfig()
@@ -104,10 +108,7 @@ export function SettingsToolsTab({
         <h4 className="mb-1 text-sm font-medium text-content-secondary">
           {t('settings.defaults')}
         </h4>
-        <p className="mb-3 text-xs text-content-muted">
-          {t('settings.defaultsDescription')}
-        </p>
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
             <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
               {t('settings.defaultBasicViewType')}
@@ -211,6 +212,23 @@ export function SettingsToolsTab({
             >
               <span className={toggleKnobClass(defaultLayerPanelOpen)} />
             </button>
+          </div>
+
+          <div className={ROW_CLASS} data-testid="settings-max-keymap-history-row">
+            <label htmlFor="settings-max-keymap-history-selector" className="text-[13px] font-medium text-content">
+              {t('settings.maxKeymapHistory')}
+            </label>
+            <select
+              id="settings-max-keymap-history-selector"
+              value={maxKeymapHistory}
+              onChange={(e) => onMaxKeymapHistoryChange(Number(e.target.value))}
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              data-testid="settings-max-keymap-history-selector"
+            >
+              {[10, 25, 50, 100, 200, 500].map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+            </select>
           </div>
         </div>
       </section>
