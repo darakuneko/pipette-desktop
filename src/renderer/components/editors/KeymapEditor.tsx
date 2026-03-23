@@ -172,12 +172,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // Clear history on keyboard/context switch or disconnect
   const prevUidRef = useRef(keyboardUid)
+  const keymapSize = keymap.size
   useEffect(() => {
-    if (keyboardUid !== prevUidRef.current || keymap.size === 0) {
+    if (keyboardUid !== prevUidRef.current || keymapSize === 0) {
       prevUidRef.current = keyboardUid
       history.clear()
     }
-  }, [keyboardUid, keymap, history])
+  }, [keyboardUid, keymapSize, history.clear])
 
   // --- Selection + handlers ---
   const {

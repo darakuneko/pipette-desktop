@@ -86,6 +86,7 @@ export function useKeymapHistory(maxHistory: number): UseKeymapHistoryReturn {
   }, [bump])
 
   const clear = useCallback(() => {
+    if (undoRef.current.length === 0 && redoRef.current.length === 0) return
     undoRef.current = []
     redoRef.current = []
     bump()
