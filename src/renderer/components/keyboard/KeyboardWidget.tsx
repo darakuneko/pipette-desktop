@@ -64,7 +64,7 @@ interface Props {
   maskKeycodes?: Map<string, string>
   encoderKeycodes?: Map<string, [string, string]>
   selectedKey?: { row: number; col: number } | null
-  selectedEncoder?: { idx: number; dir: number } | null
+  selectedEncoder?: { idx: number; dir: 0 | 1 } | null
   pressedKeys?: Set<string>
   highlightedKeys?: Set<string>
   everPressedKeys?: Set<string>
@@ -74,8 +74,8 @@ interface Props {
   selectedMaskPart?: boolean
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
-  onEncoderClick?: (key: KleKey, direction: number) => void
-  onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect) => void
+  onEncoderClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
+  onEncoderDoubleClick?: (key: KleKey, direction: number, rect: DOMRect, maskClicked: boolean) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
   readOnly?: boolean
@@ -164,11 +164,12 @@ function KeyboardWidgetInner({
         if (isEncoder) {
           const encKey = String(key.encoderIdx)
           const [cw, ccw] = encoderKeycodes?.get(encKey) ?? ['KC_NO', 'KC_NO']
+          const kc = key.encoderDir === 0 ? cw : ccw
           return (
             <EncoderWidget
               key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
               kleKey={key}
-              keycode={key.encoderDir === 0 ? cw : ccw}
+              keycode={kc}
               selected={false}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
@@ -209,12 +210,14 @@ function KeyboardWidgetInner({
         if (isEncoder) {
           const encKey = String(key.encoderIdx)
           const [cw, ccw] = encoderKeycodes?.get(encKey) ?? ['KC_NO', 'KC_NO']
+          const kc = key.encoderDir === 0 ? cw : ccw
           return (
             <EncoderWidget
               key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
               kleKey={key}
-              keycode={key.encoderDir === 0 ? cw : ccw}
+              keycode={kc}
               selected
+              selectedMaskPart={selectedMaskPart}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
               scale={scale}

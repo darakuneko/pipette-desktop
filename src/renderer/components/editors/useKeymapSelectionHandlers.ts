@@ -153,10 +153,17 @@ export function useKeymapSelectionHandlers({
   const isMaskKey = selectedKeycode != null && isMask(selectedKeycode) && selectedMaskPart
 
   const isLMMask = useMemo(() => {
-    if (!isMaskKey || !selectedKey) return false
-    const code = keymap.get(`${currentLayer},${selectedKey.row},${selectedKey.col}`) ?? 0
-    return isLMKeycode(code)
-  }, [isMaskKey, selectedKey, keymap, currentLayer])
+    if (!isMaskKey) return false
+    if (selectedKey) {
+      const code = keymap.get(`${currentLayer},${selectedKey.row},${selectedKey.col}`) ?? 0
+      return isLMKeycode(code)
+    }
+    if (selectedEncoder) {
+      const code = encoderLayout.get(`${currentLayer},${selectedEncoder.idx},${selectedEncoder.dir}`) ?? 0
+      return isLMKeycode(code)
+    }
+    return false
+  }, [isMaskKey, selectedKey, selectedEncoder, keymap, encoderLayout, currentLayer])
 
   function resolveKeycode(currentCode: number, newCode: number, maskMode: boolean): number {
     if (maskMode) {
@@ -297,8 +304,8 @@ export function useKeymapSelectionHandlers({
     [splitEdit, activePane, selectedKey, selectionAnchor, selectableKeys, multiSelectedKeys, selectionSourcePane, effectivePrimaryLayer, effectiveSecondaryLayer, handleClickToPaste, pickerSelected, handlePickerPaste, clearPickerSelection, setMultiSelectedKeys, setSelectionAnchor, setSelectionSourcePane, setSelectionMode],
   )
 
-  const handleEncoderClick = useCallback((_key: KleKey, dir: number) => {
-    setSelectedEncoder({ idx: _key.encoderIdx, dir }); setSelectedKey(null); setSelectedMaskPart(false); setPopoverState(null)
+  const handleEncoderClick = useCallback((_key: KleKey, dir: number, maskClicked: boolean) => {
+    setSelectedEncoder({ idx: _key.encoderIdx, dir: dir as 0 | 1 }); setSelectedKey(null); setSelectedMaskPart(maskClicked); setPopoverState(null)
   }, [])
 
   const handleKeyDoubleClick = useCallback((key: KleKey, rect: DOMRect, maskClicked: boolean) => {
@@ -306,9 +313,9 @@ export function useKeymapSelectionHandlers({
     setPopoverState({ anchorRect: rect, kind: 'key', row: key.row, col: key.col, maskClicked })
   }, [])
 
-  const handleEncoderDoubleClick = useCallback((_key: KleKey, dir: number, rect: DOMRect) => {
-    setSelectedEncoder({ idx: _key.encoderIdx, dir }); setSelectedKey(null)
-    setPopoverState({ anchorRect: rect, kind: 'encoder', idx: _key.encoderIdx, dir })
+  const handleEncoderDoubleClick = useCallback((_key: KleKey, dir: number, rect: DOMRect, maskClicked: boolean) => {
+    setSelectedEncoder({ idx: _key.encoderIdx, dir: dir as 0 | 1 }); setSelectedKey(null); setSelectedMaskPart(maskClicked)
+    setPopoverState({ anchorRect: rect, kind: 'encoder', idx: _key.encoderIdx, dir: dir as 0 | 1, maskClicked })
   }, [])
 
   // --- Deselect ---
@@ -336,8 +343,9 @@ export function useKeymapSelectionHandlers({
     } else if (selectedEncoder) {
       const currentCode = encoderLayout.get(`${currentLayer},${selectedEncoder.idx},${selectedEncoder.dir}`) ?? 0
       await guard([code], async () => {
-        await onSetEncoder(currentLayer, selectedEncoder.idx, selectedEncoder.dir, code)
-        history.push({ kind: 'encoder', layer: currentLayer, idx: selectedEncoder.idx, dir: selectedEncoder.dir, oldKeycode: currentCode, newKeycode: code })
+        const finalCode = resolveKeycode(currentCode, code, isMaskKey)
+        await onSetEncoder(currentLayer, selectedEncoder.idx, selectedEncoder.dir, finalCode)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: selectedEncoder.idx, dir: selectedEncoder.dir, oldKeycode: currentCode, newKeycode: finalCode, maskPart: isMaskKey ? 'inner' : undefined })
       })
     } else {
       openTdModal(code); openMacroModal(code)
@@ -358,9 +366,11 @@ export function useKeymapSelectionHandlers({
       })
     } else {
       const currentCode = encoderLayout.get(`${currentLayer},${popoverState.idx},${popoverState.dir}`) ?? 0
+      const popoverMask = popoverState.maskClicked && isMask(serialize(currentCode))
       await guard([code], async () => {
-        await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, code)
-        history.push({ kind: 'encoder', layer: currentLayer, idx: popoverState.idx, dir: popoverState.dir, oldKeycode: currentCode, newKeycode: code })
+        const newCode = resolveKeycode(currentCode, code, popoverMask)
+        await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, newCode)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: popoverState.idx, dir: popoverState.dir, oldKeycode: currentCode, newKeycode: newCode, maskPart: popoverMask ? 'inner' : undefined })
       })
     }
   }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, history])
@@ -384,15 +394,25 @@ export function useKeymapSelectionHandlers({
   }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, clearPending, history])
 
   const handlePopoverModMaskChange = useCallback(async (newMask: number) => {
-    if (!popoverState || popoverState.kind !== 'key') return
-    const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
-    const basicKey = extractBasicKey(currentCode)
-    const newCode = buildModMaskKeycode(newMask, basicKey)
-    await guard([newCode], async () => {
-      await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode)
-      history.push({ kind: 'key', layer: currentLayer, row: popoverState.row, col: popoverState.col, oldKeycode: currentCode, newKeycode: newCode, maskPart: 'outer' })
-    })
-  }, [popoverState, currentLayer, keymap, onSetKey, guard, history])
+    if (!popoverState) return
+    if (popoverState.kind === 'key') {
+      const currentCode = keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
+      const basicKey = extractBasicKey(currentCode)
+      const newCode = buildModMaskKeycode(newMask, basicKey)
+      await guard([newCode], async () => {
+        await onSetKey(currentLayer, popoverState.row, popoverState.col, newCode)
+        history.push({ kind: 'key', layer: currentLayer, row: popoverState.row, col: popoverState.col, oldKeycode: currentCode, newKeycode: newCode, maskPart: 'outer' })
+      })
+    } else {
+      const currentCode = encoderLayout.get(`${currentLayer},${popoverState.idx},${popoverState.dir}`) ?? 0
+      const basicKey = extractBasicKey(currentCode)
+      const newCode = buildModMaskKeycode(newMask, basicKey)
+      await guard([newCode], async () => {
+        await onSetEncoder(currentLayer, popoverState.idx, popoverState.dir, newCode)
+        history.push({ kind: 'encoder', layer: currentLayer, idx: popoverState.idx, dir: popoverState.dir, oldKeycode: currentCode, newKeycode: newCode, maskPart: 'outer' })
+      })
+    }
+  }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, guard, history])
 
   // --- History-derived popover undo ---
   const popoverUndoKeycode = useMemo(() => {

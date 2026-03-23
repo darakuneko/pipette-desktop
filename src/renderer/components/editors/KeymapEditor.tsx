@@ -64,7 +64,7 @@ function PopoverForState({
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
     : encoderLayout.get(`${currentLayer},${popoverState.idx},${popoverState.dir}`) ?? 0
-  const maskOnly = popoverState.kind === 'key' && popoverState.maskClicked && isMask(serialize(currentKeycode))
+  const maskOnly = popoverState.maskClicked && isMask(serialize(currentKeycode))
   return (
     <KeyPopover
       anchorRect={popoverState.anchorRect} currentKeycode={currentKeycode} maskOnly={maskOnly} layers={layers}
@@ -925,7 +925,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           popoverState={popoverState} keymap={keymap} encoderLayout={encoderLayout}
           currentLayer={currentLayer} layers={layers}
           onKeycodeSelect={handlePopoverKeycodeSelect} onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
-          onModMaskChange={popoverState.kind === 'key' ? handlePopoverModMaskChange : undefined}
+          onModMaskChange={handlePopoverModMaskChange}
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
         />

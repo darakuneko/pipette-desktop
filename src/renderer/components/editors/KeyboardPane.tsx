@@ -40,8 +40,8 @@ export interface KeyboardPaneProps {
   layerLabelTestId: string
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
-  onEncoderClick?: (key: KleKey, dir: number) => void
-  onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect) => void
+  onEncoderClick?: (key: KleKey, dir: number, maskClicked: boolean) => void
+  onEncoderDoubleClick?: (key: KleKey, dir: number, rect: DOMRect, maskClicked: boolean) => void
   onKeyHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
   onKeyHoverEnd?: () => void
   onCopyLayer?: () => void
