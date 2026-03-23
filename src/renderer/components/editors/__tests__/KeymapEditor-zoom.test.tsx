@@ -18,6 +18,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
 let capturedScale: number | undefined
 
 vi.mock('../../keyboard/KeyboardWidget', () => ({

@@ -17,6 +17,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
 let capturedOnKeyClick: ((key: { row: number; col: number }) => void) | undefined
 let capturedOnKeyDoubleClick: ((key: { row: number; col: number }, rect: DOMRect, maskClicked?: boolean) => void) | undefined
 
@@ -218,7 +222,7 @@ describe('KeymapEditor — undo after single-click selection', () => {
     // No undo initially
     expect(screen.queryByTestId('popover-undo')).not.toBeInTheDocument()
 
-    // Select keycode via popover — triggers handlePopoverKeycodeSelect → recordUndo
+    // Select keycode via popover — triggers handlePopoverKeycodeSelect
     await act(async () => {
       fireEvent.click(screen.getByTestId('popover-kc-a'))
     })
@@ -227,5 +231,149 @@ describe('KeymapEditor — undo after single-click selection', () => {
     expect(screen.getByTestId('key-popover')).toBeInTheDocument()
     expect(screen.getByTestId('popover-undo')).toBeInTheDocument()
     expect(capturedPreviousKeycode).toBe(5)
+  })
+})
+
+describe('KeymapEditor — Ctrl+Z / Ctrl+Y keyboard shortcuts', () => {
+  const onSetKey = vi.fn().mockResolvedValue(undefined)
+
+  const defaultProps = {
+    layout: makeLayout(),
+    layers: 2,
+    currentLayer: 0,
+    onLayerChange: vi.fn(),
+    keymap: new Map([
+      ['0,0,0', 5],
+      ['0,0,1', 6],
+    ]),
+    encoderLayout: new Map<string, number>(),
+    encoderCount: 0,
+    layoutOptions: new Map<number, number>(),
+    onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
+    onSetEncoder: vi.fn().mockResolvedValue(undefined),
+    autoAdvance: false,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedOnKeyClick = undefined
+    capturedOnKeyDoubleClick = undefined
+    capturedPreviousKeycode = undefined
+  })
+
+  it('Ctrl+Z undoes the last keycode assignment', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Select key and assign KC_A
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4)
+    onSetKey.mockClear()
+
+    // Ctrl+Z
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5) // reverted to original
+  })
+
+  it('Ctrl+Y redoes after undo', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    // Undo
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5)
+    onSetKey.mockClear()
+
+    // Redo with Ctrl+Y
+    await act(async () => { fireEvent.keyDown(window, { key: 'y', ctrlKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4) // re-applied KC_A
+  })
+
+  it('Cmd+Shift+Z redoes (macOS)', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', metaKey: true }) })
+    onSetKey.mockClear()
+
+    // Redo with Cmd+Shift+Z
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', metaKey: true, shiftKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4)
+  })
+
+  it('multi-step undo/redo', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Assign KC_A to [0,0]
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+
+    // Assign KC_A to [0,1]
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    // Undo [0,1] change
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 1, 6) // reverted [0,1] to original (6)
+    onSetKey.mockClear()
+
+    // Undo [0,0] change
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 5) // reverted [0,0] to original (5)
+  })
+
+  it('new operation after undo clears redo stack', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    // Undo
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    onSetKey.mockClear()
+
+    // New operation — should clear redo
+    act(() => capturedOnKeyClick?.({ row: 0, col: 1 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    // Redo should do nothing (redo stack was cleared)
+    await act(async () => { fireEvent.keyDown(window, { key: 'y', ctrlKey: true }) })
+    expect(onSetKey).not.toHaveBeenCalled()
+  })
+
+  it('does nothing when no history', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).not.toHaveBeenCalled()
+
+    await act(async () => { fireEvent.keyDown(window, { key: 'y', ctrlKey: true }) })
+    expect(onSetKey).not.toHaveBeenCalled()
+  })
+
+  it('ignores Ctrl+Z in text inputs', async () => {
+    render(
+      <div>
+        <input data-testid="text-input" />
+        <KeymapEditor {...defaultProps} />
+      </div>,
+    )
+
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    onSetKey.mockClear()
+
+    await act(async () => { fireEvent.keyDown(screen.getByTestId('text-input'), { key: 'z', ctrlKey: true }) })
+    expect(onSetKey).not.toHaveBeenCalled()
   })
 })

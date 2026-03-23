@@ -64,6 +64,8 @@ export interface SettingsModalProps {
   onDefaultQuickSelectChange: (enabled: boolean) => void
   autoLockTime: AutoLockMinutes
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
+  maxKeymapHistory: number
+  onMaxKeymapHistoryChange: (n: number) => void
   onClose: () => void
   hubEnabled: boolean
   onHubEnabledChange: (enabled: boolean) => void

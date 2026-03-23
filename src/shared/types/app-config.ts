@@ -27,6 +27,7 @@ export interface AppConfig {
   defaultBasicViewType: BasicViewType
   defaultSplitKeyMode: SplitKeyMode
   defaultQuickSelect: boolean
+  maxKeymapHistory: number
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -43,6 +44,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'defaultBasicViewType',
   'defaultSplitKeyMode',
   'defaultQuickSelect',
+  'maxKeymapHistory',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -58,4 +60,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   defaultBasicViewType: 'ansi',
   defaultSplitKeyMode: 'split',
   defaultQuickSelect: false,
+  maxKeymapHistory: 100,
 }

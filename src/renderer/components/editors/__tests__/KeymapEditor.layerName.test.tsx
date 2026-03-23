@@ -17,6 +17,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
 vi.mock('../../keyboard/KeyboardWidget', () => ({
   KeyboardWidget: () => <div data-testid="keyboard-widget">KeyboardWidget</div>,
 }))

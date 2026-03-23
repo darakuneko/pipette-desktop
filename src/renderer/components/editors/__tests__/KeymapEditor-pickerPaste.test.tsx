@@ -24,6 +24,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({ config: { maxKeymapHistory: 100 }, loading: false, set: () => {} }),
+}))
+
 let capturedWidgetProps: Array<Record<string, unknown>> = []
 let capturedTabbedProps: Record<string, unknown> = {}
 
