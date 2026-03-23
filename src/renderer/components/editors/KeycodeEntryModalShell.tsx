@@ -54,9 +54,6 @@ export interface KeycodeEntryModalShellProps<TEntry extends Record<string, unkno
   renderBeforeFields?: () => ReactNode
   /** Slot rendered after keycode fields + picker (e.g. layer/mod pickers, options) */
   renderAfterFields?: () => ReactNode
-  /** Custom footer content class for Clear/Revert/Save buttons */
-  footerClassName?: string
-
   // TabbedKeycodes props
   splitKeyMode?: SplitKeyMode
   basicViewType?: BasicViewType
@@ -76,7 +73,6 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
   index,
   renderBeforeFields,
   renderAfterFields,
-  footerClassName,
   splitKeyMode,
   basicViewType,
   quickSelect,
@@ -173,9 +169,8 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
 
   function renderFooterButtons() {
     if (selectedField || !editedEntry) return null
-    const cls = footerClassName ?? 'flex justify-end gap-2 pt-4'
     return (
-      <div className={cls}>
+      <div className="flex justify-end gap-2 pt-4">
         <ConfirmButton
           testId={`${prefix}-modal-clear`}
           confirming={clearAction.confirming}

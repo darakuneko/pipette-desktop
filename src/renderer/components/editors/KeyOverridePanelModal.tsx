@@ -112,7 +112,6 @@ export function KeyOverridePanelModal({
       splitKeyMode={splitKeyMode}
       basicViewType={basicViewType}
       hubProps={hubProps}
-      footerClassName="shrink-0 px-6 py-3"
       renderBeforeFields={() => (
         <div className="flex items-center gap-3">
           <label className="min-w-[140px] text-sm text-content">
