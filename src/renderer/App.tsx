@@ -254,6 +254,13 @@ export function App() {
     setHubUploadResult: hub.setHubUploadResult,
   })
 
+  // Register boot guard unlock callback so setKey/setEncoder can trigger the dialog
+  useEffect(() => {
+    keyboard.setBootGuardUnlock(() => {
+      editorUI.setShowUnlockDialog(true)
+    })
+  }, [keyboard.setBootGuardUnlock, editorUI.setShowUnlockDialog])
+
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
@@ -647,6 +654,7 @@ export function App() {
             device.setPollSuspended(false)
             editorUI.setShowUnlockDialog(false)
             editorUI.setUnlockMacroWarning(false)
+            keyboard.rejectPendingUnlock()
           }}
           macroWarning={editorUI.unlockMacroWarning}
         />

@@ -8,18 +8,32 @@ import type {
   AltRepeatKeyEntry,
 } from '../../shared/types/protocol'
 import type { MacroAction } from '../../preload/macro'
-import type { BulkKeyEntry, SetState, KeyboardState } from './keyboard-types'
+import type { BootGuardRef, BulkKeyEntry, SetState, KeyboardState } from './keyboard-types'
+import { isResetKeycode } from '../../shared/keycodes/keycodes'
 
 export function useKeyboardSetters(
   setState: SetState,
   stateRef: React.MutableRefObject<KeyboardState>,
   bumpActivity: () => void,
   saveLayerNamesRef: React.MutableRefObject<((names: string[]) => void) | null>,
+  bootGuardRef: React.MutableRefObject<BootGuardRef>,
+  waitForUnlock: () => Promise<void>,
 ) {
+  const guardedCall = useCallback(
+    async (keycode: number, fn: () => Promise<void>) => {
+      if (isResetKeycode(keycode) && stateRef.current.unlockStatus.unlocked === false) {
+        bootGuardRef.current.onUnlock?.()
+        await waitForUnlock()
+      }
+      await fn()
+    },
+    [stateRef, bootGuardRef, waitForUnlock],
+  )
+
   const setKey = useCallback(
     async (layer: number, row: number, col: number, keycode: number) => {
       if (!stateRef.current.isDummy) {
-        await window.vialAPI.setKeycode(layer, row, col, keycode)
+        await guardedCall(keycode, () => window.vialAPI.setKeycode(layer, row, col, keycode))
       }
       setState((s) => {
         const newKeymap = new Map(s.keymap)
@@ -28,7 +42,7 @@ export function useKeyboardSetters(
       })
       bumpActivity()
     },
-    [setState, stateRef, bumpActivity],
+    [setState, stateRef, bumpActivity, guardedCall],
   )
 
   const setKeysBulk = useCallback(
@@ -36,7 +50,7 @@ export function useKeyboardSetters(
       if (entries.length === 0) return
       if (!stateRef.current.isDummy) {
         for (const { layer, row, col, keycode } of entries) {
-          await window.vialAPI.setKeycode(layer, row, col, keycode)
+          await guardedCall(keycode, () => window.vialAPI.setKeycode(layer, row, col, keycode))
         }
       }
       setState((s) => {
@@ -48,7 +62,7 @@ export function useKeyboardSetters(
       })
       bumpActivity()
     },
-    [setState, stateRef, bumpActivity],
+    [setState, stateRef, bumpActivity, guardedCall],
   )
 
   const setEncoder = useCallback(
@@ -59,7 +73,7 @@ export function useKeyboardSetters(
       keycode: number,
     ) => {
       if (!stateRef.current.isDummy) {
-        await window.vialAPI.setEncoder(layer, idx, direction, keycode)
+        await guardedCall(keycode, () => window.vialAPI.setEncoder(layer, idx, direction, keycode))
       }
       setState((s) => {
         const newLayout = new Map(s.encoderLayout)
@@ -68,7 +82,7 @@ export function useKeyboardSetters(
       })
       bumpActivity()
     },
-    [setState, stateRef, bumpActivity],
+    [setState, stateRef, bumpActivity, guardedCall],
   )
 
   const setLayoutOptions = useCallback(async (options: number) => {

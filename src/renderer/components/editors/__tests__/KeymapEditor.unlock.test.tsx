@@ -144,7 +144,7 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
     capturedOnKeyClick = undefined
   })
 
-  it('calls onUnlock when assigning QK_BOOT while locked', () => {
+  it('calls onSetKey for QK_BOOT (guard is in setter layer)', () => {
     render(
       <KeymapEditor
         {...defaultProps}
@@ -158,8 +158,8 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
 
     fireEvent.click(screen.getByTestId('kc-boot'))
 
-    expect(onUnlock).toHaveBeenCalledTimes(1)
-    expect(onSetKey).not.toHaveBeenCalled()
+    // Guard has moved to useKeyboardSetters; component calls onSetKey directly
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, QK_BOOT)
   })
 
   it('does NOT call onUnlock when assigning non-boot keycode while locked', () => {
@@ -194,8 +194,8 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, QK_BOOT)
   })
 
-  it('executes pending action after unlock completes', () => {
-    const { rerender } = render(
+  it('calls onSetKey immediately for QK_BOOT regardless of unlock state', () => {
+    render(
       <KeymapEditor
         {...defaultProps}
         unlocked={false}
@@ -206,17 +206,7 @@ describe('KeymapEditor — QK_BOOT unlock check', () => {
     act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
     fireEvent.click(screen.getByTestId('kc-boot'))
 
-    expect(onSetKey).not.toHaveBeenCalled()
-
-    // Simulate unlock completing by re-rendering with unlocked=true
-    rerender(
-      <KeymapEditor
-        {...defaultProps}
-        unlocked={true}
-        onUnlock={onUnlock}
-      />,
-    )
-
+    // Guard has moved to useKeyboardSetters; component calls onSetKey directly
     expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, QK_BOOT)
   })
 
