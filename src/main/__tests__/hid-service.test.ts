@@ -315,42 +315,24 @@ describe('sendReceive', () => {
     expect(result.length).toBe(MSG_LEN)
   })
 
-  it('retries on transient device errors', async () => {
-    vi.useFakeTimers()
-    mockRead
-      .mockRejectedValueOnce(new Error('could not read data from device'))
-      .mockRejectedValueOnce(new Error('could not read data from device'))
-      .mockResolvedValueOnce(Buffer.alloc(MSG_LEN))
+  it('throws immediately on read errors (not transient)', async () => {
+    mockRead.mockRejectedValue(new Error('could not read data from device'))
 
-    const promise = sendReceive([0x01])
-    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
-    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
-    const result = await promise
-
-    expect(mockWrite).toHaveBeenCalledTimes(3)
-    expect(result.length).toBe(MSG_LEN)
+    await expect(sendReceive([0x01])).rejects.toThrow('could not read')
+    expect(mockWrite).toHaveBeenCalledTimes(1)
   })
 
-  it('retries on write errors', async () => {
-    vi.useFakeTimers()
-    mockWrite
-      .mockImplementationOnce(() => { throw new Error('Cannot write to hid device') })
-      .mockReturnValue(MSG_LEN + 1)
-    mockRead.mockResolvedValue(Buffer.alloc(MSG_LEN))
+  it('throws immediately on write errors (not transient)', async () => {
+    mockWrite.mockImplementation(() => { throw new Error('Cannot write to hid device') })
 
-    const promise = sendReceive([0x01])
-    await vi.advanceTimersByTimeAsync(HID_RETRY_DELAY_MS)
-    const result = await promise
-
-    expect(mockWrite).toHaveBeenCalledTimes(2)
-    expect(result.length).toBe(MSG_LEN)
+    await expect(sendReceive([0x01])).rejects.toThrow('Cannot write')
+    expect(mockWrite).toHaveBeenCalledTimes(1)
   })
 
   it('throws immediately on non-transient errors', async () => {
     mockRead.mockRejectedValue(new Error('Device disconnected'))
 
     await expect(sendReceive([0x01])).rejects.toThrow('Device disconnected')
-
     expect(mockWrite).toHaveBeenCalledTimes(1)
   })
 

@@ -6,6 +6,7 @@ import type { KleKey } from '../../../shared/kle/types'
 import { KeyboardWidget } from '../keyboard'
 
 const UNLOCK_POLL_INTERVAL = 200 // ms
+const MAX_CONSECUTIVE_ERRORS = 5 // treat as disconnect after this many consecutive poll errors
 const EMPTY_KEYCODES = new Map<string, string>()
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
   unlockStart: () => Promise<void>
   unlockPoll: () => Promise<number[]>
   onComplete: () => void
+  onDisconnect?: () => void
   macroWarning?: boolean
 }
 
@@ -25,12 +27,14 @@ export function UnlockDialog({
   unlockStart,
   unlockPoll,
   onComplete,
+  onDisconnect,
   macroWarning,
 }: Props) {
   const { t } = useTranslation()
   const [counter, setCounter] = useState(0)
   const totalRef = useRef(0)
   const startedRef = useRef(false)
+  const consecutiveErrorsRef = useRef(0)
 
   // Highlight unlock keys in the keyboard widget
   const highlightedKeys = new Set<string>()
@@ -43,7 +47,9 @@ export function UnlockDialog({
   const unlockPollRef = useRef(unlockPoll)
   unlockPollRef.current = unlockPoll
   const onCompleteRef = useRef(onComplete)
+  const onDisconnectRef = useRef(onDisconnect)
   onCompleteRef.current = onComplete
+  onDisconnectRef.current = onDisconnect
   const busyRef = useRef(false)
 
   // Single useEffect: send unlockStart once, then poll via setInterval.
@@ -58,6 +64,7 @@ export function UnlockDialog({
       try {
         const data = await unlockPollRef.current()
         if (cancelled) return
+        consecutiveErrorsRef.current = 0
         if (data.length < 3) return
 
         const unlocked = data[0]
@@ -72,7 +79,13 @@ export function UnlockDialog({
           return
         }
       } catch {
-        // device error — next interval tick will retry
+        consecutiveErrorsRef.current++
+        if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+          // Device likely disconnected — stop polling and notify parent
+          if (intervalId) clearInterval(intervalId)
+          onDisconnectRef.current?.()
+          return
+        }
       } finally {
         busyRef.current = false
       }

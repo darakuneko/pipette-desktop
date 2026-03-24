@@ -635,12 +635,18 @@ export function App() {
           keys={keyboard.layout?.keys ?? []}
           unlockKeys={keyboard.unlockStatus.keys}
           layoutOptions={decodedLayoutOptions}
-          unlockStart={api.unlockStart}
+          unlockStart={() => { device.setPollSuspended(true); return api.unlockStart() }}
           unlockPoll={api.unlockPoll}
           onComplete={async () => {
+            device.setPollSuspended(false)
             editorUI.setShowUnlockDialog(false)
             editorUI.setUnlockMacroWarning(false)
             await keyboard.refreshUnlockStatus()
+          }}
+          onDisconnect={() => {
+            device.setPollSuspended(false)
+            editorUI.setShowUnlockDialog(false)
+            editorUI.setUnlockMacroWarning(false)
           }}
           macroWarning={editorUI.unlockMacroWarning}
         />

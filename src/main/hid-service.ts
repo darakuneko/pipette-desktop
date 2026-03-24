@@ -119,11 +119,9 @@ function delay(ms: number): Promise<void> {
 
 function isTransientError(err: Error): boolean {
   const msg = err.message.toLowerCase()
-  return (
-    msg.includes('timeout') ||
-    msg.includes('could not read') ||
-    msg.includes('cannot write')
-  )
+  // "cannot write" and "could not read" on a disconnected device are NOT transient —
+  // retrying just floods the mutex queue. Only timeout is worth retrying.
+  return msg.includes('timeout')
 }
 
 /**
