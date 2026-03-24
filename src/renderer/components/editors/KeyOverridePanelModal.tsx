@@ -128,7 +128,7 @@ export function KeyOverridePanelModal({
         </div>
       )}
       renderAfterFields={() => (
-        <div className="mt-2 space-y-2" data-testid="ko-advanced-fields">
+        <div className="space-y-2" data-testid="ko-advanced-fields">
           <LayerPicker
             value={editedEntry?.layers ?? 0xffff}
             onChange={(v) => updateEntry('layers', v)}

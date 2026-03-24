@@ -52,7 +52,7 @@ export interface KeycodeEntryModalShellProps<TEntry extends Record<string, unkno
 
   /** Slot rendered before keycode fields (e.g. enabled checkbox) */
   renderBeforeFields?: () => ReactNode
-  /** Slot rendered after keycode fields + picker (e.g. layer/mod pickers, options) */
+  /** Slot rendered after keycode fields (e.g. layer/mod pickers, tappingTerm, options) */
   renderAfterFields?: () => ReactNode
   // TabbedKeycodes props
   splitKeyMode?: SplitKeyMode
@@ -268,13 +268,13 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
 
                     {/* Keycode fields */}
                     {adapter.keycodeFields.map((fd) => renderKeycodeField(fd))}
+
+                    {/* After-fields slot (e.g. layer/mod pickers, tappingTerm) */}
+                    {!selectedField && renderAfterFields?.()}
                   </div>
 
                   {renderPicker()}
                   {renderPopover()}
-
-                  {/* After-fields slot (e.g. layer/mod pickers, tappingTerm) */}
-                  {!selectedField && renderAfterFields?.()}
 
                   {renderFooterButtons()}
                 </>

@@ -117,7 +117,7 @@ export function AltRepeatKeyPanelModal({
         </div>
       )}
       renderAfterFields={() => (
-        <div className="mt-2 space-y-2" data-testid="ar-advanced-fields">
+        <div className="space-y-2" data-testid="ar-advanced-fields">
           <ModifierPicker
             value={editedEntry?.allowedMods ?? 0}
             onChange={(v) => updateEntry('allowedMods', v)}
