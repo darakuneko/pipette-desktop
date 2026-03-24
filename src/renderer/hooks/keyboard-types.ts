@@ -127,6 +127,10 @@ export function isEchoDetected(err: unknown): boolean {
   return err instanceof Error && err.message.includes(ECHO_DETECTED_MSG)
 }
 
+export interface BootGuardRef {
+  onUnlock: (() => void) | null
+}
+
 export type SetState = React.Dispatch<React.SetStateAction<KeyboardState>>
 
 export interface KeyboardRefs {
