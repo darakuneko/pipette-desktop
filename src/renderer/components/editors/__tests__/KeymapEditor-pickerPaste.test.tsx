@@ -174,7 +174,7 @@ describe('KeymapEditor — picker paste', () => {
     expect(selected.size).toBe(1)
   })
 
-  it('adds duplicate on second Ctrl+click of same keycode', () => {
+  it('toggles off on second Ctrl+click of same keycode (toggle)', () => {
     render(<KeymapEditor {...defaultProps} />)
     const multiSelect = getOnKeycodeMultiSelect()!
 
@@ -187,9 +187,9 @@ describe('KeymapEditor — picker paste', () => {
     })
 
     const selected = getPickerSelectedSet()!
-    // Set deduplicates by qmkId, but the underlying array has 2 entries
-    expect(selected.has(0)).toBe(true)
-    expect(selected.size).toBe(1)
+    // Second Ctrl+click of same keycode at same index removes it (toggle)
+    expect(selected.has(0)).toBe(false)
+    expect(selected.size).toBe(0)
   })
 
   it('selects range on Shift+click after Ctrl anchor', () => {

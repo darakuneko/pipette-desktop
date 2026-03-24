@@ -47,6 +47,8 @@ export function getShiftedKeycode(qmkId: string): Keycode | null {
   return shiftedId ? findKeycode(shiftedId) ?? null : null
 }
 
+export type SplitKeySelectedPart = 'base' | 'shifted' | 'both'
+
 export interface SplitKeyProps {
   base: Keycode
   shifted: Keycode
@@ -55,8 +57,12 @@ export interface SplitKeyProps {
   onHover?: (keycode: Keycode, rect: DOMRect) => void
   onHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
-  selected?: boolean
+  /** Which half of the split key is selected */
+  selectedPart?: SplitKeySelectedPart
+  /** Index of the base (bottom half) keycode in the expanded list */
   index: number
+  /** Index of the shifted (top half) keycode in the expanded list */
+  shiftedIndex: number
   baseDisplayLabel?: string
   shiftedDisplayLabel?: string
 }
@@ -77,15 +83,16 @@ function SplitKeyInner({
   onHover,
   onHoverEnd,
   highlightedKeycodes,
-  selected: isSelected,
+  selectedPart,
   index,
+  shiftedIndex,
   baseDisplayLabel,
   shiftedDisplayLabel,
 }: SplitKeyProps) {
   const baseHighlighted = highlightedKeycodes?.has(base.qmkId)
-  const baseSelected = isSelected
+  const baseSelected = selectedPart === 'base' || selectedPart === 'both'
   const shiftHighlighted = highlightedKeycodes?.has(shifted.qmkId)
-  const shiftSelected = isSelected
+  const shiftSelected = selectedPart === 'shifted' || selectedPart === 'both'
 
   const anySelected = baseSelected || shiftSelected
   const anyHighlighted = baseHighlighted || shiftHighlighted
@@ -107,7 +114,7 @@ function SplitKeyInner({
       <button
         type="button"
         className={`${SPLIT_HALF_BASE} rounded-t ${splitHalfClass(shiftHighlighted, shiftSelected, shiftedDisplayLabel != null)}`}
-        onClick={(e) => onClick?.(shifted, e, index)}
+        onClick={(e) => onClick?.(shifted, e, shiftedIndex)}
         onDoubleClick={() => onDoubleClick?.(shifted)}
         onMouseEnter={(e) => onHover?.(hoverShifted, e.currentTarget.getBoundingClientRect())}
         onMouseLeave={onHoverEnd}

@@ -9,7 +9,7 @@ export interface UseKeymapMultiSelectOptions {
   hasActiveSingleSelectionRef: React.RefObject<boolean>
 }
 
-/** A picker selection: index in the tab's ordered keycode list → keycode number. */
+/** A picker selection: expanded index -> keycode number. */
 export type PickerSelection = Map<number, number>
 
 export interface UseKeymapMultiSelectReturn {
@@ -21,7 +21,7 @@ export interface UseKeymapMultiSelectReturn {
   setSelectionSourcePane: React.Dispatch<React.SetStateAction<'primary' | 'secondary' | null>>
   selectionMode: 'ctrl' | 'shift'
   setSelectionMode: React.Dispatch<React.SetStateAction<'ctrl' | 'shift'>>
-  /** Map of selected indices → keycode numbers (ordered by index). */
+  /** Map of selected indices -> keycode numbers (ordered by index). */
   pickerSelected: PickerSelection
   /** Derived set of selected indices for fast .has() checks. */
   pickerSelectedIndices: Set<number>
@@ -29,12 +29,17 @@ export interface UseKeymapMultiSelectReturn {
   clearPickerSelection: () => void
   /**
    * Handle Ctrl+click / Shift+click on a picker keycode.
-   * @param index - position in the tab's ordered keycode list
+   * @param index - position in the tab's expanded keycode list
    * @param keycode - the keycode number at that position
    * @param event - modifier key state
-   * @param tabKeycodeNumbers - ordered keycode numbers for the current tab (for Shift range fill)
+   * @param tabKeycodeNumbers - ordered keycode numbers for the current tab (expanded, for Shift range fill)
    */
-  handlePickerMultiSelect: (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => void
+  handlePickerMultiSelect: (
+    index: number,
+    keycode: number,
+    event: { ctrlKey: boolean; shiftKey: boolean },
+    tabKeycodeNumbers: number[],
+  ) => void
 }
 
 const EMPTY_MAP: PickerSelection = new Map()
@@ -74,7 +79,12 @@ export function useKeymapMultiSelect({
   pickerAnchorRef.current = pickerAnchorIndex
 
   const handlePickerMultiSelect = useCallback(
-    (index: number, keycode: number, event: { ctrlKey: boolean; shiftKey: boolean }, tabKeycodeNumbers: number[]) => {
+    (
+      index: number,
+      keycode: number,
+      event: { ctrlKey: boolean; shiftKey: boolean },
+      tabKeycodeNumbers: number[],
+    ) => {
 
       setMultiSelectedKeys((prev) => prev.size === 0 ? prev : new Set())
       setSelectionAnchor(null)
@@ -87,7 +97,11 @@ export function useKeymapMultiSelect({
       } else if (event.ctrlKey) {
         setPickerSelected((prev) => {
           const next = new Map(prev)
-          next.set(index, keycode)
+          if (next.has(index)) {
+            next.delete(index)
+          } else {
+            next.set(index, keycode)
+          }
           return next
         })
         setPickerAnchorIndex(index)
@@ -101,11 +115,11 @@ export function useKeymapMultiSelect({
         }
         const start = Math.min(anchor, index)
         const end = Math.max(anchor, index)
+
         const range = new Map<number, number>()
         for (let i = start; i <= end; i++) {
-          if (i < tabKeycodeNumbers.length) {
-            range.set(i, tabKeycodeNumbers[i])
-          }
+          if (i >= tabKeycodeNumbers.length) continue
+          range.set(i, tabKeycodeNumbers[i])
         }
         setPickerSelected(range)
       }
