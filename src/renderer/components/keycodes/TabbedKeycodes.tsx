@@ -13,6 +13,78 @@ import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
 import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
 
+export interface KeycodeIndexEntry { baseIdx: number; shiftedIdx?: number }
+
+/** Expand a flat list of base keycodes: shifted first, then all in original order.
+ *  Also builds an index map keyed by base qmkId. */
+function expandGrouped(
+  keycodes: Keycode[],
+  startIdx: number,
+  indexMap: Map<string, KeycodeIndexEntry>,
+): Keycode[] {
+  let idx = startIdx
+  const shiftedPairs: { shifted: Keycode; baseQmkId: string; shiftedIdx: number }[] = []
+  for (const kc of keycodes) {
+    const s = getShiftedKeycode(kc.qmkId)
+    if (s) shiftedPairs.push({ shifted: s, baseQmkId: kc.qmkId, shiftedIdx: idx++ })
+  }
+  const expanded: Keycode[] = shiftedPairs.map((p) => p.shifted)
+  for (const kc of keycodes) {
+    const pair = shiftedPairs.find((p) => p.baseQmkId === kc.qmkId)
+    indexMap.set(kc.qmkId, { baseIdx: idx, shiftedIdx: pair?.shiftedIdx })
+    expanded.push(kc)
+    idx++
+  }
+  return expanded
+}
+
+/** Expand layout keycodes per physical row using KLE positions.
+ *  For each row: shifted in X order, then ALL keys in X order.
+ *  Also builds an index map keyed by base qmkId. */
+function expandPerRow(
+  keycodes: Keycode[],
+  kleData: unknown[][],
+  startIdx: number,
+  indexMap: Map<string, KeycodeIndexEntry>,
+): Keycode[] {
+  const kle = parseKle(kleData)
+  const kcSet = new Set(keycodes.map((k) => k.qmkId))
+  const rows = new Map<number, { kc: Keycode; x: number }[]>()
+  for (const key of kle.keys) {
+    const qmkId = key.labels[0]
+    if (!qmkId || !kcSet.has(qmkId)) continue
+    const kc = keycodes.find((k) => k.qmkId === qmkId)
+    if (!kc) continue
+    const y = Math.round(key.y * 2) / 2
+    if (!rows.has(y)) rows.set(y, [])
+    rows.get(y)!.push({ kc, x: key.x })
+  }
+
+  let idx = startIdx
+  const expanded: Keycode[] = []
+  const sortedRows = [...rows.entries()].sort((a, b) => a[0] - b[0])
+  for (const [, keys] of sortedRows) {
+    keys.sort((a, b) => a.x - b.x)
+    // Record shifted indices first
+    const shiftedMap = new Map<string, number>() // baseQmkId → shiftedIdx
+    for (const k of keys) {
+      const shifted = getShiftedKeycode(k.kc.qmkId)
+      if (shifted) {
+        shiftedMap.set(k.kc.qmkId, idx)
+        expanded.push(shifted)
+        idx++
+      }
+    }
+    // Base line: ALL keys in X order
+    for (const k of keys) {
+      indexMap.set(k.kc.qmkId, { baseIdx: idx, shiftedIdx: shiftedMap.get(k.kc.qmkId) })
+      expanded.push(k.kc)
+      idx++
+    }
+  }
+  return expanded
+}
+
 const LM_CATEGORY: KeycodeCategory = {
   id: 'lm-mods',
   labelKey: 'keycodes.modifiers',
@@ -146,16 +218,15 @@ export function TabbedKeycodes({
     [lmMode, isVisible, revision],
   )
 
-  const activeTabKeycodes = useMemo(() => {
+  const { activeTabKeycodes, keycodeIndexMap } = useMemo(() => {
     const cat = categories.find((c) => c.id === activeTab)
-    if (!cat) return []
+    if (!cat) return { activeTabKeycodes: [] as Keycode[], keycodeIndexMap: new Map<string, KeycodeIndexEntry>() }
 
-    let keycodes: Keycode[]
+    const indexMap = new Map<string, KeycodeIndexEntry>()
 
     // For keyboard views (ANSI/ISO/JIS), order by physical layout position
     if (cat.id === 'basic' && resolvedBasicViewType != null && resolvedBasicViewType !== 'list' && !lmMode) {
       const layouts = getLayoutsForViewType(resolvedBasicViewType)
-      // Largest layout has the most keys — extract keycode names in physical row-major order
       const kleLayout = parseKle(layouts[0].kle)
       const layoutKeycodes: Keycode[] = []
       const layoutIds = new Set<string>()
@@ -168,39 +239,57 @@ export function TabbedKeycodes({
           layoutIds.add(qmkId)
         }
       }
-      // Append remaining keycodes from view-specific groups (not on the keyboard)
       const groups = cat.getGroups?.(resolvedBasicViewType)?.filter((g) => g.keycodes.some(isVisible))
-      const remaining = groups
-        ? groups.flatMap((g) => g.keycodes.filter((kc) => !layoutIds.has(kc.qmkId) && isVisible(kc)))
+      const remainingGroups = groups
+        ? groups.map((g) => g.keycodes.filter((kc) => !layoutIds.has(kc.qmkId) && isVisible(kc))).filter((arr) => arr.length > 0)
         : []
-      keycodes = [...layoutKeycodes, ...remaining]
+      const remaining = remainingGroups.flat()
+
+      if (useSplit && !maskOnly) {
+        const expandedLayout = expandPerRow(layoutKeycodes, layouts[0].kle, 0, indexMap)
+        let offset = expandedLayout.length
+        const expandedRemaining = remainingGroups.flatMap((g) => {
+          const result = expandGrouped(g, offset, indexMap)
+          offset += result.length
+          return result
+        })
+        return { activeTabKeycodes: [...expandedLayout, ...expandedRemaining], keycodeIndexMap: indexMap }
+      }
+
+      const keycodes = [...layoutKeycodes, ...remaining]
+      keycodes.forEach((kc, i) => indexMap.set(kc.qmkId, { baseIdx: i }))
+      return { activeTabKeycodes: keycodes, keycodeIndexMap: indexMap }
+    }
+
+    // List/other tabs
+    const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
+    let keycodes: Keycode[]
+    if (!groups) {
+      keycodes = cat.getKeycodes().filter(isVisible)
     } else {
-      const groups = cat.getGroups?.()?.filter((g) => g.keycodes.some(isVisible))
-      if (!groups) keycodes = cat.getKeycodes().filter(isVisible)
-      else keycodes = groups.flatMap((g) =>
-        g.sections
-          ? g.sections.flatMap((s) => s.filter(isVisible))
-          : g.keycodes.filter(isVisible),
+      keycodes = groups.flatMap((g) =>
+        g.sections ? g.sections.flatMap((s) => s.filter(isVisible)) : g.keycodes.filter(isVisible),
       )
     }
 
-    // When split keys are active, expand each base keycode with its shifted
-    // counterpart so multi-select can address both halves independently.
     if (useSplit && !maskOnly) {
-      const expanded: Keycode[] = []
-      for (const kc of keycodes) {
-        const shifted = getShiftedKeycode(kc.qmkId)
-        if (shifted) {
-          expanded.push(shifted) // top half
-          expanded.push(kc)     // bottom half
-        } else {
-          expanded.push(kc)
-        }
+      let offset = 0
+      if (groups) {
+        const expanded = groups.flatMap((g) => {
+          const visible = g.sections
+            ? g.sections.flatMap((s) => s.filter(isVisible))
+            : g.keycodes.filter(isVisible)
+          const result = expandGrouped(visible, offset, indexMap)
+          offset += result.length
+          return result
+        })
+        return { activeTabKeycodes: expanded, keycodeIndexMap: indexMap }
       }
-      return expanded
+      return { activeTabKeycodes: expandGrouped(keycodes, 0, indexMap), keycodeIndexMap: indexMap }
     }
 
-    return keycodes
+    keycodes.forEach((kc, i) => indexMap.set(kc.qmkId, { baseIdx: i }))
+    return { activeTabKeycodes: keycodes, keycodeIndexMap: indexMap }
   }, [categories, activeTab, isVisible, revision, resolvedBasicViewType, maskOnly, lmMode, useSplit])
 
   // Reset active tab if it no longer exists in the filtered categories
@@ -250,7 +339,8 @@ export function TabbedKeycodes({
     [onKeycodeMultiSelect, onKeycodeSelect, activeTabKeycodeNumbers, pickerMultiSelectEnabled, onBackgroundClick],
   )
 
-  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string, indexOffset = 0): React.ReactNode {
+  function renderKeycodeGrid(keycodes: Keycode[], tabId?: string): React.ReactNode {
+    const isActive = !tabId || tabId === activeTab
     return (
       <KeycodeGrid
         keycodes={keycodes}
@@ -259,17 +349,16 @@ export function TabbedKeycodes({
         onHover={handleKeycodeHover}
         onHoverEnd={handleKeycodeHoverEnd}
         highlightedKeycodes={highlightedKeycodes}
-        pickerSelectedIndices={(!tabId || tabId === activeTab) ? pickerSelectedIndices : undefined}
+        pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
         isVisible={isVisible}
         splitKeyMode={maskOnly ? 'flat' : resolvedSplitKeyMode}
         remapLabel={remapLabel}
-        indexOffset={indexOffset}
+        keycodeIndexMap={keycodeIndexMap}
       />
     )
   }
 
-  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string, groupOffset = 0): React.ReactNode {
-    let sectionOffset = groupOffset
+  function renderGroup(group: KeycodeGroup, tabId?: string, hint?: string): React.ReactNode {
     return (
       <div key={group.labelKey}>
         <h4 className="text-xs font-normal text-content-muted px-1 pt-2 pb-1">
@@ -279,14 +368,12 @@ export function TabbedKeycodes({
           <div className="space-y-1">
             {group.sections
               .filter((s) => s.some(isVisible))
-              .map((section, i) => {
-                const offset = sectionOffset
-                sectionOffset += section.filter(isVisible).length
-                return <div key={i}>{renderKeycodeGrid(section, tabId, offset)}</div>
-              })}
+              .map((section, i) => (
+                <div key={i}>{renderKeycodeGrid(section, tabId)}</div>
+              ))}
           </div>
         ) : (
-          renderKeycodeGrid(group.keycodes, tabId, groupOffset)
+          renderKeycodeGrid(group.keycodes, tabId)
         )}
       </div>
     )
@@ -308,6 +395,7 @@ export function TabbedKeycodes({
           pickerSelectedIndices={isActive ? pickerSelectedIndices : undefined}
           isVisible={isVisible}
           remapLabel={remapLabel}
+          keycodeIndexMap={keycodeIndexMap}
         />
       )
     }
@@ -324,16 +412,10 @@ export function TabbedKeycodes({
     }
 
     const rows = groupByLayoutRow(groups ?? [])
-    let cumulativeOffset = 0
     const groupContent = rows.map((row) => (
       <div key={row[0].labelKey} className="flex gap-x-3">
         {row.map((group) => {
-          const offset = cumulativeOffset
-          const count = group.sections
-            ? group.sections.reduce((sum, s) => sum + s.filter(isVisible).length, 0)
-            : group.keycodes.filter(isVisible).length
-          cumulativeOffset += count
-          return renderGroup(group, category.id, undefined, offset)
+          return renderGroup(group, category.id)
         })}
       </div>
     ))

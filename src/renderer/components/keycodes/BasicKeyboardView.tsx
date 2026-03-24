@@ -27,9 +27,10 @@ interface Props {
   onKeycodeHover?: (keycode: Keycode, rect: DOMRect) => void
   onKeycodeHoverEnd?: () => void
   highlightedKeycodes?: Set<string>
-  pickerSelectedIndices?: Set<string>
+  pickerSelectedIndices?: Set<number>
   isVisible?: (kc: Keycode) => boolean
   remapLabel?: (qmkId: string) => string
+  keycodeIndexMap?: Map<string, { baseIdx: number; shiftedIdx?: number }>
 }
 
 /** Collect all keycode names present in a KLE layout definition */
@@ -80,6 +81,7 @@ export function BasicKeyboardView({
   pickerSelectedIndices,
   isVisible,
   remapLabel,
+  keycodeIndexMap,
 }: Props) {
   const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -131,6 +133,7 @@ export function BasicKeyboardView({
         isVisible={visCheck}
         splitKeyMode={splitKeyMode}
         remapLabel={remapLabel}
+        keycodeIndexMap={keycodeIndexMap}
       />
     )
   }
@@ -150,6 +153,7 @@ export function BasicKeyboardView({
             splitKeyMode={splitKeyMode}
             remapLabel={remapLabel}
             isVisible={visCheck}
+            keycodeIndexMap={keycodeIndexMap}
           />
           {remainingRows.length > 0 && (
             <div className="mt-1">

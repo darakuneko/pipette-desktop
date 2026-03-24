@@ -253,7 +253,6 @@ export function useKeymapSelectionHandlers({
   const handlePickerPaste = useCallback(async (targetKey: KleKey) => {
     const targetIdx = selectableKeys.findIndex((k) => k.row === targetKey.row && k.col === targetKey.col)
     if (targetIdx < 0) return
-    // Get keycodes ordered by index (Map iteration order = insertion order, but sort to be safe)
     const sortedEntries = [...pickerSelected.entries()].sort((a, b) => a[0] - b[0])
     const targetPositions = selectableKeys.slice(targetIdx, targetIdx + sortedEntries.length)
     await runCopy(async () => {

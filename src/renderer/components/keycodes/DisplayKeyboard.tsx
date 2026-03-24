@@ -5,7 +5,7 @@ import { parseKle } from '../../../shared/kle/kle-parser'
 import { findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import type { SplitKeyMode } from '../../../shared/types/app-config'
 import { KeycodeButton } from './KeycodeButton'
-import { getRemapDisplayLabel, getSplitRemapProps } from './KeycodeGrid'
+import { getRemapDisplayLabel, getSplitRemapProps, computeSplitSelectedPart } from './KeycodeGrid'
 import { SplitKey, getShiftedKeycode } from './SplitKey'
 
 /** Grid multiplier: 1u = 4 grid cells (same as vial-gui QGridLayout) */
@@ -61,6 +61,7 @@ interface Props {
   splitKeyMode?: SplitKeyMode
   remapLabel?: (qmkId: string) => string
   isVisible?: (kc: Keycode) => boolean
+  keycodeIndexMap?: Map<string, { baseIdx: number; shiftedIdx?: number }>
 }
 
 interface GridKey {
@@ -68,8 +69,10 @@ interface GridKey {
   shiftedKeycode: Keycode | null
   gridRow: number
   gridCol: number
-  /** Original index in the flat keycode list (for selection tracking). */
+  /** Index of the base keycode in the expanded list. */
   originalIndex: number
+  /** Index of the shifted keycode in the expanded list (undefined if not a split key). */
+  shiftedOriginalIndex: number | undefined
   gridRowSpan: number
   gridColSpan: number
   clipPath?: string
@@ -86,13 +89,15 @@ export function DisplayKeyboard({
   splitKeyMode,
   remapLabel,
   isVisible,
+  keycodeIndexMap,
 }: Props) {
   const { gridKeys, totalCols, totalRows } = useMemo(() => {
     const layout = parseKle(kle)
+    const useSplit = splitKeyMode !== 'flat'
     const keys: GridKey[] = []
+    let fallbackIndex = 0
     let maxCol = 0
     let maxRow = 0
-    let flatIndex = 0
 
     for (const key of layout.keys) {
       const qmkId = key.labels[0]
@@ -103,8 +108,6 @@ export function DisplayKeyboard({
       const stepped = computeSteppedKeyInfo(
         key.width, key.height, key.x2, key.y2, key.width2, key.height2,
       )
-
-      // For stepped keys, use the bounding box; for normal keys, use key dimensions directly
       const originX = key.x + (stepped?.left ?? 0)
       const originY = key.y + (stepped?.top ?? 0)
       const spanW = stepped?.width ?? key.width
@@ -114,25 +117,23 @@ export function DisplayKeyboard({
       const colSpan = Math.round(spanW * GRID_SCALE)
       const rowSpan = Math.round(spanH * GRID_SCALE)
 
-      const shiftedKc = splitKeyMode !== 'flat' ? getShiftedKeycode(kc.qmkId) : null
+      const shiftedKc = useSplit ? getShiftedKeycode(kc.qmkId) : null
+      // Look up index from the global map; fall back to local counter
+      const entry = keycodeIndexMap?.get(kc.qmkId)
+      const originalIndex = entry?.baseIdx ?? fallbackIndex++
+      const shiftedOriginalIndex = shiftedKc ? entry?.shiftedIdx : undefined
 
       keys.push({
-        keycode: kc,
-        shiftedKeycode: shiftedKc,
-        gridRow: row + 1, // CSS grid is 1-indexed
-        gridCol: col + 1,
-        gridRowSpan: rowSpan,
-        gridColSpan: colSpan,
-        clipPath: stepped?.clipPath,
-        originalIndex: flatIndex++,
+        keycode: kc, shiftedKeycode: shiftedKc,
+        gridRow: row + 1, gridCol: col + 1, gridRowSpan: rowSpan, gridColSpan: colSpan,
+        clipPath: stepped?.clipPath, originalIndex, shiftedOriginalIndex,
       })
-
       maxCol = Math.max(maxCol, col + colSpan)
       maxRow = Math.max(maxRow, row + rowSpan)
     }
 
     return { gridKeys: keys, totalCols: maxCol, totalRows: maxRow }
-  }, [kle, splitKeyMode])
+  }, [kle, splitKeyMode, keycodeIndexMap])
 
   return (
     <div
@@ -149,7 +150,7 @@ export function DisplayKeyboard({
 
         const buttonContent = !keyVisible ? (
           <div className="w-full h-full rounded-md bg-surface-dim opacity-30" />
-        ) : gk.shiftedKeycode ? (
+        ) : gk.shiftedKeycode && gk.shiftedOriginalIndex != null ? (
           <SplitKey
             base={gk.keycode}
             shifted={gk.shiftedKeycode}
@@ -158,8 +159,9 @@ export function DisplayKeyboard({
             onHover={onKeycodeHover}
             onHoverEnd={onKeycodeHoverEnd}
             highlightedKeycodes={highlightedKeycodes}
-            selected={isSelected}
+            selectedPart={computeSplitSelectedPart(pickerSelectedIndices, gk.originalIndex, gk.shiftedOriginalIndex)}
             index={gk.originalIndex}
+            shiftedIndex={gk.shiftedOriginalIndex}
             {...getSplitRemapProps(gk.keycode.qmkId, remapLabel)}
           />
         ) : (
