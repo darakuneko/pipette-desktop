@@ -40,6 +40,9 @@ export function useDeviceConnection() {
   const connectedDeviceRef = useRef<DeviceInfo | null>(null)
   const isDummyRef = useRef(false)
   const deviceListActiveRef = useRef(false)
+  // Skip all USB activity when suspended (e.g. during unlock dialog).
+  // USB device enumeration disrupts firmware operations like unlock counter.
+  const pollSuspendedRef = useRef(false)
 
   useEffect(() => {
     mountedRef.current = true
@@ -187,6 +190,12 @@ export function useDeviceConnection() {
     async function poll(): Promise<void> {
       if (!mountedRef.current || cancelled) return
 
+      // Skip all USB activity while suspended (e.g. during unlock dialog)
+      if (pollSuspendedRef.current) {
+        if (!cancelled) timerId = setTimeout(poll, POLL_INTERVAL_MS)
+        return
+      }
+
       // Refresh device list only when device picker is actively browsing
       if (deviceListActiveRef.current || !connectedDeviceRef.current) {
         try {
@@ -228,6 +237,7 @@ export function useDeviceConnection() {
   }, []) // stable — uses refs internally
 
   const setDeviceListActive = useCallback((active: boolean) => { deviceListActiveRef.current = active }, [])
+  const setPollSuspended = useCallback((suspended: boolean) => { pollSuspendedRef.current = suspended }, [])
 
   return {
     ...state,
@@ -237,5 +247,6 @@ export function useDeviceConnection() {
     connectPipetteFile,
     disconnectDevice,
     setDeviceListActive,
+    setPollSuspended,
   }
 }
