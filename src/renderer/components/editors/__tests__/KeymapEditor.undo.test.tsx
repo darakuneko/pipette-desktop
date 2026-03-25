@@ -51,16 +51,20 @@ vi.mock('../../keycodes/TabbedKeycodes', () => ({
 }))
 
 let capturedPreviousKeycode: number | undefined
+let capturedNextKeycode: number | undefined
 
 vi.mock('../../keycodes/KeyPopover', () => ({
   KeyPopover: (props: {
     previousKeycode?: number
     onUndo?: () => void
+    nextKeycode?: number
+    onRedo?: () => void
     onKeycodeSelect?: (kc: { qmkId: string }) => void
     onRawKeycodeSelect?: (code: number) => void
     onClose?: () => void
   }) => {
     capturedPreviousKeycode = props.previousKeycode
+    capturedNextKeycode = props.nextKeycode
     return (
       <div data-testid="key-popover">
         <button
@@ -72,6 +76,11 @@ vi.mock('../../keycodes/KeyPopover', () => ({
         {props.previousKeycode != null && props.onUndo && (
           <button data-testid="popover-undo" onClick={props.onUndo}>
             Undo
+          </button>
+        )}
+        {props.nextKeycode != null && props.onRedo && (
+          <button data-testid="popover-redo" onClick={props.onRedo}>
+            Redo
           </button>
         )}
       </div>
@@ -154,6 +163,7 @@ describe('KeymapEditor — undo after single-click selection', () => {
     capturedOnKeyClick = undefined
     capturedOnKeyDoubleClick = undefined
     capturedPreviousKeycode = undefined
+    capturedNextKeycode = undefined
   })
 
   it('records undo when assigning keycode via single-click picker flow', async () => {
@@ -260,6 +270,7 @@ describe('KeymapEditor — Ctrl+Z / Ctrl+Y keyboard shortcuts', () => {
     capturedOnKeyClick = undefined
     capturedOnKeyDoubleClick = undefined
     capturedPreviousKeycode = undefined
+    capturedNextKeycode = undefined
   })
 
   it('Ctrl+Z undoes the last keycode assignment', async () => {
@@ -375,5 +386,106 @@ describe('KeymapEditor — Ctrl+Z / Ctrl+Y keyboard shortcuts', () => {
 
     await act(async () => { fireEvent.keyDown(screen.getByTestId('text-input'), { key: 'z', ctrlKey: true }) })
     expect(onSetKey).not.toHaveBeenCalled()
+  })
+})
+
+describe('KeymapEditor — popover redo', () => {
+  const onSetKey = vi.fn().mockResolvedValue(undefined)
+
+  const mockRect = {
+    top: 100, left: 200, bottom: 140, right: 260,
+    width: 60, height: 40, x: 200, y: 100, toJSON: () => ({}),
+  } as DOMRect
+
+  const defaultProps = {
+    layout: makeLayout(),
+    layers: 2,
+    currentLayer: 0,
+    onLayerChange: vi.fn(),
+    keymap: new Map([
+      ['0,0,0', 5],
+      ['0,0,1', 6],
+    ]),
+    encoderLayout: new Map<string, number>(),
+    encoderCount: 0,
+    layoutOptions: new Map<number, number>(),
+    onSetKey,
+    onSetKeysBulk: vi.fn().mockResolvedValue(undefined),
+    onSetEncoder: vi.fn().mockResolvedValue(undefined),
+    autoAdvance: false,
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedOnKeyClick = undefined
+    capturedOnKeyDoubleClick = undefined
+    capturedPreviousKeycode = undefined
+    capturedNextKeycode = undefined
+  })
+
+  it('shows redo in popover after undo when same key is opened', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Assign KC_A to [0,0]
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4)
+
+    // Undo via Ctrl+Z
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+
+    // Open popover on same key — redo should be available (newKeycode = 4 = KC_A)
+    act(() => capturedOnKeyDoubleClick?.({ row: 0, col: 0 }, mockRect))
+    expect(screen.getByTestId('key-popover')).toBeInTheDocument()
+    expect(screen.getByTestId('popover-redo')).toBeInTheDocument()
+    expect(capturedNextKeycode).toBe(4)
+  })
+
+  it('does NOT show redo when redo stack top is for a different key', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Assign KC_A to [0,0]
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+
+    // Undo
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+
+    // Open popover on [0,1] — redo is for [0,0], not [0,1]
+    act(() => capturedOnKeyDoubleClick?.({ row: 0, col: 1 }, mockRect))
+    expect(screen.getByTestId('key-popover')).toBeInTheDocument()
+    expect(screen.queryByTestId('popover-redo')).not.toBeInTheDocument()
+    expect(capturedNextKeycode).toBeUndefined()
+  })
+
+  it('popover redo re-applies keycode via onSetKey', async () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // Assign KC_A to [0,0]
+    act(() => capturedOnKeyClick?.({ row: 0, col: 0 }))
+    await act(async () => { fireEvent.click(screen.getByTestId('kc-a')) })
+
+    // Undo
+    await act(async () => { fireEvent.keyDown(window, { key: 'z', ctrlKey: true }) })
+    onSetKey.mockClear()
+
+    // Open popover and click redo
+    act(() => capturedOnKeyDoubleClick?.({ row: 0, col: 0 }, mockRect))
+    await act(async () => {
+      fireEvent.click(screen.getByTestId('popover-redo'))
+    })
+
+    // Should re-apply KC_A (4)
+    expect(onSetKey).toHaveBeenCalledWith(0, 0, 0, 4)
+  })
+
+  it('does NOT show redo when redo stack is empty', () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    // No undo/redo history — directly open popover
+    act(() => capturedOnKeyDoubleClick?.({ row: 0, col: 0 }, mockRect))
+    expect(screen.getByTestId('key-popover')).toBeInTheDocument()
+    expect(screen.queryByTestId('popover-redo')).not.toBeInTheDocument()
+    expect(capturedNextKeycode).toBeUndefined()
   })
 })

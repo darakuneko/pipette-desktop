@@ -12,6 +12,19 @@ import type { PopoverState } from './keymap-editor-types'
 import type { UseKeymapMultiSelectReturn } from './useKeymapMultiSelect'
 import type { UseKeymapHistoryReturn, SingleHistoryEntry, HistoryEntry } from './useKeymapHistory'
 
+/** Match a history entry against the current popover position, returning the keycode if matched. */
+function matchPopoverEntry(
+  popoverState: PopoverState | null,
+  entry: HistoryEntry | null,
+  currentLayer: number,
+  field: 'oldKeycode' | 'newKeycode',
+): number | undefined {
+  if (!popoverState || !entry || entry.kind === 'batch') return undefined
+  if (popoverState.kind === 'key' && entry.kind === 'key' && entry.layer === currentLayer && entry.row === popoverState.row && entry.col === popoverState.col) return entry[field]
+  if (popoverState.kind === 'encoder' && entry.kind === 'encoder' && entry.layer === currentLayer && entry.idx === popoverState.idx && entry.dir === popoverState.dir) return entry[field]
+  return undefined
+}
+
 export interface UseKeymapSelectionOptions {
   // Core data
   layout: { keys: KleKey[] } | null
@@ -398,14 +411,10 @@ export function useKeymapSelectionHandlers({
   }, [popoverState, currentLayer, keymap, encoderLayout, onSetKey, onSetEncoder, history])
 
   // --- History-derived popover undo ---
-  const popoverUndoKeycode = useMemo(() => {
-    if (!popoverState) return undefined
-    const entry = history.peekUndo
-    if (!entry || entry.kind === 'batch') return undefined
-    if (popoverState.kind === 'key' && entry.kind === 'key' && entry.layer === currentLayer && entry.row === popoverState.row && entry.col === popoverState.col) return entry.oldKeycode
-    if (popoverState.kind === 'encoder' && entry.kind === 'encoder' && entry.layer === currentLayer && entry.idx === popoverState.idx && entry.dir === popoverState.dir) return entry.oldKeycode
-    return undefined
-  }, [popoverState, currentLayer, history.peekUndo])
+  const popoverUndoKeycode = useMemo(
+    () => matchPopoverEntry(popoverState, history.peekUndo, currentLayer, 'oldKeycode'),
+    [popoverState, currentLayer, history.peekUndo],
+  )
 
   // --- Undo / redo ---
   const applyHistoryEntry = useCallback(async (entry: HistoryEntry, isUndo: boolean) => {
@@ -458,6 +467,17 @@ export function useKeymapSelectionHandlers({
     if (popoverUndoKeycode == null) return
     void handleUndo()
   }, [popoverUndoKeycode, handleUndo])
+
+  // --- History-derived popover redo (top-only) ---
+  const popoverRedoKeycode = useMemo(
+    () => matchPopoverEntry(popoverState, history.peekRedo, currentLayer, 'newKeycode'),
+    [popoverState, currentLayer, history.peekRedo],
+  )
+
+  const handlePopoverRedo = useCallback(() => {
+    if (popoverRedoKeycode == null) return
+    void handleRedo()
+  }, [popoverRedoKeycode, handleRedo])
 
   // --- Keyboard shortcuts for undo/redo ---
   useEffect(() => {
@@ -539,6 +559,8 @@ export function useKeymapSelectionHandlers({
     handlePopoverModMaskChange,
     popoverUndoKeycode,
     handlePopoverUndo,
+    popoverRedoKeycode,
+    handlePopoverRedo,
     handleUndo,
     handleRedo,
     // Deselect

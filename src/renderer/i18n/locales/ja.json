@@ -122,7 +122,8 @@
         "layerLabel": "レイヤー",
         "keySelected": "選択済み: {{key}}",
         "clickToClose": "クリックして適用して閉じる、またはEnterキーで確定",
-        "undo": "元に戻す"
+        "undo": "元に戻す",
+        "redo": "やり直し"
       }
     },
     "layout": {
