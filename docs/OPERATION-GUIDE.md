@@ -179,9 +179,10 @@ Both modes show the modifier checkbox strip to select Left/Right Ctrl, Shift, Al
 
 Click an active mode button to toggle it off and revert to a basic keycode.
 
-**Undo**: If the selected key already has a keycode assigned, the popover shows an **Undo** button that displays the previous keycode. Click it to revert to the previous assignment.
+**Undo / Redo**: The popover footer shows context-sensitive **Undo** and **Redo** buttons. Undo displays the previous keycode and reverts to it; Redo displays the next keycode and re-applies it. These buttons only appear when the most recent undo/redo history entry matches the key currently open in the popover (i.e., the last single change). For multi-step history navigation, use the toolbar buttons or keyboard shortcuts (see §4.3).
 
 ![Key Popover — Undo](screenshots/key-popover-undo.png)
+![Key Popover — Redo](screenshots/key-popover-redo.png)
 
 **Confirmation**: Press **Enter** to confirm the current selection and close the popover. Press **Escape** or click outside the popover to close it without changes.
 
@@ -478,7 +479,21 @@ Adjusts the keyboard layout display scale.
 - (-) button to zoom out
 - Can also be adjusted in editor settings
 
-### 4.3 Typing Test
+### 4.3 Undo / Redo (Keymap History)
+
+The keymap editor automatically records a history of keycode changes. You can navigate through this history to undo or redo changes.
+
+| Method | Scope | How to use |
+|--------|-------|------------|
+| **Keyboard shortcuts** | Full history (up to Max Keymap History, default 100) | Ctrl/Cmd+Z (Undo), Ctrl+Y / Ctrl/Cmd+Shift+Z (Redo) |
+| **Toolbar buttons** | Full history | Undo / Redo buttons in the left toolbar |
+| **Popover buttons** | Last single change only (must match the open key) | Undo / Redo buttons in the popover footer (see §2.4) |
+
+- History is cleared when switching keyboards or disconnecting
+- The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
+- All keymap mutation paths are tracked: single key edits, popover selections, mod-mask changes, paste, and copy-layer operations
+
+### 4.4 Typing Test
 
 A typing practice feature. Test your typing with the current keymap while viewing the keyboard layout below. The layout highlights key presses in real time, so you can verify that your physical keymap matches the on-screen display.
 
@@ -741,6 +756,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
 - **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
 - **Separate Shift in Key Picker**: Default setting for separating Shift in the key picker
+- **Max Keymap History**: Maximum number of keymap changes to keep in the current keyboard's edit history (default: 100). History is cleared on disconnect or keyboard switch. See §4.3 for details.
 
 ---
 
