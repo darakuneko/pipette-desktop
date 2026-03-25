@@ -54,12 +54,14 @@ interface PopoverForStateProps {
   quickSelect?: boolean
   previousKeycode?: number
   onUndo?: () => void
+  nextKeycode?: number
+  onRedo?: () => void
 }
 
 function PopoverForState({
   popoverState, keymap, encoderLayout, currentLayer, layers,
   onKeycodeSelect, onRawKeycodeSelect, onModMaskChange, onClose,
-  quickSelect, previousKeycode, onUndo,
+  quickSelect, previousKeycode, onUndo, nextKeycode, onRedo,
 }: PopoverForStateProps) {
   const currentKeycode = popoverState.kind === 'key'
     ? keymap.get(`${currentLayer},${popoverState.row},${popoverState.col}`) ?? 0
@@ -70,6 +72,7 @@ function PopoverForState({
       anchorRect={popoverState.anchorRect} currentKeycode={currentKeycode} maskOnly={maskOnly} layers={layers}
       onKeycodeSelect={onKeycodeSelect} onRawKeycodeSelect={onRawKeycodeSelect} onModMaskChange={onModMaskChange}
       onClose={onClose} quickSelect={quickSelect} previousKeycode={previousKeycode} onUndo={onUndo}
+      nextKeycode={nextKeycode} onRedo={onRedo}
     />
   )
 }
@@ -187,6 +190,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     handleKeyClick, handleEncoderClick, handleKeyDoubleClick, handleEncoderDoubleClick,
     handleKeycodeSelect, handlePopoverKeycodeSelect, handlePopoverRawKeycodeSelect,
     handlePopoverModMaskChange, popoverUndoKeycode, handlePopoverUndo,
+    popoverRedoKeycode, handlePopoverRedo,
     handleUndo, handleRedo,
     handleDeselect, handleDeselectClick,
     isCopying, copyLayerPending, handleCopyLayerClick,
@@ -929,6 +933,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onModMaskChange={handlePopoverModMaskChange}
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
           previousKeycode={popoverUndoKeycode} onUndo={handlePopoverUndo}
+          nextKeycode={popoverRedoKeycode} onRedo={handlePopoverRedo}
         />
       )}
 
