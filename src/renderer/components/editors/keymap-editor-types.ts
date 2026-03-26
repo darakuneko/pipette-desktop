@@ -113,12 +113,6 @@ export interface KeymapEditorProps {
   onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
-  splitEdit?: boolean
-  onSplitEditChange?: (enabled: boolean) => void
-  activePane?: 'primary' | 'secondary'
-  onActivePaneChange?: (pane: 'primary' | 'secondary') => void
-  primaryLayer?: number
-  secondaryLayer?: number
   typingTestMode?: boolean
   onTypingTestModeChange?: (enabled: boolean) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void

@@ -94,7 +94,7 @@ The keymap editor consists of two main areas: the keyboard layout display and th
 ![Keymap Editor Overview](screenshots/02-keymap-editor-overview.png)
 
 - Top area: Physical keyboard layout (shows the current keycode assigned to each key)
-- Left side: Toolbar (split edit, zoom, etc.)
+- Left side: Toolbar (zoom, undo/redo, etc.)
 - Bottom area: Keycode palette (tabbed interface) with overlay panel toggle
 - Right side (when open): Keycodes Overlay Panel (tools, save, layout options)
 - Bottom bar: Status bar
@@ -179,7 +179,7 @@ Both modes show the modifier checkbox strip to select Left/Right Ctrl, Shift, Al
 
 Click an active mode button to toggle it off and revert to a basic keycode.
 
-**Undo / Redo**: The popover footer shows context-sensitive **Undo** and **Redo** buttons. Undo displays the previous keycode and reverts to it; Redo displays the next keycode and re-applies it. These buttons only appear when the most recent undo/redo history entry matches the key currently open in the popover (i.e., the last single change). For multi-step history navigation, use the toolbar buttons or keyboard shortcuts (see §4.3).
+**Undo / Redo**: The popover footer shows context-sensitive **Undo** and **Redo** buttons. Undo displays the previous keycode and reverts to it; Redo displays the next keycode and re-applies it. These buttons only appear when the most recent undo/redo history entry matches the key currently open in the popover (i.e., the last single change). For multi-step history navigation, use the toolbar buttons or keyboard shortcuts (see §4.2).
 
 ![Key Popover — Undo](screenshots/key-popover-undo.png)
 ![Key Popover — Redo](screenshots/key-popover-redo.png)
@@ -408,7 +408,7 @@ When you open the Keyboard tab, a list of all connected Vial-compatible keyboard
 - Once loaded, click any key on the displayed keyboard to assign that keycode to the selected key on the main keymap
 - Use Ctrl+click for multi-select, Shift+click for range select
 - Layer buttons at the bottom right let you browse different layers
-- Zoom controls (+ / numeric input / −) adjust the picker keyboard size independently from the main view
+- Zoom controls (+ / numeric input / −) adjust the picker keyboard size (30%–200%). When viewing another keyboard, its saved zoom level is loaded automatically
 - Press Escape to clear the picker selection
 
 **File Source**
@@ -460,26 +460,18 @@ The toolbar on the left side of the keymap editor provides the following feature
 
 ![Toolbar](screenshots/toolbar.png)
 
-### 4.1 Split Edit
+### 4.1 Zoom
 
-Displays two keyboard layouts side by side for comparing and copying keys between layers.
-
-![Split Edit](screenshots/split-edit.png)
-
-- Click the button to toggle split edit
-- Useful for copying key settings between layers
-
-### 4.2 Zoom
-
-Adjusts the keyboard layout display scale.
+Adjusts the keyboard layout display scale. Range: 30%–200% (default 100%).
 
 ![Zoom In](screenshots/zoom-in.png)
 
 - (+) button to zoom in
 - (-) button to zoom out
 - Can also be adjusted in editor settings
+- Zoom level is saved per keyboard and restored automatically on reconnect
 
-### 4.3 Undo / Redo (Keymap History)
+### 4.2 Undo / Redo (Keymap History)
 
 The keymap editor automatically records a history of keycode changes. You can navigate through this history to undo or redo changes.
 
@@ -493,7 +485,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 - The maximum history size can be configured in Settings → Defaults → **Max Keymap History** (see §6.1)
 - All keymap mutation paths are tracked: single key edits, popover selections, mod-mask changes, paste, and copy-layer operations
 
-### 4.4 Typing Test
+### 4.3 Typing Test
 
 A typing practice feature. Test your typing with the current keymap while viewing the keyboard layout below. The layout highlights key presses in real time, so you can verify that your physical keymap matches the on-screen display.
 
@@ -689,7 +681,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
-> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.14). Zoom is available in the toolbar (§4.2). Layer settings are now managed directly via the layer panel on the left side of the editor.
+> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.14). Zoom is available in the toolbar (§4.1). Layer settings are now managed directly via the layer panel on the left side of the editor.
 
 ### 6.1 Cloud Sync (Google Drive appDataFolder)
 
@@ -756,7 +748,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
 - **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
 - **Separate Shift in Key Picker**: Default setting for separating Shift in the key picker
-- **Max Keymap History**: Maximum number of keymap changes to keep in the current keyboard's edit history (default: 100). History is cleared on disconnect or keyboard switch. See §4.3 for details.
+- **Max Keymap History**: Maximum number of keymap changes to keep in the current keyboard's edit history (default: 100). History is cleared on disconnect or keyboard switch. See §4.2 for details.
 
 ---
 

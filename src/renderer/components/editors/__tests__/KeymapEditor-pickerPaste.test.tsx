@@ -13,9 +13,6 @@ vi.mock('react-i18next', () => ({
         'editor.keymap.layerN': `Layer ${opts?.n ?? ''}`,
         'editor.keymap.zoomIn': 'Zoom In',
         'editor.keymap.zoomOut': 'Zoom Out',
-        'editor.keymap.splitEdit': 'Split Edit',
-        'editor.keymap.copyLayer': 'Copy Layer',
-        'editor.keymap.copyLayerConfirm': 'Confirm Copy Layer?',
         'editor.keymap.clickToPaste': 'Click a key to paste',
         'editorSettings.title': 'Settings',
       }
@@ -125,9 +122,6 @@ describe('KeymapEditor — picker paste', () => {
     onSetKey,
     onSetKeysBulk,
     onSetEncoder: vi.fn().mockResolvedValue(undefined),
-    onSplitEditChange: vi.fn(),
-    onActivePaneChange: vi.fn(),
-    activePane: 'primary' as const,
   }
 
   beforeEach(() => {
@@ -319,7 +313,7 @@ describe('KeymapEditor — picker paste', () => {
   })
 
   it('clears picker selection on pane Ctrl+click (mutual exclusion)', () => {
-    render(<KeymapEditor {...defaultProps} splitEdit activePane="primary" primaryLayer={0} secondaryLayer={1} />)
+    render(<KeymapEditor {...defaultProps} />)
     const multiSelect = getOnKeycodeMultiSelect()!
 
     act(() => {
@@ -337,7 +331,7 @@ describe('KeymapEditor — picker paste', () => {
   })
 
   it('clears pane multi-selection on picker Ctrl+click (mutual exclusion)', () => {
-    render(<KeymapEditor {...defaultProps} splitEdit activePane="primary" primaryLayer={0} secondaryLayer={1} />)
+    render(<KeymapEditor {...defaultProps} />)
 
     // Select key on keymap with Ctrl+click
     const onKeyClick = getActiveOnKeyClick()!

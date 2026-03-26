@@ -98,8 +98,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   layerNames, onSetLayerName,
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
-  splitEdit, onSplitEditChange: _onSplitEditChange, activePane = 'primary', onActivePaneChange,
-  primaryLayer: primaryLayerProp, secondaryLayer: secondaryLayerProp,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
@@ -162,13 +160,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const hasActiveSingleSelectionRef = useRef(false)
   const multiSelect = useKeymapMultiSelect({ hasActiveSingleSelectionRef })
 
-  // --- Split edit layer resolution ---
-  const effectivePrimaryLayer = primaryLayerProp ?? currentLayer
-  const effectiveSecondaryLayer = secondaryLayerProp ?? currentLayer
-  const inactivePaneLayer = splitEdit
-    ? (activePane === 'primary' ? effectiveSecondaryLayer : effectivePrimaryLayer)
-    : undefined
-
   // --- Keymap history ---
   const { config: appCfg } = useAppConfig()
   const history = useKeymapHistory(appCfg.maxKeymapHistory)
@@ -193,12 +184,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     popoverRedoKeycode, handlePopoverRedo,
     handleUndo, handleRedo,
     handleDeselect, handleDeselectClick,
-    isCopying, copyLayerPending, handleCopyLayerClick,
     tdModalIndex, macroModalIndex, handleTdModalSave, handleTdModalClose, handleMacroModalClose,
   } = useKeymapSelectionHandlers({
-    layout, keymap, encoderLayout, encoderCount, currentLayer,
-    splitEdit, activePane, effectivePrimaryLayer, effectiveSecondaryLayer,
-    inactivePaneLayer, selectableKeys, autoAdvance,
+    layout, keymap, encoderLayout, currentLayer,
+    selectableKeys, autoAdvance,
     onSetKey, onSetKeysBulk, onSetEncoder, unlocked, onUnlock,
     multiSelect, history,
     tapDanceEntries, onSetTapDanceEntry,
@@ -206,7 +195,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   })
 
   hasActiveSingleSelectionRef.current = !!(selectedKey || selectedEncoder)
-  const { multiSelectedKeys, selectionSourcePane, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
+  const { multiSelectedKeys, pickerSelectedIndices, handlePickerMultiSelect } = multiSelect
 
   // --- Notify parent when device list browsing state changes ---
   useEffect(() => {
@@ -538,12 +527,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const { keycodes: layerKeycodes, remapped: remappedKeys } = useMemo(() => buildKeycodesForLayer(currentLayer), [buildKeycodesForLayer, currentLayer])
   const layerEncoderKeycodes = useMemo(() => buildEncoderKeycodesForLayer(currentLayer), [buildEncoderKeycodesForLayer, currentLayer])
 
-  const { keycodes: inactiveLayerKeycodes, remapped: inactiveRemappedKeys } = useMemo(
-    () => inactivePaneLayer != null ? buildKeycodesForLayer(inactivePaneLayer) : { keycodes: EMPTY_KEYCODES, remapped: EMPTY_REMAPPED },
-    [buildKeycodesForLayer, inactivePaneLayer])
-  const inactiveEncoderKeycodes = useMemo(
-    () => inactivePaneLayer != null ? buildEncoderKeycodesForLayer(inactivePaneLayer) : EMPTY_ENCODER_KEYCODES,
-    [buildEncoderKeycodesForLayer, inactivePaneLayer])
 
   const { keycodes: typingTestKeycodes, remapped: typingTestRemapped } = useMemo(
     () => typingTestMode ? buildKeycodesForLayer(typingTest.effectiveLayer) : { keycodes: EMPTY_KEYCODES, remapped: EMPTY_REMAPPED },
@@ -674,22 +657,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     return layerNames?.[layer] || t('editor.keymap.layerN', { n: layer })
   }
 
-  // --- Pane data mapping ---
-  const primaryIsCurrent = !splitEdit || activePane === 'primary'
-  const primaryKeycodes = primaryIsCurrent ? layerKeycodes : inactiveLayerKeycodes
-  const primaryEncoderKeycodes = primaryIsCurrent ? layerEncoderKeycodes : inactiveEncoderKeycodes
-  const primaryRemapped = primaryIsCurrent ? remappedKeys : inactiveRemappedKeys
-  const secondaryKeycodes = primaryIsCurrent ? inactiveLayerKeycodes : layerKeycodes
-  const secondaryEncoderKeycodes = primaryIsCurrent ? inactiveEncoderKeycodes : layerEncoderKeycodes
-  const secondaryRemapped = primaryIsCurrent ? inactiveRemappedKeys : remappedKeys
-
-  const canCopy = !!splitEdit && effectivePrimaryLayer !== effectiveSecondaryLayer
-  const panePasteReady = canCopy && selectionSourcePane != null && selectionSourcePane !== activePane && multiSelectedKeys.size > 0
-  const showCopyLayer = canCopy && !panePasteReady
-  const copyLayerConfirmText = inactivePaneLayer != null
-    ? t('editor.keymap.copyLayerConfirm', { source: layerLabel(currentLayer), target: layerLabel(inactivePaneLayer) })
-    : undefined
-
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
   const pickerData = pickerFileData
     ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
@@ -781,8 +748,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           /* --- Keyboard view (current / loaded file / probed device) --- */
           <div ref={pickerContainerRef} className="picker-hover-keys relative flex h-full min-h-0 items-center justify-center">
             <KeyboardPane
-              paneId="secondary" isActive={true} isSplitEdit={false}
-              keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
+              paneId="secondary" isActive={true}              keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
               remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
               layoutOptions={pickerData.layoutOpts} scale={pickerEffectiveScale}
@@ -915,43 +881,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               contentRef={keyboardContentRef}
             />
           ) : (
-            <>
-              <KeyboardPane
-                paneId="primary" isActive={activePane === 'primary'} isSplitEdit={splitEdit ?? false}
-                keys={layout.keys} keycodes={primaryKeycodes} encoderKeycodes={primaryEncoderKeycodes}
-                selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-                pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                remappedKeys={primaryRemapped} multiSelectedKeys={selectionSourcePane === 'primary' ? multiSelectedKeys : undefined}
-                layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                layerLabel={layerLabel(effectivePrimaryLayer)} layerLabelTestId="layer-label"
-                onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
-                onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
-                onCopyLayer={showCopyLayer && activePane === 'primary' ? handleCopyLayerClick : undefined}
-                copyLayerPending={activePane === 'primary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
-                isCopying={isCopying} onDeselect={handleDeselect}
-                onActivate={() => onActivePaneChange?.('primary')} contentRef={keyboardContentRef}
-              />
-              {splitEdit && (
-                <KeyboardPane
-                  paneId="secondary" isActive={activePane === 'secondary'} isSplitEdit={true}
-                  keys={layout.keys} keycodes={secondaryKeycodes} encoderKeycodes={secondaryEncoderKeycodes}
-                  selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
-                  pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
-                  remappedKeys={secondaryRemapped} multiSelectedKeys={selectionSourcePane === 'secondary' ? multiSelectedKeys : undefined}
-                  layoutOptions={effectiveLayoutOptions} scale={scaleProp}
-                  layerLabel={layerLabel(effectiveSecondaryLayer)} layerLabelTestId="secondary-layer-label"
-                  onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
-                  onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
-                  onCopyLayer={showCopyLayer && activePane === 'secondary' ? handleCopyLayerClick : undefined}
-                  copyLayerPending={activePane === 'secondary' && splitEdit && copyLayerPending ? copyLayerConfirmText : undefined}
-                  isCopying={isCopying} onDeselect={handleDeselect}
-                  onActivate={() => onActivePaneChange?.('secondary')}
-                />
-              )}
-            </>
+            <KeyboardPane
+              paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+              selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
+              pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
+              remappedKeys={remappedKeys} multiSelectedKeys={multiSelectedKeys}
+              layoutOptions={effectiveLayoutOptions} scale={scaleProp}
+              layerLabel={layerLabel(currentLayer)} layerLabelTestId="layer-label"
+              onKeyClick={handleKeyClick} onKeyDoubleClick={handleKeyDoubleClick}
+              onEncoderClick={handleEncoderClick} onEncoderDoubleClick={handleEncoderDoubleClick}
+              onDeselect={handleDeselect} contentRef={keyboardContentRef}
+            />
           )}
         </div>
-        {!splitEdit && !typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
+        {!typingTestMode && <div style={{ width: PANEL_COLLAPSED_WIDTH }} className="shrink-0" />}
       </div>
 
       {!typingTestMode && popoverState && (

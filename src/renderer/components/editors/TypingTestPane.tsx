@@ -122,7 +122,6 @@ export function TypingTestPane({
           <KeyboardPane
             paneId="primary"
             isActive={false}
-            isSplitEdit={false}
             keys={keys}
             keycodes={keycodes}
             encoderKeycodes={encoderKeycodes}

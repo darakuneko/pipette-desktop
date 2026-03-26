@@ -583,12 +583,6 @@ export function App() {
             onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             scale={editorUI.keymapScale}
             onScaleChange={editorUI.adjustKeymapScale}
-            splitEdit={editorUI.splitEdit}
-            onSplitEditChange={editorUI.handleSplitEditChange}
-            activePane={editorUI.activePane}
-            onActivePaneChange={editorUI.setActivePane}
-            primaryLayer={editorUI.primaryLayer}
-            secondaryLayer={editorUI.secondaryLayer}
             typingTestMode={editorUI.typingTestMode}
             onTypingTestModeChange={editorUI.handleTypingTestModeChange}
             onSaveTypingTestResult={devicePrefs.addTypingTestResult}

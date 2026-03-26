@@ -87,6 +87,7 @@ For complete instructions with screenshots:
 - **Data Modal** — Centralized favorite and Hub post management from the device selection screen
 - **Export** — Download keymap as `.vil`, `.pipette`, `keymap.c`, PDF keymap cheat sheet, or PDF layout export (key outlines with summary pages for dynamic entries)
 - **Import** — Load `.vil` files to restore keyboard state
+- **Offline Editing** — Edit `.pipette` files without a physical keyboard connected; uses the embedded keyboard definition for a virtual layout
 
 ### Cloud Sync (Google Drive appDataFolder)
 
