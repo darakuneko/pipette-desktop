@@ -85,9 +85,7 @@
       "redo": "やり直し",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-      "splitEdit": "2画面編集",
-      "copyLayer": "レイヤーをコピー",
-      "copyLayerConfirm": "{{target}} を {{source}} の内容で上書きしますか？",
+
       "copySelected": "選択キーを貼り付け ({{count}})",
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",

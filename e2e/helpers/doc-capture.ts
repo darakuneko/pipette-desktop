@@ -518,17 +518,6 @@ async function captureSidebarTools(page: Page): Promise<void> {
 
   await captureNamed(page, 'toolbar', { fullPage: true })
 
-  const splitEditBtn = page.locator('[data-testid="split-edit-button"]')
-  if (await isAvailable(splitEditBtn)) {
-    await splitEditBtn.click()
-    await page.waitForTimeout(500)
-    await captureNamed(page, 'split-edit', { fullPage: true })
-    await splitEditBtn.click()
-    await page.waitForTimeout(500)
-  } else {
-    console.log('  [skip] split-edit-button not found')
-  }
-
   const zoomInBtn = page.locator('[data-testid="zoom-in-button"]')
   if (await isAvailable(zoomInBtn)) {
     await zoomInBtn.click()
@@ -1092,7 +1081,7 @@ async function main(): Promise<void> {
     await captureLayerNavigation(page)       // 04-06
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
     await captureKeyboardTab(page)           // keyboard-tab-device-list, keyboard-tab-keymap
-    await captureSidebarTools(page)          // toolbar, split-edit, zoom, typing-test
+    await captureSidebarTools(page)          // toolbar, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
     await captureJsonEditors(page)           // json-editor-tap-dance, json-editor-macro
     await captureEditorSettings(page)        // editor-settings-save
