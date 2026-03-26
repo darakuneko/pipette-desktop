@@ -5,6 +5,7 @@ import { LAYOUT_ID_SET } from '../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { remapKeycode, isRemappedKeycode } from './useKeyboardLayout'
 import { useAppConfig } from './useAppConfig'
+import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
@@ -62,6 +63,7 @@ interface ValidatedPrefs {
   basicViewType: BasicViewType
   splitKeyMode: SplitKeyMode
   quickSelect: boolean
+  keymapScale: number
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
@@ -69,7 +71,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -96,6 +98,9 @@ function validateIpcPrefs(
     ? data.splitKeyMode as SplitKeyMode
     : defaultSplitKeyMode
   const quickSelect = typeof data.quickSelect === 'boolean' ? data.quickSelect : defaultQuickSelect
+  const keymapScale = typeof data.keymapScale === 'number' && data.keymapScale >= MIN_SCALE && data.keymapScale <= MAX_SCALE
+    ? Math.round(data.keymapScale * 10) / 10
+    : 1
 
   const layerNames = Array.isArray(data.layerNames)
     ? data.layerNames.filter((n): n is string => typeof n === 'string')
@@ -111,6 +116,7 @@ function validateIpcPrefs(
     basicViewType,
     splitKeyMode,
     quickSelect,
+    keymapScale,
     layerNames,
     typingTestResults,
     typingTestConfig: validateTypingTestConfig(data.typingTestConfig),
@@ -125,6 +131,7 @@ export interface UseDevicePrefsReturn {
   basicViewType: BasicViewType
   splitKeyMode: SplitKeyMode
   quickSelect: boolean
+  keymapScale: number
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
@@ -135,6 +142,7 @@ export interface UseDevicePrefsReturn {
   setBasicViewType: (type: BasicViewType) => void
   setSplitKeyMode: (mode: SplitKeyMode) => void
   setQuickSelect: (enabled: boolean) => void
+  setKeymapScale: (scale: number) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
@@ -191,6 +199,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [basicViewType, updateBasicViewType, basicViewTypeRef] = useStateRef<BasicViewType>(defaultBasicViewType)
   const [splitKeyMode, updateSplitKeyMode, splitKeyModeRef] = useStateRef<SplitKeyMode>(defaultSplitKeyMode)
   const [quickSelect, updateQuickSelect, quickSelectRef] = useStateRef<boolean>(defaultQuickSelect)
+  const [keymapScale, updateKeymapScale, keymapScaleRef] = useStateRef<number>(1)
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
@@ -210,6 +219,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       basicViewType: basicViewTypeRef.current,
       splitKeyMode: splitKeyModeRef.current,
       quickSelect: quickSelectRef.current,
+      keymapScale: keymapScaleRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -248,6 +258,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateQuickSelect(enabled)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateQuickSelect])
+
+  const setKeymapScale = useCallback((scale: number) => {
+    const clamped = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale))
+    updateKeymapScale(Math.round(clamped * 10) / 10)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateKeymapScale])
 
   const setLayerNames = useCallback((names: string[]) => {
     updateLayerNames(names)
@@ -321,6 +337,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       basicViewType: defaultBasicViewType,
       splitKeyMode: defaultSplitKeyMode,
       quickSelect: defaultQuickSelect,
+      keymapScale: 1,
       layerNames: [],
       typingTestResults: [],
     }
@@ -331,6 +348,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateBasicViewType(resolved.basicViewType)
     updateSplitKeyMode(resolved.splitKeyMode)
     updateQuickSelect(resolved.quickSelect)
+    updateKeymapScale(resolved.keymapScale)
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
@@ -358,6 +376,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     basicViewType,
     splitKeyMode,
     quickSelect,
+    keymapScale,
     layerNames,
     typingTestResults,
     typingTestConfig,
@@ -368,6 +387,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setBasicViewType,
     setSplitKeyMode,
     setQuickSelect,
+    setKeymapScale,
     setLayerNames,
     addTypingTestResult,
     setTypingTestConfig,
