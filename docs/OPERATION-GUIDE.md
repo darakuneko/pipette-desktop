@@ -408,7 +408,7 @@ When you open the Keyboard tab, a list of all connected Vial-compatible keyboard
 - Once loaded, click any key on the displayed keyboard to assign that keycode to the selected key on the main keymap
 - Use Ctrl+click for multi-select, Shift+click for range select
 - Layer buttons at the bottom right let you browse different layers
-- Zoom controls (+ / numeric input / −) adjust the picker keyboard size independently from the main view
+- Zoom controls (+ / numeric input / −) adjust the picker keyboard size (30%–200%). When viewing another keyboard, its saved zoom level is loaded automatically
 - Press Escape to clear the picker selection
 
 **File Source**
@@ -471,13 +471,14 @@ Displays two keyboard layouts side by side for comparing and copying keys betwee
 
 ### 4.2 Zoom
 
-Adjusts the keyboard layout display scale.
+Adjusts the keyboard layout display scale. Range: 30%–200% (default 100%).
 
 ![Zoom In](screenshots/zoom-in.png)
 
 - (+) button to zoom in
 - (-) button to zoom out
 - Can also be adjusted in editor settings
+- Zoom level is saved per keyboard and restored automatically on reconnect
 
 ### 4.3 Undo / Redo (Keymap History)
 
