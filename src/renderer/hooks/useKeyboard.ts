@@ -86,7 +86,7 @@ export function useKeyboard() {
     serialize, serializeVialGui, applyDefinition, applyVilFile,
     reset, refreshUnlockStatus,
     pipetteFileQmkSettingsGet, pipetteFileQmkSettingsSet, pipetteFileQmkSettingsReset,
-  } = useKeyboardPersistence(setState, refs, bumpActivity)
+  } = useKeyboardPersistence(setState, refs, bumpActivity, bootGuardRef, waitForUnlock)
 
   return {
     ...state,
