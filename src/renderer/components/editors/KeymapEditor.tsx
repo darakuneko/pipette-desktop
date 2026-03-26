@@ -115,7 +115,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [pickerFileData, setPickerFileData] = useState<{
     layout: KeyboardLayout; keymap: Map<string, number>; layers: number
     encoderKeycodes: Map<string, [string, string]>; layoutOptions: Map<number, number>
-    name: string; layerNames?: string[]
+    name: string; layerNames?: string[]; uid?: string
   } | null>(null)
   const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
   const [selectedFileUid, setSelectedFileUid] = useState<string | null>(null)
@@ -123,7 +123,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const [fileBrowseView, setFileBrowseView] = useState<'list' | 'entries'>('list')
   const [probeStatus, setProbeStatus] = useState<'idle' | 'probing' | 'error'>('idle')
   const [deviceBrowsing, setDeviceBrowsing] = useState(true)
-  const [pickerScale, setPickerScale] = useState(1)
+  const [pickerScale, setPickerScale] = useState<number | undefined>(undefined)
   const [pickerTooltip, setPickerTooltip] = useState<{ keycode: string; top: number; left: number } | null>(null)
   // pickerClickedPositions removed — now tracked via pickerSelectedIndices in useKeymapMultiSelect
   const pickerContainerRef = useRef<HTMLDivElement>(null)
@@ -213,6 +213,17 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     onDeviceListActiveChange?.(pickerSource === 'device' && deviceBrowsing)
   }, [pickerSource, deviceBrowsing, onDeviceListActiveChange])
 
+  // Save picker zoom back to target keyboard's settings
+  useEffect(() => {
+    const uid = pickerFileData?.uid
+    if (pickerScale == null || !uid) return
+    window.vialAPI.pipetteSettingsGet(uid).then((prefs) => {
+      if (prefs) {
+        window.vialAPI.pipetteSettingsSet(uid, { ...prefs, keymapScale: pickerScale }).catch(() => {})
+      }
+    }).catch(() => {})
+  }, [pickerScale, pickerFileData?.uid])
+
   // --- Escape clears picker selection ---
   useEffect(() => {
     if (pickerSelectedIndices.size === 0) return
@@ -256,12 +267,20 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           }
         }
       }
+      const fileUid = typeof parsed.uid === 'string' ? parsed.uid : undefined
       setPickerFileData({
         layout: fileLayout, keymap: fileKeymap, layers: fileLayers, encoderKeycodes,
         layoutOptions: parsed.definition.layouts?.labels
           ? decodeLayoutOptions(parsed.layoutOptions ?? 0, parsed.definition.layouts.labels) : new Map(),
-        name: parsed.definition.name ?? 'File', layerNames: parsed.layerNames,
+        name: parsed.definition.name ?? 'File', layerNames: parsed.layerNames, uid: fileUid,
       })
+      if (fileUid) {
+        window.vialAPI.pipetteSettingsGet(fileUid).then((prefs) => {
+          if (prefs?.keymapScale != null) setPickerScale(prefs.keymapScale)
+        }).catch(() => {})
+      } else {
+        setPickerScale(undefined)
+      }
       setPickerLayer(0)
       setFileBrowseView('list')
       return true
@@ -297,11 +316,19 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           encoderKeycodes.set(`${layer},${i}`, [remap(serialize(cw)), remap(serialize(ccw))])
         }
       }
+      let probeKeymapScale: number | undefined
+      if (result.uid) {
+        try {
+          const prefs = await window.vialAPI.pipetteSettingsGet(result.uid)
+          if (prefs?.keymapScale != null) probeKeymapScale = prefs.keymapScale
+        } catch { /* best-effort */ }
+      }
+      setPickerScale(probeKeymapScale)
       setPickerFileData({
         layout: fileLayout, keymap: fileKeymap, layers: result.layers, encoderKeycodes,
         layoutOptions: result.definition.layouts?.labels
           ? decodeLayoutOptions(result.layoutOptions, result.definition.layouts.labels) : new Map(),
-        name: result.name,
+        name: result.name, uid: result.uid,
       })
       setPickerLayer(0)
       setProbeStatus('idle')
@@ -319,6 +346,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     if (isConnectedDevice(d)) {
       // Connected device → use existing keymap/layout (clear pickerFileData)
       setPickerFileData(null)
+      setPickerScale(undefined)
       setPickerLayer(0)
       setDeviceBrowsing(false)
     } else {
@@ -667,6 +695,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
     : { keys: layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
 
+  const pickerEffectiveScale = pickerFileData ? (pickerScale ?? scaleProp) : scaleProp
   const activPickerKeycodes = pickerFileData ? filePickerKeycodes : pickerKeycodes
 
   const layerBtnClass = (active: boolean) =>
@@ -756,7 +785,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
               remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
-              layoutOptions={pickerData.layoutOpts} scale={pickerScale}
+              layoutOptions={pickerData.layoutOpts} scale={pickerEffectiveScale}
               layerLabel={(pickerData.names?.[pickerLayer] || t('editor.keymap.layerN', { n: pickerLayer })) + (pickerFileData ? ` — ${pickerFileData.name}` : '')}
               layerLabelTestId="picker-layer-label"
               onKeyClick={handlePickerKeyClick}
@@ -778,32 +807,32 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <div className="flex items-center gap-1">
           <button type="button" className={sourceBtnClass(pickerSource === 'device')}
             onClick={() => {
-              setPickerSource('device'); setPickerLayer(0); setPickerFileData(null); setDeviceBrowsing(true); setProbeStatus('idle')
+              setPickerSource('device'); setPickerLayer(0); setPickerFileData(null); setPickerScale(undefined); setDeviceBrowsing(true); setProbeStatus('idle')
             }}>
             {pickerSource === 'device' && !deviceBrowsing
               ? t('editor.keymap.pickerBackToDevices')
               : t('editor.keymap.pickerSourceDevice')}
           </button>
           <button type="button" className={sourceBtnClass(pickerSource === 'file')}
-            onClick={() => { setPickerSource('file'); setPickerLayer(0); setPickerFileData(null); setFileBrowseView('list'); setDeviceBrowsing(false) }}>
+            onClick={() => { setPickerSource('file'); setPickerLayer(0); setPickerFileData(null); setPickerScale(undefined); setFileBrowseView('list'); setDeviceBrowsing(false) }}>
             {pickerSource === 'file' && pickerFileData ? t('editor.keymap.pickerBackToFiles') : t('editor.keymap.pickerSourceFile')}
           </button>
         </div>
         <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
           <button type="button" aria-label={t('editor.keymap.zoomIn')}
             className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
-            disabled={pickerScale >= MAX_SCALE}
-            onClick={() => setPickerScale((s) => Math.min(MAX_SCALE, +(s + 0.1).toFixed(1)))}>
+            disabled={pickerEffectiveScale >= MAX_SCALE}
+            onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
             <ZoomIn size={14} aria-hidden="true" />
           </button>
-          <ScaleInput scale={pickerScale} onScaleChange={(delta) => setPickerScale((s) => {
-            const next = +(s + delta).toFixed(1)
-            return Math.max(MIN_SCALE, Math.min(MAX_SCALE, next))
-          })} />
+          <ScaleInput scale={pickerEffectiveScale} onScaleChange={(delta) => {
+            if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, +(pickerEffectiveScale + delta).toFixed(1))))
+            else onScaleChange?.(delta)
+          }} />
           <button type="button" aria-label={t('editor.keymap.zoomOut')}
             className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
-            disabled={pickerScale <= MIN_SCALE}
-            onClick={() => setPickerScale((s) => Math.max(MIN_SCALE, +(s - 0.1).toFixed(1)))}>
+            disabled={pickerEffectiveScale <= MIN_SCALE}
+            onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
             <ZoomOut size={14} aria-hidden="true" />
           </button>
         </div>
