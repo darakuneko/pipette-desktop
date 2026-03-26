@@ -164,6 +164,8 @@ export function App() {
     supportedQsids: keyboard.supportedQsids,
     lighting: keyboard.definition?.lighting,
     dynamicCounts: keyboard.dynamicCounts,
+    keymapScale: devicePrefs.keymapScale,
+    setKeymapScale: devicePrefs.setKeymapScale,
   })
 
   const fileHandlers = useFileHandlers({

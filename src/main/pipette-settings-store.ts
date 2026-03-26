@@ -32,6 +32,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('basicViewType' in obj && obj.basicViewType != null && obj.basicViewType !== 'ansi' && obj.basicViewType !== 'iso' && obj.basicViewType !== 'jis' && obj.basicViewType !== 'list' && obj.basicViewType !== 'keyboard') return false
   if ('splitKeyMode' in obj && obj.splitKeyMode != null && obj.splitKeyMode !== 'split' && obj.splitKeyMode !== 'flat') return false
   if ('quickSelect' in obj && obj.quickSelect != null && typeof obj.quickSelect !== 'boolean') return false
+  if ('keymapScale' in obj && obj.keymapScale != null && (typeof obj.keymapScale !== 'number' || obj.keymapScale < 0.3 || obj.keymapScale > 2.0)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -59,6 +60,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       basicViewType: parsed.basicViewType,
       splitKeyMode: parsed.splitKeyMode,
       quickSelect: parsed.quickSelect,
+      keymapScale: parsed.keymapScale,
       layerNames: parsed.layerNames ?? [],
       typingTestResults: parsed.typingTestResults,
       typingTestConfig: parsed.typingTestConfig,

@@ -31,5 +31,6 @@ export interface PipetteSettings {
   basicViewType?: 'ansi' | 'iso' | 'jis' | 'list'
   splitKeyMode?: 'split' | 'flat'
   quickSelect?: boolean
+  keymapScale?: number
   _updatedAt?: string // ISO 8601 — last update time
 }
