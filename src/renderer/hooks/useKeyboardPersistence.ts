@@ -6,13 +6,15 @@ import { mapToRecord, recordToMap, VILFILE_CURRENT_VERSION } from '../../shared/
 import { vilToVialGuiJson } from '../../shared/vil-compat'
 import { splitMacroBuffer, deserializeMacro, macroActionsToJson, jsonToMacroActions } from '../../preload/macro'
 import { parseKle } from '../../shared/kle/kle-parser'
-import type { SetState, KeyboardRefs } from './keyboard-types'
+import type { SetState, KeyboardRefs, BootGuardRef } from './keyboard-types'
 import { emptyState } from './keyboard-types'
 
 export function useKeyboardPersistence(
   setState: SetState,
   refs: KeyboardRefs,
   bumpActivity: () => void,
+  bootGuardRef: React.MutableRefObject<BootGuardRef>,
+  waitForUnlock: () => Promise<void>,
 ) {
   const { stateRef, qmkSettingsBaselineRef, saveLayerNamesRef } = refs
 
@@ -82,6 +84,12 @@ export function useKeyboardPersistence(
     const encoderLayout = recordToMap(vil.encoderLayout)
 
     if (!isDummy) {
+      // Prompt unlock before writing to device
+      if (stateRef.current.unlockStatus.unlocked === false) {
+        bootGuardRef.current.onUnlock?.()
+        await waitForUnlock()
+      }
+
       const api = window.vialAPI
 
       // Apply keymap
