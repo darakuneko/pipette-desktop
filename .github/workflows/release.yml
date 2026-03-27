@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write   # Required for SignPath trusted build verification
+  actions: read      # Required for SignPath to read artifact & workflow info
 
 jobs:
   test:
@@ -70,16 +72,32 @@ jobs:
 
       - run: pnpm exec electron-vite build
 
-      - name: Build Electron app
-        run: pnpm exec electron-builder --${{ matrix.platform }} --${{ matrix.arch }} --publish never
+      # Windows: build WITHOUT code signing (SignPath will sign later)
+      - name: Build Electron app (Windows)
+        if: matrix.platform == 'win'
+        run: pnpm exec electron-builder --win --${{ matrix.arch }} --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      # macOS: build with Apple code signing & notarization
+      - name: Build Electron app (macOS)
+        if: matrix.platform == 'mac'
+        run: pnpm exec electron-builder --mac --${{ matrix.arch }} --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      # Linux: build without code signing
+      - name: Build Electron app (Linux)
+        if: matrix.platform == 'linux'
+        run: pnpm exec electron-builder --linux --${{ matrix.arch }} --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -89,14 +107,71 @@ jobs:
             dist/*.exe
             dist/*.AppImage
 
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
+  sign-windows:
     needs: build
+    # Only run when SignPath is configured
+    if: vars.SIGNPATH_ORGANIZATION_ID != ''
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download unsigned Windows artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: artifact-win
+          path: unsigned
+
+      - name: Upload unsigned exe for SignPath
+        id: upload-unsigned
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-win-unsigned
+          if-no-files-found: error
+          path: unsigned/*.exe
+
+      - name: Submit signing request to SignPath
+        id: signpath
+        uses: signpath/github-action-submit-signing-request@v2
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Upload signed Windows artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifact-win-signed
+          if-no-files-found: error
+          path: signed/*.exe
+
+  release:
+    needs: [build, sign-windows]
+    # Run even if sign-windows was skipped (SignPath not yet configured)
+    if: always() && startsWith(github.ref, 'refs/tags/') && needs.build.result == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v8
         with:
-          merge-multiple: true
+          name: artifact-mac
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: artifact-linux
+
+      # Use signed artifact if available, otherwise fall back to unsigned
+      - name: Download signed Windows artifact
+        if: needs.sign-windows.result == 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: artifact-win-signed
+
+      - name: Download unsigned Windows artifact
+        if: needs.sign-windows.result != 'success'
+        uses: actions/download-artifact@v8
+        with:
+          name: artifact-win
 
       - uses: softprops/action-gh-release@v2
         with:
