@@ -666,7 +666,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const activPickerKeycodes = pickerFileData ? filePickerKeycodes : pickerKeycodes
 
   const layerBtnClass = (active: boolean) =>
-    `w-7 rounded-md border py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
+    `min-w-7 max-w-20 shrink-0 truncate rounded-md border px-1.5 py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
       active ? 'border-accent bg-accent text-content-inverse' : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
     }`
   const sourceBtnClass = (active: boolean) =>
@@ -802,13 +802,17 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             <ZoomOut size={14} aria-hidden="true" />
           </button>
         </div>
-        <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
-          {Array.from({ length: pickerData.totalLayers }, (_, i) => (
-            <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
-              onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
-              {pickerData.names?.[i] || i}
-            </button>
-          ))}
+        <div className={`flex min-w-0 items-center gap-1 overflow-x-auto ${pickerBrowseMode ? 'invisible' : ''}`}>
+          {Array.from({ length: pickerData.totalLayers }, (_, i) => {
+            const label = pickerData.names?.[i]?.trim()
+            return (
+              <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
+                title={label || undefined}
+                onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
+                {label || i}
+              </button>
+            )
+          })}
         </div>
       </div>
     </div>
