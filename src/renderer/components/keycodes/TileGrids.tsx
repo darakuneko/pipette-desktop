@@ -6,6 +6,8 @@ import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } f
 import { codeToLabel, findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import type { MacroAction } from '../../../preload/macro'
 
+const MAX_VISIBLE_MACRO_ACTIONS = 7
+
 const TILE_ENABLED = 'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
 const TILE_DISABLED = 'justify-start border-accent/50 bg-accent/10 text-accent/70 font-semibold hover:bg-accent/15'
 const TILE_EMPTY = 'justify-center border-accent/30 bg-accent/5 text-content-secondary hover:bg-accent/10'
@@ -175,16 +177,16 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
             {configured ? (
               <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px overflow-hidden">
-                {actions.slice(0, 4).map((action, j) => (
+                {actions.slice(0, MAX_VISIBLE_MACRO_ACTIONS).map((action, j) => (
                   <Fragment key={j}>
                     <span className="text-left text-content-secondary/60">{MACRO_PREFIX[action.type]}</span>
                     <span className="truncate text-left">{macroActionLabel(action)}</span>
                   </Fragment>
                 ))}
-                {actions.length > 4 && (
+                {actions.length > MAX_VISIBLE_MACRO_ACTIONS && (
                   <>
                     <span />
-                    <span className="text-content-secondary/60">+{actions.length - 4}</span>
+                    <span className="text-content-secondary/60">{t('keycodes.macroMoreActions', { count: actions.length - MAX_VISIBLE_MACRO_ACTIONS })}</span>
                   </>
                 )}
               </span>
