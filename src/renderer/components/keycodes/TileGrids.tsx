@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { Fragment } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../../shared/types/protocol'
 import { codeToLabel, findKeycode, type Keycode } from '../../../shared/keycodes/keycodes'
 import type { MacroAction } from '../../../preload/macro'
+
+const MIN_VISIBLE_MACRO_ACTIONS = 6
+const GRID_COLUMNS = 12
+const GRID_GAP_PX = 4
+const TILE_PADDING_TOP = 4
+const TILE_LABEL_HEIGHT = 12
+const TILE_CONTENT_MT = 8
+const MACRO_LINE_HEIGHT = 12
+const MACRO_MORE_ROW_HEIGHT = 12
 
 const TILE_ENABLED = 'justify-start border-accent bg-accent/20 text-accent font-semibold hover:bg-accent/30'
 const TILE_DISABLED = 'justify-start border-accent/50 bg-accent/10 text-accent/70 font-semibold hover:bg-accent/15'
@@ -158,10 +167,36 @@ interface MacroTileGridProps {
   onSelect: (keycode: Keycode) => void
 }
 
+function useMacroVisibleLines(gridRef: React.RefObject<HTMLDivElement | null>): number {
+  const [visibleLines, setVisibleLines] = useState(MIN_VISIBLE_MACRO_ACTIONS)
+
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const gridWidth = entry.contentRect.width
+        const tileWidth = (gridWidth - GRID_GAP_PX * (GRID_COLUMNS - 1)) / GRID_COLUMNS
+        const tileHeight = tileWidth
+        const contentHeight = tileHeight - TILE_PADDING_TOP - TILE_LABEL_HEIGHT - TILE_CONTENT_MT
+        const actionLines = Math.floor((contentHeight - MACRO_MORE_ROW_HEIGHT) / MACRO_LINE_HEIGHT)
+        const next = Math.max(MIN_VISIBLE_MACRO_ACTIONS, actionLines)
+        setVisibleLines((prev) => prev !== next ? next : prev)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [gridRef])
+
+  return visibleLines
+}
+
 export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
   const { t } = useTranslation()
+  const gridRef = useRef<HTMLDivElement>(null)
+  const maxVisible = useMacroVisibleLines(gridRef)
   return (
-    <div className="grid grid-cols-12 auto-rows-fr gap-1">
+    <div ref={gridRef} className="grid grid-cols-12 auto-rows-fr gap-1">
       {macros.map((actions, i) => {
         const configured = actions.length > 0
         return (
@@ -174,18 +209,15 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
           >
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
             {configured ? (
-              <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px overflow-hidden">
-                {actions.slice(0, 4).map((action, j) => (
+              <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0 overflow-hidden">
+                {actions.slice(0, maxVisible).map((action, j) => (
                   <Fragment key={j}>
                     <span className="text-left text-content-secondary/60">{MACRO_PREFIX[action.type]}</span>
                     <span className="truncate text-left">{macroActionLabel(action)}</span>
                   </Fragment>
                 ))}
-                {actions.length > 4 && (
-                  <>
-                    <span />
-                    <span className="text-content-secondary/60">+{actions.length - 4}</span>
-                  </>
+                {actions.length > maxVisible && (
+                  <span className="col-span-2 text-center text-content-secondary/60">{t('keycodes.macroMoreActions', { count: actions.length - maxVisible })}</span>
                 )}
               </span>
             ) : (
