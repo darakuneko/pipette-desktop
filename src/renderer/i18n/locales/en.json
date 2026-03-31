@@ -330,6 +330,7 @@
     "keyOverride": "Key Override",
     "altRepeatKey": "Alt Repeat Key",
     "settingsNote": "These features apply to the entire keyboard and cannot be assigned to individual keys.",
+    "macroMoreActions": "+{{count}} more",
     "user": "User",
     "midi": "MIDI",
     "group": {

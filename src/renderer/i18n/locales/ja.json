@@ -329,6 +329,7 @@
     "keyOverride": "Key Override",
     "altRepeatKey": "Alt Repeat Key",
     "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません。",
+    "macroMoreActions": "残り {{count}} 行",
     "user": "User",
     "midi": "MIDI",
     "group": {
