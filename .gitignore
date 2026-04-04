@@ -15,5 +15,3 @@ CLAUDE.md
 .aider*
 .env
 .env.*
-
-package-lock.json
