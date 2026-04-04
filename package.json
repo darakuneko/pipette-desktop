@@ -56,8 +56,8 @@
     "@types/react-dom": "^19.2.3",
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
-    "@vitejs/plugin-react": "^4.5.0",
-    "electron": "~40.2.1",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "~41.1.1",
     "electron-builder": "^26.7.0",
     "electron-vite": "^5.0.0",
     "eslint": "^9.27.0",
@@ -138,6 +138,9 @@
       "electron",
       "esbuild",
       "node-hid"
-    ]
+    ],
+    "overrides": {
+      "node-hid>node-addon-api": "^8.7.0"
+    }
   }
 }
