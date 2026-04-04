@@ -17,7 +17,7 @@ interface LocalProps extends BaseProps {
   source: 'local'
   hubOrigin?: string
   sync?: never
-  onDeleted?: never
+  onDeleted?: () => void
 }
 
 interface SyncProps extends BaseProps {
@@ -83,10 +83,10 @@ export function KeyboardSavesContent(props: Props) {
       await window.vialAPI.resetKeyboardData(uid)
     } else {
       await props.sync.resetSyncTargets({ keyboards: [uid], favorites: false })
-      props.onDeleted?.()
     }
     setConfirmDeleteAll(false)
     setEntries([])
+    props.onDeleted?.()
   }, [uid, source, props])
 
   // Hub actions (local only)
@@ -114,14 +114,54 @@ export function KeyboardSavesContent(props: Props) {
     void loadEntries()
   }, [entries, actions, loadEntries])
 
+  const deleteAllFooter = (
+    <div className="mt-4 border-t border-edge pt-3 shrink-0">
+      <div className="flex items-center justify-end gap-2">
+        {confirmDeleteAll ? (
+          <>
+            <span className="text-sm text-danger">{t('dataModal.deleteAllConfirm')}</span>
+            <button
+              type="button"
+              className={BTN_DANGER_OUTLINE}
+              onClick={() => void handleDeleteAll()}
+              data-testid="kb-saves-delete-all-confirm"
+            >
+              {t('common.confirmDelete')}
+            </button>
+            <button
+              type="button"
+              className={BTN_SECONDARY}
+              onClick={() => setConfirmDeleteAll(false)}
+              data-testid="kb-saves-delete-all-cancel"
+            >
+              {t('common.cancel')}
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className={BTN_DANGER_OUTLINE}
+            onClick={() => setConfirmDeleteAll(true)}
+            data-testid="kb-saves-delete-all"
+          >
+            {t('dataModal.deleteAll')}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+
   if (loading) {
     return <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
   }
 
   if (entries.length === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="kb-saves-empty">
-        {t('dataModal.noSaves')}
+      <div className="flex flex-col h-full" data-testid="kb-saves-empty">
+        <div className="flex-1 py-4 text-center text-[13px] text-content-muted">
+          {t('dataModal.noSaves')}
+        </div>
+        {deleteAllFooter}
       </div>
     )
   }
@@ -160,42 +200,7 @@ export function KeyboardSavesContent(props: Props) {
           })}
         </div>
       </div>
-
-      {/* Footer: Delete All */}
-      <div className="mt-4 border-t border-edge pt-3 shrink-0">
-        <div className="flex items-center justify-end gap-2">
-          {confirmDeleteAll ? (
-            <>
-              <span className="text-sm text-danger">{t('dataModal.deleteAllConfirm')}</span>
-              <button
-                type="button"
-                className={BTN_DANGER_OUTLINE}
-                onClick={() => void handleDeleteAll()}
-                data-testid="kb-saves-delete-all-confirm"
-              >
-                {t('common.confirmDelete')}
-              </button>
-              <button
-                type="button"
-                className={BTN_SECONDARY}
-                onClick={() => setConfirmDeleteAll(false)}
-                data-testid="kb-saves-delete-all-cancel"
-              >
-                {t('common.cancel')}
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className={BTN_DANGER_OUTLINE}
-              onClick={() => setConfirmDeleteAll(true)}
-              data-testid="kb-saves-delete-all"
-            >
-              {t('dataModal.deleteAll')}
-            </button>
-          )}
-        </div>
-      </div>
+      {deleteAllFooter}
     </div>
   )
 }

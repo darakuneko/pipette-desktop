@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
@@ -80,10 +80,11 @@ export function DataModal({
 
   // Load local hubPostIds to filter hub posts not available locally
   const [localHubPostIds, setLocalHubPostIds] = useState<Set<string>>(new Set())
-  const hubPostIdsLoadedRef = useRef(false)
   useEffect(() => {
-    if (hubPostIdsLoadedRef.current || nav.storedKeyboards.length === 0) return
-    hubPostIdsLoadedRef.current = true
+    if (nav.storedKeyboards.length === 0) {
+      setLocalHubPostIds(new Set())
+      return
+    }
     async function load() {
       const results = await Promise.allSettled(
         nav.storedKeyboards.map((kb) => window.vialAPI.snapshotStoreList(kb.uid)),
@@ -171,7 +172,16 @@ export function DataModal({
     }
 
     if (path.page === 'keyboard') {
-      return <KeyboardSavesContent key={path.uid} source="local" uid={path.uid} name={path.name} hubOrigin={hubOrigin} />
+      return (
+        <KeyboardSavesContent
+          key={path.uid}
+          source="local"
+          uid={path.uid}
+          name={path.name}
+          hubOrigin={hubOrigin}
+          onDeleted={() => { nav.setActivePath(null); void nav.refreshStoredKeyboards().catch(() => {}) }}
+        />
+      )
     }
 
     if (path.page === 'sync-keyboard') {

@@ -77,6 +77,11 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     cachedActivePath = activePath
   }, [activePath])
 
+  const refreshStoredKeyboards = useCallback(async () => {
+    const keyboards = await window.vialAPI.listStoredKeyboards()
+    setStoredKeyboards(keyboards)
+  }, [])
+
   const toggleExpand = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev)
@@ -96,6 +101,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     activePath,
     setActivePath,
     showHubTab,
+    refreshStoredKeyboards,
     syncScanResult: filteredSyncScanResult,
     syncScanning,
     handleSyncScan,
