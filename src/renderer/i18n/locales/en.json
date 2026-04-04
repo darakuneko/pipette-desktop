@@ -238,8 +238,8 @@
     },
     "typingTest": {
       "title": "Typing Test",
-      "switchToTypingMode": "Switch to Typing Mode",
-      "exitTypingMode": "Exit Typing Mode",
+      "switchToTypingMode": "Typing Test",
+      "exitTypingMode": "Exit Typing Test",
       "restart": "Restart",
       "wpm": "WPM",
       "accuracy": "Accuracy",
@@ -264,8 +264,9 @@
         "all": "all"
       },
       "quoteSource": "-- {{source}}",
-      "viewOnly": "view only",
+      "viewOnly": "Typing View",
       "alwaysOnTop": "top",
+      "resetSize": "Default Size",
       "baseLayer": "Base Layer",
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",

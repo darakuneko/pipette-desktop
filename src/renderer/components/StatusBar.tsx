@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { Eye, EyeOff } from 'lucide-react'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { SyncStatusType } from '../../shared/types/sync'
 
@@ -114,7 +113,7 @@ export function StatusBar({
         )}
       </div>
       <div className="flex items-center gap-3">
-        {onViewOnlyChange && hasMatrixTester && (
+        {onViewOnlyChange && hasMatrixTester && !typingTestMode && (
           <button
             type="button"
             data-testid="view-only-button"
@@ -122,7 +121,6 @@ export function StatusBar({
             className={viewOnly && typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onViewOnlyChange}
           >
-            {viewOnly && typingTestMode ? <EyeOff size={12} aria-hidden="true" /> : <Eye size={12} aria-hidden="true" />}
             {t('editor.typingTest.viewOnly')}
           </button>
         )}

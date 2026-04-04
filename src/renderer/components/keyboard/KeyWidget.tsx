@@ -147,7 +147,7 @@ function KeyWidgetInner({
   // inner rect gets accent only when inner is selected
   const outerBorderActive = selected && !innerSelected
   const innerBorderActive = !!innerSelected
-  const isClickable = !kleKey.decal
+  const isClickable = !kleKey.decal && !!(onClick || onDoubleClick)
 
   // Stroke color and width for outer key rects
   let outerStroke = KEY_BORDER_COLOR

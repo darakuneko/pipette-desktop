@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe, EyeOff, ChevronsUp, ChevronsDown } from 'lucide-react'
+import { Globe, Equal } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { HistoryToggle } from './HistoryToggle'
@@ -75,6 +75,27 @@ export function TypingTestPane({
   useEffect(() => {
     window.vialAPI.isAlwaysOnTopSupported().then(setAlwaysOnTopSupported).catch(() => {})
   }, [])
+  const controlsBarRef = useRef<HTMLDivElement>(null)
+
+  // Close controls on Escape key or click outside
+  useEffect(() => {
+    if (!viewOnly || !viewOnlyControlsOpen) return
+    const handleEsc = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') setViewOnlyControlsOpen(false)
+    }
+    const handleClickOutside = (e: MouseEvent): void => {
+      if (controlsBarRef.current && !controlsBarRef.current.contains(e.target as Node)) {
+        setViewOnlyControlsOpen(false)
+      }
+    }
+    document.addEventListener('keydown', handleEsc)
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('keydown', handleEsc)
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [viewOnly, viewOnlyControlsOpen])
+
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
   const MARGIN = 20
@@ -281,9 +302,12 @@ export function TypingTestPane({
       </div>
       {viewOnly && (
         <>
-        <div className={`fixed inset-x-0 bottom-0 z-50 flex items-center justify-center px-4 ${viewOnlyControlsOpen ? 'bg-surface-alt py-2' : 'py-0.5'}`}>
-          {viewOnlyControlsOpen && (
-            <div className="absolute left-4 flex items-center gap-2">
+        <div
+          ref={controlsBarRef}
+          className={`fixed inset-x-0 z-50 flex items-center justify-center px-4 transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'bottom-0 h-[42px] bg-surface-alt' : 'bottom-0 cursor-pointer py-0.5'}`}
+          onClick={() => { if (!viewOnlyControlsOpen) setViewOnlyControlsOpen(true) }}
+        >
+          <div className={`absolute left-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
               {layers > 1 && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
@@ -310,17 +334,31 @@ export function TypingTestPane({
                   {t('editor.typingTest.alwaysOnTop')}
                 </button>
               )}
-            </div>
+          </div>
+          {!viewOnlyControlsOpen && (
+            <button
+              type="button"
+              className="px-4 py-0.5 text-content-muted transition-colors hover:text-content"
+              onClick={() => setViewOnlyControlsOpen(true)}
+            >
+              <Equal size={12} />
+            </button>
           )}
-          <button
-            type="button"
-            className="px-4 py-0.5 text-content-muted transition-colors hover:text-content"
-            onClick={() => setViewOnlyControlsOpen((prev) => !prev)}
-          >
-            {viewOnlyControlsOpen ? <ChevronsDown size={12} /> : <ChevronsUp size={12} />}
-          </button>
-          {viewOnlyControlsOpen && onViewOnlyChange && (
-            <div className="absolute right-4">
+          {onViewOnlyChange && (
+            <div className={`absolute right-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
+              <button
+                type="button"
+                data-testid="reset-window-size"
+                className="rounded border border-edge px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content"
+                onClick={() => {
+                  const size = getDefaultCompactSize()
+                  window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                  if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                  setViewOnlyControlsOpen(false)
+                }}
+              >
+                {t('editor.typingTest.resetSize')}
+              </button>
               <button
                 type="button"
                 data-testid="view-only-toggle"
@@ -329,8 +367,7 @@ export function TypingTestPane({
                 className="flex items-center gap-1 rounded border border-accent bg-accent/10 px-2 py-0.5 text-xs text-accent transition-colors"
                 onClick={handleViewOnlyToggle}
               >
-                <EyeOff size={12} aria-hidden="true" />
-                <span>{t('editor.typingTest.viewOnly')}</span>
+                <span>Exit {t('editor.typingTest.viewOnly')}</span>
               </button>
             </div>
           )}
