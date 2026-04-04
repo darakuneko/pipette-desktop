@@ -264,6 +264,8 @@
         "all": "all"
       },
       "quoteSource": "-- {{source}}",
+      "viewOnly": "view only",
+      "alwaysOnTop": "top",
       "baseLayer": "Base Layer",
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",

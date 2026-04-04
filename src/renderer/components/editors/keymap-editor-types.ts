@@ -121,6 +121,14 @@ export interface KeymapEditorProps {
   typingTestLanguage?: string
   onTypingTestConfigChange?: (config: TypingTestConfig) => void
   onTypingTestLanguageChange?: (lang: string) => void
+  typingTestViewOnly?: boolean
+  onTypingTestViewOnlyChange?: (enabled: boolean) => void
+  typingTestViewOnlyWindowSize?: { width: number; height: number }
+  onTypingTestViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
+  typingTestViewOnlyScale?: number
+  onTypingTestViewOnlyScaleChange?: (scale: number) => void
+  typingTestViewOnlyAlwaysOnTop?: boolean
+  onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   deviceName?: string
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void

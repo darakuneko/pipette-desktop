@@ -15,7 +15,7 @@ import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
-import { loadWindowState, saveWindowState, setupAppConfigIpc } from './app-config'
+import { loadWindowState, saveWindowState, setupAppConfigIpc, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -78,7 +78,12 @@ function createWindow(): void {
   const win = new BrowserWindow(winOpts)
 
   win.on('close', () => {
-    saveWindowState(win.getBounds())
+    if (normalWindowSize) {
+      const bounds = win.getBounds()
+      saveWindowState({ ...bounds, width: normalWindowSize.width, height: normalWindowSize.height })
+    } else {
+      saveWindowState(win.getBounds())
+    }
   })
 
   hideMenuBar()
@@ -111,6 +116,89 @@ function createWindow(): void {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   if (isDev) win.webContents.openDevTools()
+}
+
+interface WindowSize { width: number; height: number }
+let normalWindowSize: WindowSize | null = null
+
+function setupWindowIpc(): void {
+  const COMPACT_MIN_WIDTH = 400
+  const COMPACT_MIN_HEIGHT = 300
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_COMPACT_MODE,
+    (event, enabled: boolean, compactSize?: { width: number; height: number }): { width: number; height: number } | null => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return null
+
+      const bounds = win.getBounds()
+      if (enabled) {
+        normalWindowSize = { width: bounds.width, height: bounds.height }
+        win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
+        if (compactSize && compactSize.width > 0 && compactSize.height > 0) {
+          const contentBounds = win.getContentBounds()
+          const frameW = bounds.width - contentBounds.width
+          const frameH = bounds.height - contentBounds.height
+          win.setSize(
+            Math.max(compactSize.width + frameW, COMPACT_MIN_WIDTH),
+            Math.max(compactSize.height + frameH, COMPACT_MIN_HEIGHT),
+          )
+        }
+        return null
+      } else {
+        const compactBounds = { width: bounds.width, height: bounds.height }
+        win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+        if (normalWindowSize) {
+          win.setSize(
+            Math.max(normalWindowSize.width, MIN_WIDTH),
+            Math.max(normalWindowSize.height, MIN_HEIGHT),
+          )
+          normalWindowSize = null
+        } else {
+          const [w, h] = win.getSize()
+          if (w < MIN_WIDTH || h < MIN_HEIGHT) {
+            win.setSize(Math.max(w, MIN_WIDTH), Math.max(h, MIN_HEIGHT))
+          }
+        }
+        return compactBounds
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_ASPECT_RATIO,
+    (event, ratio: number) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      if (ratio <= 0) {
+        win.setAspectRatio(0)
+        return
+      }
+      const bounds = win.getBounds()
+      const contentBounds = win.getContentBounds()
+      const frameW = bounds.width - contentBounds.width
+      const frameH = bounds.height - contentBounds.height
+      win.setAspectRatio(ratio, { width: frameW, height: frameH })
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_ALWAYS_ON_TOP,
+    (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      win.setAlwaysOnTop(enabled)
+    },
+  )
+
+  // Always-on-top is not supported on Wayland (compositor controls stacking)
+  secureHandle(
+    IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED,
+    () => {
+      if (process.platform !== 'linux') return true
+      return !process.env.WAYLAND_DISPLAY && !process.env.XDG_SESSION_TYPE?.includes('wayland')
+    },
+  )
 }
 
 function setupShellIpc(): void {
@@ -150,6 +238,7 @@ app.whenReady().then(() => {
   setupNotificationStore()
   setupLogIpc()
   setupShellIpc()
+  setupWindowIpc()
   createWindow()
 
   app.on('activate', () => {

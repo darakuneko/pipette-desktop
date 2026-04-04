@@ -25,6 +25,7 @@ export interface UseInputModesOptions {
   onTypingTestLanguageChange?: (lang: string) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
   typingTestHistory?: TypingTestResult[]
+  typingTestViewOnly?: boolean
 }
 
 export interface UseInputModesReturn {
@@ -55,6 +56,7 @@ export function useInputModes({
   onTypingTestLanguageChange,
   onSaveTypingTestResult,
   typingTestHistory,
+  typingTestViewOnly,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -186,7 +188,7 @@ export function useInputModes({
 
   // Capture-phase keydown listener for typing test
   useEffect(() => {
-    if (!typingTestMode) return
+    if (!typingTestMode || typingTestViewOnly) return
     function handler(e: KeyboardEvent) {
       if (document.querySelector('[role="dialog"]')) return
       if (e.isComposing) return
@@ -204,11 +206,12 @@ export function useInputModes({
     }
     document.addEventListener('keydown', handler, true)
     return () => document.removeEventListener('keydown', handler, true)
-  }, [typingTestMode, processKeyEvent])
+  }, [typingTestMode, typingTestViewOnly, processKeyEvent])
 
   // Auto-save typing test result when test finishes
   const savedResultRef = useRef(false)
   useEffect(() => {
+    if (typingTestViewOnly) return
     if (typingTest.state.status === 'finished' && !savedResultRef.current && onSaveTypingTestResult) {
       savedResultRef.current = true
       const elapsed = typingTest.state.startTime && typingTest.state.endTime
@@ -271,7 +274,7 @@ export function useInputModes({
 
   // Window focus/blur listeners
   useEffect(() => {
-    if (!typingTestMode) return
+    if (!typingTestMode || typingTestViewOnly) return
     setWindowFocused(document.hasFocus() && document.visibilityState === 'visible')
     function onBlur() { setWindowFocused(false) }
     function onFocus() { setWindowFocused(true) }
@@ -284,7 +287,7 @@ export function useInputModes({
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [typingTestMode, setWindowFocused])
+  }, [typingTestMode, typingTestViewOnly, setWindowFocused])
 
   return {
     matrixMode,

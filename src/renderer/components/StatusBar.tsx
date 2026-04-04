@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { Eye, EyeOff } from 'lucide-react'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { SyncStatusType } from '../../shared/types/sync'
 
@@ -21,6 +22,8 @@ interface Props {
   comboActive?: boolean
   altRepeatKeyActive?: boolean
   keyOverrideActive?: boolean
+  viewOnly?: boolean
+  onViewOnlyChange?: () => void
   onTypingTestModeChange?: () => void
   onDisconnect?: () => void
 }
@@ -38,6 +41,8 @@ export function StatusBar({
   comboActive,
   altRepeatKeyActive,
   keyOverrideActive,
+  viewOnly,
+  onViewOnlyChange,
   onTypingTestModeChange,
   onDisconnect,
 }: Props) {
@@ -109,6 +114,18 @@ export function StatusBar({
         )}
       </div>
       <div className="flex items-center gap-3">
+        {onViewOnlyChange && hasMatrixTester && (
+          <button
+            type="button"
+            data-testid="view-only-button"
+            aria-label={t('editor.typingTest.viewOnly')}
+            className={viewOnly && typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            onClick={onViewOnlyChange}
+          >
+            {viewOnly && typingTestMode ? <EyeOff size={12} aria-hidden="true" /> : <Eye size={12} aria-hidden="true" />}
+            {t('editor.typingTest.viewOnly')}
+          </button>
+        )}
         {onTypingTestModeChange && hasMatrixTester && (
           <button
             type="button"

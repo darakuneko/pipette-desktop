@@ -504,7 +504,7 @@ export function App() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex min-h-0 flex-1 flex-col overflow-auto p-4" data-testid="editor-content">
+        <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content">
           <KeymapEditor
             ref={keymapEditorRef}
             keyboardUid={keyboard.uid}
@@ -591,6 +591,17 @@ export function App() {
             typingTestLanguage={devicePrefs.typingTestLanguage}
             onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
+            typingTestViewOnly={devicePrefs.typingTestViewOnly}
+            onTypingTestViewOnlyChange={(enabled: boolean) => {
+              devicePrefs.setTypingTestViewOnly(enabled)
+              if (!enabled) keymapEditorRef.current?.toggleTypingTest()
+            }}
+            typingTestViewOnlyWindowSize={devicePrefs.typingTestViewOnlyWindowSize}
+            onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
+            typingTestViewOnlyScale={devicePrefs.typingTestViewOnlyScale}
+            onTypingTestViewOnlyScaleChange={devicePrefs.setTypingTestViewOnlyScale}
+            typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
+            onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
@@ -616,22 +627,36 @@ export function App() {
         )}
       </div>
 
-      <StatusBar
-        deviceName={device.connectedDevice.productName || 'Unknown'}
-        loadedLabel={lifecycle.lastLoadedLabel}
-        autoAdvance={devicePrefs.autoAdvance}
-        unlocked={keyboard.unlockStatus.unlocked}
-        syncStatus={sync.syncStatus}
-        hubConnected={sync.authStatus.authenticated ? hub.hubConnected : undefined}
-        matrixMode={editorUI.matrixState.matrixMode}
-        typingTestMode={editorUI.typingTestMode}
-        hasMatrixTester={editorUI.matrixState.hasMatrixTester}
-        comboActive={editorUI.comboSupported && keyboard.comboEntries.some((e) => e.output !== 0)}
-        altRepeatKeyActive={editorUI.altRepeatKeySupported && keyboard.altRepeatKeyEntries.some((e) => e.enabled)}
-        keyOverrideActive={editorUI.keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
-        onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
-        onDisconnect={lifecycle.handleDisconnect}
-      />
+      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && (
+        <StatusBar
+          deviceName={device.connectedDevice.productName || 'Unknown'}
+          loadedLabel={lifecycle.lastLoadedLabel}
+          autoAdvance={devicePrefs.autoAdvance}
+          unlocked={keyboard.unlockStatus.unlocked}
+          syncStatus={sync.syncStatus}
+          hubConnected={sync.authStatus.authenticated ? hub.hubConnected : undefined}
+          matrixMode={editorUI.matrixState.matrixMode}
+          typingTestMode={editorUI.typingTestMode}
+          hasMatrixTester={editorUI.matrixState.hasMatrixTester}
+          comboActive={editorUI.comboSupported && keyboard.comboEntries.some((e) => e.output !== 0)}
+          altRepeatKeyActive={editorUI.altRepeatKeySupported && keyboard.altRepeatKeyEntries.some((e) => e.enabled)}
+          keyOverrideActive={editorUI.keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
+          viewOnly={devicePrefs.typingTestViewOnly}
+          onViewOnlyChange={() => {
+            if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
+              devicePrefs.setTypingTestViewOnly(false)
+              keymapEditorRef.current?.toggleTypingTest()
+            } else {
+              devicePrefs.setTypingTestViewOnly(true)
+              if (!editorUI.typingTestMode) {
+                keymapEditorRef.current?.toggleTypingTest()
+              }
+            }
+          }}
+          onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
+          onDisconnect={lifecycle.handleDisconnect}
+        />
+      )}
 
       {editorUI.showUnlockDialog && !device.isDummy && (
         <UnlockDialog

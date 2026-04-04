@@ -7,8 +7,8 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { DEFAULT_APP_CONFIG, SETTABLE_APP_CONFIG_KEYS, type AppConfig, type WindowState } from '../shared/types/app-config'
 import { secureHandle } from './ipc-guard'
 
-const MIN_WIDTH = 1320
-const MIN_HEIGHT = 960
+export const MIN_WIDTH = 1320
+export const MIN_HEIGHT = 960
 
 const DEFAULT_STATE: WindowState = {
   x: -1,

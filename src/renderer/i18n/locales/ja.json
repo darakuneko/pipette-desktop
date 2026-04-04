@@ -263,6 +263,8 @@
         "all": "全て"
       },
       "quoteSource": "-- {{source}}",
+      "viewOnly": "表示のみ",
+      "alwaysOnTop": "最前面",
       "baseLayer": "Base Layer",
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",

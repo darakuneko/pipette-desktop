@@ -27,6 +27,10 @@ export interface PipetteSettings {
   typingTestResults?: TypingTestResult[]
   typingTestConfig?: Record<string, unknown>
   typingTestLanguage?: string
+  typingTestViewOnly?: boolean
+  typingTestViewOnlyWindowSize?: { width: number; height: number }
+  typingTestViewOnlyScale?: number
+  typingTestViewOnlyAlwaysOnTop?: boolean
   layerPanelOpen?: boolean
   basicViewType?: 'ansi' | 'iso' | 'jis' | 'list'
   splitKeyMode?: 'split' | 'flat'
