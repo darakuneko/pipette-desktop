@@ -39,7 +39,6 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
     const ws = obj.typingTestViewOnlyWindowSize as Record<string, unknown>
     if (typeof ws.width !== 'number' || typeof ws.height !== 'number') return false
   }
-  if ('typingTestViewOnlyScale' in obj && obj.typingTestViewOnlyScale != null && (typeof obj.typingTestViewOnlyScale !== 'number' || obj.typingTestViewOnlyScale < 0.1 || obj.typingTestViewOnlyScale > 5.0)) return false
   if ('typingTestViewOnlyAlwaysOnTop' in obj && obj.typingTestViewOnlyAlwaysOnTop != null && typeof obj.typingTestViewOnlyAlwaysOnTop !== 'boolean') return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
@@ -75,7 +74,6 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestLanguage: parsed.typingTestLanguage,
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
-      typingTestViewOnlyScale: parsed.typingTestViewOnlyScale,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
     }
   } catch {

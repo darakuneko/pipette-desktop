@@ -29,7 +29,6 @@ export interface PipetteSettings {
   typingTestLanguage?: string
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
-  typingTestViewOnlyScale?: number
   typingTestViewOnlyAlwaysOnTop?: boolean
   layerPanelOpen?: boolean
   basicViewType?: 'ansi' | 'iso' | 'jis' | 'list'

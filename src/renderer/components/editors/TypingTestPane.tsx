@@ -8,7 +8,7 @@ import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
-import { repositionLayoutKeys } from '../../../shared/kle/filter-keys'
+import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
@@ -35,8 +35,6 @@ export interface TypingTestPaneProps {
   onViewOnlyChange?: (enabled: boolean) => void
   viewOnlyWindowSize?: { width: number; height: number }
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
-  viewOnlyScale?: number
-  onViewOnlyScaleChange?: (scale: number) => void
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
 }
@@ -62,8 +60,6 @@ export function TypingTestPane({
   onViewOnlyChange,
   viewOnlyWindowSize,
   onViewOnlyWindowSizeChange,
-  viewOnlyScale: _viewOnlyScale = 1,
-  onViewOnlyScaleChange: _onViewOnlyScaleChange,
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
 }: TypingTestPaneProps) {
@@ -105,13 +101,7 @@ export function TypingTestPane({
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
   const getDefaultCompactSize = useCallback(() => {
-    const repositioned = repositionLayoutKeys(keys, layoutOptions)
-    const visibleKeys = repositioned.filter((key) => {
-      if (key.layoutIndex < 0) return true
-      const selectedOption = layoutOptions.get(key.layoutIndex)
-      if (selectedOption === undefined) return key.layoutOption === 0
-      return key.layoutOption === selectedOption
-    })
+    const visibleKeys = filterVisibleKeys(repositionLayoutKeys(keys, layoutOptions), layoutOptions)
     let maxRight = 0
     let maxBottom = 0
     for (const key of visibleKeys) {
@@ -313,7 +303,7 @@ export function TypingTestPane({
         <div
           className={`pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-all duration-200 ${viewOnlyControlsOpen ? '-translate-y-0 py-2 opacity-100' : '-translate-y-2 opacity-0'}`}
         >
-          <span className="text-[10px] text-content-muted/50">{t('editor.typingTest.closeHint')}</span>
+          <span className="text-[10px] text-content-muted">{t('editor.typingTest.closeHint')}</span>
         </div>
         <div
           ref={controlsBarRef}

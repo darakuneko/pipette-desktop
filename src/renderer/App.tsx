@@ -268,9 +268,22 @@ export function App() {
   // Hide content during view→edit transition animation
   const [viewExitTransition, setViewExitTransition] = useState(false)
 
+  // Exit view-only mode: hide content → wait for paint → resize → show editor
+  const exitViewOnlyMode = useCallback(() => {
+    setViewExitTransition(true)
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      window.vialAPI.setWindowCompactMode(false).then(() => {
+        devicePrefs.setTypingTestViewOnly(false)
+        keymapEditorRef.current?.toggleTypingTest()
+        setViewExitTransition(false)
+      }).catch(() => { setViewExitTransition(false) })
+    }) })
+  }, [devicePrefs])
+
   // Deferred view-only entry after unlock
   const pendingViewOnlyRef = useRef(false)
   useEffect(() => {
+    if (!device.connectedDevice) { pendingViewOnlyRef.current = false; return }
     if (pendingViewOnlyRef.current && keyboard.unlockStatus.unlocked) {
       pendingViewOnlyRef.current = false
       const savedSize = devicePrefs.typingTestViewOnlyWindowSize
@@ -281,7 +294,7 @@ export function App() {
         }
       }).catch(() => {})
     }
-  }, [keyboard.unlockStatus.unlocked, devicePrefs, editorUI.typingTestMode])
+  }, [device.connectedDevice, keyboard.unlockStatus.unlocked, devicePrefs, editorUI.typingTestMode])
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -612,22 +625,13 @@ export function App() {
             typingTestViewOnly={devicePrefs.typingTestViewOnly}
             onTypingTestViewOnlyChange={(enabled: boolean) => {
               if (!enabled) {
-                setViewExitTransition(true)
-                requestAnimationFrame(() => { requestAnimationFrame(() => {
-                  window.vialAPI.setWindowCompactMode(false).then(() => {
-                    devicePrefs.setTypingTestViewOnly(false)
-                    keymapEditorRef.current?.toggleTypingTest()
-                    setViewExitTransition(false)
-                  }).catch(() => { setViewExitTransition(false) })
-                }) })
+                exitViewOnlyMode()
               } else {
                 devicePrefs.setTypingTestViewOnly(true)
               }
             }}
             typingTestViewOnlyWindowSize={devicePrefs.typingTestViewOnlyWindowSize}
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
-            typingTestViewOnlyScale={devicePrefs.typingTestViewOnlyScale}
-            onTypingTestViewOnlyScaleChange={devicePrefs.setTypingTestViewOnlyScale}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
             deviceName={deviceName}
@@ -672,14 +676,7 @@ export function App() {
           viewOnly={devicePrefs.typingTestViewOnly}
           onViewOnlyChange={() => {
             if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
-              setViewExitTransition(true)
-              requestAnimationFrame(() => { requestAnimationFrame(() => {
-                window.vialAPI.setWindowCompactMode(false).then(() => {
-                  devicePrefs.setTypingTestViewOnly(false)
-                  keymapEditorRef.current?.toggleTypingTest()
-                  setViewExitTransition(false)
-                }).catch(() => { setViewExitTransition(false) })
-              }) })
+              exitViewOnlyMode()
             } else if (!keyboard.unlockStatus.unlocked) {
               pendingViewOnlyRef.current = true
               editorUI.setShowUnlockDialog(true)

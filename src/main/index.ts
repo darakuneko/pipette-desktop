@@ -136,7 +136,7 @@ function animateBounds(
   const easeOut = (t: number): number => 1 - (1 - t) ** 2
 
   const tick = (): void => {
-    if (id !== activeAnimationId || win.isDestroyed()) return
+    if (id !== activeAnimationId || win.isDestroyed()) { onComplete?.(); return }
     step++
     const t = easeOut(Math.min(step / steps, 1))
     win.setBounds({
@@ -167,7 +167,7 @@ function setupWindowIpc(): void {
 
       const bounds = win.getBounds()
       if (enabled) {
-        normalWindowSize = { width: bounds.width, height: bounds.height }
+        if (!normalWindowSize) normalWindowSize = { width: bounds.width, height: bounds.height }
         win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
         if (compactSize && compactSize.width > 0 && compactSize.height > 0) {
           const contentBounds = win.getContentBounds()

@@ -103,7 +103,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   onTypingTestConfigChange, onTypingTestLanguageChange,
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
-  typingTestViewOnlyScale, onTypingTestViewOnlyScaleChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
@@ -915,8 +914,6 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onViewOnlyChange={onTypingTestViewOnlyChange}
               viewOnlyWindowSize={typingTestViewOnlyWindowSize}
               onViewOnlyWindowSizeChange={onTypingTestViewOnlyWindowSizeChange}
-              viewOnlyScale={typingTestViewOnlyScale}
-              onViewOnlyScaleChange={onTypingTestViewOnlyScaleChange}
               viewOnlyAlwaysOnTop={typingTestViewOnlyAlwaysOnTop}
               onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
             />
