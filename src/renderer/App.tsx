@@ -218,6 +218,7 @@ export function App() {
     resetHubState: () => hub.resetHubState(),
     matrixMode: editorUI.matrixState.matrixMode,
     typingTestMode: editorUI.typingTestMode,
+    typingTestViewOnly: devicePrefs.typingTestViewOnly,
   })
 
   const hub = useHubState({

@@ -38,6 +38,7 @@ interface Options {
   resetHubState: () => void
   matrixMode: boolean
   typingTestMode: boolean
+  typingTestViewOnly: boolean
 }
 
 export function useDeviceLifecycle(options: Options) {
@@ -67,6 +68,7 @@ export function useDeviceLifecycle(options: Options) {
     resetHubState,
     matrixMode,
     typingTestMode,
+    typingTestViewOnly,
   } = options
 
   const { t } = useTranslation()
@@ -128,7 +130,7 @@ export function useDeviceLifecycle(options: Options) {
     unlocked,
     autoLockMinutes: autoLockTime,
     activityCounter: activityCount,
-    suspended: matrixMode || typingTestMode,
+    suspended: matrixMode || typingTestMode || typingTestViewOnly,
     onLock: handleLock,
   })
 
