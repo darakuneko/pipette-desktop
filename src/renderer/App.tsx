@@ -265,6 +265,21 @@ export function App() {
 
   const keymapEditorRef = useRef<KeymapEditorHandle>(null)
 
+  // Deferred view-only entry after unlock
+  const pendingViewOnlyRef = useRef(false)
+  useEffect(() => {
+    if (pendingViewOnlyRef.current && keyboard.unlockStatus.unlocked) {
+      pendingViewOnlyRef.current = false
+      const savedSize = devicePrefs.typingTestViewOnlyWindowSize
+      window.vialAPI.setWindowCompactMode(true, savedSize).then(() => {
+        devicePrefs.setTypingTestViewOnly(true)
+        if (!editorUI.typingTestMode) {
+          keymapEditorRef.current?.toggleTypingTest()
+        }
+      }).catch(() => {})
+    }
+  }, [keyboard.unlockStatus.unlocked, devicePrefs, editorUI.typingTestMode])
+
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
     const ok = await layoutStore.loadLayout(entryId)
@@ -648,6 +663,9 @@ export function App() {
                 devicePrefs.setTypingTestViewOnly(false)
                 keymapEditorRef.current?.toggleTypingTest()
               }).catch(() => {})
+            } else if (!keyboard.unlockStatus.unlocked) {
+              pendingViewOnlyRef.current = true
+              editorUI.setShowUnlockDialog(true)
             } else {
               const savedSize = devicePrefs.typingTestViewOnlyWindowSize
               window.vialAPI.setWindowCompactMode(true, savedSize).then(() => {

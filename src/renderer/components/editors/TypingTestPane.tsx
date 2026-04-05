@@ -100,6 +100,7 @@ export function TypingTestPane({
 
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
+  const paneNaturalSizeRef = useRef({ w: 0, h: 0 })
   const MARGIN = 20
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
@@ -158,6 +159,7 @@ export function TypingTestPane({
       if (!el) return
       paneNaturalW = el.scrollWidth
       paneNaturalH = el.scrollHeight
+      paneNaturalSizeRef.current = { w: paneNaturalW, h: paneNaturalH }
       if (paneNaturalW <= 0 || paneNaturalH <= 0) return
 
       const totalW = paneNaturalW + MARGIN * 2
@@ -233,10 +235,11 @@ export function TypingTestPane({
         />
       )}
       <div className={viewOnly ? 'flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden' : 'flex items-start justify-center overflow-auto'}>
-        <div
-          ref={viewOnly ? paneWrapperRef : undefined}
-          style={viewOnly ? { transform: `scale(${cssScale})`, transformOrigin: 'center center' } : undefined}
-        >
+        <div style={viewOnly && paneNaturalSizeRef.current.w > 0 ? { width: paneNaturalSizeRef.current.w * cssScale, height: paneNaturalSizeRef.current.h * cssScale, overflow: 'hidden' } : undefined}>
+          <div
+            ref={viewOnly ? paneWrapperRef : undefined}
+            style={viewOnly ? { transform: `scale(${cssScale})`, transformOrigin: 'top left' } : undefined}
+          >
           {!viewOnly && (
             <div className="mb-3 flex items-center justify-between px-5">
               <div className="flex items-center gap-4">
@@ -309,6 +312,7 @@ export function TypingTestPane({
             contentRef={contentRef}
           />
         </div>
+        </div>
       </div>
       {viewOnly && (
         <>
@@ -349,18 +353,6 @@ export function TypingTestPane({
                   {t('editor.typingTest.alwaysOnTop')}
                 </button>
               )}
-          </div>
-          {!viewOnlyControlsOpen && (
-            <button
-              type="button"
-              className="px-4 py-0.5 text-content-muted transition-colors hover:text-content"
-              onClick={() => setViewOnlyControlsOpen(true)}
-            >
-              <Equal size={12} />
-            </button>
-          )}
-          {onViewOnlyChange && (
-            <div className={`absolute right-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
               <button
                 type="button"
                 data-testid="reset-window-size"
@@ -374,6 +366,35 @@ export function TypingTestPane({
               >
                 {t('editor.typingTest.resetSize')}
               </button>
+              <button
+                type="button"
+                data-testid="fit-window-size"
+                className="rounded border border-edge px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content"
+                onClick={() => {
+                  const defaultSize = getDefaultCompactSize()
+                  const ratio = defaultSize.height / defaultSize.width
+                  const w = window.innerWidth
+                  const h = Math.round(w * ratio)
+                  const size = { width: w, height: h }
+                  window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                  if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                  setViewOnlyControlsOpen(false)
+                }}
+              >
+                {t('editor.typingTest.fitSize')}
+              </button>
+          </div>
+          {!viewOnlyControlsOpen && (
+            <button
+              type="button"
+              className="px-4 py-0.5 text-content-muted transition-colors hover:text-content"
+              onClick={() => setViewOnlyControlsOpen(true)}
+            >
+              <Equal size={12} />
+            </button>
+          )}
+          {onViewOnlyChange && (
+            <div className={`absolute right-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
               <button
                 type="button"
                 data-testid="view-only-toggle"
