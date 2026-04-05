@@ -237,8 +237,8 @@
     },
     "typingTest": {
       "title": "タイピングテスト",
-      "switchToTypingMode": "Typing Test",
-      "exitTypingMode": "Exit Typing Test",
+      "switchToTypingMode": "タイピングテスト",
+      "exitTypingMode": "タイピングテスト終了",
       "restart": "やり直す",
       "wpm": "WPM",
       "accuracy": "正確性",
@@ -263,7 +263,8 @@
         "all": "全て"
       },
       "quoteSource": "-- {{source}}",
-      "viewOnly": "Typing View",
+      "viewOnly": "タイピングビュー",
+      "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
       "closeHint": "ここをクリックまたは Esc で閉じる",
       "resetSize": "初期サイズ",

@@ -94,9 +94,23 @@ export function TypingTestPane({
     }
   }, [viewOnly, viewOnlyControlsOpen])
 
+  // Set compact min width based on controls bar measurement (once on mount)
+  useEffect(() => {
+    if (!viewOnly) return
+    requestAnimationFrame(() => {
+      const el = controlsMeasureRef.current
+      if (!el) return
+      const minW = el.scrollWidth + 32
+      if (minW > 400) {
+        window.vialAPI.setWindowMinSize(minW, 300).catch(() => {})
+      }
+    })
+  }, [viewOnly])
+
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
   const paneNaturalSizeRef = useRef({ w: 0, h: 0 })
+  const controlsMeasureRef = useRef<HTMLDivElement>(null)
   const MARGIN = 20
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
@@ -115,7 +129,8 @@ export function TypingTestPane({
     const svgH = maxBottom * KEY_UNIT + KEYBOARD_PADDING * 2
     const paneW = svgW + 44
     const paneH = svgH + 42
-    let w = paneW + MARGIN * 2
+    const controlsW = controlsMeasureRef.current?.scrollWidth ?? 0
+    let w = Math.max(paneW + MARGIN * 2, controlsW + MARGIN * 2)
     let h = paneH + MARGIN * 2
     // Cap to 80% of screen if keyboard at 100% exceeds it
     const maxW = window.screen.availWidth * 0.8
@@ -307,10 +322,11 @@ export function TypingTestPane({
         </div>
         <div
           ref={controlsBarRef}
-          className={`fixed inset-x-0 z-50 flex items-center justify-center px-4 transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'bottom-0 h-[42px] bg-surface-alt' : 'bottom-0 cursor-pointer py-0.5'}`}
+          className={`fixed inset-x-0 z-50 flex items-center gap-2 overflow-hidden whitespace-nowrap px-4 transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'bottom-0 justify-between bg-surface-alt py-1.5' : 'bottom-0 cursor-pointer justify-center py-0.5'}`}
           onClick={() => { if (!viewOnlyControlsOpen) setViewOnlyControlsOpen(true) }}
         >
-          <div className={`absolute left-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
+          {viewOnlyControlsOpen && (
+          <div className="flex items-center gap-2">
               {layers > 1 && (
                 <div className="flex items-center gap-1">
                   <span className="text-xs text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
@@ -368,6 +384,7 @@ export function TypingTestPane({
                 {t('editor.typingTest.fitSize')}
               </button>
           </div>
+          )}
           {!viewOnlyControlsOpen && (
             <button
               type="button"
@@ -377,8 +394,8 @@ export function TypingTestPane({
               <Equal size={12} />
             </button>
           )}
-          {onViewOnlyChange && (
-            <div className={`absolute right-4 flex items-center gap-2 transition-all duration-200 ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-2 opacity-0'}`}>
+          {viewOnlyControlsOpen && onViewOnlyChange && (
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 data-testid="view-only-toggle"
@@ -387,10 +404,21 @@ export function TypingTestPane({
                 className="flex items-center gap-1 rounded border border-accent bg-accent/10 px-2 py-0.5 text-xs text-accent transition-colors"
                 onClick={handleViewOnlyToggle}
               >
-                <span>Exit {t('editor.typingTest.viewOnly')}</span>
+                <span>{t('editor.typingTest.exitViewOnly')}</span>
               </button>
             </div>
           )}
+        </div>
+        {/* Hidden measurement div for controls bar width — mirrors actual bar styling */}
+        <div ref={controlsMeasureRef} className="pointer-events-none fixed -left-[9999px] flex items-center gap-2 whitespace-nowrap px-4 text-xs" aria-hidden="true">
+          <div className="flex items-center gap-1">
+            <span>{t('editor.typingTest.baseLayer')}:</span>
+            <span className="rounded border px-1.5 py-0.5">0</span>
+          </div>
+          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.alwaysOnTop')}</span>
+          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.resetSize')}</span>
+          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.fitSize')}</span>
+          <span className="rounded border px-2 py-0.5">{t('editor.typingTest.exitViewOnly')}</span>
         </div>
         </>
       )}

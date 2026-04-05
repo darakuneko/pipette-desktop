@@ -218,6 +218,7 @@ export function App() {
     resetHubState: () => hub.resetHubState(),
     matrixMode: editorUI.matrixState.matrixMode,
     typingTestMode: editorUI.typingTestMode,
+    typingTestViewOnly: devicePrefs.typingTestViewOnly,
   })
 
   const hub = useHubState({
@@ -279,6 +280,20 @@ export function App() {
       }).catch(() => { setViewExitTransition(false) })
     }) })
   }, [devicePrefs])
+
+  // Restore window on device disconnect while in view-only mode
+  const prevConnectedRef = useRef(device.connectedDevice)
+  useEffect(() => {
+    const wasConnected = prevConnectedRef.current
+    prevConnectedRef.current = device.connectedDevice
+    if (wasConnected && !device.connectedDevice && devicePrefs.typingTestViewOnly) {
+      window.vialAPI.setWindowCompactMode(false).catch(() => {})
+      window.vialAPI.setWindowAspectRatio(0).catch(() => {})
+      window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {})
+      devicePrefs.setTypingTestViewOnly(false)
+      setViewExitTransition(false)
+    }
+  }, [device.connectedDevice, devicePrefs])
 
   // Deferred view-only entry after unlock
   const pendingViewOnlyRef = useRef(false)
