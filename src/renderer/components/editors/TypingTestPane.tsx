@@ -205,13 +205,7 @@ export function TypingTestPane({
         onViewOnlyChange(true)
       }).catch(() => {})
     } else {
-      window.vialAPI.setWindowCompactMode(false).then(() => {
-        onViewOnlyChange(false)
-        typingTest.restart()
-      }).catch(() => {
-        onViewOnlyChange(false)
-        typingTest.restart()
-      })
+      onViewOnlyChange(false)
     }
   }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
