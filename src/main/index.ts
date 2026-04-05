@@ -167,8 +167,10 @@ function setupWindowIpc(): void {
 
       const bounds = win.getBounds()
       if (enabled) {
-        if (!normalWindowSize) normalWindowSize = { width: bounds.width, height: bounds.height }
-        win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
+        if (!normalWindowSize) {
+          normalWindowSize = { width: bounds.width, height: bounds.height }
+          win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
+        }
         if (compactSize && compactSize.width > 0 && compactSize.height > 0) {
           const contentBounds = win.getContentBounds()
           const frameW = bounds.width - contentBounds.width
@@ -229,6 +231,15 @@ function setupWindowIpc(): void {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return
       win.setAlwaysOnTop(enabled)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_MIN_SIZE,
+    (event, width: number, height: number) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      win.setMinimumSize(Math.max(width, 1), Math.max(height, 1))
     },
   )
 

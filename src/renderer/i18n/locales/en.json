@@ -265,6 +265,7 @@
       },
       "quoteSource": "-- {{source}}",
       "viewOnly": "Typing View",
+      "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
       "closeHint": "Click here or press Esc to close",
       "resetSize": "Default Size",

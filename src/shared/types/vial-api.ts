@@ -194,5 +194,6 @@ export interface VialAPI {
   setWindowCompactMode(enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null>
   setWindowAspectRatio(ratio: number): Promise<void>
   setWindowAlwaysOnTop(enabled: boolean): Promise<void>
+  setWindowMinSize(width: number, height: number): Promise<void>
   isAlwaysOnTopSupported(): Promise<boolean>
 }
