@@ -306,6 +306,16 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.EXPORT_LOCAL_DATA),
   importLocalData: (): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.IMPORT_LOCAL_DATA),
+
+  // --- Window Management ---
+  setWindowCompactMode: (enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SET_COMPACT_MODE, enabled, compactSize),
+  setWindowAspectRatio: (ratio: number): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SET_ASPECT_RATIO, ratio),
+  setWindowAlwaysOnTop: (enabled: boolean): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SET_ALWAYS_ON_TOP, enabled),
+  isAlwaysOnTopSupported: (): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED),
 }
 
 contextBridge.exposeInMainWorld('vialAPI', vialAPI)

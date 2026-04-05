@@ -117,4 +117,10 @@ export const IpcChannels = {
 
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
+
+  // Window management (renderer → main)
+  WINDOW_SET_COMPACT_MODE: 'window:set-compact-mode',
+  WINDOW_SET_ASPECT_RATIO: 'window:set-aspect-ratio',
+  WINDOW_SET_ALWAYS_ON_TOP: 'window:set-always-on-top',
+  WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED: 'window:is-always-on-top-supported',
 } as const

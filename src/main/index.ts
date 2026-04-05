@@ -15,7 +15,7 @@ import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
-import { loadWindowState, saveWindowState, setupAppConfigIpc } from './app-config'
+import { loadWindowState, saveWindowState, setupAppConfigIpc, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -78,7 +78,12 @@ function createWindow(): void {
   const win = new BrowserWindow(winOpts)
 
   win.on('close', () => {
-    saveWindowState(win.getBounds())
+    if (normalWindowSize) {
+      const bounds = win.getBounds()
+      saveWindowState({ ...bounds, width: normalWindowSize.width, height: normalWindowSize.height })
+    } else {
+      saveWindowState(win.getBounds())
+    }
   })
 
   hideMenuBar()
@@ -111,6 +116,130 @@ function createWindow(): void {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   if (isDev) win.webContents.openDevTools()
+}
+
+interface WindowSize { width: number; height: number }
+
+let activeAnimationId = 0
+
+function animateBounds(
+  win: BrowserWindow,
+  from: Electron.Rectangle,
+  to: { x: number; y: number; width: number; height: number },
+  duration = 200,
+  onComplete?: () => void,
+): void {
+  const id = ++activeAnimationId
+  const steps = Math.max(1, Math.round(duration / 16))
+  let step = 0
+  const lerp = (a: number, b: number, t: number): number => Math.round(a + (b - a) * t)
+  const easeOut = (t: number): number => 1 - (1 - t) ** 2
+
+  const tick = (): void => {
+    if (id !== activeAnimationId || win.isDestroyed()) { onComplete?.(); return }
+    step++
+    const t = easeOut(Math.min(step / steps, 1))
+    win.setBounds({
+      x: lerp(from.x, to.x, t),
+      y: lerp(from.y, to.y, t),
+      width: lerp(from.width, to.width, t),
+      height: lerp(from.height, to.height, t),
+    })
+    if (step < steps) {
+      setTimeout(tick, 16)
+    } else {
+      onComplete?.()
+    }
+  }
+  tick()
+}
+let normalWindowSize: WindowSize | null = null
+
+function setupWindowIpc(): void {
+  const COMPACT_MIN_WIDTH = 400
+  const COMPACT_MIN_HEIGHT = 300
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_COMPACT_MODE,
+    async (event, enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null> => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return null
+
+      const bounds = win.getBounds()
+      if (enabled) {
+        if (!normalWindowSize) normalWindowSize = { width: bounds.width, height: bounds.height }
+        win.setMinimumSize(COMPACT_MIN_WIDTH, COMPACT_MIN_HEIGHT)
+        if (compactSize && compactSize.width > 0 && compactSize.height > 0) {
+          const contentBounds = win.getContentBounds()
+          const frameW = bounds.width - contentBounds.width
+          const frameH = bounds.height - contentBounds.height
+          const newW = Math.max(compactSize.width + frameW, COMPACT_MIN_WIDTH)
+          const newH = Math.max(compactSize.height + frameH, COMPACT_MIN_HEIGHT)
+          const targetX = bounds.x + Math.round((bounds.width - newW) / 2)
+          const targetY = bounds.y + Math.round((bounds.height - newH) / 2)
+          animateBounds(win, bounds, { x: targetX, y: targetY, width: newW, height: newH })
+        }
+        return null
+      } else {
+        const compactBounds = { width: bounds.width, height: bounds.height }
+        if (normalWindowSize) {
+          const newW = Math.max(normalWindowSize.width, MIN_WIDTH)
+          const newH = Math.max(normalWindowSize.height, MIN_HEIGHT)
+          const targetX = bounds.x - Math.round((newW - bounds.width) / 2)
+          const targetY = bounds.y - Math.round((newH - bounds.height) / 2)
+          await new Promise<void>((resolve) => {
+            animateBounds(win, bounds, { x: targetX, y: targetY, width: newW, height: newH }, 300, () => {
+              win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+              resolve()
+            })
+          })
+          normalWindowSize = null
+        } else {
+          win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+          const [w, h] = win.getSize()
+          if (w < MIN_WIDTH || h < MIN_HEIGHT) {
+            win.setSize(Math.max(w, MIN_WIDTH), Math.max(h, MIN_HEIGHT))
+          }
+        }
+        return compactBounds
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_ASPECT_RATIO,
+    (event, ratio: number) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      if (ratio <= 0) {
+        win.setAspectRatio(0)
+        return
+      }
+      const bounds = win.getBounds()
+      const contentBounds = win.getContentBounds()
+      const frameW = bounds.width - contentBounds.width
+      const frameH = bounds.height - contentBounds.height
+      win.setAspectRatio(ratio, { width: frameW, height: frameH })
+    },
+  )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_ALWAYS_ON_TOP,
+    (event, enabled: boolean) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      win.setAlwaysOnTop(enabled)
+    },
+  )
+
+  // Always-on-top is not supported on Wayland (compositor controls stacking)
+  secureHandle(
+    IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED,
+    () => {
+      if (process.platform !== 'linux') return true
+      return !process.env.WAYLAND_DISPLAY && !process.env.XDG_SESSION_TYPE?.includes('wayland')
+    },
+  )
 }
 
 function setupShellIpc(): void {
@@ -150,6 +279,7 @@ app.whenReady().then(() => {
   setupNotificationStore()
   setupLogIpc()
   setupShellIpc()
+  setupWindowIpc()
   createWindow()
 
   app.on('activate', () => {

@@ -21,6 +21,8 @@ interface Props {
   comboActive?: boolean
   altRepeatKeyActive?: boolean
   keyOverrideActive?: boolean
+  viewOnly?: boolean
+  onViewOnlyChange?: () => void
   onTypingTestModeChange?: () => void
   onDisconnect?: () => void
 }
@@ -38,6 +40,8 @@ export function StatusBar({
   comboActive,
   altRepeatKeyActive,
   keyOverrideActive,
+  viewOnly,
+  onViewOnlyChange,
   onTypingTestModeChange,
   onDisconnect,
 }: Props) {
@@ -109,6 +113,17 @@ export function StatusBar({
         )}
       </div>
       <div className="flex items-center gap-3">
+        {onViewOnlyChange && hasMatrixTester && !typingTestMode && (
+          <button
+            type="button"
+            data-testid="view-only-button"
+            aria-label={t('editor.typingTest.viewOnly')}
+            className={viewOnly && typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            onClick={onViewOnlyChange}
+          >
+            {t('editor.typingTest.viewOnly')}
+          </button>
+        )}
         {onTypingTestModeChange && hasMatrixTester && (
           <button
             type="button"

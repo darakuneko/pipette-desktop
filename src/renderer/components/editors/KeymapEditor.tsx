@@ -101,6 +101,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
+  typingTestViewOnly, onTypingTestViewOnlyChange,
+  typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
+  typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
   onFavUploadToHub, onFavUpdateOnHub, onFavRemoveFromHub, onFavRenameOnHub,
@@ -148,6 +151,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange, keymap,
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, typingTestHistory,
+    typingTestViewOnly,
   })
 
   // --- Layout options ---
@@ -880,13 +884,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
+    <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
       <div
-        className="flex items-start gap-2 overflow-auto"
+        className={typingTestMode && typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex items-start gap-2 overflow-auto'}
         style={!typingTestMode && keyboardAreaMinHeight ? { minHeight: keyboardAreaMinHeight } : undefined}
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
-        {toolbar}
+        {!(typingTestMode && typingTestViewOnly) && toolbar}
         <div className={typingTestMode ? 'flex min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
           {typingTestMode ? (
             <TypingTestPane
@@ -906,6 +910,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keys={layout.keys}
               layerLabel={layerLabel(typingTest.effectiveLayer)}
               contentRef={keyboardContentRef}
+              viewOnly={typingTestViewOnly}
+              onViewOnlyChange={onTypingTestViewOnlyChange}
+              viewOnlyWindowSize={typingTestViewOnlyWindowSize}
+              onViewOnlyWindowSizeChange={onTypingTestViewOnlyWindowSizeChange}
+              viewOnlyAlwaysOnTop={typingTestViewOnlyAlwaysOnTop}
+              onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
             />
           ) : (
             <KeyboardPane
