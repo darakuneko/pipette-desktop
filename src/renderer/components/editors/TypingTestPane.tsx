@@ -76,6 +76,8 @@ export function TypingTestPane({
     window.vialAPI.isAlwaysOnTopSupported().then(setAlwaysOnTopSupported).catch(() => {})
   }, [])
   const controlsBarRef = useRef<HTMLDivElement>(null)
+  const onViewOnlyWindowSizeChangeRef = useRef(onViewOnlyWindowSizeChange)
+  onViewOnlyWindowSizeChangeRef.current = onViewOnlyWindowSizeChange
 
   // Close controls on Escape key or click outside
   useEffect(() => {
@@ -102,7 +104,13 @@ export function TypingTestPane({
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
   const getDefaultCompactSize = useCallback(() => {
-    const visibleKeys = repositionLayoutKeys(keys, layoutOptions)
+    const repositioned = repositionLayoutKeys(keys, layoutOptions)
+    const visibleKeys = repositioned.filter((key) => {
+      if (key.layoutIndex < 0) return true
+      const selectedOption = layoutOptions.get(key.layoutIndex)
+      if (selectedOption === undefined) return key.layoutOption === 0
+      return key.layoutOption === selectedOption
+    })
     let maxRight = 0
     let maxBottom = 0
     for (const key of visibleKeys) {
@@ -116,7 +124,17 @@ export function TypingTestPane({
     const svgH = maxBottom * KEY_UNIT + KEYBOARD_PADDING * 2
     const paneW = svgW + 44
     const paneH = svgH + 42
-    return { width: Math.round(paneW + MARGIN * 2), height: Math.round(paneH + MARGIN * 2) }
+    let w = paneW + MARGIN * 2
+    let h = paneH + MARGIN * 2
+    // Cap to 80% of screen if keyboard at 100% exceeds it
+    const maxW = window.screen.availWidth * 0.8
+    const maxH = window.screen.availHeight * 0.8
+    const capScale = Math.min(1, maxW / w, maxH / h)
+    if (capScale < 1) {
+      w = Math.round(w * capScale)
+      h = Math.round(h * capScale)
+    }
+    return { width: w, height: h }
   }, [keys, layoutOptions])
 
   // Auto-fit using CSS transform + aspect ratio lock
@@ -142,7 +160,6 @@ export function TypingTestPane({
       paneNaturalH = el.scrollHeight
       if (paneNaturalW <= 0 || paneNaturalH <= 0) return
 
-      // Set window aspect ratio: (pane + margins) width : height
       const totalW = paneNaturalW + MARGIN * 2
       const totalH = paneNaturalH + MARGIN * 2
       window.vialAPI.setWindowAspectRatio(totalW / totalH).catch(() => {})
@@ -150,9 +167,20 @@ export function TypingTestPane({
       computeCssScale()
     })
 
-    window.addEventListener('resize', computeCssScale)
+    // Save window size on resize (debounced)
+    let saveTimer: ReturnType<typeof setTimeout> | null = null
+    const onResize = (): void => {
+      computeCssScale()
+      if (saveTimer) clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => {
+        onViewOnlyWindowSizeChangeRef.current?.({ width: window.innerWidth, height: window.innerHeight })
+      }, 500)
+    }
+
+    window.addEventListener('resize', onResize)
     return () => {
-      window.removeEventListener('resize', computeCssScale)
+      window.removeEventListener('resize', onResize)
+      if (saveTimer) clearTimeout(saveTimer)
       window.vialAPI.setWindowAspectRatio(0).catch(() => {})
     }
   }, [viewOnly, keys, layoutOptions])
@@ -164,36 +192,18 @@ export function TypingTestPane({
     return () => { window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {}) }
   }, [viewOnly, viewOnlyAlwaysOnTop])
 
-  // Sync window compact mode on mount (device switch with viewOnly=true) and cleanup on unmount
-  const mountedRef = useRef(false)
-  useEffect(() => {
-    if (!mountedRef.current && viewOnly) {
-      const compactSize = viewOnlyWindowSize ?? getDefaultCompactSize()
-      window.vialAPI.setWindowCompactMode(true, compactSize).catch(() => {})
-    }
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-      if (viewOnly) {
-        window.vialAPI.setWindowCompactMode(false).catch(() => {})
-      }
-    }
-  }, []) // mount/unmount only — toggle uses handleViewOnlyToggle
+  // Compact mode is managed by App.tsx onViewOnlyChange handler
 
   const handleViewOnlyToggle = useCallback(() => {
     if (!onViewOnlyChange) return
     const next = !viewOnly
     if (next) {
-      onViewOnlyChange(true)
       const compactSize = viewOnlyWindowSize ?? getDefaultCompactSize()
-      window.vialAPI.setWindowCompactMode(true, compactSize).catch(() => {
-        onViewOnlyChange(false)
-      })
+      window.vialAPI.setWindowCompactMode(true, compactSize).then(() => {
+        onViewOnlyChange(true)
+      }).catch(() => {})
     } else {
-      window.vialAPI.setWindowCompactMode(false).then((compactBounds) => {
-        if (compactBounds && onViewOnlyWindowSizeChange) {
-          onViewOnlyWindowSizeChange(compactBounds)
-        }
+      window.vialAPI.setWindowCompactMode(false).then(() => {
         onViewOnlyChange(false)
         typingTest.restart()
       }).catch(() => {
@@ -201,7 +211,7 @@ export function TypingTestPane({
         typingTest.restart()
       })
     }
-  }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, onViewOnlyWindowSizeChange, typingTest])
+  }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
   return (
     <>
@@ -302,6 +312,11 @@ export function TypingTestPane({
       </div>
       {viewOnly && (
         <>
+        <div
+          className={`pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-all duration-200 ${viewOnlyControlsOpen ? '-translate-y-0 py-2 opacity-100' : '-translate-y-2 opacity-0'}`}
+        >
+          <span className="text-[10px] text-content-muted/50">{t('editor.typingTest.closeHint')}</span>
+        </div>
         <div
           ref={controlsBarRef}
           className={`fixed inset-x-0 z-50 flex items-center justify-center px-4 transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'bottom-0 h-[42px] bg-surface-alt' : 'bottom-0 cursor-pointer py-0.5'}`}

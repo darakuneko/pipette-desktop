@@ -644,13 +644,18 @@ export function App() {
           viewOnly={devicePrefs.typingTestViewOnly}
           onViewOnlyChange={() => {
             if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
-              devicePrefs.setTypingTestViewOnly(false)
-              keymapEditorRef.current?.toggleTypingTest()
-            } else {
-              devicePrefs.setTypingTestViewOnly(true)
-              if (!editorUI.typingTestMode) {
+              window.vialAPI.setWindowCompactMode(false).then(() => {
+                devicePrefs.setTypingTestViewOnly(false)
                 keymapEditorRef.current?.toggleTypingTest()
-              }
+              }).catch(() => {})
+            } else {
+              const savedSize = devicePrefs.typingTestViewOnlyWindowSize
+              window.vialAPI.setWindowCompactMode(true, savedSize).then(() => {
+                devicePrefs.setTypingTestViewOnly(true)
+                if (!editorUI.typingTestMode) {
+                  keymapEditorRef.current?.toggleTypingTest()
+                }
+              }).catch(() => {})
             }
           }}
           onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}

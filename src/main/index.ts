@@ -119,6 +119,40 @@ function createWindow(): void {
 }
 
 interface WindowSize { width: number; height: number }
+
+let activeAnimationId = 0
+
+function animateBounds(
+  win: BrowserWindow,
+  from: Electron.Rectangle,
+  to: { x: number; y: number; width: number; height: number },
+  duration = 200,
+  onComplete?: () => void,
+): void {
+  const id = ++activeAnimationId
+  const steps = Math.max(1, Math.round(duration / 16))
+  let step = 0
+  const lerp = (a: number, b: number, t: number): number => Math.round(a + (b - a) * t)
+  const easeOut = (t: number): number => 1 - (1 - t) ** 2
+
+  const tick = (): void => {
+    if (id !== activeAnimationId || win.isDestroyed()) return
+    step++
+    const t = easeOut(Math.min(step / steps, 1))
+    win.setBounds({
+      x: lerp(from.x, to.x, t),
+      y: lerp(from.y, to.y, t),
+      width: lerp(from.width, to.width, t),
+      height: lerp(from.height, to.height, t),
+    })
+    if (step < steps) {
+      setTimeout(tick, 16)
+    } else {
+      onComplete?.()
+    }
+  }
+  tick()
+}
 let normalWindowSize: WindowSize | null = null
 
 function setupWindowIpc(): void {
@@ -127,7 +161,7 @@ function setupWindowIpc(): void {
 
   secureHandle(
     IpcChannels.WINDOW_SET_COMPACT_MODE,
-    (event, enabled: boolean, compactSize?: { width: number; height: number }): { width: number; height: number } | null => {
+    async (event, enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null> => {
       const win = BrowserWindow.fromWebContents(event.sender)
       if (!win) return null
 
@@ -139,22 +173,29 @@ function setupWindowIpc(): void {
           const contentBounds = win.getContentBounds()
           const frameW = bounds.width - contentBounds.width
           const frameH = bounds.height - contentBounds.height
-          win.setSize(
-            Math.max(compactSize.width + frameW, COMPACT_MIN_WIDTH),
-            Math.max(compactSize.height + frameH, COMPACT_MIN_HEIGHT),
-          )
+          const newW = Math.max(compactSize.width + frameW, COMPACT_MIN_WIDTH)
+          const newH = Math.max(compactSize.height + frameH, COMPACT_MIN_HEIGHT)
+          const targetX = bounds.x + Math.round((bounds.width - newW) / 2)
+          const targetY = bounds.y + Math.round((bounds.height - newH) / 2)
+          animateBounds(win, bounds, { x: targetX, y: targetY, width: newW, height: newH })
         }
         return null
       } else {
         const compactBounds = { width: bounds.width, height: bounds.height }
-        win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
         if (normalWindowSize) {
-          win.setSize(
-            Math.max(normalWindowSize.width, MIN_WIDTH),
-            Math.max(normalWindowSize.height, MIN_HEIGHT),
-          )
+          const newW = Math.max(normalWindowSize.width, MIN_WIDTH)
+          const newH = Math.max(normalWindowSize.height, MIN_HEIGHT)
+          const targetX = bounds.x - Math.round((newW - bounds.width) / 2)
+          const targetY = bounds.y - Math.round((newH - bounds.height) / 2)
+          await new Promise<void>((resolve) => {
+            animateBounds(win, bounds, { x: targetX, y: targetY, width: newW, height: newH }, 300, () => {
+              win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
+              resolve()
+            })
+          })
           normalWindowSize = null
         } else {
+          win.setMinimumSize(MIN_WIDTH, MIN_HEIGHT)
           const [w, h] = win.getSize()
           if (w < MIN_WIDTH || h < MIN_HEIGHT) {
             win.setSize(Math.max(w, MIN_WIDTH), Math.max(h, MIN_HEIGHT))

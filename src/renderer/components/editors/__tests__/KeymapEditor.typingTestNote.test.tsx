@@ -63,6 +63,16 @@ vi.mock('../MacroModal', () => ({ MacroModal: () => null }))
 
 import { KeymapEditor } from '../KeymapEditor'
 
+beforeEach(() => {
+  window.vialAPI = {
+    ...window.vialAPI,
+    isAlwaysOnTopSupported: () => Promise.resolve(false),
+    setWindowCompactMode: () => Promise.resolve(null),
+    setWindowAspectRatio: () => Promise.resolve(),
+    setWindowAlwaysOnTop: () => Promise.resolve(),
+  } as typeof window.vialAPI
+})
+
 const makeLayout = () => ({
   keys: [
     { x: 0, y: 0, w: 1, h: 1, row: 0, col: 0, encoderIdx: -1, decal: false, labels: [] },
