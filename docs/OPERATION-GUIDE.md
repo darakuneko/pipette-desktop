@@ -558,19 +558,19 @@ Click the **Typing View** button in the status bar (visible when Typing Test is 
 - The toolbar, keycode palette, typing test UI, and status bar are hidden
 - The window maintains its aspect ratio when resized
 
-**Controls Bar**
+**Controls Panel**
 
 ![View-Only — Controls](screenshots/view-only-controls.png)
 
-Click the toggle at the bottom of the window to expand the controls bar:
+Click anywhere on the keyboard area to toggle the controls panel (bottom-right popup):
 
-- **Base Layer**: Select which layer to display (when the keyboard has multiple layers)
+- **Base**: Select which layer to display (when the keyboard has multiple layers)
 - **top**: Keep the window above other windows (always-on-top; not available on Wayland)
 - **Default Size**: Reset the window to its default calculated size
 - **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
 - **Exit Typing View**: Return to the full editor
 
-Press Escape or click outside the controls bar to collapse it. The window size and always-on-top preference are saved per keyboard.
+Press Escape or click the keyboard area again to close the panel. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
 

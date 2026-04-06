@@ -316,24 +316,29 @@ export function TypingTestPane({
         >
           <span className="text-[10px] text-content-muted">{t('editor.typingTest.closeHint')}</span>
         </div>
-        <div ref={controlsBarRef} className="fixed right-0 top-0 z-50">
+        <div ref={controlsBarRef} className="fixed bottom-0 right-0 z-50">
           <div
             id="view-only-panel"
             role="menu"
-            className={`absolute right-0 top-0 flex flex-col gap-1.5 rounded-bl-lg bg-surface-alt/95 px-3 pt-2 pb-3 text-xs shadow-lg backdrop-blur-sm transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-full overflow-hidden opacity-0'}`}
+            className={`absolute bottom-0 right-0 flex flex-col gap-1.5 rounded-tl-lg bg-surface-alt/95 px-3 pt-3 pb-2 text-xs shadow-lg backdrop-blur-sm transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-full overflow-hidden opacity-0'}`}
             onClick={(e) => e.stopPropagation()}
             {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
           >
-            {onViewOnlyChange && (
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="view-only-toggle"
-                className="whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
-                onClick={handleViewOnlyToggle}
-              >
-                {t('editor.typingTest.exitViewOnly')}
-              </button>
+            {layers > 1 && (
+              <div className="flex items-center justify-between gap-1">
+                <span className="text-content-muted">{t('editor.typingTest.baseLayerShort')}</span>
+                <select
+                  data-testid="base-layer-select"
+                  aria-label={t('editor.typingTest.baseLayer')}
+                  value={typingTest.baseLayer}
+                  onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
+                  className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                >
+                  {Array.from({ length: layers }, (_, i) => (
+                    <option key={i} value={i}>{layerNames?.[i] || i}</option>
+                  ))}
+                </select>
+              </div>
             )}
             {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
               <button
@@ -378,21 +383,16 @@ export function TypingTestPane({
             >
               {t('editor.typingTest.fitSize')}
             </button>
-            {layers > 1 && (
-              <div className="mt-2 flex items-center gap-1">
-                <span className="text-content-muted">{t('editor.typingTest.baseLayerShort')}</span>
-                <select
-                  data-testid="base-layer-select"
-                  aria-label={t('editor.typingTest.baseLayer')}
-                  value={typingTest.baseLayer}
-                  onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                  className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
-                >
-                  {Array.from({ length: layers }, (_, i) => (
-                    <option key={i} value={i}>{layerNames?.[i] || i}</option>
-                  ))}
-                </select>
-              </div>
+            {onViewOnlyChange && (
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="view-only-toggle"
+                className="mt-2 whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
+                onClick={handleViewOnlyToggle}
+              >
+                {t('editor.typingTest.exitViewOnly')}
+              </button>
             )}
           </div>
         </div>
