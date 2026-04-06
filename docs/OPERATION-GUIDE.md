@@ -415,6 +415,8 @@ When you open the Keyboard tab, a list of all connected Vial-compatible keyboard
 
 Click the **File** button at the bottom to switch to the file source. This shows saved keyboard snapshots and allows loading `.pipette` files — the same keycode picking workflow applies.
 
+> **Note**: Only V2 format (`.pipette`) files are supported in the key picker. If a legacy V1 format file is selected, a warning is displayed prompting you to connect the keyboard and open the keymap to migrate the data.
+
 **Composite Keycodes**
 
 When clicking a composite key (e.g., `LT1(KC_SPC)`) in the picker, the full keycode is assigned as-is. Inner/outer parts are not split — the complete keycode is copied to the target key.
@@ -489,7 +491,7 @@ The keymap editor automatically records a history of keycode changes. You can na
 
 A typing practice feature. Test your typing with the current keymap while viewing the keyboard layout below. The layout highlights key presses in real time, so you can verify that your physical keymap matches the on-screen display.
 
-Click the typing test button in the toolbar to enter typing test mode.
+Click the **Typing Test** button in the status bar to enter typing test mode.
 
 #### Modes
 
@@ -543,6 +545,34 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 - Press the restart button (↺) to restart the test at any time
 - Press Escape to exit typing test mode
 - The keyboard layout below the test area shows key presses in real time via the Vial matrix tester protocol
+
+#### Typing View (View-Only Mode)
+
+Typing View displays only the keyboard layout in a compact, resizable window — ideal for overlaying on top of other applications while practicing.
+
+Click the **Typing View** button in the status bar (visible when Typing Test is not active) to enter view-only mode.
+
+![View-Only — Compact Window](screenshots/view-only-compact.png)
+
+- The window shows only the keyboard layout with real-time key press highlighting
+- The toolbar, keycode palette, typing test UI, and status bar are hidden
+- The window maintains its aspect ratio when resized
+
+**Controls Bar**
+
+![View-Only — Controls](screenshots/view-only-controls.png)
+
+Click the toggle at the bottom of the window to expand the controls bar:
+
+- **Base Layer**: Select which layer to display (when the keyboard has multiple layers)
+- **top**: Keep the window above other windows (always-on-top; not available on Wayland)
+- **Default Size**: Reset the window to its default calculated size
+- **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
+- **Exit Typing View**: Return to the full editor
+
+Press Escape or click outside the controls bar to collapse it. The window size and always-on-top preference are saved per keyboard.
+
+> **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
 
 ---
 
@@ -834,8 +864,9 @@ The status bar at the bottom of the screen shows connection information and acti
 - **Device name**: Shows the name of the connected keyboard
 - **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
 - **Auto Advance**: Status of automatic key advancement after assigning a keycode (shown only when enabled)
-- **Key Tester**: Matrix Tester mode status (shown only when enabled and Typing Test is not active)
-- **Typing Test**: Typing Test mode status (shown only when enabled)
+- **Key Tester**: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)
+- **Typing View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active
+- **Typing Test**: Toggle button for Typing Test mode (requires matrix tester support)
 - **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
 - **Sync status**: Cloud sync status (shown only when sync is configured)
 - **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)

@@ -105,6 +105,7 @@ See [Data Guide](docs/Data.md) for details on how Hub authentication works.
 ### Utilities
 
 - **Typing Test** — Built-in typing test with WPM/accuracy tracking, downloadable language packs, and per-keyboard history
+- **Typing View** — View-only mode displaying only the keyboard layout in a compact, resizable window with always-on-top support — ideal for overlaying on other applications
 - **Multilingual UI** — Multiple languages supported; selectable in Settings
 - **Light / Dark / System theme**
 - **Keyboard layout override** (QWERTY, Dvorak, etc.) for correct label display
