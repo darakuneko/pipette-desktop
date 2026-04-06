@@ -422,7 +422,7 @@
     "uidMismatchConfirm": "このレイアウトファイルは別のキーボード用に作成されました。読み込みますか？"
   },
   "statusBar": {
-    "autoAdvance": "Auto Move",
+    "autoAdvance": "自動移動",
     "locked": "ロック中",
     "unlocked": "アンロック",
     "keyTester": "キーテスター",
