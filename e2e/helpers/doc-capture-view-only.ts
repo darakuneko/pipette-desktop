@@ -99,17 +99,19 @@ async function main(): Promise<void> {
     // Wait for compact mode transition
     await dismissNotificationModal(page)
 
-    // 1. View-only compact window — keyboard only, controls collapsed (default)
+    // Resize to ~400px width for documentation screenshots
+    await page.setViewportSize({ width: 400, height: 300 })
+    await page.waitForTimeout(1000)
+
+    // 1. View-only compact window — keyboard only, panel closed (default)
     await capture(page, 'view-only-compact')
 
-    // 2. Open the controls bar by clicking the toggle at the bottom
-    const controlsToggle = page.locator('.fixed.inset-x-0.z-50 button')
-    if ((await controlsToggle.count()) > 0) {
-      await controlsToggle.first().click()
-      await page.waitForTimeout(500)
-    }
+    // 2. Open the controls panel by clicking the keyboard area
+    const keyboardArea = page.locator('[data-testid="editor-content"]')
+    await keyboardArea.click()
+    await page.waitForTimeout(500)
 
-    // 3. Controls expanded — shows Base Layer, Always on Top, Default/Fit Size, Exit
+    // 3. Controls panel open — shows Exit, Always on Top, Default/Fit Size, Base Layer
     await capture(page, 'view-only-controls')
 
     console.log(`\nScreenshots saved to: ${SCREENSHOT_DIR}`)
