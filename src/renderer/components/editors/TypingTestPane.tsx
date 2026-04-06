@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe, Equal } from 'lucide-react'
+import { Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { HistoryToggle } from './HistoryToggle'
@@ -66,6 +66,20 @@ export function TypingTestPane({
   const { t } = useTranslation()
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
+  const [mouseOver, setMouseOver] = useState(false)
+
+  // Show hint text only when mouse is over the window
+  useEffect(() => {
+    if (!viewOnly) return
+    const onEnter = (): void => setMouseOver(true)
+    const onLeave = (): void => setMouseOver(false)
+    document.documentElement.addEventListener('mouseenter', onEnter)
+    document.documentElement.addEventListener('mouseleave', onLeave)
+    return () => {
+      document.documentElement.removeEventListener('mouseenter', onEnter)
+      document.documentElement.removeEventListener('mouseleave', onLeave)
+    }
+  }, [viewOnly])
   // Always-on-top not supported on Wayland
   const [alwaysOnTopSupported, setAlwaysOnTopSupported] = useState(false)
   useEffect(() => {
@@ -75,42 +89,21 @@ export function TypingTestPane({
   const onViewOnlyWindowSizeChangeRef = useRef(onViewOnlyWindowSizeChange)
   onViewOnlyWindowSizeChangeRef.current = onViewOnlyWindowSizeChange
 
-  // Close controls on Escape key or click outside
+  // Close controls on Escape key
   useEffect(() => {
     if (!viewOnly || !viewOnlyControlsOpen) return
     const handleEsc = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') setViewOnlyControlsOpen(false)
     }
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (controlsBarRef.current && !controlsBarRef.current.contains(e.target as Node)) {
-        setViewOnlyControlsOpen(false)
-      }
-    }
     document.addEventListener('keydown', handleEsc)
-    document.addEventListener('mousedown', handleClickOutside)
     return () => {
       document.removeEventListener('keydown', handleEsc)
-      document.removeEventListener('mousedown', handleClickOutside)
     }
   }, [viewOnly, viewOnlyControlsOpen])
-
-  // Set compact min width based on controls bar measurement (once on mount)
-  useEffect(() => {
-    if (!viewOnly) return
-    requestAnimationFrame(() => {
-      const el = controlsMeasureRef.current
-      if (!el) return
-      const minW = el.scrollWidth + 32
-      if (minW > 400) {
-        window.vialAPI.setWindowMinSize(minW, 300).catch(() => {})
-      }
-    })
-  }, [viewOnly])
 
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
   const paneNaturalSizeRef = useRef({ w: 0, h: 0 })
-  const controlsMeasureRef = useRef<HTMLDivElement>(null)
   const MARGIN = 20
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
@@ -129,8 +122,7 @@ export function TypingTestPane({
     const svgH = maxBottom * KEY_UNIT + KEYBOARD_PADDING * 2
     const paneW = svgW + 44
     const paneH = svgH + 42
-    const controlsW = controlsMeasureRef.current?.scrollWidth ?? 0
-    let w = Math.max(paneW + MARGIN * 2, controlsW + MARGIN * 2)
+    let w = paneW + MARGIN * 2
     let h = paneH + MARGIN * 2
     // Cap to 80% of screen if keyboard at 100% exceeds it
     const maxW = window.screen.availWidth * 0.8
@@ -233,8 +225,12 @@ export function TypingTestPane({
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
         />
       )}
-      <div className={viewOnly ? 'flex min-h-0 w-full flex-1 items-center justify-center overflow-hidden' : 'flex items-start justify-center overflow-auto'}>
-        <div style={viewOnly && paneNaturalSizeRef.current.w > 0 ? { width: paneNaturalSizeRef.current.w * cssScale, height: paneNaturalSizeRef.current.h * cssScale, overflow: 'hidden' } : undefined}>
+      <div
+        className={viewOnly ? 'flex min-h-0 w-full flex-1 cursor-pointer items-center justify-center overflow-hidden' : 'flex items-start justify-center overflow-auto'}
+        onClick={viewOnly ? () => setViewOnlyControlsOpen((v) => !v) : undefined}
+      >
+        <div className="relative" style={viewOnly && paneNaturalSizeRef.current.w > 0 ? { width: paneNaturalSizeRef.current.w * cssScale, height: paneNaturalSizeRef.current.h * cssScale, overflow: 'hidden' } : undefined}>
+          {viewOnly && <div className="absolute inset-0 z-10" />}
           <div
             ref={viewOnly ? paneWrapperRef : undefined}
             style={viewOnly ? { transform: `scale(${cssScale})`, transformOrigin: 'top left' } : undefined}
@@ -316,109 +312,89 @@ export function TypingTestPane({
       {viewOnly && (
         <>
         <div
-          className={`pointer-events-none fixed inset-x-0 top-0 z-50 flex justify-center transition-all duration-200 ${viewOnlyControlsOpen ? '-translate-y-0 py-2 opacity-100' : '-translate-y-2 opacity-0'}`}
+          className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || !mouseOver ? 'opacity-0' : 'opacity-100'}`}
         >
           <span className="text-[10px] text-content-muted">{t('editor.typingTest.closeHint')}</span>
         </div>
-        <div
-          ref={controlsBarRef}
-          className={`fixed inset-x-0 z-50 flex items-center gap-2 overflow-hidden whitespace-nowrap px-4 transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'bottom-0 justify-between bg-surface-alt py-1.5' : 'bottom-0 cursor-pointer justify-center py-0.5'}`}
-          onClick={() => { if (!viewOnlyControlsOpen) setViewOnlyControlsOpen(true) }}
-        >
-          {viewOnlyControlsOpen && (
-          <div className="flex items-center gap-2">
-              {layers > 1 && (
-                <div className="flex items-center gap-1">
-                  <span className="text-xs text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
-                  <select
-                    data-testid="base-layer-select"
-                    aria-label={t('editor.typingTest.baseLayer')}
-                    value={typingTest.baseLayer}
-                    onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                    className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
-                  >
-                    {Array.from({ length: layers }, (_, i) => (
-                      <option key={i} value={i}>{layerNames?.[i] || i}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
-                <button
-                  type="button"
-                  data-testid="always-on-top-toggle"
-                  className={`rounded border px-1.5 py-0.5 text-xs transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                  onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
-                >
-                  {t('editor.typingTest.alwaysOnTop')}
-                </button>
-              )}
+        <div ref={controlsBarRef} className="fixed right-0 top-0 z-50">
+          <div
+            id="view-only-panel"
+            role="menu"
+            className={`absolute right-0 top-0 flex flex-col gap-1.5 rounded-bl-lg bg-surface-alt/95 px-3 pt-2 pb-3 text-xs shadow-lg backdrop-blur-sm transition-all duration-200 ease-out ${viewOnlyControlsOpen ? 'translate-y-0 opacity-100' : 'pointer-events-none -translate-y-full overflow-hidden opacity-0'}`}
+            onClick={(e) => e.stopPropagation()}
+            {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
+          >
+            {onViewOnlyChange && (
               <button
                 type="button"
-                data-testid="reset-window-size"
-                className="rounded border border-edge px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content"
-                onClick={() => {
-                  const size = getDefaultCompactSize()
-                  window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                  if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                  setViewOnlyControlsOpen(false)
-                }}
-              >
-                {t('editor.typingTest.resetSize')}
-              </button>
-              <button
-                type="button"
-                data-testid="fit-window-size"
-                className="rounded border border-edge px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content"
-                onClick={() => {
-                  const defaultSize = getDefaultCompactSize()
-                  const ratio = defaultSize.height / defaultSize.width
-                  const w = window.innerWidth
-                  const h = Math.round(w * ratio)
-                  const size = { width: w, height: h }
-                  window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                  if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                  setViewOnlyControlsOpen(false)
-                }}
-              >
-                {t('editor.typingTest.fitSize')}
-              </button>
-          </div>
-          )}
-          {!viewOnlyControlsOpen && (
-            <button
-              type="button"
-              className="px-4 py-0.5 text-content-muted transition-colors hover:text-content"
-              onClick={() => setViewOnlyControlsOpen(true)}
-            >
-              <Equal size={12} />
-            </button>
-          )}
-          {viewOnlyControlsOpen && onViewOnlyChange && (
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
+                role="menuitem"
                 data-testid="view-only-toggle"
-                aria-label={t('editor.typingTest.viewOnly')}
-                title={t('editor.typingTest.viewOnly')}
-                className="flex items-center gap-1 rounded border border-accent bg-accent/10 px-2 py-0.5 text-xs text-accent transition-colors"
+                className="whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
                 onClick={handleViewOnlyToggle}
               >
-                <span>{t('editor.typingTest.exitViewOnly')}</span>
+                {t('editor.typingTest.exitViewOnly')}
               </button>
-            </div>
-          )}
-        </div>
-        {/* Hidden measurement div for controls bar width — mirrors actual bar styling */}
-        <div ref={controlsMeasureRef} className="pointer-events-none fixed -left-[9999px] flex items-center gap-2 whitespace-nowrap px-4 text-xs" aria-hidden="true">
-          <div className="flex items-center gap-1">
-            <span>{t('editor.typingTest.baseLayer')}:</span>
-            <span className="rounded border px-1.5 py-0.5">0</span>
+            )}
+            {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
+              <button
+                type="button"
+                role="menuitem"
+                data-testid="always-on-top-toggle"
+                className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
+              >
+                {t('editor.typingTest.alwaysOnTop')}
+              </button>
+            )}
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="reset-window-size"
+              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+              onClick={() => {
+                const size = getDefaultCompactSize()
+                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                setViewOnlyControlsOpen(false)
+              }}
+            >
+              {t('editor.typingTest.resetSize')}
+            </button>
+            <button
+              type="button"
+              role="menuitem"
+              data-testid="fit-window-size"
+              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+              onClick={() => {
+                const defaultSize = getDefaultCompactSize()
+                const ratio = defaultSize.height / defaultSize.width
+                const w = window.innerWidth
+                const h = Math.round(w * ratio)
+                const size = { width: w, height: h }
+                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                setViewOnlyControlsOpen(false)
+              }}
+            >
+              {t('editor.typingTest.fitSize')}
+            </button>
+            {layers > 1 && (
+              <div className="mt-2 flex items-center gap-1">
+                <span className="text-content-muted">{t('editor.typingTest.baseLayerShort')}</span>
+                <select
+                  data-testid="base-layer-select"
+                  aria-label={t('editor.typingTest.baseLayer')}
+                  value={typingTest.baseLayer}
+                  onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
+                  className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                >
+                  {Array.from({ length: layers }, (_, i) => (
+                    <option key={i} value={i}>{layerNames?.[i] || i}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.alwaysOnTop')}</span>
-          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.resetSize')}</span>
-          <span className="rounded border px-1.5 py-0.5">{t('editor.typingTest.fitSize')}</span>
-          <span className="rounded border px-2 py-0.5">{t('editor.typingTest.exitViewOnly')}</span>
         </div>
         </>
       )}

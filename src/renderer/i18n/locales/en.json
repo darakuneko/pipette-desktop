@@ -267,10 +267,11 @@
       "viewOnly": "Typing View",
       "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
-      "closeHint": "Click here or press Esc to close",
+      "closeHint": "Click to open menu",
       "resetSize": "Default Size",
       "fitSize": "Fit Size",
       "baseLayer": "Base Layer",
+      "baseLayerShort": "Base",
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {
