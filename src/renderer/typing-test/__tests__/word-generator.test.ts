@@ -123,12 +123,12 @@ describe('injectPunctuation', () => {
     expect(hasComma).toBe(true)
   })
 
-  it('adds periods at sentence boundaries', () => {
+  it('adds sentence-ending punctuation at boundaries', () => {
     const words = Array(30).fill('word') as string[]
     const result = injectPunctuation(words)
-    // At least one period besides the final one
-    const periodsBeforeLast = result.slice(0, -1).filter((w) => w.endsWith('.')).length
-    expect(periodsBeforeLast).toBeGreaterThanOrEqual(1)
+    // At least one sentence-ending mark (. ? !) besides the final word
+    const sentenceEndsBeforeLast = result.slice(0, -1).filter((w) => /[.?!]$/.test(w)).length
+    expect(sentenceEndsBeforeLast).toBeGreaterThanOrEqual(1)
   })
 })
 
