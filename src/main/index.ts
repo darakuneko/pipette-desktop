@@ -156,8 +156,8 @@ function animateBounds(
 let normalWindowSize: WindowSize | null = null
 
 function setupWindowIpc(): void {
-  const COMPACT_MIN_WIDTH = 400
-  const COMPACT_MIN_HEIGHT = 300
+  const COMPACT_MIN_WIDTH = 300
+  const COMPACT_MIN_HEIGHT = 100
 
   secureHandle(
     IpcChannels.WINDOW_SET_COMPACT_MODE,
