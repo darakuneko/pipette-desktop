@@ -562,13 +562,13 @@ Click the **Typing View** button in the status bar (visible when Typing Test is 
 
 ![View-Only — Controls](screenshots/view-only-controls.png)
 
-Click anywhere on the keyboard area to toggle the controls panel (top-right dropdown):
+Click anywhere on the keyboard area to toggle the controls panel (bottom-right popup):
 
-- **Exit Typing View**: Return to the full editor
+- **Base**: Select which layer to display (when the keyboard has multiple layers)
 - **top**: Keep the window above other windows (always-on-top; not available on Wayland)
 - **Default Size**: Reset the window to its default calculated size
 - **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
-- **Base**: Select which layer to display (when the keyboard has multiple layers)
+- **Exit Typing View**: Return to the full editor
 
 Press Escape or click the keyboard area again to close the panel. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
 
