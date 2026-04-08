@@ -177,7 +177,7 @@ export function QmkSettings({
           .filter((f) => supportedQsids.has(f.qsid))
           .map((field, i) => (
             <div key={`${field.qsid}-${field.bit ?? i}`} className="flex items-start gap-3">
-              <label className="flex-1 min-w-0 pt-1 text-sm">{field.title}</label>
+              <label className="flex-1 min-w-0 pt-1 text-sm">{t(`qmkSettings.${field.title.replace(/\s+/g, '_').toLowerCase()}`)}</label>
               {field.type === 'boolean' ? (
                 <input
                   type="checkbox"
