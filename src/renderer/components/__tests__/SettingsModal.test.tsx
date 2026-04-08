@@ -20,6 +20,7 @@ vi.mock('../../i18n', () => ({
   SUPPORTED_LANGUAGES: [
     { id: 'en', name: 'English' },
     { id: 'ja', name: '日本語' },
+    { id: 'zh', name: '简体中文' },
   ],
 }))
 
