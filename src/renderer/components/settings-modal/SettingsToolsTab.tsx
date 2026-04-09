@@ -140,7 +140,7 @@ export function SettingsToolsTab({
             >
               {KEYBOARD_LAYOUTS.map((layoutDef) => (
                 <option key={layoutDef.id} value={layoutDef.id}>
-                  {layoutDef.name}
+                  {t(`keyboardLayouts.${layoutDef.id}`) || layoutDef.name}
                 </option>
               ))}
             </select>

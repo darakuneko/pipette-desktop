@@ -729,6 +729,12 @@ export function App() {
             editorUI.setUnlockMacroWarning(false)
             keyboard.rejectPendingUnlock()
           }}
+          onCancel={() => {
+            device.setPollSuspended(false)
+            editorUI.setShowUnlockDialog(false)
+            editorUI.setUnlockMacroWarning(false)
+            keyboard.rejectPendingUnlock()
+          }}
           macroWarning={editorUI.unlockMacroWarning}
         />
       )}

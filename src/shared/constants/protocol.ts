@@ -10,13 +10,13 @@ export const VIAL_SERIAL_MAGIC = 'vial:f64c2b3c'
 export const BOOTLOADER_SERIAL_MAGIC = 'vibl:d4f8159c'
 
 // Communication parameters
-export const HID_TIMEOUT_MS = 500
-export const HID_RETRY_COUNT = 20
-export const HID_RETRY_DELAY_MS = 500
-export const HID_OPEN_RETRY_COUNT = 10
-export const HID_OPEN_RETRY_DELAY_MS = 1000
-export const ECHO_RETRY_COUNT = 3
-export const ECHO_RETRY_DELAY_MS = 500
+export const HID_TIMEOUT_MS = 1000
+export const HID_RETRY_COUNT = 30
+export const HID_RETRY_DELAY_MS = 300
+export const HID_OPEN_RETRY_COUNT = 15
+export const HID_OPEN_RETRY_DELAY_MS = 800
+export const ECHO_RETRY_COUNT = 5
+export const ECHO_RETRY_DELAY_MS = 300
 export const ECHO_DETECTED_MSG = 'ECHO_DETECTED'
 
 /** Sentinel UID used for the empty/reset keyboard state (no device loaded). */

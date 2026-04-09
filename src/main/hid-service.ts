@@ -119,9 +119,16 @@ function delay(ms: number): Promise<void> {
 
 function isTransientError(err: Error): boolean {
   const msg = err.message.toLowerCase()
-  // "cannot write" and "could not read" on a disconnected device are NOT transient —
-  // retrying just floods the mutex queue. Only timeout is worth retrying.
-  return msg.includes('timeout')
+  // 识别常见的无线连接临时错误
+  // 包括超时、连接中断、数据传输错误等
+  return msg.includes('timeout') ||
+    msg.includes('disconnected') ||
+    msg.includes('connection') ||
+    msg.includes('transmit') ||
+    msg.includes('receive') ||
+    msg.includes('io error') ||
+    msg.includes('device not responding') ||
+    msg.includes('resource temporarily unavailable')
 }
 
 /**
@@ -394,9 +401,18 @@ export async function probeDevice(vendorId: number, productId: number, serialNum
       writeBE16(pkt, 1, offset)
       pkt[3] = chunkSize
       const resp = await probeSendReceive(pkt)
+      // 检查响应数据长度是否足够
+      if (resp.length < 4 + chunkSize) {
+        throw new Error(`Keymap data chunk too short: expected ${4 + chunkSize} bytes, got ${resp.length}`)
+      }
       for (let i = 0; i < chunkSize; i++) {
         keymapBuf.push(resp[4 + i])
       }
+    }
+
+    // 检查键位映射数据长度是否正确
+    if (keymapBuf.length !== keymapSize) {
+      throw new Error(`Keymap data length mismatch: expected ${keymapSize} bytes, got ${keymapBuf.length}`)
     }
 
     // Convert buffer to keymap record
@@ -405,6 +421,10 @@ export async function probeDevice(vendorId: number, productId: number, serialNum
     for (let layer = 0; layer < layers; layer++) {
       for (let row = 0; row < rows; row++) {
         for (let col = 0; col < cols; col++) {
+          // 检查缓冲区索引是否有效
+          if (bufIdx + 1 >= keymapBuf.length) {
+            throw new Error(`Keymap buffer underflow at ${layer},${row},${col}`)
+          }
           const keycode = (keymapBuf[bufIdx] << 8) | keymapBuf[bufIdx + 1]
           keymap[`${layer},${row},${col}`] = keycode
           bufIdx += 2
