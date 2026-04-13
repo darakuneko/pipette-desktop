@@ -90,15 +90,19 @@ async function main(): Promise<void> {
 
     console.log('\n--- Typing Test Screenshots ---')
 
-    // Enter typing test mode via status bar button
-    const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
-    await typingTestBtn.waitFor({ state: 'visible', timeout: 10_000 })
-    await typingTestBtn.click()
-    await page.waitForTimeout(1000)
-    await dismissNotificationModal(page)
+    // Per-keyboard view mode auto-restore may have entered typing test already.
+    // Only click the button when we are still in the editor.
+    const typingTestView = page.locator('[data-testid="typing-test-view"]')
+    const alreadyInTypingTest = await typingTestView.isVisible().catch(() => false)
+    if (!alreadyInTypingTest) {
+      const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+      await typingTestBtn.waitFor({ state: 'visible', timeout: 10_000 })
+      await typingTestBtn.click()
+      await page.waitForTimeout(1000)
+      await dismissNotificationModal(page)
+    }
 
     // 1. Words mode — waiting state (explicitly select to avoid persisted config)
-    const typingTestView = page.locator('[data-testid="typing-test-view"]')
     await typingTestView.waitFor({ state: 'visible', timeout: 10_000 })
     await page.locator('[data-testid="mode-words"]').click()
     await page.waitForTimeout(500)

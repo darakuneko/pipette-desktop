@@ -544,6 +544,7 @@ Correctly typed words turn green. Incorrect characters are highlighted in red wi
 
 - Press the restart button (↺) to restart the test at any time
 - Press Escape to exit typing test mode
+- The status bar's Disconnect button is hidden while Typing Test is active. To disconnect, first return to the editor with Escape or the Typing Test button
 - The keyboard layout below the test area shows key presses in real time via the Vial matrix tester protocol
 
 #### Typing View (View-Only Mode)
@@ -573,6 +574,16 @@ Click anywhere on the keyboard area to toggle the controls panel (bottom-right p
 Press Escape or click the keyboard area again to close the panel. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
+
+#### View Mode Memory and Auto-Restore
+
+The last view mode (Editor / Typing Test / Typing View) is remembered per keyboard and automatically restored the next time you connect that keyboard:
+
+- **Editor**: The editor view is shown as usual
+- **Typing Test**: Typing Test mode is re-entered automatically. If the keyboard is locked, the Unlock dialog appears first and the test starts after unlocking
+- **Typing View**: The compact view-only window is re-entered automatically. If the keyboard is locked, the Unlock dialog appears first
+
+View mode is stored per keyboard alongside preferences like keyboard layout, zoom scale, and window size. When Pipette Hub sync is enabled, view mode is synced to other devices as well (see §7).
 
 ---
 
@@ -870,4 +881,4 @@ The status bar at the bottom of the screen shows connection information and acti
 - **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
 - **Sync status**: Cloud sync status (shown only when sync is configured)
 - **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)
-- **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen
+- **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)
