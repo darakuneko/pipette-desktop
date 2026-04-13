@@ -8,7 +8,7 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
-import { VIEW_MODES } from '../shared/types/pipette-settings'
+import { VIEW_MODES, isTypingSyncSpanDays } from '../shared/types/pipette-settings'
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
@@ -41,6 +41,8 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
     if (typeof ws.width !== 'number' || typeof ws.height !== 'number') return false
   }
   if ('typingTestViewOnlyAlwaysOnTop' in obj && obj.typingTestViewOnlyAlwaysOnTop != null && typeof obj.typingTestViewOnlyAlwaysOnTop !== 'boolean') return false
+  if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
+  if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
@@ -77,6 +79,8 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
+      typingRecordEnabled: parsed.typingRecordEnabled,
+      typingSyncSpanDays: parsed.typingSyncSpanDays,
       viewMode: parsed.viewMode,
     }
   } catch {

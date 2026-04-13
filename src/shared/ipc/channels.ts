@@ -77,6 +77,14 @@ export const IpcChannels = {
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',
   PIPETTE_SETTINGS_SET: 'pipette-settings:set',
 
+  // Typing Analytics (renderer ↔ main)
+  TYPING_ANALYTICS_EVENT: 'typing-analytics:event',
+  TYPING_ANALYTICS_FLUSH: 'typing-analytics:flush',
+  TYPING_ANALYTICS_LIST_KEYBOARDS: 'typing-analytics:list-keyboards',
+  TYPING_ANALYTICS_LIST_ITEMS: 'typing-analytics:list-items',
+  TYPING_ANALYTICS_DELETE_ITEMS: 'typing-analytics:delete-items',
+  TYPING_ANALYTICS_DELETE_ALL: 'typing-analytics:delete-all',
+
   // Language Store (renderer → main → renderer)
   LANG_LIST: 'lang:list',
   LANG_GET: 'lang:get',

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing-analytics'
+
 export interface TypingTestResult {
   date: string
   wpm: number
@@ -22,6 +24,10 @@ export interface TypingTestResult {
 export const VIEW_MODES = ['editor', 'typingView', 'typingTest'] as const
 export type ViewMode = typeof VIEW_MODES[number]
 
+export function isTypingSyncSpanDays(value: unknown): value is TypingSyncSpanDays {
+  return typeof value === 'number' && (ALLOWED_TYPING_SYNC_SPAN_DAYS as readonly number[]).includes(value)
+}
+
 export interface PipetteSettings {
   _rev: 1
   keyboardLayout: string
@@ -33,6 +39,8 @@ export interface PipetteSettings {
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop?: boolean
+  typingRecordEnabled?: boolean
+  typingSyncSpanDays?: TypingSyncSpanDays
   layerPanelOpen?: boolean
   basicViewType?: 'ansi' | 'iso' | 'jis' | 'list'
   splitKeyMode?: 'split' | 'flat'
