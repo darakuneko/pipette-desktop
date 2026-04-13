@@ -22,11 +22,16 @@ General preferences that apply across all keyboards.
 |------|-------------|
 | Theme | Light, Dark, or System |
 | Language | UI language (English / Japanese) |
-| Panel side | Left or Right |
-| Auto-lock timer | 10 - 60 seconds |
+| Auto-lock timer | 10 - 60 minutes |
 | Default keyboard layout | QWERTY, Dvorak, etc. |
 | Default auto-advance | Move to next key after assignment |
+| Default layer panel open | Initial state of the layer list panel for new keyboards |
+| Default basic view type | Default Basic tab view (ANSI / ISO / JIS / List) |
+| Default split key mode | Default split-key display mode (split or flat) |
+| Default quick select | Default quick-select mode for the keycode popover |
+| Max keymap history | Maximum number of keymap changes kept in edit history |
 | Auto sync | Enable/disable cloud sync |
+| Hub enabled | Enable/disable Pipette Hub integration |
 | Window position & size | Restored on next launch |
 
 ### Per-Keyboard Settings
@@ -38,9 +43,16 @@ Settings tied to a specific keyboard, identified by its unique ID.
 | Keyboard layout override | Display labels using a specific layout |
 | Auto-advance | Per-keyboard override |
 | Layer names | Custom names for each layer (Pipette-only; not written to firmware or visible in other apps) |
+| Layer panel open | Whether the layer list panel is expanded |
+| Basic view type | Basic tab view (ANSI / ISO / JIS / List) |
+| Split key mode | How split-key tiles are displayed (split or flat) |
+| Quick select | Quick-select mode for the keycode popover |
+| Keymap scale | Keymap zoom level |
+| View mode | Last active view (Editor / Typing Test / Typing View) — auto-restored on reconnect |
 | Typing test history | WPM/accuracy records (up to 500 entries) |
 | Typing test config | Mode, word count, and other test preferences |
 | Typing test language | Selected language pack |
+| Typing view preferences | Compact window size and always-on-top setting |
 
 ### Snapshots
 
@@ -228,7 +240,7 @@ Pipette can export keymap data in several formats. These are local file download
 
 | Operation | Snapshots | Settings | Favorites | Cloud Data | Hub Posts | App Settings |
 |-----------|:---------:|:--------:|:---------:|:----------:|:--------:|:------------:|
-| Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | Deleted for that keyboard | - |
+| Reset Keyboard Data | Deleted | Deleted | - | Deleted for that keyboard | - | - |
 | Reset Local Data | Selected targets deleted | Selected targets deleted | Selected targets deleted | - | - | Selected targets reset to defaults |
 | Reset Sync Data | - | - | - | Selected targets deleted | - | - |
 | Change Password | - | - | - | All files re-encrypted | - | - |

@@ -19,6 +19,9 @@ export interface TypingTestResult {
   wpmHistory?: number[]
 }
 
+export const VIEW_MODES = ['editor', 'typingView', 'typingTest'] as const
+export type ViewMode = typeof VIEW_MODES[number]
+
 export interface PipetteSettings {
   _rev: 1
   keyboardLayout: string
@@ -35,5 +38,6 @@ export interface PipetteSettings {
   splitKeyMode?: 'split' | 'flat'
   quickSelect?: boolean
   keymapScale?: number
+  viewMode?: ViewMode
   _updatedAt?: string // ISO 8601 — last update time
 }

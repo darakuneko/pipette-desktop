@@ -281,35 +281,101 @@ export function App() {
     }) })
   }, [devicePrefs])
 
-  // Restore window on device disconnect while in view-only mode
+  // Enter typing view-only mode (compact window + typing test). Assumes unlocked.
+  const { typingTestViewOnlyWindowSize, setTypingTestViewOnly } = devicePrefs
+  const enterTypingViewOnly = useCallback(() => {
+    window.vialAPI.setWindowCompactMode(true, typingTestViewOnlyWindowSize).then(() => {
+      setTypingTestViewOnly(true)
+      if (!editorUI.typingTestMode) {
+        keymapEditorRef.current?.toggleTypingTest()
+      }
+    }).catch(() => {})
+  }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
+
+  // One-shot guard: prevents re-restoring the same uid after an initial restore
+  const restoreRequestedUidRef = useRef<string | null>(null)
+
+  // Pending refs for deferred user intents (set while unlock dialog is open)
+  const pendingViewOnlyRef = useRef(false)
+  const pendingTypingTestSaveRef = useRef(false)
+
+  const { setViewMode } = devicePrefs
+  const { resetUIState } = editorUI
+
   const prevConnectedRef = useRef(device.connectedDevice)
   useEffect(() => {
     const wasConnected = prevConnectedRef.current
     prevConnectedRef.current = device.connectedDevice
-    if (wasConnected && !device.connectedDevice && devicePrefs.typingTestViewOnly) {
-      window.vialAPI.setWindowCompactMode(false).catch(() => {})
-      window.vialAPI.setWindowAspectRatio(0).catch(() => {})
-      window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {})
-      devicePrefs.setTypingTestViewOnly(false)
-      setViewExitTransition(false)
+    if (wasConnected && !device.connectedDevice) {
+      restoreRequestedUidRef.current = null
+      pendingViewOnlyRef.current = false
+      pendingTypingTestSaveRef.current = false
+      // Auto-detect polling disconnect bypasses lifecycle.handleDisconnect,
+      // so ephemeral UI state (typingTestMode etc.) must be reset here too.
+      resetUIState()
+      if (devicePrefs.typingTestViewOnly) {
+        window.vialAPI.setWindowCompactMode(false).catch(() => {})
+        window.vialAPI.setWindowAspectRatio(0).catch(() => {})
+        window.vialAPI.setWindowAlwaysOnTop(false).catch(() => {})
+        setTypingTestViewOnly(false)
+        setViewExitTransition(false)
+      }
     }
-  }, [device.connectedDevice, devicePrefs])
+  }, [device.connectedDevice, devicePrefs.typingTestViewOnly, setTypingTestViewOnly, resetUIState])
 
   // Deferred view-only entry after unlock
-  const pendingViewOnlyRef = useRef(false)
   useEffect(() => {
     if (!device.connectedDevice) { pendingViewOnlyRef.current = false; return }
     if (pendingViewOnlyRef.current && keyboard.unlockStatus.unlocked) {
       pendingViewOnlyRef.current = false
-      const savedSize = devicePrefs.typingTestViewOnlyWindowSize
-      window.vialAPI.setWindowCompactMode(true, savedSize).then(() => {
-        devicePrefs.setTypingTestViewOnly(true)
-        if (!editorUI.typingTestMode) {
-          keymapEditorRef.current?.toggleTypingTest()
-        }
-      }).catch(() => {})
+      setViewMode('typingView')
+      enterTypingViewOnly()
     }
-  }, [device.connectedDevice, keyboard.unlockStatus.unlocked, devicePrefs, editorUI.typingTestMode])
+  }, [device.connectedDevice, keyboard.unlockStatus.unlocked, enterTypingViewOnly, setViewMode])
+
+  // Commit deferred typing-test save once state actually transitions to on.
+  // Catches both immediate (unlocked click) and deferred (locked click → unlock) paths.
+  useEffect(() => {
+    if (pendingTypingTestSaveRef.current && editorUI.typingTestMode) {
+      pendingTypingTestSaveRef.current = false
+      setViewMode('typingTest')
+    }
+  }, [editorUI.typingTestMode, setViewMode])
+
+  // Auto-restore last view mode once prefs are applied for the connected uid
+  useEffect(() => {
+    if (!device.connectedDevice || device.isDummy) return
+    if (keyboard.loading || keyboard.uid === EMPTY_UID) return
+    if (devicePrefs.appliedUid !== keyboard.uid) return
+    if (restoreRequestedUidRef.current === keyboard.uid) return
+    restoreRequestedUidRef.current = keyboard.uid
+    // Restore is not a user intent — clear any stale pending save flags so the
+    // watcher above does not misattribute the restore's state change to a user click.
+    pendingTypingTestSaveRef.current = false
+    pendingViewOnlyRef.current = false
+
+    const mode = devicePrefs.viewMode
+    if (mode === 'typingTest') {
+      keymapEditorRef.current?.toggleTypingTest()
+    } else if (mode === 'typingView') {
+      if (keyboard.unlockStatus.unlocked) {
+        enterTypingViewOnly()
+      } else {
+        pendingViewOnlyRef.current = true
+        editorUI.setShowUnlockDialog(true)
+      }
+    }
+  }, [
+    device.connectedDevice,
+    device.isDummy,
+    keyboard.loading,
+    keyboard.uid,
+    keyboard.unlockStatus.unlocked,
+    devicePrefs.appliedUid,
+    devicePrefs.viewMode,
+    enterTypingViewOnly,
+    editorUI.setShowUnlockDialog,
+  ])
 
   const handleLoadEntry = useCallback(async (entryId: string) => {
     const entry = layoutStore.entries.find((e) => e.id === entryId)
@@ -639,9 +705,13 @@ export function App() {
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
             typingTestViewOnly={devicePrefs.typingTestViewOnly}
             onTypingTestViewOnlyChange={(enabled: boolean) => {
+              pendingTypingTestSaveRef.current = false
+              pendingViewOnlyRef.current = false
               if (!enabled) {
+                setViewMode('editor')
                 exitViewOnlyMode()
               } else {
+                setViewMode('typingView')
                 devicePrefs.setTypingTestViewOnly(true)
               }
             }}
@@ -690,23 +760,31 @@ export function App() {
           keyOverrideActive={editorUI.keyOverrideSupported && keyboard.keyOverrideEntries.some((e) => e.enabled)}
           viewOnly={devicePrefs.typingTestViewOnly}
           onViewOnlyChange={() => {
+            pendingTypingTestSaveRef.current = false
             if (editorUI.typingTestMode && devicePrefs.typingTestViewOnly) {
+              pendingViewOnlyRef.current = false
+              setViewMode('editor')
               exitViewOnlyMode()
             } else if (!keyboard.unlockStatus.unlocked) {
               pendingViewOnlyRef.current = true
               editorUI.setShowUnlockDialog(true)
             } else {
-              const savedSize = devicePrefs.typingTestViewOnlyWindowSize
-              window.vialAPI.setWindowCompactMode(true, savedSize).then(() => {
-                devicePrefs.setTypingTestViewOnly(true)
-                if (!editorUI.typingTestMode) {
-                  keymapEditorRef.current?.toggleTypingTest()
-                }
-              }).catch(() => {})
+              pendingViewOnlyRef.current = false
+              setViewMode('typingView')
+              enterTypingViewOnly()
             }
           }}
-          onTypingTestModeChange={() => keymapEditorRef.current?.toggleTypingTest()}
-          onDisconnect={lifecycle.handleDisconnect}
+          onTypingTestModeChange={() => {
+            pendingViewOnlyRef.current = false
+            if (editorUI.typingTestMode) {
+              setViewMode('editor')
+              pendingTypingTestSaveRef.current = false
+            } else {
+              pendingTypingTestSaveRef.current = true
+            }
+            keymapEditorRef.current?.toggleTypingTest()
+          }}
+          onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
         />
       )}
 

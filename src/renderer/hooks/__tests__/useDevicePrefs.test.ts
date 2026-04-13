@@ -690,6 +690,119 @@ describe('useDevicePrefs', () => {
     })
   })
 
+  describe('viewMode', () => {
+    it('defaults to "editor" when not in storage', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMode).toBe('editor')
+    })
+
+    it('loads stored viewMode from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMode: 'typingView',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMode).toBe('typingView')
+    })
+
+    it('falls back to "editor" for invalid viewMode from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMode: 'bogus',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.viewMode).toBe('editor')
+    })
+
+    it('setViewMode saves via IPC', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+      act(() => {
+        result.current.setViewMode('typingTest')
+      })
+
+      expect(result.current.viewMode).toBe('typingTest')
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        viewMode: 'typingTest',
+      }))
+    })
+
+    it('appliedUid is null before applyDevicePrefs', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      expect(result.current.appliedUid).toBeNull()
+    })
+
+    it('appliedUid matches uid after applyDevicePrefs resolves', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.appliedUid).toBe('0xAABB')
+    })
+
+    it('setTypingTestViewOnly preserves stored viewMode (disconnect scenario)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestViewOnly: true,
+        viewMode: 'typingView',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+
+      // Simulates disconnect cleanup: resets typingTestViewOnly but should not touch viewMode
+      act(() => {
+        result.current.setTypingTestViewOnly(false)
+      })
+
+      expect(result.current.viewMode).toBe('typingView')
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        typingTestViewOnly: false,
+        viewMode: 'typingView',
+      }))
+    })
+  })
+
   describe('remapLabel and isRemapped', () => {
     it('remapLabel delegates to remapKeycode with current layout', async () => {
       setupMocks()
