@@ -37,6 +37,8 @@ export interface TypingTestPaneProps {
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  recordEnabled?: boolean
+  onRecordEnabledChange?: (enabled: boolean) => void
 }
 
 export function TypingTestPane({
@@ -62,6 +64,8 @@ export function TypingTestPane({
   onViewOnlyWindowSizeChange,
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
+  recordEnabled,
+  onRecordEnabledChange,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
   const [showLanguageModal, setShowLanguageModal] = useState(false)
@@ -339,6 +343,19 @@ export function TypingTestPane({
                   ))}
                 </select>
               </div>
+            )}
+            {onRecordEnabledChange && (
+              <button
+                type="button"
+                role="menuitemcheckbox"
+                aria-checked={recordEnabled ?? false}
+                data-testid="typing-record-toggle"
+                className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onRecordEnabledChange(!recordEnabled)}
+                title={t('editor.typingTest.recordTooltip')}
+              >
+                {recordEnabled ? t('editor.typingTest.recordOn') : t('editor.typingTest.recordOff')}
+              </button>
             )}
             {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
               <button

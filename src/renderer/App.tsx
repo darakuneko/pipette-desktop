@@ -719,6 +719,8 @@ export function App() {
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
+            typingRecordEnabled={devicePrefs.typingRecordEnabled}
+            onTypingRecordEnabledChange={devicePrefs.setTypingRecordEnabled}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}

@@ -127,6 +127,8 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   typingTestViewOnlyAlwaysOnTop?: boolean
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  typingRecordEnabled?: boolean
+  onTypingRecordEnabledChange?: (enabled: boolean) => void
   deviceName?: string
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void

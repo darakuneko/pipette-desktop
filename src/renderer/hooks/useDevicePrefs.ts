@@ -73,11 +73,12 @@ interface ValidatedPrefs {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingRecordEnabled: boolean
   viewMode: ViewMode
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingRecordEnabled?: boolean; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -145,6 +146,7 @@ function validateIpcPrefs(
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
     typingTestViewOnlyAlwaysOnTop: typeof data.typingTestViewOnlyAlwaysOnTop === 'boolean' ? data.typingTestViewOnlyAlwaysOnTop : false,
+    typingRecordEnabled: typeof data.typingRecordEnabled === 'boolean' ? data.typingRecordEnabled : false,
     viewMode,
   }
 }
@@ -172,6 +174,7 @@ export interface UseDevicePrefsReturn {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize: { width: number; height: number } | undefined
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingRecordEnabled: boolean
   viewMode: ViewMode
   appliedUid: string | null
   setLayout: (id: KeyboardLayoutId) => void
@@ -188,6 +191,7 @@ export interface UseDevicePrefsReturn {
   setTypingTestViewOnly: (enabled: boolean) => void
   setTypingTestViewOnlyWindowSize: (size: { width: number; height: number }) => void
   setTypingTestViewOnlyAlwaysOnTop: (enabled: boolean) => void
+  setTypingRecordEnabled: (enabled: boolean) => void
   setViewMode: (mode: ViewMode) => void
   defaultLayout: KeyboardLayoutId
   defaultAutoAdvance: boolean
@@ -249,6 +253,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
   const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
   const [typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef] = useStateRef<boolean>(false)
+  const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
@@ -274,6 +279,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
       typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current || undefined,
+      typingRecordEnabled: typingRecordEnabledRef.current || undefined,
       viewMode: viewModeRef.current,
     }).catch(() => {
       // IPC failure — best-effort save
@@ -355,6 +361,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestViewOnlyAlwaysOnTop])
 
+  const setTypingRecordEnabled = useCallback((enabled: boolean) => {
+    if (typingRecordEnabledRef.current === enabled) return
+    updateTypingRecordEnabled(enabled)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingRecordEnabled])
+
   const setViewMode = useCallback((mode: ViewMode) => {
     if (viewModeRef.current === mode) return
     updateViewMode(mode)
@@ -416,6 +428,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestResults: [],
       typingTestViewOnly: false,
       typingTestViewOnlyAlwaysOnTop: false,
+      typingRecordEnabled: false,
       viewMode: 'editor',
     }
 
@@ -433,6 +446,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingTestViewOnly(resolved.typingTestViewOnly)
     updateTypingTestViewOnlyWindowSize(resolved.typingTestViewOnlyWindowSize)
     updateTypingTestViewOnlyAlwaysOnTop(resolved.typingTestViewOnlyAlwaysOnTop)
+    updateTypingRecordEnabled(resolved.typingRecordEnabled)
     updateViewMode(resolved.viewMode)
     setAppliedUid(uid)
 
@@ -466,6 +480,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestViewOnly,
     typingTestViewOnlyWindowSize,
     typingTestViewOnlyAlwaysOnTop,
+    typingRecordEnabled,
     viewMode,
     appliedUid,
     setLayout,
@@ -482,6 +497,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingTestViewOnly,
     setTypingTestViewOnlyWindowSize,
     setTypingTestViewOnlyAlwaysOnTop,
+    setTypingRecordEnabled,
     setViewMode,
     defaultLayout,
     defaultAutoAdvance,
