@@ -849,13 +849,31 @@ async function flushPendingChanges(): Promise<void> {
 
 // --- Before-quit handler ---
 
+interface BeforeQuitFinalizer {
+  hasWork: () => boolean
+  run: () => Promise<void>
+}
+
+const extraFinalizers: BeforeQuitFinalizer[] = []
+
+/**
+ * Register an additional async finalizer to run alongside the sync flush at
+ * before-quit time. Used by other main subsystems (e.g. typing analytics) to
+ * coordinate persistence so the app does not exit while writes are in flight.
+ */
+export function registerBeforeQuitFinalizer(finalizer: BeforeQuitFinalizer): void {
+  extraFinalizers.push(finalizer)
+}
+
 export function setupBeforeQuitHandler(): void {
   app.on('before-quit', (e) => {
     if (isQuitting) return
 
     stopPolling()
 
-    if (pendingChanges.size === 0 && !debounceTimer) return
+    const syncPending = pendingChanges.size > 0 || debounceTimer !== null
+    const extras = extraFinalizers.filter((f) => f.hasWork())
+    if (!syncPending && extras.length === 0) return
 
     e.preventDefault()
     isQuitting = true
@@ -865,11 +883,13 @@ export function setupBeforeQuitHandler(): void {
       debounceTimer = null
     }
 
-    flushPendingChanges()
-      .catch(() => {})
-      .finally(() => {
-        app.quit()
-      })
+    const tasks: Promise<unknown>[] = []
+    if (syncPending) tasks.push(flushPendingChanges().catch(() => undefined))
+    for (const f of extras) tasks.push(f.run().catch(() => undefined))
+
+    Promise.all(tasks).finally(() => {
+      app.quit()
+    })
   })
 }
 

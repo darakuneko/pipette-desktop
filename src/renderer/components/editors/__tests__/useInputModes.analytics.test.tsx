@@ -6,13 +6,17 @@ import { renderHook, act } from '@testing-library/react'
 import { useInputModes } from '../useInputModes'
 
 const mockTypingAnalyticsEvent = vi.fn<(event: unknown) => Promise<void>>()
+const mockTypingAnalyticsFlush = vi.fn<(uid: string) => Promise<void>>()
 
 beforeEach(() => {
   mockTypingAnalyticsEvent.mockReset()
+  mockTypingAnalyticsFlush.mockReset()
   mockTypingAnalyticsEvent.mockResolvedValue(undefined)
+  mockTypingAnalyticsFlush.mockResolvedValue(undefined)
   Object.defineProperty(window, 'vialAPI', {
     value: {
       typingAnalyticsEvent: mockTypingAnalyticsEvent,
+      typingAnalyticsFlush: mockTypingAnalyticsFlush,
     },
     writable: true,
     configurable: true,
@@ -118,6 +122,27 @@ describe('useInputModes — typing analytics dispatch', () => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(2)
+  })
+
+  it('calls typingAnalyticsFlush when recording transitions from on to off', () => {
+    const { rerender } = renderHook(
+      ({ typingRecordEnabled }: { typingRecordEnabled: boolean }) => useInputModes({
+        rows: 1,
+        cols: 1,
+        keymap: buildKeymap(),
+        typingTestMode: true,
+        typingRecordKeyboard: sampleKeyboard,
+        typingRecordEnabled,
+      }),
+      { initialProps: { typingRecordEnabled: true } },
+    )
+
+    expect(mockTypingAnalyticsFlush).not.toHaveBeenCalled()
+
+    rerender({ typingRecordEnabled: false })
+
+    expect(mockTypingAnalyticsFlush).toHaveBeenCalledTimes(1)
+    expect(mockTypingAnalyticsFlush).toHaveBeenCalledWith(sampleKeyboard.uid)
   })
 
   it('swallows IPC rejection silently (fire-and-forget)', async () => {

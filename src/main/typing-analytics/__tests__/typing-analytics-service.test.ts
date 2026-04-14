@@ -31,15 +31,23 @@ vi.mock('node-machine-id', () => ({
 }))
 
 import { ipcMain } from 'electron'
+import { readFile } from 'node:fs/promises'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
   resetTypingAnalyticsForTests,
   getTypingAnalyticsAggregatorForTests,
+  flushTypingAnalyticsNowForTests,
+  hasTypingAnalyticsPendingWork,
+  flushTypingAnalyticsBeforeQuit,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
 import { resetMachineHashCacheForTests } from '../machine-hash'
-import { canonicalScopeKey } from '../../../shared/types/typing-analytics'
+import {
+  canonicalScopeKey,
+  type TypingAnalyticsDailyFile,
+} from '../../../shared/types/typing-analytics'
+import { dailyFilePath, sessionsFilePath } from '../typing-analytics-paths'
 import { IpcChannels } from '../../../shared/ipc/channels'
 
 type IpcHandler = (event: unknown, ...args: unknown[]) => Promise<unknown>
@@ -174,6 +182,140 @@ describe('typing-analytics-service', () => {
       await handler(fakeEvent, { kind: 'char', key: 'b', ts: 2, keyboard: otherKeyboard })
 
       expect(getTypingAnalyticsAggregatorForTests().getScopes().size).toBe(2)
+    })
+
+    it('persists aggregated counts to a daily file when flushed', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+      await handler(fakeEvent, {
+        kind: 'matrix', row: 0, col: 3, layer: 0, keycode: 0x04,
+        ts: Date.now(), keyboard: sampleKeyboard,
+      })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const today = new Date().toISOString().slice(0, 10)
+      const path = dailyFilePath(sampleKeyboard.uid, today)
+      const file = JSON.parse(await readFile(path, 'utf-8')) as TypingAnalyticsDailyFile
+      const [entry] = Object.values(file.scopes)
+      expect(entry.charCounts).toEqual({ a: 2 })
+      expect(entry.matrixCounts['0,3,0']).toEqual({ count: 1, keycode: 0x04 })
+
+      // The aggregator is cleared after a successful flush.
+      expect(getTypingAnalyticsAggregatorForTests().isEmpty()).toBe(true)
+    })
+
+    it('writes a session record when the flush IPC closes the session', async () => {
+      setupTypingAnalyticsIpc()
+      const eventHandler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const flushHandler = getHandler(IpcChannels.TYPING_ANALYTICS_FLUSH)
+
+      const start = Date.UTC(2026, 3, 14, 10, 0, 0)
+      const end = Date.UTC(2026, 3, 14, 10, 0, 5)
+      await eventHandler(fakeEvent, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
+      await eventHandler(fakeEvent, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
+
+      await flushHandler(fakeEvent, sampleKeyboard.uid)
+
+      const path = sessionsFilePath(sampleKeyboard.uid, '2026-04-14')
+      const lines = (await readFile(path, 'utf-8')).trim().split('\n')
+      expect(lines).toHaveLength(1)
+      const session = JSON.parse(lines[0]) as { keystrokeCount: number; start: string; end: string }
+      expect(session.keystrokeCount).toBe(2)
+      expect(session.start).toBe(new Date(start).toISOString())
+      expect(session.end).toBe(new Date(end).toISOString())
+    })
+
+    it('routes events from different keyboards to separate daily files', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD', vendorId: 0x1234 }
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: otherKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const today = new Date().toISOString().slice(0, 10)
+      const a = JSON.parse(await readFile(dailyFilePath(sampleKeyboard.uid, today), 'utf-8'))
+      const b = JSON.parse(await readFile(dailyFilePath(otherKeyboard.uid, today), 'utf-8'))
+      expect(Object.keys(a.scopes)).toHaveLength(1)
+      expect(Object.keys(b.scopes)).toHaveLength(1)
+    })
+
+    it('reports pending work while only an active session exists', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      // After a successful flush the aggregator and queued sessions are
+      // empty, but the active session is still open and must be picked up by
+      // the before-quit finalizer.
+      expect(getTypingAnalyticsAggregatorForTests().isEmpty()).toBe(true)
+      expect(hasTypingAnalyticsPendingWork()).toBe(true)
+    })
+
+    it('persists the active session via flushTypingAnalyticsBeforeQuit', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+      // The session is still open at this point; quit-time finalize should
+      // close it and append the record.
+      await flushTypingAnalyticsBeforeQuit()
+
+      const sessionsPath = sessionsFilePath(sampleKeyboard.uid, '2026-04-14')
+      const lines = (await readFile(sessionsPath, 'utf-8')).trim().split('\n')
+      expect(lines).toHaveLength(1)
+      const session = JSON.parse(lines[0]) as { keystrokeCount: number }
+      expect(session.keystrokeCount).toBe(1)
+      expect(hasTypingAnalyticsPendingWork()).toBe(false)
+    })
+
+    it('reports pending work while a flush is mid-write so before-quit waits', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+
+      // Kick off a flush but don't await — the chain holds the in-flight pass.
+      const inflight = flushTypingAnalyticsNowForTests()
+
+      // While the flush is mid-write the live state is already cleared by
+      // the snapshot, but the in-flight counter must still surface as work.
+      expect(hasTypingAnalyticsPendingWork()).toBe(true)
+
+      await inflight
+      // After the flush settles only the still-open active session keeps the
+      // pending flag true, exercising the post-snapshot path.
+      expect(hasTypingAnalyticsPendingWork()).toBe(true)
+    })
+
+    it('serializes concurrent flush callers so quit waits for the in-flight pass', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: Date.now(), keyboard: sampleKeyboard })
+
+      // Kick off two concurrent flushes; both promises must resolve only
+      // after their own pass completes (no early-return short circuit).
+      const a = flushTypingAnalyticsNowForTests()
+      const b = flushTypingAnalyticsNowForTests()
+      await Promise.all([a, b])
+
+      // The second pass would observe the (already empty) state and become
+      // a no-op, but the chain ensures it cannot resolve until the first
+      // pass has finished writing — proving quit-time callers will wait too.
+      const today = new Date().toISOString().slice(0, 10)
+      const file = JSON.parse(await readFile(dailyFilePath(sampleKeyboard.uid, today), 'utf-8'))
+      expect(Object.keys(file.scopes)).toHaveLength(1)
     })
 
     it('silently drops malformed payloads', async () => {

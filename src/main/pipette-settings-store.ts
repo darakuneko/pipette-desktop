@@ -58,6 +58,11 @@ function getDataPath(uid: string): string {
   return join(app.getPath('userData'), 'sync', 'keyboards', uid, 'pipette_settings.json')
 }
 
+export async function readPipetteSettings(uid: string): Promise<PipetteSettings | null> {
+  if (!isSafePathSegment(uid)) return null
+  return readData(uid)
+}
+
 async function readData(uid: string): Promise<PipetteSettings | null> {
   try {
     const raw = await readFile(getDataPath(uid), 'utf-8')

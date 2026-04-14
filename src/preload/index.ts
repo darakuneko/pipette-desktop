@@ -193,6 +193,8 @@ const vialAPI = {
   // --- Typing Analytics (fire-and-forget event dispatch) ---
   typingAnalyticsEvent: (event: TypingAnalyticsEvent): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EVENT, event),
+  typingAnalyticsFlush: (uid: string): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FLUSH, uid),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>

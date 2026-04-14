@@ -212,6 +212,21 @@ export function useInputModes({
     resetMatrixPressTracking()
   }, [keymap, typingRecordEnabled, resetMatrixPressTracking])
 
+  // When recording is turned off, finalize any open session in main and
+  // flush its data to disk for the active keyboard.
+  const prevRecordEnabledRef = useRef(typingRecordEnabled ?? false)
+  useEffect(() => {
+    const wasOn = prevRecordEnabledRef.current
+    const isOn = typingRecordEnabled ?? false
+    prevRecordEnabledRef.current = isOn
+    if (wasOn && !isOn) {
+      const uid = typingRecordKeyboard?.uid
+      if (uid) {
+        window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
+      }
+    }
+  }, [typingRecordEnabled, typingRecordKeyboard])
+
   // Capture-phase keydown listener for typing test
   useEffect(() => {
     if (!typingTestMode || typingTestViewOnly) return
