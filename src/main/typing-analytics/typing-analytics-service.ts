@@ -53,10 +53,22 @@ export function setupTypingAnalyticsIpc(): void {
   )
 }
 
+function isValidKeyboard(value: unknown): value is TypingAnalyticsEvent['keyboard'] {
+  if (typeof value !== 'object' || value === null) return false
+  const obj = value as Record<string, unknown>
+  return (
+    typeof obj.uid === 'string' && obj.uid.length > 0 &&
+    typeof obj.vendorId === 'number' && Number.isFinite(obj.vendorId) &&
+    typeof obj.productId === 'number' && Number.isFinite(obj.productId) &&
+    typeof obj.productName === 'string'
+  )
+}
+
 function isValidEvent(value: unknown): value is TypingAnalyticsEvent {
   if (typeof value !== 'object' || value === null) return false
   const obj = value as Record<string, unknown>
   if (typeof obj.ts !== 'number' || !Number.isFinite(obj.ts)) return false
+  if (!isValidKeyboard(obj.keyboard)) return false
   if (obj.kind === 'char') {
     return typeof obj.key === 'string' && obj.key.length > 0
   }

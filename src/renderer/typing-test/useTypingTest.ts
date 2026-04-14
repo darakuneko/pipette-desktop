@@ -5,10 +5,10 @@ import { extractMOLayer, extractLTLayer, extractLMLayer } from './keycode-char-m
 import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords } from './word-generator'
 import type { TypingTestConfig, Quote } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from './types'
-import type { TypingAnalyticsEvent } from '../../shared/types/typing-analytics'
+import type { TypingAnalyticsEventPayload } from '../../shared/types/typing-analytics'
 
 export interface UseTypingTestOptions {
-  onAnalyticsEvent?: (event: TypingAnalyticsEvent) => void
+  onAnalyticsEvent?: (event: TypingAnalyticsEventPayload) => void
 }
 
 export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished'

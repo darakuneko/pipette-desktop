@@ -39,6 +39,7 @@
     "lucide-react": "^0.564.0",
     "lzma": "^2.3.2",
     "node-hid": "^3.3.0",
+    "node-machine-id": "^1.1.12",
     "pdfjs-dist": "^5.4.624",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

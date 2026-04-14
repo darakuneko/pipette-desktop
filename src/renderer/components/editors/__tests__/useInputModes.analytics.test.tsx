@@ -30,18 +30,26 @@ function buildKeymap(): Map<string, number> {
   return m
 }
 
+const sampleKeyboard = {
+  uid: '0xAABB',
+  vendorId: 0xFEED,
+  productId: 0x0000,
+  productName: 'Pipette Keyboard',
+}
+
 function renderUseInputModes(overrides: Partial<Parameters<typeof useInputModes>[0]>) {
   return renderHook(() => useInputModes({
     rows: 1,
     cols: 1,
     keymap: buildKeymap(),
     typingTestMode: true,
+    typingRecordKeyboard: sampleKeyboard,
     ...overrides,
   }))
 }
 
 describe('useInputModes — typing analytics dispatch', () => {
-  it('dispatches a matrix event to vialAPI when recording is enabled', () => {
+  it('dispatches a matrix event with the active keyboard attached', () => {
     const { result } = renderUseInputModes({ typingRecordEnabled: true })
 
     act(() => {
@@ -50,12 +58,25 @@ describe('useInputModes — typing analytics dispatch', () => {
 
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: 'matrix', row: 0, col: 0 }),
+      expect.objectContaining({ kind: 'matrix', row: 0, col: 0, keyboard: sampleKeyboard }),
     )
   })
 
   it('does not dispatch analytics events when recording is disabled', () => {
     const { result } = renderUseInputModes({ typingRecordEnabled: false })
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+
+    expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
+  })
+
+  it('does not dispatch when the active keyboard is unknown', () => {
+    const { result } = renderUseInputModes({
+      typingRecordEnabled: true,
+      typingRecordKeyboard: undefined,
+    })
 
     act(() => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
@@ -71,6 +92,7 @@ describe('useInputModes — typing analytics dispatch', () => {
         cols: 1,
         keymap: buildKeymap(),
         typingTestMode: true,
+        typingRecordKeyboard: sampleKeyboard,
         typingRecordEnabled,
       }),
       { initialProps: { typingRecordEnabled: true } },

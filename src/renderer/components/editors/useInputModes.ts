@@ -6,7 +6,7 @@ import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-b
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
-import type { TypingAnalyticsEvent } from '../../../shared/types/typing-analytics'
+import type { TypingAnalyticsEventPayload, TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
@@ -28,6 +28,7 @@ export interface UseInputModesOptions {
   typingTestHistory?: TypingTestResult[]
   typingTestViewOnly?: boolean
   typingRecordEnabled?: boolean
+  typingRecordKeyboard?: TypingAnalyticsKeyboard
 }
 
 export interface UseInputModesReturn {
@@ -60,6 +61,7 @@ export function useInputModes({
   typingTestHistory,
   typingTestViewOnly,
   typingRecordEnabled,
+  typingRecordKeyboard,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -142,10 +144,16 @@ export function useInputModes({
   }, [matrixMode, unlocked, resetMatrixState, enterMatrixMode, onUnlock])
 
   // --- Typing test ---
-  const analyticsSink = useMemo<((event: TypingAnalyticsEvent) => void) | undefined>(() => {
+  const keyboardRef = useRef(typingRecordKeyboard)
+  keyboardRef.current = typingRecordKeyboard
+  const analyticsSink = useMemo<((event: TypingAnalyticsEventPayload) => void) | undefined>(() => {
     if (!typingRecordEnabled) return undefined
-    return (event) => {
-      window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
+    return (payload) => {
+      const keyboard = keyboardRef.current
+      if (!keyboard) return
+      window.vialAPI
+        .typingAnalyticsEvent({ ...payload, keyboard })
+        .catch(() => { /* fire-and-forget */ })
     }
   }, [typingRecordEnabled])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {

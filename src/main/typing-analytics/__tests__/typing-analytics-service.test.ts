@@ -45,6 +45,13 @@ function getHandler(channel: string): IpcHandler {
 
 const fakeEvent = {} as Electron.IpcMainInvokeEvent
 
+const sampleKeyboard = {
+  uid: '0xAABB',
+  vendorId: 0xFEED,
+  productId: 0x0000,
+  productName: 'Pipette Keyboard',
+}
+
 describe('typing-analytics-service', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -116,10 +123,10 @@ describe('typing-analytics-service', () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000 })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000, keyboard: sampleKeyboard })
 
       expect(getTypingAnalyticsBufferForTests()).toEqual([
-        { kind: 'char', key: 'a', ts: 1000 },
+        { kind: 'char', key: 'a', ts: 1000, keyboard: sampleKeyboard },
       ])
     })
 
@@ -134,10 +141,11 @@ describe('typing-analytics-service', () => {
         layer: 1,
         keycode: 0x4015,
         ts: 2000,
+        keyboard: sampleKeyboard,
       })
 
       expect(getTypingAnalyticsBufferForTests()).toEqual([
-        { kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2000 },
+        { kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2000, keyboard: sampleKeyboard },
       ])
     })
 
@@ -147,11 +155,15 @@ describe('typing-analytics-service', () => {
 
       await handler(fakeEvent, null)
       await handler(fakeEvent, 'not-an-object')
-      await handler(fakeEvent, { kind: 'char', ts: 1000 })
-      await handler(fakeEvent, { kind: 'char', key: 'a' })
-      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 1 })
-      await handler(fakeEvent, { kind: 'unknown', key: 'a', ts: 1000 })
-      await handler(fakeEvent, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1000 })
+      await handler(fakeEvent, { kind: 'char', ts: 1000, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 1, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'unknown', key: 'a', ts: 1000, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1000, keyboard: sampleKeyboard })
+      // Missing keyboard field
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000 })
+      // Invalid keyboard shape
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
 
       expect(getTypingAnalyticsBufferForTests()).toEqual([])
     })
@@ -162,16 +174,16 @@ describe('typing-analytics-service', () => {
 
       const capacity = 50000
       for (let i = 0; i < capacity; i++) {
-        await handler(fakeEvent, { kind: 'char', key: 'a', ts: i })
+        await handler(fakeEvent, { kind: 'char', key: 'a', ts: i, keyboard: sampleKeyboard })
       }
       expect(getTypingAnalyticsBufferForTests()).toHaveLength(capacity)
 
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: capacity })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: capacity, keyboard: sampleKeyboard })
 
       const buffer = getTypingAnalyticsBufferForTests()
       expect(buffer).toHaveLength(capacity)
-      expect(buffer[0]).toEqual({ kind: 'char', key: 'a', ts: 1 })
-      expect(buffer[buffer.length - 1]).toEqual({ kind: 'char', key: 'b', ts: capacity })
+      expect(buffer[0]).toEqual({ kind: 'char', key: 'a', ts: 1, keyboard: sampleKeyboard })
+      expect(buffer[buffer.length - 1]).toEqual({ kind: 'char', key: 'b', ts: capacity, keyboard: sampleKeyboard })
     })
   })
 })

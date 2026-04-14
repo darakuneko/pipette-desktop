@@ -153,6 +153,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, typingTestHistory,
     typingTestViewOnly, typingRecordEnabled,
+    typingRecordKeyboard: keyboardUid && connectedDevice
+      ? {
+          uid: keyboardUid,
+          vendorId: connectedDevice.vendorId,
+          productId: connectedDevice.productId,
+          productName: connectedDevice.productName ?? deviceName ?? '',
+        }
+      : undefined,
   })
 
   // --- Layout options ---
