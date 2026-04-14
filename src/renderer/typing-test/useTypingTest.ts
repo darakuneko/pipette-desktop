@@ -5,6 +5,11 @@ import { extractMOLayer, extractLTLayer, extractLMLayer } from './keycode-char-m
 import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords } from './word-generator'
 import type { TypingTestConfig, Quote } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from './types'
+import type { TypingAnalyticsEvent } from '../../shared/types/typing-analytics'
+
+export interface UseTypingTestOptions {
+  onAnalyticsEvent?: (event: TypingAnalyticsEvent) => void
+}
 
 export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished'
 
@@ -54,6 +59,7 @@ export interface UseTypingTestReturn {
   effectiveLayer: number
   windowFocused: boolean
   processMatrixFrame: (pressed: Set<string>, keymap: Map<string, number>) => void
+  resetMatrixPressTracking: () => void
   processKeyEvent: (key: string, ctrlKey: boolean, altKey: boolean, metaKey: boolean) => void
   processCompositionStart: () => void
   processCompositionUpdate: (data: string) => void
@@ -147,6 +153,7 @@ function resolveEffectiveCode(
 export function useTypingTest(
   initialConfig?: TypingTestConfig,
   initialLanguage?: string,
+  options?: UseTypingTestOptions,
 ): UseTypingTestReturn {
   const [config, setConfigState] = useState<TypingTestConfig>(() => initialConfig ?? DEFAULT_CONFIG)
   const [language, setLanguageState] = useState<string>(() => initialLanguage ?? DEFAULT_LANGUAGE)
@@ -159,12 +166,15 @@ export function useTypingTest(
   const languageRef = useRef(language)
   const baseLayerRef = useRef(baseLayer)
   const windowFocusedRef = useRef(windowFocused)
+  const analyticsSinkRef = useRef(options?.onAnalyticsEvent)
+  const prevPressedRef = useRef<Set<string>>(new Set())
   const seqRef = useRef(0)
   const langLoadSeqRef = useRef(0)
   configRef.current = config
   languageRef.current = language
   baseLayerRef.current = baseLayer
   windowFocusedRef.current = windowFocused
+  analyticsSinkRef.current = options?.onAnalyticsEvent
 
   const restartAsync = useCallback(async () => {
     const seq = ++seqRef.current
@@ -263,6 +273,31 @@ export function useTypingTest(
       ? Math.max(...activeLayerSet)
       : bl
     setEffectiveLayer(highestActiveLayer)
+
+    // Detect newly-pressed keys (press edges) for analytics recording.
+    // Matrix events come from HID polling and should fire regardless of window
+    // focus; it's the caller's responsibility to stop calling processMatrixFrame
+    // when recording should pause (e.g. record toggle off).
+    const sink = analyticsSinkRef.current
+    if (sink) {
+      const prev = prevPressedRef.current
+      const sortedLayers = [...activeLayerSet].sort((a, b) => b - a)
+      const ts = Date.now()
+      for (const key of pressed) {
+        if (prev.has(key)) continue
+        const [row, col] = parseMatrixKey(key)
+        const code = resolveEffectiveCode(row, col, keymap, sortedLayers, bl)
+        if (code == null) continue
+        sink({ kind: 'matrix', row, col, layer: highestActiveLayer, keycode: code, ts })
+      }
+    }
+    prevPressedRef.current = new Set(pressed)
+  }, [])
+
+  /** Reset press-edge tracking. Call on record toggle, device change, or
+   * keymap reload so the next frame doesn't emit stale "newly pressed" events. */
+  const resetMatrixPressTracking = useCallback(() => {
+    prevPressedRef.current = new Set()
   }, [])
 
   const setWindowFocused = useCallback((focused: boolean) => {
@@ -278,6 +313,11 @@ export function useTypingTest(
     if (ctrlKey && !altKey) return
     if (altKey && !ctrlKey) return
     if (IGNORED_KEYS.has(key)) return
+
+    const sink = analyticsSinkRef.current
+    if (sink && (key.length === 1 || key === 'Backspace')) {
+      sink({ kind: 'char', key, ts: Date.now() })
+    }
 
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
@@ -421,6 +461,7 @@ export function useTypingTest(
     effectiveLayer,
     windowFocused,
     processMatrixFrame,
+    resetMatrixPressTracking,
     processKeyEvent,
     processCompositionStart,
     processCompositionUpdate,

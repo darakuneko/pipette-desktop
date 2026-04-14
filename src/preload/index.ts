@@ -14,6 +14,7 @@ import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/fa
 import type { AppConfig } from '../shared/types/app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
+import type { TypingAnalyticsEvent } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
@@ -188,6 +189,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_GET, uid),
   pipetteSettingsSet: (uid: string, prefs: PipetteSettings): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_SET, uid, prefs),
+
+  // --- Typing Analytics (fire-and-forget event dispatch) ---
+  typingAnalyticsEvent: (event: TypingAnalyticsEvent): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EVENT, event),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>

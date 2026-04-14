@@ -966,4 +966,108 @@ describe('useTypingTest windowFocused', () => {
     act(() => result.current.processKeyEvent('a', false, false, false))
     expect(result.current.state.currentInput).toBe('a')
   })
+
+  describe('analytics sink', () => {
+    it('emits a char event for printable keys when a sink is provided', () => {
+      const sink = vi.fn()
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.processKeyEvent('a', false, false, false))
+
+      expect(sink).toHaveBeenCalledTimes(1)
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'char', key: 'a' }))
+    })
+
+    it('emits a char event for Backspace', () => {
+      const sink = vi.fn()
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.processKeyEvent('a', false, false, false))
+      act(() => result.current.processKeyEvent('Backspace', false, false, false))
+
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'char', key: 'Backspace' }))
+    })
+
+    it('does not emit char events for modifier-only keys', () => {
+      const sink = vi.fn()
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.processKeyEvent('Shift', false, false, false))
+      act(() => result.current.processKeyEvent('Control', false, false, false))
+      act(() => result.current.processKeyEvent('Meta', false, false, false))
+
+      expect(sink).not.toHaveBeenCalled()
+    })
+
+    it('does not emit char events when the window is not focused', () => {
+      const sink = vi.fn()
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.setWindowFocused(false))
+      act(() => result.current.processKeyEvent('a', false, false, false))
+
+      expect(sink).not.toHaveBeenCalled()
+    })
+
+    it('emits matrix events only on press edges', () => {
+      const sink = vi.fn()
+      const keymap = buildMultiLayerKeymap([
+        { layer: 0, entries: [[0, 0, 'KC_A'], [0, 1, 'KC_B']] },
+      ])
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(sink).toHaveBeenCalledTimes(1)
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'matrix', row: 0, col: 0 }))
+
+      // Same key still held — should not re-emit
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(sink).toHaveBeenCalledTimes(1)
+
+      // New key pressed — one more emit
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0', '0,1']), keymap))
+      expect(sink).toHaveBeenCalledTimes(2)
+      expect(sink).toHaveBeenLastCalledWith(expect.objectContaining({ kind: 'matrix', row: 0, col: 1 }))
+    })
+
+    it('emits matrix events even when the window is not focused', () => {
+      // Matrix events come from HID polling, so they should record physical
+      // keystrokes regardless of window focus. The caller gates on record mode.
+      const sink = vi.fn()
+      const keymap = buildMultiLayerKeymap([
+        { layer: 0, entries: [[0, 0, 'KC_A']] },
+      ])
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.setWindowFocused(false))
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+      expect(sink).toHaveBeenCalledWith(expect.objectContaining({ kind: 'matrix', row: 0, col: 0 }))
+    })
+
+    it('resetMatrixPressTracking re-emits the next press edge after a reset', () => {
+      const sink = vi.fn()
+      const keymap = buildMultiLayerKeymap([
+        { layer: 0, entries: [[0, 0, 'KC_A']] },
+      ])
+      const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(sink).toHaveBeenCalledTimes(1)
+
+      // Without reset, the same held key stays silent.
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(sink).toHaveBeenCalledTimes(1)
+
+      act(() => result.current.resetMatrixPressTracking())
+      act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+      expect(sink).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not require a sink for normal typing test operation', () => {
+      const { result } = renderHook(() => useTypingTest())
+      act(() => result.current.processKeyEvent('a', false, false, false))
+      expect(result.current.state.currentInput).toBe('a')
+    })
+  })
 })

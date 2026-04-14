@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingAnalyticsEvent } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
@@ -26,6 +27,7 @@ export interface UseInputModesOptions {
   onSaveTypingTestResult?: (result: TypingTestResult) => void
   typingTestHistory?: TypingTestResult[]
   typingTestViewOnly?: boolean
+  typingRecordEnabled?: boolean
 }
 
 export interface UseInputModesReturn {
@@ -57,6 +59,7 @@ export function useInputModes({
   onSaveTypingTestResult,
   typingTestHistory,
   typingTestViewOnly,
+  typingRecordEnabled,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -139,11 +142,20 @@ export function useInputModes({
   }, [matrixMode, unlocked, resetMatrixState, enterMatrixMode, onUnlock])
 
   // --- Typing test ---
-  const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage)
+  const analyticsSink = useMemo<((event: TypingAnalyticsEvent) => void) | undefined>(() => {
+    if (!typingRecordEnabled) return undefined
+    return (event) => {
+      window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
+    }
+  }, [typingRecordEnabled])
+  const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
+    onAnalyticsEvent: analyticsSink,
+  })
   const {
     restart: restartTypingTest,
     restartWithCountdown,
     processMatrixFrame,
+    resetMatrixPressTracking,
     processKeyEvent,
     setWindowFocused,
   } = typingTest
@@ -185,6 +197,12 @@ export function useInputModes({
     if (!typingTestMode) return
     processMatrixFrame(pressedKeys, keymap)
   }, [pressedKeys, typingTestMode, processMatrixFrame, keymap])
+
+  // Reset matrix press-edge tracking when keymap changes or recording toggles
+  // so the next frame doesn't emit stale press events against an old state.
+  useEffect(() => {
+    resetMatrixPressTracking()
+  }, [keymap, typingRecordEnabled, resetMatrixPressTracking])
 
   // Capture-phase keydown listener for typing test
   useEffect(() => {

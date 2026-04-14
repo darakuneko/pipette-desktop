@@ -14,13 +14,40 @@ vi.mock('electron', () => ({
       return `/mock/${name}`
     },
   },
+  ipcMain: {
+    handle: vi.fn(),
+  },
 }))
 
-import { setupTypingAnalytics, resetTypingAnalyticsForTests } from '../typing-analytics-service'
+vi.mock('../../ipc-guard', async () => {
+  const { ipcMain } = await import('electron')
+  return { secureHandle: ipcMain.handle }
+})
+
+import { ipcMain } from 'electron'
+import {
+  setupTypingAnalytics,
+  setupTypingAnalyticsIpc,
+  resetTypingAnalyticsForTests,
+  getTypingAnalyticsBufferForTests,
+} from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
+import { IpcChannels } from '../../../shared/ipc/channels'
+
+type IpcHandler = (event: unknown, ...args: unknown[]) => Promise<unknown>
+
+function getHandler(channel: string): IpcHandler {
+  const calls = vi.mocked(ipcMain.handle).mock.calls
+  const match = calls.find(([ch]) => ch === channel)
+  if (!match) throw new Error(`No handler registered for ${channel}`)
+  return match[1] as IpcHandler
+}
+
+const fakeEvent = {} as Electron.IpcMainInvokeEvent
 
 describe('typing-analytics-service', () => {
   beforeEach(async () => {
+    vi.clearAllMocks()
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'pipette-typing-analytics-service-test-'))
     resetTypingAnalyticsForTests()
     installationIdModule.resetInstallationIdCacheForTests()
@@ -31,47 +58,120 @@ describe('typing-analytics-service', () => {
     await rm(mockUserDataPath, { recursive: true, force: true })
   })
 
-  it('shares a single in-flight initialization across concurrent callers', async () => {
-    const spy = vi.spyOn(installationIdModule, 'getInstallationId')
-    await Promise.all([setupTypingAnalytics(), setupTypingAnalytics(), setupTypingAnalytics()])
-    expect(spy).toHaveBeenCalledTimes(1)
+  describe('setupTypingAnalytics', () => {
+    it('shares a single in-flight initialization across concurrent callers', async () => {
+      const spy = vi.spyOn(installationIdModule, 'getInstallationId')
+      await Promise.all([setupTypingAnalytics(), setupTypingAnalytics(), setupTypingAnalytics()])
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('reuses the completed initialization on subsequent calls', async () => {
+      const spy = vi.spyOn(installationIdModule, 'getInstallationId')
+      await setupTypingAnalytics()
+      await setupTypingAnalytics()
+      expect(spy).toHaveBeenCalledTimes(1)
+    })
+
+    it('allows retry after an initialization failure', async () => {
+      const spy = vi
+        .spyOn(installationIdModule, 'getInstallationId')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      await expect(setupTypingAnalytics()).rejects.toThrow('boom')
+
+      spy.mockResolvedValueOnce('11111111-2222-3333-4444-555555555555')
+      await expect(setupTypingAnalytics()).resolves.toBeUndefined()
+      expect(spy).toHaveBeenCalledTimes(2)
+    })
+
+    it('does not leave unhandled rejections when called as fire-and-forget', async () => {
+      vi
+        .spyOn(installationIdModule, 'getInstallationId')
+        .mockRejectedValueOnce(new Error('boom'))
+
+      const handler = vi.fn()
+      process.on('unhandledRejection', handler)
+      try {
+        setupTypingAnalytics().catch(() => {
+          // Simulates the main-process `.catch(...)` wrapper that logs the failure.
+        })
+        await new Promise((resolve) => setImmediate(resolve))
+      } finally {
+        process.off('unhandledRejection', handler)
+      }
+      expect(handler).not.toHaveBeenCalled()
+    })
   })
 
-  it('reuses the completed initialization on subsequent calls', async () => {
-    const spy = vi.spyOn(installationIdModule, 'getInstallationId')
-    await setupTypingAnalytics()
-    await setupTypingAnalytics()
-    expect(spy).toHaveBeenCalledTimes(1)
-  })
+  describe('setupTypingAnalyticsIpc', () => {
+    it('registers the event handler exactly once', () => {
+      setupTypingAnalyticsIpc()
+      setupTypingAnalyticsIpc()
+      const registered = vi.mocked(ipcMain.handle).mock.calls
+        .filter(([ch]) => ch === IpcChannels.TYPING_ANALYTICS_EVENT)
+      expect(registered).toHaveLength(1)
+    })
 
-  it('allows retry after an initialization failure', async () => {
-    const spy = vi
-      .spyOn(installationIdModule, 'getInstallationId')
-      .mockRejectedValueOnce(new Error('boom'))
+    it('stores a valid char event in the buffer', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-    await expect(setupTypingAnalytics()).rejects.toThrow('boom')
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000 })
 
-    // After a failure the stored promise should clear so a retry can proceed.
-    spy.mockResolvedValueOnce('11111111-2222-3333-4444-555555555555')
-    await expect(setupTypingAnalytics()).resolves.toBeUndefined()
-    expect(spy).toHaveBeenCalledTimes(2)
-  })
+      expect(getTypingAnalyticsBufferForTests()).toEqual([
+        { kind: 'char', key: 'a', ts: 1000 },
+      ])
+    })
 
-  it('does not leave unhandled rejections when called as fire-and-forget', async () => {
-    vi
-      .spyOn(installationIdModule, 'getInstallationId')
-      .mockRejectedValueOnce(new Error('boom'))
+    it('stores a valid matrix event in the buffer', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
-    const handler = vi.fn()
-    process.on('unhandledRejection', handler)
-    try {
-      setupTypingAnalytics().catch(() => {
-        // Simulates the main-process `.catch(...)` wrapper that logs the failure.
+      await handler(fakeEvent, {
+        kind: 'matrix',
+        row: 2,
+        col: 4,
+        layer: 1,
+        keycode: 0x4015,
+        ts: 2000,
       })
-      await new Promise((resolve) => setImmediate(resolve))
-    } finally {
-      process.off('unhandledRejection', handler)
-    }
-    expect(handler).not.toHaveBeenCalled()
+
+      expect(getTypingAnalyticsBufferForTests()).toEqual([
+        { kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2000 },
+      ])
+    })
+
+    it('silently drops malformed payloads', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, null)
+      await handler(fakeEvent, 'not-an-object')
+      await handler(fakeEvent, { kind: 'char', ts: 1000 })
+      await handler(fakeEvent, { kind: 'char', key: 'a' })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 1 })
+      await handler(fakeEvent, { kind: 'unknown', key: 'a', ts: 1000 })
+      await handler(fakeEvent, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1000 })
+
+      expect(getTypingAnalyticsBufferForTests()).toEqual([])
+    })
+
+    it('drops the oldest event when pushing over capacity', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const capacity = 50000
+      for (let i = 0; i < capacity; i++) {
+        await handler(fakeEvent, { kind: 'char', key: 'a', ts: i })
+      }
+      expect(getTypingAnalyticsBufferForTests()).toHaveLength(capacity)
+
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: capacity })
+
+      const buffer = getTypingAnalyticsBufferForTests()
+      expect(buffer).toHaveLength(capacity)
+      expect(buffer[0]).toEqual({ kind: 'char', key: 'a', ts: 1 })
+      expect(buffer[buffer.length - 1]).toEqual({ kind: 'char', key: 'b', ts: capacity })
+    })
   })
 })

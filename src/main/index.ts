@@ -16,7 +16,7 @@ import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
 import { loadWindowState, saveWindowState, setupAppConfigIpc, MIN_WIDTH, MIN_HEIGHT } from './app-config'
-import { setupTypingAnalytics } from './typing-analytics/typing-analytics-service'
+import { setupTypingAnalytics, setupTypingAnalyticsIpc } from './typing-analytics/typing-analytics-service'
 import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -292,6 +292,7 @@ app.whenReady().then(() => {
   setupLogIpc()
   setupShellIpc()
   setupWindowIpc()
+  setupTypingAnalyticsIpc()
   setupTypingAnalytics().catch((err: unknown) => {
     const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
     log('error', `Failed to initialize typing analytics: ${detail}`)

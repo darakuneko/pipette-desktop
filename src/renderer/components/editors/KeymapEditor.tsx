@@ -152,7 +152,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange, keymap,
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, typingTestHistory,
-    typingTestViewOnly,
+    typingTestViewOnly, typingRecordEnabled,
   })
 
   // --- Layout options ---
