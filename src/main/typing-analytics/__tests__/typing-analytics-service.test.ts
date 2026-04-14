@@ -24,9 +24,15 @@ vi.mock('../../ipc-guard', async () => {
   return { secureHandle: ipcMain.handle }
 })
 
+vi.mock('../../pipette-settings-store', () => ({
+  readPipetteSettings: vi.fn().mockResolvedValue(null),
+  setupPipetteSettingsStore: vi.fn(),
+}))
+
 const mockMachineId = vi.fn<(original?: boolean) => Promise<string>>()
 
 vi.mock('node-machine-id', () => ({
+  default: { machineId: (original?: boolean) => mockMachineId(original) },
   machineId: (original?: boolean) => mockMachineId(original),
 }))
 

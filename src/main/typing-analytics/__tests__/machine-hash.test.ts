@@ -19,6 +19,7 @@ vi.mock('electron', () => ({
 const mockMachineId = vi.fn<(original?: boolean) => Promise<string>>()
 
 vi.mock('node-machine-id', () => ({
+  default: { machineId: (original?: boolean) => mockMachineId(original) },
   machineId: (original?: boolean) => mockMachineId(original),
 }))
 

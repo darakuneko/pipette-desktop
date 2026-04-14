@@ -4,8 +4,12 @@
 // only the sha256 of the concatenation is returned.
 
 import { createHash } from 'node:crypto'
-import { machineId } from 'node-machine-id'
+import nodeMachineId from 'node-machine-id'
 import { getInstallationId } from './installation-id'
+
+// node-machine-id is published as CJS, so the named export only resolves via
+// the default import.
+const { machineId } = nodeMachineId
 
 let cached: string | null = null
 let pending: Promise<string> | null = null

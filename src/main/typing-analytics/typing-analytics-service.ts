@@ -15,6 +15,7 @@ import {
   canonicalScopeKey,
 } from '../../shared/types/typing-analytics'
 import { log } from '../logger'
+import { readPipetteSettings } from '../pipette-settings-store'
 import { TypingAnalyticsAggregator } from './aggregator'
 import { cleanupArchiveForKeyboard } from './archive-cleanup'
 import { flushDailyFile } from './daily-file-store'
@@ -201,9 +202,6 @@ function groupScopesByUid(
 
 async function resolveSyncSpanDays(uid: string): Promise<number> {
   try {
-    // Dynamic import keeps this module independent from pipette-settings-store
-    // at module-load time (avoids the sync-service ↔ pipette-settings circle).
-    const { readPipetteSettings } = await import('../pipette-settings-store')
     const prefs = await readPipetteSettings(uid)
     return prefs?.typingSyncSpanDays ?? DEFAULT_TYPING_SYNC_SPAN_DAYS
   } catch {
