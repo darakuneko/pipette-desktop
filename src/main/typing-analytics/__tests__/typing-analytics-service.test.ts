@@ -24,14 +24,22 @@ vi.mock('../../ipc-guard', async () => {
   return { secureHandle: ipcMain.handle }
 })
 
+const mockMachineId = vi.fn<(original?: boolean) => Promise<string>>()
+
+vi.mock('node-machine-id', () => ({
+  machineId: (original?: boolean) => mockMachineId(original),
+}))
+
 import { ipcMain } from 'electron'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
   resetTypingAnalyticsForTests,
-  getTypingAnalyticsBufferForTests,
+  getTypingAnalyticsAggregatorForTests,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
+import { resetMachineHashCacheForTests } from '../machine-hash'
+import { canonicalScopeKey } from '../../../shared/types/typing-analytics'
 import { IpcChannels } from '../../../shared/ipc/channels'
 
 type IpcHandler = (event: unknown, ...args: unknown[]) => Promise<unknown>
@@ -52,16 +60,24 @@ const sampleKeyboard = {
   productName: 'Pipette Keyboard',
 }
 
+/** Canonical scope key for `sampleKeyboard` + mocked OS info, computed lazily. */
+function expectedScopeKey(): string {
+  const [scope] = getTypingAnalyticsAggregatorForTests().getScopes().values()
+  return canonicalScopeKey(scope.scope)
+}
+
 describe('typing-analytics-service', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'pipette-typing-analytics-service-test-'))
     resetTypingAnalyticsForTests()
     installationIdModule.resetInstallationIdCacheForTests()
+    resetMachineHashCacheForTests()
+    mockMachineId.mockReset()
+    mockMachineId.mockResolvedValue('fixed-machine-id')
   })
 
   afterEach(async () => {
-    vi.restoreAllMocks()
     await rm(mockUserDataPath, { recursive: true, force: true })
   })
 
@@ -119,34 +135,45 @@ describe('typing-analytics-service', () => {
       expect(registered).toHaveLength(1)
     })
 
-    it('stores a valid char event in the buffer', async () => {
+    it('aggregates a char event into the active scope bucket', async () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1001, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: 1002, keyboard: sampleKeyboard })
 
-      expect(getTypingAnalyticsBufferForTests()).toEqual([
-        { kind: 'char', key: 'a', ts: 1000, keyboard: sampleKeyboard },
-      ])
+      const scopes = getTypingAnalyticsAggregatorForTests().getScopes()
+      expect(scopes.size).toBe(1)
+      const entry = scopes.get(expectedScopeKey())!
+      expect(entry.charCounts).toEqual({ a: 2, b: 1 })
+      expect(entry.scope.keyboard).toEqual(sampleKeyboard)
     })
 
-    it('stores a valid matrix event in the buffer', async () => {
+    it('aggregates a matrix event into per-position counts', async () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
 
       await handler(fakeEvent, {
-        kind: 'matrix',
-        row: 2,
-        col: 4,
-        layer: 1,
-        keycode: 0x4015,
-        ts: 2000,
-        keyboard: sampleKeyboard,
+        kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2000, keyboard: sampleKeyboard,
+      })
+      await handler(fakeEvent, {
+        kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2001, keyboard: sampleKeyboard,
       })
 
-      expect(getTypingAnalyticsBufferForTests()).toEqual([
-        { kind: 'matrix', row: 2, col: 4, layer: 1, keycode: 0x4015, ts: 2000, keyboard: sampleKeyboard },
-      ])
+      const entry = getTypingAnalyticsAggregatorForTests().getScopes().get(expectedScopeKey())!
+      expect(entry.matrixCounts['2,4,1']).toEqual({ count: 2, keycode: 0x4015 })
+    })
+
+    it('creates separate scope buckets for different keyboards', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD', vendorId: 0x1234 }
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: 2, keyboard: otherKeyboard })
+
+      expect(getTypingAnalyticsAggregatorForTests().getScopes().size).toBe(2)
     })
 
     it('silently drops malformed payloads', async () => {
@@ -162,28 +189,10 @@ describe('typing-analytics-service', () => {
       await handler(fakeEvent, { kind: 'matrix', row: -1, col: 0, layer: 0, keycode: 1, ts: 1000, keyboard: sampleKeyboard })
       // Missing keyboard field
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000 })
-      // Invalid keyboard shape
+      // Invalid keyboard shape (empty uid)
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
 
-      expect(getTypingAnalyticsBufferForTests()).toEqual([])
-    })
-
-    it('drops the oldest event when pushing over capacity', async () => {
-      setupTypingAnalyticsIpc()
-      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
-
-      const capacity = 50000
-      for (let i = 0; i < capacity; i++) {
-        await handler(fakeEvent, { kind: 'char', key: 'a', ts: i, keyboard: sampleKeyboard })
-      }
-      expect(getTypingAnalyticsBufferForTests()).toHaveLength(capacity)
-
-      await handler(fakeEvent, { kind: 'char', key: 'b', ts: capacity, keyboard: sampleKeyboard })
-
-      const buffer = getTypingAnalyticsBufferForTests()
-      expect(buffer).toHaveLength(capacity)
-      expect(buffer[0]).toEqual({ kind: 'char', key: 'a', ts: 1, keyboard: sampleKeyboard })
-      expect(buffer[buffer.length - 1]).toEqual({ kind: 'char', key: 'b', ts: capacity, keyboard: sampleKeyboard })
+      expect(getTypingAnalyticsAggregatorForTests().isEmpty()).toBe(true)
     })
   })
 })

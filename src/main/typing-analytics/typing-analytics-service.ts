@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Typing analytics service — PR2 Slice 2b introduces an in-memory ring buffer
-// that collects events emitted by the renderer. Persistence, rotation, archive,
-// and machine fingerprinting land in Slice 2c as described in
-// .claude/plans/typing-analytics.md.
+// Typing analytics service — orchestrates the scope-map aggregator, ingests
+// IPC events, and will hand off to persistence / rotate / archive once later
+// slices land. See .claude/plans/typing-analytics.md.
 
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
-import type { TypingAnalyticsEvent } from '../../shared/types/typing-analytics'
+import type {
+  TypingAnalyticsEvent,
+  TypingAnalyticsFingerprint,
+  TypingAnalyticsKeyboard,
+} from '../../shared/types/typing-analytics'
+import { buildFingerprint } from './fingerprint'
 import { getInstallationId } from './installation-id'
-
-const BUFFER_CAPACITY = 50000
+import { TypingAnalyticsAggregator } from './aggregator'
 
 let initialization: Promise<void> | null = null
 let ipcRegistered = false
 
-const buffer: TypingAnalyticsEvent[] = []
+const aggregator = new TypingAnalyticsAggregator()
+const fingerprintCache = new Map<string, TypingAnalyticsFingerprint>()
 
 async function initialize(): Promise<void> {
   await getInstallationId()
@@ -48,12 +52,12 @@ export function setupTypingAnalyticsIpc(): void {
     IpcChannels.TYPING_ANALYTICS_EVENT,
     async (_event, payload: unknown): Promise<void> => {
       if (!isValidEvent(payload)) return
-      pushEvent(payload)
+      await ingestEvent(payload)
     },
   )
 }
 
-function isValidKeyboard(value: unknown): value is TypingAnalyticsEvent['keyboard'] {
+function isValidKeyboard(value: unknown): value is TypingAnalyticsKeyboard {
   if (typeof value !== 'object' || value === null) return false
   const obj = value as Record<string, unknown>
   return (
@@ -83,11 +87,17 @@ function isValidEvent(value: unknown): value is TypingAnalyticsEvent {
   return false
 }
 
-function pushEvent(event: TypingAnalyticsEvent): void {
-  if (buffer.length >= BUFFER_CAPACITY) {
-    buffer.shift()
-  }
-  buffer.push(event)
+async function resolveFingerprint(keyboard: TypingAnalyticsKeyboard): Promise<TypingAnalyticsFingerprint> {
+  const cached = fingerprintCache.get(keyboard.uid)
+  if (cached) return cached
+  const fp = await buildFingerprint(keyboard)
+  fingerprintCache.set(keyboard.uid, fp)
+  return fp
+}
+
+async function ingestEvent(event: TypingAnalyticsEvent): Promise<void> {
+  const fingerprint = await resolveFingerprint(event.keyboard)
+  aggregator.addEvent(event, fingerprint)
 }
 
 // --- Test helpers ---
@@ -95,9 +105,10 @@ function pushEvent(event: TypingAnalyticsEvent): void {
 export function resetTypingAnalyticsForTests(): void {
   initialization = null
   ipcRegistered = false
-  buffer.length = 0
+  aggregator.clear()
+  fingerprintCache.clear()
 }
 
-export function getTypingAnalyticsBufferForTests(): TypingAnalyticsEvent[] {
-  return [...buffer]
+export function getTypingAnalyticsAggregatorForTests(): TypingAnalyticsAggregator {
+  return aggregator
 }
