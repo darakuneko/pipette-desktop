@@ -147,7 +147,11 @@ export function useInputModes({
   const keyboardRef = useRef(typingRecordKeyboard)
   keyboardRef.current = typingRecordKeyboard
   const analyticsSink = useMemo<((event: TypingAnalyticsEventPayload) => void) | undefined>(() => {
-    if (!typingRecordEnabled) return undefined
+    // Recording is scoped to the typingView (view-only) compact window +
+    // record ON. Regular typing-test mode never feeds analytics, even with
+    // record on, and typingView hides the DeviceSelector sidebar so the
+    // Data modal cannot open concurrently.
+    if (!typingRecordEnabled || !typingTestViewOnly) return undefined
     return (payload) => {
       const keyboard = keyboardRef.current
       if (!keyboard) return
@@ -155,7 +159,7 @@ export function useInputModes({
         .typingAnalyticsEvent({ ...payload, keyboard })
         .catch(() => { /* fire-and-forget */ })
     }
-  }, [typingRecordEnabled])
+  }, [typingRecordEnabled, typingTestViewOnly])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onAnalyticsEvent: analyticsSink,
   })
@@ -206,26 +210,30 @@ export function useInputModes({
     processMatrixFrame(pressedKeys, keymap)
   }, [pressedKeys, typingTestMode, processMatrixFrame, keymap])
 
+  // Effective recording condition: view-only + record toggle on. Anything
+  // else leaves the analytics pipeline idle.
+  const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
+
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
   useEffect(() => {
     resetMatrixPressTracking()
-  }, [keymap, typingRecordEnabled, resetMatrixPressTracking])
+  }, [keymap, recordingActive, resetMatrixPressTracking])
 
-  // When recording is turned off, finalize any open session in main and
-  // flush its data to disk for the active keyboard.
-  const prevRecordEnabledRef = useRef(typingRecordEnabled ?? false)
+  // When recording transitions off (either the toggle flips or the user
+  // leaves view-only mode), finalize the open session in main and flush
+  // its data for the active keyboard.
+  const prevRecordingActiveRef = useRef(recordingActive)
   useEffect(() => {
-    const wasOn = prevRecordEnabledRef.current
-    const isOn = typingRecordEnabled ?? false
-    prevRecordEnabledRef.current = isOn
-    if (wasOn && !isOn) {
+    const wasOn = prevRecordingActiveRef.current
+    prevRecordingActiveRef.current = recordingActive
+    if (wasOn && !recordingActive) {
       const uid = typingRecordKeyboard?.uid
       if (uid) {
         window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
       }
     }
-  }, [typingRecordEnabled, typingRecordKeyboard])
+  }, [recordingActive, typingRecordKeyboard])
 
   // Capture-phase keydown listener for typing test
   useEffect(() => {

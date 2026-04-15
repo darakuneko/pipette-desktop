@@ -47,6 +47,7 @@ function renderUseInputModes(overrides: Partial<Parameters<typeof useInputModes>
     cols: 1,
     keymap: buildKeymap(),
     typingTestMode: true,
+    typingTestViewOnly: true,
     typingRecordKeyboard: sampleKeyboard,
     ...overrides,
   }))
@@ -76,6 +77,19 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
+  it('does not dispatch analytics events in regular typing-test mode (not view-only)', () => {
+    const { result } = renderUseInputModes({
+      typingRecordEnabled: true,
+      typingTestViewOnly: false,
+    })
+
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+
+    expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
+  })
+
   it('does not dispatch when the active keyboard is unknown', () => {
     const { result } = renderUseInputModes({
       typingRecordEnabled: true,
@@ -96,6 +110,7 @@ describe('useInputModes — typing analytics dispatch', () => {
         cols: 1,
         keymap: buildKeymap(),
         typingTestMode: true,
+        typingTestViewOnly: true,
         typingRecordKeyboard: sampleKeyboard,
         typingRecordEnabled,
       }),
@@ -131,6 +146,7 @@ describe('useInputModes — typing analytics dispatch', () => {
         cols: 1,
         keymap: buildKeymap(),
         typingTestMode: true,
+        typingTestViewOnly: true,
         typingRecordKeyboard: sampleKeyboard,
         typingRecordEnabled,
       }),
