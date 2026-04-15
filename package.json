@@ -33,6 +33,7 @@
     "@zxcvbn-ts/core": "^3.0.4",
     "@zxcvbn-ts/language-common": "^3.0.4",
     "@zxcvbn-ts/language-en": "^3.0.2",
+    "better-sqlite3": "^12.9.0",
     "electron-store": "^11.0.2",
     "i18next": "^25.8.4",
     "jspdf": "^4.1.0",
@@ -52,6 +53,7 @@
     "@tailwindcss/vite": "^4.1.18",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.15.0",
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
@@ -136,6 +138,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "better-sqlite3",
       "electron",
       "esbuild",
       "node-hid"
