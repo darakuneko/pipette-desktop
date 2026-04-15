@@ -46,6 +46,10 @@ import {
   hasTypingAnalyticsPendingWork,
   flushTypingAnalyticsBeforeQuit,
   setTypingAnalyticsSyncNotifier,
+  listTypingKeyboards,
+  listTypingDailySummaries,
+  deleteTypingDailySummaries,
+  deleteAllTypingForKeyboard,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
 import { resetMachineHashCacheForTests } from '../machine-hash'
@@ -321,6 +325,73 @@ describe('typing-analytics-service', () => {
 
       expect(notifier).not.toHaveBeenCalled()
       resetTypingAnalyticsDBForTests()
+    })
+
+    describe('data modal API', () => {
+      async function seedKeyboardData(keyboard: typeof sampleKeyboard, ts: number, key = 'a'): Promise<void> {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+        await handler(fakeEvent, { kind: 'char', key, ts, keyboard })
+        await flushTypingAnalyticsNowForTests()
+      }
+
+      it('listTypingKeyboards returns keyboards with live data after a flush', async () => {
+        const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD' }
+        await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 14, 10, 0, 0))
+        await seedKeyboardData(otherKeyboard, Date.UTC(2026, 3, 14, 11, 0, 0), 'b')
+
+        const keyboards = listTypingKeyboards().map((k) => k.uid).sort()
+        expect(keyboards).toEqual(['0xAABB', '0xCCDD'])
+      })
+
+      it('listTypingDailySummaries returns day-aggregated counts for a uid', async () => {
+        // Two events, same local day, different minutes.
+        const day = new Date(2026, 3, 14, 12, 0, 0).getTime()
+        await seedKeyboardData(sampleKeyboard, day)
+        await seedKeyboardData(sampleKeyboard, day + 5 * 60_000, 'b')
+
+        const summaries = listTypingDailySummaries(sampleKeyboard.uid)
+        expect(summaries).toHaveLength(1)
+        expect(summaries[0].keystrokes).toBe(2)
+      })
+
+      it('deleteTypingDailySummaries tombstones matching rows and notifies sync', async () => {
+        const notifier = vi.fn()
+        setTypingAnalyticsSyncNotifier(notifier)
+        const d = new Date(2026, 3, 14, 12, 0, 0)
+        await seedKeyboardData(sampleKeyboard, d.getTime())
+
+        const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        const result = await deleteTypingDailySummaries(sampleKeyboard.uid, [date])
+
+        expect(result.minuteStats).toBeGreaterThan(0)
+        expect(listTypingDailySummaries(sampleKeyboard.uid)).toEqual([])
+        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/typing-analytics`)
+      })
+
+      it('deleteAllTypingForKeyboard wipes every live row for the uid', async () => {
+        const notifier = vi.fn()
+        setTypingAnalyticsSyncNotifier(notifier)
+        await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 10, 12, 0, 0))
+        await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 14, 12, 0, 0), 'b')
+
+        const result = await deleteAllTypingForKeyboard(sampleKeyboard.uid)
+        expect(result.charMinutes).toBeGreaterThan(0)
+        expect(listTypingKeyboards().map((k) => k.uid)).not.toContain(sampleKeyboard.uid)
+        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/typing-analytics`)
+      })
+
+      it('deleteTypingDailySummaries is a no-op when the dates array is empty', async () => {
+        const notifier = vi.fn()
+        setTypingAnalyticsSyncNotifier(notifier)
+        await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 14, 12, 0, 0))
+        notifier.mockClear() // forget the seed's own flush notification
+
+        const result = await deleteTypingDailySummaries(sampleKeyboard.uid, [])
+        expect(result).toEqual({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+        expect(notifier).not.toHaveBeenCalled()
+        expect(listTypingDailySummaries(sampleKeyboard.uid)).toHaveLength(1)
+      })
     })
 
     it('silently drops malformed payloads', async () => {

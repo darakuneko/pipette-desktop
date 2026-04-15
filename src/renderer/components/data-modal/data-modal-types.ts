@@ -7,6 +7,7 @@ export type DataNavPath =
   | { section: 'local'; page: 'keyboard'; uid: string; name: string }
   | { section: 'local'; page: 'favorite'; favoriteType: FavoriteType }
   | { section: 'local'; page: 'application' }
+  | { section: 'local'; page: 'typing'; uid: string; name: string }
   | { section: 'sync'; page: 'sync-keyboard'; uid: string; name: string }
   | { section: 'sync'; page: 'sync-favorite'; favoriteType: string }
   | { section: 'hub'; page: 'hub-keyboard'; keyboardName: string }
@@ -23,6 +24,8 @@ export function breadcrumbSegments(
       return [t('dataModal.local'), t('dataModal.favorites'), t(`editor.${path.favoriteType}.title`)]
     case 'application':
       return [t('dataModal.local'), t('dataModal.application')]
+    case 'typing':
+      return [t('dataModal.local'), t('dataModal.typing.title'), path.name]
     case 'sync-keyboard':
       return [t('dataModal.sync'), t('dataModal.keyboards'), path.name]
     case 'sync-favorite':
@@ -44,6 +47,8 @@ export function navTitle(
       return t(`editor.${path.favoriteType}.title`)
     case 'application':
       return t('dataModal.application')
+    case 'typing':
+      return path.name
     case 'sync-keyboard':
       return path.name
     case 'sync-favorite':

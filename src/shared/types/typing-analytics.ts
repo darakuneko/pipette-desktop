@@ -45,6 +45,32 @@ export type TypingAnalyticsEvent = TypingAnalyticsEventPayload & {
   keyboard: TypingAnalyticsKeyboard
 }
 
+/** Summary of a keyboard that currently has typing analytics data
+ * visible locally. Produced by the data-modal list API. */
+export interface TypingKeyboardSummary {
+  uid: string
+  productName: string
+  vendorId: number
+  productId: number
+}
+
+/** Day-level aggregation of typing analytics data for a single keyboard,
+ * summed across every scope (machine) sharing the uid. */
+export interface TypingDailySummary {
+  date: string
+  keystrokes: number
+  activeMs: number
+}
+
+/** Row counts returned from a tombstone / delete-all call. The renderer
+ * uses the total to decide whether to surface a "no rows changed" notice. */
+export interface TypingTombstoneResult {
+  charMinutes: number
+  matrixMinutes: number
+  minuteStats: number
+  sessions: number
+}
+
 /** Build the canonical scope key from a fingerprint. Excludes productName
  * so that cross-OS descriptor variation doesn't fragment the same device. */
 export function canonicalScopeKey(fp: TypingAnalyticsFingerprint): string {

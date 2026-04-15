@@ -627,7 +627,22 @@
     "deleteAll": "Delete All Data",
     "deleteAllConfirm": "This will delete all data including synced data.",
     "syncNoOrphans": "All synced data is available locally",
-    "resetAppSettings": "Reset application settings"
+    "resetAppSettings": "Reset application settings",
+    "typing": {
+      "title": "Typing",
+      "noKeyboards": "No recorded typing data",
+      "noItems": "No typing data for this keyboard",
+      "summaryHeader": "{{name}} — {{days}} day(s), {{keystrokes}} keystrokes total",
+      "colDate": "Date",
+      "colKeystrokes": "Keystrokes",
+      "colActiveMs": "Active time",
+      "selectAll": "Select all days",
+      "selectRow": "Select {{date}}",
+      "deleteSelected": "Delete selected ({{count}})",
+      "deleteAll": "Delete all for this keyboard",
+      "confirmDeleteSelected": "Delete {{count}} day(s)? Synced devices will drop the same data.",
+      "confirmDeleteAll": "Delete every recorded day for this keyboard? Synced devices will drop the same data."
+    }
   },
   "editorSettings": {
     "title": "Menu",

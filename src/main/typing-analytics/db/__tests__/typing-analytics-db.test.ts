@@ -340,4 +340,110 @@ describe('TypingAnalyticsDB', () => {
       expect(db.listLocalKeyboardUids('other-machine')).toEqual(['0xAABB'])
     })
   })
+
+  describe('data modal queries', () => {
+    const baseStats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+
+    beforeEach(() => {
+      // Two scopes sharing the same keyboard uid but different machines,
+      // so aggregations must sum across them.
+      db.upsertScope(sampleScope({ id: 'scope-aabb-local', keyboardUid: '0xAABB', machineHash: MACHINE_HASH, keyboardProductName: 'Pipette A' }))
+      db.upsertScope(sampleScope({ id: 'scope-aabb-remote', keyboardUid: '0xAABB', machineHash: 'other-machine', keyboardProductName: 'Pipette A' }))
+      // A second keyboard with data — must appear in listKeyboardsWithTypingData.
+      db.upsertScope(sampleScope({ id: 'scope-ccdd-local', keyboardUid: '0xCCDD', machineHash: MACHINE_HASH, keyboardProductName: 'Pipette C' }))
+      // Third keyboard: scope exists but NO data rows yet; must be filtered out.
+      db.upsertScope(sampleScope({ id: 'scope-empty', keyboardUid: '0xEEFF', machineHash: MACHINE_HASH, keyboardProductName: 'Empty' }))
+
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 60_000, ...baseStats, keystrokes: 3, activeMs: 1_000 },
+        [{ scopeId: 'scope-aabb-local', minuteTs: 60_000, char: 'a', count: 3 }],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 60_000, row: 0, col: 0, layer: 0, keycode: 0x04, count: 3 }],
+        1_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-remote', minuteTs: 60_000, ...baseStats, keystrokes: 2, activeMs: 500 },
+        [{ scopeId: 'scope-aabb-remote', minuteTs: 60_000, char: 'a', count: 2 }],
+        [],
+        1_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-ccdd-local', minuteTs: 120_000, ...baseStats, keystrokes: 7, activeMs: 2_000 },
+        [{ scopeId: 'scope-ccdd-local', minuteTs: 120_000, char: 'b', count: 7 }],
+        [],
+        1_000,
+      )
+      db.insertSession({ id: 'session-aabb-1', scopeId: 'scope-aabb-local', startMs: 60_000, endMs: 61_000 }, 1_000)
+    })
+
+    it('listKeyboardsWithTypingData returns only keyboards with live data and dedupes across machines', () => {
+      const rows = db.listKeyboardsWithTypingData()
+      const uids = rows.map((r) => r.uid).sort()
+      expect(uids).toEqual(['0xAABB', '0xCCDD'])
+      // The empty scope uid is filtered out because no stats rows exist.
+      expect(uids).not.toContain('0xEEFF')
+    })
+
+    it('listDailySummariesForUid aggregates minute stats across machines', () => {
+      const summaries = db.listDailySummariesForUid('0xAABB')
+      expect(summaries).toHaveLength(1)
+      // 3 + 2 keystrokes across local + remote scopes for the same minute.
+      expect(summaries[0].keystrokes).toBe(5)
+      expect(summaries[0].activeMs).toBe(1_500)
+    })
+
+    it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {
+      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
+      expect(result.charMinutes).toBe(2) // aabb-local + aabb-remote at minute 60_000
+      expect(result.minuteStats).toBe(2)
+      expect(result.matrixMinutes).toBe(1) // only aabb-local had a matrix row
+      expect(result.sessions).toBe(1)
+
+      const conn = db.getConnection()
+      const rows = conn.prepare('SELECT is_deleted, updated_at FROM typing_char_minute WHERE char = ?').all('a') as Array<{ is_deleted: number; updated_at: number }>
+      expect(rows.every((r) => r.is_deleted === 1)).toBe(true)
+      expect(rows.every((r) => r.updated_at === 5_000)).toBe(true)
+
+      // ccdd data at minute 120_000 is untouched because it's outside the range.
+      const ccdd = conn.prepare('SELECT is_deleted FROM typing_char_minute WHERE char = ?').get('b') as { is_deleted: number }
+      expect(ccdd.is_deleted).toBe(0)
+    })
+
+    it('tombstoneRowsForUidInRange does not touch already-deleted rows', () => {
+      db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
+      // Second tombstone with a newer updated_at should not re-bump the already-deleted rows.
+      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 9_000)
+      expect(result.charMinutes).toBe(0)
+      const row = db.getConnection().prepare('SELECT updated_at FROM typing_char_minute WHERE char = ? AND scope_id = ?').get('a', 'scope-aabb-local') as { updated_at: number }
+      expect(row.updated_at).toBe(5_000)
+    })
+
+    it('tombstoneAllRowsForUid covers every minute without a range filter', () => {
+      const result = db.tombstoneAllRowsForUid('0xAABB', 6_000)
+      // 2 char rows + 1 matrix row + 2 stats rows + 1 session = 6 updates.
+      expect(result.charMinutes + result.matrixMinutes + result.minuteStats + result.sessions).toBe(6)
+
+      // Re-run listKeyboardsWithTypingData — 0xAABB no longer has live rows so it drops out.
+      const remaining = db.listKeyboardsWithTypingData().map((r) => r.uid)
+      expect(remaining).toEqual(['0xCCDD'])
+    })
+
+    it('listDailySummariesForUid ignores tombstoned rows', () => {
+      db.tombstoneAllRowsForUid('0xAABB', 6_000)
+      expect(db.listDailySummariesForUid('0xAABB')).toEqual([])
+    })
+
+    it('tombstoneRowsForUidInRange catches sessions that span into the window', () => {
+      // A session that started before the delete window and ends inside it
+      // (e.g. crosses midnight) must still be tombstoned — day-level delete
+      // should remove everything that contributed minutes to that day.
+      db.insertSession(
+        { id: 'session-midnight', scopeId: 'scope-aabb-local', startMs: 10_000, endMs: 70_000 },
+        1_000,
+      )
+      const result = db.tombstoneRowsForUidInRange('0xAABB', 60_000, 120_000, 8_000)
+      expect(result.sessions).toBeGreaterThanOrEqual(1)
+      const row = db.getConnection().prepare('SELECT is_deleted FROM typing_sessions WHERE id = ?').get('session-midnight') as { is_deleted: number }
+      expect(row.is_deleted).toBe(1)
+    })
+  })
 })

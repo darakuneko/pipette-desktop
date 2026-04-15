@@ -18,7 +18,12 @@ import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './fa
 import type { AppConfig } from './app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
 import type { PipetteSettings } from './pipette-settings'
-import type { TypingAnalyticsEvent } from './typing-analytics'
+import type {
+  TypingAnalyticsEvent,
+  TypingDailySummary,
+  TypingKeyboardSummary,
+  TypingTombstoneResult,
+} from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
 import type { NotificationFetchResult } from './notification'
@@ -130,6 +135,10 @@ export interface VialAPI {
   // Typing Analytics
   typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>
   typingAnalyticsFlush(uid: string): Promise<void>
+  typingAnalyticsListKeyboards(): Promise<TypingKeyboardSummary[]>
+  typingAnalyticsListItems(uid: string): Promise<TypingDailySummary[]>
+  typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
+  typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>

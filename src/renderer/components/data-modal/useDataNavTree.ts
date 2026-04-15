@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
+import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 
 export interface UseDataNavTreeOptions {
   showHubTab: boolean
@@ -25,11 +26,13 @@ export function resetDataNavCache(): void {
 
 export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOptions) {
   const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
+  const [typingKeyboards, setTypingKeyboards] = useState<TypingKeyboardSummary[]>([])
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     () => cachedExpandedNodes ?? new Set(),
   )
   const [activePath, setActivePath] = useState<DataNavPath | null>(cachedActivePath)
   const fetchedRef = useRef(false)
+  const typingFetchedRef = useRef(false)
 
   // Sync scan state
   const [syncScanResult, setSyncScanResult] = useState<SyncDataScanResult | null>(null)
@@ -44,6 +47,12 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     if (fetchedRef.current) return
     fetchedRef.current = true
     window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (typingFetchedRef.current) return
+    typingFetchedRef.current = true
+    window.vialAPI.typingAnalyticsListKeyboards().then(setTypingKeyboards).catch(() => {})
   }, [])
 
   // Auto-scan sync when enabled
@@ -88,6 +97,15 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   const refreshStoredKeyboards = useCallback(async () => {
     const keyboards = await window.vialAPI.listStoredKeyboards()
     setStoredKeyboards(keyboards)
+  }, [])
+
+  const refreshTypingKeyboards = useCallback(async () => {
+    try {
+      const keyboards = await window.vialAPI.typingAnalyticsListKeyboards()
+      setTypingKeyboards(keyboards)
+    } catch {
+      setTypingKeyboards([])
+    }
   }, [])
 
   const onSyncKeyboardSelect = useCallback(
@@ -140,6 +158,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
 
   return {
     storedKeyboards,
+    typingKeyboards,
     expandedNodes,
     toggleExpand,
     isExpanded,
@@ -147,6 +166,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     setActivePath,
     showHubTab,
     refreshStoredKeyboards,
+    refreshTypingKeyboards,
     syncScanResult: filteredSyncScanResult,
     syncScanning,
     handleSyncScan,

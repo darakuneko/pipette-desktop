@@ -626,7 +626,22 @@
     "deleteAll": "全てのデータを削除",
     "deleteAllConfirm": "同期データを含む全てのデータが削除されます。",
     "syncNoOrphans": "同期データは全てローカルにあります",
-    "resetAppSettings": "アプリケーション設定をリセット"
+    "resetAppSettings": "アプリケーション設定をリセット",
+    "typing": {
+      "title": "タイピング",
+      "noKeyboards": "タイピングデータがありません",
+      "noItems": "このキーボードのタイピングデータはありません",
+      "summaryHeader": "{{name}} — {{days}} 日分 / 合計 {{keystrokes}} 打",
+      "colDate": "日付",
+      "colKeystrokes": "打鍵数",
+      "colActiveMs": "アクティブ時間",
+      "selectAll": "全ての日を選択",
+      "selectRow": "{{date}} を選択",
+      "deleteSelected": "選択した日を削除 ({{count}})",
+      "deleteAll": "このキーボードの全データを削除",
+      "confirmDeleteSelected": "{{count}} 日分を削除しますか？ 同期先の端末からも同じデータが削除されます。",
+      "confirmDeleteAll": "このキーボードの全ての日を削除しますか？ 同期先の端末からも同じデータが削除されます。"
+    }
   },
   "editorSettings": {
     "title": "メニュー",

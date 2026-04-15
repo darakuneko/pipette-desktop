@@ -26,7 +26,10 @@ import {
   type MatrixMinuteRow,
   type MinuteStatsRow,
   type TypingAnalyticsDB,
+  type TypingDailySummary,
+  type TypingKeyboardSummary,
   type TypingScopeRow,
+  type TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import { typingAnalyticsSyncUnit } from './sync'
 
@@ -105,6 +108,40 @@ export function setupTypingAnalyticsIpc(): void {
       await flushNow({ final: true })
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_KEYBOARDS,
+    async (): Promise<TypingKeyboardSummary[]> => listTypingKeyboards(),
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ITEMS,
+    async (_event, uid: unknown): Promise<TypingDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      return listTypingDailySummaries(uid)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS,
+    async (_event, uid: unknown, dates: unknown): Promise<TypingTombstoneResult> => {
+      const empty: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+      if (typeof uid !== 'string' || uid.length === 0) return empty
+      if (!Array.isArray(dates)) return empty
+      const validDates = dates.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))
+      if (validDates.length === 0) return empty
+      return deleteTypingDailySummaries(uid, validDates)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_DELETE_ALL,
+    async (_event, uid: unknown): Promise<TypingTombstoneResult> => {
+      const empty: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+      if (typeof uid !== 'string' || uid.length === 0) return empty
+      return deleteAllTypingForKeyboard(uid)
+    },
+  )
 }
 
 /**
@@ -132,6 +169,90 @@ export async function flushTypingAnalyticsBeforeQuit(): Promise<void> {
   pendingSessions.push(...sessionDetector.closeAll())
   if (pendingSessions.length > 0) dirty = true
   await flushNow({ final: true })
+}
+
+// --- Data modal API --------------------------------------------------
+
+/** Keyboards that currently have live typing analytics rows, aggregated
+ * across every machine that has synced to this device. */
+export function listTypingKeyboards(): TypingKeyboardSummary[] {
+  return getTypingAnalyticsDB().listKeyboardsWithTypingData()
+}
+
+/** Day-level summaries for one keyboard uid, newest first. */
+export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
+  return getTypingAnalyticsDB().listDailySummariesForUid(uid)
+}
+
+/** Convert a 'YYYY-MM-DD' local-calendar date into a [startMs, endMs)
+ * window that matches the strftime('%Y-%m-%d', ..., 'localtime') buckets
+ * used by listDailySummariesForUid. */
+function localDayRangeMs(date: string): { startMs: number; endMs: number } | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  if (!m) return null
+  const y = Number(m[1])
+  const mo = Number(m[2])
+  const d = Number(m[3])
+  if (!Number.isFinite(y) || !Number.isFinite(mo) || !Number.isFinite(d)) return null
+  const startMs = new Date(y, mo - 1, d).getTime()
+  const endMs = new Date(y, mo - 1, d + 1).getTime()
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return null
+  return { startMs, endMs }
+}
+
+/** Tombstone the live rows for a set of local-calendar dates. Live
+ * analytics state is flushed first so any in-memory events land in the
+ * DB before the tombstone window is applied. All per-date tombstones
+ * run inside a single outer transaction so the renderer sees a single
+ * atomic delete instead of N independent writes. */
+export async function deleteTypingDailySummaries(
+  uid: string,
+  dates: string[],
+): Promise<TypingTombstoneResult> {
+  await flushNow({ final: true })
+  const ranges: Array<{ startMs: number; endMs: number }> = []
+  for (const date of dates) {
+    const range = localDayRangeMs(date)
+    if (range) ranges.push(range)
+  }
+  const total: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+  if (ranges.length === 0) return total
+
+  const db = getTypingAnalyticsDB()
+  const updatedAt = Date.now()
+  db.getConnection().transaction(() => {
+    for (const range of ranges) {
+      const result = db.tombstoneRowsForUidInRange(uid, range.startMs, range.endMs, updatedAt)
+      total.charMinutes += result.charMinutes
+      total.matrixMinutes += result.matrixMinutes
+      total.minuteStats += result.minuteStats
+      total.sessions += result.sessions
+    }
+  })()
+  notifySyncIfTouched(uid, total)
+  return total
+}
+
+/** Tombstone every live row for a keyboard uid. */
+export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
+  await flushNow({ final: true })
+  const db = getTypingAnalyticsDB()
+  const updatedAt = Date.now()
+  const result = db.tombstoneAllRowsForUid(uid, updatedAt)
+  notifySyncIfTouched(uid, result)
+  return result
+}
+
+function notifySyncIfTouched(uid: string, result: TypingTombstoneResult): void {
+  const touched = result.charMinutes + result.matrixMinutes + result.minuteStats + result.sessions
+  if (touched === 0) return
+  const notifier = syncNotifier
+  if (!notifier) return
+  try {
+    notifier(typingAnalyticsSyncUnit(uid))
+  } catch (err) {
+    log('warn', `typing-analytics sync notify failed for ${uid}: ${String(err)}`)
+  }
 }
 
 function isValidKeyboard(value: unknown): value is TypingAnalyticsKeyboard {

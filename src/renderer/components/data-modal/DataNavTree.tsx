@@ -5,9 +5,11 @@ import { useTranslation } from 'react-i18next'
 import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
+import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 
 interface Props {
   storedKeyboards: StoredKeyboardInfo[]
+  typingKeyboards: TypingKeyboardSummary[]
   activePath: DataNavPath | null
   onNavigate: (path: DataNavPath) => void
   isExpanded: (nodeId: string) => boolean
@@ -34,6 +36,7 @@ function isActivePath(a: DataNavPath | null, b: DataNavPath): boolean {
   if (a.section !== b.section || a.page !== b.page) return false
   if (a.page === 'keyboard' && b.page === 'keyboard') return a.uid === b.uid
   if (a.page === 'favorite' && b.page === 'favorite') return a.favoriteType === b.favoriteType
+  if (a.page === 'typing' && b.page === 'typing') return a.uid === b.uid
   if (a.page === 'sync-keyboard' && b.page === 'sync-keyboard') return a.uid === b.uid
   if (a.page === 'sync-favorite' && b.page === 'sync-favorite') return a.favoriteType === b.favoriteType
   if (a.page === 'hub-keyboard' && b.page === 'hub-keyboard') return a.keyboardName === b.keyboardName
@@ -107,7 +110,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid }: Props) {
+export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid }: Props) {
   const { t } = useTranslation()
 
   function resolveSyncKeyboardName(uid: string): string {
@@ -186,6 +189,36 @@ export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpande
           onClick={() => onNavigate({ section: 'local', page: 'application' })}
           testId="nav-local-application"
         />
+
+        {/* Typing */}
+        <Branch
+          label={t('dataModal.typing.title')}
+          depth={1}
+          open={isExpanded('local-typing')}
+          onToggle={() => onToggle('local-typing')}
+          testId="nav-local-typing"
+        >
+          {typingKeyboards.length === 0 ? (
+            <div
+              className="text-[11px] text-content-muted py-1"
+              style={{ paddingLeft: '50px' }}
+              data-testid="nav-no-typing"
+            >
+              {t('dataModal.typing.noKeyboards')}
+            </div>
+          ) : (
+            typingKeyboards.map((kb) => (
+              <Leaf
+                key={kb.uid}
+                label={kb.productName || kb.uid}
+                depth={2}
+                active={isActivePath(activePath, { section: 'local', page: 'typing', uid: kb.uid, name: kb.productName || kb.uid })}
+                onClick={() => onNavigate({ section: 'local', page: 'typing', uid: kb.uid, name: kb.productName || kb.uid })}
+                testId={`nav-typing-${kb.uid}`}
+              />
+            ))
+          )}
+        </Branch>
       </Branch>
 
       {/* ── Sync ── */}

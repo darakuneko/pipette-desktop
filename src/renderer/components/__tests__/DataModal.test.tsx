@@ -31,6 +31,10 @@ const mockResetKeyboardData = vi.fn().mockResolvedValue({ success: true })
 const mockResetLocalTargets = vi.fn().mockResolvedValue({ success: true })
 const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
+const mockTypingAnalyticsListKeyboards = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItems = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -45,6 +49,10 @@ Object.defineProperty(window, 'vialAPI', {
     resetLocalTargets: mockResetLocalTargets,
     exportLocalData: mockExportLocalData,
     importLocalData: mockImportLocalData,
+    typingAnalyticsListKeyboards: mockTypingAnalyticsListKeyboards,
+    typingAnalyticsListItems: mockTypingAnalyticsListItems,
+    typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
+    typingAnalyticsDeleteAll: mockTypingAnalyticsDeleteAll,
   },
   writable: true,
 })
@@ -96,6 +104,10 @@ describe('DataModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockListStoredKeyboards.mockResolvedValue([])
+    mockTypingAnalyticsListKeyboards.mockResolvedValue([])
+    mockTypingAnalyticsListItems.mockResolvedValue([])
+    mockTypingAnalyticsDeleteItems.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+    mockTypingAnalyticsDeleteAll.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     resetDataNavCache()
   })
 

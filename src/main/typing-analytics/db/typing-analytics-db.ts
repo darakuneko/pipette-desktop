@@ -79,6 +79,12 @@ export interface SessionExportRow extends SessionRow {
   isDeleted: boolean
 }
 
+export type {
+  TypingKeyboardSummary,
+  TypingDailySummary,
+  TypingTombstoneResult,
+} from '../../../shared/types/typing-analytics'
+
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
   private readonly upsertScopeStmt: Statement
@@ -97,6 +103,16 @@ export class TypingAnalyticsDB {
   private readonly selectMinuteStatsForUidStmt: Statement
   private readonly selectSessionsForUidStmt: Statement
   private readonly selectLocalKeyboardUidsStmt: Statement
+  private readonly selectKeyboardsWithTypingDataStmt: Statement
+  private readonly selectDailySummariesForUidStmt: Statement
+  private readonly tombstoneCharMinutesInRangeStmt: Statement
+  private readonly tombstoneMatrixMinutesInRangeStmt: Statement
+  private readonly tombstoneMinuteStatsInRangeStmt: Statement
+  private readonly tombstoneSessionsInRangeStmt: Statement
+  private readonly tombstoneAllCharMinutesStmt: Statement
+  private readonly tombstoneAllMatrixMinutesStmt: Statement
+  private readonly tombstoneAllMinuteStatsStmt: Statement
+  private readonly tombstoneAllSessionsStmt: Statement
   private readonly deleteCharMinuteBeforeStmt: Statement
   private readonly deleteMatrixMinuteBeforeStmt: Statement
   private readonly deleteMinuteStatsBeforeStmt: Statement
@@ -418,6 +434,102 @@ export class TypingAnalyticsDB {
        WHERE machine_hash = @machineHash
          AND is_deleted = 0
     `)
+
+    // Data-modal queries. "Has typing data" is defined as "at least one
+    // live minute-stats row under one of this uid's scopes" — minute_stats
+    // is smaller than char_minute/matrix_minute so EXISTS is cheaper.
+    //
+    // Product name / vendor / product are aggregated via MAX because a
+    // keyboard typed on multiple machines can surface different descriptor
+    // values. MAX gives a deterministic-but-arbitrary pick; the renderer
+    // treats this as a display label only.
+    this.selectKeyboardsWithTypingDataStmt = this.db.prepare(`
+      SELECT keyboard_uid AS uid,
+             MAX(keyboard_product_name) AS productName,
+             MAX(keyboard_vendor_id) AS vendorId,
+             MAX(keyboard_product_id) AS productId
+        FROM typing_scopes s
+       WHERE s.is_deleted = 0
+         AND EXISTS (
+           SELECT 1 FROM typing_minute_stats t
+            WHERE t.scope_id = s.id AND t.is_deleted = 0
+         )
+       GROUP BY keyboard_uid
+       ORDER BY MAX(keyboard_product_name) COLLATE NOCASE
+    `)
+
+    // Daily aggregation. strftime with 'localtime' so day boundaries align
+    // with the user's wall-clock expectation (today is "today" even near
+    // midnight UTC). Sums across every scope with the same keyboard_uid —
+    // different machines contribute additively.
+    this.selectDailySummariesForUidStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+       GROUP BY date
+       ORDER BY date DESC
+    `)
+
+    // Tombstone range deletes. Only flips live rows (is_deleted = 0) so
+    // existing tombstones keep their original updated_at for GC purposes.
+    const tombstoneRangeWhere = `
+      scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+        AND is_deleted = 0
+    `
+    this.tombstoneCharMinutesInRangeStmt = this.db.prepare(`
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    this.tombstoneMatrixMinutesInRangeStmt = this.db.prepare(`
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    this.tombstoneMinuteStatsInRangeStmt = this.db.prepare(`
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    // Sessions use overlap semantics instead of start_ms-containment so a
+    // session that spans midnight (start before the window, end inside)
+    // still gets tombstoned when the user deletes that day. Matches the
+    // per-minute rows that contribute to the same day bucket.
+    this.tombstoneSessionsInRangeStmt = this.db.prepare(`
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+         AND end_ms > @startMs AND start_ms < @endMs
+    `)
+
+    this.tombstoneAllCharMinutesStmt = this.db.prepare(`
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+    `)
+    this.tombstoneAllMatrixMinutesStmt = this.db.prepare(`
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+    `)
+    this.tombstoneAllMinuteStatsStmt = this.db.prepare(`
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+    `)
+    this.tombstoneAllSessionsStmt = this.db.prepare(`
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneRangeWhere}
+    `)
   }
 
   upsertScope(row: TypingScopeRow): void {
@@ -506,6 +618,57 @@ export class TypingAnalyticsDB {
   listLocalKeyboardUids(machineHash: string): string[] {
     const rows = this.selectLocalKeyboardUidsStmt.all({ machineHash }) as Array<{ keyboardUid: string }>
     return rows.map((r) => r.keyboardUid)
+  }
+
+  // --- Data modal queries -------------------------------------------
+
+  /** Keyboards that currently have at least one live minute-stats row.
+   * Aggregates across machines — a keyboard typed on two devices shows
+   * up once with one representative product name. */
+  listKeyboardsWithTypingData(): TypingKeyboardSummary[] {
+    return this.selectKeyboardsWithTypingDataStmt.all() as TypingKeyboardSummary[]
+  }
+
+  /** Daily summaries for a keyboard uid, grouped by local calendar day
+   * and ordered newest first. Live rows only. */
+  listDailySummariesForUid(uid: string): TypingDailySummary[] {
+    return this.selectDailySummariesForUidStmt.all({ uid }) as TypingDailySummary[]
+  }
+
+  /** Tombstone every live row for a uid whose timestamp falls inside
+   * [startMs, endMs). Bumps updated_at on the touched rows so LWW
+   * merge on other devices picks up the deletion. Returns per-table
+   * change counts for UX / logging. */
+  tombstoneRowsForUidInRange(
+    uid: string,
+    startMs: number,
+    endMs: number,
+    updatedAt: number,
+  ): TypingTombstoneResult {
+    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const tx = this.db.transaction(() => {
+      result.charMinutes = this.tombstoneCharMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
+      result.matrixMinutes = this.tombstoneMatrixMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
+      result.minuteStats = this.tombstoneMinuteStatsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
+      result.sessions = this.tombstoneSessionsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
+    })
+    tx()
+    return result
+  }
+
+  /** Tombstone every live row for a uid across all time. Scope rows
+   * themselves are left intact so the next recording session reuses
+   * them without a fresh fingerprint build. */
+  tombstoneAllRowsForUid(uid: string, updatedAt: number): TypingTombstoneResult {
+    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const tx = this.db.transaction(() => {
+      result.charMinutes = this.tombstoneAllCharMinutesStmt.run({ uid, updatedAt }).changes
+      result.matrixMinutes = this.tombstoneAllMatrixMinutesStmt.run({ uid, updatedAt }).changes
+      result.minuteStats = this.tombstoneAllMinuteStatsStmt.run({ uid, updatedAt }).changes
+      result.sessions = this.tombstoneAllSessionsStmt.run({ uid, updatedAt }).changes
+    })
+    tx()
+    return result
   }
 
   // --- Sync export ----------------------------------------------------

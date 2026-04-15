@@ -14,7 +14,12 @@ import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/fa
 import type { AppConfig } from '../shared/types/app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
-import type { TypingAnalyticsEvent } from '../shared/types/typing-analytics'
+import type {
+  TypingAnalyticsEvent,
+  TypingDailySummary,
+  TypingKeyboardSummary,
+  TypingTombstoneResult,
+} from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
@@ -195,6 +200,14 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EVENT, event),
   typingAnalyticsFlush: (uid: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FLUSH, uid),
+  typingAnalyticsListKeyboards: (): Promise<TypingKeyboardSummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYBOARDS),
+  typingAnalyticsListItems: (uid: string): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS, uid),
+  typingAnalyticsDeleteItems: (uid: string, dates: string[]): Promise<TypingTombstoneResult> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, uid, dates),
+  typingAnalyticsDeleteAll: (uid: string): Promise<TypingTombstoneResult> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ALL, uid),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>
