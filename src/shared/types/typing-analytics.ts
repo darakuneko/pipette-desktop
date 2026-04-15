@@ -45,37 +45,6 @@ export type TypingAnalyticsEvent = TypingAnalyticsEventPayload & {
   keyboard: TypingAnalyticsKeyboard
 }
 
-/** Per-physical-key counter keyed by "row,col,layer". */
-export interface MatrixKeyStat {
-  count: number
-  keycode: number
-}
-
-/** One scope bucket inside a daily file. */
-export interface TypingScopeEntry {
-  scope: TypingAnalyticsFingerprint
-  charCounts: Record<string, number>
-  matrixCounts: Record<string, MatrixKeyStat>
-}
-
-/** The on-disk schema of a daily aggregate file. */
-export interface TypingAnalyticsDailyFile {
-  _rev: typeof TYPING_ANALYTICS_REV
-  analyticsVersion: typeof TYPING_ANALYTICS_VERSION
-  date: string
-  updatedAt: string
-  lastFlushedAt: string
-  scopes: Record<string, TypingScopeEntry>
-}
-
-/** One session row stored in the JSONL session log. */
-export interface TypingSessionRecord {
-  start: string
-  end: string
-  keystrokeCount: number
-  scope: string
-}
-
 /** Build the canonical scope key from a fingerprint. Excludes productName
  * so that cross-OS descriptor variation doesn't fragment the same device. */
 export function canonicalScopeKey(fp: TypingAnalyticsFingerprint): string {

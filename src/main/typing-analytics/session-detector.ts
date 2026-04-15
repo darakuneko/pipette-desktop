@@ -3,13 +3,14 @@
 // recording is paused, the user goes idle, or the app shuts down. A session
 // = the span between record ON / first event and record OFF / idle gap /
 // before-quit. The detector emits closed sessions; the caller is responsible
-// for routing them to disk (sessions-file-store).
+// for routing them to the SQLite store.
 
-import type { TypingSessionRecord } from '../../shared/types/typing-analytics'
+import { randomUUID } from 'node:crypto'
 
 export const SESSION_IDLE_GAP_MS = 5 * 60 * 1000
 
 interface ActiveSession {
+  id: string
   uid: string
   scopeKey: string
   startMs: number
@@ -18,8 +19,12 @@ interface ActiveSession {
 }
 
 export interface FinalizedSession {
+  id: string
   uid: string
-  record: TypingSessionRecord
+  scopeKey: string
+  startMs: number
+  endMs: number
+  keystrokeCount: number
 }
 
 export class SessionDetector {
@@ -47,7 +52,13 @@ export class SessionDetector {
       return [finalized]
     }
 
-    existing.lastEventMs = ts
+    // A late-arriving event (ts < lastEventMs) counts as a keystroke but
+    // does not rewind the session end, which would otherwise inflate the
+    // next gap and falsely trip the idle-gap split. Its ts still extends
+    // startMs backwards so the finalized span reflects the true outer
+    // window of the session.
+    if (ts > existing.lastEventMs) existing.lastEventMs = ts
+    if (ts < existing.startMs) existing.startMs = ts
     existing.keystrokeCount += 1
     return []
   }
@@ -82,18 +93,24 @@ export class SessionDetector {
   }
 
   private startNew(uid: string, scopeKey: string, ts: number): ActiveSession {
-    return { uid, scopeKey, startMs: ts, lastEventMs: ts, keystrokeCount: 1 }
+    return {
+      id: randomUUID(),
+      uid,
+      scopeKey,
+      startMs: ts,
+      lastEventMs: ts,
+      keystrokeCount: 1,
+    }
   }
 
   private toFinalized(session: ActiveSession): FinalizedSession {
     return {
+      id: session.id,
       uid: session.uid,
-      record: {
-        start: new Date(session.startMs).toISOString(),
-        end: new Date(session.lastEventMs).toISOString(),
-        keystrokeCount: session.keystrokeCount,
-        scope: session.scopeKey,
-      },
+      scopeKey: session.scopeKey,
+      startMs: session.startMs,
+      endMs: session.lastEventMs,
+      keystrokeCount: session.keystrokeCount,
     }
   }
 }

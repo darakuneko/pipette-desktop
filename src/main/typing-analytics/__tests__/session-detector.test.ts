@@ -23,9 +23,10 @@ describe('SessionDetector', () => {
     expect(det.recordEvent(UID_A, SCOPE_A, 3_000)).toEqual([])
     const closed = det.closeAll()
     expect(closed).toHaveLength(1)
-    expect(closed[0].record.keystrokeCount).toBe(3)
-    expect(closed[0].record.start).toBe(new Date(1_000).toISOString())
-    expect(closed[0].record.end).toBe(new Date(3_000).toISOString())
+    expect(closed[0].keystrokeCount).toBe(3)
+    expect(closed[0].startMs).toBe(1_000)
+    expect(closed[0].endMs).toBe(3_000)
+    expect(closed[0].id).toMatch(/^[0-9a-f-]{36}$/)
   })
 
   it('finalizes the previous session when an idle gap is detected', () => {
@@ -35,15 +36,16 @@ describe('SessionDetector', () => {
     const after = det.recordEvent(UID_A, SCOPE_A, 2_000 + SESSION_IDLE_GAP_MS)
 
     expect(after).toHaveLength(1)
-    expect(after[0].record.keystrokeCount).toBe(2)
-    expect(after[0].record.start).toBe(new Date(1_000).toISOString())
-    expect(after[0].record.end).toBe(new Date(2_000).toISOString())
+    expect(after[0].keystrokeCount).toBe(2)
+    expect(after[0].startMs).toBe(1_000)
+    expect(after[0].endMs).toBe(2_000)
 
-    // A fresh session is now active for the same scope.
+    // A fresh session is now active for the same scope with a new id.
     expect(det.hasActiveSession(SCOPE_A)).toBe(true)
     const closed = det.closeAll()
-    expect(closed[0].record.start).toBe(new Date(2_000 + SESSION_IDLE_GAP_MS).toISOString())
-    expect(closed[0].record.keystrokeCount).toBe(1)
+    expect(closed[0].startMs).toBe(2_000 + SESSION_IDLE_GAP_MS)
+    expect(closed[0].keystrokeCount).toBe(1)
+    expect(closed[0].id).not.toBe(after[0].id)
   })
 
   it('tracks separate sessions per scope', () => {
@@ -56,8 +58,8 @@ describe('SessionDetector', () => {
     expect(closed.map((f) => f.uid).sort()).toEqual([UID_A, UID_B])
     const aSession = closed.find((f) => f.uid === UID_A)!
     const bSession = closed.find((f) => f.uid === UID_B)!
-    expect(aSession.record.keystrokeCount).toBe(2)
-    expect(bSession.record.keystrokeCount).toBe(1)
+    expect(aSession.keystrokeCount).toBe(2)
+    expect(bSession.keystrokeCount).toBe(1)
   })
 
   it('closeForUid only finalizes sessions for that keyboard', () => {
@@ -85,7 +87,26 @@ describe('SessionDetector', () => {
     expect(det.recordEvent(UID_A, SCOPE_A, 1_050)).toEqual([])
     const after = det.recordEvent(UID_A, SCOPE_A, 1_200)
     expect(after).toHaveLength(1)
-    expect(after[0].record.keystrokeCount).toBe(2)
+    expect(after[0].keystrokeCount).toBe(2)
+  })
+
+  it('does not rewind lastEventMs when a late out-of-order event arrives', () => {
+    const det = new SessionDetector()
+    det.recordEvent(UID_A, SCOPE_A, 1_000)
+    det.recordEvent(UID_A, SCOPE_A, 2_000 + SESSION_IDLE_GAP_MS) // finalizes #1, starts #2
+    // Late event from before the split: must not rewind session #2 such
+    // that a subsequent on-time event would trip a false idle-gap split.
+    det.recordEvent(UID_A, SCOPE_A, 1_500)
+    const further = det.recordEvent(UID_A, SCOPE_A, 2_000 + SESSION_IDLE_GAP_MS + 1_000)
+    expect(further).toEqual([])
+
+    const [closed] = det.closeAll()
+    expect(closed.startMs).toBeLessThanOrEqual(closed.endMs)
+    // startMs was extended backwards by the late event so the finalized
+    // record reflects the true outer window.
+    expect(closed.startMs).toBe(1_500)
+    expect(closed.endMs).toBe(2_000 + SESSION_IDLE_GAP_MS + 1_000)
+    expect(closed.keystrokeCount).toBe(3)
   })
 
   it('preserves a session record whose start and end span midnight', () => {
@@ -96,9 +117,9 @@ describe('SessionDetector', () => {
     det.recordEvent(UID_A, SCOPE_A, end)
 
     const [closed] = det.closeAll()
-    // The record itself spans midnight; the consumer routes it to the
-    // start-date file.
-    expect(closed.record.start.startsWith('2026-01-01')).toBe(true)
-    expect(closed.record.end.startsWith('2026-01-02')).toBe(true)
+    // The record itself spans midnight; the consumer is free to route it by
+    // start date or raw ms.
+    expect(closed.startMs).toBe(start)
+    expect(closed.endMs).toBe(end)
   })
 })
