@@ -7,10 +7,16 @@ import { readFile, readdir, access } from 'node:fs/promises'
 import { gcTombstones } from './merge'
 import { keyboardMetaFilePath, readKeyboardMetaIndex } from './keyboard-meta'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
+import { DEFAULT_TYPING_SYNC_SPAN_DAYS } from '../../shared/types/typing-analytics'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
+import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
+import { getMachineHash } from '../typing-analytics/machine-hash'
+import { buildTypingAnalyticsBundle, typingAnalyticsSyncUnit } from '../typing-analytics/sync'
+import { readPipetteSettings } from '../pipette-settings-store'
+import { log } from '../logger'
 
 export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | null> {
   try {
@@ -29,6 +35,30 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
 
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
+
+  // Handle "keyboards/{uid}/typing-analytics" — synthetic single-file bundle
+  // backed by the SQLite store. Nothing lives on disk under sync/ for this
+  // unit; the exported rows are serialized into files['data.json'] so the
+  // existing encrypt/upload pipeline can carry them unchanged. Errors are
+  // logged and re-thrown so the upload path re-queues the unit instead of
+  // treating a transient DB/settings failure as a silent success.
+  if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'typing-analytics') {
+    const uid = parts[1]
+    try {
+      const prefs = await readPipetteSettings(uid)
+      const spanDays = prefs?.typingSyncSpanDays ?? DEFAULT_TYPING_SYNC_SPAN_DAYS
+      const bundle = buildTypingAnalyticsBundle(uid, spanDays)
+      return {
+        type: 'typing-analytics',
+        key: uid,
+        index: { uid, entries: [] } as SnapshotIndex,
+        files: { 'data.json': JSON.stringify(bundle) },
+      }
+    } catch (err) {
+      log('warn', `typing-analytics bundle build failed for ${uid}: ${String(err)}`)
+      throw err
+    }
+  }
 
   // Handle "keyboards/{uid}/settings" — single-file bundle (no index)
   if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'settings') {
@@ -101,6 +131,21 @@ export async function collectAllSyncUnits(): Promise<string[]> {
       } catch { /* no snapshots */ }
     }
   } catch { /* dir doesn't exist */ }
+
+  // Typing analytics units: one per keyboard uid that this machine has
+  // recorded rows for. Remote-only uids (from other machines) are not
+  // uploaded here — the owning machine is responsible for its own data.
+  try {
+    const machineHash = await getMachineHash()
+    const typingUids = getTypingAnalyticsDB().listLocalKeyboardUids(machineHash)
+    for (const uid of typingUids) {
+      units.push(typingAnalyticsSyncUnit(uid))
+    }
+  } catch (err) {
+    // Log instead of silently dropping so a DB schema mismatch or machine
+    // hash failure does not silently disable typing-analytics sync forever.
+    log('warn', `typing-analytics sync-unit scan failed: ${String(err)}`)
+  }
 
   return units
 }

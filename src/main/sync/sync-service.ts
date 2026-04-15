@@ -26,6 +26,8 @@ import {
   readKeyboardMetaIndex,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
+import { mergeTypingAnalyticsBundle } from '../typing-analytics/sync'
+import { log } from '../logger'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
 
@@ -398,6 +400,23 @@ async function mergeSyncUnit(
 
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
+
+  // Handle typing-analytics sync unit (row-level LWW into SQLite)
+  if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'typing-analytics') {
+    const uid = parts[1]
+    const data = remoteBundle.files['data.json']
+    if (!data) return false
+    try {
+      const parsed = JSON.parse(data) as unknown
+      mergeTypingAnalyticsBundle(parsed, uid)
+    } catch {
+      // Malformed payload — skip without surfacing as a failed unit so one
+      // bad bundle doesn't block the rest of the sync cycle.
+    }
+    // Typing-analytics rows always re-export based on the local DB state,
+    // so there is no upload-back signal to emit here.
+    return false
+  }
 
   // Handle settings sync unit (single-file LWW)
   if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'settings') {
@@ -854,12 +873,22 @@ interface BeforeQuitFinalizer {
   run: () => Promise<void>
 }
 
+const preSyncFinalizers: BeforeQuitFinalizer[] = []
 const extraFinalizers: BeforeQuitFinalizer[] = []
 
 /**
+ * Register a finalizer that runs BEFORE the sync flush at before-quit time.
+ * Use this when the subsystem's flush may enqueue new sync units via
+ * notifyChange() — running pre-sync guarantees the freshly queued units land
+ * in the same quit cycle instead of waiting for the next launch.
+ */
+export function registerPreSyncQuitFinalizer(finalizer: BeforeQuitFinalizer): void {
+  preSyncFinalizers.push(finalizer)
+}
+
+/**
  * Register an additional async finalizer to run alongside the sync flush at
- * before-quit time. Used by other main subsystems (e.g. typing analytics) to
- * coordinate persistence so the app does not exit while writes are in flight.
+ * before-quit time. Used by subsystems that do not touch the sync queue.
  */
 export function registerBeforeQuitFinalizer(finalizer: BeforeQuitFinalizer): void {
   extraFinalizers.push(finalizer)
@@ -872,8 +901,9 @@ export function setupBeforeQuitHandler(): void {
     stopPolling()
 
     const syncPending = pendingChanges.size > 0 || debounceTimer !== null
+    const preSync = preSyncFinalizers.filter((f) => f.hasWork())
     const extras = extraFinalizers.filter((f) => f.hasWork())
-    if (!syncPending && extras.length === 0) return
+    if (!syncPending && preSync.length === 0 && extras.length === 0) return
 
     e.preventDefault()
     isQuitting = true
@@ -883,13 +913,51 @@ export function setupBeforeQuitHandler(): void {
       debounceTimer = null
     }
 
-    const tasks: Promise<unknown>[] = []
-    if (syncPending) tasks.push(flushPendingChanges().catch(() => undefined))
-    for (const f of extras) tasks.push(f.run().catch(() => undefined))
+    const runQuitPhases = async (): Promise<void> => {
+      // Phase 1: pre-sync finalizers. They may call notifyChange() to
+      // enqueue additional sync units; those land in pendingChanges before
+      // the sync flush starts.
+      if (preSync.length > 0) {
+        await Promise.all(
+          preSync.map((f) =>
+            f.run().catch((err: unknown) => {
+              log('error', `pre-sync quit finalizer failed: ${String(err)}`)
+            }),
+          ),
+        )
+      }
 
-    Promise.all(tasks).finally(() => {
-      app.quit()
-    })
+      // Phase 2: sync flush. Re-evaluate pendingChanges because pre-sync
+      // finalizers may have added to it.
+      if (syncPending || pendingChanges.size > 0) {
+        await flushPendingChanges().catch((err: unknown) => {
+          log('error', `before-quit sync flush failed: ${String(err)}`)
+        })
+      }
+
+      // Phase 3: remaining extra finalizers. Re-check hasWork() so nothing
+      // is run twice if it also happens to sit on the extra list.
+      const extrasAfter = extraFinalizers.filter((f) => f.hasWork())
+      if (extrasAfter.length > 0) {
+        await Promise.all(
+          extrasAfter.map((f) =>
+            f.run().catch((err: unknown) => {
+              log('error', `extra quit finalizer failed: ${String(err)}`)
+            }),
+          ),
+        )
+      }
+    }
+
+    // Always call app.quit() even if a phase unexpectedly throws, so the
+    // app cannot hang on the preventDefault()'d quit.
+    runQuitPhases()
+      .catch((err: unknown) => {
+        log('error', `before-quit phases crashed: ${String(err)}`)
+      })
+      .finally(() => {
+        app.quit()
+      })
   })
 }
 
@@ -907,4 +975,6 @@ export function _resetForTests(): void {
   isQuitting = false
   progressCallback = null
   passwordCheckValidated = false
+  preSyncFinalizers.length = 0
+  extraFinalizers.length = 0
 }

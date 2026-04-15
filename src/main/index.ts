@@ -21,8 +21,9 @@ import {
   setupTypingAnalyticsIpc,
   hasTypingAnalyticsPendingWork,
   flushTypingAnalyticsBeforeQuit,
+  setTypingAnalyticsSyncNotifier,
 } from './typing-analytics/typing-analytics-service'
-import { registerBeforeQuitFinalizer } from './sync/sync-service'
+import { registerPreSyncQuitFinalizer, notifyChange } from './sync/sync-service'
 import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -298,8 +299,9 @@ app.whenReady().then(() => {
   setupLogIpc()
   setupShellIpc()
   setupWindowIpc()
+  setTypingAnalyticsSyncNotifier(notifyChange)
   setupTypingAnalyticsIpc()
-  registerBeforeQuitFinalizer({
+  registerPreSyncQuitFinalizer({
     hasWork: hasTypingAnalyticsPendingWork,
     run: flushTypingAnalyticsBeforeQuit,
   })

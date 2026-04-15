@@ -110,8 +110,12 @@ import {
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  setupBeforeQuitHandler,
+  registerPreSyncQuitFinalizer,
+  registerBeforeQuitFinalizer,
   _resetForTests,
 } from '../sync/sync-service'
+import { app } from 'electron'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -1615,6 +1619,72 @@ describe('sync-service', () => {
 
       await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
       expect(mockClearPassword).toHaveBeenCalled()
+    })
+  })
+
+  describe('setupBeforeQuitHandler phased ordering', () => {
+    function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void {
+      setupBeforeQuitHandler()
+      const mockOn = vi.mocked(app.on)
+      const match = mockOn.mock.calls.find(([event]) => event === 'before-quit')
+      if (!match) throw new Error('before-quit handler not registered')
+      return match[1] as (e: { preventDefault: () => void }) => void
+    }
+
+    it('runs pre-sync finalizers before the sync flush, then extra finalizers', async () => {
+      const order: string[] = []
+      const preSyncFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {
+          order.push('pre-sync')
+          // Pre-sync finalizer enqueues a sync unit that the flush must pick up.
+          notifyChange('keyboards/0xAABB/settings')
+        }),
+      }
+      const extraFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {
+          order.push('extra')
+        }),
+      }
+      registerPreSyncQuitFinalizer(preSyncFinalizer)
+      registerBeforeQuitFinalizer(extraFinalizer)
+
+      // Seed pendingChanges so the sync-flush phase becomes observable.
+      notifyChange('favorites/tapDance')
+
+      const handler = captureBeforeQuitHandler()
+      const preventDefault = vi.fn()
+      handler({ preventDefault })
+      await flushIO()
+
+      expect(preventDefault).toHaveBeenCalled()
+      expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(extraFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(order).toEqual(['pre-sync', 'extra'])
+      expect(app.quit).toHaveBeenCalled()
+    })
+
+    it('skips the handler entirely when nothing has work', () => {
+      const handler = captureBeforeQuitHandler()
+      const preventDefault = vi.fn()
+      handler({ preventDefault })
+      expect(preventDefault).not.toHaveBeenCalled()
+    })
+
+    it('runs only pre-sync finalizers when there is no extra work and sync is empty', async () => {
+      const preSyncFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {}),
+      }
+      registerPreSyncQuitFinalizer(preSyncFinalizer)
+
+      const handler = captureBeforeQuitHandler()
+      handler({ preventDefault: vi.fn() })
+      await flushIO()
+
+      expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(app.quit).toHaveBeenCalled()
     })
   })
 })

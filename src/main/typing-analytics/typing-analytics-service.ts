@@ -28,11 +28,23 @@ import {
   type TypingAnalyticsDB,
   type TypingScopeRow,
 } from './db/typing-analytics-db'
+import { typingAnalyticsSyncUnit } from './sync'
 
 const FLUSH_DEBOUNCE_MS = 1_000
 
 let initialization: Promise<void> | null = null
 let ipcRegistered = false
+
+/** Injected sync-change notifier. Kept as a callback instead of a direct
+ * import to avoid coupling the analytics service to sync-service at module
+ * load time — the main-process bootstrap wires in the real implementation
+ * via {@link setTypingAnalyticsSyncNotifier}. */
+type SyncNotifier = (syncUnit: string) => void
+let syncNotifier: SyncNotifier | null = null
+
+export function setTypingAnalyticsSyncNotifier(notifier: SyncNotifier | null): void {
+  syncNotifier = notifier
+}
 
 interface ResolvedScope {
   fingerprint: TypingAnalyticsFingerprint
@@ -339,6 +351,28 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     return
   }
 
+  // Notify the sync layer that the typing-analytics unit for each touched
+  // keyboard has new rows to upload. Derived from the committed snapshots
+  // and sessions, so rollback never fires this. Capture the notifier into
+  // a local so a reset-clear between iterations cannot null it mid-loop.
+  const notifier = syncNotifier
+  if (notifier) {
+    const touchedUids = new Set<string>()
+    for (const snapshot of snapshots) {
+      touchedUids.add(snapshot.fingerprint.keyboard.uid)
+    }
+    for (const { resolved } of validSessions) {
+      touchedUids.add(resolved.fingerprint.keyboard.uid)
+    }
+    for (const uid of touchedUids) {
+      try {
+        notifier(typingAnalyticsSyncUnit(uid))
+      } catch (notifyErr) {
+        log('warn', `typing-analytics sync notify failed for ${uid}: ${String(notifyErr)}`)
+      }
+    }
+  }
+
   dirty = !minuteBuffer.isEmpty()
 }
 
@@ -376,6 +410,7 @@ export function resetTypingAnalyticsForTests(): void {
   dirty = false
   flushChain = Promise.resolve()
   inFlightFlushCount = 0
+  syncNotifier = null
   if (flushTimer) {
     clearTimeout(flushTimer)
     flushTimer = null

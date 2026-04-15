@@ -45,6 +45,7 @@ import {
   flushTypingAnalyticsNowForTests,
   hasTypingAnalyticsPendingWork,
   flushTypingAnalyticsBeforeQuit,
+  setTypingAnalyticsSyncNotifier,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
 import { resetMachineHashCacheForTests } from '../machine-hash'
@@ -287,6 +288,39 @@ describe('typing-analytics-service', () => {
       const conn = getTypingAnalyticsDB().getConnection()
       const stats = conn.prepare('SELECT COUNT(*) as n FROM typing_minute_stats').get() as { n: number }
       expect(stats.n).toBe(1)
+    })
+
+    it('notifies the sync layer per touched keyboard after a successful commit', async () => {
+      const notifier = vi.fn()
+      setTypingAnalyticsSyncNotifier(notifier)
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const otherKeyboard = { ...sampleKeyboard, uid: '0xCCDD', vendorId: 0x1234 }
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const units = notifier.mock.calls.map((c) => c[0]).sort()
+      expect(units).toEqual([
+        `keyboards/${sampleKeyboard.uid}/typing-analytics`,
+        `keyboards/${otherKeyboard.uid}/typing-analytics`,
+      ])
+    })
+
+    it('suppresses notification when the DB transaction fails', async () => {
+      const notifier = vi.fn()
+      setTypingAnalyticsSyncNotifier(notifier)
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: sampleKeyboard })
+      // Force the open DB into a bad state so the transaction throws.
+      getTypingAnalyticsDB().close()
+      await flushTypingAnalyticsNowForTests()
+
+      expect(notifier).not.toHaveBeenCalled()
+      resetTypingAnalyticsDBForTests()
     })
 
     it('silently drops malformed payloads', async () => {
