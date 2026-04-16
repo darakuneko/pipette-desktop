@@ -298,7 +298,6 @@ export function jsonToMacroActions(json: string): MacroAction[] | null {
       case 'tap':
       case 'down':
       case 'up': {
-        if (item.length < 2) return null
         const keycodes: number[] = []
         for (let i = 1; i < item.length; i++) {
           if (typeof item[i] !== 'string') return null

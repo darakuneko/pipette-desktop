@@ -35,6 +35,7 @@ type PendingAction = { kind: 'kc'; kc: Keycode } | { kind: 'raw'; code: number }
 interface KeyPopoverProps {
   anchorRect: DOMRect
   currentKeycode: number
+  emptyInitial?: boolean   // When true, start with empty search (no current keycode)
   maskOnly?: boolean
   layers?: number
   onKeycodeSelect: (kc: Keycode) => void
@@ -55,6 +56,7 @@ const POPOVER_GAP = 6
 export function KeyPopover({
   anchorRect,
   currentKeycode,
+  emptyInitial,
   maskOnly,
   layers = 16,
   onKeycodeSelect,
@@ -313,6 +315,7 @@ export function KeyPopover({
   return (
     <div
       ref={popoverRef}
+      data-popover="key"
       className="fixed z-50 rounded-lg border border-edge bg-surface-alt shadow-xl"
       style={{
         top: position.top,
@@ -414,6 +417,7 @@ export function KeyPopover({
             // After a mode switch away from LM, currentKeycode may still hold the stale LM value
             // for one render frame before the parent propagates the rebuilt keycode.
             currentKeycode={isLMKeycode(currentKeycode) ? 0 : currentKeycode}
+            emptyInitial={emptyInitial}
             maskOnly={maskOnly}
             modMask={currentModMask}
             basicKeyOnly={wrapperMode === 'lt' || wrapperMode === 'shT'}

@@ -37,6 +37,7 @@ function stripPrefix(id: string): string {
 
 interface Props {
   currentKeycode: number
+  emptyInitial?: boolean
   maskOnly?: boolean
   modMask?: number
   lmMode?: boolean
@@ -47,10 +48,11 @@ interface Props {
 
 const MAX_RESULTS = 50
 
-export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose }: Props) {
+export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask = 0, lmMode: lmModeProp, basicKeyOnly, onKeycodeSelect, onClose }: Props) {
   const hasModMask = modMask > 0
   const { t } = useTranslation()
   const initialQuery = useMemo(() => {
+    if (emptyInitial) return ''
     // When modifier strip is active or in LT/SH_T mode, show the inner basic key
     if (modMask > 0 || basicKeyOnly) {
       const basicCode = extractBasicKey(currentKeycode)
@@ -73,7 +75,7 @@ export function PopoverTabKey({ currentKeycode, maskOnly, modMask = 0, lmMode: l
       return serialized.substring(0, serialized.indexOf('('))
     }
     return stripPrefix(serialized)
-  }, [currentKeycode, maskOnly, modMask, basicKeyOnly])
+  }, [currentKeycode, emptyInitial, maskOnly, modMask, basicKeyOnly])
   const [query, setQuery] = useState(initialQuery)
   const [suppressResults, setSuppressResults] = useState(false)
 

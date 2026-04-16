@@ -11,6 +11,14 @@ export function isKeycodeAction(action: MacroAction): action is KeycodeAction {
   return action.type === 'tap' || action.type === 'down' || action.type === 'up'
 }
 
+export function normalizeMacroActions(actions: MacroAction[]): MacroAction[] {
+  return actions.filter((a) => !isKeycodeAction(a) || a.keycodes.length > 0)
+}
+
+export function normalizeMacros(macros: MacroAction[][]): MacroAction[][] {
+  return macros.map(normalizeMacroActions)
+}
+
 export function parseMacroBuffer(
   buffer: number[],
   protocol: number,

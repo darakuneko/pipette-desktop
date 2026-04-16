@@ -123,40 +123,57 @@ describe('MacroActionItem', () => {
       expect(keycodeFields).toHaveLength(2)
     })
 
-    it('renders add keycode button', () => {
+    it('renders edit button in list mode', () => {
+      const onEditClick = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
-        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onEditClick={onEditClick} />,
       )
-      expect(screen.getByTestId('macro-add-keycode')).toBeInTheDocument()
+      expect(screen.getByTestId('macro-edit-action')).toBeInTheDocument()
     })
 
-    it('calls onKeycodeAdd when + button is clicked', () => {
-      const onKeycodeAdd = vi.fn()
-      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
-      render(
-        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeAdd={onKeycodeAdd} />,
-      )
-      fireEvent.click(screen.getByTestId('macro-add-keycode'))
-      expect(onKeycodeAdd).toHaveBeenCalled()
-    })
-
-    it('calls onKeycodeClick when keycode button is clicked', () => {
+    it('keycodes are read-only in list mode', () => {
       const onKeycodeClick = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
       render(
         <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeClick={onKeycodeClick} />,
       )
       fireEvent.click(screen.getByTestId('keycode-field'))
-      // KeycodeField uses a timeout for single click when onDoubleClick is not provided
-      // When not selected, onDoubleClick is undefined so click fires immediately
-      expect(onKeycodeClick).toHaveBeenCalledWith(0)
+      expect(onKeycodeClick).not.toHaveBeenCalled()
     })
 
-    it('reflects selectedKeycodeIndex via aria-pressed', () => {
+    it('renders add keycode button in edit mode', () => {
+      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
+      render(
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} focusMode selectedKeycodeIndex={0} />,
+      )
+      expect(screen.getByTestId('macro-add-keycode')).toBeInTheDocument()
+    })
+
+    it('calls onKeycodeAdd when + button is clicked in edit mode', () => {
+      const onKeycodeAdd = vi.fn()
+      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
+      render(
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeAdd={onKeycodeAdd} focusMode selectedKeycodeIndex={0} />,
+      )
+      fireEvent.click(screen.getByTestId('macro-add-keycode'))
+      expect(onKeycodeAdd).toHaveBeenCalled()
+    })
+
+    it('calls onKeycodeClick when non-selected keycode is clicked in edit mode', () => {
+      const onKeycodeClick = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41, 0x42] }
       render(
-        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} selectedKeycodeIndex={0} />,
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onKeycodeClick={onKeycodeClick} focusMode selectedKeycodeIndex={0} />,
+      )
+      fireEvent.click(screen.getAllByTestId('keycode-field')[1])
+      expect(onKeycodeClick).toHaveBeenCalledWith(1)
+    })
+
+    it('reflects selectedKeycodeIndex via aria-pressed in edit mode', () => {
+      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41, 0x42] }
+      render(
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} selectedKeycodeIndex={0} focusMode />,
       )
       const keycodeFields = screen.getAllByTestId('keycode-field')
       expect(keycodeFields[0]).toHaveAttribute('aria-pressed', 'true')

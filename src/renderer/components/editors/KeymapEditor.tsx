@@ -1012,7 +1012,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           macroBuffer={macroBuffer} vialProtocol={vialProtocol ?? 0} onSaveMacros={onSaveMacros}
           parsedMacros={parsedMacros} onClose={handleMacroModalClose} unlocked={unlocked} onUnlock={onUnlock}
           isDummy={isDummy} tapDanceEntries={tapDanceEntries} deserializedMacros={deserializedMacros}
-          quickSelect={quickSelect} splitKeyMode={splitKeyMode} basicViewType={basicViewType}
+          quickSelect={quickSelect} autoAdvance={autoAdvance} splitKeyMode={splitKeyMode} basicViewType={basicViewType}
+          layers={layers}
           hubOrigin={favHubOrigin} hubNeedsDisplayName={favHubNeedsDisplayName}
           hubUploading={favHubUploading} hubUploadResult={favHubUploadResult}
           onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('macro', entryId) : undefined}

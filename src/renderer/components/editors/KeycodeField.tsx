@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { X } from 'lucide-react'
 import { serialize, keycodeTooltip, isMask } from '../../../shared/keycodes/keycodes'
 import { KeyWidget } from '../keyboard/KeyWidget'
 import type { KleKey } from '../../../shared/kle/types'
@@ -13,6 +15,8 @@ interface Props {
   onSelect: () => void
   onMaskPartClick?: (part: 'outer' | 'inner') => void
   onDoubleClick?: (rect: DOMRect) => void
+  onDelete?: () => void
+  noTooltip?: boolean
   label?: string
 }
 
@@ -52,9 +56,10 @@ const FACE_ORIGIN = KEY_FACE_INSET
 const FACE_SIZE = KEY_UNIT - KEY_SPACING - 2 * KEY_FACE_INSET
 export const KEYCODE_FIELD_SIZE = Math.round(FACE_SIZE)
 
-export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, label }: Props) {
+export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, onDelete, noTooltip, label }: Props) {
+  const { t } = useTranslation()
   const qmkId = serialize(value)
-  const tooltip = keycodeTooltip(qmkId)
+  const tooltip = noTooltip ? undefined : keycodeTooltip(qmkId)
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isMasked = onMaskPartClick != null && isMask(qmkId)
 
@@ -96,14 +101,14 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
     [onDoubleClick],
   )
 
-  return (
+  const keyButton = (
     <button
       type="button"
       aria-label={label}
       aria-pressed={selected}
       title={tooltip}
       data-testid="keycode-field"
-      className={`flex shrink-0 rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border'}`}
+      className={`flex shrink-0 cursor-pointer rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border hover:ring-accent'}`}
       onClick={handleClick}
       onDoubleClick={isMasked ? undefined : handleDoubleClick}
     >
@@ -124,5 +129,22 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
         />
       </svg>
     </button>
+  )
+
+  if (!onDelete) return keyButton
+
+  return (
+    <div className="group relative">
+      {keyButton}
+      <button
+        type="button"
+        data-testid="keycode-delete"
+        aria-label={t('editor.macro.deleteKeycode')}
+        className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+        onClick={(e) => { e.stopPropagation(); onDelete() }}
+      >
+        <X size={14} aria-hidden="true" />
+      </button>
+    </div>
   )
 }

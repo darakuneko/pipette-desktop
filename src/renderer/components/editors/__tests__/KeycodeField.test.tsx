@@ -59,6 +59,11 @@ describe('KeycodeField', () => {
     expect(screen.getByTestId('keycode-field')).not.toHaveAttribute('title')
   })
 
+  it('suppresses title when noTooltip is true', () => {
+    render(<KeycodeField value={4} selected={false} onSelect={() => {}} noTooltip />)
+    expect(screen.getByTestId('keycode-field')).not.toHaveAttribute('title')
+  })
+
   it('delays onSelect when onDoubleClick is provided', () => {
     vi.useFakeTimers()
     const onSelect = vi.fn()

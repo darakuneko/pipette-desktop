@@ -750,8 +750,13 @@ describe('macro', () => {
       expect(jsonToMacroActions('[["delay","500"]]')).toBeNull()
     })
 
-    it('returns null for tap with no keycodes', () => {
-      expect(jsonToMacroActions('[["tap"]]')).toBeNull()
+    it('accepts tap with no keycodes as empty array', () => {
+      expect(jsonToMacroActions('[["tap"]]')).toEqual([{ type: 'tap', keycodes: [] }])
+    })
+
+    it('accepts down/up with no keycodes as empty array', () => {
+      expect(jsonToMacroActions('[["down"]]')).toEqual([{ type: 'down', keycodes: [] }])
+      expect(jsonToMacroActions('[["up"]]')).toEqual([{ type: 'up', keycodes: [] }])
     })
 
     it('returns null for tap with non-string keycode', () => {

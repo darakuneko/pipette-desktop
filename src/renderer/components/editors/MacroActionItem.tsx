@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, X } from 'lucide-react'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
 import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 
@@ -22,9 +22,12 @@ interface Props {
   onKeycodeClick: (keycodeIndex: number) => void
   onKeycodeDoubleClick: (keycodeIndex: number, rect: DOMRect) => void
   onKeycodeAdd: () => void
+  onKeycodeAddDoubleClick: (rect: DOMRect) => void
+  onKeycodeDelete?: (keycodeIndex: number) => void
+  onEditClick?: (keycodeIndex: number) => void
+  onCloseEdit?: () => void
   onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
   focusMode?: boolean
-  showConfirmHint?: boolean
 }
 
 export function defaultAction(type: ActionType): MacroAction {
@@ -34,7 +37,7 @@ export function defaultAction(type: ActionType): MacroAction {
     case 'tap':
     case 'down':
     case 'up':
-      return { type, keycodes: [1] }
+      return { type, keycodes: [] }
     case 'delay':
       return { type: 'delay', delay: 100 }
   }
@@ -55,9 +58,12 @@ export function MacroActionItem({
   onKeycodeClick,
   onKeycodeDoubleClick,
   onKeycodeAdd,
+  onKeycodeAddDoubleClick,
+  onKeycodeDelete,
+  onEditClick,
+  onCloseEdit,
   onMaskPartClick,
   focusMode,
-  showConfirmHint,
 }: Props) {
   const { t } = useTranslation()
 
@@ -93,30 +99,33 @@ export function MacroActionItem({
       case 'up':
         return (
           <div className="flex flex-wrap items-center gap-1 flex-1">
-            {action.keycodes.map((kc, ki) => {
-              const isSelected = selectedKeycodeIndex === ki
-              return (
-                <KeycodeField
-                  key={ki}
-                  value={kc}
-                  selected={isSelected}
-                  selectedMaskPart={isSelected && selectedMaskPart}
-                  onSelect={() => onKeycodeClick(ki)}
-                  onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
-                  onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
+            {action.keycodes.map((kc, ki) => (
+              <KeycodeField
+                key={ki}
+                value={kc}
+                selected={false}
+                onSelect={() => onEditClick?.(ki)}
+                noTooltip
+              />
+            ))}
+            {onEditClick && (
+              <div className="group relative">
+                <button
+                  type="button"
+                  data-testid="macro-edit-action"
+                  style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
+                  className="flex shrink-0 rounded-sm outline outline-1 outline-dashed outline-edge hover:outline-accent"
+                  onClick={() => onEditClick(action.keycodes.length)}
+                  aria-label={t('editor.macro.addKeycode')}
                 />
-              )
-            })}
-            <button
-              type="button"
-              data-testid="macro-add-keycode"
-              style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
-              className="flex items-center justify-center rounded border border-dashed border-edge text-content-muted hover:border-accent hover:text-accent"
-              onClick={onKeycodeAdd}
-              title={t('editor.macro.addKeycode')}
-            >
-              +
-            </button>
+
+                <div className="pointer-events-none invisible absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg group-hover:visible">
+                  <div className="text-xs font-medium text-content whitespace-nowrap">
+                    {t('editor.macro.addKeycode')}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )
       case 'delay':
@@ -143,21 +152,57 @@ export function MacroActionItem({
 
   const isKeycodeType = action.type === 'tap' || action.type === 'down' || action.type === 'up'
 
-  if (focusMode && isKeycodeType && selectedKeycodeIndex !== null) {
-    const kc = action.keycodes[selectedKeycodeIndex]
+  if (focusMode && isKeycodeType) {
     return (
       <div className="flex items-center gap-3">
-        <label className="min-w-[140px] text-sm text-content">{typeLabels[action.type]}</label>
-        <KeycodeField
-          value={kc ?? 0}
-          selected
-          selectedMaskPart={selectedMaskPart}
-          onSelect={() => onKeycodeClick(selectedKeycodeIndex)}
-          onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(selectedKeycodeIndex, part) : undefined}
-          onDoubleClick={(rect) => onKeycodeDoubleClick(selectedKeycodeIndex, rect)}
-        />
-        {showConfirmHint && (
-          <span className="text-xs text-content-muted">{t('editor.keymap.pickerDoubleClickHint')}</span>
+        <label className="min-w-[60px] text-sm text-content">{typeLabels[action.type]}</label>
+        <div className="flex flex-wrap items-center gap-1 flex-1">
+          {action.keycodes.map((kc, ki) => {
+            const isSelected = selectedKeycodeIndex === ki
+            return (
+              <KeycodeField
+                key={ki}
+                value={kc}
+                selected={isSelected}
+                selectedMaskPart={isSelected && selectedMaskPart}
+                onSelect={() => onKeycodeClick(ki)}
+                onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
+                onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
+                onDelete={onKeycodeDelete ? () => onKeycodeDelete(ki) : undefined}
+              />
+            )
+          })}
+          <div className="group relative">
+            <button
+              type="button"
+              data-testid="macro-add-keycode"
+              style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
+              className={`flex shrink-0 rounded-sm outline outline-1 outline-dashed ${
+                selectedKeycodeIndex === action.keycodes.length
+                  ? 'outline-accent'
+                  : 'outline-edge hover:outline-accent'
+              }`}
+              onClick={onKeycodeAdd}
+              onDoubleClick={(e) => onKeycodeAddDoubleClick(e.currentTarget.getBoundingClientRect())}
+              aria-label={t('editor.macro.addKeycode')}
+            />
+            <div className="pointer-events-none invisible absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg group-hover:visible">
+              <div className="text-xs font-medium text-content whitespace-nowrap">
+                {t('editor.macro.addKeycode')}
+              </div>
+            </div>
+          </div>
+        </div>
+        {onCloseEdit && (
+          <button
+            type="button"
+            data-testid="macro-close-edit"
+            className="ml-auto rounded p-1 text-content-muted hover:text-content"
+            onClick={onCloseEdit}
+            aria-label={t('common.close')}
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
         )}
       </div>
     )
@@ -187,9 +232,10 @@ export function MacroActionItem({
       <button
         type="button"
         onClick={() => onDelete(index)}
-        className="px-1.5 text-content-muted hover:text-danger"
+        className="rounded p-1 text-content-muted hover:text-danger"
+        aria-label={t('common.delete')}
       >
-        &times;
+        <X size={20} aria-hidden="true" />
       </button>
     </div>
   )
