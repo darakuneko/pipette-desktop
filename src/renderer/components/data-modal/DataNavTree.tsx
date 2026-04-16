@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
@@ -15,6 +16,9 @@ interface Props {
   hubKeyboardNames: string[]
   syncScanResult: SyncDataScanResult | null
   syncScanning: boolean
+  onSyncKeyboardSelect: (uid: string, name: string) => void | Promise<void>
+  downloadingUid: string | null
+  downloadErrorByUid: Record<string, string>
 }
 
 const FAVORITE_TYPES: { type: FavoriteType; labelKey: string }[] = [
@@ -102,8 +106,16 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning }: Props) {
+export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid }: Props) {
   const { t } = useTranslation()
+
+  function resolveSyncKeyboardName(uid: string): string {
+    return (
+      syncScanResult?.keyboardNames?.[uid] ??
+      storedKeyboards.find((kb) => kb.uid === uid)?.name ??
+      uid
+    )
+  }
 
   return (
     <div className="flex flex-col gap-0.5 py-2 px-1" data-testid="data-nav-tree">
@@ -207,16 +219,32 @@ export function DataNavTree({ storedKeyboards, activePath, onNavigate, isExpande
             onToggle={() => onToggle('sync-keyboards')}
             testId="nav-sync-keyboards"
           >
-            {syncScanResult.keyboards.map((uid) => (
-              <Leaf
-                key={uid}
-                label={storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid}
-                depth={2}
-                active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name: '' })}
-                onClick={() => onNavigate({ section: 'sync', page: 'sync-keyboard', uid, name: storedKeyboards.find((kb) => kb.uid === uid)?.name ?? uid })}
-                testId={`nav-sync-kb-${uid}`}
-              />
-            ))}
+            {syncScanResult.keyboards.map((uid) => {
+              const name = resolveSyncKeyboardName(uid)
+              const isDownloading = downloadingUid === uid
+              const error = downloadErrorByUid[uid]
+              const label = isDownloading ? `${name} (${t('sync.downloading')})` : name
+              return (
+                <Fragment key={uid}>
+                  <Leaf
+                    label={label}
+                    depth={2}
+                    active={isActivePath(activePath, { section: 'sync', page: 'sync-keyboard', uid, name })}
+                    onClick={() => { if (!isDownloading) void onSyncKeyboardSelect(uid, name) }}
+                    testId={`nav-sync-kb-${uid}`}
+                  />
+                  {error && (
+                    <div
+                      className="text-[11px] text-danger py-1"
+                      style={{ paddingLeft: `${2 * 14 + 8}px` }}
+                      data-testid={`nav-sync-kb-${uid}-error`}
+                    >
+                      {error}
+                    </div>
+                  )}
+                </Fragment>
+              )
+            })}
           </Branch>
         )}
       </Branch>

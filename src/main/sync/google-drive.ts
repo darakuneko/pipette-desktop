@@ -3,6 +3,7 @@
 
 import { getAccessToken } from './google-auth'
 import { pLimit } from '../../shared/concurrency'
+import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import type { SyncEnvelope } from '../../shared/types/sync'
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3'
@@ -149,6 +150,8 @@ export function syncUnitFromFileName(fileName: string): string | null {
   // "favorites_tapDance.enc" → "favorites/tapDance"
   const favMatch = fileName.match(/^favorites_(.+)\.enc$/)
   if (favMatch) return `favorites/${favMatch[1]}`
+
+  if (fileName === driveFileName(KEYBOARD_META_SYNC_UNIT)) return KEYBOARD_META_SYNC_UNIT
 
   return null
 }

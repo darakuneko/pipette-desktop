@@ -69,6 +69,11 @@ describe('google-drive', () => {
       expect(syncUnitFromFileName('keyboards_0x1234_snapshots.enc')).toBe('keyboards/0x1234/snapshots')
     })
 
+    it('round-trips the keyboard-meta singleton sync unit', () => {
+      expect(driveFileName('meta/keyboard-names')).toBe('meta_keyboard-names.enc')
+      expect(syncUnitFromFileName('meta_keyboard-names.enc')).toBe('meta/keyboard-names')
+    })
+
     it('returns null for invalid filenames', () => {
       expect(syncUnitFromFileName('invalid.txt')).toBeNull()
       expect(syncUnitFromFileName('other_thing.enc')).toBeNull()

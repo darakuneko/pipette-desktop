@@ -38,6 +38,15 @@ import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTarget
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
+import {
+  extractDeviceNameFromFilename,
+  getActiveKeyboardMetaMap,
+  readKeyboardMetaIndex,
+  tombstoneAllKeyboardMeta,
+  tombstoneKeyboardMeta,
+  upsertKeyboardMeta,
+} from './keyboard-meta'
+import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 
 interface IpcResult {
   success: boolean
@@ -178,20 +187,26 @@ export function setupSyncIpc(): void {
       }
       if (!hasKeyboards && !targets.favorites) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
+      let metaChanged = false
       if (targets.keyboards === true) {
         cancelPendingChanges('keyboards/')
         await deleteFilesByPrefix('keyboards_')
+        const tombstoned = await tombstoneAllKeyboardMeta()
+        if (tombstoned > 0) metaChanged = true
       } else if (Array.isArray(targets.keyboards)) {
         for (const uid of targets.keyboards) {
           if (typeof uid !== 'string' || !isSafeKey(uid)) throw new Error('Invalid keyboard UID')
           cancelPendingChanges(`keyboards/${uid}/`)
           await deleteFilesByPrefix(`keyboards_${uid}_`)
+          const result = await tombstoneKeyboardMeta(uid)
+          if (result === 'tombstoned') metaChanged = true
         }
       }
       if (targets.favorites) {
         cancelPendingChanges('favorites/')
         await deleteFilesByPrefix('favorites_')
       }
+      if (metaChanged) notifyChange(KEYBOARD_META_SYNC_UNIT)
     }),
   )
 
@@ -226,27 +241,34 @@ export function setupSyncIpc(): void {
     const userData = app.getPath('userData')
     const keyboardsDir = join(userData, 'sync', 'keyboards')
     const results: StoredKeyboardInfo[] = []
+    const metaIndex = await readKeyboardMetaIndex()
+    const metaMap = getActiveKeyboardMetaMap(metaIndex)
+    let metaBackfilled = false
     try {
       const entries = await readdir(keyboardsDir, { withFileTypes: true })
       for (const entry of entries) {
         if (!entry.isDirectory()) continue
         const uid = entry.name
         if (!isSafeKey(uid)) continue
-        let name = uid
-        // Try to extract device name from first snapshot entry filename
-        try {
-          const raw = await readFile(join(keyboardsDir, uid, 'snapshots', 'index.json'), 'utf-8')
-          const index = JSON.parse(raw) as SnapshotIndex
-          const active = index.entries.find((e) => !e.deletedAt)
-          if (active) {
-            // filename: "{deviceName}_{ISO_timestamp}.pipette"
-            const match = active.filename.match(/^(.+?)_\d{4}-\d{2}-/)
-            if (match) name = match[1]
-          }
-        } catch { /* no snapshots */ }
+        let name = metaMap.get(uid) ?? uid
+        // Fallback: derive name from snapshot filename and backfill meta
+        if (name === uid) {
+          try {
+            const raw = await readFile(join(keyboardsDir, uid, 'snapshots', 'index.json'), 'utf-8')
+            const index = JSON.parse(raw) as SnapshotIndex
+            const active = index.entries.find((e) => !e.deletedAt)
+            const extracted = active ? extractDeviceNameFromFilename(active.filename) : null
+            if (extracted) {
+              name = extracted
+              const result = await upsertKeyboardMeta(uid, extracted)
+              if (result === 'upserted') metaBackfilled = true
+            }
+          } catch { /* no snapshots */ }
+        }
         results.push({ uid, name })
       }
     } catch { /* dir doesn't exist */ }
+    if (metaBackfilled) notifyChange(KEYBOARD_META_SYNC_UNIT)
     return results
   })
 
@@ -262,6 +284,11 @@ export function setupSyncIpc(): void {
       await rm(join(userData, 'sync', 'keyboards', uid), { recursive: true, force: true })
       // Best-effort remote deletion
       await deleteFilesByPrefix(`keyboards_${uid}_`).catch(() => {})
+      // Tombstone meta entry so other devices see the removal
+      const tombstoneResult = await tombstoneKeyboardMeta(uid)
+      if (tombstoneResult === 'tombstoned') {
+        notifyChange(KEYBOARD_META_SYNC_UNIT)
+      }
     }),
   )
 

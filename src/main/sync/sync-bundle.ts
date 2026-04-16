@@ -5,10 +5,12 @@ import { app } from 'electron'
 import { join } from 'node:path'
 import { readFile, readdir, access } from 'node:fs/promises'
 import { gcTombstones } from './merge'
+import { keyboardMetaFilePath, readKeyboardMetaIndex } from './keyboard-meta'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle } from '../../shared/types/sync'
+import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 
 export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | null> {
   try {
@@ -20,6 +22,11 @@ export async function readIndexFile(dir: string): Promise<FavoriteIndex | Snapsh
 }
 
 export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | null> {
+  if (syncUnit === KEYBOARD_META_SYNC_UNIT) {
+    const index = await readKeyboardMetaIndex()
+    return { type: 'keyboard-meta', key: 'keyboard-names', index, files: {} }
+  }
+
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
@@ -68,7 +75,12 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
 
 export async function collectAllSyncUnits(): Promise<string[]> {
   const userData = app.getPath('userData')
-  const units = FAVORITE_TYPES.map((type) => `favorites/${type}`)
+  const units: string[] = FAVORITE_TYPES.map((type) => `favorites/${type}`)
+
+  try {
+    await access(keyboardMetaFilePath())
+    units.push(KEYBOARD_META_SYNC_UNIT)
+  } catch { /* no meta */ }
 
   // Scan sync/keyboards/{uid}/ for settings and snapshots
   const keyboardsDir = join(userData, 'sync', 'keyboards')

@@ -272,6 +272,9 @@ export function DataModal({
               hubKeyboardNames={hubKeyboardNames}
               syncScanResult={nav.syncScanResult}
               syncScanning={nav.syncScanning}
+              onSyncKeyboardSelect={nav.onSyncKeyboardSelect}
+              downloadingUid={nav.downloadingUid}
+              downloadErrorByUid={nav.downloadErrorByUid}
             />
           </div>
 

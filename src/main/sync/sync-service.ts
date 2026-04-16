@@ -3,7 +3,7 @@
 
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises'
 import { encrypt, decrypt, retrievePassword, storePassword, clearPassword } from './sync-crypto'
 import { loadAppConfig } from '../app-config'
 import { getAuthStatus } from './google-auth'
@@ -19,6 +19,13 @@ import { pLimit } from '../../shared/concurrency'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { mergeEntries, gcTombstones } from './merge'
 import { readIndexFile, bundleSyncUnit, collectAllSyncUnits } from './sync-bundle'
+import {
+  applyRemoteKeyboardMetaIndex,
+  backfillKeyboardMeta,
+  getActiveKeyboardMetaMap,
+  readKeyboardMetaIndex,
+} from './keyboard-meta'
+import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope } from '../../shared/types/sync'
 
 const SYNC_CONCURRENCY = 10
@@ -89,11 +96,41 @@ function errorMessage(err: unknown, fallback: string): string {
 export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean {
   if (scope === 'all') return true
   if (syncUnit === null) return false
+  if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
     return syncUnit.startsWith('favorites/') || syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
   }
   return syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
+}
+
+async function listLocalKeyboardUids(): Promise<Set<string>> {
+  const userData = app.getPath('userData')
+  const keyboardsDir = join(userData, 'sync', 'keyboards')
+  const uids = new Set<string>()
+  try {
+    const entries = await readdir(keyboardsDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) uids.add(entry.name)
+    }
+  } catch { /* dir doesn't exist */ }
+  return uids
+}
+
+function shouldDownloadSyncUnit(
+  syncUnit: string | null,
+  scope: SyncScope,
+  localKeyboardUids: Set<string>,
+): boolean {
+  if (!syncUnit) return false
+  if (!matchesScope(syncUnit, scope)) return false
+  // Lazy: when scope is 'all' only download keyboards/<uid>/* that already exist locally.
+  // Explicit keyboard scopes always download in full.
+  if (syncUnit.startsWith('keyboards/') && scope === 'all') {
+    const uid = syncUnit.split('/')[1]
+    return !!uid && localKeyboardUids.has(uid)
+  }
+  return true
 }
 
 async function requireSyncCredentials(): Promise<string | null> {
@@ -147,7 +184,7 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
 
 export async function scanRemoteData(): Promise<SyncDataScanResult> {
   const result = await fetchValidatedDataFiles()
-  if (!result) return { keyboards: [], favorites: [], undecryptable: [] }
+  if (!result) return { keyboards: [], keyboardNames: {}, favorites: [], undecryptable: [] }
   const { password, dataFiles } = result
 
   // Categorize from filenames (no download needed)
@@ -165,10 +202,22 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
     }
   }
 
+  // Use whatever names are already in the local meta index (populated by executeSync/backfill
+  // and the LIST_STORED_KEYBOARDS safety net). scanRemoteData stays read-only here so it
+  // doesn't trigger extra downloads or writes.
+  const metaIndex = await readKeyboardMetaIndex()
+  const metaMap = getActiveKeyboardMetaMap(metaIndex)
+  const keyboardNames: Record<string, string> = {}
+  for (const uid of keyboardUids) {
+    const name = metaMap.get(uid)
+    if (name) keyboardNames[uid] = name
+  }
+
   const undecryptable = await findUndecryptableFiles(password, dataFiles)
 
   return {
     keyboards: [...keyboardUids],
+    keyboardNames,
     favorites: [...favoriteTypes],
     undecryptable,
   }
@@ -330,6 +379,13 @@ async function mergeSyncUnit(
   const plaintext = await decrypt(envelope, password)
   const remoteBundle = JSON.parse(plaintext) as SyncBundle
 
+  // Handle meta/keyboard-names (entry-level LWW, no data files)
+  if (syncUnit === KEYBOARD_META_SYNC_UNIT) {
+    const remoteIndex = remoteBundle.index as KeyboardMetaIndex
+    const { remoteNeedsUpdate } = await applyRemoteKeyboardMetaIndex(remoteIndex)
+    return remoteNeedsUpdate
+  }
+
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
@@ -445,6 +501,13 @@ export async function executeSync(
     let failedUnits: string[]
     if (direction === 'download') {
       failedUnits = await executeDownloadSync(password, initialFiles, scope)
+      if (scope === 'all') {
+        const { resolved } = await backfillKeyboardMeta(password, initialFiles)
+        if (resolved > 0) {
+          pendingChanges.add(KEYBOARD_META_SYNC_UNIT)
+          broadcastPendingStatus()
+        }
+      }
     } else {
       failedUnits = await executeUploadSync(password, initialFiles, scope)
       // Clear pending changes matching the scope, then re-add failed units
@@ -487,9 +550,10 @@ async function executeDownloadSync(
   const remoteFiles = prefetchedFiles ?? await listFiles()
   updateRemoteState(remoteFiles) // Always record full remote state for polling
 
+  const localKeyboardUids = await listLocalKeyboardUids()
   const filesToDownload = remoteFiles.filter((f) => {
     const syncUnit = syncUnitFromFileName(f.name)
-    return matchesScope(syncUnit, scope)
+    return shouldDownloadSyncUnit(syncUnit, scope, localKeyboardUids)
   })
 
   const total = filesToDownload.length
@@ -612,9 +676,12 @@ async function pollForRemoteChanges(): Promise<void> {
       return
     }
 
-    const changedFiles = remoteFiles.filter(
-      (file) => lastKnownRemoteState.get(file.name) !== file.modifiedTime,
-    )
+    const localKeyboardUids = await listLocalKeyboardUids()
+    const changedFiles = remoteFiles.filter((file) => {
+      if (lastKnownRemoteState.get(file.name) === file.modifiedTime) return false
+      const syncUnit = syncUnitFromFileName(file.name)
+      return shouldDownloadSyncUnit(syncUnit, 'all', localKeyboardUids)
+    })
 
     updateRemoteState(remoteFiles)
 
@@ -634,7 +701,9 @@ async function pollForRemoteChanges(): Promise<void> {
               message: 'Sync complete',
             })
           } catch {
-            // Polling merge failed — will retry next poll
+            // Forget the modifiedTime so the next poll re-detects this file as changed
+            // and gets another chance to merge it.
+            lastKnownRemoteState.delete(remoteFile.name)
           }
         }),
       ),
