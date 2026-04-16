@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTroubleshooting } from '../../hooks/useTroubleshooting'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { BTN_SECONDARY as SETTINGS_BTN_SECONDARY } from '../settings-modal/settings-modal-shared'
 import { HubPostRow, DEFAULT_PER_PAGE } from '../hub-post-shared'
@@ -70,6 +71,8 @@ export function DataModal({
     onResetStart,
     onResetEnd,
   })
+
+  useEscapeClose(onClose, !troubleshoot.busy)
 
   // Reset to null if hub tab becomes hidden while active
   useEffect(() => {

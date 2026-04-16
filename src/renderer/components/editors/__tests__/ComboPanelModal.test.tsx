@@ -151,12 +151,12 @@ describe('ComboPanelModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('does not close modal on Escape key', () => {
+  it('closes modal on Escape key', () => {
     render(
       <ComboPanelModal entries={[makeEntry()]} initialIndex={0} onSetEntry={onSetEntry} onClose={onClose} />,
     )
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(onClose).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('hides favorites panel when picker is open', () => {

@@ -163,7 +163,7 @@ describe('LanguageSelectorModal', () => {
     expect(screen.queryByTestId('language-delete-english')).not.toBeInTheDocument()
   })
 
-  it('does not close modal on Escape key', async () => {
+  it('closes modal on Escape key', async () => {
     const onClose = vi.fn()
 
     render(
@@ -174,9 +174,12 @@ describe('LanguageSelectorModal', () => {
       />,
     )
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    // Search input auto-focuses on mount; blur it so Escape is not treated as
+    // input-in-progress.
+    ;(document.activeElement as HTMLElement | null)?.blur()
+    fireEvent.keyDown(window, { key: 'Escape' })
 
-    expect(onClose).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('does not update state after unmount when langList resolves late', async () => {

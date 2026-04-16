@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from './editors/ModalCloseButton'
 import { formatDateShort } from './editors/store-modal-shared'
 import type { AppNotification } from '../../shared/types/notification'
@@ -10,6 +11,7 @@ interface NotificationModalProps {
 
 export function NotificationModal({ notifications, onClose }: NotificationModalProps) {
   const { t } = useTranslation()
+  useEscapeClose(onClose)
 
   return (
     <div
