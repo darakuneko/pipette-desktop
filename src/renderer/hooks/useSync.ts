@@ -16,6 +16,8 @@ import type {
   UndecryptableFile,
   SyncDataScanResult,
   SyncScope,
+  SyncOperationResult,
+  SyncCredentialFailureReason,
 } from '../../shared/types/sync'
 
 /** Maps a SyncProgress status or LastSyncResult status to the UI SyncStatusType. */
@@ -42,19 +44,21 @@ export interface UseSyncReturn {
   hasRemotePassword: boolean | null
   checkingRemotePassword: boolean
   syncUnavailable: boolean
+  /** Why the sync subsystem isn't ready to run; null when ready. */
+  syncReadinessReason: SyncCredentialFailureReason | null
   retryRemoteCheck: () => void
   startAuth: () => Promise<void>
   signOut: () => Promise<void>
   setConfig: (patch: Partial<AppConfig>) => void
-  setPassword: (password: string) => Promise<{ success: boolean; error?: string }>
-  changePassword: (newPassword: string) => Promise<{ success: boolean; error?: string }>
-  resetSyncTargets: (targets: SyncResetTargets) => Promise<{ success: boolean; error?: string }>
+  setPassword: (password: string) => Promise<SyncOperationResult>
+  changePassword: (newPassword: string) => Promise<SyncOperationResult>
+  resetSyncTargets: (targets: SyncResetTargets) => Promise<SyncOperationResult>
   validatePassword: (password: string) => Promise<PasswordStrength>
   syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
   refreshStatus: () => Promise<void>
   listUndecryptable: () => Promise<UndecryptableFile[]>
   scanRemote: () => Promise<SyncDataScanResult>
-  deleteFiles: (fileIds: string[]) => Promise<{ success: boolean; error?: string }>
+  deleteFiles: (fileIds: string[]) => Promise<SyncOperationResult>
 }
 
 export function useSync(): UseSyncReturn {
@@ -244,6 +248,15 @@ export function useSync(): UseSyncReturn {
     return 'none'
   }, [progress, authStatus.authenticated, hasPassword, config.autoSync, hasPendingChangesState, lastSyncResult])
 
+  // Detailed keystore failures (decryptFailed / keystoreUnavailable) come back
+  // through password set/change IPC results, not from this aggregate.
+  const syncReadinessReason = useMemo<SyncCredentialFailureReason | null>(() => {
+    if (!authStatus.authenticated) return 'unauthenticated'
+    if (!hasPassword) return 'noPasswordFile'
+    if (syncUnavailable) return 'remoteCheckFailed'
+    return null
+  }, [authStatus.authenticated, hasPassword, syncUnavailable])
+
   return {
     config,
     authStatus,
@@ -256,6 +269,7 @@ export function useSync(): UseSyncReturn {
     hasRemotePassword,
     checkingRemotePassword,
     syncUnavailable,
+    syncReadinessReason,
     retryRemoteCheck,
     startAuth,
     signOut,

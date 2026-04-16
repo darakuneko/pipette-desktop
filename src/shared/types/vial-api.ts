@@ -16,7 +16,7 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo } from './sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
 import type { PipetteSettings } from './pipette-settings'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
@@ -131,13 +131,13 @@ export interface VialAPI {
   appConfigSet(key: string, value: unknown): Promise<void>
 
   // Sync
-  syncAuthStart(): Promise<{ success: boolean; error?: string }>
+  syncAuthStart(): Promise<SyncOperationResult>
   syncAuthStatus(): Promise<SyncAuthStatus>
-  syncAuthSignOut(): Promise<{ success: boolean; error?: string }>
-  syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<{ success: boolean; error?: string }>
-  syncSetPassword(password: string): Promise<{ success: boolean; error?: string }>
-  syncChangePassword(newPassword: string): Promise<{ success: boolean; error?: string }>
-  syncResetTargets(targets: SyncResetTargets): Promise<{ success: boolean; error?: string }>
+  syncAuthSignOut(): Promise<SyncOperationResult>
+  syncExecute(direction: 'download' | 'upload', scope?: SyncScope): Promise<SyncOperationResult>
+  syncSetPassword(password: string): Promise<SyncOperationResult>
+  syncChangePassword(newPassword: string): Promise<SyncOperationResult>
+  syncResetTargets(targets: SyncResetTargets): Promise<SyncOperationResult>
   syncHasPassword(): Promise<boolean>
   syncValidatePassword(password: string): Promise<PasswordStrength>
   syncOnProgress(callback: (progress: SyncProgress) => void): () => void

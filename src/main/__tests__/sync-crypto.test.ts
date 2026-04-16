@@ -22,7 +22,7 @@ import {
   encrypt,
   decrypt,
   storePassword,
-  retrievePassword,
+  retrievePasswordResult,
   clearPassword,
   hasStoredPassword,
   checkPasswordStrength,
@@ -201,8 +201,8 @@ describe('sync-crypto', () => {
   describe('password storage (safeStorage)', () => {
     it('stores and retrieves password', async () => {
       await storePassword('my-secure-password')
-      const retrieved = await retrievePassword()
-      expect(retrieved).toBe('my-secure-password')
+      const result = await retrievePasswordResult()
+      expect(result).toEqual({ ok: true, password: 'my-secure-password' })
     })
 
     it('hasStoredPassword returns false when no password stored', async () => {
@@ -221,11 +221,6 @@ describe('sync-crypto', () => {
       await clearPassword()
       const has = await hasStoredPassword()
       expect(has).toBe(false)
-    })
-
-    it('retrievePassword returns null when no password stored', async () => {
-      const retrieved = await retrievePassword()
-      expect(retrieved).toBeNull()
     })
 
     it('storePassword throws when safeStorage unavailable', async () => {
@@ -264,6 +259,36 @@ describe('sync-crypto', () => {
     it('handles empty password', () => {
       const result = checkPasswordStrength('')
       expect(result.score).toBe(0)
+    })
+  })
+
+  describe('retrievePasswordResult', () => {
+    it('returns ok when file exists and decrypts', async () => {
+      await storePassword('p')
+      const result = await retrievePasswordResult()
+      expect(result).toEqual({ ok: true, password: 'p' })
+    })
+
+    it('returns no_password_file when no file exists', async () => {
+      const result = await retrievePasswordResult()
+      expect(result).toEqual({ ok: false, reason: 'noPasswordFile' })
+    })
+
+    it('returns decrypt_failed when decryptString throws', async () => {
+      const { safeStorage } = await import('electron')
+      await storePassword('p')
+      vi.mocked(safeStorage.decryptString).mockImplementationOnce(() => {
+        throw new Error('decrypt failed')
+      })
+      const result = await retrievePasswordResult()
+      expect(result).toEqual({ ok: false, reason: 'decryptFailed' })
+    })
+
+    it('returns keystore_unavailable when safeStorage is not available', async () => {
+      const { safeStorage } = await import('electron')
+      vi.mocked(safeStorage.isEncryptionAvailable).mockReturnValueOnce(false)
+      const result = await retrievePasswordResult()
+      expect(result).toEqual({ ok: false, reason: 'keystoreUnavailable' })
     })
   })
 })

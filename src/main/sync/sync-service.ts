@@ -4,7 +4,7 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'node:path'
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises'
-import { encrypt, decrypt, retrievePassword, storePassword, clearPassword } from './sync-crypto'
+import { encrypt, decrypt, retrievePasswordResult, storePassword, clearPassword } from './sync-crypto'
 import { loadAppConfig } from '../app-config'
 import { getAuthStatus } from './google-auth'
 import {
@@ -26,7 +26,16 @@ import {
   readKeyboardMetaIndex,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
-import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope } from '../../shared/types/sync'
+import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
+import { syncCredentialI18nKey } from '../../shared/types/sync'
+
+export class SyncCredentialError extends Error {
+  readonly reason: SyncCredentialFailureReason
+  constructor(reason: SyncCredentialFailureReason, namespace: 'readiness' | 'changePasswordError' = 'changePasswordError') {
+    super(syncCredentialI18nKey(namespace, reason))
+    this.reason = reason
+  }
+}
 
 const SYNC_CONCURRENCY = 10
 const DEBOUNCE_MS = 10_000
@@ -133,18 +142,18 @@ function shouldDownloadSyncUnit(
   return true
 }
 
-async function requireSyncCredentials(): Promise<string | null> {
+async function requireSyncCredentials(): Promise<SyncCredentialResult> {
   const authStatus = await getAuthStatus()
-  if (!authStatus.authenticated) return null
-
-  return retrievePassword()
+  if (!authStatus.authenticated) return { ok: false, reason: 'unauthenticated' }
+  return retrievePasswordResult()
 }
 
 // --- Remote data inspection ---
 
 async function fetchValidatedDataFiles(): Promise<{ password: string; dataFiles: DriveFile[] } | null> {
-  const password = await requireSyncCredentials()
-  if (!password) return null
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return null
+  const { password } = credentials
   const remoteFiles = await listFiles()
 
   await validatePasswordCheck(password, remoteFiles)
@@ -243,11 +252,12 @@ export async function fetchRemoteBundle(syncUnit: string): Promise<SyncBundle | 
 // --- Non-destructive password change ---
 
 export async function changePassword(newPassword: string): Promise<void> {
-  if (isSyncing) throw new Error('Cannot change password while sync is in progress')
+  if (isSyncing) throw new Error('sync.changePasswordInProgress')
   isSyncing = true
   try {
-    const oldPassword = await requireSyncCredentials()
-    if (!oldPassword) throw new Error('No stored password found')
+    const credentials = await requireSyncCredentials()
+    if (!credentials.ok) throw new SyncCredentialError(credentials.reason)
+    const oldPassword = credentials.password
     if (newPassword === oldPassword) throw new Error('sync.samePassword')
     const remoteFiles = await listFiles()
 
@@ -484,8 +494,17 @@ export async function executeSync(
   isSyncing = true
 
   try {
-    const password = await requireSyncCredentials()
-    if (!password) return
+    const credentials = await requireSyncCredentials()
+    if (!credentials.ok) {
+      emitProgress({
+        direction,
+        status: 'error',
+        reason: credentials.reason,
+        message: syncCredentialI18nKey('readiness', credentials.reason),
+      })
+      return
+    }
+    const password = credentials.password
 
     emitProgress({ direction, status: 'syncing', message: 'Starting sync...' })
 
@@ -660,8 +679,9 @@ async function pollForRemoteChanges(): Promise<void> {
   isSyncing = true
 
   try {
-    const password = await requireSyncCredentials()
-    if (!password) return
+    const credentials = await requireSyncCredentials()
+    if (!credentials.ok) return  // polling stays silent — manual sync surfaces the reason
+    const password = credentials.password
 
     const remoteFiles = await listFiles()
 
@@ -766,12 +786,13 @@ async function flushPendingChanges(): Promise<void> {
       return
     }
 
-    const password = await requireSyncCredentials()
-    if (!password) {
+    const credentials = await requireSyncCredentials()
+    if (!credentials.ok) {
       pendingChanges.clear()
       broadcastPendingStatus()
       return
     }
+    const password = credentials.password
 
     const changes = new Set(pendingChanges)
     pendingChanges.clear()

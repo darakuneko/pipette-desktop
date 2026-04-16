@@ -200,7 +200,12 @@ export function SettingsDataTab({
       </div>
 
       {/* Sync Status */}
-      <SyncStatusSection syncStatus={sync.syncStatus} progress={sync.progress} lastSyncResult={sync.lastSyncResult} />
+      <SyncStatusSection
+        syncStatus={sync.syncStatus}
+        progress={sync.progress}
+        lastSyncResult={sync.lastSyncResult}
+        syncReadinessReason={sync.syncReadinessReason}
+      />
 
       <hr className="my-4 border-edge" />
 

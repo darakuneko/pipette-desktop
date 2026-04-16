@@ -68,7 +68,7 @@ vi.mock('../sync/google-auth', () => ({
 }))
 
 vi.mock('../sync/sync-crypto', () => ({
-  retrievePassword: vi.fn(async () => 'test-password'),
+  retrievePasswordResult: vi.fn(async () => ({ ok: true, password: 'test-password' })),
   storePassword: vi.fn(async () => {}),
   clearPassword: vi.fn(async () => {}),
   hasStoredPassword: vi.fn(async () => true),
@@ -1012,7 +1012,7 @@ describe('sync-service', () => {
       const syncPromise = executeSync('download')
 
       await expect(changePassword('new-password')).rejects.toThrow(
-        'Cannot change password while sync is in progress',
+        'sync.changePasswordInProgress',
       )
 
       await vi.advanceTimersByTimeAsync(200)
@@ -1024,10 +1024,10 @@ describe('sync-service', () => {
       expect(mockUploadFile).not.toHaveBeenCalled()
     })
 
-    it('throws when no password is stored', async () => {
+    it('throws SyncCredentialError(unauthenticated) when not signed in', async () => {
       mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
 
-      await expect(changePassword('new-password')).rejects.toThrow('No stored password found')
+      await expect(changePassword('new-password')).rejects.toThrow('sync.changePasswordError.unauthenticated')
     })
 
     it('succeeds with no remote data files (password-check only)', async () => {
