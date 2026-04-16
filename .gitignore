@@ -13,5 +13,6 @@ CLAUDE.md
 .copilot/
 .github/copilot*
 .aider*
+.codex
 .env
 .env.*

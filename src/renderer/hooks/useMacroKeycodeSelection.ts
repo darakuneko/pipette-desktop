@@ -6,7 +6,7 @@ import { type Keycode, deserialize } from '../../shared/keycodes/keycodes'
 import type { TapDanceEntry } from '../../shared/types/protocol'
 import { useMaskedKeycodeSelection } from './useMaskedKeycodeSelection'
 import { useTileContentOverride } from './useTileContentOverride'
-import { KC_TRNS, KC_NO, isKeycodeAction } from '../components/editors/macro-editor-utils'
+import { isKeycodeAction } from '../components/editors/macro-editor-utils'
 
 interface UseMacroKeycodeSelectionOptions {
   currentActions: MacroAction[]
@@ -18,6 +18,7 @@ interface UseMacroKeycodeSelectionOptions {
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
   quickSelect?: boolean
+  autoAdvance?: boolean
 }
 
 export function useMacroKeycodeSelection({
@@ -30,6 +31,7 @@ export function useMacroKeycodeSelection({
   tapDanceEntries,
   deserializedMacros,
   quickSelect,
+  autoAdvance,
 }: UseMacroKeycodeSelectionOptions) {
   const [selectedKey, setSelectedKey] = useState<{
     actionIndex: number
@@ -88,11 +90,11 @@ export function useMacroKeycodeSelection({
   const handleKeycodeAdd = useCallback(
     (actionIndex: number) => {
       const action = currentActions[actionIndex]
-      if (isKeycodeAction(action)) {
-        setKeycodeAt(actionIndex, [...action.keycodes, KC_TRNS])
-      }
+      if (!isKeycodeAction(action)) return
+      preEditValueRef.current = 0
+      setSelectedKey({ actionIndex, keycodeIndex: action.keycodes.length })
     },
-    [currentActions, setKeycodeAt],
+    [currentActions],
   )
 
   const macroInitialValue = (() => {
@@ -103,27 +105,46 @@ export function useMacroKeycodeSelection({
       : undefined
   })()
 
+  const handleKeycodeDelete = useCallback(
+    (actionIndex: number, keycodeIndex: number) => {
+      const action = currentActions[actionIndex]
+      if (!isKeycodeAction(action)) return
+      const newKeycodes = action.keycodes.filter((_, i) => i !== keycodeIndex)
+      setKeycodeAt(actionIndex, newKeycodes)
+      if (selectedKey?.actionIndex === actionIndex) {
+        const nextIndex = keycodeIndex < selectedKey.keycodeIndex
+          ? selectedKey.keycodeIndex - 1
+          : Math.min(selectedKey.keycodeIndex, Math.max(newKeycodes.length - 1, 0))
+        preEditValueRef.current = newKeycodes[nextIndex] ?? 0
+        setSelectedKey({ actionIndex, keycodeIndex: nextIndex })
+      }
+    },
+    [currentActions, setKeycodeAt, selectedKey],
+  )
+
   const maskedSelection = useMaskedKeycodeSelection({
     onUpdate(code: number) {
       if (!selectedKey) return false
       const action = currentActions[selectedKey.actionIndex]
       if (!isKeycodeAction(action)) return false
 
-      if (code === KC_NO) {
-        // Delete this keycode, but keep at least one
-        if (action.keycodes.length <= 1) return false
-        setKeycodeAt(
-          selectedKey.actionIndex,
-          action.keycodes.filter((_, i) => i !== selectedKey.keycodeIndex),
-        )
+      const newKeycodes = [...action.keycodes]
+      if (selectedKey.keycodeIndex >= newKeycodes.length) {
+        newKeycodes.push(code)
       } else {
-        const newKeycodes = [...action.keycodes]
         newKeycodes[selectedKey.keycodeIndex] = code
-        setKeycodeAt(selectedKey.actionIndex, newKeycodes)
+      }
+      setKeycodeAt(selectedKey.actionIndex, newKeycodes)
+
+      if (autoAdvance) {
+        const nextIndex = selectedKey.keycodeIndex + 1
+        preEditValueRef.current = newKeycodes[nextIndex] ?? 0
+        setSelectedKey({ actionIndex: selectedKey.actionIndex, keycodeIndex: nextIndex })
       }
     },
     onCommit() {
-      setSelectedKey(null)
+      // In macro edit mode, picker commits (quickSelect click, double-click)
+      // should not exit edit mode — user explicitly clicks × to close.
     },
     resetKey: selectedKey,
     initialValue: macroInitialValue,
@@ -174,20 +195,9 @@ export function useMacroKeycodeSelection({
   const pickerRef = useRef<HTMLDivElement>(null)
 
   const revertAndDeselect = useCallback(() => {
-    if (selectedKey) {
-      const action = currentActions[selectedKey.actionIndex]
-      if (
-        isKeycodeAction(action) &&
-        action.keycodes[selectedKey.keycodeIndex] !== preEditValueRef.current
-      ) {
-        const newKeycodes = [...action.keycodes]
-        newKeycodes[selectedKey.keycodeIndex] = preEditValueRef.current
-        setKeycodeAt(selectedKey.actionIndex, newKeycodes)
-      }
-    }
     maskedSelection.clearMask()
     setSelectedKey(null)
-  }, [selectedKey, currentActions, setKeycodeAt, maskedSelection.clearMask])
+  }, [maskedSelection.clearMask])
 
   // Close picker when clicking outside of it.
   useEffect(() => {
@@ -196,9 +206,11 @@ export function useMacroKeycodeSelection({
       const target = e.target as Node | null
       if (!target) return
       if (pickerRef.current?.contains(target)) return
-      // Resolve to Element for text node targets (e.g. spans inside buttons)
       const el = target instanceof Element ? target : target.parentElement
       if (el?.closest('[data-testid="keycode-field"]')) return
+      if (el?.closest('[data-testid="macro-action-list"]')) return
+      if (el?.closest('[data-macro-footer]')) return
+      if (el?.closest('[data-popover="key"]')) return
       revertAndDeselect()
     }
     window.addEventListener('click', handler)
@@ -227,6 +239,7 @@ export function useMacroKeycodeSelection({
     handleKeycodeClick,
     handleKeycodeDoubleClick,
     handleKeycodeAdd,
+    handleKeycodeDelete,
     handleMaskPartClick,
     applyPopoverKeycode,
     handlePopoverKeycodeSelect,

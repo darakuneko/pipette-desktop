@@ -146,6 +146,8 @@
       "textEditorTitle": "Edit Macro (Text)",
       "invalidJson": "Invalid JSON format",
       "addKeycode": "Add keycode",
+      "deleteKeycode": "Delete keycode",
+      "editAction": "Edit action",
       "asciiOnly": "Only ASCII characters (A-Z, 0-9, symbols) are supported",
       "unlockClickAgain": "After unlocking, click the macro key again to open the editor.",
       "unlockWarning": "Do not store passwords or sensitive information in macros, as they may be replayed or shared.",
