@@ -45,6 +45,8 @@ export interface SyncProgress {
   current?: number
   total?: number
   failedUnits?: string[]
+  /** Surfaces a credential failure reason so the UI can localize the message. */
+  reason?: SyncCredentialFailureReason
 }
 
 export interface SyncAuthStatus {
@@ -110,3 +112,38 @@ export type SyncScope =
   | 'favorites'     // favorites/* only
   | { keyboard: string }  // keyboards/{uid}/* only
   | { favorites: true; keyboard: string }  // favorites/* + keyboards/{uid}/*
+
+/**
+ * Why the sync subsystem cannot proceed without prompting the user.
+ * The same UX surface ("Not synced yet" / "No stored password found") used to
+ * collapse all of these into one string, hiding root cause from the user.
+ * Values are camelCase so they slot directly into i18n keys
+ * (`sync.readiness.<reason>`, `sync.changePasswordError.<reason>`).
+ */
+export type SyncCredentialFailureReason =
+  | 'unauthenticated'         // Google sign-in incomplete / token revoked
+  | 'noPasswordFile'          // sync-password.enc has never been written
+  | 'decryptFailed'           // file exists but the OS keychain refuses it
+  | 'keystoreUnavailable'     // safeStorage.isEncryptionAvailable() === false
+  | 'remoteCheckFailed'       // can't reach the remote password-check (network / drive)
+
+export type SyncCredentialI18nNamespace = 'readiness' | 'changePasswordError'
+
+/** Single source of truth: reason → i18n key (used by progress, status, password UI). */
+export function syncCredentialI18nKey(
+  ns: SyncCredentialI18nNamespace,
+  reason: SyncCredentialFailureReason,
+): string {
+  return `sync.${ns}.${reason}`
+}
+
+export type SyncCredentialResult =
+  | { ok: true; password: string }
+  | { ok: false; reason: SyncCredentialFailureReason }
+
+/** Serializable IPC envelope so renderer code can branch on the reason. */
+export interface SyncOperationResult {
+  success: boolean
+  error?: string
+  reason?: SyncCredentialFailureReason
+}

@@ -522,6 +522,21 @@
     "statusSuccess": "成功",
     "statusError": "エラー",
     "noSyncYet": "未同期",
+    "readiness": {
+      "unauthenticated": "Google にサインインして同期を開始してください。",
+      "noPasswordFile": "同期パスワードを設定してください。",
+      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)。",
+      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません。",
+      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています。"
+    },
+    "changePasswordError": {
+      "unauthenticated": "パスワードを変更する前に Google にサインインしてください。",
+      "noPasswordFile": "保存済みパスワードがありません。先にパスワードを設定してください。",
+      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)。",
+      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません。",
+      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました。"
+    },
+    "changePasswordInProgress": "同期実行中のためパスワードを変更できません。",
     "troubleshooting": "トラブルシューティング",
     "localData": "ローカルデータ",
     "import": "インポート",

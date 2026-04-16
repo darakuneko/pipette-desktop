@@ -33,8 +33,9 @@ import {
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  SyncCredentialError,
 } from './sync-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -51,6 +52,7 @@ import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 interface IpcResult {
   success: boolean
   error?: string
+  reason?: SyncCredentialFailureReason
 }
 
 async function wrapIpc(fallbackMessage: string, fn: () => Promise<void>): Promise<IpcResult> {
@@ -58,6 +60,9 @@ async function wrapIpc(fallbackMessage: string, fn: () => Promise<void>): Promis
     await fn()
     return { success: true }
   } catch (err) {
+    if (err instanceof SyncCredentialError) {
+      return { success: false, error: err.message, reason: err.reason }
+    }
     return { success: false, error: err instanceof Error ? err.message : fallbackMessage }
   }
 }

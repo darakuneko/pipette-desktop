@@ -12,7 +12,7 @@ import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/type
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
-import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo } from '../shared/types/sync'
+import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
@@ -210,15 +210,15 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_AUTH_START),
   syncAuthStatus: (): Promise<SyncAuthStatus> =>
     ipcRenderer.invoke(IpcChannels.SYNC_AUTH_STATUS),
-  syncAuthSignOut: (): Promise<{ success: boolean; error?: string }> =>
+  syncAuthSignOut: (): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_AUTH_SIGN_OUT),
-  syncExecute: (direction: 'download' | 'upload', scope?: SyncScope): Promise<{ success: boolean; error?: string }> =>
+  syncExecute: (direction: 'download' | 'upload', scope?: SyncScope): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_EXECUTE, direction, scope),
-  syncSetPassword: (password: string): Promise<{ success: boolean; error?: string }> =>
+  syncSetPassword: (password: string): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_SET_PASSWORD, password),
-  syncChangePassword: (newPassword: string): Promise<{ success: boolean; error?: string }> =>
+  syncChangePassword: (newPassword: string): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CHANGE_PASSWORD, newPassword),
-  syncResetTargets: (targets: SyncResetTargets): Promise<{ success: boolean; error?: string }> =>
+  syncResetTargets: (targets: SyncResetTargets): Promise<SyncOperationResult> =>
     ipcRenderer.invoke(IpcChannels.SYNC_RESET_TARGETS, targets),
   syncHasPassword: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.SYNC_HAS_PASSWORD),

@@ -9,7 +9,7 @@ import { promisify } from 'node:util'
 import { zxcvbn, zxcvbnOptions } from '@zxcvbn-ts/core'
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
-import type { SyncEnvelope } from '../../shared/types/sync'
+import type { SyncCredentialResult, SyncEnvelope } from '../../shared/types/sync'
 import type { PasswordStrength } from '../../shared/types/sync'
 
 const pbkdf2Async = promisify(pbkdf2)
@@ -104,12 +104,29 @@ export async function storePassword(password: string): Promise<void> {
   await writeFile(getPasswordPath(), encrypted)
 }
 
-export async function retrievePassword(): Promise<string | null> {
+/**
+ * Surface why we couldn't return a password instead of collapsing every failure
+ * into `null`. We probe the file first so the happy path skips the OS keychain
+ * availability check; the probe only runs when we actually have to disambiguate
+ * a decrypt failure from a missing keystore.
+ */
+export async function retrievePasswordResult(): Promise<SyncCredentialResult> {
+  let encrypted: Buffer
   try {
-    const encrypted = await readFile(getPasswordPath())
-    return safeStorage.decryptString(encrypted)
+    encrypted = await readFile(getPasswordPath())
   } catch {
-    return null
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { ok: false, reason: 'keystoreUnavailable' }
+    }
+    return { ok: false, reason: 'noPasswordFile' }
+  }
+  try {
+    return { ok: true, password: safeStorage.decryptString(encrypted) }
+  } catch {
+    if (!safeStorage.isEncryptionAvailable()) {
+      return { ok: false, reason: 'keystoreUnavailable' }
+    }
+    return { ok: false, reason: 'decryptFailed' }
   }
 }
 

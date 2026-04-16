@@ -3,22 +3,28 @@
 import { useTranslation } from 'react-i18next'
 import { SYNC_STATUS_CLASS } from '../sync-ui'
 import { formatDate } from '../editors/store-modal-shared'
-import type { SyncStatusType, LastSyncResult, SyncProgress } from '../../../shared/types/sync'
+import { syncCredentialI18nKey } from '../../../shared/types/sync'
+import type { SyncStatusType, LastSyncResult, SyncProgress, SyncCredentialFailureReason } from '../../../shared/types/sync'
 
 export interface SyncStatusSectionProps {
   syncStatus: SyncStatusType
   progress: SyncProgress | null
   lastSyncResult: LastSyncResult | null
+  syncReadinessReason?: SyncCredentialFailureReason | null
 }
 
-export function SyncStatusSection({ syncStatus, progress, lastSyncResult }: SyncStatusSectionProps) {
+export function SyncStatusSection({ syncStatus, progress, lastSyncResult, syncReadinessReason }: SyncStatusSectionProps) {
   const { t } = useTranslation()
+
+  const noneLabelKey = syncReadinessReason
+    ? syncCredentialI18nKey('readiness', syncReadinessReason)
+    : 'sync.noSyncYet'
 
   return (
     <section className="mb-6">
       {syncStatus === 'none' ? (
         <span className="text-sm text-content-muted" data-testid="sync-status-label">
-          {t('sync.noSyncYet')}
+          {t(noneLabelKey)}
         </span>
       ) : (
         <div className="space-y-1">

@@ -523,6 +523,21 @@
     "statusSuccess": "Success",
     "statusError": "Error",
     "noSyncYet": "Not synced yet",
+    "readiness": {
+      "unauthenticated": "Sign in to Google to sync.",
+      "noPasswordFile": "Set a sync password to start syncing.",
+      "decryptFailed": "Stored password could not be read (the OS keychain may have changed).",
+      "keystoreUnavailable": "OS keychain is not available on this system.",
+      "remoteCheckFailed": "Couldn't reach Google Drive — sync is paused."
+    },
+    "changePasswordError": {
+      "unauthenticated": "Please sign in to Google before changing the password.",
+      "noPasswordFile": "No saved password to change. Set a password first.",
+      "decryptFailed": "Couldn't read the existing password (OS keychain rejected it).",
+      "keystoreUnavailable": "OS keychain is not available; password cannot be changed here.",
+      "remoteCheckFailed": "Couldn't reach Google Drive to verify the current password."
+    },
+    "changePasswordInProgress": "Cannot change password while sync is in progress.",
     "troubleshooting": "Troubleshooting",
     "localData": "Local Data",
     "import": "Import",

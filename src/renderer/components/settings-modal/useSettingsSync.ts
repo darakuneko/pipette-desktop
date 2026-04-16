@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import type { AppNotification } from '../../../shared/types/notification'
 import type { ModalTabId } from '../editors/modal-tabs'
+import { syncCredentialI18nKey } from '../../../shared/types/sync'
 
 export interface UseSettingsSyncOptions {
   sync: UseSyncReturn
@@ -132,7 +133,9 @@ export function useSettingsSync({
       if (result.success) {
         clearPasswordForm()
       } else {
-        const errorKey = result.error ?? t('sync.passwordSetFailed')
+        const errorKey = result.reason
+          ? syncCredentialI18nKey('changePasswordError', result.reason)
+          : (result.error ?? 'sync.passwordSetFailed')
         setPasswordError(t(errorKey, errorKey))
       }
     } finally {
