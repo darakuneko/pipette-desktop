@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from './ModalCloseButton'
 import { LayoutStoreContent } from './LayoutStoreContent'
 import type { LayoutStoreContentProps } from './layout-store-types'
@@ -15,6 +16,7 @@ interface Props extends LayoutStoreContentProps {
 
 export function LayoutStoreModal({ onClose, ...contentProps }: Props) {
   const { t } = useTranslation()
+  useEscapeClose(onClose)
 
   return (
     <div

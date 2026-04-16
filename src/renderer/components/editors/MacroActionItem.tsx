@@ -28,6 +28,7 @@ interface Props {
   onCloseEdit?: () => void
   onMaskPartClick?: (keycodeIndex: number, part: 'outer' | 'inner') => void
   focusMode?: boolean
+  disabled?: boolean
 }
 
 export function defaultAction(type: ActionType): MacroAction {
@@ -64,6 +65,7 @@ export function MacroActionItem({
   onCloseEdit,
   onMaskPartClick,
   focusMode,
+  disabled,
 }: Props) {
   const { t } = useTranslation()
 
@@ -86,7 +88,8 @@ export function MacroActionItem({
               value={action.text}
               onChange={(e) => onChange(index, { type: 'text', text: e.target.value })}
               placeholder={t('editor.macro.text')}
-              className={`w-full rounded border px-2 py-1 text-sm ${valid ? 'border-edge' : 'border-danger'}`}
+              disabled={disabled}
+              className={`w-full rounded border px-2 py-1 text-sm disabled:opacity-50 ${valid ? 'border-edge' : 'border-danger'}`}
             />
             {!valid && (
               <p className="mt-0.5 text-xs text-danger">{t('editor.macro.asciiOnly')}</p>
@@ -105,6 +108,7 @@ export function MacroActionItem({
                 value={kc}
                 selected={false}
                 onSelect={() => onEditClick?.(ki)}
+                disabled={disabled}
                 noTooltip
               />
             ))}
@@ -114,8 +118,9 @@ export function MacroActionItem({
                   type="button"
                   data-testid="macro-edit-action"
                   style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
-                  className="flex shrink-0 rounded-sm outline outline-1 outline-dashed outline-edge hover:outline-accent"
+                  className="flex shrink-0 rounded-sm outline outline-1 outline-dashed outline-edge hover:outline-accent disabled:opacity-50"
                   onClick={() => onEditClick(action.keycodes.length)}
+                  disabled={disabled}
                   aria-label={t('editor.macro.addKeycode')}
                 />
 
@@ -142,7 +147,8 @@ export function MacroActionItem({
                   delay: Math.max(0, parseInt(e.target.value, 10) || 0),
                 })
               }
-              className="w-24 rounded border border-edge px-2 py-1 text-sm"
+              disabled={disabled}
+              className="w-24 rounded border border-edge px-2 py-1 text-sm disabled:opacity-50"
             />
             <span className="text-sm text-content-secondary">ms</span>
           </div>
@@ -169,6 +175,7 @@ export function MacroActionItem({
                 onMaskPartClick={onMaskPartClick ? (part) => onMaskPartClick(ki, part) : undefined}
                 onDoubleClick={isSelected ? (rect) => onKeycodeDoubleClick(ki, rect) : undefined}
                 onDelete={onKeycodeDelete ? () => onKeycodeDelete(ki) : undefined}
+                disabled={disabled}
               />
             )
           })}
@@ -177,13 +184,14 @@ export function MacroActionItem({
               type="button"
               data-testid="macro-add-keycode"
               style={{ width: KEYCODE_FIELD_SIZE, height: KEYCODE_FIELD_SIZE }}
-              className={`flex shrink-0 rounded-sm outline outline-1 outline-dashed ${
+              className={`flex shrink-0 rounded-sm outline outline-1 outline-dashed disabled:opacity-50 ${
                 selectedKeycodeIndex === action.keycodes.length
                   ? 'outline-accent'
                   : 'outline-edge hover:outline-accent'
               }`}
               onClick={onKeycodeAdd}
               onDoubleClick={(e) => onKeycodeAddDoubleClick(e.currentTarget.getBoundingClientRect())}
+              disabled={disabled}
               aria-label={t('editor.macro.addKeycode')}
             />
             <div className="pointer-events-none invisible absolute left-1/2 top-full z-50 mt-1 -translate-x-1/2 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg group-hover:visible">
@@ -197,8 +205,9 @@ export function MacroActionItem({
           <button
             type="button"
             data-testid="macro-close-edit"
-            className="ml-auto rounded p-1 text-content-muted hover:text-content"
+            className="ml-auto rounded p-1 text-content-muted hover:text-content disabled:opacity-50"
             onClick={onCloseEdit}
+            disabled={disabled}
             aria-label={t('common.close')}
           >
             <X size={20} aria-hidden="true" />
@@ -210,16 +219,16 @@ export function MacroActionItem({
 
   return (
     <div
-      onDragOver={onDragOver}
-      onDrop={(e) => { e.preventDefault(); onDrop() }}
+      onDragOver={disabled ? undefined : onDragOver}
+      onDrop={disabled ? undefined : (e) => { e.preventDefault(); onDrop() }}
       className={`flex items-center gap-2 rounded border border-edge bg-surface-alt px-2 py-1.5 ${dropIndicator === 'above' ? 'border-t-2 border-t-accent' : dropIndicator === 'below' ? 'border-b-2 border-b-accent' : ''}`}
     >
       <div
-        draggable
+        draggable={!disabled}
         data-testid="drag-handle"
-        onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); onDragStart() }}
-        onDragEnd={onDragEnd}
-        className="flex items-center gap-1.5 border-r border-edge py-1 pl-1 pr-3 cursor-grab active:cursor-grabbing"
+        onDragStart={disabled ? undefined : (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', ''); onDragStart() }}
+        onDragEnd={disabled ? undefined : onDragEnd}
+        className={`flex items-center gap-1.5 border-r border-edge py-1 pl-1 pr-3 ${disabled ? '' : 'cursor-grab active:cursor-grabbing'}`}
       >
         <GripVertical className="shrink-0 text-content-muted" size={14} />
         <span className="min-w-[36px] text-center text-sm text-content-secondary">
@@ -232,7 +241,8 @@ export function MacroActionItem({
       <button
         type="button"
         onClick={() => onDelete(index)}
-        className="rounded p-1 text-content-muted hover:text-danger"
+        disabled={disabled}
+        className="rounded p-1 text-content-muted hover:text-danger disabled:opacity-50"
         aria-label={t('common.delete')}
       >
         <X size={20} aria-hidden="true" />

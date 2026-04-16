@@ -9,6 +9,7 @@ interface Props {
   labelKey: string
   confirmLabelKey: string
   className?: string
+  disabled?: boolean
 }
 
 const STYLE_NORMAL = 'border-edge hover:bg-surface-dim'
@@ -21,6 +22,7 @@ export function ConfirmButton({
   labelKey,
   confirmLabelKey,
   className = 'rounded border px-4 py-2 text-sm',
+  disabled,
 }: Props) {
   const { t } = useTranslation()
 
@@ -28,8 +30,9 @@ export function ConfirmButton({
     <button
       type="button"
       data-testid={testId}
-      className={`${className} ${confirming ? STYLE_CONFIRMING : STYLE_NORMAL}`}
+      className={`${className} ${confirming ? STYLE_CONFIRMING : STYLE_NORMAL} disabled:opacity-50`}
       onClick={onClick}
+      disabled={disabled}
     >
       {confirming ? t(confirmLabelKey) : t(labelKey)}
     </button>

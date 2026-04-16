@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { QmkSettings } from './QmkSettings'
 import { ModalCloseButton } from './ModalCloseButton'
 
@@ -27,6 +28,7 @@ function SettingsModal({
   onSettingsUpdate,
   onClose,
 }: SettingsModalProps) {
+  useEscapeClose(onClose)
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"

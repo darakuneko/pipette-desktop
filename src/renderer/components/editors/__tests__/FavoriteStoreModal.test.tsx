@@ -298,7 +298,7 @@ describe('FavoriteStoreModal', () => {
     expect(onClose).toHaveBeenCalledOnce()
   })
 
-  it('does not close modal on Escape key', () => {
+  it('closes modal on Escape key', () => {
     const onClose = vi.fn()
     render(
       <FavoriteStoreModal
@@ -308,9 +308,9 @@ describe('FavoriteStoreModal', () => {
       />,
     )
 
-    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.keyDown(window, { key: 'Escape' })
 
-    expect(onClose).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('shows loading state', () => {

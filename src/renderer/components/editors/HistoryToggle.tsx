@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { TypingTestHistory } from '../../typing-test/TypingTestHistory'
 import { ModalCloseButton } from './ModalCloseButton'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
@@ -25,6 +26,9 @@ export function HistoryToggle({ results, deviceName }: HistoryToggleProps) {
     const prefix = deviceName ? `${deviceName}_typing-test-history` : undefined
     window.vialAPI.exportCsv(csv, prefix)
   }, [deviceName])
+
+  const closeHistory = useCallback(() => setShowHistory(false), [])
+  useEscapeClose(closeHistory, showHistory)
 
   return (
     <>

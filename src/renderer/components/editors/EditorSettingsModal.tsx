@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { LayoutStoreContent, type LayoutStoreContentProps } from './LayoutStoreModal'
 import { ModalCloseButton } from './ModalCloseButton'
 
@@ -31,6 +32,8 @@ export function EditorSettingsModal({
     const id = requestAnimationFrame(() => setOpen(true))
     return () => cancelAnimationFrame(id)
   }, [])
+
+  useEscapeClose(onClose)
 
   return (
     <div

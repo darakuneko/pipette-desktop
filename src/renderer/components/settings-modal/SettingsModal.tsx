@@ -9,6 +9,7 @@ import { SettingsToolsTab } from './SettingsToolsTab'
 import { SettingsDataTab } from './SettingsDataTab'
 import { SettingsNotificationTab } from './SettingsNotificationTab'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalTabBar, ModalTabPanel } from '../editors/modal-tabs'
 import { AboutTabContent } from '../AboutTabContent'
 import type { ModalTabId } from '../editors/modal-tabs'
@@ -54,6 +55,8 @@ export function SettingsModal({
     onHubEnabledChange,
     activeTab,
   })
+
+  useEscapeClose(onClose, !syncState.busy)
 
   return (
     <div

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { MacroEditor } from './MacroEditor'
 import { ModalCloseButton } from './ModalCloseButton'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { FavHubEntryResult } from './FavoriteHubActions'
@@ -69,13 +70,16 @@ export function MacroModal({
 }: Props) {
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
+  const [isRecording, setIsRecording] = useState(false)
   const modalWidth = isDummy ? 'w-[1200px]' : 'w-[1300px]'
+
+  useEscapeClose(onClose, !isRecording)
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="macro-modal-backdrop"
-      onClick={onClose}
+      onClick={isRecording ? undefined : onClose}
     >
       <div
         className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] h-[90vh] flex flex-col overflow-hidden`}
@@ -88,7 +92,9 @@ export function MacroModal({
               <h3 className="text-lg font-semibold">
                 {t('editor.macro.editTitle', { index })}
               </h3>
-              <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
+              {!isRecording && (
+                <ModalCloseButton testid="macro-modal-close" onClick={onClose} />
+              )}
             </div>
             <p className="mt-1 text-xs text-warning">{t('editor.macro.unlockWarning')}</p>
           </div>
@@ -108,6 +114,7 @@ export function MacroModal({
             onUnlock={onUnlock}
             isDummy={isDummy}
             onEditingChange={setIsEditing}
+            onRecordingChange={setIsRecording}
             tapDanceEntries={tapDanceEntries}
             deserializedMacros={deserializedMacros}
             hubOrigin={hubOrigin}

@@ -17,6 +17,7 @@ interface Props {
   onDoubleClick?: (rect: DOMRect) => void
   onDelete?: () => void
   noTooltip?: boolean
+  disabled?: boolean
   label?: string
 }
 
@@ -56,7 +57,7 @@ const FACE_ORIGIN = KEY_FACE_INSET
 const FACE_SIZE = KEY_UNIT - KEY_SPACING - 2 * KEY_FACE_INSET
 export const KEYCODE_FIELD_SIZE = Math.round(FACE_SIZE)
 
-export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, onDelete, noTooltip, label }: Props) {
+export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMaskPartClick, onDoubleClick, onDelete, noTooltip, disabled, label }: Props) {
   const { t } = useTranslation()
   const qmkId = serialize(value)
   const tooltip = noTooltip ? undefined : keycodeTooltip(qmkId)
@@ -108,7 +109,8 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       aria-pressed={selected}
       title={tooltip}
       data-testid="keycode-field"
-      className={`flex shrink-0 cursor-pointer rounded-sm ring-1 ${selected ? 'ring-accent' : 'ring-picker-item-border hover:ring-accent'}`}
+      disabled={disabled}
+      className={`flex shrink-0 rounded-sm ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
       onClick={handleClick}
       onDoubleClick={isMasked ? undefined : handleDoubleClick}
     >
