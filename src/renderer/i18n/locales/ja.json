@@ -536,6 +536,7 @@
     "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします。",
     "scanUndecryptable": "スキャン",
     "scanning": "スキャン中...",
+    "downloading": "ダウンロード中...",
     "noRemoteData": "リモートデータはありません",
     "noUndecryptable": "復号できないファイルはありません",
     "undecryptableCount": "{{count}} 件の復号できないファイル",

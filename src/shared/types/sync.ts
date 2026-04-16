@@ -3,6 +3,7 @@
 import type { FavoriteType, FavoriteIndex } from './favorite-store'
 import type { SnapshotIndex } from './snapshot-store'
 import type { AppConfig } from './app-config'
+import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 
 export type { AppConfig }
 export { DEFAULT_APP_CONFIG } from './app-config'
@@ -17,10 +18,10 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'settings'
-  key: string // FavoriteType or UID
-  index: FavoriteIndex | SnapshotIndex
-  files: Record<string, string> // filename -> content
+  type: 'favorite' | 'layout' | 'settings' | 'keyboard-meta'
+  key: string // FavoriteType, UID, or 'keyboard-names' for meta
+  index: FavoriteIndex | SnapshotIndex | KeyboardMetaIndex
+  files: Record<string, string> // filename -> content (empty for meta)
 }
 
 export type SyncDirection = 'upload' | 'download'
@@ -54,7 +55,11 @@ export interface SyncAuthStatus {
 export type FavoriteSyncUnit = `favorites/${FavoriteType}`
 export type KeyboardSettingsSyncUnit = `keyboards/${string}/settings`
 export type KeyboardSnapshotsSyncUnit = `keyboards/${string}/snapshots`
-export type SyncUnit = FavoriteSyncUnit | KeyboardSettingsSyncUnit | KeyboardSnapshotsSyncUnit
+export type SyncUnit =
+  | FavoriteSyncUnit
+  | KeyboardSettingsSyncUnit
+  | KeyboardSnapshotsSyncUnit
+  | KeyboardMetaSyncUnit
 
 export interface PasswordStrength {
   score: number // 0-4
@@ -89,6 +94,8 @@ export interface UndecryptableFile {
 
 export interface SyncDataScanResult {
   keyboards: string[]
+  /** uid -> deviceName from synced meta (when available) */
+  keyboardNames: Record<string, string>
   favorites: string[]
   undecryptable: UndecryptableFile[]
 }

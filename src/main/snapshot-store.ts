@@ -7,6 +7,8 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
+import { upsertKeyboardMeta } from './sync/keyboard-meta'
+import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
 
@@ -152,6 +154,12 @@ export function setupSnapshotStore(): void {
           await writeIndex(uid, index)
 
           notifyChange(`keyboards/${uid}/snapshots`)
+
+          const metaResult = await upsertKeyboardMeta(uid, deviceName)
+          if (metaResult === 'upserted') {
+            notifyChange(KEYBOARD_META_SYNC_UNIT)
+          }
+
           return { success: true, entry }
         })
       } catch (err) {

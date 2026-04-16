@@ -9,6 +9,10 @@ export interface UseDataNavTreeOptions {
   syncEnabled: boolean
 }
 
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : 'Download failed'
+}
+
 // Persist tree state across modal open/close within the same session
 let cachedExpandedNodes: Set<string> | null = null
 let cachedActivePath: DataNavPath | null = null
@@ -31,6 +35,10 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   const [syncScanResult, setSyncScanResult] = useState<SyncDataScanResult | null>(null)
   const [syncScanning, setSyncScanning] = useState(false)
   const syncScannedRef = useRef(false)
+
+  // Lazy-download state for sync keyboards
+  const [downloadingUid, setDownloadingUid] = useState<string | null>(null)
+  const [downloadErrorByUid, setDownloadErrorByUid] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (fetchedRef.current) return
@@ -82,6 +90,43 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     setStoredKeyboards(keyboards)
   }, [])
 
+  const onSyncKeyboardSelect = useCallback(
+    async (uid: string, name: string) => {
+      // Already local — switch immediately, no network needed
+      const local = storedKeyboards.find((kb) => kb.uid === uid)
+      if (local) {
+        setActivePath({ section: 'local', page: 'keyboard', uid, name: local.name })
+        return
+      }
+      // Block concurrent downloads: executeSync silently no-ops while another sync runs,
+      // so dispatching multiple clicks would otherwise "succeed" without producing data.
+      if (downloadingUid !== null) return
+      setDownloadingUid(uid)
+      setDownloadErrorByUid((prev) => {
+        if (!(uid in prev)) return prev
+        const next = { ...prev }
+        delete next[uid]
+        return next
+      })
+      try {
+        await window.vialAPI.syncExecute('download', { keyboard: uid })
+        const refreshed = await window.vialAPI.listStoredKeyboards()
+        setStoredKeyboards(refreshed)
+        const downloaded = refreshed.find((kb) => kb.uid === uid)
+        if (downloaded) {
+          setActivePath({ section: 'local', page: 'keyboard', uid, name: downloaded.name || name })
+        } else {
+          setDownloadErrorByUid((prev) => ({ ...prev, [uid]: 'Downloaded data not found locally' }))
+        }
+      } catch (err) {
+        setDownloadErrorByUid((prev) => ({ ...prev, [uid]: errorMessage(err) }))
+      } finally {
+        setDownloadingUid(null)
+      }
+    },
+    [storedKeyboards, downloadingUid],
+  )
+
   const toggleExpand = useCallback((nodeId: string) => {
     setExpandedNodes((prev) => {
       const next = new Set(prev)
@@ -105,5 +150,8 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     syncScanResult: filteredSyncScanResult,
     syncScanning,
     handleSyncScan,
+    onSyncKeyboardSelect,
+    downloadingUid,
+    downloadErrorByUid,
   }
 }

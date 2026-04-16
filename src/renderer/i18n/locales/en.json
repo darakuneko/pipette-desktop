@@ -537,6 +537,7 @@
     "scanRemoteDesc": "Scan remote data to see what is stored in Google Drive.",
     "scanUndecryptable": "Scan",
     "scanning": "Scanning...",
+    "downloading": "Downloading...",
     "noRemoteData": "No remote data found",
     "noUndecryptable": "No undecryptable files found",
     "undecryptableCount": "{{count}} undecryptable file(s)",
