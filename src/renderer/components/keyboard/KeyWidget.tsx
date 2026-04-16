@@ -209,7 +209,7 @@ function KeyWidgetInner({
         if (hoverMaskParts && masked) setHoveredPart(null)
         onHoverEnd?.()
       }}
-      style={{ cursor: isClickable ? 'pointer' : 'default' }}
+      style={isClickable ? { cursor: 'pointer' } : undefined}
     >
       {/* Key shape: unified path for ISO/stepped keys, simple rect for normal */}
       {unionPath ? (
