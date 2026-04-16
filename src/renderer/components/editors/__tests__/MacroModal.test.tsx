@@ -22,12 +22,26 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-// Mock MacroEditor to verify props are passed through
+// Mock MacroEditor to verify props are passed through and let tests toggle
+// recording state from within the editor subtree.
 let capturedInitialMacro: number | undefined
 vi.mock('../MacroEditor', () => ({
-  MacroEditor: (props: { initialMacro?: number }) => {
+  MacroEditor: (props: {
+    initialMacro?: number
+    onRecordingChange?: (recording: boolean) => void
+  }) => {
     capturedInitialMacro = props.initialMacro
-    return <div data-testid="editor-macro">MacroEditor</div>
+    return (
+      <div data-testid="editor-macro">
+        <button
+          type="button"
+          data-testid="mock-record-toggle"
+          onClick={() => props.onRecordingChange?.(true)}
+        >
+          start recording
+        </button>
+      </div>
+    )
   },
 }))
 
@@ -72,15 +86,36 @@ describe('MacroModal', () => {
     expect(defaultProps.onClose).not.toHaveBeenCalled()
   })
 
-  it('does not close modal on Escape key', () => {
+  it('closes modal on Escape key', () => {
     render(<MacroModal {...defaultProps} />)
-    fireEvent.keyDown(document, { key: 'Escape' })
-    expect(defaultProps.onClose).not.toHaveBeenCalled()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(defaultProps.onClose).toHaveBeenCalled()
   })
 
   it('calls onClose when clicking Close button', () => {
     render(<MacroModal {...defaultProps} />)
     fireEvent.click(screen.getByTestId('macro-modal-close'))
     expect(defaultProps.onClose).toHaveBeenCalledOnce()
+  })
+
+  it('hides Close button while recording', () => {
+    render(<MacroModal {...defaultProps} />)
+    expect(screen.getByTestId('macro-modal-close')).toBeInTheDocument()
+    fireEvent.click(screen.getByTestId('mock-record-toggle'))
+    expect(screen.queryByTestId('macro-modal-close')).not.toBeInTheDocument()
+  })
+
+  it('does not close on backdrop click while recording', () => {
+    render(<MacroModal {...defaultProps} />)
+    fireEvent.click(screen.getByTestId('mock-record-toggle'))
+    fireEvent.click(screen.getByTestId('macro-modal-backdrop'))
+    expect(defaultProps.onClose).not.toHaveBeenCalled()
+  })
+
+  it('does not close on Escape while recording', () => {
+    render(<MacroModal {...defaultProps} />)
+    fireEvent.click(screen.getByTestId('mock-record-toggle'))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(defaultProps.onClose).not.toHaveBeenCalled()
   })
 })

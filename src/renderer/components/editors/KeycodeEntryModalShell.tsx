@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import type { KeycodeEntryModalReturn, KeycodeEntryModalAdapter, KeycodeFieldDescriptor } from '../../hooks/useKeycodeEntryModal'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import { ConfirmButton } from './ConfirmButton'
@@ -106,6 +107,8 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
     showFavorites,
     modalWidth,
   } = hook
+
+  useEscapeClose(handleClose)
 
   const isConfigured = editedEntry !== null && adapter.isConfigured(editedEntry)
 

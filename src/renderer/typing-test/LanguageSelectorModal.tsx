@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { Check, Download, Trash2, Loader2 } from 'lucide-react'
 import type { LanguageListEntry } from '../../shared/types/language-store'
@@ -23,6 +24,8 @@ export function LanguageSelectorModal({ currentLanguage, onSelectLanguage, onClo
   const [downloading, setDownloading] = useState<Set<string>>(new Set())
   const backdropRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
+
+  useEscapeClose(onClose)
 
   useEffect(() => {
     let alive = true

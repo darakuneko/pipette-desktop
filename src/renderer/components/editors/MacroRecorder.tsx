@@ -7,6 +7,7 @@ import { findByRecorderAlias } from '../../../shared/keycodes/keycodes'
 
 interface Props {
   onRecordComplete: (actions: MacroAction[]) => void
+  onRecordingChange?: (recording: boolean) => void
 }
 
 const TAP_THRESHOLD_MS = 200
@@ -16,9 +17,13 @@ interface PendingKey {
   downTime: number
 }
 
-export function MacroRecorder({ onRecordComplete }: Props) {
+export function MacroRecorder({ onRecordComplete, onRecordingChange }: Props) {
   const { t } = useTranslation()
   const [recording, setRecording] = useState(false)
+
+  useEffect(() => {
+    onRecordingChange?.(recording)
+  }, [recording, onRecordingChange])
   const actionsRef = useRef<MacroAction[]>([])
   const pendingRef = useRef<Map<string, PendingKey>>(new Map())
 
