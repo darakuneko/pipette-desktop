@@ -403,8 +403,10 @@ export function MacroEditor({
           </div>
         </div>
 
-        {/* Picker: own scroll, fills remaining space in edit mode */}
-        <div ref={pickerRef} className={`flex-1 overflow-y-auto px-6 pb-6 ${isEditing ? '' : 'hidden'}`}>
+        {/* Picker: shrink to content in edit mode so the Save footer sits close
+             to the keypicker content; list mode keeps the action list area
+             hidden via the sibling container. */}
+        <div ref={pickerRef} className={`overflow-y-auto px-6 pb-6 ${isEditing ? 'shrink-0' : 'hidden'}`}>
           <TabbedKeycodes
             onKeycodeSelect={maskedSelection.pickerSelect}
             maskOnly={maskedSelection.maskOnly}
@@ -415,31 +417,35 @@ export function MacroEditor({
           />
         </div>
 
-        {/* Fixed footer: Clear / Revert / Save — hidden in edit mode */}
-          <div data-macro-footer="true" className={`shrink-0 px-6 py-3 ${isEditing ? 'hidden' : ''}`}>
+        {/* Fixed footer: Clear / Revert (list mode only) / Save (always visible) */}
+          <div data-macro-footer="true" className="shrink-0 px-6 py-3">
             <div className="flex justify-end gap-2">
-              <ConfirmButton
-                testId="macro-clear"
-                confirming={clearAction.confirming}
-                onClick={() => { revertAction.reset(); clearAction.trigger() }}
-                labelKey="common.clear"
-                confirmLabelKey="common.confirmClear"
-                disabled={isRecording}
-              />
-              <ConfirmButton
-                testId="macro-revert"
-                confirming={revertAction.confirming}
-                onClick={() => { clearAction.reset(); revertAction.trigger() }}
-                labelKey="common.revert"
-                confirmLabelKey="common.confirmRevert"
-                disabled={isRecording}
-              />
+              {!isEditing && (
+                <>
+                  <ConfirmButton
+                    testId="macro-clear"
+                    confirming={clearAction.confirming}
+                    onClick={() => { revertAction.reset(); clearAction.trigger() }}
+                    labelKey="common.clear"
+                    confirmLabelKey="common.confirmClear"
+                    disabled={isRecording}
+                  />
+                  <ConfirmButton
+                    testId="macro-revert"
+                    confirming={revertAction.confirming}
+                    onClick={() => { clearAction.reset(); revertAction.trigger() }}
+                    labelKey="common.revert"
+                    confirmLabelKey="common.confirmRevert"
+                    disabled={isRecording}
+                  />
+                </>
+              )}
               <button
                 type="button"
                 data-testid="macro-save"
                 className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                onClick={handleSave}
-                disabled={!dirty || hasInvalidText || isRecording}
+                onClick={isEditing ? revertAndDeselect : handleSave}
+                disabled={isEditing ? isRecording : (!dirty || hasInvalidText || isRecording)}
               >
                 {t('common.save')}
               </button>

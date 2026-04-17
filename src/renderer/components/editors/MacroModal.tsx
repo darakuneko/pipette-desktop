@@ -72,6 +72,7 @@ export function MacroModal({
   const [isEditing, setIsEditing] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const modalWidth = isDummy ? 'w-[1200px]' : 'w-[1300px]'
+  const modalHeight = isEditing ? 'max-h-[90vh]' : 'h-[90vh]'
 
   useEscapeClose(onClose, !isRecording)
 
@@ -82,7 +83,7 @@ export function MacroModal({
       onClick={isRecording ? undefined : onClose}
     >
       <div
-        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] h-[90vh] flex flex-col overflow-hidden`}
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] ${modalHeight} flex flex-col overflow-hidden`}
         data-testid="macro-modal"
         onClick={(e) => e.stopPropagation()}
       >
