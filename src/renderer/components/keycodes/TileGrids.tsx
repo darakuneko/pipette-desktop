@@ -53,6 +53,7 @@ function SettingsTileGrid<T extends Record<string, unknown>>({ entries, fields, 
               key={i}
               type="button"
               data-testid={`${testIdPrefix}-tile-${i}`}
+              data-configured={configured || undefined}
               className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${tileStyle(configured, enabled)}`}
               onClick={() => onOpen(i)}
             >
@@ -137,6 +138,7 @@ export function TdTileGrid({ entries, onSelect }: TdTileGridProps) {
             key={i}
             type="button"
             data-testid={`td-tile-${i}`}
+            data-configured={configured || undefined}
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={() => { const kc = findKeycode(`TD(${i})`); if (kc) onSelect(kc) }}
           >
@@ -204,6 +206,7 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
             key={i}
             type="button"
             data-testid={`macro-tile-${i}`}
+            data-configured={configured || undefined}
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={() => { const kc = findKeycode(`M${i}`); if (kc) onSelect(kc) }}
           >

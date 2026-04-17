@@ -431,6 +431,7 @@ export function TabbedKeycodes({
     <div
       ref={containerRef}
       className="relative flex flex-col rounded-[10px] border border-edge bg-picker-bg min-h-0 flex-1"
+      data-testid="tabbed-keycodes-root"
       onClick={handleBackgroundClick}
     >
       {/* Tab bar */}

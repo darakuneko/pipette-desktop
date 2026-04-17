@@ -135,7 +135,8 @@ Pipette uses [Google Drive **appDataFolder**](https://developers.google.com/work
 - Synced data is **end-to-end encrypted** before upload (AES-256-GCM with a key derived from your sync password via PBKDF2)
 - Sync happens automatically when changes are detected (with a 10-second debounce) and via periodic polling (every 3 minutes)
 - Pending changes are flushed on app exit
-- **Selective sync scope**: Not all data is synced at once. On device connection, favorites are downloaded first, then keyboard-specific data is downloaded once the keyboard UID is confirmed. Manual sync (**Sync**) syncs favorites and the currently connected keyboard only — other keyboards' data is not touched
+- **Selective sync scope**: Not all keyboards' data is downloaded at once. On device connection, favorites are downloaded first, then the connected keyboard's snapshots and settings are downloaded (in full) once its UID is confirmed. Keyboards you have never connected on this machine are left undownloaded; their data is fetched on demand when you open them from the **Data** modal's Sync section. Manual sync (**Sync**) and background polling keep the currently connected keyboard and favorites in sync — other keyboards' data is never pulled down automatically
+- **Lightweight keyboard name index**: A small synced index (UID → keyboard name) is kept so that remote-only keyboards can be shown by name in the Data modal before their full data is ever downloaded. The index holds only UIDs and keyboard names — no keymap, macro, or setting data
 
 ### What Is Synced
 
@@ -144,6 +145,7 @@ Pipette uses [Google Drive **appDataFolder**](https://developers.google.com/work
 | Snapshots | Per keyboard |
 | Per-keyboard settings | Per keyboard |
 | Favorites | Per type (tap dance, macro, etc.) |
+| Keyboard name index (UID → name) | Single shared index |
 
 App settings (theme, language, window state, etc.) are **not** synced.
 
@@ -157,8 +159,8 @@ App settings (theme, language, window state, etc.) are **not** synced.
 | **Is my data encrypted?** | **Yes.** All data is encrypted with AES-256-GCM using a key derived from your sync password (PBKDF2, 600,000 iterations) before it leaves your device. Google stores only encrypted blobs. |
 | **Can Pipette's developers read my synced data?** | **No.** Encryption happens on your device with your password. Without your sync password, the encrypted data is unreadable. |
 | **What happens if I sign out?** | Local data is preserved. Cloud data remains in Google Drive appDataFolder but is no longer synced. You can sign back in to resume syncing. |
-| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings and select both keyboard and favorite data. This removes selected Pipette data from Google Drive appDataFolder. |
-| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
+| **How do I delete all cloud data?** | Use "Reset Sync Data" in settings and select both keyboard and favorite data. This removes selected `keyboards_*.enc` / `favorites_*.enc` files from Google Drive appDataFolder. The keyboard name index (`meta_keyboard-names.enc`) and password check (`password-check.enc`) are retained; deletions are propagated to other signed-in devices via tombstone entries in the name index (garbage-collected after 30 days). |
+| **What is stored on Google?** | Encrypted files named by sync unit (e.g., `keyboards_{uid}_snapshots.enc`, `favorites_tapDance.enc`, `meta_keyboard-names.enc`, `password-check.enc`). File names contain keyboard UIDs but no personal information. |
 | **How does authentication work?** | Standard Google OAuth 2.0 with PKCE (Proof Key for Code Exchange) via a local loopback redirect. No passwords are sent to any third-party server. |
 | **What happens if I change my password?** | All synced files are re-encrypted with the new password. No data is deleted — files are decrypted and re-encrypted in place. |
 | **What are undecryptable files?** | Files that cannot be decrypted with your current sync password or are otherwise unreadable (e.g., leftover from a previous password). You can scan for and delete them from the Data tab in settings. |
@@ -248,3 +250,5 @@ Pipette can export keymap data in several formats. These are local file download
 | Export/Import Local Data | Included | Included | Included | - | - | - |
 
 > **Note**: Reset Local Data allows you to select individual targets — keyboard data, favorites, and app settings can each be reset independently.
+>
+> **Note**: Reset Local Data and Reset Sync Data do not delete the local keyboard name index (`sync/meta/keyboard-names.json`) or the remote index file (`meta_keyboard-names.enc`). Reset Keyboard Data and Reset Sync Data mark the affected UIDs as deleted in the index (tombstone, 30-day TTL) so other signed-in devices see the removal; the index file itself is retained.
