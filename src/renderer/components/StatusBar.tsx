@@ -128,6 +128,7 @@ export function StatusBar({
           <button
             type="button"
             data-testid="typing-test-button"
+            data-active={typingTestMode || undefined}
             aria-label={typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
             className={typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onTypingTestModeChange}

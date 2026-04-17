@@ -97,6 +97,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
         style={{ paddingLeft: `${depth * 14 + 8}px` }}
         onClick={onToggle}
         data-testid={testId}
+        aria-expanded={open}
       >
         <Chevron open={open} />
         <span className="truncate">{label}</span>

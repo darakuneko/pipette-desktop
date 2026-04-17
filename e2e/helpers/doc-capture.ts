@@ -19,6 +19,30 @@ async function isAvailable(locator: Locator): Promise<boolean> {
   return (await locator.count()) > 0
 }
 
+// Click a tree-nav branch button only when it reports aria-expanded=false, so
+// repeat runs don't collapse an already-expanded branch via the toggle handler.
+// When already expanded, skip the click and the settle delay.
+async function expandBranchIfCollapsed(branch: Locator, settleMs = 300): Promise<void> {
+  if ((await branch.getAttribute('aria-expanded')) === 'true') return
+  await branch.click()
+  await branch.page().waitForTimeout(settleMs)
+}
+
+// Restore the Editor view after a prior run left the device in Typing Test mode.
+// useDevicePrefs persists `viewMode` per keyboard; since `~/.config/Electron`
+// is not isolated between capture runs, this guard avoids landing in a state
+// where TabbedKeycodes is not rendered (KeymapEditor hides it under
+// `typingTestMode`). Uses the locale-stable `data-active` attribute instead of
+// the i18n-dependent aria-label text.
+async function ensureEditorMode(page: Page): Promise<void> {
+  const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+  if (!(await isAvailable(typingTestBtn))) return
+  if ((await typingTestBtn.getAttribute('data-active')) !== 'true') return
+  console.log('  [reset] Exiting Typing Test mode from prior run')
+  await typingTestBtn.click()
+  await page.waitForTimeout(500)
+}
+
 // Uses fixed filenames that match OPERATION-GUIDE.md references.
 // A global counter tracks sequential numbering.
 let screenshotCounter = 0
@@ -304,13 +328,11 @@ async function captureDataModal(page: Page): Promise<void> {
   // Expand Local branch and navigate to Favorites > Tap Dance
   const navLocal = page.locator('[data-testid="nav-local"]')
   if (await isAvailable(navLocal)) {
-    await navLocal.click()
-    await page.waitForTimeout(300)
+    await expandBranchIfCollapsed(navLocal)
 
     const navFavorites = page.locator('[data-testid="nav-local-favorites"]')
     if (await isAvailable(navFavorites)) {
-      await navFavorites.click()
-      await page.waitForTimeout(300)
+      await expandBranchIfCollapsed(navFavorites)
 
       const navTd = page.locator('[data-testid="nav-fav-tapDance"]')
       if (await isAvailable(navTd)) {
@@ -324,8 +346,7 @@ async function captureDataModal(page: Page): Promise<void> {
   // Navigate to Keyboards (first keyboard if available)
   const navKeyboards = page.locator('[data-testid="nav-local-keyboards"]')
   if (await isAvailable(navKeyboards)) {
-    await navKeyboards.click()
-    await page.waitForTimeout(300)
+    await expandBranchIfCollapsed(navKeyboards)
 
     // Click first keyboard leaf if available
     const kbLeaf = page.locator('[data-testid^="nav-kb-"]').first()
@@ -344,16 +365,29 @@ async function captureDataModal(page: Page): Promise<void> {
     await captureNamed(page, 'data-sidebar-application', { fullPage: true })
   }
 
+  // Navigate to Sync (Cloud Sync configured → remote-only keyboards listed by name;
+  // otherwise an empty-state message appears, still a valid documentation state).
+  // useDataNavTree caches expansion across modal opens, so branch clicks are guarded
+  // by aria-expanded to avoid collapsing an already-open branch on repeat runs.
+  const navSync = page.locator('[data-testid="nav-sync"]')
+  if (await isAvailable(navSync)) {
+    await expandBranchIfCollapsed(navSync, 500)
+
+    const navSyncKeyboards = page.locator('[data-testid="nav-sync-keyboards"]')
+    if (await isAvailable(navSyncKeyboards)) {
+      await expandBranchIfCollapsed(navSyncKeyboards)
+    }
+    await captureNamed(page, 'data-sidebar-sync', { fullPage: true })
+  }
+
   // Navigate to Hub (if available)
   const navHub = page.locator('[data-testid="nav-cloud-hub"]')
   if (await isAvailable(navHub)) {
-    await navHub.click()
-    await page.waitForTimeout(300)
+    await expandBranchIfCollapsed(navHub)
 
     const hubKbs = page.locator('[data-testid="nav-hub-keyboards"]')
     if (await isAvailable(hubKbs)) {
-      await hubKbs.click()
-      await page.waitForTimeout(300)
+      await expandBranchIfCollapsed(hubKbs)
     }
     await captureNamed(page, 'data-sidebar-hub', { fullPage: true })
   }
@@ -1034,6 +1068,73 @@ async function captureTileGrids(page: Page): Promise<void> {
   }
 }
 
+// --- Phase 14: Macro Edit Modal (list mode + edit mode) ---
+
+async function captureMacroEditModal(page: Page): Promise<void> {
+  console.log('\n--- Phase 14: Macro Edit Modal ---')
+
+  const editorContent = page.locator('[data-testid="editor-content"]')
+  const macroTab = editorContent.locator('button', { hasText: /^Macro$/ })
+  if (!(await isAvailable(macroTab))) {
+    console.log('  [skip] Macro tab not found')
+    return
+  }
+  await macroTab.first().click()
+  await page.waitForTimeout(300)
+
+  // Prefer an already-configured macro so the screenshot reflects a real list/edit UI
+  // without mutating device state. If none are configured we skip.
+  const configuredTile = page.locator('[data-testid^="macro-tile-"][data-configured]').first()
+  if (!(await isAvailable(configuredTile))) {
+    console.log('  [skip] No configured macro tile found — configure a macro on the device first')
+    return
+  }
+
+  // Deselect any keymap key left selected by earlier phases; otherwise clicking a
+  // macro tile assigns its keycode to the selected key instead of opening the modal.
+  await page.evaluate(() => {
+    const el = document.querySelector('[data-testid="tabbed-keycodes-root"]') as HTMLElement | null
+    el?.click()
+  })
+  await page.waitForTimeout(200)
+
+  await configuredTile.click()
+  const modal = page.locator('[data-testid="macro-modal"]')
+  try {
+    await modal.waitFor({ state: 'visible', timeout: 2000 })
+  } catch {
+    console.log('  [skip] Macro modal did not open')
+    return
+  }
+
+  try {
+    await captureNamed(page, 'macro-list-mode', { element: modal })
+
+    const firstKey = modal.locator('[data-testid="keycode-field"]').first()
+    if (!(await isAvailable(firstKey))) {
+      console.log('  [warn] No keycode-field found — edit-mode capture skipped')
+      return
+    }
+    await firstKey.click()
+    const closeEditBtn = modal.locator('[data-testid="macro-close-edit"]')
+    try {
+      await closeEditBtn.waitFor({ state: 'visible', timeout: 1500 })
+    } catch {
+      console.log('  [warn] edit mode did not activate — edit-mode capture skipped')
+      return
+    }
+    await captureNamed(page, 'macro-edit-mode', { element: modal })
+    await closeEditBtn.click()
+    await page.waitForTimeout(300)
+  } finally {
+    const closeBtn = modal.locator('[data-testid="macro-modal-close"]')
+    if (await isAvailable(closeBtn)) {
+      await closeBtn.click().catch(() => { /* modal may already be gone */ })
+      await page.waitForTimeout(300)
+    }
+  }
+}
+
 // --- Main ---
 
 async function main(): Promise<void> {
@@ -1076,6 +1177,7 @@ async function main(): Promise<void> {
       console.log('Failed to connect. Only device selection screenshots captured.')
       return
     }
+    await ensureEditorMode(page)             // exit Typing Test if persisted from prior run
 
     await captureKeymapEditor(page)          // 03
     await captureLayerNavigation(page)       // 04-06
@@ -1092,6 +1194,7 @@ async function main(): Promise<void> {
     await captureBasicViewVariants(page)     // named: basic-{ansi,iso,jis,list}-view
     await captureLayerPanelStates(page)      // layer-panel-collapsed/expanded
     await captureTileGrids(page)             // td-tile-grid, macro-tile-grid
+    await captureMacroEditModal(page)        // macro-list-mode, macro-edit-mode
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
