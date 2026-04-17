@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { HSVColorPicker, hsvToRgb, rgbToHsv, rgbToHex, hexToRgb } from './HSVColorPicker'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
@@ -194,7 +194,9 @@ export function RGBConfigurator({
   }
 
   type LightingSnapshot = typeof currentValues
-  const savedRef = useRef<LightingSnapshot>(currentValues)
+  // Must be state (not ref) so saving/reverting triggers a re-render and the
+  // Save button's disabled state tracks the latest baseline.
+  const [savedSnapshot, setSavedSnapshot] = useState<LightingSnapshot>(currentValues)
 
   if (!lightingType || lightingType === 'none') {
     return (
@@ -211,14 +213,14 @@ export function RGBConfigurator({
   const hasVialRGB = lightingType === 'vialrgb' && vialRGBVersion === 1
   const sectionCount = Number(hasBacklight) + Number(hasRGBlight) + Number(hasVialRGB)
 
-  const isDirty = (Object.keys(savedRef.current) as (keyof LightingSnapshot)[]).some(
-    (k) => currentValues[k] !== savedRef.current[k],
+  const isDirty = (Object.keys(savedSnapshot) as (keyof LightingSnapshot)[]).some(
+    (k) => currentValues[k] !== savedSnapshot[k],
   )
 
   const revertAction = useConfirmAction(restoreSavedValues)
 
   async function restoreSavedValues(): Promise<void> {
-    const s = savedRef.current
+    const s = savedSnapshot
     try {
       if (hasBacklight) {
         await onSetBacklightBrightness(s.backlightBrightness)
@@ -462,12 +464,6 @@ export function RGBConfigurator({
         </section>
       )}
 
-      {isDirty && (
-        <p className="text-xs text-content-muted" data-testid="lighting-unsaved">
-          {t('editor.lighting.unsavedPreview')}
-        </p>
-      )}
-
       <div className="flex items-center justify-end gap-2">
         {isDirty && (
           <ConfirmButton
@@ -484,11 +480,12 @@ export function RGBConfigurator({
           onClick={async () => {
             try {
               await onSave()
-              savedRef.current = currentValues
+              setSavedSnapshot(currentValues)
             } catch (err) {
               console.error('[Lighting] save failed:', err)
             }
           }}
+          disabled={!isDirty}
           className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
         >
           {t('common.save')}

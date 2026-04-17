@@ -166,7 +166,6 @@
       "value": "Value",
       "hex": "HEX",
       "noLighting": "This keyboard does not support lighting control.",
-      "unsavedPreview": "Preview — not saved to keyboard yet",
       "colorPicker": {
         "label": "Color Picker",
         "palette": "Palette",
