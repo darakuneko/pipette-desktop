@@ -165,7 +165,6 @@
       "value": "明度",
       "hex": "HEX",
       "noLighting": "このキーボードはライティング制御をサポートしていません。",
-      "unsavedPreview": "プレビュー中 — まだキーボードに保存されていません",
       "colorPicker": {
         "label": "カラーピッカー",
         "palette": "パレット",
