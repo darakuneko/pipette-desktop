@@ -25,6 +25,8 @@ export interface KeyboardPaneProps {
   remappedKeys: Set<string>
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>
+  heatmapIntensity?: Map<string, number> | null
+  heatmapMax?: number
   scale: number
   layerLabel: string
   layerLabelTestId: string
@@ -53,6 +55,8 @@ export function KeyboardPane({
   remappedKeys,
   multiSelectedKeys,
   layoutOptions,
+  heatmapIntensity,
+  heatmapMax,
   scale,
   layerLabel,
   layerLabelTestId,
@@ -88,6 +92,8 @@ export function KeyboardPane({
           remappedKeys={remappedKeys}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}
+          heatmapIntensity={heatmapIntensity}
+          heatmapMax={heatmapMax}
           scale={scale}
           onKeyClick={isActive ? onKeyClick : undefined}
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}

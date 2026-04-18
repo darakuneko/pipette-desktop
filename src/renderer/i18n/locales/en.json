@@ -271,6 +271,9 @@
       "recordOn": "Record: On",
       "recordOff": "Record: Off",
       "recordTooltip": "Toggle typing analytics recording for this keyboard",
+      "heatmap": {
+        "legend": "Heatmap: last 1 hour"
+      },
       "closeHint": "Click to open menu",
       "resetSize": "Default Size",
       "fitSize": "Fit Size",

@@ -6,6 +6,7 @@ import { repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
+import { heatmapFillForCell } from './heatmap-color'
 
 /** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
 export function rotatePoint(
@@ -72,6 +73,12 @@ interface Props {
   multiSelectedKeys?: Set<string>
   layoutOptions?: Map<number, number>
   selectedMaskPart?: boolean
+  /** Per-cell press totals for the typing-view heatmap overlay, keyed
+   * by `"row,col"`. The overlay is hidden when this is null. */
+  heatmapIntensity?: Map<string, number> | null
+  /** Peak count across `heatmapIntensity` so every key can look up
+   * its own ramp position in O(1) without recomputing the max. */
+  heatmapMax?: number
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
@@ -96,6 +103,8 @@ function KeyboardWidgetInner({
   remappedKeys,
   multiSelectedKeys,
   layoutOptions,
+  heatmapIntensity,
+  heatmapMax = 0,
   onKeyClick,
   onKeyDoubleClick,
   onEncoderClick,
@@ -191,6 +200,7 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
+            heatmapFill={heatmapFillForCell(heatmapIntensity ?? null, heatmapMax, key.row, key.col)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
@@ -239,6 +249,7 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
+            heatmapFill={heatmapFillForCell(heatmapIntensity ?? null, heatmapMax, key.row, key.col)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}

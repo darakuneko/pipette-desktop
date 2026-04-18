@@ -38,6 +38,11 @@ interface Props {
   highlighted?: boolean
   everPressed?: boolean
   remapped?: boolean
+  /** Precomputed heatmap fill (hsl(...)) for this key. Used by the
+   * typing-view overlay. Lives below the pressed / selected / multi /
+   * highlighted / everPressed priority levels so the immediate
+   * feedback colours never get painted over by the heatmap. */
+  heatmapFill?: string | null
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
@@ -58,6 +63,7 @@ function KeyWidgetInner({
   highlighted,
   everPressed,
   remapped,
+  heatmapFill,
   onClick,
   onDoubleClick,
   onHover,
@@ -85,7 +91,10 @@ function KeyWidgetInner({
   const h = gh - 2 * inset
 
   // Key fill color (always use theme colors, ignore KLE color overrides)
-  // Priority: pressed > selected > multiSelected > highlighted > everPressed > default
+  // Priority: pressed > selected > multiSelected > highlighted > everPressed
+  //           > hover > heatmap > default
+  // Heatmap sits below every interactive state so the typing-view
+  // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
   const masked = isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
@@ -97,6 +106,7 @@ function KeyWidgetInner({
   else if (highlighted) { fillColor = KEY_HIGHLIGHT_COLOR; invertText = true }
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
   else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
+  else if (heatmapFill) fillColor = heatmapFill
 
   // Label text color: inverted when key is selected/highlighted, remap color
   // for remapped keys in non-mask mode, default otherwise

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
+import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
@@ -39,6 +40,10 @@ export interface TypingTestPaneProps {
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   recordEnabled?: boolean
   onRecordEnabledChange?: (enabled: boolean) => void
+  /** Keyboard uid used for the typing-view heatmap query. The heatmap
+   * stays hidden while this is unset or recording is off so a session
+   * without a device never sees stale overlay data. */
+  keyboardUid?: string
 }
 
 export function TypingTestPane({
@@ -66,8 +71,18 @@ export function TypingTestPane({
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
   onRecordEnabledChange,
+  keyboardUid,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
+
+  // Heatmap overlay for view-only + record mode. Gated on both flags
+  // so the overlay never shows up in editor mode and never lingers
+  // after the user toggles record off.
+  const { intensityByCell: heatmapIntensity, maxCount: heatmapMax } = useTypingHeatmap({
+    uid: keyboardUid ?? null,
+    layer: typingTest.effectiveLayer,
+    enabled: !!viewOnly && !!recordEnabled,
+  })
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
   const [mouseOver, setMouseOver] = useState(false)
@@ -305,11 +320,21 @@ export function TypingTestPane({
             everPressedKeys={undefined}
             remappedKeys={remappedKeys}
             layoutOptions={layoutOptions}
+            heatmapIntensity={heatmapIntensity}
+            heatmapMax={heatmapMax}
             scale={viewOnly ? 1 : scale}
             layerLabel={layerLabel}
             layerLabelTestId="layer-label"
             contentRef={contentRef}
           />
+          {heatmapMax > 0 && (
+            <p
+              data-testid="typing-test-heatmap-legend"
+              className="mt-1 text-center text-[11px] text-content-muted"
+            >
+              {t('editor.typingTest.heatmap.legend')}
+            </p>
+          )}
         </div>
         </div>
       </div>

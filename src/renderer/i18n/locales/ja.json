@@ -270,6 +270,9 @@
       "recordOn": "記録: オン",
       "recordOff": "記録: オフ",
       "recordTooltip": "このキーボードの入力解析記録をオンオフ",
+      "heatmap": {
+        "legend": "ヒートマップ: 直近 1 時間"
+      },
       "closeHint": "クリックでメニューを開く",
       "resetSize": "初期サイズ",
       "fitSize": "フィット",

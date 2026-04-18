@@ -930,6 +930,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
               recordEnabled={typingRecordEnabled}
               onRecordEnabledChange={onTypingRecordEnabledChange}
+              keyboardUid={keyboardUid}
             />
           ) : (
             <KeyboardPane
