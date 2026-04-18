@@ -147,11 +147,6 @@ export function TdTileGrid({ entries, onSelect, onDoubleClick }: TdTileGridProps
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
-            onKeyDown={commit ? (e) => {
-              if (e.key !== 'Enter') return
-              e.preventDefault()
-              commit()
-            } : undefined}
           >
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">TD({i})</span>
             {configured ? (
@@ -226,11 +221,6 @@ export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGrid
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
-            onKeyDown={commit ? (e) => {
-              if (e.key !== 'Enter') return
-              e.preventDefault()
-              commit()
-            } : undefined}
           >
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
             {configured ? (

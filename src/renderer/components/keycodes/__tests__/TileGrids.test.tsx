@@ -38,31 +38,9 @@ describe('TdTileGrid', () => {
     expect(onDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'TD(0)' }))
   })
 
-  it('fires onDoubleClick with TD(i) on Enter keydown', () => {
-    const onSelect = vi.fn()
-    const onDoubleClick = vi.fn()
-    render(<TdTileGrid entries={entries} onSelect={onSelect} onDoubleClick={onDoubleClick} />)
-    fireEvent.keyDown(screen.getByTestId('td-tile-1'), { key: 'Enter' })
-    expect(onDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'TD(1)' }))
-  })
-
-  it('ignores non-Enter keys', () => {
-    const onDoubleClick = vi.fn()
-    render(<TdTileGrid entries={entries} onSelect={vi.fn()} onDoubleClick={onDoubleClick} />)
-    fireEvent.keyDown(screen.getByTestId('td-tile-0'), { key: 'a' })
-    expect(onDoubleClick).not.toHaveBeenCalled()
-  })
-
-  it('falls back to native Enter→click when onDoubleClick is omitted', () => {
-    const onSelect = vi.fn()
-    render(<TdTileGrid entries={entries} onSelect={onSelect} />)
-    // Without onDoubleClick, onKeyDown is not attached, so Enter fires the
-    // browser default button activation (click event → onSelect).
-    const tile = screen.getByTestId('td-tile-0')
-    fireEvent.keyDown(tile, { key: 'Enter' })
-    fireEvent.click(tile) // native activation that would follow
-    expect(onSelect).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'TD(0)' }))
-  })
+  // Enter-to-commit is wired at the picker level (TabbedKeycodes window
+  // handler routes any Enter inside the picker container to onConfirm), not
+  // at individual tiles — so TileGrids itself doesn't attach an onKeyDown.
 })
 
 describe('MacroTileGrid', () => {
@@ -83,12 +61,5 @@ describe('MacroTileGrid', () => {
     render(<MacroTileGrid macros={macros} onSelect={vi.fn()} onDoubleClick={onDoubleClick} />)
     fireEvent.doubleClick(screen.getByTestId('macro-tile-1'))
     expect(onDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'M1' }))
-  })
-
-  it('fires onDoubleClick with M{i} on Enter keydown', () => {
-    const onDoubleClick = vi.fn()
-    render(<MacroTileGrid macros={macros} onSelect={vi.fn()} onDoubleClick={onDoubleClick} />)
-    fireEvent.keyDown(screen.getByTestId('macro-tile-0'), { key: 'Enter' })
-    expect(onDoubleClick).toHaveBeenCalledWith(expect.objectContaining({ qmkId: 'M0' }))
   })
 })
