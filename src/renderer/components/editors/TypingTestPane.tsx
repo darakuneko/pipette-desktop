@@ -349,9 +349,13 @@ export function TypingTestPane({
       {viewOnly && (
         <>
         <div
-          className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || !mouseOver ? 'opacity-0' : 'opacity-100'}`}
+          className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || (!mouseOver && !recordEnabled) ? 'opacity-0' : 'opacity-100'}`}
         >
-          <span className="text-[10px] text-content-muted">{t('editor.typingTest.closeHint')}</span>
+          <span className={`text-[10px] ${!mouseOver && recordEnabled ? 'text-accent' : 'text-content-muted'}`}>
+            {mouseOver
+              ? t('editor.typingTest.closeHint')
+              : t('editor.typingTest.recordingIndicator')}
+          </span>
         </div>
         <div ref={controlsBarRef} className="fixed bottom-0 right-0 z-50">
           <div

@@ -273,6 +273,7 @@
         "legend": "ヒートマップ: 直近 1 時間"
       },
       "closeHint": "クリックでメニューを開く",
+      "recordingIndicator": "記録中",
       "resetSize": "初期サイズ",
       "fitSize": "フィット",
       "baseLayer": "Base Layer",

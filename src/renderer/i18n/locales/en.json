@@ -274,6 +274,7 @@
         "legend": "Heatmap: last 1 hour"
       },
       "closeHint": "Click to open menu",
+      "recordingIndicator": "Recording",
       "resetSize": "Default Size",
       "fitSize": "Fit Size",
       "baseLayer": "Base Layer",
