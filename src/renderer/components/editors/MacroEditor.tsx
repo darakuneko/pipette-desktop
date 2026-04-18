@@ -151,6 +151,8 @@ export function MacroEditor({
     revertAndDeselect,
     commitAndDeselect,
     beginAddAction,
+    hasPendingEdit,
+    isExistingEdit,
   } = useMacroKeycodeSelection({
     currentActions,
     activeMacro,
@@ -284,12 +286,24 @@ export function MacroEditor({
     setDirty(false)
   }, [macroBuffer, vialProtocol, macroCount, clearPending, setSelectedKey, setPopoverState]))
 
+  // Edit-mode Revert (per-slot) — confirms like the list-level Revert but
+  // only rolls back the in-flight picker edit via revertAndDeselect.
+  const editRevertAction = useConfirmAction(revertAndDeselect)
+
+  // Enter in the picker commits the staged edit and exits edit mode,
+  // mirroring the Save button's enabled state so an empty commit can't
+  // sneak through.
+  const pickerEnterCommit = useCallback(() => {
+    if (isEditing && !isRecording && hasPendingEdit) commitAndDeselect()
+  }, [isEditing, isRecording, hasPendingEdit, commitAndDeselect])
+
   // Clear selection state when switching macros to avoid stale indices
   useEffect(() => {
     setSelectedKey(null)
     setPopoverState(null)
     clearAction.reset()
     revertAction.reset()
+    editRevertAction.reset()
   }, [activeMacro])
 
   const memoryUsed = useMemo(() => {
@@ -398,6 +412,7 @@ export function MacroEditor({
         <div ref={pickerRef} className={`overflow-y-auto px-6 pb-6 ${isEditing ? 'shrink-0' : 'hidden'}`}>
           <TabbedKeycodes
             onKeycodeSelect={maskedSelection.pickerSelect}
+            onConfirm={pickerEnterCommit}
             maskOnly={maskedSelection.maskOnly}
             lmMode={maskedSelection.lmMode}
             tabContentOverride={tabContentOverride}
@@ -429,12 +444,24 @@ export function MacroEditor({
                   />
                 </>
               )}
+              {isEditing && isExistingEdit && (
+                <ConfirmButton
+                  testId="macro-edit-revert"
+                  confirming={editRevertAction.confirming}
+                  onClick={editRevertAction.trigger}
+                  labelKey="common.revert"
+                  confirmLabelKey="common.confirmRevert"
+                  disabled={isRecording || !hasPendingEdit}
+                />
+              )}
               <button
                 type="button"
                 data-testid="macro-save"
                 className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
                 onClick={isEditing ? commitAndDeselect : handleSave}
-                disabled={isEditing ? isRecording : (!dirty || hasInvalidText || isRecording)}
+                disabled={isEditing
+                  ? (isRecording || !hasPendingEdit)
+                  : (!dirty || hasInvalidText || isRecording)}
               >
                 {t('common.save')}
               </button>

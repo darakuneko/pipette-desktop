@@ -143,4 +143,22 @@ describe('TabbedKeycodes', () => {
     expect(btnA.className).toContain('text-accent')
     expect(btnB.className).not.toContain('text-accent')
   })
+
+  it('Enter on a focused picker button is preventDefaulted even without onConfirm (no duplicate insert)', () => {
+    render(<TabbedKeycodes onKeycodeSelect={vi.fn()} />)
+    const btn = screen.getByText('A').closest('button')!
+    btn.focus()
+    const ev = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    window.dispatchEvent(ev)
+    expect(ev.defaultPrevented).toBe(true)
+  })
+
+  it('Enter on a focused picker button calls onConfirm when provided', () => {
+    const onConfirm = vi.fn()
+    render(<TabbedKeycodes onKeycodeSelect={vi.fn()} onConfirm={onConfirm} />)
+    const btn = screen.getByText('A').closest('button')!
+    btn.focus()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
 })

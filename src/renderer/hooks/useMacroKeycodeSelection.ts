@@ -8,6 +8,30 @@ import { useMaskedKeycodeSelection } from './useMaskedKeycodeSelection'
 import { useTileContentOverride } from './useTileContentOverride'
 import { isKeycodeAction } from '../components/editors/macro-editor-utils'
 
+/** Structural equality for a MacroAction[] — cheap enough per-render because
+ *  macros are small (< 50 actions, each with a handful of keycodes). */
+function actionsEqual(a: MacroAction[], b: MacroAction[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i]
+    const y = b[i]
+    if (x.type !== y.type) return false
+    if (x.type === 'text' && y.type === 'text') {
+      if (x.text !== y.text) return false
+    } else if (x.type === 'delay' && y.type === 'delay') {
+      if (x.delay !== y.delay) return false
+    } else if ('keycodes' in x && 'keycodes' in y) {
+      if (x.keycodes.length !== y.keycodes.length) return false
+      for (let j = 0; j < x.keycodes.length; j++) {
+        if (x.keycodes[j] !== y.keycodes[j]) return false
+      }
+    } else {
+      return false
+    }
+  }
+  return true
+}
+
 interface UseMacroKeycodeSelectionOptions {
   currentActions: MacroAction[]
   activeMacro: number
@@ -287,6 +311,15 @@ export function useMacroKeycodeSelection({
       : 0
   })()
 
+  // isExistingEdit is false while editing a freshly-added action
+  // (beginAddAction grew the array) — that's how the Revert button stays
+  // hidden for new actions.
+  const snapshot = preEditActionsRef.current
+  const hasPendingEdit =
+    isEditing && snapshot !== null && !actionsEqual(snapshot, currentActions)
+  const isExistingEdit =
+    isEditing && snapshot !== null && snapshot.length === currentActions.length
+
   return {
     selectedKey,
     setSelectedKey,
@@ -309,5 +342,7 @@ export function useMacroKeycodeSelection({
     revertAndDeselect,
     commitAndDeselect,
     beginAddAction,
+    hasPendingEdit,
+    isExistingEdit,
   }
 }
