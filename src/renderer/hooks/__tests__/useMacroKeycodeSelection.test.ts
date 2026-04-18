@@ -106,6 +106,34 @@ describe('useMacroKeycodeSelection revert/commit', () => {
     expect(result.current.macros[0]).toEqual([orig[0], tap([deserialize('KC_R')])])
   })
 
+  it('hasPendingEdit tracks whether currentActions differs from the snapshot', () => {
+    const orig = [deserialize('KC_T'), deserialize('KC_Y')]
+    const { result } = renderHook(() => useTestHarness([[tap(orig)]]))
+
+    expect(result.current.selection.hasPendingEdit).toBe(false)
+
+    act(() => { result.current.selection.handleKeycodeClick(0, 1) })
+    expect(result.current.selection.hasPendingEdit).toBe(false)
+
+    act(() => { result.current.selection.maskedSelection.pickerSelect(fakeKey('KC_W')) })
+    expect(result.current.selection.hasPendingEdit).toBe(true)
+
+    act(() => { result.current.selection.revertAndDeselect() })
+    expect(result.current.selection.hasPendingEdit).toBe(false)
+  })
+
+  it('isExistingEdit is true for an existing-slot edit and false for beginAddAction', () => {
+    const orig: MacroAction[] = [tap([deserialize('KC_T')])]
+    const { result } = renderHook(() => useTestHarness([orig]))
+
+    act(() => { result.current.selection.handleKeycodeClick(0, 0) })
+    expect(result.current.selection.isExistingEdit).toBe(true)
+    act(() => { result.current.selection.commitAndDeselect() })
+
+    act(() => { result.current.selection.beginAddAction(tap([0])) })
+    expect(result.current.selection.isExistingEdit).toBe(false)
+  })
+
   it('externally clearing selectedKey invalidates the snapshot (no stale revert)', () => {
     const orig = [deserialize('KC_T'), deserialize('KC_Y')]
     const { result } = renderHook(() => useTestHarness([[tap(orig)]]))
