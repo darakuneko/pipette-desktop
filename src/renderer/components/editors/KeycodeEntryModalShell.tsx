@@ -108,7 +108,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
     modalWidth,
   } = hook
 
-  useEscapeClose(handleClose)
+  useEscapeClose(selectedField ? handlePickerClose : handleClose)
 
   const isConfigured = editedEntry !== null && adapter.isConfigured(editedEntry)
 
@@ -262,7 +262,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
         <div className="flex min-h-0 flex-1 overflow-hidden" data-testid={adapter.bodyTestId ?? `editor-${prefix}`}>
           {/* Left panel */}
           <div className="flex-1 flex flex-col min-h-0">
-            <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : ''}`}>
+            <div className={`flex-1 overflow-y-auto px-6 pb-6 ${selectedField ? 'pt-6' : 'pt-1'}`}>
               {editedEntry && (
                 <>
                   <div className="space-y-2">

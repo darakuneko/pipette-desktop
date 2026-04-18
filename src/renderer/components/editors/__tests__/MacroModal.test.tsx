@@ -23,12 +23,13 @@ vi.mock('react-i18next', () => ({
 }))
 
 // Mock MacroEditor to verify props are passed through and let tests toggle
-// recording state from within the editor subtree.
+// recording/editing state from within the editor subtree.
 let capturedInitialMacro: number | undefined
 vi.mock('../MacroEditor', () => ({
   MacroEditor: (props: {
     initialMacro?: number
     onRecordingChange?: (recording: boolean) => void
+    onEditingChange?: (editing: boolean) => void
   }) => {
     capturedInitialMacro = props.initialMacro
     return (
@@ -39,6 +40,13 @@ vi.mock('../MacroEditor', () => ({
           onClick={() => props.onRecordingChange?.(true)}
         >
           start recording
+        </button>
+        <button
+          type="button"
+          data-testid="mock-edit-toggle"
+          onClick={() => props.onEditingChange?.(true)}
+        >
+          start editing
         </button>
       </div>
     )
@@ -115,6 +123,13 @@ describe('MacroModal', () => {
   it('does not close on Escape while recording', () => {
     render(<MacroModal {...defaultProps} />)
     fireEvent.click(screen.getByTestId('mock-record-toggle'))
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(defaultProps.onClose).not.toHaveBeenCalled()
+  })
+
+  it('does not close on Escape while MacroEditor is in edit mode', () => {
+    render(<MacroModal {...defaultProps} />)
+    fireEvent.click(screen.getByTestId('mock-edit-toggle'))
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(defaultProps.onClose).not.toHaveBeenCalled()
   })
