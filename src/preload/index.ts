@@ -17,6 +17,7 @@ import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type {
   TypingAnalyticsEvent,
   TypingDailySummary,
+  TypingHeatmapByCell,
   TypingKeyboardSummary,
   TypingTombstoneResult,
 } from '../shared/types/typing-analytics'
@@ -212,7 +213,7 @@ const vialAPI = {
     uid: string,
     layer: number,
     sinceMs: number,
-  ): Promise<Record<string, number>> =>
+  ): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
 
   // --- Language Store (IPC to main) ---

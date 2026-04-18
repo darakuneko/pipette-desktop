@@ -417,7 +417,7 @@ describe('typing-analytics-service', () => {
           await ingestMatrix(sampleKeyboard, 1, 2, 0, ts + 500)
 
           const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, ts - 60_000)
-          expect(heat['1,2']).toBe(2)
+          expect(heat['1,2']?.total).toBe(2)
         })
 
         it('floors sinceMs to the minute boundary so partial minutes are not dropped', async () => {
@@ -428,7 +428,7 @@ describe('typing-analytics-service', () => {
           await flushTypingAnalyticsNowForTests()
 
           const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, floored + 30_000)
-          expect(heat['3,4']).toBe(1)
+          expect(heat['3,4']?.total).toBe(1)
         })
 
         it('excludes other layers', async () => {
@@ -438,7 +438,7 @@ describe('typing-analytics-service', () => {
           await flushTypingAnalyticsNowForTests()
 
           const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, ts - 60_000)
-          expect(heat['1,2']).toBe(1)
+          expect(heat['1,2']?.total).toBe(1)
         })
 
         it('returns an empty object when no matrix events fall in the window', async () => {

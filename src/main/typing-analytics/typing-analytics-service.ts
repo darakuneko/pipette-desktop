@@ -9,6 +9,7 @@ import type {
   TypingAnalyticsEvent,
   TypingAnalyticsFingerprint,
   TypingAnalyticsKeyboard,
+  TypingHeatmapByCell,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { log } from '../logger'
@@ -146,7 +147,7 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP,
-    async (_event, uid: unknown, layer: unknown, sinceMs: unknown): Promise<Record<string, number>> => {
+    async (_event, uid: unknown, layer: unknown, sinceMs: unknown): Promise<TypingHeatmapByCell> => {
       if (typeof uid !== 'string' || uid.length === 0) return {}
       if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return {}
@@ -202,27 +203,37 @@ export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
  *  - DB rows flushed for that window (closed minutes), and
  *  - the live current-minute entries still sitting in the `MinuteBuffer`.
  *
- * The live-minute path is what keeps a 5s poll usable — without it the
- * heatmap would lag the debounced flush by up to ~59 seconds. Returns a
- * plain object keyed by `"row,col"` so it round-trips through IPC
- * unchanged. */
+ * Each cell carries a `{ total, tap, hold }` triple so the UI can
+ * colour the outer (hold) and inner (tap) rects of LT/MT keys
+ * independently while non-tap-hold keys stay painted by `total`.
+ * The live-minute path is what keeps a 5s poll usable — without it
+ * the heatmap would lag the debounced flush by up to ~59 seconds.
+ * Serializes the Map as a plain keyed object so the triple round-trips
+ * through IPC unchanged. */
 export async function getMatrixHeatmap(
   uid: string,
   layer: number,
   sinceMs: number,
-): Promise<Record<string, number>> {
+): Promise<TypingHeatmapByCell> {
   const machineHash = await getMachineHash()
   const sinceMinuteMs = Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS
 
   const db = getTypingAnalyticsDB()
   const totals = db.aggregateMatrixCountsForUid(uid, machineHash, layer, sinceMinuteMs)
   const live = minuteBuffer.peekMatrixCountsForUid(uid, machineHash, layer)
-  for (const [key, count] of live) {
-    totals.set(key, (totals.get(key) ?? 0) + count)
+  for (const [key, cell] of live) {
+    const existing = totals.get(key)
+    if (existing) {
+      existing.total += cell.total
+      existing.tap += cell.tap
+      existing.hold += cell.hold
+    } else {
+      totals.set(key, { total: cell.total, tap: cell.tap, hold: cell.hold })
+    }
   }
 
-  const result: Record<string, number> = {}
-  for (const [key, count] of totals) result[key] = count
+  const result: TypingHeatmapByCell = {}
+  for (const [key, cell] of totals) result[key] = cell
   return result
 }
 
@@ -404,7 +415,7 @@ function charRowsFromSnapshot(snapshot: MinuteSnapshot): CharMinuteRow[] {
 
 function matrixRowsFromSnapshot(snapshot: MinuteSnapshot): MatrixMinuteRow[] {
   const rows: MatrixMinuteRow[] = []
-  for (const { row, col, layer, keycode, count } of snapshot.matrixCounts.values()) {
+  for (const { row, col, layer, keycode, count, tapCount, holdCount } of snapshot.matrixCounts.values()) {
     rows.push({
       scopeId: snapshot.scopeId,
       minuteTs: snapshot.minuteTs,
@@ -413,6 +424,8 @@ function matrixRowsFromSnapshot(snapshot: MinuteSnapshot): MatrixMinuteRow[] {
       layer,
       keycode,
       count,
+      tapCount,
+      holdCount,
     })
   }
   return rows

@@ -38,6 +38,13 @@ export interface MatrixMinuteRow {
   layer: number
   keycode: number
   count: number
+  /** Portion of `count` attributed to a tap on the release edge for
+   * LT/MT keys. Defaults to 0 when the row came from a non-tap-hold
+   * press (older ingestion path, test fixtures, or still-held keys). */
+  tapCount?: number
+  /** Portion of `count` attributed to a hold on the release edge.
+   * Defaults to 0 for the same reasons as `tapCount`. */
+  holdCount?: number
 }
 
 export interface MinuteStatsRow {
@@ -136,9 +143,8 @@ export class TypingAnalyticsDB {
     if (stored == null) {
       this.setMeta('schema_version', String(SCHEMA_VERSION))
     } else if (Number(stored) !== SCHEMA_VERSION) {
-      throw new Error(
-        `typing-analytics DB schema mismatch: stored=${stored}, expected=${SCHEMA_VERSION}`,
-      )
+      this.migrateSchema(Number(stored))
+      this.setMeta('schema_version', String(SCHEMA_VERSION))
     }
 
     this.upsertScopeStmt = this.db.prepare(`
@@ -176,13 +182,19 @@ export class TypingAnalyticsDB {
 
     this.upsertMatrixMinuteStmt = this.db.prepare(`
       INSERT INTO typing_matrix_minute (
-        scope_id, minute_ts, row, col, layer, keycode, count, updated_at, is_deleted
+        scope_id, minute_ts, row, col, layer, keycode, count,
+        tap_count, hold_count,
+        updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count, @updatedAt, 0
+        @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
+        @tapCount, @holdCount,
+        @updatedAt, 0
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
         count = typing_matrix_minute.count + excluded.count,
+        tap_count = typing_matrix_minute.tap_count + excluded.tap_count,
+        hold_count = typing_matrix_minute.hold_count + excluded.hold_count,
         keycode = excluded.keycode,
         updated_at = excluded.updated_at,
         is_deleted = 0
@@ -293,14 +305,20 @@ export class TypingAnalyticsDB {
 
     this.mergeMatrixMinuteStmt = this.db.prepare(`
       INSERT INTO typing_matrix_minute (
-        scope_id, minute_ts, row, col, layer, keycode, count, updated_at, is_deleted
+        scope_id, minute_ts, row, col, layer, keycode, count,
+        tap_count, hold_count,
+        updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
+        @tapCount, @holdCount,
+        @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
         keycode = excluded.keycode,
         count = excluded.count,
+        tap_count = excluded.tap_count,
+        hold_count = excluded.hold_count,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_matrix_minute.updated_at
@@ -384,6 +402,7 @@ export class TypingAnalyticsDB {
       SELECT m.scope_id AS scopeId, m.minute_ts AS minuteTs,
              m.row AS row, m.col AS col, m.layer AS layer,
              m.keycode AS keycode, m.count AS count,
+             m.tap_count AS tapCount, m.hold_count AS holdCount,
              m.updated_at AS updatedAt, m.is_deleted AS isDeleted
         FROM typing_matrix_minute m
         JOIN typing_scopes s ON s.id = m.scope_id
@@ -442,7 +461,10 @@ export class TypingAnalyticsDB {
     // caller). Both tables' is_deleted flags are filtered so tombstoned
     // scopes and tombstoned minute rows are both excluded.
     this.selectMatrixHeatmapStmt = this.db.prepare(`
-      SELECT m.row AS row, m.col AS col, SUM(m.count) AS total
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
         FROM typing_matrix_minute m
         JOIN typing_scopes s ON s.id = m.scope_id
        WHERE s.keyboard_uid = @uid
@@ -604,6 +626,8 @@ export class TypingAnalyticsDB {
           layer: m.layer,
           keycode: m.keycode,
           count: m.count,
+          tapCount: m.tapCount ?? 0,
+          holdCount: m.holdCount ?? 0,
           updatedAt,
         })
       }
@@ -639,25 +663,27 @@ export class TypingAnalyticsDB {
     return rows.map((r) => r.keyboardUid)
   }
 
-  /** Summed matrix counts for the typing-view heatmap, restricted to one
-   * machine + uid + layer and minute-flushed rows at or after
-   * `sinceMinuteMs`. The caller is responsible for flooring
-   * `sinceMinuteMs` to a minute boundary so partial minutes aren't lost.
-   * Returns a Map keyed by `"row,col"`. Current-minute in-memory counts
-   * are combined at the service layer, not here. */
+  /** Per-cell totals broken down into the overall press count plus the
+   * tap / hold subcounts for LT and MT keys. The heatmap uses `total`
+   * for the outer rect colour on non-tap-hold keys and the tap / hold
+   * splits for the outer and inner rects of LT/MT keys. */
   aggregateMatrixCountsForUid(
     uid: string,
     machineHash: string,
     layer: number,
     sinceMinuteMs: number,
-  ): Map<string, number> {
+  ): Map<string, { total: number; tap: number; hold: number }> {
     const rows = this.selectMatrixHeatmapStmt.all({ uid, machineHash, layer, sinceMinuteMs }) as Array<{
       row: number
       col: number
       total: number
+      tap: number
+      hold: number
     }>
-    const result = new Map<string, number>()
-    for (const r of rows) result.set(`${r.row},${r.col}`, r.total)
+    const result = new Map<string, { total: number; tap: number; hold: number }>()
+    for (const r of rows) {
+      result.set(`${r.row},${r.col}`, { total: r.total, tap: r.tap, hold: r.hold })
+    }
     return result
   }
 
@@ -803,6 +829,8 @@ export class TypingAnalyticsDB {
       layer: row.layer,
       keycode: row.keycode,
       count: row.count,
+      tapCount: row.tapCount ?? 0,
+      holdCount: row.holdCount ?? 0,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -834,6 +862,29 @@ export class TypingAnalyticsDB {
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
+  }
+
+  /** Apply additive migrations for older databases. Only forward
+   * migrations are supported; downgrading keeps today's "mismatch is
+   * fatal" posture because the reverse direction can't be made safe. */
+  private migrateSchema(fromVersion: number): void {
+    if (fromVersion > SCHEMA_VERSION) {
+      throw new Error(
+        `typing-analytics DB schema version ${fromVersion} is newer than this build's ${SCHEMA_VERSION}`,
+      )
+    }
+    // v1 -> v2: Add tap_count / hold_count columns to the matrix
+    // rollups so LT/MT release-edge classification has somewhere to
+    // accumulate. Existing rows default to 0, meaning "unclassified" —
+    // the heatmap falls back to the total `count` when both are zero.
+    if (fromVersion < 2) {
+      this.db.exec(`
+        ALTER TABLE typing_matrix_minute
+          ADD COLUMN tap_count INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE typing_matrix_minute
+          ADD COLUMN hold_count INTEGER NOT NULL DEFAULT 0;
+      `)
+    }
   }
 
   getMeta(key: string): string | null {

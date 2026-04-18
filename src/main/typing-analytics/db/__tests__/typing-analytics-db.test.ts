@@ -39,7 +39,7 @@ describe('TypingAnalyticsDB', () => {
   })
 
   it('stores the schema version on first open', () => {
-    expect(db.getMeta('schema_version')).toBe('1')
+    expect(db.getMeta('schema_version')).toBe('2')
   })
 
   it('upserts a scope row and keeps the newest updatedAt', () => {
@@ -471,8 +471,8 @@ describe('TypingAnalyticsDB', () => {
       writeMatrix('scope-local', 120_000, 1, 2, 0, 5) // same cell/layer, accumulates
       writeMatrix('scope-local', 180_000, 0, 0, 0, 1)
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
-      expect(heat.get('1,2')).toBe(8)
-      expect(heat.get('0,0')).toBe(1)
+      expect(heat.get('1,2')?.total).toBe(8)
+      expect(heat.get('0,0')?.total).toBe(1)
       expect(heat.size).toBe(2)
     })
 
@@ -480,21 +480,21 @@ describe('TypingAnalyticsDB', () => {
       writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
       writeMatrix('scope-other-machine', 60_000, 1, 2, 0, 100)
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
-      expect(heat.get('1,2')).toBe(3)
+      expect(heat.get('1,2')?.total).toBe(3)
     })
 
     it('excludes other keyboards on the same machine', () => {
       writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
       writeMatrix('scope-other-uid', 60_000, 1, 2, 0, 99)
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
-      expect(heat.get('1,2')).toBe(3)
+      expect(heat.get('1,2')?.total).toBe(3)
     })
 
     it('excludes other layers so the heatmap shows only the active layer', () => {
       writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
       writeMatrix('scope-local', 60_000, 1, 2, 1, 100)
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
-      expect(heat.get('1,2')).toBe(3)
+      expect(heat.get('1,2')?.total).toBe(3)
       expect(heat.size).toBe(1)
     })
 
@@ -502,7 +502,7 @@ describe('TypingAnalyticsDB', () => {
       writeMatrix('scope-local', 30_000, 1, 2, 0, 100) // before cutoff
       writeMatrix('scope-local', 60_000, 1, 2, 0, 7) // at cutoff (inclusive)
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
-      expect(heat.get('1,2')).toBe(7)
+      expect(heat.get('1,2')?.total).toBe(7)
     })
 
     it('excludes tombstoned matrix rows', () => {
@@ -524,6 +524,24 @@ describe('TypingAnalyticsDB', () => {
       })
       const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
       expect(heat.size).toBe(0)
+    })
+
+    it('carries tap / hold subcounts alongside the per-cell total', () => {
+      db.writeMinute(
+        { scopeId: 'scope-local', minuteTs: 60_000, ...stats },
+        [],
+        [
+          // Four total presses on the same cell: two classified as tap,
+          // one as hold, one unclassified (still-held or non-tap-hold key).
+          { scopeId: 'scope-local', minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04, count: 1, tapCount: 1, holdCount: 0 },
+          { scopeId: 'scope-local', minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04, count: 1, tapCount: 1, holdCount: 0 },
+          { scopeId: 'scope-local', minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04, count: 1, tapCount: 0, holdCount: 1 },
+          { scopeId: 'scope-local', minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04, count: 1 },
+        ],
+        1_000,
+      )
+      const cell = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000).get('1,2')
+      expect(cell).toEqual({ total: 4, tap: 2, hold: 1 })
     })
   })
 })

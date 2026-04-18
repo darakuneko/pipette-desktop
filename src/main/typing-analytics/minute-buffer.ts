@@ -12,6 +12,20 @@ import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 
 export const MINUTE_MS = 60_000
 
+/** Per-cell aggregated counts. `count` is the total press count. `tapCount`
+ * and `holdCount` break that down for LT/MT release-edge classifications;
+ * non-tap-hold presses leave both at zero and the consumer treats
+ * `count` as the fallback intensity. */
+export interface MatrixCellCounts {
+  row: number
+  col: number
+  layer: number
+  keycode: number
+  count: number
+  tapCount: number
+  holdCount: number
+}
+
 export interface MinuteSnapshot {
   scopeId: string
   fingerprint: TypingAnalyticsFingerprint
@@ -25,7 +39,7 @@ export interface MinuteSnapshot {
   intervalP75Ms: number | null
   intervalMaxMs: number | null
   charCounts: Map<string, number>
-  matrixCounts: Map<string, { row: number; col: number; layer: number; keycode: number; count: number }>
+  matrixCounts: Map<string, MatrixCellCounts>
 }
 
 interface Entry {
@@ -33,7 +47,7 @@ interface Entry {
   fingerprint: TypingAnalyticsFingerprint
   minuteTs: number
   charCounts: Map<string, number>
-  matrixCounts: Map<string, { row: number; col: number; layer: number; keycode: number; count: number }>
+  matrixCounts: Map<string, MatrixCellCounts>
   intervals: number[]
   keystrokes: number
   firstEventMs: number
@@ -116,12 +130,16 @@ export class MinuteBuffer {
     } else {
       const mKey = `${event.row},${event.col},${event.layer}`
       const existing = entry.matrixCounts.get(mKey)
+      const tapDelta = event.action === 'tap' ? 1 : 0
+      const holdDelta = event.action === 'hold' ? 1 : 0
       entry.matrixCounts.set(mKey, {
         row: event.row,
         col: event.col,
         layer: event.layer,
         keycode: event.keycode,
         count: (existing?.count ?? 0) + 1,
+        tapCount: (existing?.tapCount ?? 0) + tapDelta,
+        holdCount: (existing?.holdCount ?? 0) + holdDelta,
       })
     }
   }
@@ -158,18 +176,29 @@ export class MinuteBuffer {
    * keyboard uid + machine hash + layer. Used by the heatmap service to
    * combine the live (not-yet-flushed) current minute with the DB
    * totals so the UI does not lag ~59 seconds behind actual input.
-   * Returns `"row,col"` keyed counts summed across every live minute
+   * Returns `"row,col"` keyed triples summed across every live minute
    * for the scope. Matching by (uid, machineHash) lets callers query
    * without first resolving the canonical scope key. */
-  peekMatrixCountsForUid(uid: string, machineHash: string, layer: number): Map<string, number> {
-    const result = new Map<string, number>()
+  peekMatrixCountsForUid(
+    uid: string,
+    machineHash: string,
+    layer: number,
+  ): Map<string, { total: number; tap: number; hold: number }> {
+    const result = new Map<string, { total: number; tap: number; hold: number }>()
     for (const entry of this.buffers.values()) {
       if (entry.fingerprint.keyboard.uid !== uid) continue
       if (entry.fingerprint.machineHash !== machineHash) continue
       for (const cell of entry.matrixCounts.values()) {
         if (cell.layer !== layer) continue
         const key = `${cell.row},${cell.col}`
-        result.set(key, (result.get(key) ?? 0) + cell.count)
+        const existing = result.get(key)
+        if (existing) {
+          existing.total += cell.count
+          existing.tap += cell.tapCount
+          existing.hold += cell.holdCount
+        } else {
+          result.set(key, { total: cell.count, tap: cell.tapCount, hold: cell.holdCount })
+        }
       }
     }
     return result

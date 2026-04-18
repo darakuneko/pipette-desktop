@@ -80,6 +80,21 @@ export interface TypingDailySummary {
   activeMs: number
 }
 
+/** One cell of the typing-view heatmap. `total` is the overall press
+ * count for the cell; `tap` and `hold` are the portions of that total
+ * that the release-edge classifier routed to the tap vs hold arm of
+ * an LT/MT key. Non-tap-hold presses leave both at 0 and consumers
+ * fall back to `total` as a single intensity. */
+export interface TypingHeatmapCell {
+  total: number
+  tap: number
+  hold: number
+}
+
+/** Wire format for the heatmap IPC. Keyed by `"row,col"` so the
+ * renderer can plug it straight into KeyWidget without reshaping. */
+export type TypingHeatmapByCell = Record<string, TypingHeatmapCell>
+
 /** Row counts returned from a tombstone / delete-all call. The renderer
  * uses the total to decide whether to surface a "no rows changed" notice. */
 export interface TypingTombstoneResult {

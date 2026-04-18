@@ -2,7 +2,7 @@
 // SQLite schema for the typing analytics database. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export const CREATE_SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   layer INTEGER NOT NULL,
   keycode INTEGER NOT NULL,
   count INTEGER NOT NULL,
+  -- Portion of count that resolved as a tap vs hold on the release
+  -- edge, for LT / MT style tap-hold keys. Non-tap-hold keys leave
+  -- both at 0 and the heatmap falls back to the total count column.
+  tap_count INTEGER NOT NULL DEFAULT 0,
+  hold_count INTEGER NOT NULL DEFAULT 0,
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (scope_id, minute_ts, row, col, layer),

@@ -21,6 +21,7 @@ import type { PipetteSettings } from './pipette-settings'
 import type {
   TypingAnalyticsEvent,
   TypingDailySummary,
+  TypingHeatmapByCell,
   TypingKeyboardSummary,
   TypingTombstoneResult,
 } from './typing-analytics'
@@ -139,7 +140,7 @@ export interface VialAPI {
   typingAnalyticsListItems(uid: string): Promise<TypingDailySummary[]>
   typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
   typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
-  typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<Record<string, number>>
+  typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>

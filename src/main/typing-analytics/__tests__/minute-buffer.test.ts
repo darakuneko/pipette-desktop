@@ -84,8 +84,8 @@ describe('MinuteBuffer', () => {
     buffer.addEvent(matrixEvent(2, 1, 1, 0x4015, 3_000), fp)
 
     const [snap] = buffer.drainAll()
-    expect(snap.matrixCounts.get('0,3,0')).toEqual({ row: 0, col: 3, layer: 0, keycode: 0x04, count: 2 })
-    expect(snap.matrixCounts.get('2,1,1')).toEqual({ row: 2, col: 1, layer: 1, keycode: 0x4015, count: 1 })
+    expect(snap.matrixCounts.get('0,3,0')).toEqual({ row: 0, col: 3, layer: 0, keycode: 0x04, count: 2, tapCount: 0, holdCount: 0 })
+    expect(snap.matrixCounts.get('2,1,1')).toEqual({ row: 2, col: 1, layer: 1, keycode: 0x4015, count: 1, tapCount: 0, holdCount: 0 })
   })
 
   it('computes interval stats from event timing', () => {
