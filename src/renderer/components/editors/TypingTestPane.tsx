@@ -78,11 +78,17 @@ export function TypingTestPane({
   // Heatmap overlay for view-only + record mode. Gated on both flags
   // so the overlay never shows up in editor mode and never lingers
   // after the user toggles record off.
-  const { intensityByCell: heatmapIntensity, maxCount: heatmapMax } = useTypingHeatmap({
+  const {
+    cells: heatmapCells,
+    maxTotal: heatmapMaxTotal,
+    maxTap: heatmapMaxTap,
+    maxHold: heatmapMaxHold,
+  } = useTypingHeatmap({
     uid: keyboardUid ?? null,
     layer: typingTest.effectiveLayer,
     enabled: !!viewOnly && !!recordEnabled,
   })
+  const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
   const [mouseOver, setMouseOver] = useState(false)
@@ -320,14 +326,16 @@ export function TypingTestPane({
             everPressedKeys={undefined}
             remappedKeys={remappedKeys}
             layoutOptions={layoutOptions}
-            heatmapIntensity={heatmapIntensity}
-            heatmapMax={heatmapMax}
+            heatmapCells={heatmapCells}
+            heatmapMaxTotal={heatmapMaxTotal}
+            heatmapMaxTap={heatmapMaxTap}
+            heatmapMaxHold={heatmapMaxHold}
             scale={viewOnly ? 1 : scale}
             layerLabel={layerLabel}
             layerLabelTestId="layer-label"
             contentRef={contentRef}
           />
-          {heatmapMax > 0 && (
+          {heatmapActive && (
             <p
               data-testid="typing-test-heatmap-legend"
               className="mt-1 text-center text-[11px] text-content-muted"

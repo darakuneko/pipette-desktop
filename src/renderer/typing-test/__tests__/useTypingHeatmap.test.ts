@@ -4,13 +4,18 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingHeatmap, TYPING_HEATMAP_POLL_MS, TYPING_HEATMAP_WINDOW_MS } from '../useTypingHeatmap'
+import type { TypingHeatmapByCell } from '../../../shared/types/typing-analytics'
 
 // Minimal vialAPI surface — only the heatmap call is exercised here.
-type HeatmapFn = (uid: string, layer: number, sinceMs: number) => Promise<Record<string, number>>
+type HeatmapFn = (uid: string, layer: number, sinceMs: number) => Promise<TypingHeatmapByCell>
 
 function installVialApi(fn: HeatmapFn): void {
   ;(globalThis as unknown as { window: { vialAPI: { typingAnalyticsGetMatrixHeatmap: HeatmapFn } } })
     .window = { vialAPI: { typingAnalyticsGetMatrixHeatmap: fn } }
+}
+
+function cell(total: number, tap = 0, hold = 0): { total: number; tap: number; hold: number } {
+  return { total, tap, hold }
 }
 
 /** Flush every pending microtask + promise callback. Repeated loops
@@ -39,8 +44,10 @@ describe('useTypingHeatmap', () => {
     const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: false }))
     await act(async () => { await Promise.resolve() })
 
-    expect(result.current.intensityByCell).toBeNull()
-    expect(result.current.maxCount).toBe(0)
+    expect(result.current.cells).toBeNull()
+    expect(result.current.maxTotal).toBe(0)
+    expect(result.current.maxTap).toBe(0)
+    expect(result.current.maxHold).toBe(0)
     expect(api).not.toHaveBeenCalled()
   })
 
@@ -64,43 +71,47 @@ describe('useTypingHeatmap', () => {
     expect(api).toHaveBeenCalledTimes(1)
   })
 
-  it('fetches immediately on enable and populates intensity + max', async () => {
-    const api = vi.fn<HeatmapFn>().mockResolvedValue({ '1,2': 5, '3,4': 2 })
+  it('fetches immediately on enable and populates cells + separate maxes', async () => {
+    const api = vi.fn<HeatmapFn>().mockResolvedValue({
+      '1,2': cell(5, 3, 2),
+      '3,4': cell(2, 1, 1),
+    })
     installVialApi(api)
 
     const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
     await act(async () => { await flushPromises() })
 
-    expect(result.current.intensityByCell?.get('1,2')).toBe(5)
-    expect(result.current.maxCount).toBe(5)
+    expect(result.current.cells?.get('1,2')).toEqual(cell(5, 3, 2))
+    expect(result.current.maxTotal).toBe(5)
+    expect(result.current.maxTap).toBe(3)
+    expect(result.current.maxHold).toBe(2)
     expect(api).toHaveBeenCalledTimes(1)
     const [, , sinceMs] = api.mock.calls[0]
-    // sinceMs == now - 1h; tolerate a tick of slop.
     expect(Date.now() - (sinceMs as number)).toBeCloseTo(TYPING_HEATMAP_WINDOW_MS, -2)
   })
 
   it('refetches on the poll interval', async () => {
     const api = vi.fn<HeatmapFn>()
-      .mockResolvedValueOnce({ '1,2': 5 })
-      .mockResolvedValueOnce({ '1,2': 12 })
+      .mockResolvedValueOnce({ '1,2': cell(5) })
+      .mockResolvedValueOnce({ '1,2': cell(12) })
     installVialApi(api)
 
     const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
     await act(async () => { await flushPromises() })
-    expect(result.current.intensityByCell?.get('1,2')).toBe(5)
+    expect(result.current.cells?.get('1,2')?.total).toBe(5)
 
     await act(async () => {
       vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
       await flushPromises()
     })
-    expect(result.current.intensityByCell?.get('1,2')).toBe(12)
+    expect(result.current.cells?.get('1,2')?.total).toBe(12)
     expect(api).toHaveBeenCalledTimes(2)
   })
 
   it('refetches immediately when uid or layer changes', async () => {
     const api = vi.fn<HeatmapFn>()
-      .mockResolvedValueOnce({ '1,1': 1 })
-      .mockResolvedValueOnce({ '2,2': 3 })
+      .mockResolvedValueOnce({ '1,1': cell(1) })
+      .mockResolvedValueOnce({ '2,2': cell(3) })
     installVialApi(api)
 
     const { result, rerender } = renderHook(
@@ -108,17 +119,17 @@ describe('useTypingHeatmap', () => {
       { initialProps: { uid: '0xAABB', layer: 0, enabled: true } },
     )
     await act(async () => { await flushPromises() })
-    expect(result.current.intensityByCell?.get('1,1')).toBe(1)
+    expect(result.current.cells?.get('1,1')?.total).toBe(1)
 
     rerender({ uid: '0xAABB', layer: 1, enabled: true })
     await act(async () => { await flushPromises() })
 
-    expect(result.current.intensityByCell?.get('2,2')).toBe(3)
+    expect(result.current.cells?.get('2,2')?.total).toBe(3)
     expect(api).toHaveBeenCalledTimes(2)
   })
 
   it('clears the overlay when enabled flips back to false', async () => {
-    const api = vi.fn<HeatmapFn>().mockResolvedValue({ '1,2': 5 })
+    const api = vi.fn<HeatmapFn>().mockResolvedValue({ '1,2': cell(5) })
     installVialApi(api)
 
     const { result, rerender } = renderHook(
@@ -126,36 +137,37 @@ describe('useTypingHeatmap', () => {
       { initialProps: { uid: '0xAABB', layer: 0, enabled: true } },
     )
     await act(async () => { await flushPromises() })
-    expect(result.current.intensityByCell?.get('1,2')).toBe(5)
+    expect(result.current.cells?.get('1,2')?.total).toBe(5)
 
     rerender({ uid: '0xAABB', layer: 0, enabled: false })
     await act(async () => { await flushPromises() })
 
-    expect(result.current.intensityByCell).toBeNull()
-    expect(result.current.maxCount).toBe(0)
+    expect(result.current.cells).toBeNull()
+    expect(result.current.maxTotal).toBe(0)
+    expect(result.current.maxTap).toBe(0)
+    expect(result.current.maxHold).toBe(0)
   })
 
   it('keeps the last good snapshot when a poll fails', async () => {
     const api = vi.fn<HeatmapFn>()
-      .mockResolvedValueOnce({ '1,2': 5 })
+      .mockResolvedValueOnce({ '1,2': cell(5) })
       .mockRejectedValueOnce(new Error('ipc down'))
     installVialApi(api)
 
     const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
     await act(async () => { await flushPromises() })
-    expect(result.current.intensityByCell?.get('1,2')).toBe(5)
+    expect(result.current.cells?.get('1,2')?.total).toBe(5)
 
     await act(async () => {
       vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
       await flushPromises()
     })
 
-    // Second fetch rejected — snapshot from the first still visible.
-    expect(result.current.intensityByCell?.get('1,2')).toBe(5)
+    expect(result.current.cells?.get('1,2')?.total).toBe(5)
   })
 
   it('does not set state after unmount', async () => {
-    let resolveFetch: ((v: Record<string, number>) => void) | null = null
+    let resolveFetch: ((v: TypingHeatmapByCell) => void) | null = null
     const api = vi.fn<HeatmapFn>().mockImplementationOnce(
       () => new Promise((resolve) => { resolveFetch = resolve }),
     )
@@ -164,8 +176,7 @@ describe('useTypingHeatmap', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { unmount } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
     unmount()
-    // Resolve after unmount; the hook must swallow the callback.
-    resolveFetch?.({ '1,2': 99 })
+    resolveFetch?.({ '1,2': cell(99) })
     await act(async () => { await Promise.resolve() })
 
     expect(errors).not.toHaveBeenCalled()

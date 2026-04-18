@@ -38,11 +38,17 @@ interface Props {
   highlighted?: boolean
   everPressed?: boolean
   remapped?: boolean
-  /** Precomputed heatmap fill (hsl(...)) for this key. Used by the
-   * typing-view overlay. Lives below the pressed / selected / multi /
-   * highlighted / everPressed priority levels so the immediate
-   * feedback colours never get painted over by the heatmap. */
-  heatmapFill?: string | null
+  /** Heatmap fill for the outer rect (or the whole key on non-masked
+   * keys). Lives below the pressed / selected / multi / highlighted /
+   * everPressed priority levels so the immediate feedback colours are
+   * never painted over by the overlay. Null leaves the default key
+   * background in place. */
+  heatmapOuterFill?: string | null
+  /** Heatmap fill for the inner (tap) rect of a masked LT/MT key.
+   * Null leaves the default mask-rect colour in place so masked keys
+   * still visually announce themselves when there is no tap data
+   * yet. Ignored for non-masked keys. */
+  heatmapInnerFill?: string | null
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
@@ -63,7 +69,8 @@ function KeyWidgetInner({
   highlighted,
   everPressed,
   remapped,
-  heatmapFill,
+  heatmapOuterFill,
+  heatmapInnerFill,
   onClick,
   onDoubleClick,
   onHover,
@@ -106,7 +113,7 @@ function KeyWidgetInner({
   else if (highlighted) { fillColor = KEY_HIGHLIGHT_COLOR; invertText = true }
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
   else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
-  else if (heatmapFill) fillColor = heatmapFill
+  else if (heatmapOuterFill) fillColor = heatmapOuterFill
 
   // Label text color: inverted when key is selected/highlighted, remap color
   // for remapped keys in non-mask mode, default otherwise
@@ -253,7 +260,11 @@ function KeyWidgetInner({
           height={innerH}
           rx={innerCorner}
           ry={innerCorner}
-          fill={hoverMaskParts && hoveredPart === 'inner' ? KEY_HOVER_COLOR : KEY_MASK_RECT_COLOR}
+          fill={
+            hoverMaskParts && hoveredPart === 'inner'
+              ? KEY_HOVER_COLOR
+              : heatmapInnerFill ?? KEY_MASK_RECT_COLOR
+          }
           stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
           strokeWidth={innerBorderActive ? 2 : 1}
           onClick={handleInnerClick}
