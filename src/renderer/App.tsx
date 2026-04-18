@@ -335,6 +335,17 @@ export function App() {
     }).catch(() => {})
   }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
 
+  // Back from the analytics page should return the user to wherever
+  // they came from — which today is always the typing view (there's
+  // no other entry point yet). Close the page and re-enter the
+  // compact window + typing-test mode in one step so the user lands
+  // exactly where they were before clicking View Analytics.
+  const handleAnalyticsBack = useCallback(() => {
+    setAnalyticsPageOpen(false)
+    enterTypingViewOnly()
+    devicePrefs.setViewMode('typingView')
+  }, [enterTypingViewOnly, devicePrefs])
+
   // One-shot guard: prevents re-restoring the same uid after an initial restore
   const restoreRequestedUidRef = useRef<string | null>(null)
 
@@ -662,7 +673,7 @@ export function App() {
         {analyticsPageOpen ? (
           <TypingAnalyticsPage
             deviceName={deviceName}
-            onBack={() => setAnalyticsPageOpen(false)}
+            onBack={handleAnalyticsBack}
           />
         ) : (
         <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>

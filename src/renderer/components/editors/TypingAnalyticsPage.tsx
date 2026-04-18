@@ -7,11 +7,14 @@
 import { useTranslation } from 'react-i18next'
 
 export interface TypingAnalyticsPageProps {
-  /** Label shown beside the back button — today this is the keyboard
-   * name so the user knows which editor they return to. */
+  /** Label shown beside the back button. The current (only) entry
+   * path is the typing view's REC tab, so Back returns the user to
+   * that keyboard's typing view — the name identifies which
+   * keyboard rather than which mode. */
   deviceName?: string
   /** Invoked when the user hits the back button — the App shell is
-   * responsible for actually navigating. */
+   * responsible for actually navigating (re-entering the typing
+   * view's compact window + typing-test mode). */
   onBack: () => void
 }
 
