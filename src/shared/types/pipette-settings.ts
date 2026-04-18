@@ -49,10 +49,13 @@ export interface PipetteSettings {
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop?: boolean
-  /** Record toggle is NOT persisted here on purpose: recording is only
-   * valid while the typing-view compact window is open, and every entry
-   * starts from OFF so the user has to press Start explicitly. See the
-   * "Record lifecycle" section in .claude/plans/typing-analytics.md. */
+  /** User-chosen record toggle. Persisted + synced so the setting
+   * survives reloads and follows the keyboard across machines. Actual
+   * recording is gated additionally on typingTestViewOnly at the
+   * analyticsSink layer — leaving the typing view stops recording
+   * without touching this value. See the "Record lifecycle" section
+   * in .claude/plans/typing-analytics.md. */
+  typingRecordEnabled?: boolean
   typingViewMenuTab?: TypingViewMenuTab
   typingSyncSpanDays?: TypingSyncSpanDays
   layerPanelOpen?: boolean

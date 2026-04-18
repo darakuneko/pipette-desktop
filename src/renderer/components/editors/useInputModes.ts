@@ -156,14 +156,15 @@ export function useInputModes({
     //
     // Events only flow to the main process when all three conditions hold:
     //   1. typing-view compact window is open (typingTestViewOnly)
-    //   2. user has pressed Start on the record toggle (typingRecordEnabled)
+    //   2. user has Start pressed on the record toggle (typingRecordEnabled)
     //   3. useTypingTest's processMatrixFrame / processKeyEvent actually
     //      fires, which is gated to typingTestMode by useInputModes below
     //
-    // Regular typing-test mode (typingTestMode && !typingTestViewOnly) never
-    // feeds analytics. Record OFF makes the sink undefined so neither
-    // matrix nor char events can escape. typingRecordEnabled is
-    // session-local in App.tsx — exiting the typing view auto-resets it.
+    // typingRecordEnabled is the user's explicit Start/Stop choice —
+    // persisted in PipetteSettings + synced across devices. Leaving
+    // the typing view (Exit, analytics navigation, disconnect) stops
+    // the sink via typingTestViewOnly=false without touching the
+    // toggle, so the next re-entry resumes recording automatically.
     if (!typingRecordEnabled || !typingTestViewOnly) return undefined
     return (payload) => {
       const keyboard = keyboardRef.current

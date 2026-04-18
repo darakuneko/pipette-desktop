@@ -276,27 +276,6 @@ export function App() {
   // and hands the main content area over to TypingAnalyticsPage.
   const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
 
-  // Typing-view record toggle. Intentionally session-local (not in
-  // PipetteSettings) — every typing-view entry must start with
-  // record OFF so the user has to press Start explicitly. The effect
-  // below clamps it back to false whenever the compact window closes
-  // so exiting the view also stops the recording. See
-  // .claude/plans/typing-analytics.md "Record lifecycle".
-  //
-  // Exception: navigating to the analytics page via the REC tab
-  // leaves typingTestViewOnly=false but preserves the record state
-  // so Back re-enters the typing view with Start still pressed.
-  // The sink is already gated on typingTestViewOnly, so the
-  // recording is effectively suspended while the analytics page is
-  // open — no events leak.
-  const [typingRecordEnabled, setTypingRecordEnabled] = useState(false)
-  useEffect(() => {
-    if (analyticsPageOpen) return
-    if (!devicePrefs.typingTestViewOnly && typingRecordEnabled) {
-      setTypingRecordEnabled(false)
-    }
-  }, [devicePrefs.typingTestViewOnly, typingRecordEnabled, analyticsPageOpen])
-
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
     setViewExitTransition(true)
@@ -786,8 +765,8 @@ export function App() {
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
-            typingRecordEnabled={typingRecordEnabled}
-            onTypingRecordEnabledChange={setTypingRecordEnabled}
+            typingRecordEnabled={devicePrefs.typingRecordEnabled}
+            onTypingRecordEnabledChange={devicePrefs.setTypingRecordEnabled}
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}

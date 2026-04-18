@@ -305,24 +305,33 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
-    // typingRecordEnabled intentionally removed — record toggle is now
-    // session-local (see .claude/plans/typing-analytics.md "Record
-    // lifecycle"). The prefs store must accept payloads that don't carry
-    // it and must not persist it even if an older client does.
-    it('ignores a legacy typingRecordEnabled field in the payload', async () => {
+    it('accepts typingRecordEnabled boolean and round-trips it', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
         autoAdvance: true,
         layerNames: [],
-        typingRecordEnabled: true, // legacy: should be silently dropped
+        typingRecordEnabled: true,
       }) as { success: boolean }
       expect(result.success).toBe(true)
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as Record<string, unknown>
-      expect(prefs.typingRecordEnabled).toBeUndefined()
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingRecordEnabled: boolean }
+      expect(prefs.typingRecordEnabled).toBe(true)
+    })
+
+    it('rejects prefs with non-boolean typingRecordEnabled', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingRecordEnabled: 'yes',
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
     })
 
     it.each([1, 7, 30, 90])('accepts typingSyncSpanDays=%i', async (span) => {
