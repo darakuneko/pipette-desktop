@@ -295,25 +295,37 @@ export function useTypingTest(
 
   const processMatrixFrame = useCallback((pressed: Set<string>, keymap: Map<string, number>) => {
     const bl = baseLayerRef.current
+    const prev = prevPressedRef.current
 
-    const activeLayerSet = new Set<number>()
-    let changed = true
-    while (changed) {
-      changed = false
-      for (const key of pressed) {
-        const sortedLayers = [...activeLayerSet].sort((a, b) => b - a)
-        const [row, col] = parseMatrixKey(key)
-        const code = resolveEffectiveCode(row, col, keymap, sortedLayers, bl)
-        if (code == null) continue
-        const targetLayer = extractSwitchLayer(code)
-        if (targetLayer === null) continue
-        const effective = Math.max(bl, targetLayer)
-        if (!activeLayerSet.has(effective)) {
-          activeLayerSet.add(effective)
-          changed = true
+    // Fixed-point layer activation: a key that activates a layer may
+    // itself resolve differently on that newly-active layer, so keep
+    // iterating until no new layer is added. Used for both the full
+    // live set (drives the UI layer indicator) and the pre-existing
+    // set used to classify new presses against the layer context that
+    // existed before this frame.
+    function activateLayers(keys: Iterable<string>): Set<number> {
+      const set = new Set<number>()
+      let changed = true
+      while (changed) {
+        changed = false
+        for (const key of keys) {
+          const sortedLayers = [...set].sort((a, b) => b - a)
+          const [row, col] = parseMatrixKey(key)
+          const code = resolveEffectiveCode(row, col, keymap, sortedLayers, bl)
+          if (code == null) continue
+          const targetLayer = extractSwitchLayer(code)
+          if (targetLayer === null) continue
+          const effective = Math.max(bl, targetLayer)
+          if (!set.has(effective)) {
+            set.add(effective)
+            changed = true
+          }
         }
       }
+      return set
     }
+
+    const activeLayerSet = activateLayers(pressed)
     const highestActiveLayer = activeLayerSet.size > 0
       ? Math.max(...activeLayerSet)
       : bl
@@ -332,16 +344,27 @@ export function useTypingTest(
     // is dropped via resetMatrixPressTracking / record gate.
     const sink = analyticsSinkRef.current
     if (sink) {
-      const prev = prevPressedRef.current
       const starts = pressStartMapRef.current
-      const sortedLayers = [...activeLayerSet].sort((a, b) => b - a)
+      // Layer context for a NEW press is "what OTHER keys were already
+      // holding us to" — i.e. layers activated by keys carried over
+      // from the previous frame. A lone MO(1) press at base 0 must
+      // resolve as layer 0 even if MO(1) is also the layer 1 keycode
+      // at the same cell; otherwise the press is attributed to the
+      // very layer the key is activating and disappears from the
+      // base-layer heatmap.
+      const carriedKeys: string[] = []
+      for (const k of prev) {
+        if (pressed.has(k)) carriedKeys.push(k)
+      }
+      const preExistingLayerSet = activateLayers(carriedKeys)
+      const preExistingSortedLayers = [...preExistingLayerSet].sort((a, b) => b - a)
       const ts = Date.now()
       const tappingTermMs = tappingTermMsRef.current
 
       for (const key of pressed) {
         if (prev.has(key)) continue
         const [row, col] = parseMatrixKey(key)
-        const resolved = resolveEffectiveCodeWithLayer(row, col, keymap, sortedLayers, bl)
+        const resolved = resolveEffectiveCodeWithLayer(row, col, keymap, preExistingSortedLayers, bl)
         if (!resolved) continue
         const { code, layer: eventLayer } = resolved
         // Only LT / MT style tap-hold keys need the deferred classify

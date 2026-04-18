@@ -1224,6 +1224,30 @@ describe('useTypingTest windowFocused', () => {
         }))
       })
 
+      it('records MO1 at the base layer even when MO1 is defined on layer 1 too', () => {
+        // Real-world keymaps often repeat the layer-switch key on the
+        // target layer (so it stays visible / releases correctly when
+        // held across nested layers). Without the carried-keys fix the
+        // press would resolve from layer 1 and disappear from the base
+        // view.
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'MO(1)']] },
+          { layer: 1, entries: [[0, 0, 'MO(1)']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          row: 0,
+          col: 0,
+          layer: 0,
+        }))
+      })
+
       it('records keys pressed while MO1 is held at the upper layer', () => {
         const sink = vi.fn()
         // MO1 on (0, 0) at base. (1, 1) resolves to KC_A on layer 1 only.
