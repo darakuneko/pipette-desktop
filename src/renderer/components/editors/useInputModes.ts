@@ -29,6 +29,10 @@ export interface UseInputModesOptions {
   typingTestViewOnly?: boolean
   typingRecordEnabled?: boolean
   typingRecordKeyboard?: TypingAnalyticsKeyboard
+  /** TAPPING_TERM (ms) forwarded to useTypingTest for masked-key
+   * tap/hold classification. Defaults to QMK's 200 ms when the
+   * keyboard hasn't reported one. */
+  tappingTermMs?: number
 }
 
 export interface UseInputModesReturn {
@@ -62,6 +66,7 @@ export function useInputModes({
   typingTestViewOnly,
   typingRecordEnabled,
   typingRecordKeyboard,
+  tappingTermMs,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -162,6 +167,7 @@ export function useInputModes({
   }, [typingRecordEnabled, typingTestViewOnly])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onAnalyticsEvent: analyticsSink,
+    tappingTermMs,
   })
   const {
     restart: restartTypingTest,

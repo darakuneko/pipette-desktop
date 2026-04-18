@@ -105,6 +105,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
+  tappingTermMs,
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
   onFavUploadToHub, onFavUpdateOnHub, onFavRemoveFromHub, onFavRenameOnHub,
@@ -161,6 +162,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           productName: connectedDevice.productName ?? deviceName ?? '',
         }
       : undefined,
+    tappingTermMs,
   })
 
   // --- Layout options ---

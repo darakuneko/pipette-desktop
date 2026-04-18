@@ -129,6 +129,10 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
+  /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
+   * useTypingTest so masked-key tap/hold classification uses the same
+   * timeout QMK itself enforces. */
+  tappingTermMs?: number
   deviceName?: string
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void

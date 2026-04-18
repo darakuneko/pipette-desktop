@@ -38,6 +38,7 @@ import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { generateKeymapC } from '../shared/keymap-export'
 import { generateKeymapPdf } from '../shared/pdf-export'
+import { resolveTappingTermMs } from '../shared/qmk-settings-tapping-term'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -664,6 +665,7 @@ export function App() {
             qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
             qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
             onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
+            tappingTermMs={resolveTappingTermMs(keyboard.qmkSettingsValues)}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             basicViewType={devicePrefs.basicViewType}
