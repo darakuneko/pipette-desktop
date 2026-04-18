@@ -35,7 +35,7 @@ import {
   setPasswordAndValidate,
   SyncCredentialError,
 } from './sync-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason } from '../../shared/types/sync'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -337,12 +337,18 @@ export function setupSyncIpc(): void {
     wrapIpc('Export failed', async () => {
       const syncUnits = await collectAllSyncUnits()
 
-      const bundleTypeToCategory: Record<string, string> = {
+      // Only sync-bundle types covered by the import contract below are
+      // exported. A missing entry is a hard skip rather than a silent
+      // fallback so new types don't get misfiled under 'snapshots' — the
+      // prior ?? 'snapshots' default hid typing-analytics and
+      // keyboard-meta bundles inside the snapshots category even though
+      // neither has an importer.
+      const bundleTypeToCategory: Partial<Record<SyncBundle['type'], 'favorites' | 'snapshots' | 'settings'>> = {
         favorite: 'favorites',
         layout: 'snapshots',
         settings: 'settings',
       }
-      const categories: Record<string, Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
+      const categories: Record<'favorites' | 'snapshots' | 'settings', Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
         snapshots: {},
         favorites: {},
         settings: {},
@@ -351,7 +357,8 @@ export function setupSyncIpc(): void {
       for (const syncUnit of syncUnits) {
         const bundle = await bundleSyncUnit(syncUnit)
         if (!bundle) continue
-        const category = bundleTypeToCategory[bundle.type] ?? 'snapshots'
+        const category = bundleTypeToCategory[bundle.type]
+        if (!category) continue // typing-analytics / keyboard-meta not in export contract yet
         categories[category][bundle.key] = { index: bundle.index, files: bundle.files }
       }
 
