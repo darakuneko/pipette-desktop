@@ -11,7 +11,7 @@ import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 
@@ -40,6 +40,16 @@ export interface TypingTestPaneProps {
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   recordEnabled?: boolean
   onRecordEnabledChange?: (enabled: boolean) => void
+  /** Which tab of the view-only menu is currently open. Window shows
+   * size / always-on-top controls; REC shows the recording toggle and
+   * the entry point to the analytics page. Persisted per keyboard via
+   * PipetteSettings. */
+  menuTab?: TypingViewMenuTab
+  onMenuTabChange?: (tab: TypingViewMenuTab) => void
+  /** Called when the user picks "View Analytics" from the REC tab.
+   * The parent owns the navigation — the pane only surfaces the
+   * entry point. */
+  onViewAnalytics?: () => void
   /** Keyboard uid used for the typing-view heatmap query. The heatmap
    * stays hidden while this is unset or recording is off so a session
    * without a device never sees stale overlay data. */
@@ -71,6 +81,9 @@ export function TypingTestPane({
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
   onRecordEnabledChange,
+  menuTab = 'window',
+  onMenuTabChange,
+  onViewAnalytics,
   keyboardUid,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
@@ -365,6 +378,115 @@ export function TypingTestPane({
             onClick={(e) => e.stopPropagation()}
             {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
           >
+            {/* Tab row — Window (sizing + always-on-top) vs REC
+                (recording toggle + analytics entry). The active tab is
+                persisted per keyboard via PipetteSettings. */}
+            <div role="tablist" className="flex gap-1">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={menuTab === 'window'}
+                data-testid="menu-tab-window"
+                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'window' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onMenuTabChange?.('window')}
+              >
+                {t('editor.typingTest.tab.window')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={menuTab === 'rec'}
+                data-testid="menu-tab-rec"
+                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'rec' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onMenuTabChange?.('rec')}
+              >
+                {t('editor.typingTest.tab.rec')}
+              </button>
+            </div>
+
+            {menuTab === 'window' && (
+              <>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="reset-window-size"
+                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  onClick={() => {
+                    const size = getDefaultCompactSize()
+                    window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                    if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                    setViewOnlyControlsOpen(false)
+                  }}
+                >
+                  {t('editor.typingTest.resetSize')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="fit-window-size"
+                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  onClick={() => {
+                    const defaultSize = getDefaultCompactSize()
+                    const ratio = defaultSize.height / defaultSize.width
+                    const w = window.innerWidth
+                    const h = Math.round(w * ratio)
+                    const size = { width: w, height: h }
+                    window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                    if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                    setViewOnlyControlsOpen(false)
+                  }}
+                >
+                  {t('editor.typingTest.fitSize')}
+                </button>
+                {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="always-on-top-toggle"
+                    className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                    onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
+                  >
+                    {t('editor.typingTest.alwaysOnTop')}
+                  </button>
+                )}
+              </>
+            )}
+
+            {menuTab === 'rec' && (
+              <>
+                {onRecordEnabledChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={recordEnabled ?? false}
+                    data-testid="typing-record-toggle"
+                    className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                    onClick={() => onRecordEnabledChange(!recordEnabled)}
+                    title={t('editor.typingTest.recordTooltip')}
+                  >
+                    {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}
+                  </button>
+                )}
+                {onViewAnalytics && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="view-analytics"
+                    className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                    onClick={() => {
+                      setViewOnlyControlsOpen(false)
+                      onViewAnalytics()
+                    }}
+                  >
+                    {t('editor.typingTest.viewAnalytics')}
+                  </button>
+                )}
+              </>
+            )}
+
+            {/* Separator — what follows is always visible regardless of tab */}
+            <div className="mt-1 border-t border-edge-subtle" aria-hidden="true" />
+
             {layers > 1 && (
               <div className="flex items-center justify-between gap-1">
                 <span className="text-content-muted">{t('editor.typingTest.baseLayerShort')}</span>
@@ -381,68 +503,13 @@ export function TypingTestPane({
                 </select>
               </div>
             )}
-            {onRecordEnabledChange && (
-              <button
-                type="button"
-                role="menuitemcheckbox"
-                aria-checked={recordEnabled ?? false}
-                data-testid="typing-record-toggle"
-                className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                onClick={() => onRecordEnabledChange(!recordEnabled)}
-                title={t('editor.typingTest.recordTooltip')}
-              >
-                {t('editor.typingTest.record')}
-              </button>
-            )}
-            {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="always-on-top-toggle"
-                className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
-              >
-                {t('editor.typingTest.alwaysOnTop')}
-              </button>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="reset-window-size"
-              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
-              onClick={() => {
-                const size = getDefaultCompactSize()
-                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                setViewOnlyControlsOpen(false)
-              }}
-            >
-              {t('editor.typingTest.resetSize')}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="fit-window-size"
-              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
-              onClick={() => {
-                const defaultSize = getDefaultCompactSize()
-                const ratio = defaultSize.height / defaultSize.width
-                const w = window.innerWidth
-                const h = Math.round(w * ratio)
-                const size = { width: w, height: h }
-                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                setViewOnlyControlsOpen(false)
-              }}
-            >
-              {t('editor.typingTest.fitSize')}
-            </button>
+
             {onViewOnlyChange && (
               <button
                 type="button"
                 role="menuitem"
                 data-testid="view-only-toggle"
-                className="mt-2 whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
+                className="whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
                 onClick={handleViewOnlyToggle}
               >
                 {t('editor.typingTest.exitViewOnly')}

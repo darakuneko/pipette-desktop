@@ -267,8 +267,14 @@
       "viewOnly": "タイピングビュー",
       "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
-      "record": "記録",
+      "recordStart": "開始",
+      "recordStop": "停止",
       "recordTooltip": "このキーボードの入力解析記録をオンオフ",
+      "viewAnalytics": "分析ビュー",
+      "tab": {
+        "window": "ウィンドウ",
+        "rec": "REC"
+      },
       "heatmap": {
         "legend": "ヒートマップ: 直近 1 時間"
       },
@@ -601,6 +607,11 @@
       "license": "ライセンス: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
     }
+  },
+  "analytics": {
+    "title": "分析",
+    "backToKeyboard": "← {{name}}",
+    "comingSoon": "分析ダッシュボード — 作成中"
   },
   "dataModal": {
     "title": "データ",

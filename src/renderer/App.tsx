@@ -32,6 +32,7 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
+import { TypingAnalyticsPage } from './components/editors/TypingAnalyticsPage'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
@@ -283,6 +284,13 @@ export function App() {
     }
   }, [devicePrefs.typingTestViewOnly, typingRecordEnabled])
 
+  // Analytics page shell. Session-local boolean — entering the page
+  // from the REC tab of the typing view exits the compact window
+  // and hands the main content area over to TypingAnalyticsPage.
+  // The page's back button resets this to false so the user lands
+  // back in the editor (keyboard).
+  const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
+
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
     setViewExitTransition(true)
@@ -294,6 +302,23 @@ export function App() {
       }).catch(() => { setViewExitTransition(false) })
     }) })
   }, [devicePrefs])
+
+  // Navigate from the typing-view REC tab to the analytics page.
+  // Same resize-before-swap choreography as exitViewOnlyMode so the
+  // editor chrome doesn't flash at the old compact size; record is
+  // cleared implicitly by the typingTestViewOnly-watching effect
+  // above when the view closes.
+  const handleViewAnalytics = useCallback(() => {
+    setViewExitTransition(true)
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      window.vialAPI.setWindowCompactMode(false).then(() => {
+        devicePrefs.setTypingTestViewOnly(false)
+        if (editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
+        setAnalyticsPageOpen(true)
+        setViewExitTransition(false)
+      }).catch(() => { setViewExitTransition(false) })
+    }) })
+  }, [devicePrefs, editorUI.typingTestMode])
 
   // Enter typing view-only mode (compact window + typing test). Assumes unlocked.
   const { typingTestViewOnlyWindowSize, setTypingTestViewOnly } = devicePrefs
@@ -630,6 +655,12 @@ export function App() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">
+        {analyticsPageOpen ? (
+          <TypingAnalyticsPage
+            deviceName={deviceName}
+            onBack={() => setAnalyticsPageOpen(false)}
+          />
+        ) : (
         <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
           <KeymapEditor
             ref={keymapEditorRef}
@@ -736,6 +767,9 @@ export function App() {
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
             typingRecordEnabled={typingRecordEnabled}
             onTypingRecordEnabledChange={setTypingRecordEnabled}
+            typingViewMenuTab={devicePrefs.typingViewMenuTab}
+            onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
+            onViewAnalytics={handleViewAnalytics}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
@@ -753,6 +787,7 @@ export function App() {
             onDeviceListActiveChange={device.setDeviceListActive}
           />
         </div>
+        )}
 
         {(fileIO.error || sideload.error || layoutStore.error) && (
           <div className="bg-danger/10 px-4 py-1.5 text-xs text-danger">

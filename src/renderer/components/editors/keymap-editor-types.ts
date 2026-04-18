@@ -6,7 +6,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -129,6 +129,13 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
+  typingViewMenuTab?: TypingViewMenuTab
+  onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
+  /** Called when the typing-view REC tab triggers "View Analytics".
+   * KeymapEditor forwards to the App shell so the shell can exit the
+   * compact window, reset the record toggle, and swap to the analytics
+   * page. */
+  onViewAnalytics?: () => void
   /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
    * useTypingTest so masked-key tap/hold classification uses the same
    * timeout QMK itself enforces. */
