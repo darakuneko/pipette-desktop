@@ -8,7 +8,7 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
-import { VIEW_MODES, isTypingSyncSpanDays } from '../shared/types/pipette-settings'
+import { VIEW_MODES, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
@@ -45,6 +45,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   // recording is a session-local state that resets on every typing-view
   // entry. See .claude/plans/typing-analytics.md "Record lifecycle".
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
+  if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
@@ -87,6 +88,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
+      typingViewMenuTab: parsed.typingViewMenuTab,
       viewMode: parsed.viewMode,
     }
   } catch {
