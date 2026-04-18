@@ -1204,6 +1204,26 @@ describe('useTypingTest windowFocused', () => {
         }))
       })
 
+      it('records LT1 hold on the base layer where LT1 is defined', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+          { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        vi.advanceTimersByTime(500)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          layer: 0,
+          action: 'hold',
+        }))
+      })
+
       it('records keys pressed while MO1 is held at the upper layer', () => {
         const sink = vi.fn()
         // MO1 on (0, 0) at base. (1, 1) resolves to KC_A on layer 1 only.
