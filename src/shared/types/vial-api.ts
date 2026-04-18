@@ -139,6 +139,7 @@ export interface VialAPI {
   typingAnalyticsListItems(uid: string): Promise<TypingDailySummary[]>
   typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
   typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
+  typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<Record<string, number>>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>

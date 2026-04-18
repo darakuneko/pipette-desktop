@@ -208,6 +208,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, uid, dates),
   typingAnalyticsDeleteAll: (uid: string): Promise<TypingTombstoneResult> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ALL, uid),
+  typingAnalyticsGetMatrixHeatmap: (
+    uid: string,
+    layer: number,
+    sinceMs: number,
+  ): Promise<Record<string, number>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>

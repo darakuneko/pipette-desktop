@@ -32,6 +32,7 @@ import {
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import { typingAnalyticsSyncUnit } from './sync'
+import { getMachineHash } from './machine-hash'
 
 const FLUSH_DEBOUNCE_MS = 1_000
 
@@ -142,6 +143,16 @@ export function setupTypingAnalyticsIpc(): void {
       return deleteAllTypingForKeyboard(uid)
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP,
+    async (_event, uid: unknown, layer: unknown, sinceMs: unknown): Promise<Record<string, number>> => {
+      if (typeof uid !== 'string' || uid.length === 0) return {}
+      if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
+      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return {}
+      return getMatrixHeatmap(uid, layer, sinceMs)
+    },
+  )
 }
 
 /**
@@ -182,6 +193,37 @@ export function listTypingKeyboards(): TypingKeyboardSummary[] {
 /** Day-level summaries for one keyboard uid, newest first. */
 export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
   return getTypingAnalyticsDB().listDailySummariesForUid(uid)
+}
+
+/** Heatmap intensity for the typing-view overlay: summed matrix counts
+ * per (row, col) on a single keyboard + machine + layer, covering the
+ * window `[floorMinute(sinceMs), now]`. Values are the sum of:
+ *
+ *  - DB rows flushed for that window (closed minutes), and
+ *  - the live current-minute entries still sitting in the `MinuteBuffer`.
+ *
+ * The live-minute path is what keeps a 5s poll usable — without it the
+ * heatmap would lag the debounced flush by up to ~59 seconds. Returns a
+ * plain object keyed by `"row,col"` so it round-trips through IPC
+ * unchanged. */
+export async function getMatrixHeatmap(
+  uid: string,
+  layer: number,
+  sinceMs: number,
+): Promise<Record<string, number>> {
+  const machineHash = await getMachineHash()
+  const sinceMinuteMs = Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS
+
+  const db = getTypingAnalyticsDB()
+  const totals = db.aggregateMatrixCountsForUid(uid, machineHash, layer, sinceMinuteMs)
+  const live = minuteBuffer.peekMatrixCountsForUid(uid, machineHash, layer)
+  for (const [key, count] of live) {
+    totals.set(key, (totals.get(key) ?? 0) + count)
+  }
+
+  const result: Record<string, number> = {}
+  for (const [key, count] of totals) result[key] = count
+  return result
 }
 
 /** Convert a 'YYYY-MM-DD' local-calendar date into a [startMs, endMs)

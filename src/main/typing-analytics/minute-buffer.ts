@@ -153,4 +153,25 @@ export class MinuteBuffer {
   isEmpty(): boolean {
     return this.buffers.size === 0
   }
+
+  /** Read-only view of the in-memory matrix counts matching the given
+   * keyboard uid + machine hash + layer. Used by the heatmap service to
+   * combine the live (not-yet-flushed) current minute with the DB
+   * totals so the UI does not lag ~59 seconds behind actual input.
+   * Returns `"row,col"` keyed counts summed across every live minute
+   * for the scope. Matching by (uid, machineHash) lets callers query
+   * without first resolving the canonical scope key. */
+  peekMatrixCountsForUid(uid: string, machineHash: string, layer: number): Map<string, number> {
+    const result = new Map<string, number>()
+    for (const entry of this.buffers.values()) {
+      if (entry.fingerprint.keyboard.uid !== uid) continue
+      if (entry.fingerprint.machineHash !== machineHash) continue
+      for (const cell of entry.matrixCounts.values()) {
+        if (cell.layer !== layer) continue
+        const key = `${cell.row},${cell.col}`
+        result.set(key, (result.get(key) ?? 0) + cell.count)
+      }
+    }
+    return result
+  }
 }

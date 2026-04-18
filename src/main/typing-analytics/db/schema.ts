@@ -49,6 +49,10 @@ CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_matrix_minute_ts ON typing_matrix_minute(minute_ts);
+-- Supports the typing-view heatmap (scope_id + layer + minute_ts range scan
+-- polled every few seconds). Without it the heatmap query falls back to the
+-- minute_ts-only index and re-filters every scope/layer row in memory.
+CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_layer_ts ON typing_matrix_minute(scope_id, layer, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_minute_stats (
   scope_id TEXT NOT NULL,

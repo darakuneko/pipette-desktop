@@ -446,4 +446,84 @@ describe('TypingAnalyticsDB', () => {
       expect(row.is_deleted).toBe(1)
     })
   })
+
+  describe('aggregateMatrixCountsForUid (heatmap)', () => {
+    // Small helper so each heatmap test can seed just the rows it cares
+    // about without repeating the stats/char payload the schema demands.
+    const stats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+    function writeMatrix(scopeId: string, minuteTs: number, row: number, col: number, layer: number, count: number, updatedAt = 1_000): void {
+      db.writeMinute(
+        { scopeId, minuteTs, ...stats },
+        [],
+        [{ scopeId, minuteTs, row, col, layer, keycode: 0x04, count }],
+        updatedAt,
+      )
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('sums counts by (row, col) within the time window and layer', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      writeMatrix('scope-local', 120_000, 1, 2, 0, 5) // same cell/layer, accumulates
+      writeMatrix('scope-local', 180_000, 0, 0, 0, 1)
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.get('1,2')).toBe(8)
+      expect(heat.get('0,0')).toBe(1)
+      expect(heat.size).toBe(2)
+    })
+
+    it('excludes other machines so one machine\'s heatmap never leaks another\'s data', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      writeMatrix('scope-other-machine', 60_000, 1, 2, 0, 100)
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.get('1,2')).toBe(3)
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      writeMatrix('scope-other-uid', 60_000, 1, 2, 0, 99)
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.get('1,2')).toBe(3)
+    })
+
+    it('excludes other layers so the heatmap shows only the active layer', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      writeMatrix('scope-local', 60_000, 1, 2, 1, 100)
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.get('1,2')).toBe(3)
+      expect(heat.size).toBe(1)
+    })
+
+    it('drops rows older than sinceMinuteMs', () => {
+      writeMatrix('scope-local', 30_000, 1, 2, 0, 100) // before cutoff
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 7) // at cutoff (inclusive)
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.get('1,2')).toBe(7)
+    })
+
+    it('excludes tombstoned matrix rows', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      db.mergeMatrixMinute({
+        scopeId: 'scope-local', minuteTs: 60_000, row: 1, col: 2, layer: 0, keycode: 0x04, count: 0,
+        updatedAt: 5_000, isDeleted: true,
+      })
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.size).toBe(0)
+    })
+
+    it('excludes rows whose scope is tombstoned', () => {
+      writeMatrix('scope-local', 60_000, 1, 2, 0, 3)
+      db.mergeScope({
+        ...sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }),
+        updatedAt: 5_000,
+        isDeleted: true,
+      })
+      const heat = db.aggregateMatrixCountsForUid('0xAABB', MACHINE_HASH, 0, 60_000)
+      expect(heat.size).toBe(0)
+    })
+  })
 })

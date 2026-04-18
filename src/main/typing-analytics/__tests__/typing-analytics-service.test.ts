@@ -50,6 +50,7 @@ import {
   listTypingDailySummaries,
   deleteTypingDailySummaries,
   deleteAllTypingForKeyboard,
+  getMatrixHeatmap,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
 import { resetMachineHashCacheForTests } from '../machine-hash'
@@ -391,6 +392,59 @@ describe('typing-analytics-service', () => {
         expect(result).toEqual({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
         expect(notifier).not.toHaveBeenCalled()
         expect(listTypingDailySummaries(sampleKeyboard.uid)).toHaveLength(1)
+      })
+
+      describe('getMatrixHeatmap', () => {
+        async function ingestMatrix(
+          keyboard: typeof sampleKeyboard,
+          row: number,
+          col: number,
+          layer: number,
+          ts: number,
+        ): Promise<void> {
+          setupTypingAnalyticsIpc()
+          const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+          await handler(fakeEvent, { kind: 'matrix', row, col, layer, keycode: 0x04, ts, keyboard })
+        }
+
+        it('combines flushed DB rows with the live in-memory current minute', async () => {
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          // One press lands in the DB via the flush.
+          await ingestMatrix(sampleKeyboard, 1, 2, 0, ts)
+          await flushTypingAnalyticsNowForTests()
+          // Second press stays in the buffer (not flushed), so only
+          // the peekMatrixCountsForUid path can see it.
+          await ingestMatrix(sampleKeyboard, 1, 2, 0, ts + 500)
+
+          const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, ts - 60_000)
+          expect(heat['1,2']).toBe(2)
+        })
+
+        it('floors sinceMs to the minute boundary so partial minutes are not dropped', async () => {
+          const floored = Date.UTC(2026, 3, 14, 12, 0, 0) // minute start
+          // Press at the very start of that minute must be included even
+          // when sinceMs is mid-minute.
+          await ingestMatrix(sampleKeyboard, 3, 4, 0, floored)
+          await flushTypingAnalyticsNowForTests()
+
+          const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, floored + 30_000)
+          expect(heat['3,4']).toBe(1)
+        })
+
+        it('excludes other layers', async () => {
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          await ingestMatrix(sampleKeyboard, 1, 2, 0, ts)
+          await ingestMatrix(sampleKeyboard, 1, 2, 1, ts + 100)
+          await flushTypingAnalyticsNowForTests()
+
+          const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, ts - 60_000)
+          expect(heat['1,2']).toBe(1)
+        })
+
+        it('returns an empty object when no matrix events fall in the window', async () => {
+          const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, Date.now() - 3600_000)
+          expect(heat).toEqual({})
+        })
       })
     })
 

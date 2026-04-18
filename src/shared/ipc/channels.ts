@@ -84,6 +84,7 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_ITEMS: 'typing-analytics:list-items',
   TYPING_ANALYTICS_DELETE_ITEMS: 'typing-analytics:delete-items',
   TYPING_ANALYTICS_DELETE_ALL: 'typing-analytics:delete-all',
+  TYPING_ANALYTICS_GET_MATRIX_HEATMAP: 'typing-analytics:get-matrix-heatmap',
 
   // Language Store (renderer → main → renderer)
   LANG_LIST: 'lang:list',

@@ -103,6 +103,7 @@ export class TypingAnalyticsDB {
   private readonly selectMinuteStatsForUidStmt: Statement
   private readonly selectSessionsForUidStmt: Statement
   private readonly selectLocalKeyboardUidsStmt: Statement
+  private readonly selectMatrixHeatmapStmt: Statement
   private readonly selectKeyboardsWithTypingDataStmt: Statement
   private readonly selectDailySummariesForUidStmt: Statement
   private readonly tombstoneCharMinutesInRangeStmt: Statement
@@ -435,6 +436,24 @@ export class TypingAnalyticsDB {
          AND is_deleted = 0
     `)
 
+    // Aggregated per-(row, col) counts for the typing-view heatmap.
+    // Restricted to one machine + one uid + one layer, and only rolls up
+    // minutes at or after @sinceMinuteMs (already minute-floored by the
+    // caller). Both tables' is_deleted flags are filtered so tombstoned
+    // scopes and tombstoned minute rows are both excluded.
+    this.selectMatrixHeatmapStmt = this.db.prepare(`
+      SELECT m.row AS row, m.col AS col, SUM(m.count) AS total
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMinuteMs
+       GROUP BY m.row, m.col
+    `)
+
     // Data-modal queries. "Has typing data" is defined as "at least one
     // live minute-stats row under one of this uid's scopes" — minute_stats
     // is smaller than char_minute/matrix_minute so EXISTS is cheaper.
@@ -618,6 +637,28 @@ export class TypingAnalyticsDB {
   listLocalKeyboardUids(machineHash: string): string[] {
     const rows = this.selectLocalKeyboardUidsStmt.all({ machineHash }) as Array<{ keyboardUid: string }>
     return rows.map((r) => r.keyboardUid)
+  }
+
+  /** Summed matrix counts for the typing-view heatmap, restricted to one
+   * machine + uid + layer and minute-flushed rows at or after
+   * `sinceMinuteMs`. The caller is responsible for flooring
+   * `sinceMinuteMs` to a minute boundary so partial minutes aren't lost.
+   * Returns a Map keyed by `"row,col"`. Current-minute in-memory counts
+   * are combined at the service layer, not here. */
+  aggregateMatrixCountsForUid(
+    uid: string,
+    machineHash: string,
+    layer: number,
+    sinceMinuteMs: number,
+  ): Map<string, number> {
+    const rows = this.selectMatrixHeatmapStmt.all({ uid, machineHash, layer, sinceMinuteMs }) as Array<{
+      row: number
+      col: number
+      total: number
+    }>
+    const result = new Map<string, number>()
+    for (const r of rows) result.set(`${r.row},${r.col}`, r.total)
+    return result
   }
 
   // --- Data modal queries -------------------------------------------
