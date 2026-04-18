@@ -267,8 +267,7 @@
       "viewOnly": "タイピングビュー",
       "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
-      "recordOn": "記録: オン",
-      "recordOff": "記録: オフ",
+      "record": "記録",
       "recordTooltip": "このキーボードの入力解析記録をオンオフ",
       "heatmap": {
         "legend": "ヒートマップ: 直近 1 時間"

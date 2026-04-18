@@ -387,7 +387,7 @@ export function TypingTestPane({
                 onClick={() => onRecordEnabledChange(!recordEnabled)}
                 title={t('editor.typingTest.recordTooltip')}
               >
-                {recordEnabled ? t('editor.typingTest.recordOn') : t('editor.typingTest.recordOff')}
+                {t('editor.typingTest.record')}
               </button>
             )}
             {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (

@@ -268,8 +268,7 @@
       "viewOnly": "Typing View",
       "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
-      "recordOn": "Record: On",
-      "recordOff": "Record: Off",
+      "record": "Record",
       "recordTooltip": "Toggle typing analytics recording for this keyboard",
       "heatmap": {
         "legend": "Heatmap: last 1 hour"
