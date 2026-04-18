@@ -134,7 +134,6 @@ export function MacroEditor({
     selectedKey,
     setSelectedKey,
     setPopoverState,
-    preEditValueRef,
     isEditing,
     maskedSelection,
     tabContentOverride,
@@ -150,6 +149,8 @@ export function MacroEditor({
     handlePopoverKeycodeSelect,
     closePopover,
     revertAndDeselect,
+    commitAndDeselect,
+    beginAddAction,
   } = useMacroKeycodeSelection({
     currentActions,
     activeMacro,
@@ -193,21 +194,9 @@ export function MacroEditor({
   const handleAddActionType = useCallback(
     (type: ActionType) => {
       if (isRecording) return
-      const newAction = defaultAction(type)
-      const newIndex = currentActions.length
-      clearPending()
-      setPopoverState(null)
-      setMacros((prev) => {
-        const updated = [...prev]
-        updated[activeMacro] = [...currentActions, newAction]
-        return updated
-      })
-      setDirty(true)
-      if (isKeycodeAction(newAction)) {
-        setSelectedKey({ actionIndex: newIndex, keycodeIndex: 0 })
-      }
+      beginAddAction(defaultAction(type))
     },
-    [isRecording, currentActions, activeMacro, setMacros, setDirty, clearPending, setPopoverState, setSelectedKey],
+    [isRecording, beginAddAction],
   )
 
   const handleChange = useCallback(
@@ -233,13 +222,9 @@ export function MacroEditor({
   const handleEditClick = useCallback(
     (index: number, keycodeIndex: number) => {
       if (isRecording) return
-      const action = currentActions[index]
-      if (isKeycodeAction(action)) {
-        preEditValueRef.current = action.keycodes[keycodeIndex] ?? 0
-        setSelectedKey({ actionIndex: index, keycodeIndex })
-      }
+      handleKeycodeClick(index, keycodeIndex)
     },
-    [isRecording, currentActions, setSelectedKey, preEditValueRef],
+    [isRecording, handleKeycodeClick],
   )
 
   const handleDelete = useCallback(
@@ -448,7 +433,7 @@ export function MacroEditor({
                 type="button"
                 data-testid="macro-save"
                 className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
-                onClick={isEditing ? revertAndDeselect : handleSave}
+                onClick={isEditing ? commitAndDeselect : handleSave}
                 disabled={isEditing ? isRecording : (!dirty || hasInvalidText || isRecording)}
               >
                 {t('common.save')}
