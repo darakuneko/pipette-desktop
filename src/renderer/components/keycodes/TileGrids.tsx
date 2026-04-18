@@ -125,14 +125,19 @@ function macroActionLabel(action: MacroAction): string {
 interface TdTileGridProps {
   entries: TapDanceEntry[]
   onSelect: (keycode: Keycode) => void
+  /** Double-click / Enter commit. When omitted, only onSelect runs on click. */
+  onDoubleClick?: (keycode: Keycode) => void
 }
 
-export function TdTileGrid({ entries, onSelect }: TdTileGridProps) {
+export function TdTileGrid({ entries, onSelect, onDoubleClick }: TdTileGridProps) {
   const { t } = useTranslation()
   return (
     <div className="grid grid-cols-12 auto-rows-fr gap-1">
       {entries.map((entry, i) => {
         const configured = entry.onTap !== 0 || entry.onHold !== 0 || entry.onDoubleTap !== 0 || entry.onTapHold !== 0
+        const kc = findKeycode(`TD(${i})`)
+        const select = kc ? () => onSelect(kc) : undefined
+        const commit = kc && onDoubleClick ? () => onDoubleClick(kc) : undefined
         return (
           <button
             key={i}
@@ -140,7 +145,8 @@ export function TdTileGrid({ entries, onSelect }: TdTileGridProps) {
             data-testid={`td-tile-${i}`}
             data-configured={configured || undefined}
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
-            onClick={() => { const kc = findKeycode(`TD(${i})`); if (kc) onSelect(kc) }}
+            onClick={select}
+            onDoubleClick={commit}
           >
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">TD({i})</span>
             {configured ? (
@@ -167,6 +173,8 @@ export function TdTileGrid({ entries, onSelect }: TdTileGridProps) {
 interface MacroTileGridProps {
   macros: MacroAction[][]
   onSelect: (keycode: Keycode) => void
+  /** Double-click / Enter commit. When omitted, only onSelect runs on click. */
+  onDoubleClick?: (keycode: Keycode) => void
 }
 
 function useMacroVisibleLines(gridRef: React.RefObject<HTMLDivElement | null>): number {
@@ -193,7 +201,7 @@ function useMacroVisibleLines(gridRef: React.RefObject<HTMLDivElement | null>): 
   return visibleLines
 }
 
-export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
+export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGridProps) {
   const { t } = useTranslation()
   const gridRef = useRef<HTMLDivElement>(null)
   const maxVisible = useMacroVisibleLines(gridRef)
@@ -201,6 +209,9 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
     <div ref={gridRef} className="grid grid-cols-12 auto-rows-fr gap-1">
       {macros.map((actions, i) => {
         const configured = actions.length > 0
+        const kc = findKeycode(`M${i}`)
+        const select = kc ? () => onSelect(kc) : undefined
+        const commit = kc && onDoubleClick ? () => onDoubleClick(kc) : undefined
         return (
           <button
             key={i}
@@ -208,7 +219,8 @@ export function MacroTileGrid({ macros, onSelect }: MacroTileGridProps) {
             data-testid={`macro-tile-${i}`}
             data-configured={configured || undefined}
             className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
-            onClick={() => { const kc = findKeycode(`M${i}`); if (kc) onSelect(kc) }}
+            onClick={select}
+            onDoubleClick={commit}
           >
             <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
             {configured ? (

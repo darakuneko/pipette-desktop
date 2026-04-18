@@ -641,8 +641,11 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     return content
   }, [tapDanceEntries, comboEntries, keyOverrideEntries, altRepeatKeyEntries, deserializedMacros, tapHoldSupported, mouseKeysSupported, magicSupported, autoShiftSupported, graveEscapeSupported, oneShotKeysSupported, comboSettingsSupported, onOpenLighting, t, openSettings])
 
-  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, handleKeycodeSelect, {
-    comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey,
+  const tabContentOverride = useTileContentOverride({
+    tapDanceEntries,
+    deserializedMacros,
+    onSelect: handleKeycodeSelect,
+    settings: { comboEntries, onOpenCombo, keyOverrideEntries, onOpenKeyOverride, altRepeatKeyEntries, onOpenAltRepeatKey },
   })
 
   // For file/device mode, build keycodes per-layer on the fly

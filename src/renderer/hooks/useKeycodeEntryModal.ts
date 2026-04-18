@@ -237,8 +237,15 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
     quickSelect,
   })
 
-  // Tile content override
-  const tabContentOverride = useTileContentOverride(tapDanceEntries, deserializedMacros, maskedSelection.handleKeycodeSelect)
+  // pickerSelect/pickerDoubleClick honour quickSelect:
+  // quickSelect=false → single-click selects, double-click / Enter commits;
+  // quickSelect=true  → single-click already commits, double-click handler is undefined.
+  const tabContentOverride = useTileContentOverride({
+    tapDanceEntries,
+    deserializedMacros,
+    onSelect: maskedSelection.pickerSelect,
+    onDoubleClick: maskedSelection.pickerDoubleClick,
+  })
 
   // Field interactions
   const handleFieldSelect = useCallback((field: string & keyof TEntry) => {

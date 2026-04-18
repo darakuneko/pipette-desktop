@@ -15,26 +15,37 @@ interface SettingsTabOptions {
   onOpenAltRepeatKey?: (index: number) => void
 }
 
-/**
- * Builds a `tabContentOverride` record for TabbedKeycodes,
- * rendering TD, Macro, Combo, Key Override, and Alt Repeat Key tile grid previews when data is available.
- */
-export function useTileContentOverride(
-  tapDanceEntries: TapDanceEntry[] | undefined,
-  deserializedMacros: MacroAction[][] | undefined,
-  onSelect: (keycode: Keycode) => void,
-  settings?: SettingsTabOptions,
-): Record<string, React.ReactNode> | undefined {
+interface UseTileContentOverrideOptions {
+  tapDanceEntries?: TapDanceEntry[]
+  deserializedMacros?: MacroAction[][]
+  onSelect: (keycode: Keycode) => void
+  /** Picker modals pass `pickerDoubleClick` to enable double-click / Enter
+   * commit on TD and Macro tiles. The keymap editor omits it because single
+   * click there already commits. */
+  onDoubleClick?: (keycode: Keycode) => void
+  settings?: SettingsTabOptions
+}
+
+/** Builds a `tabContentOverride` record for TabbedKeycodes, rendering TD,
+ * Macro, Combo, Key Override, and Alt Repeat Key tile grid previews when data
+ * is available. */
+export function useTileContentOverride({
+  tapDanceEntries,
+  deserializedMacros,
+  onSelect,
+  onDoubleClick,
+  settings,
+}: UseTileContentOverrideOptions): Record<string, React.ReactNode> | undefined {
   return useMemo(() => {
     const hasSettings = settings?.comboEntries?.length || settings?.keyOverrideEntries?.length || settings?.altRepeatKeyEntries?.length
     if (!tapDanceEntries?.length && !deserializedMacros && !hasSettings) return undefined
 
     const overrides: Record<string, React.ReactNode> = {}
     if (tapDanceEntries?.length) {
-      overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={onSelect} />
+      overrides.tapDance = <TdTileGrid entries={tapDanceEntries} onSelect={onSelect} onDoubleClick={onDoubleClick} />
     }
     if (deserializedMacros) {
-      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={onSelect} />
+      overrides.macro = <MacroTileGrid macros={deserializedMacros} onSelect={onSelect} onDoubleClick={onDoubleClick} />
     }
     if (settings?.comboEntries?.length && settings.onOpenCombo) {
       overrides.combo = <ComboTileGrid entries={settings.comboEntries} onOpenCombo={settings.onOpenCombo} />
@@ -46,5 +57,5 @@ export function useTileContentOverride(
       overrides.altRepeatKey = <AltRepeatKeyTileGrid entries={settings.altRepeatKeyEntries} onOpen={settings.onOpenAltRepeatKey} />
     }
     return overrides
-  }, [tapDanceEntries, deserializedMacros, onSelect, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
+  }, [tapDanceEntries, deserializedMacros, onSelect, onDoubleClick, settings?.comboEntries, settings?.onOpenCombo, settings?.keyOverrideEntries, settings?.onOpenKeyOverride, settings?.altRepeatKeyEntries, settings?.onOpenAltRepeatKey])
 }

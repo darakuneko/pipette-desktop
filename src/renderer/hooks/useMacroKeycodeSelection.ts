@@ -151,11 +151,15 @@ export function useMacroKeycodeSelection({
     quickSelect,
   })
 
-  const tabContentOverride = useTileContentOverride(
+  // Tile picker uses pickerSelect/pickerDoubleClick so the quickSelect and
+  // Enter-to-commit behavior matches regular keycode tiles. onCommit is a
+  // no-op in macro mode, so double-click simply acts like another single-click.
+  const tabContentOverride = useTileContentOverride({
     tapDanceEntries,
     deserializedMacros,
-    maskedSelection.handleKeycodeSelect,
-  )
+    onSelect: maskedSelection.pickerSelect,
+    onDoubleClick: maskedSelection.pickerDoubleClick,
+  })
 
   const handleMaskPartClick = useCallback(
     (actionIndex: number, keycodeIndex: number, part: 'outer' | 'inner') => {
