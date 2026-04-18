@@ -270,6 +270,19 @@ export function App() {
   // Hide content during view→edit transition animation
   const [viewExitTransition, setViewExitTransition] = useState(false)
 
+  // Typing-view record toggle. Intentionally session-local (not in
+  // PipetteSettings) — every typing-view entry must start with
+  // record OFF so the user has to press Start explicitly. The effect
+  // below clamps it back to false whenever the compact window closes
+  // so exiting the view also stops the recording. See
+  // .claude/plans/typing-analytics.md "Record lifecycle".
+  const [typingRecordEnabled, setTypingRecordEnabled] = useState(false)
+  useEffect(() => {
+    if (!devicePrefs.typingTestViewOnly && typingRecordEnabled) {
+      setTypingRecordEnabled(false)
+    }
+  }, [devicePrefs.typingTestViewOnly, typingRecordEnabled])
+
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
     setViewExitTransition(true)
@@ -721,8 +734,8 @@ export function App() {
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
-            typingRecordEnabled={devicePrefs.typingRecordEnabled}
-            onTypingRecordEnabledChange={devicePrefs.setTypingRecordEnabled}
+            typingRecordEnabled={typingRecordEnabled}
+            onTypingRecordEnabledChange={setTypingRecordEnabled}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}

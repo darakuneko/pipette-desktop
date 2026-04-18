@@ -152,10 +152,18 @@ export function useInputModes({
   const keyboardRef = useRef(typingRecordKeyboard)
   keyboardRef.current = typingRecordKeyboard
   const analyticsSink = useMemo<((event: TypingAnalyticsEventPayload) => void) | undefined>(() => {
-    // Recording is scoped to the typingView (view-only) compact window +
-    // record ON. Regular typing-test mode never feeds analytics, even with
-    // record on, and typingView hides the DeviceSelector sidebar so the
-    // Data modal cannot open concurrently.
+    // Recording lifecycle — see .claude/plans/typing-analytics.md.
+    //
+    // Events only flow to the main process when all three conditions hold:
+    //   1. typing-view compact window is open (typingTestViewOnly)
+    //   2. user has pressed Start on the record toggle (typingRecordEnabled)
+    //   3. useTypingTest's processMatrixFrame / processKeyEvent actually
+    //      fires, which is gated to typingTestMode by useInputModes below
+    //
+    // Regular typing-test mode (typingTestMode && !typingTestViewOnly) never
+    // feeds analytics. Record OFF makes the sink undefined so neither
+    // matrix nor char events can escape. typingRecordEnabled is
+    // session-local in App.tsx — exiting the typing view auto-resets it.
     if (!typingRecordEnabled || !typingTestViewOnly) return undefined
     return (payload) => {
       const keyboard = keyboardRef.current

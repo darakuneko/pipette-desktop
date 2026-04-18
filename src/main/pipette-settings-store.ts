@@ -41,7 +41,9 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
     if (typeof ws.width !== 'number' || typeof ws.height !== 'number') return false
   }
   if ('typingTestViewOnlyAlwaysOnTop' in obj && obj.typingTestViewOnlyAlwaysOnTop != null && typeof obj.typingTestViewOnlyAlwaysOnTop !== 'boolean') return false
-  if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
+  // Record toggle is intentionally not validated or persisted here —
+  // recording is a session-local state that resets on every typing-view
+  // entry. See .claude/plans/typing-analytics.md "Record lifecycle".
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
@@ -84,7 +86,6 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
-      typingRecordEnabled: parsed.typingRecordEnabled,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
       viewMode: parsed.viewMode,
     }
