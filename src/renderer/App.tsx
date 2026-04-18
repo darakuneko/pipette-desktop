@@ -271,25 +271,31 @@ export function App() {
   // Hide content during view→edit transition animation
   const [viewExitTransition, setViewExitTransition] = useState(false)
 
+  // Analytics page shell. Session-local boolean — entering the page
+  // from the REC tab of the typing view exits the compact window
+  // and hands the main content area over to TypingAnalyticsPage.
+  const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
+
   // Typing-view record toggle. Intentionally session-local (not in
   // PipetteSettings) — every typing-view entry must start with
   // record OFF so the user has to press Start explicitly. The effect
   // below clamps it back to false whenever the compact window closes
   // so exiting the view also stops the recording. See
   // .claude/plans/typing-analytics.md "Record lifecycle".
+  //
+  // Exception: navigating to the analytics page via the REC tab
+  // leaves typingTestViewOnly=false but preserves the record state
+  // so Back re-enters the typing view with Start still pressed.
+  // The sink is already gated on typingTestViewOnly, so the
+  // recording is effectively suspended while the analytics page is
+  // open — no events leak.
   const [typingRecordEnabled, setTypingRecordEnabled] = useState(false)
   useEffect(() => {
+    if (analyticsPageOpen) return
     if (!devicePrefs.typingTestViewOnly && typingRecordEnabled) {
       setTypingRecordEnabled(false)
     }
-  }, [devicePrefs.typingTestViewOnly, typingRecordEnabled])
-
-  // Analytics page shell. Session-local boolean — entering the page
-  // from the REC tab of the typing view exits the compact window
-  // and hands the main content area over to TypingAnalyticsPage.
-  // The page's back button resets this to false so the user lands
-  // back in the editor (keyboard).
-  const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
+  }, [devicePrefs.typingTestViewOnly, typingRecordEnabled, analyticsPageOpen])
 
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
