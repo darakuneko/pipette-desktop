@@ -167,6 +167,28 @@ function resolveEffectiveCode(
   return keymap.get(`${baseLayer},${row},${col}`)
 }
 
+/** Resolve the effective keycode AND the layer the keycode was picked
+ * from. Used by the analytics path so each event is attributed to the
+ * layer where the key is actually defined, not the (possibly different)
+ * layer the pressed key itself is activating. For example, a lone LT1
+ * press at base 0 resolves to LT1(kc) from layer 0 even though it
+ * activates layer 1, so the heatmap shows the press on the base-layer
+ * view the user is looking at. */
+function resolveEffectiveCodeWithLayer(
+  row: number,
+  col: number,
+  keymap: Map<string, number>,
+  sortedLayers: number[],
+  baseLayer: number,
+): { code: number; layer: number } | undefined {
+  for (const layer of sortedLayers) {
+    const code = keymap.get(`${layer},${row},${col}`)
+    if (code != null && code !== 0x01) return { code, layer }
+  }
+  const baseCode = keymap.get(`${baseLayer},${row},${col}`)
+  return baseCode != null ? { code: baseCode, layer: baseLayer } : undefined
+}
+
 export function useTypingTest(
   initialConfig?: TypingTestConfig,
   initialLanguage?: string,
@@ -319,16 +341,17 @@ export function useTypingTest(
       for (const key of pressed) {
         if (prev.has(key)) continue
         const [row, col] = parseMatrixKey(key)
-        const code = resolveEffectiveCode(row, col, keymap, sortedLayers, bl)
-        if (code == null) continue
+        const resolved = resolveEffectiveCodeWithLayer(row, col, keymap, sortedLayers, bl)
+        if (!resolved) continue
+        const { code, layer: eventLayer } = resolved
         // Only LT / MT style tap-hold keys need the deferred classify
         // pass. LSFT(kc) etc. are "masked" too but always fire the
         // modifier + base together, so the heatmap treats them as
         // regular presses.
         if (isTapKeycode(code)) {
-          starts.set(key, { tsMs: ts, row, col, layer: highestActiveLayer, keycode: code })
+          starts.set(key, { tsMs: ts, row, col, layer: eventLayer, keycode: code })
         } else {
-          sink({ kind: 'matrix', row, col, layer: highestActiveLayer, keycode: code, ts })
+          sink({ kind: 'matrix', row, col, layer: eventLayer, keycode: code, ts })
         }
       }
 

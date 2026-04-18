@@ -1160,5 +1160,69 @@ describe('useTypingTest windowFocused', () => {
         expect(sink).not.toHaveBeenCalled()
       })
     })
+
+    describe('event.layer uses the source layer (key location), not the layer the key activates', () => {
+      it('records MO1 at the base layer where MO1 is defined', () => {
+        const sink = vi.fn()
+        // MO1 on (0, 0) at layer 0. Layer 1 leaves (0, 0) transparent.
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'MO(1)']] },
+          { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          row: 0,
+          col: 0,
+          layer: 0,
+        }))
+        const payload = sink.mock.calls[0][0] as { action?: string }
+        expect(payload.action).toBeUndefined()
+      })
+
+      it('records LT1 tap on the base layer where LT1 is defined', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+          { layer: 1, entries: [[0, 0, 'KC_TRNS']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        vi.advanceTimersByTime(100)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          layer: 0,
+          action: 'tap',
+        }))
+      })
+
+      it('records keys pressed while MO1 is held at the upper layer', () => {
+        const sink = vi.fn()
+        // MO1 on (0, 0) at base. (1, 1) resolves to KC_A on layer 1 only.
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'MO(1)'], [1, 1, 'KC_TRNS']] },
+          { layer: 1, entries: [[0, 0, 'KC_TRNS'], [1, 1, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0', '1,1']), keymap))
+
+        const calls = sink.mock.calls.map((c) => c[0]) as Array<{ row: number; col: number; layer: number }>
+        const mo1 = calls.find((c) => c.row === 0 && c.col === 0)
+        const kcA = calls.find((c) => c.row === 1 && c.col === 1)
+        expect(mo1?.layer).toBe(0)
+        expect(kcA?.layer).toBe(1)
+      })
+    })
   })
 })
