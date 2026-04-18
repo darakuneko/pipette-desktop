@@ -133,8 +133,10 @@ export interface KeymapEditorProps {
   onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
   /** Called when the typing-view REC tab triggers "View Analytics".
    * KeymapEditor forwards to the App shell so the shell can exit the
-   * compact window, reset the record toggle, and swap to the analytics
-   * page. */
+   * compact window and swap to the analytics page. The record toggle
+   * is preserved across the navigation — leaving the compact window
+   * stops the sink via typingTestViewOnly without touching the
+   * persisted preference. */
   onViewAnalytics?: () => void
   /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
    * useTypingTest so masked-key tap/hold classification uses the same

@@ -290,9 +290,10 @@ export function App() {
 
   // Navigate from the typing-view REC tab to the analytics page.
   // Same resize-before-swap choreography as exitViewOnlyMode so the
-  // editor chrome doesn't flash at the old compact size; record is
-  // cleared implicitly by the typingTestViewOnly-watching effect
-  // above when the view closes.
+  // editor chrome doesn't flash at the old compact size. The record
+  // toggle stays intact — useInputModes.analyticsSink is already
+  // gated on typingTestViewOnly, so flipping the view off stops the
+  // sink without touching the persisted typingRecordEnabled.
   const handleViewAnalytics = useCallback(() => {
     setViewExitTransition(true)
     requestAnimationFrame(() => { requestAnimationFrame(() => {
