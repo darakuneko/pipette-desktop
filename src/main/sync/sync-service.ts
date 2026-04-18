@@ -26,7 +26,7 @@ import {
   readKeyboardMetaIndex,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
-import { mergeTypingAnalyticsBundle } from '../typing-analytics/sync'
+import { mergeTypingAnalyticsBundle, parseTypingAnalyticsSyncUnit } from '../typing-analytics/sync'
 import { log } from '../logger'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
@@ -402,8 +402,9 @@ async function mergeSyncUnit(
   const userData = app.getPath('userData')
 
   // Handle typing-analytics sync unit (row-level LWW into SQLite)
-  if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'typing-analytics') {
-    const uid = parts[1]
+  const typingAnalyticsUid = parseTypingAnalyticsSyncUnit(syncUnit)
+  if (typingAnalyticsUid !== null) {
+    const uid = typingAnalyticsUid
     const data = remoteBundle.files['data.json']
     if (!data) return false
     let parsed: unknown

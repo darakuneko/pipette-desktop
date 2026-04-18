@@ -29,6 +29,16 @@ export function typingAnalyticsSyncUnit(uid: string): `keyboards/${string}/typin
   return `keyboards/${uid}/typing-analytics`
 }
 
+/** Returns the uid when `syncUnit` matches `keyboards/{uid}/typing-analytics`,
+ * otherwise null. Pair this with `typingAnalyticsSyncUnit(uid)` so call sites
+ * never hand-roll the 3-part split check. */
+export function parseTypingAnalyticsSyncUnit(syncUnit: string): string | null {
+  const parts = syncUnit.split('/')
+  if (parts.length !== 3) return null
+  if (parts[0] !== 'keyboards' || parts[2] !== 'typing-analytics') return null
+  return parts[1]
+}
+
 export const TYPING_ANALYTICS_BUNDLE_REV = 1
 
 const DAY_MS = 24 * 60 * 60 * 1_000

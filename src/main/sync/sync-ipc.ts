@@ -343,12 +343,13 @@ export function setupSyncIpc(): void {
       // prior ?? 'snapshots' default hid typing-analytics and
       // keyboard-meta bundles inside the snapshots category even though
       // neither has an importer.
-      const bundleTypeToCategory: Partial<Record<SyncBundle['type'], 'favorites' | 'snapshots' | 'settings'>> = {
+      type ExportCategory = 'favorites' | 'snapshots' | 'settings'
+      const bundleTypeToCategory: Partial<Record<SyncBundle['type'], ExportCategory>> = {
         favorite: 'favorites',
         layout: 'snapshots',
         settings: 'settings',
       }
-      const categories: Record<'favorites' | 'snapshots' | 'settings', Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
+      const categories: Record<ExportCategory, Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
         snapshots: {},
         favorites: {},
         settings: {},

@@ -95,6 +95,11 @@ vi.mock('../typing-analytics/sync', () => ({
   mergeTypingAnalyticsBundle: (...args: unknown[]) => mockMergeTypingAnalyticsBundle(...args),
   buildTypingAnalyticsBundle: vi.fn(() => ({ _rev: 1, uid: 'mock', scopes: [], charMinutes: [], matrixMinutes: [], minuteStats: [], sessions: [] })),
   typingAnalyticsSyncUnit: (uid: string) => `keyboards/${uid}/typing-analytics`,
+  parseTypingAnalyticsSyncUnit: (syncUnit: string) => {
+    const parts = syncUnit.split('/')
+    if (parts.length !== 3 || parts[0] !== 'keyboards' || parts[2] !== 'typing-analytics') return null
+    return parts[1]
+  },
 }))
 
 vi.stubGlobal('fetch', vi.fn())

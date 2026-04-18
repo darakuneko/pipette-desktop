@@ -14,7 +14,7 @@ import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
-import { buildTypingAnalyticsBundle, typingAnalyticsSyncUnit } from '../typing-analytics/sync'
+import { buildTypingAnalyticsBundle, parseTypingAnalyticsSyncUnit, typingAnalyticsSyncUnit } from '../typing-analytics/sync'
 import { readPipetteSettings } from '../pipette-settings-store'
 import { log } from '../logger'
 
@@ -42,8 +42,9 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   // existing encrypt/upload pipeline can carry them unchanged. Errors are
   // logged and re-thrown so the upload path re-queues the unit instead of
   // treating a transient DB/settings failure as a silent success.
-  if (parts.length === 3 && parts[0] === 'keyboards' && parts[2] === 'typing-analytics') {
-    const uid = parts[1]
+  const typingAnalyticsUid = parseTypingAnalyticsSyncUnit(syncUnit)
+  if (typingAnalyticsUid !== null) {
+    const uid = typingAnalyticsUid
     try {
       const prefs = await readPipetteSettings(uid)
       const spanDays = prefs?.typingSyncSpanDays ?? DEFAULT_TYPING_SYNC_SPAN_DAYS
