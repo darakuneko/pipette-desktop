@@ -337,7 +337,7 @@ The Macro section displays a **tile grid preview** showing all entries at a glan
 Opening a macro action brings up the Macro Modal with two display modes that share the same row:
 
 - **List mode** (default): The action's keycodes are shown as clickable tiles followed by a dashed **add slot**. Single-click a keycode tile to switch that index into edit mode. Single-click the dashed add slot to select it; double-click the dashed slot to open the keycode popover with an empty query (mirrors the keymap editor). The pencil "edit" icon from earlier versions is gone — clicking is the only affordance
-- **Edit mode**: The keycode picker stays visible below the row. Each keycode tile shows a hover **X** button to delete that index, and the Tap row exposes a **Close** button to leave edit mode. There is no per-action Save button; every selection in the picker or the keycode popover commits immediately. Deleting the selected index shifts the selection so the edit session continues rather than exiting. An outside-click handler exits edit mode on any click outside the picker, the macro action list, the footer, and the key popover — so the session ends when you press Close, or when you click away into the wider app (the modal backdrop, the title area, etc.)
+- **Edit mode**: The keycode picker stays visible below the row. Each keycode tile shows a hover **X** button to delete that index, and the Tap row exposes a **Close** button to leave edit mode. Picker and popover selections are **staged** — they update the row visually but are not committed until you press the bottom **Save** button or **Enter**. The footer also shows a **Revert** ConfirmButton when you are editing an action that already existed (it is hidden when you just added the action via Add Action, since there is nothing prior to revert to). Save and Revert are disabled until a pick actually changes something. Pressing **Escape**, the per-row **Close** button, **Revert**, or clicking outside the picker / action list / footer / key popover rolls back the entire in-flight edit — including newly-appended Add-keycode slots or an entirely newly-added action — and leaves edit mode. Deleting a slot during edit shifts the selection so the session continues rather than exiting.
 
 Empty keycode actions are tolerated while editing; they are normalized out silently when the macro is saved or exported to a favorite.
 
@@ -349,7 +349,7 @@ While the built-in recorder is capturing keystrokes, the Macro Modal enters a st
 - Every existing MacroActionItem and its KeycodeField is disabled (native `disabled` attribute — Tab / hover / click are all suppressed)
 - The inline favorites panel is made invisible with its width preserved, so the layout does not jump
 - The modal's top-right Close button and backdrop click are inert — the modal cannot be dismissed until recording stops
-- The footer (Clear / Revert / Save row) is also hidden while you are inside the per-action edit mode, since each picker/popover click already commits; re-open list mode to see the footer again
+- The list-mode footer's Clear / Revert / Save buttons remain visible but disabled during recording. In per-action edit mode the list-level Clear / Revert are hidden, but the edit-mode Save (and Revert, for existing edits) are kept visible and disabled so you can see the affordance
 
 ### 3.8 Combo
 
