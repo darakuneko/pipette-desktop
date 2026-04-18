@@ -49,6 +49,30 @@ We do not provide or document distro-specific packages (.deb, .rpm, AUR, Flatpak
 
 Community-maintained packages may exist, but they are not officially supported.
 
+### Linux: AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
+
+On distributions that restrict unprivileged user namespaces (e.g. Ubuntu 24.04+, Debian 13+ via AppArmor's `unprivileged_userns_restricted` flag), the AppImage may fail to launch with a sandbox / user namespace error.
+
+Create an AppArmor profile that permits the namespace:
+
+```bash
+# Adjust the profile path to match where you placed the AppImage
+sudo tee /etc/apparmor.d/pipette >/dev/null <<'EOF'
+abi <abi/4.0>,
+include <tunables/global>
+
+profile pipette /home/YOUR_USER/Applications/Pipette-linux-x86_64.AppImage flags=(unconfined) {
+  userns,
+
+  include if exists <local/pipette>
+}
+EOF
+
+sudo systemctl reload apparmor.service
+```
+
+Replace `YOUR_USER` and adjust the filename/path to match your setup.
+
 ## Usage
 
 ### Quick Start
