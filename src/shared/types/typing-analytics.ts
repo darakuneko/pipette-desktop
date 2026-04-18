@@ -33,12 +33,30 @@ export interface TypingAnalyticsKeyboard {
   productName: string
 }
 
+/** How a physical press resolved for masked (tap-hold style) keys. The
+ * heatmap uses this to colour the outer (hold) and inner (tap) rects
+ * independently. `undefined` is reserved for non-masked keys and for
+ * release-edge data that the press-edge pipeline dispatches eagerly.*/
+export type TypingMatrixAction = 'tap' | 'hold'
+
 /** Partial event emitted by `useTypingTest` before the active keyboard is
  * attached. `useInputModes` wraps it into a full {@link TypingAnalyticsEvent}
  * before dispatching to the main process. */
 export type TypingAnalyticsEventPayload =
   | { kind: 'char'; key: string; ts: number }
-  | { kind: 'matrix'; row: number; col: number; layer: number; keycode: number; ts: number }
+  | {
+      kind: 'matrix'
+      row: number
+      col: number
+      layer: number
+      keycode: number
+      ts: number
+      /** Only set for masked keys (LT/MT/etc.) after the release edge
+       * has been classified against TAPPING_TERM. Non-masked presses
+       * and presses that have not yet seen a release leave this
+       * undefined; the count still lands in the `count` total column. */
+      action?: TypingMatrixAction
+    }
 
 /** Normalized analytics event carried over the IPC to the main process. */
 export type TypingAnalyticsEvent = TypingAnalyticsEventPayload & {

@@ -1069,5 +1069,96 @@ describe('useTypingTest windowFocused', () => {
       act(() => result.current.processKeyEvent('a', false, false, false))
       expect(result.current.state.currentInput).toBe('a')
     })
+
+    describe('masked-key tap/hold classification', () => {
+      it('defers the matrix emit for masked keys until the release edge', () => {
+        const sink = vi.fn()
+        // LT1(KC_SPACE) on (0, 0), plain KC_A on (0, 1).
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)'], [0, 1, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        // No emit yet — masked keys wait for release.
+        expect(sink).not.toHaveBeenCalled()
+      })
+
+      it('classifies a short press as a tap on the release edge', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        vi.advanceTimersByTime(100)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(1)
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          row: 0,
+          col: 0,
+          action: 'tap',
+        }))
+      })
+
+      it('classifies a long press as a hold on the release edge', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+
+        vi.advanceTimersByTime(500)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).toHaveBeenCalledTimes(1)
+        expect(sink).toHaveBeenCalledWith(expect.objectContaining({
+          kind: 'matrix',
+          action: 'hold',
+        }))
+      })
+
+      it('leaves non-masked keys firing on the press edge without an action field', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'KC_A']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        vi.setSystemTime(new Date('2026-04-18T10:00:00.000Z'))
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+        const payload = sink.mock.calls[0][0] as { action?: string }
+        expect(payload.action).toBeUndefined()
+
+        // Release should NOT produce a second event for non-masked keys.
+        vi.advanceTimersByTime(50)
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+        expect(sink).toHaveBeenCalledTimes(1)
+      })
+
+      it('resetMatrixPressTracking drops pending masked-key starts so no event fires on the next release', () => {
+        const sink = vi.fn()
+        const keymap = buildMultiLayerKeymap([
+          { layer: 0, entries: [[0, 0, 'LT1(KC_SPACE)']] },
+        ])
+        const { result } = renderHook(() => useTypingTest(undefined, undefined, { onAnalyticsEvent: sink, tappingTermMs: 200 }))
+
+        act(() => result.current.processMatrixFrame(pressKeys(['0,0']), keymap))
+        act(() => result.current.resetMatrixPressTracking())
+        act(() => result.current.processMatrixFrame(new Set(), keymap))
+
+        expect(sink).not.toHaveBeenCalled()
+      })
+    })
   })
 })
