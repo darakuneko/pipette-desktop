@@ -43,7 +43,7 @@ const mockDownloadFile = vi.fn(async () => ({}))
 const mockUploadFile = vi.fn(async () => 'file-id')
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
-  const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
+  const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots|typing-analytics)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
   const favMatch = name.match(/^favorites_(.+)\.enc$/)
   if (favMatch) return `favorites/${favMatch[1]}`

@@ -138,13 +138,15 @@ export function driveFileName(syncUnit: string): string {
   // "favorites/tapDance" -> "favorites_tapDance.enc"
   // "keyboards/0x1234/settings" -> "keyboards_0x1234_settings.enc"
   // "keyboards/0x1234/snapshots" -> "keyboards_0x1234_snapshots.enc"
+  // "keyboards/0x1234/typing-analytics" -> "keyboards_0x1234_typing-analytics.enc"
   return syncUnit.replaceAll('/', '_') + '.enc'
 }
 
 export function syncUnitFromFileName(fileName: string): string | null {
   // "keyboards_0x1234_settings.enc" → "keyboards/0x1234/settings"
   // "keyboards_0x1234_snapshots.enc" → "keyboards/0x1234/snapshots"
-  const kbMatch = fileName.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
+  // "keyboards_0x1234_typing-analytics.enc" → "keyboards/0x1234/typing-analytics"
+  const kbMatch = fileName.match(/^keyboards_(.+?)_(settings|snapshots|typing-analytics)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
 
   // "favorites_tapDance.enc" → "favorites/tapDance"
