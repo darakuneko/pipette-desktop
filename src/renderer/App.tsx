@@ -313,6 +313,10 @@ export function App() {
     requestAnimationFrame(() => { requestAnimationFrame(() => {
       window.vialAPI.setWindowCompactMode(false).then(() => {
         devicePrefs.setTypingTestViewOnly(false)
+        // Leaving the typing view — flip the persisted viewMode back
+        // to 'editor' too so the next session-restore doesn't reopen
+        // the compact window behind the analytics page.
+        devicePrefs.setViewMode('editor')
         if (editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
         setAnalyticsPageOpen(true)
         setViewExitTransition(false)
