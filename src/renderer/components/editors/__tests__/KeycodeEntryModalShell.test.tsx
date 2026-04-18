@@ -300,4 +300,24 @@ describe('KeycodeEntryModalShell', () => {
     expect(screen.queryByText('Test - 0')).not.toBeInTheDocument()
     expect(screen.queryByTestId('test-modal-save')).not.toBeInTheDocument()
   })
+
+  it('Escape closes the outer modal when no field is selected', () => {
+    const hook = createMockHook()
+    render(
+      <KeycodeEntryModalShell adapter={testAdapter} hook={hook} index={0} />,
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(hook.handleClose).toHaveBeenCalledTimes(1)
+    expect(hook.handlePickerClose).not.toHaveBeenCalled()
+  })
+
+  it('Escape closes only the picker when a field is selected', () => {
+    const hook = createMockHook({ selectedField: 'fieldA' })
+    render(
+      <KeycodeEntryModalShell adapter={testAdapter} hook={hook} index={0} />,
+    )
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(hook.handlePickerClose).toHaveBeenCalledTimes(1)
+    expect(hook.handleClose).not.toHaveBeenCalled()
+  })
 })

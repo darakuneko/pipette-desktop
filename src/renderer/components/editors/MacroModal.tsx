@@ -74,7 +74,7 @@ export function MacroModal({
   const modalWidth = isDummy ? 'w-[1200px]' : 'w-[1300px]'
   const modalHeight = isEditing ? 'max-h-[90vh]' : 'h-[90vh]'
 
-  useEscapeClose(onClose, !isRecording)
+  useEscapeClose(onClose, !isRecording && !isEditing)
 
   return (
     <div

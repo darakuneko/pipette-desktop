@@ -18,6 +18,7 @@ import {
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
 import { useMacroKeycodeSelection } from '../../hooks/useMacroKeycodeSelection'
 import { ConfirmButton } from './ConfirmButton'
@@ -161,6 +162,9 @@ export function MacroEditor({
     quickSelect,
     autoAdvance,
   })
+
+  // Guarded so MacroModal's ESC handler takes over outside edit mode and during recording.
+  useEscapeClose(revertAndDeselect, isEditing && !isRecording)
 
   const updateActions = useCallback(
     (newActions: MacroAction[]) => {
