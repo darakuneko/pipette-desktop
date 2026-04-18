@@ -25,23 +25,27 @@ describe('heatmapFill', () => {
 
 describe('heatmapFillForCell', () => {
   it('returns null when the map is null (hook disabled)', () => {
-    expect(heatmapFillForCell(null, 10, 1, 2)).toBeNull()
+    expect(heatmapFillForCell(null, 10, '1,2')).toBeNull()
+  })
+
+  it('returns null when the map is undefined (prop not wired)', () => {
+    expect(heatmapFillForCell(undefined, 10, '1,2')).toBeNull()
   })
 
   it('returns null when maxCount is zero (no data yet)', () => {
-    expect(heatmapFillForCell(new Map([['1,2', 5]]), 0, 1, 2)).toBeNull()
+    expect(heatmapFillForCell(new Map([['1,2', 5]]), 0, '1,2')).toBeNull()
   })
 
   it('returns null for cells that never saw a press', () => {
-    expect(heatmapFillForCell(new Map([['1,2', 5]]), 5, 9, 9)).toBeNull()
+    expect(heatmapFillForCell(new Map([['1,2', 5]]), 5, '9,9')).toBeNull()
   })
 
   it('derives a warm fill for the peak cell', () => {
-    expect(heatmapFillForCell(new Map([['1,2', 10]]), 10, 1, 2)).toBe(heatmapFill(1))
+    expect(heatmapFillForCell(new Map([['1,2', 10]]), 10, '1,2')).toBe(heatmapFill(1))
   })
 
   it('scales intermediate cells proportionally to the peak', () => {
     const map = new Map([['1,2', 5], ['3,4', 10]])
-    expect(heatmapFillForCell(map, 10, 1, 2)).toBe(heatmapFill(0.5))
+    expect(heatmapFillForCell(map, 10, '1,2')).toBe(heatmapFill(0.5))
   })
 })

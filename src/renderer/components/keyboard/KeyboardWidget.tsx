@@ -200,7 +200,7 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
-            heatmapFill={heatmapFillForCell(heatmapIntensity ?? null, heatmapMax, key.row, key.col)}
+            heatmapFill={heatmapFillForCell(heatmapIntensity, heatmapMax, posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
@@ -249,7 +249,7 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
-            heatmapFill={heatmapFillForCell(heatmapIntensity ?? null, heatmapMax, key.row, key.col)}
+            heatmapFill={heatmapFillForCell(heatmapIntensity, heatmapMax, posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}

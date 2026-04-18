@@ -16,20 +16,21 @@ export function heatmapFill(intensity: number): string {
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
-/** Returns the HSL fill for a given (row, col) given the raw count
- * map + the pre-computed peak. Returns null when the cell has no
- * count or the peak is zero; callers should fall back to the default
- * key background in that case. Keeping the peak outside of this
- * function lets callers compute it once per frame instead of
- * per-key. */
+/** Returns the HSL fill for the given `"row,col"` cell using the raw
+ * count map + the pre-computed peak. Returns null when the cell has
+ * no count or the peak is zero; callers should fall back to the
+ * default key background in that case. Keeping the peak outside of
+ * this function lets callers compute it once per frame instead of
+ * per-key. Accepting `posKey` as the `"row,col"` string the caller
+ * already formatted for other Set/Map lookups avoids a second
+ * per-key allocation in the render loop. */
 export function heatmapFillForCell(
-  intensityByCell: Map<string, number> | null,
+  intensityByCell: Map<string, number> | null | undefined,
   maxCount: number,
-  row: number,
-  col: number,
+  posKey: string,
 ): string | null {
   if (!intensityByCell || maxCount <= 0) return null
-  const count = intensityByCell.get(`${row},${col}`)
+  const count = intensityByCell.get(posKey)
   if (!count || count <= 0) return null
   return heatmapFill(count / maxCount)
 }
