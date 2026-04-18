@@ -3,16 +3,16 @@
 // module so the KeyWidget fill-priority chain stays readable and the
 // ramp can be tweaked without touching the rest of the key renderer.
 
-/** Maps a normalized 0-1 intensity to an HSL fill. 0 returns a pale
- * cool tint; 1 returns a saturated warm tint. Intensities above 1 are
- * clamped so the hottest key cannot go beyond full warm. */
+/** Maps a normalized 0-1 intensity to an HSL fill. 0 returns a soft
+ * yellow tint; 1 returns a saturated red. Intensities above 1 are
+ * clamped so the hottest key cannot go beyond full red. */
 export function heatmapFill(intensity: number): string {
   const t = Math.max(0, Math.min(1, intensity))
-  // Hue slides from cool (220°) to warm (0°). Lightness drops so the
-  // high end reads as a filled key rather than a pastel wash.
-  const hue = Math.round(220 - 220 * t)
+  // Hue slides from yellow (60°) to red (0°). Lightness drops so the
+  // high end reads as a filled red key rather than a washed-out tint.
+  const hue = Math.round(60 - 60 * t)
   const saturation = 70
-  const lightness = Math.round(86 - 36 * t)
+  const lightness = Math.round(80 - 30 * t)
   return `hsl(${hue}, ${saturation}%, ${lightness}%)`
 }
 
