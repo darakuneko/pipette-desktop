@@ -108,7 +108,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
     modalWidth,
   } = hook
 
-  useEscapeClose(handleClose)
+  useEscapeClose(selectedField ? handlePickerClose : handleClose)
 
   const isConfigured = editedEntry !== null && adapter.isConfigured(editedEntry)
 
