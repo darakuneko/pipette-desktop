@@ -406,13 +406,17 @@ async function mergeSyncUnit(
     const uid = parts[1]
     const data = remoteBundle.files['data.json']
     if (!data) return false
+    let parsed: unknown
     try {
-      const parsed = JSON.parse(data) as unknown
-      mergeTypingAnalyticsBundle(parsed, uid)
+      parsed = JSON.parse(data)
     } catch {
-      // Malformed payload — skip without surfacing as a failed unit so one
-      // bad bundle doesn't block the rest of the sync cycle.
+      // Malformed JSON payload — skip without surfacing as a failed unit so
+      // one bad bundle doesn't block the rest of the sync cycle. DB/merge
+      // errors are deliberately NOT swallowed here: they bubble up so the
+      // caller records the unit in failedUnits and polling retries it.
+      return false
     }
+    mergeTypingAnalyticsBundle(parsed, uid)
     // Typing-analytics rows always re-export based on the local DB state,
     // so there is no upload-back signal to emit here.
     return false

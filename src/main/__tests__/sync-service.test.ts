@@ -90,6 +90,13 @@ vi.mock('../app-config', () => ({
   saveAppConfig: vi.fn(async () => {}),
 }))
 
+const mockMergeTypingAnalyticsBundle = vi.fn()
+vi.mock('../typing-analytics/sync', () => ({
+  mergeTypingAnalyticsBundle: (...args: unknown[]) => mockMergeTypingAnalyticsBundle(...args),
+  buildTypingAnalyticsBundle: vi.fn(() => ({ _rev: 1, uid: 'mock', scopes: [], charMinutes: [], matrixMinutes: [], minuteStats: [], sessions: [] })),
+  typingAnalyticsSyncUnit: (uid: string) => `keyboards/${uid}/typing-analytics`,
+}))
+
 vi.stubGlobal('fetch', vi.fn())
 
 import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn } from '../sync/sync-crypto'
@@ -718,6 +725,80 @@ describe('sync-service', () => {
       const final = progressEvents[progressEvents.length - 1]
       expect(final.status).toBe('error')
       expect(final.failedUnits).toBeUndefined()
+    })
+  })
+
+  describe('typing-analytics merge error handling', () => {
+    const uid = '0xtype'
+    const fileName = `keyboards_${uid}_typing-analytics.enc`
+    const syncUnit = `keyboards/${uid}/typing-analytics`
+
+    function makeTypingEnvelope(dataJson: string): Record<string, unknown> {
+      return {
+        version: 1,
+        syncUnit,
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'typing-analytics',
+          key: uid,
+          index: { uid, entries: [] },
+          files: { 'data.json': dataJson },
+        }),
+      }
+    }
+
+    it('skips malformed typing-analytics payload without flagging it as failed', async () => {
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      mockListFiles.mockResolvedValue([
+        { id: 'typing-1', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValue(makeTypingEnvelope('{ not json'))
+
+      // Force local uid visibility so scope 'all' keeps the unit (lazy gate).
+      const kbDir = join(mockUserDataPath, 'sync', 'keyboards', uid)
+      await mkdir(kbDir, { recursive: true })
+
+      await executeSync('download')
+
+      // Merge must not be called because JSON.parse failed.
+      expect(mockMergeTypingAnalyticsBundle).not.toHaveBeenCalled()
+
+      // No failure recorded; one bad bundle should not block the cycle.
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('success')
+      expect(final.failedUnits).toBeUndefined()
+    })
+
+    it('surfaces merge-side DB errors as failedUnits so polling can retry', async () => {
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      mockMergeTypingAnalyticsBundle.mockImplementationOnce(() => {
+        throw new Error('sqlite schema mismatch')
+      })
+
+      mockListFiles.mockResolvedValue([
+        { id: 'typing-2', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValue(makeTypingEnvelope(JSON.stringify({ _rev: 1, uid, scopes: [], charMinutes: [], matrixMinutes: [], minuteStats: [], sessions: [] })))
+
+      const kbDir = join(mockUserDataPath, 'sync', 'keyboards', uid)
+      await mkdir(kbDir, { recursive: true })
+
+      await executeSync('download')
+
+      // JSON was well-formed, so merge was called and rejected from the DB side.
+      expect(mockMergeTypingAnalyticsBundle).toHaveBeenCalledTimes(1)
+
+      // The exception must bubble up so the unit ends up in failedUnits,
+      // which is the signal polling uses to retry on the next tick.
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('partial')
+      expect(final.failedUnits).toEqual([syncUnit])
     })
   })
 
