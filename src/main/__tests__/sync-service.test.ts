@@ -128,9 +128,11 @@ vi.mock('../typing-analytics/sync-state', () => ({
   loadSyncState: vi.fn(async () => null),
   saveSyncState: vi.fn(async () => {}),
   emptySyncState: (myDeviceId: string) => ({
-    _rev: 1,
+    _rev: 2,
     my_device_id: myDeviceId,
     read_pointers: {},
+    uploaded: {},
+    reconciled_at: {},
     last_synced_at: 0,
   }),
 }))
