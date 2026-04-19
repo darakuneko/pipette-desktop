@@ -883,6 +883,51 @@ async function reconcileOwnHashTypingAnalytics(
   return { state, mutated }
 }
 
+/** List the UTC days that cloud currently holds for a remote device
+ * `(uid, machineHash)`. Returned in ascending lexicographic order so
+ * callers can feed the list straight into a Sync > Typing > Device
+ * tree without post-processing. An unauthenticated / network-failed
+ * call returns an empty array — UIs surface the network error via
+ * scanRemoteData or the sync progress channel separately. */
+export async function listRemoteTypingDaysFor(
+  uid: string,
+  machineHash: string,
+): Promise<UtcDay[]> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return []
+  const remoteFiles = await listFiles()
+  const perUid = collectRemoteOwnHashDays(remoteFiles, machineHash)
+  const days = perUid.get(uid)
+  if (!days) return []
+  return Array.from(days.keys()).sort()
+}
+
+/** Lazily fetch a single remote (uid, machineHash, day) into the
+ * local cache. Returns `true` when the day was downloaded and merged,
+ * `false` when the cloud copy was missing or a credential check failed.
+ * Designed for the Sync > Typing > Device lazy-expand flow so the UI
+ * can pull in only the days the user actually opens. */
+export async function fetchRemoteTypingDay(
+  uid: string,
+  machineHash: string,
+  utcDay: UtcDay,
+): Promise<boolean> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return false
+  const { password } = credentials
+  const remoteFiles = await listFiles()
+  const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
+  const file = remoteFiles.find((f) => f.name === targetName)
+  if (!file) return false
+  const envelope = await downloadFile(file.id)
+  const plaintext = await decrypt(envelope, password)
+  const remoteBundle = JSON.parse(plaintext) as SyncBundle
+  const userData = app.getPath('userData')
+  const ownHash = await getMachineHash()
+  await mergeDeviceDayBundle(remoteBundle, { uid, machineHash, utcDay }, userData, ownHash)
+  return true
+}
+
 async function executeUploadSync(
   password: string,
   prefetchedFiles?: DriveFile[],
