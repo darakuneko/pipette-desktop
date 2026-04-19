@@ -28,7 +28,10 @@ import {
   type TypingKeyboardSummary,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
-import { typingAnalyticsDeviceSyncUnit } from './sync'
+import {
+  typingAnalyticsDeviceDaySyncUnit,
+  typingAnalyticsDeviceSyncUnit,
+} from './sync'
 import { getMachineHash } from './machine-hash'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import {
@@ -755,6 +758,7 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   syncState = state
 
   const touchedUids: string[] = []
+  const touchedByUid = new Map<string, UtcDay[]>()
   try {
     // JSONL master write happens first: the file is the source of truth.
     // If the cache apply later fails we still have the data on disk, and
@@ -762,25 +766,22 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     // order so the pointer lands on the most recent row id.
     for (const [uid, byDay] of rowsByUidDay) {
       const orderedDays = Array.from(byDay.keys()).sort()
-      let wroteAny = false
+      const writtenDays: UtcDay[] = []
       for (const day of orderedDays) {
         const rows = byDay.get(day)
         if (!rows || rows.length === 0) continue
-        // Transitional mirror: write the v6 flat file first so the
-        // existing sync bundle / merge paths (still reading
-        // `{hash}.jsonl`) pick up fresh rows. If this fails we throw
-        // before touching the v7 per-day path or the cache, so the
-        // outer catch requeues sessions and the batch is atomically
-        // lost (same failure mode the service already tolerates).
-        // Dropped when sync switches to per-day enumeration.
-        await appendRowsToFile(
-          deviceJsonlPath(userDataDir, uid, machineHash),
-          rows,
-        )
         await persistOwnJsonlDay(uid, day, rows, machineHash, userDataDir, state)
-        wroteAny = true
+        writtenDays.push(day)
       }
-      if (wroteAny) touchedUids.push(uid)
+      if (writtenDays.length === 0) continue
+      touchedUids.push(uid)
+      touchedByUid.set(uid, writtenDays)
+      // `state.uploaded` is intentionally NOT updated here — that map
+      // tracks days confirmed to be in cloud, and is bumped by the
+      // sync layer after a successful upload. Flush only guarantees
+      // local disk + cache coherence, so writing here would conflate
+      // the two states and break reconcile's "uploaded but cloud
+      // missing" signal in C5b.
     }
     state.last_synced_at = updatedAt
     await saveSyncState(userDataDir, state)
@@ -795,16 +796,20 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
     return
   }
 
-  // Notify the sync layer that this device's JSONL for each touched
-  // keyboard has new rows to upload. Capture the notifier into a local so
-  // a reset-clear between iterations cannot null it mid-loop.
+  // Notify the sync layer that new rows are ready for upload. One
+  // notify per (uid, hash, day) so cloud storage tracks days as
+  // independent units. Capture the notifier into a local so a reset
+  // between iterations cannot null it mid-loop.
   const notifier = syncNotifier
   if (notifier) {
     for (const uid of touchedUids) {
-      try {
-        notifier(typingAnalyticsDeviceSyncUnit(uid, machineHash))
-      } catch (notifyErr) {
-        log('warn', `typing-analytics sync notify failed for ${uid}: ${String(notifyErr)}`)
+      const days = touchedByUid.get(uid) ?? []
+      for (const day of days) {
+        try {
+          notifier(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+        } catch (notifyErr) {
+          log('warn', `typing-analytics sync notify failed for ${uid} ${day}: ${String(notifyErr)}`)
+        }
       }
     }
   }

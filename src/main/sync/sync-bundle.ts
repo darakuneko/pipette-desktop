@@ -11,11 +11,17 @@ import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
-import { deviceJsonlPath } from '../typing-analytics/jsonl/paths'
+import {
+  deviceDayJsonlPath,
+  deviceJsonlPath,
+  listDeviceDays,
+} from '../typing-analytics/jsonl/paths'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import {
+  parseTypingAnalyticsDeviceDaySyncUnit,
   parseTypingAnalyticsDeviceSyncUnit,
+  typingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceSyncUnit,
 } from '../typing-analytics/sync'
 import { log } from '../logger'
@@ -38,12 +44,30 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
-  // Handle "keyboards/{uid}/devices/{machineHash}" — per-device JSONL master
-  // file. Source of truth lives on disk under sync/keyboards/{uid}/devices/,
-  // so the bundle just packages the raw file contents unchanged for the
-  // encrypt/upload pipeline. 1-writer-per-file invariant means a device
-  // only ever bundles its own JSONL; remote devices' files are read on
-  // download, never on upload.
+  // Handle "keyboards/{uid}/devices/{hash}/days/{YYYY-MM-DD}" — v7 per-day
+  // JSONL master. One bundle per (uid, hash, day), so cloud storage grows
+  // as new days are recorded and each day's file is uploaded / deleted
+  // independently of the others.
+  const dayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
+  if (dayRef) {
+    const filePath = deviceDayJsonlPath(userData, dayRef.uid, dayRef.machineHash, dayRef.utcDay)
+    try {
+      const content = await readFile(filePath, 'utf-8')
+      return {
+        type: 'typing-analytics-device',
+        key: `${dayRef.uid}|${dayRef.machineHash}|${dayRef.utcDay}`,
+        index: { uid: dayRef.uid, entries: [] } as SnapshotIndex,
+        files: { 'data.jsonl': content },
+      }
+    } catch {
+      return null
+    }
+  }
+
+  // Handle v6 "keyboards/{uid}/devices/{machineHash}" — flat JSONL master
+  // file. Kept while the v6 mirror write is still in place so existing
+  // remote devices' flat files remain readable. Removed in a later
+  // chunk once sync has fully switched to the per-day form.
   const deviceRef = parseTypingAnalyticsDeviceSyncUnit(syncUnit)
   if (deviceRef) {
     const filePath = deviceJsonlPath(userData, deviceRef.uid, deviceRef.machineHash)
@@ -132,14 +156,21 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     }
   } catch { /* dir doesn't exist */ }
 
-  // Typing analytics device units: one per keyboard uid this machine has
-  // recorded against. Only our own machineHash is emitted — remote
-  // devices' files are owned by their producers and uploaded by them.
+  // Typing analytics sync units. Own hash only — remote devices' files
+  // are owned by their producers and uploaded by them.
   try {
     const machineHash = await getMachineHash()
     const typingUids = getTypingAnalyticsDB().listLocalKeyboardUids(machineHash)
     for (const uid of typingUids) {
+      // v6 flat bundle: needed only while the mirror write keeps the
+      // flat file fresh. Dropped together with the mirror.
       units.push(typingAnalyticsDeviceSyncUnit(uid, machineHash))
+      // v7 per-day bundles: one per day we've recorded against this uid.
+      // listDeviceDays returns an empty list if the per-day directory
+      // doesn't exist yet, so this silently no-ops on a pre-v7 store.
+      for (const day of await listDeviceDays(userData, uid, machineHash)) {
+        units.push(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+      }
     }
   } catch (err) {
     // Log instead of silently dropping so a DB schema mismatch or machine

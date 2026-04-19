@@ -95,12 +95,21 @@ vi.mock('../app-config', () => ({
 vi.mock('../typing-analytics/sync', () => ({
   typingAnalyticsDeviceSyncUnit: (uid: string, machineHash: string) =>
     `keyboards/${uid}/devices/${machineHash}`,
+  typingAnalyticsDeviceDaySyncUnit: (uid: string, machineHash: string, day: string) =>
+    `keyboards/${uid}/devices/${machineHash}/days/${day}`,
   parseTypingAnalyticsDeviceSyncUnit: (syncUnit: string) => {
     const parts = syncUnit.split('/')
     if (parts.length !== 4) return null
     if (parts[0] !== 'keyboards' || parts[2] !== 'devices') return null
     if (parts[1].length === 0 || parts[3].length === 0) return null
     return { uid: parts[1], machineHash: parts[3] }
+  },
+  parseTypingAnalyticsDeviceDaySyncUnit: (syncUnit: string) => {
+    const parts = syncUnit.split('/')
+    if (parts.length !== 6) return null
+    if (parts[0] !== 'keyboards' || parts[2] !== 'devices' || parts[4] !== 'days') return null
+    if (parts[1].length === 0 || parts[3].length === 0 || !/^\d{4}-\d{2}-\d{2}$/.test(parts[5])) return null
+    return { uid: parts[1], machineHash: parts[3], utcDay: parts[5] }
   },
 }))
 

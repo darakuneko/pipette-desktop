@@ -57,6 +57,7 @@ import {
   deviceDayDir,
   deviceDayJsonlPath,
   listDeviceDays,
+  readPointerKey,
 } from '../jsonl/paths'
 import { readRows } from '../jsonl/jsonl-reader'
 import type { JsonlRow } from '../jsonl/jsonl-row'
@@ -316,9 +317,11 @@ describe('typing-analytics-service', () => {
 
       const machineHash = await getMachineHash()
       const units = notifier.mock.calls.map((c) => c[0]).sort()
+      // ts=1000 falls in UTC day 1970-01-01; one notify per
+      // (uid, hash, day) triple.
       expect(units).toEqual([
-        `keyboards/${sampleKeyboard.uid}/devices/${machineHash}`,
-        `keyboards/${otherKeyboard.uid}/devices/${machineHash}`,
+        `keyboards/${sampleKeyboard.uid}/devices/${machineHash}/days/1970-01-01`,
+        `keyboards/${otherKeyboard.uid}/devices/${machineHash}/days/1970-01-01`,
       ])
     })
 
@@ -486,7 +489,7 @@ describe('typing-analytics-service', () => {
     const charsOnDay = (rows: JsonlRow[]): string[] =>
       rows.flatMap((r) => (r.kind === 'char-minute' ? [r.payload.char] : []))
 
-    it('writes each flush to {hash}/{utcDay}.jsonl and mirrors the rows into the v6 flat path', async () => {
+    it('writes each flush to {hash}/{utcDay}.jsonl and no longer mirrors the v6 flat path', async () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
@@ -498,19 +501,34 @@ describe('typing-analytics-service', () => {
       const dayPath = deviceDayJsonlPath(mockUserDataPath, sampleKeyboard.uid, hash, '2026-04-14')
       expect(existsSync(dayPath)).toBe(true)
 
-      // Transitional mirror: sync bundle + merge still read the flat
-      // file, so per-day writes mirror the same rows into it. The
-      // mirror is removed when sync switches to per-day enumeration.
+      // Mirror write is dropped — flat `{hash}.jsonl` only exists
+      // for legacy v6 imports, never from a fresh v7 flush.
       const legacyPath = join(deviceDayDir(mockUserDataPath, sampleKeyboard.uid, hash), '..', `${hash}.jsonl`)
-      expect(existsSync(legacyPath)).toBe(true)
+      expect(existsSync(legacyPath)).toBe(false)
 
       const rows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
       expect(rows.some((r) => r.kind === 'scope')).toBe(true)
       expect(rows.some((r) => r.kind === 'char-minute')).toBe(true)
       expect(rows.some((r) => r.kind === 'minute-stats')).toBe(true)
+    })
 
-      const { rows: mirroredRows } = await readRows(legacyPath)
-      expect(mirroredRows.map((r) => r.id).sort()).toEqual(rows.map((r) => r.id).sort())
+    it('does not populate sync_state.uploaded at flush time (cloud confirmation required)', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const dayOne = Date.UTC(2026, 3, 14, 10, 0, 0)
+      const dayTwo = Date.UTC(2026, 3, 15, 10, 0, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: dayOne, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: dayTwo, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const hash = await getMachineHash()
+      const { loadSyncState } = await import('../sync-state')
+      const state = await loadSyncState(mockUserDataPath)
+      // `uploaded` tracks cloud-confirmed days and is bumped by the
+      // sync layer after uploadSyncUnit succeeds — flush alone leaves
+      // it untouched so reconcile can still distinguish "never
+      // uploaded" from "uploaded then remotely deleted".
+      expect(state?.uploaded[readPointerKey(sampleKeyboard.uid, hash)]).toBeUndefined()
     })
 
     it('partitions a flush that spans 00:00 UTC into two day files', async () => {
