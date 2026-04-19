@@ -40,7 +40,8 @@ import {
   type JsonlRow,
 } from './jsonl/jsonl-row'
 import { appendRowsToFile } from './jsonl/jsonl-writer'
-import { deviceJsonlPath, readPointerKey } from './jsonl/paths'
+import { deviceDayJsonlPath, deviceJsonlPath, readPointerKey } from './jsonl/paths'
+import { utcDayFromMs, type UtcDay } from './jsonl/utc-day'
 import {
   emptySyncState,
   saveSyncState,
@@ -353,20 +354,53 @@ async function tombstoneOwnScopeRows(
   return { rows, result }
 }
 
-/** Append rows to this device's JSONL, apply them to the cache DB,
- * and advance the sync-state pointer. Does NOT save the sync state —
- * callers batch the write so multi-uid flushes hit disk once. */
-async function persistOwnJsonlRows(
+/** Append rows to a JSONL master file, apply them to the cache, and
+ * advance the sync-state pointer for (uid, machineHash) to the last row
+ * id in this batch. Does NOT save the sync state — callers batch the
+ * write so multi-uid flushes hit disk once. */
+async function persistOwnJsonlAt(
+  path: string,
+  uid: string,
+  rows: readonly JsonlRow[],
+  machineHash: string,
+  state: TypingSyncState,
+): Promise<void> {
+  await appendRowsToFile(path, rows)
+  applyRowsToCache(getTypingAnalyticsDB(), rows)
+  const lastId = rows[rows.length - 1]?.id
+  if (lastId) state.read_pointers[readPointerKey(uid, machineHash)] = lastId
+}
+
+/** v6 flat layout, retained for the tombstone write path until
+ * row-level tombstones are removed. */
+function persistOwnJsonlRows(
   uid: string,
   rows: readonly JsonlRow[],
   machineHash: string,
   userDataDir: string,
   state: TypingSyncState,
 ): Promise<void> {
-  await appendRowsToFile(deviceJsonlPath(userDataDir, uid, machineHash), rows)
-  applyRowsToCache(getTypingAnalyticsDB(), rows)
-  const lastId = rows[rows.length - 1]?.id
-  if (lastId) state.read_pointers[readPointerKey(uid, machineHash)] = lastId
+  return persistOwnJsonlAt(deviceJsonlPath(userDataDir, uid, machineHash), uid, rows, machineHash, state)
+}
+
+/** v7 per-day layout. Multiple days within a single flush must be
+ * persisted in ascending chronological order so the pointer lands on
+ * the most recent row. */
+function persistOwnJsonlDay(
+  uid: string,
+  utcDay: UtcDay,
+  rows: readonly JsonlRow[],
+  machineHash: string,
+  userDataDir: string,
+  state: TypingSyncState,
+): Promise<void> {
+  return persistOwnJsonlAt(
+    deviceDayJsonlPath(userDataDir, uid, machineHash, utcDay),
+    uid,
+    rows,
+    machineHash,
+    state,
+  )
 }
 
 /** Persist tombstone rows for one uid and sync the sync-state to disk. */
@@ -585,31 +619,67 @@ function buildSessionRow(
   }
 }
 
-function groupRowsByUid(
+/** Partition the flush's rows into per-(uid, UTC-day) buckets.
+ *
+ * The UTC day is derived from the row's native timestamp:
+ *   - snapshot rows (minute-stats / char-minute / matrix-minute) use
+ *     `minuteTs` so every row in the same minute bucket lands on the
+ *     same day regardless of how long the flush takes to run.
+ *   - session rows use `startMs`; a session that spans 00:00 UTC is
+ *     kept whole on the start day (no splitting).
+ *   - scope rows don't carry a timestamp, so they're replicated into
+ *     every day that references the scope in this flush. The LWW merge
+ *     makes the duplicates idempotent on the cache side. */
+function groupRowsByUidDay(
   scopesToUpsert: Map<string, TypingAnalyticsFingerprint>,
   snapshots: MinuteSnapshot[],
   sessionsWithScope: Array<{ session: FinalizedSession; resolved: ResolvedScope }>,
   updatedAt: number,
-): Map<string, JsonlRow[]> {
-  const rowsByUid = new Map<string, JsonlRow[]>()
-  const add = (uid: string, row: JsonlRow): void => {
-    const list = rowsByUid.get(uid)
+): Map<string, Map<UtcDay, JsonlRow[]>> {
+  const rowsByUidDay = new Map<string, Map<UtcDay, JsonlRow[]>>()
+  const scopeDays = new Map<string, Set<UtcDay>>()
+  const scopeDayKey = (uid: string, scopeId: string): string => `${uid}\0${scopeId}`
+
+  const addRow = (uid: string, day: UtcDay, row: JsonlRow): void => {
+    let byDay = rowsByUidDay.get(uid)
+    if (!byDay) {
+      byDay = new Map<UtcDay, JsonlRow[]>()
+      rowsByUidDay.set(uid, byDay)
+    }
+    const list = byDay.get(day)
     if (list) list.push(row)
-    else rowsByUid.set(uid, [row])
+    else byDay.set(day, [row])
   }
-  for (const [scopeId, fingerprint] of scopesToUpsert) {
-    add(fingerprint.keyboard.uid, buildScopeRow(scopeId, fingerprint, updatedAt))
+
+  const recordScopeDay = (uid: string, scopeId: string, day: UtcDay): void => {
+    const key = scopeDayKey(uid, scopeId)
+    const set = scopeDays.get(key)
+    if (set) set.add(day)
+    else scopeDays.set(key, new Set([day]))
   }
+
   for (const snapshot of snapshots) {
     const uid = snapshot.fingerprint.keyboard.uid
+    const day = utcDayFromMs(snapshot.minuteTs)
+    recordScopeDay(uid, snapshot.scopeId, day)
     for (const row of buildSnapshotRows(snapshot, updatedAt)) {
-      add(uid, row)
+      addRow(uid, day, row)
     }
   }
   for (const { session, resolved } of sessionsWithScope) {
-    add(resolved.fingerprint.keyboard.uid, buildSessionRow(session, resolved, updatedAt))
+    const uid = resolved.fingerprint.keyboard.uid
+    const day = utcDayFromMs(session.startMs)
+    recordScopeDay(uid, resolved.scopeKey, day)
+    addRow(uid, day, buildSessionRow(session, resolved, updatedAt))
   }
-  return rowsByUid
+  for (const [scopeId, fingerprint] of scopesToUpsert) {
+    const uid = fingerprint.keyboard.uid
+    const days = scopeDays.get(scopeDayKey(uid, scopeId))
+    if (!days) continue
+    const scopeRow = buildScopeRow(scopeId, fingerprint, updatedAt)
+    for (const day of days) addRow(uid, day, scopeRow)
+  }
+  return rowsByUidDay
 }
 
 /**
@@ -673,8 +743,8 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   }
 
   const updatedAt = Date.now()
-  const rowsByUid = groupRowsByUid(scopesToUpsert, snapshots, validSessions, updatedAt)
-  if (rowsByUid.size === 0) {
+  const rowsByUidDay = groupRowsByUidDay(scopesToUpsert, snapshots, validSessions, updatedAt)
+  if (rowsByUidDay.size === 0) {
     dirty = !minuteBuffer.isEmpty()
     return
   }
@@ -688,11 +758,29 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   try {
     // JSONL master write happens first: the file is the source of truth.
     // If the cache apply later fails we still have the data on disk, and
-    // the next startup rebuild replays it.
-    for (const [uid, rows] of rowsByUid) {
-      if (rows.length === 0) continue
-      await persistOwnJsonlRows(uid, rows, machineHash, userDataDir, state)
-      touchedUids.push(uid)
+    // the next startup rebuild replays it. Days are written in ascending
+    // order so the pointer lands on the most recent row id.
+    for (const [uid, byDay] of rowsByUidDay) {
+      const orderedDays = Array.from(byDay.keys()).sort()
+      let wroteAny = false
+      for (const day of orderedDays) {
+        const rows = byDay.get(day)
+        if (!rows || rows.length === 0) continue
+        // Transitional mirror: write the v6 flat file first so the
+        // existing sync bundle / merge paths (still reading
+        // `{hash}.jsonl`) pick up fresh rows. If this fails we throw
+        // before touching the v7 per-day path or the cache, so the
+        // outer catch requeues sessions and the batch is atomically
+        // lost (same failure mode the service already tolerates).
+        // Dropped when sync switches to per-day enumeration.
+        await appendRowsToFile(
+          deviceJsonlPath(userDataDir, uid, machineHash),
+          rows,
+        )
+        await persistOwnJsonlDay(uid, day, rows, machineHash, userDataDir, state)
+        wroteAny = true
+      }
+      if (wroteAny) touchedUids.push(uid)
     }
     state.last_synced_at = updatedAt
     await saveSyncState(userDataDir, state)

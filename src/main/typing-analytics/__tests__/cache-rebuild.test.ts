@@ -17,7 +17,7 @@ import {
   type JsonlRow,
 } from '../jsonl/jsonl-row'
 import { appendRowsToFile } from '../jsonl/jsonl-writer'
-import { deviceJsonlPath, readPointerKey } from '../jsonl/paths'
+import { deviceDayJsonlPath, deviceJsonlPath, readPointerKey } from '../jsonl/paths'
 import {
   emptySyncState,
   loadSyncState,
@@ -201,6 +201,34 @@ describe('rebuildCacheFromMasterFiles', () => {
     await writeFile(path, '')
     const { pointers } = await rebuildCacheFromMasterFiles(db, tmpDir)
     expect(pointers[readPointerKey(UID_A, MY_HASH)]).toBeNull()
+  })
+
+  it('replays v7 per-day files alongside v6 flat files in one pass', async () => {
+    // v6 flat (legacy) at devices/{hash}.jsonl
+    await appendRowsToFile(deviceJsonlPath(tmpDir, UID_A, REMOTE_HASH), [
+      scope(REMOTE_HASH),
+      char(REMOTE_HASH, 'b', 2),
+    ])
+    // v7 per-day at devices/{hash}/{date}.jsonl
+    await appendRowsToFile(deviceDayJsonlPath(tmpDir, UID_A, MY_HASH, '2026-04-18'), [
+      scope(MY_HASH),
+      char(MY_HASH, 'a', 3),
+    ])
+    await appendRowsToFile(deviceDayJsonlPath(tmpDir, UID_A, MY_HASH, '2026-04-19'), [
+      char(MY_HASH, 'c', 4, 2_000),
+    ])
+
+    const { result, pointers } = await rebuildCacheFromMasterFiles(db, tmpDir)
+    expect(result.jsonlFilesRead).toBe(3)
+
+    const conn = db.getConnection()
+    const totals = conn.prepare('SELECT COUNT(*) AS n FROM typing_char_minute').get() as { n: number }
+    expect(totals.n).toBe(3)
+    // v7 day files are read after v6 flat; for a hash that has both, pointer
+    // lands on the last per-day row applied — `c` is the later day's only
+    // char row because both days share the same minute in this fixture.
+    expect(pointers[readPointerKey(UID_A, MY_HASH)]).toBe(char(MY_HASH, 'c', 4, 2_000).id)
+    expect(pointers[readPointerKey(UID_A, REMOTE_HASH)]).toBe(char(REMOTE_HASH, 'b', 2).id)
   })
 })
 

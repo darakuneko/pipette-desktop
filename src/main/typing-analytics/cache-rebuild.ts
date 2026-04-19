@@ -7,7 +7,11 @@
 
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import { readRows } from './jsonl/jsonl-reader'
-import { listAllDeviceJsonlFiles, readPointerKey } from './jsonl/paths'
+import {
+  listAllDeviceDayJsonlFiles,
+  listAllDeviceJsonlFiles,
+  readPointerKey,
+} from './jsonl/paths'
 import { DATA_TABLE_NAMES } from './db/schema'
 import type { TypingAnalyticsDB } from './db/typing-analytics-db'
 import {
@@ -37,12 +41,15 @@ export function truncateCache(db: TypingAnalyticsDB): void {
   })()
 }
 
-/** Read every `{sync}/keyboards/*\/devices/*.jsonl` from disk, apply each
- * row to `db` in order, and return the new `read_pointers` map plus the
- * number of rows touched in each table. Scope rows inside a single file
- * are applied before non-scope rows via `applyRowsToCache`; across files
- * scopes are interleaved with data rows but the cache merge is LWW so
- * ordering across files does not matter. */
+/** Read every JSONL master file from disk, apply its rows to `db` in
+ * order, and return the new `read_pointers` map plus the number of rows
+ * touched in each table. Both the v6 flat layout
+ * (`{uid}/devices/{hash}.jsonl`) and the v7 per-day layout
+ * (`{uid}/devices/{hash}/{YYYY-MM-DD}.jsonl`) are read so rebuilds
+ * survive the transition period. v6 files are applied first; v7 day
+ * files are applied in ascending date order afterwards, so for a hash
+ * that has both layouts the pointer lands on the latest per-day row.
+ * The cache merge is LWW, so file order does not affect row content. */
 export async function rebuildCacheFromMasterFiles(
   db: TypingAnalyticsDB,
   userDataDir: string,
@@ -51,7 +58,6 @@ export async function rebuildCacheFromMasterFiles(
   pointers: Record<string, string | null>
 }> {
   truncateCache(db)
-  const refs = await listAllDeviceJsonlFiles(userDataDir)
   const pointers: Record<string, string | null> = {}
   const result: CacheRebuildResult = {
     scopes: 0,
@@ -62,10 +68,14 @@ export async function rebuildCacheFromMasterFiles(
     jsonlFilesRead: 0,
   }
 
-  for (const ref of refs) {
+  const applyFile = async (ref: {
+    uid: string
+    machineHash: string
+    path: string
+  }): Promise<void> => {
     const { rows, lastId } = await readRows(ref.path)
     pointers[readPointerKey(ref.uid, ref.machineHash)] = lastId
-    if (rows.length === 0) continue
+    if (rows.length === 0) return
     const applied = applyRowsToCache(db, rows)
     result.scopes += applied.scopes
     result.charMinutes += applied.charMinutes
@@ -74,6 +84,17 @@ export async function rebuildCacheFromMasterFiles(
     result.sessions += applied.sessions
     result.jsonlFilesRead += 1
   }
+
+  // Scan both layouts in parallel; they walk overlapping trees so the
+  // filesystem cache warms once. Apply serially afterwards because v7
+  // files must run after v6 for a hash that has both, and the cache
+  // merge itself is sequential inside better-sqlite3.
+  const [flatRefs, dayRefs] = await Promise.all([
+    listAllDeviceJsonlFiles(userDataDir),
+    listAllDeviceDayJsonlFiles(userDataDir),
+  ])
+  for (const ref of flatRefs) await applyFile(ref)
+  for (const ref of dayRefs) await applyFile(ref)
 
   return { result, pointers }
 }

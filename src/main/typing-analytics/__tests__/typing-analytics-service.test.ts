@@ -36,6 +36,7 @@ vi.mock('node-machine-id', () => ({
   machineId: (original?: boolean) => mockMachineId(original),
 }))
 
+import { existsSync } from 'node:fs'
 import { ipcMain } from 'electron'
 import {
   setupTypingAnalytics,
@@ -52,6 +53,13 @@ import {
   deleteAllTypingForKeyboard,
   getMatrixHeatmap,
 } from '../typing-analytics-service'
+import {
+  deviceDayDir,
+  deviceDayJsonlPath,
+  listDeviceDays,
+} from '../jsonl/paths'
+import { readRows } from '../jsonl/jsonl-reader'
+import type { JsonlRow } from '../jsonl/jsonl-row'
 import * as installationIdModule from '../installation-id'
 import { getMachineHash, resetMachineHashCacheForTests } from '../machine-hash'
 import {
@@ -466,6 +474,98 @@ describe('typing-analytics-service', () => {
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: { uid: '', vendorId: 0, productId: 0, productName: '' } })
 
       expect(getMinuteBufferForTests().isEmpty()).toBe(true)
+    })
+  })
+
+  describe('v7 per-day JSONL output', () => {
+    async function readDayRows(uid: string, machineHash: string, utcDay: string): Promise<JsonlRow[]> {
+      const path = deviceDayJsonlPath(mockUserDataPath, uid, machineHash, utcDay)
+      const { rows } = await readRows(path)
+      return rows
+    }
+    const charsOnDay = (rows: JsonlRow[]): string[] =>
+      rows.flatMap((r) => (r.kind === 'char-minute' ? [r.payload.char] : []))
+
+    it('writes each flush to {hash}/{utcDay}.jsonl and mirrors the rows into the v6 flat path', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: ts + 100, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const hash = await getMachineHash()
+      const dayPath = deviceDayJsonlPath(mockUserDataPath, sampleKeyboard.uid, hash, '2026-04-14')
+      expect(existsSync(dayPath)).toBe(true)
+
+      // Transitional mirror: sync bundle + merge still read the flat
+      // file, so per-day writes mirror the same rows into it. The
+      // mirror is removed when sync switches to per-day enumeration.
+      const legacyPath = join(deviceDayDir(mockUserDataPath, sampleKeyboard.uid, hash), '..', `${hash}.jsonl`)
+      expect(existsSync(legacyPath)).toBe(true)
+
+      const rows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
+      expect(rows.some((r) => r.kind === 'scope')).toBe(true)
+      expect(rows.some((r) => r.kind === 'char-minute')).toBe(true)
+      expect(rows.some((r) => r.kind === 'minute-stats')).toBe(true)
+
+      const { rows: mirroredRows } = await readRows(legacyPath)
+      expect(mirroredRows.map((r) => r.id).sort()).toEqual(rows.map((r) => r.id).sort())
+    })
+
+    it('partitions a flush that spans 00:00 UTC into two day files', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const eveningMinute = Date.UTC(2026, 3, 14, 23, 30, 0)
+      const morningMinute = Date.UTC(2026, 3, 15, 0, 30, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'x', ts: eveningMinute, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'y', ts: morningMinute, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const hash = await getMachineHash()
+      const days = await listDeviceDays(mockUserDataPath, sampleKeyboard.uid, hash)
+      expect(days).toEqual(['2026-04-14', '2026-04-15'])
+
+      const eveningRows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
+      const morningRows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-15')
+      expect(charsOnDay(eveningRows)).toEqual(['x'])
+      expect(charsOnDay(morningRows)).toEqual(['y'])
+      expect(eveningRows.some((r) => r.kind === 'scope')).toBe(true)
+      expect(morningRows.some((r) => r.kind === 'scope')).toBe(true)
+    })
+
+    it('pins a session row to its startMs UTC day even when endMs crosses midnight', async () => {
+      setupTypingAnalyticsIpc()
+      const eventHandler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+      const flushHandler = getHandler(IpcChannels.TYPING_ANALYTICS_FLUSH)
+
+      const start = Date.UTC(2026, 3, 14, 23, 59, 50)
+      const end = Date.UTC(2026, 3, 15, 0, 0, 5)
+      await eventHandler(fakeEvent, { kind: 'char', key: 'a', ts: start, keyboard: sampleKeyboard })
+      await eventHandler(fakeEvent, { kind: 'char', key: 'b', ts: end, keyboard: sampleKeyboard })
+      await flushHandler(fakeEvent, sampleKeyboard.uid)
+
+      const hash = await getMachineHash()
+      const startDayRows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
+      const endDayRows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-15')
+      expect(startDayRows.some((r) => r.kind === 'session')).toBe(true)
+      expect(endDayRows.some((r) => r.kind === 'session')).toBe(false)
+    })
+
+    it('emits exactly one scope row per (uid, day) even with multiple snapshots', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const minuteOne = Date.UTC(2026, 3, 14, 10, 0, 0)
+      const minuteTwo = Date.UTC(2026, 3, 14, 10, 5, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts: minuteOne, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: minuteTwo, keyboard: sampleKeyboard })
+      await flushTypingAnalyticsNowForTests()
+
+      const hash = await getMachineHash()
+      const rows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
+      expect(rows.filter((r) => r.kind === 'scope')).toHaveLength(1)
     })
   })
 })
