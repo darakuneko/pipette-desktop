@@ -654,8 +654,8 @@
       "selectRow": "Select {{date}}",
       "deleteSelected": "Delete selected ({{count}})",
       "deleteAll": "Delete all for this keyboard",
-      "confirmDeleteSelected": "Delete {{count}} day(s)? Synced devices will drop the same data.",
-      "confirmDeleteAll": "Delete every recorded day for this keyboard? Synced devices will drop the same data.",
+      "confirmDeleteSelected": "Delete {{count}} day(s) of this device's records? Synced copies will drop too, days recorded by other devices remain.",
+      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? Synced copies will drop too, days recorded by other devices remain.",
       "noRemoteDevices": "No other devices have typed on this keyboard"
     }
   },
