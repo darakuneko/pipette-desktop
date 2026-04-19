@@ -89,6 +89,7 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_ITEMS_LOCAL: 'typing-analytics:list-items-local',
   TYPING_ANALYTICS_LIST_REMOTE_HASHES: 'typing-analytics:list-remote-hashes',
   TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
+  TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS: 'typing-analytics:list-local-device-days',
   TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES: 'typing-analytics:list-remote-cloud-hashes',
   TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS: 'typing-analytics:list-remote-cloud-days',
   TYPING_ANALYTICS_FETCH_REMOTE_DAY: 'typing-analytics:fetch-remote-day',

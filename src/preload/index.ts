@@ -221,6 +221,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES, uid),
   typingAnalyticsListItemsForHash: (uid: string, machineHash: string): Promise<TypingDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash),
+  typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsListRemoteCloudHashes: (uid: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES, uid),
   typingAnalyticsListRemoteCloudDays: (uid: string, machineHash: string): Promise<string[]> =>

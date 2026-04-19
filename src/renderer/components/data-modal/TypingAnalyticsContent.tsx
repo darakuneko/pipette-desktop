@@ -51,17 +51,19 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
     setLoading(true)
     try {
       if (isSync) {
-        // Lazy fetch: discover which days cloud currently has for this
-        // remote device and pull any that aren't already in the local
-        // cache. `fetchRemoteTypingDay` writes to the per-day file and
-        // replays rows via the LWW merge path, so a repeated fetch is
-        // a no-op on the cache side.
+        // Lazy fetch: pull any day cloud currently holds for this
+        // remote device that isn't already in the local per-day tree.
+        // The "known" set must be compared in UTC-day space because
+        // the cloud listing is UTC but the daily-summary query groups
+        // by local calendar day; mixing the two caused every Sync
+        // view open to re-download the same days in non-UTC timezones.
         try {
-          const cloudDays = await window.vialAPI.typingAnalyticsListRemoteCloudDays(uid, machineHash!)
-          const knownDates = new Set(
-            (await window.vialAPI.typingAnalyticsListItemsForHash(uid, machineHash!)).map((s) => s.date),
-          )
-          const toFetch = cloudDays.filter((d) => !knownDates.has(d))
+          const [cloudDays, localDays] = await Promise.all([
+            window.vialAPI.typingAnalyticsListRemoteCloudDays(uid, machineHash!),
+            window.vialAPI.typingAnalyticsListLocalDeviceDays(uid, machineHash!),
+          ])
+          const knownUtcDays = new Set(localDays)
+          const toFetch = cloudDays.filter((d) => !knownUtcDays.has(d))
           for (const day of toFetch) {
             await window.vialAPI.typingAnalyticsFetchRemoteDay(uid, machineHash!, day)
           }

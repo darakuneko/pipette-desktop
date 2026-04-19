@@ -212,6 +212,15 @@ export function setupTypingAnalyticsIpc(): void {
       return listTypingDailySummariesForHash(uid, machineHash)
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS,
+    async (_event, uid: unknown, machineHash: unknown): Promise<UtcDay[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      return listDeviceDays(app.getPath('userData'), uid, machineHash)
+    },
+  )
 }
 
 /**
