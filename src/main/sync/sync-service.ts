@@ -902,6 +902,38 @@ export async function listRemoteTypingDaysFor(
   return Array.from(days.keys()).sort()
 }
 
+/** Delete the cloud copy of a specific (uid, machineHash, day) and
+ * its local mirror if we previously downloaded it. Used by the Sync >
+ * Typing > Device > Delete-day UX: another device's record is gone
+ * from cloud, and when that device next syncs the reconcile pass will
+ * see its `uploaded` entry without a cloud file and drop its own
+ * local copy (rule 3). Own-hash cache rows are accepted as stale until
+ * the next rebuild — they live in the machine that owns the day.
+ * Returns `true` when a cloud delete actually ran, `false` when the
+ * user is unauthenticated or the cloud file was already missing. */
+export async function deleteRemoteTypingDay(
+  uid: string,
+  machineHash: string,
+  utcDay: UtcDay,
+): Promise<boolean> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return false
+  const remoteFiles = await listFiles()
+  const targetName = driveFileName(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, utcDay))
+  const remoteFile = remoteFiles.find((f) => f.name === targetName)
+  const userData = app.getPath('userData')
+  try {
+    await unlink(deviceDayJsonlPath(userData, uid, machineHash, utcDay))
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+      log('warn', `typing-analytics local delete failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
+    }
+  }
+  if (!remoteFile) return false
+  await deleteFile(remoteFile.id)
+  return true
+}
+
 /** Lazily fetch a single remote (uid, machineHash, day) into the
  * local cache. Returns `true` when the day was downloaded and merged,
  * `false` when the cloud copy was missing or a credential check failed.
