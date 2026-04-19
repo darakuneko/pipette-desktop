@@ -10,6 +10,7 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { dismissNotificationModal } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -31,19 +32,6 @@ async function interceptFileDialog(app: ElectronApplication): Promise<void> {
     },
     FIXTURE_PATH,
   )
-}
-
-async function dismissNotificationModal(page: Page): Promise<void> {
-  const backdrop = page.locator('[data-testid="notification-modal-backdrop"]')
-  if (!(await backdrop.isVisible())) return
-
-  const closeBtn = page.locator('[data-testid="notification-modal-close"]')
-  if ((await closeBtn.count()) > 0) {
-    await closeBtn.click()
-  } else {
-    await backdrop.click({ position: { x: 10, y: 10 } })
-  }
-  await page.waitForTimeout(500)
 }
 
 async function ensureOverlayOpen(page: Page): Promise<void> {
@@ -74,7 +62,7 @@ async function main(): Promise<void> {
   await page.waitForTimeout(3000)
 
   try {
-    await dismissNotificationModal(page)
+    await dismissNotificationModal(page, { waitForAppearMs: 3000 })
     await interceptFileDialog(app)
 
     const dummyBtn = page.locator('[data-testid="dummy-button"]')
