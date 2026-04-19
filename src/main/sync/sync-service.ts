@@ -11,10 +11,12 @@ import {
   listFiles,
   downloadFile,
   uploadFile,
+  deleteFile,
   driveFileName,
   syncUnitFromFileName,
   type DriveFile,
 } from './google-drive'
+import { unlink } from 'node:fs/promises'
 import { pLimit } from '../../shared/concurrency'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { mergeEntries, gcTombstones } from './merge'
@@ -29,6 +31,7 @@ import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/ty
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   parseTypingAnalyticsDeviceSyncUnit,
+  typingAnalyticsDeviceDaySyncUnit,
 } from '../typing-analytics/sync'
 import { applyRowsToCache } from '../typing-analytics/jsonl/apply-to-cache'
 import { readRows } from '../typing-analytics/jsonl/jsonl-reader'
@@ -37,6 +40,7 @@ import {
   deviceDayJsonlPath,
   deviceJsonlPath,
   devicesDir,
+  listDeviceDays,
   readPointerKey,
 } from '../typing-analytics/jsonl/paths'
 import type { UtcDay } from '../typing-analytics/jsonl/utc-day'
@@ -44,8 +48,10 @@ import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import {
   emptySyncState,
+  isReconcilePending,
   loadSyncState,
   saveSyncState,
+  type TypingSyncState,
 } from '../typing-analytics/sync-state'
 import { log } from '../logger'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
@@ -746,16 +752,164 @@ async function executeDownloadSync(
   return failedUnits
 }
 
+/** Scan the remote file list for v7 per-day typing-analytics units
+ * owned by `ownHash`, grouped by keyboard uid. Units with a malformed
+ * filename are skipped. */
+function collectRemoteOwnHashDays(
+  remoteFiles: DriveFile[],
+  ownHash: string,
+): Map<string, Map<UtcDay, DriveFile>> {
+  const perUid = new Map<string, Map<UtcDay, DriveFile>>()
+  for (const file of remoteFiles) {
+    const unit = syncUnitFromFileName(file.name)
+    if (!unit) continue
+    const ref = parseTypingAnalyticsDeviceDaySyncUnit(unit)
+    if (!ref || ref.machineHash !== ownHash) continue
+    let byDay = perUid.get(ref.uid)
+    if (!byDay) {
+      byDay = new Map<UtcDay, DriveFile>()
+      perUid.set(ref.uid, byDay)
+    }
+    byDay.set(ref.utcDay, file)
+  }
+  return perUid
+}
+
+/** Reconcile the own-hash cloud state with local + uploaded bookkeeping
+ * before the regular upload pass runs. Three transitions are applied:
+ *
+ *   Rule 2 — `uploaded` has day X, local does not: user or Local-delete
+ *     removed the file locally → delete the cloud copy as well.
+ *   Rule 3 — `uploaded` has day X, cloud does not: a Sync-delete from
+ *     another device or a GC step removed the cloud copy → drop the
+ *     local file and let the next cache rebuild resync (rows added
+ *     post-delete are preserved because they were never in `uploaded`).
+ *   Orphan — when `reconciled_at` is pending for (uid, ownHash), also
+ *     delete any cloud day that is neither in local nor in `uploaded`
+ *     (leftover from a previous install / pre-migration state).
+ *
+ * Rules 2 and 3 run on every pass; orphan cleanup only on the first
+ * pass after a cache rebuild or fresh install, then `reconciled_at`
+ * is timestamped so the expensive listing is skipped afterwards. */
+async function reconcileOwnHashTypingAnalytics(
+  remoteFiles: DriveFile[],
+  userData: string,
+  ownHash: string,
+): Promise<{ state: TypingSyncState; mutated: boolean }> {
+  const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
+  const remotePerUid = collectRemoteOwnHashDays(remoteFiles, ownHash)
+
+  // Every uid that appears in any of the three sources needs a pass:
+  // local files, uploaded bookkeeping, or remote cloud listing. Union
+  // them so a fully-remote-only uid (no local files left) still gets
+  // reconciled.
+  const candidateUids = new Set<string>()
+  for (const key of Object.keys(state.uploaded)) {
+    const parts = key.split('|')
+    if (parts.length === 2 && parts[1] === ownHash) candidateUids.add(parts[0])
+  }
+  for (const uid of remotePerUid.keys()) candidateUids.add(uid)
+  try {
+    for (const entry of await readdir(join(userData, 'sync', 'keyboards'), { withFileTypes: true })) {
+      if (entry.isDirectory()) candidateUids.add(entry.name)
+    }
+  } catch { /* no keyboards dir */ }
+
+  let mutated = false
+  for (const uid of candidateUids) {
+    const pointerKey = readPointerKey(uid, ownHash)
+    const localDays = new Set<UtcDay>(await listDeviceDays(userData, uid, ownHash))
+    const uploadedDays = new Set<UtcDay>(state.uploaded[pointerKey] ?? [])
+    const cloudDays = remotePerUid.get(uid) ?? new Map<UtcDay, DriveFile>()
+
+    // Rule 2: uploaded but not local — delete from cloud.
+    for (const day of Array.from(uploadedDays)) {
+      if (localDays.has(day)) continue
+      const cloudFile = cloudDays.get(day)
+      if (cloudFile) {
+        try {
+          await deleteFile(cloudFile.id)
+        } catch (err) {
+          log('warn', `typing-analytics cloud delete failed for ${uid} ${day}: ${String(err)}`)
+        }
+        cloudDays.delete(day)
+      }
+      uploadedDays.delete(day)
+      mutated = true
+    }
+
+    // Rule 3: uploaded but not cloud — another device Sync-deleted us.
+    for (const day of Array.from(uploadedDays)) {
+      if (cloudDays.has(day)) continue
+      try {
+        await unlink(deviceDayJsonlPath(userData, uid, ownHash, day))
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          log('warn', `typing-analytics local delete failed for ${uid} ${day}: ${String(err)}`)
+        }
+      }
+      localDays.delete(day)
+      uploadedDays.delete(day)
+      mutated = true
+    }
+
+    // Orphan cleanup on first reconcile only. Cloud days that are
+    // neither local nor in `uploaded` are leftovers (pre-migration
+    // flat bundles converted to per-day, or data from a removed
+    // install). Deleting them avoids surprising re-download prompts.
+    if (isReconcilePending(state, uid, ownHash)) {
+      for (const [day, cloudFile] of Array.from(cloudDays.entries())) {
+        if (localDays.has(day) || uploadedDays.has(day)) continue
+        try {
+          await deleteFile(cloudFile.id)
+        } catch (err) {
+          log('warn', `typing-analytics orphan delete failed for ${uid} ${day}: ${String(err)}`)
+        }
+        cloudDays.delete(day)
+      }
+      state.reconciled_at[pointerKey] = Date.now()
+      mutated = true
+    }
+
+    // Persist the trimmed uploaded list (sorted for determinism so
+    // the JSON-on-disk diff stays stable).
+    state.uploaded[pointerKey] = Array.from(uploadedDays).sort()
+  }
+
+  if (mutated) {
+    state.last_synced_at = Date.now()
+    await saveSyncState(userData, state)
+  }
+  return { state, mutated }
+}
+
 async function executeUploadSync(
   password: string,
   prefetchedFiles?: DriveFile[],
   scope: SyncScope = 'all',
 ): Promise<string[]> {
+  const remoteFilesInitial = prefetchedFiles ?? await listFiles()
+  // Run own-hash typing-analytics reconcile before collecting units so
+  // deleted cloud days don't get re-uploaded and vice-versa. The
+  // reconcile only deletes when it detects a divergence; when nothing
+  // changed we reuse the initial snapshot to keep the N+1 invariant.
+  let mutatedDuringReconcile = false
+  try {
+    const ownHash = await getMachineHash()
+    const result = await reconcileOwnHashTypingAnalytics(
+      remoteFilesInitial,
+      app.getPath('userData'),
+      ownHash,
+    )
+    mutatedDuringReconcile = result.mutated
+  } catch (err) {
+    log('warn', `typing-analytics reconcile failed: ${String(err)}`)
+  }
   let syncUnits = await collectAllSyncUnits()
   if (scope !== 'all') {
     syncUnits = syncUnits.filter((unit) => matchesScope(unit, scope))
   }
-  const remoteFiles = prefetchedFiles ?? await listFiles()
+  const remoteFiles = mutatedDuringReconcile ? await listFiles() : remoteFilesInitial
   updateRemoteState(remoteFiles)
   const total = syncUnits.length
   let completed = 0

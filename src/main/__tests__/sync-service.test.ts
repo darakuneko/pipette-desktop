@@ -41,6 +41,7 @@ vi.mock('electron', () => ({
 const mockListFiles = vi.fn(async () => [])
 const mockDownloadFile = vi.fn(async () => ({}))
 const mockUploadFile = vi.fn(async () => 'file-id')
+const mockDeleteFile = vi.fn(async () => {})
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
   const deviceMatch = name.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
@@ -56,6 +57,7 @@ vi.mock('../sync/google-drive', () => ({
   listFiles: (...args: unknown[]) => mockListFiles(...args),
   downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
   uploadFile: (...args: unknown[]) => mockUploadFile(...args),
+  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
   driveFileName: (...args: unknown[]) => mockDriveFileName(...args),
   syncUnitFromFileName: (...args: unknown[]) => mockSyncUnitFromFileName(...args),
 }))
