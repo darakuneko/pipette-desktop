@@ -215,6 +215,18 @@ const vialAPI = {
     sinceMs: number,
   ): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
+  typingAnalyticsListItemsLocal: (uid: string): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid),
+  typingAnalyticsListRemoteHashes: (uid: string): Promise<string[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES, uid),
+  typingAnalyticsListItemsForHash: (uid: string, machineHash: string): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash),
+  typingAnalyticsListRemoteCloudDays: (uid: string, machineHash: string): Promise<string[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS, uid, machineHash),
+  typingAnalyticsFetchRemoteDay: (uid: string, machineHash: string, utcDay: string): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FETCH_REMOTE_DAY, uid, machineHash, utcDay),
+  typingAnalyticsDeleteRemoteDay: (uid: string, machineHash: string, utcDay: string): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAY, uid, machineHash, utcDay),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>

@@ -178,6 +178,35 @@ export function setupTypingAnalyticsIpc(): void {
       return getMatrixHeatmap(uid, layer, sinceMs)
     },
   )
+
+  // v7 Local / Sync split handlers. The Local tab filters to own hash,
+  // the Sync tab iterates remote hashes. Cloud-facing handlers are
+  // wired into sync-service so they share the same credential check.
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL,
+    async (_event, uid: unknown): Promise<TypingDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const ownHash = await getMachineHash()
+      return listTypingDailySummariesForHash(uid, ownHash)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES,
+    async (_event, uid: unknown): Promise<string[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      return listTypingRemoteHashesForUid(uid)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown): Promise<TypingDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      return listTypingDailySummariesForHash(uid, machineHash)
+    },
+  )
 }
 
 /**
@@ -218,6 +247,24 @@ export function listTypingKeyboards(): TypingKeyboardSummary[] {
 /** Day-level summaries for one keyboard uid, newest first. */
 export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
   return getTypingAnalyticsDB().listDailySummariesForUid(uid)
+}
+
+/** Day-level summaries restricted to a single `machineHash`. When
+ * called with the local machine hash it powers the Local tab; with a
+ * remote hash it powers the Sync > Device tab. */
+export function listTypingDailySummariesForHash(
+  uid: string,
+  machineHash: string,
+): TypingDailySummary[] {
+  return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash)
+}
+
+/** Remote `machineHash` values with live data for this keyboard —
+ * used to populate the Sync > Typing > Device subnodes. Own hash is
+ * resolved here so callers don't need to fetch it separately. */
+export async function listTypingRemoteHashesForUid(uid: string): Promise<string[]> {
+  const ownHash = await getMachineHash()
+  return getTypingAnalyticsDB().listRemoteHashesForUid(uid, ownHash)
 }
 
 /** Heatmap intensity for the typing-view overlay: summed matrix counts

@@ -33,6 +33,9 @@ import {
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  deleteRemoteTypingDay,
+  fetchRemoteTypingDay,
+  listRemoteTypingDaysFor,
   SyncCredentialError,
 } from './sync-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
@@ -502,6 +505,36 @@ export function setupSyncIpc(): void {
 
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
+
+  // --- Typing analytics cloud operations (Sync tab) ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS,
+    async (_event, uid: unknown, machineHash: unknown): Promise<string[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      return listRemoteTypingDaysFor(uid, machineHash)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_FETCH_REMOTE_DAY,
+    async (_event, uid: unknown, machineHash: unknown, utcDay: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return false
+      if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
+      return fetchRemoteTypingDay(uid, machineHash, utcDay)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAY,
+    async (_event, uid: unknown, machineHash: unknown, utcDay: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return false
+      if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
+      return deleteRemoteTypingDay(uid, machineHash, utcDay)
+    },
+  )
 
   // --- Change notification (from stores) ---
   secureOn(IpcChannels.SYNC_NOTIFY_CHANGE, (_event, syncUnit: string) => {

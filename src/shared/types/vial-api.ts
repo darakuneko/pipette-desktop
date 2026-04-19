@@ -141,6 +141,12 @@ export interface VialAPI {
   typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
   typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
   typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
+  typingAnalyticsListItemsLocal(uid: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListRemoteHashes(uid: string): Promise<string[]>
+  typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
+  typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
+  typingAnalyticsDeleteRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>
