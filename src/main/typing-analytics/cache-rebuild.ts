@@ -5,6 +5,7 @@
 // user rows, re-reads every master file, and re-applies every row via
 // the LWW merge path. See .claude/plans/typing-analytics.md.
 
+import { unlink } from 'node:fs/promises'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import { readRows } from './jsonl/jsonl-reader'
 import {
@@ -99,6 +100,28 @@ export async function rebuildCacheFromMasterFiles(
   return { result, pointers }
 }
 
+/** Remove any v6 flat JSONL files discovered on disk. Safe to call
+ * after rebuildCacheFromMasterFiles because the rows have already
+ * been replayed into the cache from both the flat and per-day files.
+ * Silently skips files that were already removed between the listing
+ * and the unlink (expected on repeated runs). */
+export async function cleanupLegacyFlatMasterFiles(userDataDir: string): Promise<number> {
+  const refs = await listAllDeviceJsonlFiles(userDataDir)
+  let removed = 0
+  for (const ref of refs) {
+    try {
+      await unlink(ref.path)
+      removed += 1
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+        // Leave unexpected errors for the caller's log/tests to surface.
+        throw err
+      }
+    }
+  }
+  return removed
+}
+
 export interface EnsureCacheOptions {
   /** Force a rebuild regardless of sync-state contents. Used by tests
    * and the schema-migration path. */
@@ -132,6 +155,15 @@ export async function ensureCacheIsFresh(
   }
 
   const { pointers } = await rebuildCacheFromMasterFiles(db, userDataDir)
+  // One-shot v7 migration: per-day files are the canonical master now,
+  // so delete any v6 flat `{hash}.jsonl` files after their rows have
+  // been replayed. Failures are tolerated — the flat files are still
+  // harmless, they just become a leftover the next rebuild will re-read.
+  try {
+    await cleanupLegacyFlatMasterFiles(userDataDir)
+  } catch {
+    /* non-fatal; rerun on next rebuild */
+  }
   const state: TypingSyncState = {
     ...emptySyncState(myDeviceId),
     read_pointers: pointers,
