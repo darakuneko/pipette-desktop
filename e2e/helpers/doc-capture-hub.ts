@@ -10,6 +10,7 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
+import { dismissOverlay, isAvailable } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -95,23 +96,6 @@ function restoreDocFavorites({ indexBackups, createdFiles }: SeedBackup): void {
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
-
-async function isAvailable(locator: Locator): Promise<boolean> {
-  return (await locator.count()) > 0
-}
-
-async function dismissOverlay(page: Page, backdropId: string, closeId: string, fallback: () => Promise<void>): Promise<void> {
-  const backdrop = page.locator(`[data-testid="${backdropId}"]`)
-  if (!(await backdrop.isVisible())) return
-
-  const closeBtn = page.locator(`[data-testid="${closeId}"]`)
-  if (await isAvailable(closeBtn)) {
-    await closeBtn.click()
-  } else {
-    await fallback()
-  }
-  await page.waitForTimeout(500)
 }
 
 async function dismissOverlays(page: Page): Promise<void> {

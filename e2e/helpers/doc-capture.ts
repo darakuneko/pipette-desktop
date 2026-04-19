@@ -6,6 +6,7 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
+import { dismissNotificationModal, isAvailable } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -13,10 +14,6 @@ const DEVICE_NAME = 'GPK60-63R'
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
-
-async function isAvailable(locator: Locator): Promise<boolean> {
-  return (await locator.count()) > 0
 }
 
 // Click a tree-nav branch button only when it reports aria-expanded=false, so
@@ -78,20 +75,6 @@ async function captureNamed(
   opts?: { element?: Locator; fullPage?: boolean },
 ): Promise<void> {
   await takeScreenshot(page, `${name}.png`, '--', opts)
-}
-
-async function dismissNotificationModal(page: Page): Promise<void> {
-  const backdrop = page.locator('[data-testid="notification-modal-backdrop"]')
-  if (await backdrop.isVisible()) {
-    console.log('Dismissing notification modal...')
-    const closeBtn = page.locator('[data-testid="notification-modal-close"]')
-    if (await isAvailable(closeBtn)) {
-      await closeBtn.click()
-    } else {
-      await backdrop.click({ position: { x: 10, y: 10 } })
-    }
-    await page.waitForTimeout(500)
-  }
 }
 
 async function waitForUnlockDialog(page: Page): Promise<void> {
@@ -1167,7 +1150,10 @@ async function main(): Promise<void> {
   await page.waitForTimeout(3000)
 
   try {
-    await dismissNotificationModal(page)
+    // First post-launch call: wait a bit for the async startup-notification
+    // fetch to land so we don't race past it and capture a later screen with
+    // the modal still up.
+    await dismissNotificationModal(page, { waitForAppearMs: 3000 })
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults

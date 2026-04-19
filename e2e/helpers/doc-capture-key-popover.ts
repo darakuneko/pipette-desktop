@@ -7,9 +7,10 @@
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-key-popover.ts
 
 import { _electron as electron } from '@playwright/test'
-import type { Page, Locator } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
+import { dismissNotificationModal, isAvailable } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -19,27 +20,10 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
 }
 
-async function isAvailable(locator: Locator): Promise<boolean> {
-  return (await locator.count()) > 0
-}
-
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   await page.screenshot({ path, fullPage: true })
   console.log(`  [ok] ${name}`)
-}
-
-async function dismissNotificationModal(page: Page): Promise<void> {
-  const backdrop = page.locator('[data-testid="notification-modal-backdrop"]')
-  if (!(await backdrop.isVisible())) return
-
-  const closeBtn = page.locator('[data-testid="notification-modal-close"]')
-  if ((await closeBtn.count()) > 0) {
-    await closeBtn.click()
-  } else {
-    await backdrop.click({ position: { x: 10, y: 10 } })
-  }
-  await page.waitForTimeout(500)
 }
 
 async function main(): Promise<void> {
@@ -61,7 +45,7 @@ async function main(): Promise<void> {
   await page.waitForTimeout(3000)
 
   try {
-    await dismissNotificationModal(page)
+    await dismissNotificationModal(page, { waitForAppearMs: 3000 })
 
     // Connect to device
     const deviceList = page.locator('[data-testid="device-list"]')
