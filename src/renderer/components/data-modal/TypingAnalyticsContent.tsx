@@ -10,6 +10,16 @@ interface Props {
   name: string
   /** Called after a delete (partial or full) clears the current view. */
   onDeleted?: () => void
+  /** Local tab by default. `"sync"` flips this component into a
+   * single-remote-device view where summaries come from the hash-
+   * scoped query and deletes route to the Sync-delete cloud path. */
+  mode?: 'local' | 'sync'
+  /** Required for `mode === "sync"`. Identifies which remote device's
+   * days are being shown and acted on. */
+  machineHash?: string
+  /** Optional heading suffix (e.g. device label) appended next to the
+   * keyboard name for the Sync view. */
+  deviceLabel?: string
 }
 
 const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -28,18 +38,21 @@ function formatActiveMs(ms: number): string {
 
 type ConfirmMode = 'selected' | 'all' | null
 
-export function TypingAnalyticsContent({ uid, name, onDeleted }: Props) {
+export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', machineHash, deviceLabel }: Props) {
   const { t } = useTranslation()
   const [summaries, setSummaries] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>(null)
   const [busy, setBusy] = useState(false)
+  const isSync = mode === 'sync' && typeof machineHash === 'string'
 
   const loadSummaries = useCallback(async () => {
     setLoading(true)
     try {
-      const rows = await window.vialAPI.typingAnalyticsListItems(uid)
+      const rows = isSync
+        ? await window.vialAPI.typingAnalyticsListItemsForHash(uid, machineHash!)
+        : await window.vialAPI.typingAnalyticsListItemsLocal(uid)
       setSummaries(rows)
       setSelected(new Set())
     } catch {
@@ -47,7 +60,7 @@ export function TypingAnalyticsContent({ uid, name, onDeleted }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [uid])
+  }, [uid, machineHash, isSync])
 
   useEffect(() => {
     void loadSummaries()
@@ -80,26 +93,38 @@ export function TypingAnalyticsContent({ uid, name, onDeleted }: Props) {
     const clearsView = summaries.length === selected.size
     setBusy(true)
     try {
-      await window.vialAPI.typingAnalyticsDeleteItems(uid, Array.from(selected))
+      if (isSync) {
+        for (const date of selected) {
+          await window.vialAPI.typingAnalyticsDeleteRemoteDay(uid, machineHash!, date)
+        }
+      } else {
+        await window.vialAPI.typingAnalyticsDeleteItems(uid, Array.from(selected))
+      }
       setConfirmMode(null)
       await loadSummaries()
       if (clearsView) onDeleted?.()
     } finally {
       setBusy(false)
     }
-  }, [uid, selected, summaries.length, loadSummaries, onDeleted])
+  }, [uid, machineHash, isSync, selected, summaries.length, loadSummaries, onDeleted])
 
   const handleDeleteAll = useCallback(async () => {
     setBusy(true)
     try {
-      await window.vialAPI.typingAnalyticsDeleteAll(uid)
+      if (isSync) {
+        for (const summary of summaries) {
+          await window.vialAPI.typingAnalyticsDeleteRemoteDay(uid, machineHash!, summary.date)
+        }
+      } else {
+        await window.vialAPI.typingAnalyticsDeleteAll(uid)
+      }
       setConfirmMode(null)
       await loadSummaries()
       onDeleted?.()
     } finally {
       setBusy(false)
     }
-  }, [uid, loadSummaries, onDeleted])
+  }, [uid, machineHash, isSync, summaries, loadSummaries, onDeleted])
 
   const footer = (
     <div className="mt-4 border-t border-edge pt-3 shrink-0">
@@ -196,7 +221,7 @@ export function TypingAnalyticsContent({ uid, name, onDeleted }: Props) {
       <div className="flex items-center justify-between py-2 text-[13px] text-content-muted shrink-0">
         <span>
           {t('dataModal.typing.summaryHeader', {
-            name,
+            name: deviceLabel ? `${name} — ${deviceLabel}` : name,
             days: summaries.length,
             keystrokes: totalKeystrokes.toLocaleString(),
           })}

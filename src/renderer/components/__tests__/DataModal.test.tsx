@@ -33,6 +33,12 @@ const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockTypingAnalyticsListKeyboards = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListItems = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItemsLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItemsForHash = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListRemoteHashes = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
+const mockTypingAnalyticsDeleteRemoteDay = vi.fn().mockResolvedValue(true)
 const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
 const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
 
@@ -51,6 +57,12 @@ Object.defineProperty(window, 'vialAPI', {
     importLocalData: mockImportLocalData,
     typingAnalyticsListKeyboards: mockTypingAnalyticsListKeyboards,
     typingAnalyticsListItems: mockTypingAnalyticsListItems,
+    typingAnalyticsListItemsLocal: mockTypingAnalyticsListItemsLocal,
+    typingAnalyticsListItemsForHash: mockTypingAnalyticsListItemsForHash,
+    typingAnalyticsListRemoteHashes: mockTypingAnalyticsListRemoteHashes,
+    typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
+    typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
+    typingAnalyticsDeleteRemoteDay: mockTypingAnalyticsDeleteRemoteDay,
     typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
     typingAnalyticsDeleteAll: mockTypingAnalyticsDeleteAll,
   },
@@ -106,6 +118,12 @@ describe('DataModal', () => {
     mockListStoredKeyboards.mockResolvedValue([])
     mockTypingAnalyticsListKeyboards.mockResolvedValue([])
     mockTypingAnalyticsListItems.mockResolvedValue([])
+    mockTypingAnalyticsListItemsLocal.mockResolvedValue([])
+    mockTypingAnalyticsListItemsForHash.mockResolvedValue([])
+    mockTypingAnalyticsListRemoteHashes.mockResolvedValue([])
+    mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
+    mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
+    mockTypingAnalyticsDeleteRemoteDay.mockResolvedValue(true)
     mockTypingAnalyticsDeleteItems.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     mockTypingAnalyticsDeleteAll.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     resetDataNavCache()

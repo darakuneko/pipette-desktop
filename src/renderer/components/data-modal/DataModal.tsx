@@ -220,6 +220,20 @@ export function DataModal({
       )
     }
 
+    if (path.page === 'sync-typing-device') {
+      return (
+        <TypingAnalyticsContent
+          key={`sync-typing-${path.uid}-${path.machineHash}`}
+          uid={path.uid}
+          name={path.name}
+          mode="sync"
+          machineHash={path.machineHash}
+          deviceLabel={path.deviceLabel}
+          onDeleted={() => { void nav.refreshTypingKeyboards() }}
+        />
+      )
+    }
+
     if (path.page === 'hub-keyboard') {
       const filtered = hubPostsFiltered.filter((p) => p.keyboard_name === path.keyboardName)
       return renderHubContent(filtered)
