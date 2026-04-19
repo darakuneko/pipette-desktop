@@ -288,6 +288,8 @@ export function DataModal({
               onSyncKeyboardSelect={nav.onSyncKeyboardSelect}
               downloadingUid={nav.downloadingUid}
               downloadErrorByUid={nav.downloadErrorByUid}
+              remoteTypingHashes={nav.remoteTypingHashes}
+              ensureRemoteTypingHashes={nav.ensureRemoteTypingHashes}
             />
           </div>
 

@@ -654,7 +654,8 @@
       "deleteSelected": "選択した日を削除 ({{count}})",
       "deleteAll": "このキーボードの全データを削除",
       "confirmDeleteSelected": "{{count}} 日分を削除しますか？ 同期先の端末からも同じデータが削除されます。",
-      "confirmDeleteAll": "このキーボードの全ての日を削除しますか？ 同期先の端末からも同じデータが削除されます。"
+      "confirmDeleteAll": "このキーボードの全ての日を削除しますか？ 同期先の端末からも同じデータが削除されます。",
+      "noRemoteDevices": "このキーボードを他のデバイスで打ったデータはありません"
     }
   },
   "editorSettings": {

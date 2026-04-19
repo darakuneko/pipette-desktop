@@ -39,6 +39,24 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   const [syncScanning, setSyncScanning] = useState(false)
   const syncScannedRef = useRef(false)
 
+  // Remote typing hashes keyed by uid — populated lazily when the user
+  // expands Sync > Typing > {keyboard} so startup stays quiet.
+  const [remoteTypingHashes, setRemoteTypingHashes] = useState<Record<string, string[]>>({})
+  const remoteTypingFetchedRef = useRef<Set<string>>(new Set())
+  const refreshRemoteTypingHashes = useCallback(async (uid: string) => {
+    try {
+      const hashes = await window.vialAPI.typingAnalyticsListRemoteHashes(uid)
+      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: hashes }))
+    } catch {
+      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: [] }))
+    }
+  }, [])
+  const ensureRemoteTypingHashes = useCallback((uid: string) => {
+    if (remoteTypingFetchedRef.current.has(uid)) return
+    remoteTypingFetchedRef.current.add(uid)
+    void refreshRemoteTypingHashes(uid)
+  }, [refreshRemoteTypingHashes])
+
   // Lazy-download state for sync keyboards
   const [downloadingUid, setDownloadingUid] = useState<string | null>(null)
   const [downloadErrorByUid, setDownloadErrorByUid] = useState<Record<string, string>>({})
@@ -173,5 +191,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     onSyncKeyboardSelect,
     downloadingUid,
     downloadErrorByUid,
+    remoteTypingHashes,
+    ensureRemoteTypingHashes,
   }
 }
