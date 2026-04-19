@@ -44,6 +44,8 @@ const mockUploadFile = vi.fn(async () => 'file-id')
 const mockDeleteFile = vi.fn(async () => {})
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
+  const dayMatch = name.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
+  if (dayMatch) return `keyboards/${dayMatch[1]}/devices/${dayMatch[2]}/days/${dayMatch[3]}`
   const deviceMatch = name.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
   if (deviceMatch) return `keyboards/${deviceMatch[1]}/devices/${deviceMatch[2]}`
   const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
@@ -135,10 +137,23 @@ vi.mock('../typing-analytics/machine-hash', () => ({
   getMachineHash: vi.fn(async () => 'test-machine-hash'),
 }))
 
+interface MockTypingSyncState {
+  _rev: 2
+  my_device_id: string
+  read_pointers: Record<string, string | null>
+  uploaded: Record<string, string[]>
+  reconciled_at: Record<string, number | null>
+  last_synced_at: number
+}
+let mockSyncState: MockTypingSyncState | null = null
+const mockLoadSyncState = vi.fn(async () => mockSyncState ? { ...mockSyncState } : null)
+const mockSaveSyncState = vi.fn(async (_userData: string, state: MockTypingSyncState) => {
+  mockSyncState = state
+})
 vi.mock('../typing-analytics/sync-state', () => ({
-  loadSyncState: vi.fn(async () => null),
-  saveSyncState: vi.fn(async () => {}),
-  emptySyncState: (myDeviceId: string) => ({
+  loadSyncState: (...args: unknown[]) => mockLoadSyncState(...args as [string]),
+  saveSyncState: (...args: unknown[]) => mockSaveSyncState(...args as [string, MockTypingSyncState]),
+  emptySyncState: (myDeviceId: string): MockTypingSyncState => ({
     _rev: 2,
     my_device_id: myDeviceId,
     read_pointers: {},
@@ -146,6 +161,10 @@ vi.mock('../typing-analytics/sync-state', () => ({
     reconciled_at: {},
     last_synced_at: 0,
   }),
+  isReconcilePending: (state: MockTypingSyncState, uid: string, hash: string): boolean => {
+    const v = state.reconciled_at[`${uid}|${hash}`]
+    return v === undefined || v === null
+  },
 }))
 
 vi.stubGlobal('fetch', vi.fn())
@@ -289,6 +308,7 @@ describe('sync-service', () => {
     vi.useFakeTimers(FAKE_TIMER_OPTS)
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'sync-service-test-'))
     mockAutoSync = false
+    mockSyncState = null
     _resetForTests()
   })
 
@@ -1813,6 +1833,150 @@ describe('sync-service', () => {
 
       expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
       expect(app.quit).toHaveBeenCalled()
+    })
+  })
+
+  // v7 sync scenario coverage. These tests exercise the per-day
+  // upload / reconcile / delete code paths with a stateful sync-state
+  // mock and a real filesystem tmpDir for local JSONL files, while
+  // Google Drive calls stay mocked.
+  describe('v7 typing-analytics sync scenarios', () => {
+    const OWN_HASH = 'test-machine-hash'
+    const REMOTE_HASH = 'remote-hash-xyz'
+    const UID = '0xDEAD'
+    const cloudFileName = (hash: string, day: string): string =>
+      `keyboards_${UID}_devices_${hash}_days_${day}.enc`
+    const pointerKey = (hash: string): string => `${UID}|${hash}`
+    const ownDayPath = (day: string, hash = OWN_HASH): string =>
+      join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', hash, `${day}.jsonl`)
+
+    async function writeDayFile(day: string, hash = OWN_HASH, content = '{"id":"x"}\n'): Promise<void> {
+      const path = ownDayPath(day, hash)
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', hash), { recursive: true })
+      await writeFile(path, content, 'utf-8')
+    }
+
+    function cloudDriveFile(hash: string, day: string): { id: string; name: string; modifiedTime: string } {
+      return { id: `drive-${hash}-${day}`, name: cloudFileName(hash, day), modifiedTime: '2026-04-19T00:00:00.000Z' }
+    }
+
+    async function fileExists(path: string): Promise<boolean> {
+      try {
+        await access(path)
+        return true
+      } catch { return false }
+    }
+
+    // --- Reconcile rule 2: uploaded has, local missing → cloud delete ---
+    it('reconcile rule 2: drops cloud file when uploaded lists a day but local file is gone', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      // Only day 18 exists locally; day 17 was Local-deleted.
+      await writeDayFile('2026-04-18')
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-17'),
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-17')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- Reconcile rule 3: uploaded has, cloud missing → local unlink ---
+    it('reconcile rule 3: unlinks local file when uploaded has the day but cloud does not', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      await writeDayFile('2026-04-17')
+      await writeDayFile('2026-04-18')
+      // Cloud lost day 17 (Sync-deleted from another device).
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(await fileExists(ownDayPath('2026-04-17'))).toBe(false)
+      expect(await fileExists(ownDayPath('2026-04-18'))).toBe(true)
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- Reconcile orphan cleanup: first run ---
+    it('reconcile orphan: deletes cloud-only days when reconciled_at is pending', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: null },
+        last_synced_at: 0,
+      }
+      await writeDayFile('2026-04-18')
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'), // orphan: not local, not uploaded
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-16')
+      expect(typeof mockSyncState?.reconciled_at[pointerKey(OWN_HASH)]).toBe('number')
+    })
+
+    // --- Reconcile skip: reconciled_at set ---
+    it('reconcile skip: leaves cloud orphans alone once reconciled_at is a timestamp', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+    })
+
+    // --- Reconcile: remote hashes are not touched ---
+    it('reconcile hash-scope: remote device days stay intact (own-hash only)', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: null },
+        last_synced_at: 0,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).not.toHaveBeenCalled()
     })
   })
 })
