@@ -26,7 +26,17 @@ import {
   readKeyboardMetaIndex,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
-import { mergeTypingAnalyticsBundle, parseTypingAnalyticsSyncUnit } from '../typing-analytics/sync'
+import { parseTypingAnalyticsDeviceSyncUnit } from '../typing-analytics/sync'
+import { applyRowsToCache } from '../typing-analytics/jsonl/apply-to-cache'
+import { readRows } from '../typing-analytics/jsonl/jsonl-reader'
+import { deviceJsonlPath, devicesDir, readPointerKey } from '../typing-analytics/jsonl/paths'
+import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
+import { getMachineHash } from '../typing-analytics/machine-hash'
+import {
+  emptySyncState,
+  loadSyncState,
+  saveSyncState,
+} from '../typing-analytics/sync-state'
 import { log } from '../logger'
 import type { SyncBundle, SyncProgress, SyncEnvelope, UndecryptableFile, SyncDataScanResult, SyncScope, SyncCredentialFailureReason, SyncCredentialResult } from '../../shared/types/sync'
 import { syncCredentialI18nKey } from '../../shared/types/sync'
@@ -382,6 +392,39 @@ async function uploadSyncUnit(
   await uploadFile(targetName, envelope, existing?.id)
 }
 
+/** Write the downloaded JSONL to the owning device's local path,
+ * then replay only the rows after the previously-applied pointer into
+ * the cache DB. Leaves the sync-state file with an updated pointer so
+ * the next pass skips already-applied rows. No-op when the unit's
+ * machineHash matches our own (our local file is the authoritative copy
+ * and will be re-uploaded on the next flush). */
+async function mergeDeviceBundle(
+  remoteBundle: SyncBundle,
+  deviceRef: { uid: string; machineHash: string },
+  userData: string,
+  ownHash: string,
+): Promise<void> {
+  if (deviceRef.machineHash === ownHash) return
+  const data = remoteBundle.files['data.jsonl']
+  if (!data) return
+
+  const localPath = deviceJsonlPath(userData, deviceRef.uid, deviceRef.machineHash)
+  await mkdir(devicesDir(userData, deviceRef.uid), { recursive: true })
+  await writeFile(localPath, data, 'utf-8')
+
+  const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
+  const pointerKey = readPointerKey(deviceRef.uid, deviceRef.machineHash)
+  const priorPointer = state.read_pointers[pointerKey] ?? null
+
+  const { rows, lastId } = await readRows(localPath, { afterId: priorPointer })
+  if (rows.length > 0) {
+    applyRowsToCache(getTypingAnalyticsDB(), rows)
+  }
+  state.read_pointers[pointerKey] = lastId
+  state.last_synced_at = Date.now()
+  await saveSyncState(userData, state)
+}
+
 // Merges remote bundle into local state, returns whether remote needs update
 async function mergeSyncUnit(
   syncUnit: string,
@@ -401,25 +444,13 @@ async function mergeSyncUnit(
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
-  // Handle typing-analytics sync unit (row-level LWW into SQLite)
-  const typingAnalyticsUid = parseTypingAnalyticsSyncUnit(syncUnit)
-  if (typingAnalyticsUid !== null) {
-    const uid = typingAnalyticsUid
-    const data = remoteBundle.files['data.json']
-    if (!data) return false
-    let parsed: unknown
-    try {
-      parsed = JSON.parse(data)
-    } catch {
-      // Malformed JSON payload — skip without surfacing as a failed unit so
-      // one bad bundle doesn't block the rest of the sync cycle. DB/merge
-      // errors are deliberately NOT swallowed here: they bubble up so the
-      // caller records the unit in failedUnits and polling retries it.
-      return false
-    }
-    mergeTypingAnalyticsBundle(parsed, uid)
-    // Typing-analytics rows always re-export based on the local DB state,
-    // so there is no upload-back signal to emit here.
+  // Per-device typing-analytics JSONL: the file is owned by one device.
+  // Skip our own hash so a stale remote never clobbers freshly-flushed
+  // local rows. For a remote device's file we overwrite the local copy
+  // and replay only the newly-appended rows into the cache.
+  const deviceRef = parseTypingAnalyticsDeviceSyncUnit(syncUnit)
+  if (deviceRef) {
+    await mergeDeviceBundle(remoteBundle, deviceRef, userData, await getMachineHash())
     return false
   }
 

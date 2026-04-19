@@ -113,6 +113,11 @@ export class TypingAnalyticsDB {
   private readonly selectMatrixHeatmapStmt: Statement
   private readonly selectKeyboardsWithTypingDataStmt: Statement
   private readonly selectDailySummariesForUidStmt: Statement
+  private readonly selectOwnScopeIdsForUidStmt: Statement
+  private readonly selectLiveCharMinutesForScopeStmt: Statement
+  private readonly selectLiveMatrixMinutesForScopeStmt: Statement
+  private readonly selectLiveMinuteStatsForScopeStmt: Statement
+  private readonly selectLiveSessionsForScopeStmt: Statement
   private readonly tombstoneCharMinutesInRangeStmt: Statement
   private readonly tombstoneMatrixMinutesInRangeStmt: Statement
   private readonly tombstoneMinuteStatsInRangeStmt: Statement
@@ -516,6 +521,63 @@ export class TypingAnalyticsDB {
        ORDER BY date DESC
     `)
 
+    // Row-listing queries scoped to a single scope_id — used by the
+    // delete APIs to build tombstone JSONL rows for our own machine's
+    // scope only. The range window is half-open `[startMs, endMs)` for
+    // minute rows and overlap (`end_ms > startMs AND start_ms < endMs`)
+    // for sessions that can span day boundaries.
+    this.selectOwnScopeIdsForUidStmt = this.db.prepare(`
+      SELECT id FROM typing_scopes
+       WHERE machine_hash = @machineHash
+         AND keyboard_uid = @uid
+         AND is_deleted = 0
+    `)
+
+    this.selectLiveCharMinutesForScopeStmt = this.db.prepare(`
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs, char, count
+        FROM typing_char_minute
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    `)
+
+    this.selectLiveMatrixMinutesForScopeStmt = this.db.prepare(`
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs,
+             row, col, layer, keycode, count,
+             tap_count AS tapCount, hold_count AS holdCount
+        FROM typing_matrix_minute
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    `)
+
+    this.selectLiveMinuteStatsForScopeStmt = this.db.prepare(`
+      SELECT scope_id AS scopeId, minute_ts AS minuteTs,
+             keystrokes, active_ms AS activeMs,
+             interval_avg_ms AS intervalAvgMs,
+             interval_min_ms AS intervalMinMs,
+             interval_p25_ms AS intervalP25Ms,
+             interval_p50_ms AS intervalP50Ms,
+             interval_p75_ms AS intervalP75Ms,
+             interval_max_ms AS intervalMaxMs
+        FROM typing_minute_stats
+       WHERE scope_id = @scopeId
+         AND minute_ts >= @startMs
+         AND minute_ts < @endMs
+         AND is_deleted = 0
+    `)
+
+    this.selectLiveSessionsForScopeStmt = this.db.prepare(`
+      SELECT id, scope_id AS scopeId, start_ms AS startMs, end_ms AS endMs
+        FROM typing_sessions
+       WHERE scope_id = @scopeId
+         AND end_ms > @startMs
+         AND start_ms < @endMs
+         AND is_deleted = 0
+    `)
+
     // Tombstone range deletes. Only flips live rows (is_deleted = 0) so
     // existing tombstones keep their original updated_at for GC purposes.
     const tombstoneRangeWhere = `
@@ -661,6 +723,36 @@ export class TypingAnalyticsDB {
   listLocalKeyboardUids(machineHash: string): string[] {
     const rows = this.selectLocalKeyboardUidsStmt.all({ machineHash }) as Array<{ keyboardUid: string }>
     return rows.map((r) => r.keyboardUid)
+  }
+
+  /** Scope ids belonging to the local machine for a single keyboard uid.
+   * Used by the delete APIs to scope tombstone emission to rows this
+   * device actually owns (1-writer per JSONL file). */
+  listOwnScopeIdsForUid(machineHash: string, uid: string): string[] {
+    const rows = this.selectOwnScopeIdsForUidStmt.all({ machineHash, uid }) as Array<{ id: string }>
+    return rows.map((r) => r.id)
+  }
+
+  /** Live char-minute rows for a single scope within `[startMs, endMs)`. */
+  listLiveCharMinutesForScope(scopeId: string, startMs: number, endMs: number): CharMinuteRow[] {
+    return this.selectLiveCharMinutesForScopeStmt.all({ scopeId, startMs, endMs }) as CharMinuteRow[]
+  }
+
+  /** Live matrix-minute rows for a single scope within `[startMs, endMs)`. */
+  listLiveMatrixMinutesForScope(scopeId: string, startMs: number, endMs: number): MatrixMinuteRow[] {
+    return this.selectLiveMatrixMinutesForScopeStmt.all({ scopeId, startMs, endMs }) as MatrixMinuteRow[]
+  }
+
+  /** Live minute-stats rows for a single scope within `[startMs, endMs)`. */
+  listLiveMinuteStatsForScope(scopeId: string, startMs: number, endMs: number): MinuteStatsRow[] {
+    return this.selectLiveMinuteStatsForScopeStmt.all({ scopeId, startMs, endMs }) as MinuteStatsRow[]
+  }
+
+  /** Live sessions overlapping `[startMs, endMs)` for a single scope.
+   * Overlap semantics mirror the existing tombstone path: a session that
+   * starts before the window but ends inside still qualifies. */
+  listLiveSessionsForScope(scopeId: string, startMs: number, endMs: number): SessionRow[] {
+    return this.selectLiveSessionsForScopeStmt.all({ scopeId, startMs, endMs }) as SessionRow[]
   }
 
   /** Per-cell totals broken down into the overall press count plus the

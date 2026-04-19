@@ -4,6 +4,16 @@
 
 export const SCHEMA_VERSION = 2
 
+/** User-data tables in the order a rebuild should truncate them. Listed
+ * child-before-parent so any future FK_ON delete won't trip itself. */
+export const DATA_TABLE_NAMES = [
+  'typing_char_minute',
+  'typing_matrix_minute',
+  'typing_minute_stats',
+  'typing_sessions',
+  'typing_scopes',
+] as const
+
 export const CREATE_SCHEMA_SQL = `
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;

@@ -3,6 +3,7 @@
 // session detector, and SQLite persistence. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
+import { app } from 'electron'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
 import type {
@@ -13,8 +14,8 @@ import type {
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { log } from '../logger'
+import { ensureCacheIsFresh } from './cache-rebuild'
 import { buildFingerprint } from './fingerprint'
-import { getInstallationId } from './installation-id'
 import {
   MinuteBuffer,
   MINUTE_MS,
@@ -23,17 +24,28 @@ import {
 import { SessionDetector, type FinalizedSession } from './session-detector'
 import {
   getTypingAnalyticsDB,
-  type CharMinuteRow,
-  type MatrixMinuteRow,
-  type MinuteStatsRow,
-  type TypingAnalyticsDB,
   type TypingDailySummary,
   type TypingKeyboardSummary,
-  type TypingScopeRow,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
-import { typingAnalyticsSyncUnit } from './sync'
+import { typingAnalyticsDeviceSyncUnit } from './sync'
 import { getMachineHash } from './machine-hash'
+import { applyRowsToCache } from './jsonl/apply-to-cache'
+import {
+  charMinuteRowId,
+  matrixMinuteRowId,
+  minuteStatsRowId,
+  scopeRowId,
+  sessionRowId,
+  type JsonlRow,
+} from './jsonl/jsonl-row'
+import { appendRowsToFile } from './jsonl/jsonl-writer'
+import { deviceJsonlPath, readPointerKey } from './jsonl/paths'
+import {
+  emptySyncState,
+  saveSyncState,
+  type TypingSyncState,
+} from './sync-state'
 
 const FLUSH_DEBOUNCE_MS = 1_000
 
@@ -65,9 +77,17 @@ let dirty = false
 let flushChain: Promise<void> = Promise.resolve()
 let inFlightFlushCount = 0
 let flushTimer: ReturnType<typeof setTimeout> | null = null
+let syncState: TypingSyncState | null = null
 
 async function initialize(): Promise<void> {
-  await getInstallationId()
+  // getMachineHash transitively warms getInstallationId (and caches its
+  // own hash), so later sync notifications can `await` without triggering
+  // fresh I/O.
+  const machineHash = await getMachineHash()
+  const db = getTypingAnalyticsDB()
+  const userDataDir = app.getPath('userData')
+  const { state } = await ensureCacheIsFresh(db, userDataDir, machineHash)
+  syncState = state
 }
 
 /**
@@ -253,11 +273,122 @@ function localDayRangeMs(date: string): { startMs: number; endMs: number } | nul
   return { startMs, endMs }
 }
 
+const FULL_RANGE: { startMs: number; endMs: number } = {
+  startMs: Number.MIN_SAFE_INTEGER,
+  endMs: Number.MAX_SAFE_INTEGER,
+}
+
+/** Collect live rows for the local machine's scopes of `uid` within each
+ * given range and produce tombstone JSONL rows that mark them deleted
+ * (`is_deleted: true`, `updated_at: now`). Composite ids match the
+ * original live rows so `applyRowsToCache` can flip `is_deleted` via the
+ * LWW merge path. Only our own machineHash is touched — remote devices'
+ * data stays intact (their machine is responsible for deleting it). */
+async function tombstoneOwnScopeRows(
+  uid: string,
+  ranges: readonly { startMs: number; endMs: number }[],
+  updatedAt: number,
+): Promise<{ rows: JsonlRow[]; result: TypingTombstoneResult }> {
+  const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+  const rows: JsonlRow[] = []
+  const machineHash = await getMachineHash()
+  const db = getTypingAnalyticsDB()
+  const scopeIds = db.listOwnScopeIdsForUid(machineHash, uid)
+  if (scopeIds.length === 0) return { rows, result }
+
+  for (const scopeId of scopeIds) {
+    for (const range of ranges) {
+      for (const c of db.listLiveCharMinutesForScope(scopeId, range.startMs, range.endMs)) {
+        rows.push({
+          id: charMinuteRowId(c.scopeId, c.minuteTs, c.char),
+          kind: 'char-minute',
+          updated_at: updatedAt,
+          is_deleted: true,
+          payload: c,
+        })
+        result.charMinutes += 1
+      }
+      for (const m of db.listLiveMatrixMinutesForScope(scopeId, range.startMs, range.endMs)) {
+        rows.push({
+          id: matrixMinuteRowId(m.scopeId, m.minuteTs, m.row, m.col, m.layer),
+          kind: 'matrix-minute',
+          updated_at: updatedAt,
+          is_deleted: true,
+          payload: {
+            scopeId: m.scopeId,
+            minuteTs: m.minuteTs,
+            row: m.row,
+            col: m.col,
+            layer: m.layer,
+            keycode: m.keycode,
+            count: m.count,
+            tapCount: m.tapCount ?? 0,
+            holdCount: m.holdCount ?? 0,
+          },
+        })
+        result.matrixMinutes += 1
+      }
+      for (const s of db.listLiveMinuteStatsForScope(scopeId, range.startMs, range.endMs)) {
+        rows.push({
+          id: minuteStatsRowId(s.scopeId, s.minuteTs),
+          kind: 'minute-stats',
+          updated_at: updatedAt,
+          is_deleted: true,
+          payload: s,
+        })
+        result.minuteStats += 1
+      }
+      for (const ss of db.listLiveSessionsForScope(scopeId, range.startMs, range.endMs)) {
+        rows.push({
+          id: sessionRowId(ss.id),
+          kind: 'session',
+          updated_at: updatedAt,
+          is_deleted: true,
+          payload: ss,
+        })
+        result.sessions += 1
+      }
+    }
+  }
+  return { rows, result }
+}
+
+/** Append rows to this device's JSONL, apply them to the cache DB,
+ * and advance the sync-state pointer. Does NOT save the sync state —
+ * callers batch the write so multi-uid flushes hit disk once. */
+async function persistOwnJsonlRows(
+  uid: string,
+  rows: readonly JsonlRow[],
+  machineHash: string,
+  userDataDir: string,
+  state: TypingSyncState,
+): Promise<void> {
+  await appendRowsToFile(deviceJsonlPath(userDataDir, uid, machineHash), rows)
+  applyRowsToCache(getTypingAnalyticsDB(), rows)
+  const lastId = rows[rows.length - 1]?.id
+  if (lastId) state.read_pointers[readPointerKey(uid, machineHash)] = lastId
+}
+
+/** Persist tombstone rows for one uid and sync the sync-state to disk. */
+async function flushTombstoneRows(
+  uid: string,
+  rows: readonly JsonlRow[],
+  updatedAt: number,
+): Promise<void> {
+  if (rows.length === 0) return
+  const machineHash = await getMachineHash()
+  const userDataDir = app.getPath('userData')
+  const state = syncState ?? emptySyncState(machineHash)
+  syncState = state
+  await persistOwnJsonlRows(uid, rows, machineHash, userDataDir, state)
+  state.last_synced_at = updatedAt
+  await saveSyncState(userDataDir, state)
+}
+
 /** Tombstone the live rows for a set of local-calendar dates. Live
  * analytics state is flushed first so any in-memory events land in the
- * DB before the tombstone window is applied. All per-date tombstones
- * run inside a single outer transaction so the renderer sees a single
- * atomic delete instead of N independent writes. */
+ * cache before the tombstone ids are computed. Tombstones cover only
+ * the local machine's scope — other devices delete their own copies. */
 export async function deleteTypingDailySummaries(
   uid: string,
   dates: string[],
@@ -268,41 +399,34 @@ export async function deleteTypingDailySummaries(
     const range = localDayRangeMs(date)
     if (range) ranges.push(range)
   }
-  const total: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
-  if (ranges.length === 0) return total
-
-  const db = getTypingAnalyticsDB()
+  if (ranges.length === 0) {
+    return { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+  }
   const updatedAt = Date.now()
-  db.getConnection().transaction(() => {
-    for (const range of ranges) {
-      const result = db.tombstoneRowsForUidInRange(uid, range.startMs, range.endMs, updatedAt)
-      total.charMinutes += result.charMinutes
-      total.matrixMinutes += result.matrixMinutes
-      total.minuteStats += result.minuteStats
-      total.sessions += result.sessions
-    }
-  })()
-  notifySyncIfTouched(uid, total)
-  return total
-}
-
-/** Tombstone every live row for a keyboard uid. */
-export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
-  await flushNow({ final: true })
-  const db = getTypingAnalyticsDB()
-  const updatedAt = Date.now()
-  const result = db.tombstoneAllRowsForUid(uid, updatedAt)
-  notifySyncIfTouched(uid, result)
+  const { rows, result } = await tombstoneOwnScopeRows(uid, ranges, updatedAt)
+  await flushTombstoneRows(uid, rows, updatedAt)
+  await notifySyncIfTouched(uid, result)
   return result
 }
 
-function notifySyncIfTouched(uid: string, result: TypingTombstoneResult): void {
+/** Tombstone every live row for a keyboard uid on this machine. */
+export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
+  await flushNow({ final: true })
+  const updatedAt = Date.now()
+  const { rows, result } = await tombstoneOwnScopeRows(uid, [FULL_RANGE], updatedAt)
+  await flushTombstoneRows(uid, rows, updatedAt)
+  await notifySyncIfTouched(uid, result)
+  return result
+}
+
+async function notifySyncIfTouched(uid: string, result: TypingTombstoneResult): Promise<void> {
   const touched = result.charMinutes + result.matrixMinutes + result.minuteStats + result.sessions
   if (touched === 0) return
   const notifier = syncNotifier
   if (!notifier) return
   try {
-    notifier(typingAnalyticsSyncUnit(uid))
+    const machineHash = await getMachineHash()
+    notifier(typingAnalyticsDeviceSyncUnit(uid, machineHash))
   } catch (err) {
     log('warn', `typing-analytics sync notify failed for ${uid}: ${String(err)}`)
   }
@@ -371,72 +495,130 @@ function scheduleFlush(): void {
   }, FLUSH_DEBOUNCE_MS)
 }
 
-function scopeRowFromFingerprint(
+function buildScopeRow(
   scopeKey: string,
   fingerprint: TypingAnalyticsFingerprint,
   updatedAt: number,
-): TypingScopeRow {
+): JsonlRow {
   return {
-    id: scopeKey,
-    machineHash: fingerprint.machineHash,
-    osPlatform: fingerprint.os.platform,
-    osRelease: fingerprint.os.release,
-    osArch: fingerprint.os.arch,
-    keyboardUid: fingerprint.keyboard.uid,
-    keyboardVendorId: fingerprint.keyboard.vendorId,
-    keyboardProductId: fingerprint.keyboard.productId,
-    keyboardProductName: fingerprint.keyboard.productName,
-    updatedAt,
+    id: scopeRowId(scopeKey),
+    kind: 'scope',
+    updated_at: updatedAt,
+    payload: {
+      id: scopeKey,
+      machineHash: fingerprint.machineHash,
+      osPlatform: fingerprint.os.platform,
+      osRelease: fingerprint.os.release,
+      osArch: fingerprint.os.arch,
+      keyboardUid: fingerprint.keyboard.uid,
+      keyboardVendorId: fingerprint.keyboard.vendorId,
+      keyboardProductId: fingerprint.keyboard.productId,
+      keyboardProductName: fingerprint.keyboard.productName,
+    },
   }
 }
 
-function minuteStatsRowFromSnapshot(snapshot: MinuteSnapshot): MinuteStatsRow {
-  return {
-    scopeId: snapshot.scopeId,
-    minuteTs: snapshot.minuteTs,
-    keystrokes: snapshot.keystrokes,
-    activeMs: snapshot.activeMs,
-    intervalAvgMs: snapshot.intervalAvgMs,
-    intervalMinMs: snapshot.intervalMinMs,
-    intervalP25Ms: snapshot.intervalP25Ms,
-    intervalP50Ms: snapshot.intervalP50Ms,
-    intervalP75Ms: snapshot.intervalP75Ms,
-    intervalMaxMs: snapshot.intervalMaxMs,
-  }
-}
-
-function charRowsFromSnapshot(snapshot: MinuteSnapshot): CharMinuteRow[] {
-  const rows: CharMinuteRow[] = []
+function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRow[] {
+  const rows: JsonlRow[] = [
+    {
+      id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs),
+      kind: 'minute-stats',
+      updated_at: updatedAt,
+      payload: {
+        scopeId: snapshot.scopeId,
+        minuteTs: snapshot.minuteTs,
+        keystrokes: snapshot.keystrokes,
+        activeMs: snapshot.activeMs,
+        intervalAvgMs: snapshot.intervalAvgMs,
+        intervalMinMs: snapshot.intervalMinMs,
+        intervalP25Ms: snapshot.intervalP25Ms,
+        intervalP50Ms: snapshot.intervalP50Ms,
+        intervalP75Ms: snapshot.intervalP75Ms,
+        intervalMaxMs: snapshot.intervalMaxMs,
+      },
+    },
+  ]
   for (const [char, count] of snapshot.charCounts) {
-    rows.push({ scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count })
-  }
-  return rows
-}
-
-function matrixRowsFromSnapshot(snapshot: MinuteSnapshot): MatrixMinuteRow[] {
-  const rows: MatrixMinuteRow[] = []
-  for (const { row, col, layer, keycode, count, tapCount, holdCount } of snapshot.matrixCounts.values()) {
     rows.push({
-      scopeId: snapshot.scopeId,
-      minuteTs: snapshot.minuteTs,
-      row,
-      col,
-      layer,
-      keycode,
-      count,
-      tapCount,
-      holdCount,
+      id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, char),
+      kind: 'char-minute',
+      updated_at: updatedAt,
+      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count },
+    })
+  }
+  for (const cell of snapshot.matrixCounts.values()) {
+    rows.push({
+      id: matrixMinuteRowId(snapshot.scopeId, snapshot.minuteTs, cell.row, cell.col, cell.layer),
+      kind: 'matrix-minute',
+      updated_at: updatedAt,
+      payload: {
+        scopeId: snapshot.scopeId,
+        minuteTs: snapshot.minuteTs,
+        row: cell.row,
+        col: cell.col,
+        layer: cell.layer,
+        keycode: cell.keycode,
+        count: cell.count,
+        tapCount: cell.tapCount,
+        holdCount: cell.holdCount,
+      },
     })
   }
   return rows
 }
 
+function buildSessionRow(
+  session: FinalizedSession,
+  resolved: ResolvedScope,
+  updatedAt: number,
+): JsonlRow {
+  return {
+    id: sessionRowId(session.id),
+    kind: 'session',
+    updated_at: updatedAt,
+    payload: {
+      id: session.id,
+      scopeId: resolved.scopeKey,
+      startMs: session.startMs,
+      endMs: session.endMs,
+    },
+  }
+}
+
+function groupRowsByUid(
+  scopesToUpsert: Map<string, TypingAnalyticsFingerprint>,
+  snapshots: MinuteSnapshot[],
+  sessionsWithScope: Array<{ session: FinalizedSession; resolved: ResolvedScope }>,
+  updatedAt: number,
+): Map<string, JsonlRow[]> {
+  const rowsByUid = new Map<string, JsonlRow[]>()
+  const add = (uid: string, row: JsonlRow): void => {
+    const list = rowsByUid.get(uid)
+    if (list) list.push(row)
+    else rowsByUid.set(uid, [row])
+  }
+  for (const [scopeId, fingerprint] of scopesToUpsert) {
+    add(fingerprint.keyboard.uid, buildScopeRow(scopeId, fingerprint, updatedAt))
+  }
+  for (const snapshot of snapshots) {
+    const uid = snapshot.fingerprint.keyboard.uid
+    for (const row of buildSnapshotRows(snapshot, updatedAt)) {
+      add(uid, row)
+    }
+  }
+  for (const { session, resolved } of sessionsWithScope) {
+    add(resolved.fingerprint.keyboard.uid, buildSessionRow(session, resolved, updatedAt))
+  }
+  return rowsByUid
+}
+
 /**
- * Run a single flush pass: snapshot the live buffer + session queue, persist
- * them via the SQLite store in one batched transaction. On `final: true`
- * every buffered minute is drained; otherwise only minutes strictly older
- * than the current wall-clock minute are drained so the live minute keeps
- * accumulating.
+ * Run a single flush pass: drain the live buffer + session queue, append
+ * every row to the per-device JSONL master file, and apply the same rows
+ * to the local SQLite cache via the LWW merge helpers. On `final: true`
+ * every buffered minute is drained; otherwise only minutes strictly
+ * older than the current wall-clock minute are drained so the live
+ * minute keeps accumulating.
  */
 async function doFlushPass(options: { final: boolean }): Promise<void> {
   if (!dirty && pendingSessions.length === 0) return
@@ -447,9 +629,10 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
 
   // Confirm the DB is usable BEFORE draining the buffer. A failed open here
   // would otherwise throw the drained counts away with no way to recover.
-  let db: TypingAnalyticsDB
+  // persistOwnJsonlRows resolves the singleton on each call, so the return
+  // value isn't captured here.
   try {
-    db = getTypingAnalyticsDB()
+    getTypingAnalyticsDB()
   } catch (err) {
     log('error', `typing-analytics DB open failed: ${String(err)}`)
     return
@@ -490,59 +673,48 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   }
 
   const updatedAt = Date.now()
-  const connection = db.getConnection()
+  const rowsByUid = groupRowsByUid(scopesToUpsert, snapshots, validSessions, updatedAt)
+  if (rowsByUid.size === 0) {
+    dirty = !minuteBuffer.isEmpty()
+    return
+  }
 
+  const machineHash = await getMachineHash()
+  const userDataDir = app.getPath('userData')
+  const state = syncState ?? emptySyncState(machineHash)
+  syncState = state
+
+  const touchedUids: string[] = []
   try {
-    connection.transaction(() => {
-      for (const [scopeId, fingerprint] of scopesToUpsert) {
-        db.upsertScope(scopeRowFromFingerprint(scopeId, fingerprint, updatedAt))
-      }
-      for (const snapshot of snapshots) {
-        db.writeMinute(
-          minuteStatsRowFromSnapshot(snapshot),
-          charRowsFromSnapshot(snapshot),
-          matrixRowsFromSnapshot(snapshot),
-          updatedAt,
-        )
-      }
-      for (const { session, resolved } of validSessions) {
-        db.insertSession(
-          {
-            id: session.id,
-            scopeId: resolved.scopeKey,
-            startMs: session.startMs,
-            endMs: session.endMs,
-          },
-          updatedAt,
-        )
-      }
-    })()
+    // JSONL master write happens first: the file is the source of truth.
+    // If the cache apply later fails we still have the data on disk, and
+    // the next startup rebuild replays it.
+    for (const [uid, rows] of rowsByUid) {
+      if (rows.length === 0) continue
+      await persistOwnJsonlRows(uid, rows, machineHash, userDataDir, state)
+      touchedUids.push(uid)
+    }
+    state.last_synced_at = updatedAt
+    await saveSyncState(userDataDir, state)
   } catch (err) {
-    log('error', `typing-analytics batch persist failed: ${String(err)}`)
-    // Transaction rolled back — re-queue sessions so the next pass can
-    // retry. Snapshots are already drained and cannot be cheaply reinserted,
-    // so they are accepted as lost (aggregate counts only).
+    log('error', `typing-analytics flush failed: ${String(err)}`)
+    // Re-queue sessions so the next pass can retry. Snapshots are already
+    // drained and cannot be cheaply reinserted, so their counts are
+    // accepted as lost (the JSONL append for the failed uid may or may
+    // not have landed; an eventual cache rebuild reconciles).
     pendingSessions.push(...sessionsToWrite)
     dirty = true
     return
   }
 
-  // Notify the sync layer that the typing-analytics unit for each touched
-  // keyboard has new rows to upload. Derived from the committed snapshots
-  // and sessions, so rollback never fires this. Capture the notifier into
-  // a local so a reset-clear between iterations cannot null it mid-loop.
+  // Notify the sync layer that this device's JSONL for each touched
+  // keyboard has new rows to upload. Capture the notifier into a local so
+  // a reset-clear between iterations cannot null it mid-loop.
   const notifier = syncNotifier
   if (notifier) {
-    const touchedUids = new Set<string>()
-    for (const snapshot of snapshots) {
-      touchedUids.add(snapshot.fingerprint.keyboard.uid)
-    }
-    for (const { resolved } of validSessions) {
-      touchedUids.add(resolved.fingerprint.keyboard.uid)
-    }
     for (const uid of touchedUids) {
       try {
-        notifier(typingAnalyticsSyncUnit(uid))
+        notifier(typingAnalyticsDeviceSyncUnit(uid, machineHash))
       } catch (notifyErr) {
         log('warn', `typing-analytics sync notify failed for ${uid}: ${String(notifyErr)}`)
       }
@@ -587,6 +759,7 @@ export function resetTypingAnalyticsForTests(): void {
   flushChain = Promise.resolve()
   inFlightFlushCount = 0
   syncNotifier = null
+  syncState = null
   if (flushTimer) {
     clearTimeout(flushTimer)
     flushTimer = null

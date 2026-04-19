@@ -53,7 +53,7 @@ import {
   getMatrixHeatmap,
 } from '../typing-analytics-service'
 import * as installationIdModule from '../installation-id'
-import { resetMachineHashCacheForTests } from '../machine-hash'
+import { getMachineHash, resetMachineHashCacheForTests } from '../machine-hash'
 import {
   getTypingAnalyticsDB,
   resetTypingAnalyticsDBForTests,
@@ -306,10 +306,11 @@ describe('typing-analytics-service', () => {
       await handler(fakeEvent, { kind: 'char', key: 'a', ts: 1_000, keyboard: otherKeyboard })
       await flushTypingAnalyticsNowForTests()
 
+      const machineHash = await getMachineHash()
       const units = notifier.mock.calls.map((c) => c[0]).sort()
       expect(units).toEqual([
-        `keyboards/${sampleKeyboard.uid}/typing-analytics`,
-        `keyboards/${otherKeyboard.uid}/typing-analytics`,
+        `keyboards/${sampleKeyboard.uid}/devices/${machineHash}`,
+        `keyboards/${otherKeyboard.uid}/devices/${machineHash}`,
       ])
     })
 
@@ -367,7 +368,8 @@ describe('typing-analytics-service', () => {
 
         expect(result.minuteStats).toBeGreaterThan(0)
         expect(listTypingDailySummaries(sampleKeyboard.uid)).toEqual([])
-        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/typing-analytics`)
+        const machineHash = await getMachineHash()
+        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/devices/${machineHash}`)
       })
 
       it('deleteAllTypingForKeyboard wipes every live row for the uid', async () => {
@@ -379,7 +381,8 @@ describe('typing-analytics-service', () => {
         const result = await deleteAllTypingForKeyboard(sampleKeyboard.uid)
         expect(result.charMinutes).toBeGreaterThan(0)
         expect(listTypingKeyboards().map((k) => k.uid)).not.toContain(sampleKeyboard.uid)
-        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/typing-analytics`)
+        const machineHash = await getMachineHash()
+        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/devices/${machineHash}`)
       })
 
       it('deleteTypingDailySummaries is a no-op when the dates array is empty', async () => {

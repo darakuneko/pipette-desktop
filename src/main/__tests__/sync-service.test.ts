@@ -43,7 +43,9 @@ const mockDownloadFile = vi.fn(async () => ({}))
 const mockUploadFile = vi.fn(async () => 'file-id')
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
-  const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots|typing-analytics)\.enc$/)
+  const deviceMatch = name.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
+  if (deviceMatch) return `keyboards/${deviceMatch[1]}/devices/${deviceMatch[2]}`
+  const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
   const favMatch = name.match(/^favorites_(.+)\.enc$/)
   if (favMatch) return `favorites/${favMatch[1]}`
@@ -90,16 +92,47 @@ vi.mock('../app-config', () => ({
   saveAppConfig: vi.fn(async () => {}),
 }))
 
-const mockMergeTypingAnalyticsBundle = vi.fn()
 vi.mock('../typing-analytics/sync', () => ({
-  mergeTypingAnalyticsBundle: (...args: unknown[]) => mockMergeTypingAnalyticsBundle(...args),
-  buildTypingAnalyticsBundle: vi.fn(() => ({ _rev: 1, uid: 'mock', scopes: [], charMinutes: [], matrixMinutes: [], minuteStats: [], sessions: [] })),
-  typingAnalyticsSyncUnit: (uid: string) => `keyboards/${uid}/typing-analytics`,
-  parseTypingAnalyticsSyncUnit: (syncUnit: string) => {
+  typingAnalyticsDeviceSyncUnit: (uid: string, machineHash: string) =>
+    `keyboards/${uid}/devices/${machineHash}`,
+  parseTypingAnalyticsDeviceSyncUnit: (syncUnit: string) => {
     const parts = syncUnit.split('/')
-    if (parts.length !== 3 || parts[0] !== 'keyboards' || parts[2] !== 'typing-analytics') return null
-    return parts[1]
+    if (parts.length !== 4) return null
+    if (parts[0] !== 'keyboards' || parts[2] !== 'devices') return null
+    if (parts[1].length === 0 || parts[3].length === 0) return null
+    return { uid: parts[1], machineHash: parts[3] }
   },
+}))
+
+const mockApplyRowsToCache = vi.fn(() => ({ scopes: 0, charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }))
+vi.mock('../typing-analytics/jsonl/apply-to-cache', () => ({
+  applyRowsToCache: (...args: unknown[]) => mockApplyRowsToCache(...args),
+}))
+
+const mockReadRows = vi.fn(async () => ({ rows: [], lastId: null, partialLineSkipped: false }))
+vi.mock('../typing-analytics/jsonl/jsonl-reader', () => ({
+  readRows: (...args: unknown[]) => mockReadRows(...args),
+}))
+
+vi.mock('../typing-analytics/db/typing-analytics-db', () => ({
+  getTypingAnalyticsDB: vi.fn(() => ({
+    listLocalKeyboardUids: vi.fn(() => []),
+  })),
+}))
+
+vi.mock('../typing-analytics/machine-hash', () => ({
+  getMachineHash: vi.fn(async () => 'test-machine-hash'),
+}))
+
+vi.mock('../typing-analytics/sync-state', () => ({
+  loadSyncState: vi.fn(async () => null),
+  saveSyncState: vi.fn(async () => {}),
+  emptySyncState: (myDeviceId: string) => ({
+    _rev: 1,
+    my_device_id: myDeviceId,
+    read_pointers: {},
+    last_synced_at: 0,
+  }),
 }))
 
 vi.stubGlobal('fetch', vi.fn())
@@ -733,12 +766,13 @@ describe('sync-service', () => {
     })
   })
 
-  describe('typing-analytics merge error handling', () => {
+  describe('typing-analytics device merge', () => {
     const uid = '0xtype'
-    const fileName = `keyboards_${uid}_typing-analytics.enc`
-    const syncUnit = `keyboards/${uid}/typing-analytics`
+    const remoteHash = 'hash-remote'
+    const fileName = `keyboards_${uid}_devices_${remoteHash}.enc`
+    const syncUnit = `keyboards/${uid}/devices/${remoteHash}`
 
-    function makeTypingEnvelope(dataJson: string): Record<string, unknown> {
+    function makeDeviceEnvelope(dataJsonl: string): Record<string, unknown> {
       return {
         version: 1,
         syncUnit,
@@ -746,61 +780,56 @@ describe('sync-service', () => {
         salt: 's',
         iv: 'i',
         ciphertext: JSON.stringify({
-          type: 'typing-analytics',
-          key: uid,
+          type: 'typing-analytics-device',
+          key: `${uid}|${remoteHash}`,
           index: { uid, entries: [] },
-          files: { 'data.json': dataJson },
+          files: { 'data.jsonl': dataJsonl },
         }),
       }
     }
 
-    it('skips malformed typing-analytics payload without flagging it as failed', async () => {
-      const progressEvents: SyncProgress[] = []
-      setProgressCallback((p) => progressEvents.push({ ...p }))
-
+    it('writes the remote JSONL to disk and replays new rows into the cache', async () => {
       mockListFiles.mockResolvedValue([
-        { id: 'typing-1', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'dev-1', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
       ])
-      mockDownloadFile.mockResolvedValue(makeTypingEnvelope('{ not json'))
+      const payload = JSON.stringify({ id: 'x', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
+      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope(payload))
 
       // Force local uid visibility so scope 'all' keeps the unit (lazy gate).
-      const kbDir = join(mockUserDataPath, 'sync', 'keyboards', uid)
-      await mkdir(kbDir, { recursive: true })
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
 
       await executeSync('download')
 
-      // Merge must not be called because JSON.parse failed.
-      expect(mockMergeTypingAnalyticsBundle).not.toHaveBeenCalled()
-
-      // No failure recorded; one bad bundle should not block the cycle.
-      const final = progressEvents[progressEvents.length - 1]
-      expect(final.status).toBe('success')
-      expect(final.failedUnits).toBeUndefined()
+      const written = await readFile(
+        join(mockUserDataPath, 'sync', 'keyboards', uid, 'devices', `${remoteHash}.jsonl`),
+        'utf-8',
+      )
+      expect(written).toBe(payload)
+      expect(mockReadRows).toHaveBeenCalled()
     })
 
-    it('surfaces merge-side DB errors as failedUnits so polling can retry', async () => {
+    it('surfaces cache-apply errors as failedUnits so polling can retry', async () => {
       const progressEvents: SyncProgress[] = []
       setProgressCallback((p) => progressEvents.push({ ...p }))
 
-      mockMergeTypingAnalyticsBundle.mockImplementationOnce(() => {
+      mockReadRows.mockResolvedValueOnce({
+        rows: [{ id: 'row-1', kind: 'scope', updated_at: 1, payload: {} } as unknown as { id: string }],
+        lastId: 'row-1',
+        partialLineSkipped: false,
+      } as unknown as { rows: never[]; lastId: string | null; partialLineSkipped: boolean })
+      mockApplyRowsToCache.mockImplementationOnce(() => {
         throw new Error('sqlite schema mismatch')
       })
 
       mockListFiles.mockResolvedValue([
-        { id: 'typing-2', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+        { id: 'dev-2', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
       ])
-      mockDownloadFile.mockResolvedValue(makeTypingEnvelope(JSON.stringify({ _rev: 1, uid, scopes: [], charMinutes: [], matrixMinutes: [], minuteStats: [], sessions: [] })))
+      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope('{"id":"row-1","kind":"scope","updated_at":1,"payload":{}}\n'))
 
-      const kbDir = join(mockUserDataPath, 'sync', 'keyboards', uid)
-      await mkdir(kbDir, { recursive: true })
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
 
       await executeSync('download')
 
-      // JSON was well-formed, so merge was called and rejected from the DB side.
-      expect(mockMergeTypingAnalyticsBundle).toHaveBeenCalledTimes(1)
-
-      // The exception must bubble up so the unit ends up in failedUnits,
-      // which is the signal polling uses to retry on the next tick.
       const final = progressEvents[progressEvents.length - 1]
       expect(final.status).toBe('partial')
       expect(final.failedUnits).toEqual([syncUnit])

@@ -7,15 +7,17 @@ import { readFile, readdir, access } from 'node:fs/promises'
 import { gcTombstones } from './merge'
 import { keyboardMetaFilePath, readKeyboardMetaIndex } from './keyboard-meta'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
-import { DEFAULT_TYPING_SYNC_SPAN_DAYS } from '../../shared/types/typing-analytics'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
+import { deviceJsonlPath } from '../typing-analytics/jsonl/paths'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
-import { buildTypingAnalyticsBundle, parseTypingAnalyticsSyncUnit, typingAnalyticsSyncUnit } from '../typing-analytics/sync'
-import { readPipetteSettings } from '../pipette-settings-store'
+import {
+  parseTypingAnalyticsDeviceSyncUnit,
+  typingAnalyticsDeviceSyncUnit,
+} from '../typing-analytics/sync'
 import { log } from '../logger'
 
 export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | null> {
@@ -36,28 +38,25 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
-  // Handle "keyboards/{uid}/typing-analytics" — synthetic single-file bundle
-  // backed by the SQLite store. Nothing lives on disk under sync/ for this
-  // unit; the exported rows are serialized into files['data.json'] so the
-  // existing encrypt/upload pipeline can carry them unchanged. Errors are
-  // logged and re-thrown so the upload path re-queues the unit instead of
-  // treating a transient DB/settings failure as a silent success.
-  const typingAnalyticsUid = parseTypingAnalyticsSyncUnit(syncUnit)
-  if (typingAnalyticsUid !== null) {
-    const uid = typingAnalyticsUid
+  // Handle "keyboards/{uid}/devices/{machineHash}" — per-device JSONL master
+  // file. Source of truth lives on disk under sync/keyboards/{uid}/devices/,
+  // so the bundle just packages the raw file contents unchanged for the
+  // encrypt/upload pipeline. 1-writer-per-file invariant means a device
+  // only ever bundles its own JSONL; remote devices' files are read on
+  // download, never on upload.
+  const deviceRef = parseTypingAnalyticsDeviceSyncUnit(syncUnit)
+  if (deviceRef) {
+    const filePath = deviceJsonlPath(userData, deviceRef.uid, deviceRef.machineHash)
     try {
-      const prefs = await readPipetteSettings(uid)
-      const spanDays = prefs?.typingSyncSpanDays ?? DEFAULT_TYPING_SYNC_SPAN_DAYS
-      const bundle = buildTypingAnalyticsBundle(uid, spanDays)
+      const content = await readFile(filePath, 'utf-8')
       return {
-        type: 'typing-analytics',
-        key: uid,
-        index: { uid, entries: [] } as SnapshotIndex,
-        files: { 'data.json': JSON.stringify(bundle) },
+        type: 'typing-analytics-device',
+        key: `${deviceRef.uid}|${deviceRef.machineHash}`,
+        index: { uid: deviceRef.uid, entries: [] } as SnapshotIndex,
+        files: { 'data.jsonl': content },
       }
-    } catch (err) {
-      log('warn', `typing-analytics bundle build failed for ${uid}: ${String(err)}`)
-      throw err
+    } catch {
+      return null
     }
   }
 
@@ -133,14 +132,14 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     }
   } catch { /* dir doesn't exist */ }
 
-  // Typing analytics units: one per keyboard uid that this machine has
-  // recorded rows for. Remote-only uids (from other machines) are not
-  // uploaded here — the owning machine is responsible for its own data.
+  // Typing analytics device units: one per keyboard uid this machine has
+  // recorded against. Only our own machineHash is emitted — remote
+  // devices' files are owned by their producers and uploaded by them.
   try {
     const machineHash = await getMachineHash()
     const typingUids = getTypingAnalyticsDB().listLocalKeyboardUids(machineHash)
     for (const uid of typingUids) {
-      units.push(typingAnalyticsSyncUnit(uid))
+      units.push(typingAnalyticsDeviceSyncUnit(uid, machineHash))
     }
   } catch (err) {
     // Log instead of silently dropping so a DB schema mismatch or machine
