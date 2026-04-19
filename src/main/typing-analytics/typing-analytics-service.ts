@@ -4,6 +4,7 @@
 // .claude/plans/typing-analytics.md for the design rationale.
 
 import { app } from 'electron'
+import { unlink } from 'node:fs/promises'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
 import type {
@@ -43,7 +44,11 @@ import {
   type JsonlRow,
 } from './jsonl/jsonl-row'
 import { appendRowsToFile } from './jsonl/jsonl-writer'
-import { deviceDayJsonlPath, deviceJsonlPath, readPointerKey } from './jsonl/paths'
+import {
+  deviceDayJsonlPath,
+  listDeviceDays,
+  readPointerKey,
+} from './jsonl/paths'
 import { utcDayFromMs, type UtcDay } from './jsonl/utc-day'
 import {
   emptySyncState,
@@ -324,86 +329,6 @@ function localDayRangeMs(date: string): { startMs: number; endMs: number } | nul
   return { startMs, endMs }
 }
 
-const FULL_RANGE: { startMs: number; endMs: number } = {
-  startMs: Number.MIN_SAFE_INTEGER,
-  endMs: Number.MAX_SAFE_INTEGER,
-}
-
-/** Collect live rows for the local machine's scopes of `uid` within each
- * given range and produce tombstone JSONL rows that mark them deleted
- * (`is_deleted: true`, `updated_at: now`). Composite ids match the
- * original live rows so `applyRowsToCache` can flip `is_deleted` via the
- * LWW merge path. Only our own machineHash is touched — remote devices'
- * data stays intact (their machine is responsible for deleting it). */
-async function tombstoneOwnScopeRows(
-  uid: string,
-  ranges: readonly { startMs: number; endMs: number }[],
-  updatedAt: number,
-): Promise<{ rows: JsonlRow[]; result: TypingTombstoneResult }> {
-  const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
-  const rows: JsonlRow[] = []
-  const machineHash = await getMachineHash()
-  const db = getTypingAnalyticsDB()
-  const scopeIds = db.listOwnScopeIdsForUid(machineHash, uid)
-  if (scopeIds.length === 0) return { rows, result }
-
-  for (const scopeId of scopeIds) {
-    for (const range of ranges) {
-      for (const c of db.listLiveCharMinutesForScope(scopeId, range.startMs, range.endMs)) {
-        rows.push({
-          id: charMinuteRowId(c.scopeId, c.minuteTs, c.char),
-          kind: 'char-minute',
-          updated_at: updatedAt,
-          is_deleted: true,
-          payload: c,
-        })
-        result.charMinutes += 1
-      }
-      for (const m of db.listLiveMatrixMinutesForScope(scopeId, range.startMs, range.endMs)) {
-        rows.push({
-          id: matrixMinuteRowId(m.scopeId, m.minuteTs, m.row, m.col, m.layer),
-          kind: 'matrix-minute',
-          updated_at: updatedAt,
-          is_deleted: true,
-          payload: {
-            scopeId: m.scopeId,
-            minuteTs: m.minuteTs,
-            row: m.row,
-            col: m.col,
-            layer: m.layer,
-            keycode: m.keycode,
-            count: m.count,
-            tapCount: m.tapCount ?? 0,
-            holdCount: m.holdCount ?? 0,
-          },
-        })
-        result.matrixMinutes += 1
-      }
-      for (const s of db.listLiveMinuteStatsForScope(scopeId, range.startMs, range.endMs)) {
-        rows.push({
-          id: minuteStatsRowId(s.scopeId, s.minuteTs),
-          kind: 'minute-stats',
-          updated_at: updatedAt,
-          is_deleted: true,
-          payload: s,
-        })
-        result.minuteStats += 1
-      }
-      for (const ss of db.listLiveSessionsForScope(scopeId, range.startMs, range.endMs)) {
-        rows.push({
-          id: sessionRowId(ss.id),
-          kind: 'session',
-          updated_at: updatedAt,
-          is_deleted: true,
-          payload: ss,
-        })
-        result.sessions += 1
-      }
-    }
-  }
-  return { rows, result }
-}
-
 /** Append rows to a JSONL master file, apply them to the cache, and
  * advance the sync-state pointer for (uid, machineHash) to the last row
  * id in this batch. Does NOT save the sync state — callers batch the
@@ -419,18 +344,6 @@ async function persistOwnJsonlAt(
   applyRowsToCache(getTypingAnalyticsDB(), rows)
   const lastId = rows[rows.length - 1]?.id
   if (lastId) state.read_pointers[readPointerKey(uid, machineHash)] = lastId
-}
-
-/** v6 flat layout, retained for the tombstone write path until
- * row-level tombstones are removed. */
-function persistOwnJsonlRows(
-  uid: string,
-  rows: readonly JsonlRow[],
-  machineHash: string,
-  userDataDir: string,
-  state: TypingSyncState,
-): Promise<void> {
-  return persistOwnJsonlAt(deviceJsonlPath(userDataDir, uid, machineHash), uid, rows, machineHash, state)
 }
 
 /** v7 per-day layout. Multiple days within a single flush must be
@@ -453,26 +366,13 @@ function persistOwnJsonlDay(
   )
 }
 
-/** Persist tombstone rows for one uid and sync the sync-state to disk. */
-async function flushTombstoneRows(
-  uid: string,
-  rows: readonly JsonlRow[],
-  updatedAt: number,
-): Promise<void> {
-  if (rows.length === 0) return
-  const machineHash = await getMachineHash()
-  const userDataDir = app.getPath('userData')
-  const state = syncState ?? emptySyncState(machineHash)
-  syncState = state
-  await persistOwnJsonlRows(uid, rows, machineHash, userDataDir, state)
-  state.last_synced_at = updatedAt
-  await saveSyncState(userDataDir, state)
-}
-
-/** Tombstone the live rows for a set of local-calendar dates. Live
- * analytics state is flushed first so any in-memory events land in the
- * cache before the tombstone ids are computed. Tombstones cover only
- * the local machine's scope — other devices delete their own copies. */
+/** Delete the local per-day JSONL files covering the requested
+ * calendar dates and tombstone the matching cache rows for an
+ * immediate list refresh. The owning device's `uploaded` bookkeeping
+ * still holds the day, so the next sync pass drops the cloud copy via
+ * reconcile rule 2. `is_deleted` on cache rows is retained so the
+ * upcoming list query can hide the affected minutes before the next
+ * rebuild runs. */
 export async function deleteTypingDailySummaries(
   uid: string,
   dates: string[],
@@ -486,21 +386,70 @@ export async function deleteTypingDailySummaries(
   if (ranges.length === 0) {
     return { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
   }
+  const machineHash = await getMachineHash()
+  const userDataDir = app.getPath('userData')
+  // Map each local-calendar range to the UTC days it overlaps. A local
+  // date typically covers one UTC day, but near midnight UTC in
+  // non-zero offsets it spans two, so we unlink both.
+  const utcDays = new Set<UtcDay>()
+  for (const range of ranges) {
+    utcDays.add(utcDayFromMs(range.startMs))
+    utcDays.add(utcDayFromMs(range.endMs - 1))
+  }
+  for (const day of utcDays) {
+    try {
+      await unlinkOwnDayFile(userDataDir, uid, machineHash, day)
+    } catch (err) {
+      log('warn', `typing-analytics per-day unlink failed for ${uid}/${machineHash}/${day}: ${String(err)}`)
+    }
+  }
+  const db = getTypingAnalyticsDB()
   const updatedAt = Date.now()
-  const { rows, result } = await tombstoneOwnScopeRows(uid, ranges, updatedAt)
-  await flushTombstoneRows(uid, rows, updatedAt)
+  const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+  for (const range of ranges) {
+    const r = db.tombstoneRowsForUidInRange(uid, range.startMs, range.endMs, updatedAt)
+    result.charMinutes += r.charMinutes
+    result.matrixMinutes += r.matrixMinutes
+    result.minuteStats += r.minuteStats
+    result.sessions += r.sessions
+  }
   await notifySyncIfTouched(uid, result)
   return result
 }
 
-/** Tombstone every live row for a keyboard uid on this machine. */
+/** Delete every per-day JSONL file owned by this device for the given
+ * keyboard uid and tombstone all of that uid's cache rows. Other
+ * devices' files are untouched — they clear themselves on their own
+ * Delete All action. */
 export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
   await flushNow({ final: true })
+  const machineHash = await getMachineHash()
+  const userDataDir = app.getPath('userData')
+  for (const day of await listDeviceDays(userDataDir, uid, machineHash)) {
+    try {
+      await unlinkOwnDayFile(userDataDir, uid, machineHash, day)
+    } catch (err) {
+      log('warn', `typing-analytics per-day unlink failed for ${uid}/${machineHash}/${day}: ${String(err)}`)
+    }
+  }
+  const db = getTypingAnalyticsDB()
   const updatedAt = Date.now()
-  const { rows, result } = await tombstoneOwnScopeRows(uid, [FULL_RANGE], updatedAt)
-  await flushTombstoneRows(uid, rows, updatedAt)
+  const result = db.tombstoneAllRowsForUid(uid, updatedAt)
   await notifySyncIfTouched(uid, result)
   return result
+}
+
+async function unlinkOwnDayFile(
+  userDataDir: string,
+  uid: string,
+  machineHash: string,
+  utcDay: UtcDay,
+): Promise<void> {
+  try {
+    await unlink(deviceDayJsonlPath(userDataDir, uid, machineHash, utcDay))
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err
+  }
 }
 
 async function notifySyncIfTouched(uid: string, result: TypingTombstoneResult): Promise<void> {
