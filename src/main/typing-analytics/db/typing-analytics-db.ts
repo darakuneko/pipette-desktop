@@ -113,6 +113,8 @@ export class TypingAnalyticsDB {
   private readonly selectMatrixHeatmapStmt: Statement
   private readonly selectKeyboardsWithTypingDataStmt: Statement
   private readonly selectDailySummariesForUidStmt: Statement
+  private readonly selectDailySummariesForUidAndHashStmt: Statement
+  private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
   private readonly selectLiveMatrixMinutesForScopeStmt: Statement
@@ -521,6 +523,40 @@ export class TypingAnalyticsDB {
        ORDER BY date DESC
     `)
 
+    // Same as the cross-hash variant but restricted to one machine_hash
+    // so the Local tab shows only this device's contribution and the
+    // Sync tab can drill into a specific remote device.
+    this.selectDailySummariesForUidAndHashStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+       GROUP BY date
+       ORDER BY date DESC
+    `)
+
+    // Remote devices (machine_hash != @ownHash) that currently hold at
+    // least one live minute-stats row for this keyboard. Powers the
+    // Sync > Typing > Device tree: each returned hash gets its own
+    // subnode. Sorted for deterministic UI ordering.
+    this.selectRemoteHashesForUidStmt = this.db.prepare(`
+      SELECT DISTINCT s.machine_hash AS machineHash
+        FROM typing_scopes s
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash != @ownHash
+         AND s.is_deleted = 0
+         AND EXISTS (
+           SELECT 1 FROM typing_minute_stats t
+            WHERE t.scope_id = s.id AND t.is_deleted = 0
+         )
+       ORDER BY s.machine_hash
+    `)
+
     // Row-listing queries scoped to a single scope_id — used by the
     // delete APIs to build tombstone JSONL rows for our own machine's
     // scope only. The range window is half-open `[startMs, endMs)` for
@@ -792,6 +828,26 @@ export class TypingAnalyticsDB {
    * and ordered newest first. Live rows only. */
   listDailySummariesForUid(uid: string): TypingDailySummary[] {
     return this.selectDailySummariesForUidStmt.all({ uid }) as TypingDailySummary[]
+  }
+
+  /** Daily summaries for a keyboard uid restricted to a single
+   * machine_hash. Same shape as {@link listDailySummariesForUid} but
+   * drops any rows that aren't attributable to the requested hash so
+   * the Local tab can show only this device's days and the Sync tab
+   * can show one remote device at a time. */
+  listDailySummariesForUidAndHash(
+    uid: string,
+    machineHash: string,
+  ): TypingDailySummary[] {
+    return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingDailySummary[]
+  }
+
+  /** machine_hash values for remote devices (non-@ownHash) that hold
+   * at least one live minute-stats row for this keyboard. Used by the
+   * Sync > Typing tree to decide how many device subnodes to render. */
+  listRemoteHashesForUid(uid: string, ownHash: string): string[] {
+    const rows = this.selectRemoteHashesForUidStmt.all({ uid, ownHash }) as Array<{ machineHash: string }>
+    return rows.map((r) => r.machineHash)
   }
 
   /** Tombstone every live row for a uid whose timestamp falls inside
