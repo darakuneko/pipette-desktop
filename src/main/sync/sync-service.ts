@@ -43,7 +43,7 @@ import {
   listDeviceDays,
   readPointerKey,
 } from '../typing-analytics/jsonl/paths'
-import type { UtcDay } from '../typing-analytics/jsonl/utc-day'
+import { utcDayBoundaryMs, type UtcDay } from '../typing-analytics/jsonl/utc-day'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import {
@@ -487,19 +487,17 @@ async function mergeDeviceDayBundle(
   await mkdir(deviceDayDir(userData, dayRef.uid, dayRef.machineHash), { recursive: true })
   await writeFile(localPath, data, 'utf-8')
 
-  const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
-  // read_pointers remain keyed by (uid, hash) at the hash level — the
-  // newest row id from the latest day per hash is what gets stored.
-  // Incremental application still works because readRows skips rows at
-  // or below the pointer.
-  const pointerKey = readPointerKey(dayRef.uid, dayRef.machineHash)
-  const priorPointer = state.read_pointers[pointerKey] ?? null
-
-  const { rows, lastId } = await readRows(localPath, { afterId: priorPointer })
+  // Per-day bundles are replayed in full, not against the hash-level
+  // `read_pointers` — the pointer points at whatever day was last
+  // processed for this hash, so fetching an older day afterwards would
+  // see `afterId` already past every row in that file and apply 0
+  // rows. The LWW merge is idempotent, so replaying the whole day is
+  // cheap and correct. `read_pointers` only tracks v6 flat merges.
+  const { rows } = await readRows(localPath)
   if (rows.length > 0) {
     applyRowsToCache(getTypingAnalyticsDB(), rows)
-    state.read_pointers[pointerKey] = lastId
   }
+  const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
   state.last_synced_at = Date.now()
   await saveSyncState(userData, state)
 }
@@ -883,6 +881,29 @@ async function reconcileOwnHashTypingAnalytics(
   return { state, mutated }
 }
 
+/** Distinct remote machineHash values (non-own) that cloud currently
+ * holds any per-day file for under `uid`. Used by the Sync > Typing
+ * subtree to discover remote devices before the user has ever opened
+ * one — the cache-only `listRemoteHashesForUid` misses hashes that
+ * haven't been merged locally yet. Sorted for stable UI order. */
+export async function listRemoteTypingHashesForUidFromCloud(
+  uid: string,
+): Promise<string[]> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return []
+  const ownHash = await getMachineHash()
+  const remoteFiles = await listFiles()
+  const hashes = new Set<string>()
+  for (const file of remoteFiles) {
+    const unit = syncUnitFromFileName(file.name)
+    if (!unit) continue
+    const ref = parseTypingAnalyticsDeviceDaySyncUnit(unit)
+    if (!ref || ref.uid !== uid || ref.machineHash === ownHash) continue
+    hashes.add(ref.machineHash)
+  }
+  return Array.from(hashes).sort()
+}
+
 /** List the UTC days that cloud currently holds for a remote device
  * `(uid, machineHash)`. Returned in ascending lexicographic order so
  * callers can feed the list straight into a Sync > Typing > Device
@@ -928,6 +949,16 @@ export async function deleteRemoteTypingDay(
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
       log('warn', `typing-analytics local delete failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
     }
+  }
+  // Tombstone the remote hash's cache rows for this day so the Data
+  // modal list refreshes immediately after the delete. Scoped to the
+  // single hash + day so a same-day local contribution stays visible.
+  try {
+    const { startMs, endMs } = utcDayBoundaryMs(utcDay)
+    const updatedAt = Date.now()
+    getTypingAnalyticsDB().tombstoneRowsForUidHashInRange(uid, machineHash, startMs, endMs, updatedAt)
+  } catch (err) {
+    log('warn', `typing-analytics cache tombstone failed for ${uid} ${machineHash} ${utcDay}: ${String(err)}`)
   }
   if (!remoteFile) return false
   await deleteFile(remoteFile.id)

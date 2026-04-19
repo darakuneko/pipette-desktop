@@ -36,6 +36,7 @@ const mockTypingAnalyticsListItems = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListItemsLocal = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListItemsForHash = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListRemoteHashes = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListRemoteCloudHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
 const mockTypingAnalyticsDeleteRemoteDay = vi.fn().mockResolvedValue(true)
@@ -60,6 +61,7 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListItemsLocal: mockTypingAnalyticsListItemsLocal,
     typingAnalyticsListItemsForHash: mockTypingAnalyticsListItemsForHash,
     typingAnalyticsListRemoteHashes: mockTypingAnalyticsListRemoteHashes,
+    typingAnalyticsListRemoteCloudHashes: mockTypingAnalyticsListRemoteCloudHashes,
     typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
     typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
     typingAnalyticsDeleteRemoteDay: mockTypingAnalyticsDeleteRemoteDay,
@@ -121,6 +123,7 @@ describe('DataModal', () => {
     mockTypingAnalyticsListItemsLocal.mockResolvedValue([])
     mockTypingAnalyticsListItemsForHash.mockResolvedValue([])
     mockTypingAnalyticsListRemoteHashes.mockResolvedValue([])
+    mockTypingAnalyticsListRemoteCloudHashes.mockResolvedValue([])
     mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
     mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
     mockTypingAnalyticsDeleteRemoteDay.mockResolvedValue(true)

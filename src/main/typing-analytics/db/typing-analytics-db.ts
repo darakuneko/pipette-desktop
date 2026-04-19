@@ -121,6 +121,10 @@ export class TypingAnalyticsDB {
   private readonly selectLiveMinuteStatsForScopeStmt: Statement
   private readonly selectLiveSessionsForScopeStmt: Statement
   private readonly tombstoneCharMinutesInRangeStmt: Statement
+  private readonly tombstoneCharMinutesForHashInRangeStmt: Statement
+  private readonly tombstoneMatrixMinutesForHashInRangeStmt: Statement
+  private readonly tombstoneMinuteStatsForHashInRangeStmt: Statement
+  private readonly tombstoneSessionsForHashInRangeStmt: Statement
   private readonly tombstoneMatrixMinutesInRangeStmt: Statement
   private readonly tombstoneMinuteStatsInRangeStmt: Statement
   private readonly tombstoneSessionsInRangeStmt: Statement
@@ -649,6 +653,41 @@ export class TypingAnalyticsDB {
          AND end_ms > @startMs AND start_ms < @endMs
     `)
 
+    // Hash-scoped range variants — Sync-delete of another device's day
+    // removes only that device's rows while keeping same-day contributions
+    // from other hashes intact.
+    const tombstoneHashRangeWhere = `
+      scope_id IN (
+        SELECT id FROM typing_scopes
+         WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+      )
+        AND is_deleted = 0
+    `
+    this.tombstoneCharMinutesForHashInRangeStmt = this.db.prepare(`
+      UPDATE typing_char_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneHashRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    this.tombstoneMatrixMinutesForHashInRangeStmt = this.db.prepare(`
+      UPDATE typing_matrix_minute
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneHashRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    this.tombstoneMinuteStatsForHashInRangeStmt = this.db.prepare(`
+      UPDATE typing_minute_stats
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneHashRangeWhere}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `)
+    this.tombstoneSessionsForHashInRangeStmt = this.db.prepare(`
+      UPDATE typing_sessions
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${tombstoneHashRangeWhere}
+         AND end_ms > @startMs AND start_ms < @endMs
+    `)
+
     this.tombstoneAllCharMinutesStmt = this.db.prepare(`
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
@@ -854,6 +893,28 @@ export class TypingAnalyticsDB {
    * [startMs, endMs). Bumps updated_at on the touched rows so LWW
    * merge on other devices picks up the deletion. Returns per-table
    * change counts for UX / logging. */
+  /** Same as {@link tombstoneRowsForUidInRange} but restricted to a
+   * single machine_hash. Used by the Sync-delete UX to retract a
+   * specific remote device's contribution without touching rows
+   * another device recorded on the same date. */
+  tombstoneRowsForUidHashInRange(
+    uid: string,
+    machineHash: string,
+    startMs: number,
+    endMs: number,
+    updatedAt: number,
+  ): TypingTombstoneResult {
+    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const tx = this.db.transaction(() => {
+      result.charMinutes = this.tombstoneCharMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      result.matrixMinutes = this.tombstoneMatrixMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      result.minuteStats = this.tombstoneMinuteStatsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      result.sessions = this.tombstoneSessionsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+    })
+    tx()
+    return result
+  }
+
   tombstoneRowsForUidInRange(
     uid: string,
     startMs: number,

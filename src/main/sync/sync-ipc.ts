@@ -36,6 +36,7 @@ import {
   deleteRemoteTypingDay,
   fetchRemoteTypingDay,
   listRemoteTypingDaysFor,
+  listRemoteTypingHashesForUidFromCloud,
   SyncCredentialError,
 } from './sync-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
@@ -507,6 +508,14 @@ export function setupSyncIpc(): void {
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
 
   // --- Typing analytics cloud operations (Sync tab) ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES,
+    async (_event, uid: unknown): Promise<string[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      return listRemoteTypingHashesForUidFromCloud(uid)
+    },
+  )
+
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS,
     async (_event, uid: unknown, machineHash: unknown): Promise<string[]> => {
