@@ -679,7 +679,22 @@
     "analysisTab": {
       "wpm": "WPM",
       "interval": "間隔",
-      "activity": "活動量"
+      "activity": "活動量",
+      "keyHeatmap": "ヒートマップ"
+    },
+    "keyHeatmap": {
+      "layer": "レイヤー",
+      "layerOption": "レイヤー {{i}}",
+      "noLayout": "このスナップショットにレイアウトデータがありません。",
+      "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
+      "ranking": {
+        "topN": "上位",
+        "unusedN": "表示数",
+        "topHeading": "最頻キー (上位 {{n}})",
+        "unusedHeading": "未押下キー (先頭 {{n}})",
+        "emptyTop": "この期間に押下されたキーがありません。",
+        "emptyUnused": "全キーが 1 回以上押されています。"
+      }
     },
     "filters": {
       "from": "From",
@@ -693,6 +708,12 @@
       "unitOption": {
         "sec": "秒",
         "ms": "ミリ秒"
+      },
+      "normalization": "正規化",
+      "normalizationOption": {
+        "absolute": "絶対数",
+        "perHour": "1 時間あたり",
+        "shareOfTotal": "総打鍵比 (%)"
       },
       "granularity": "粒度",
       "granularityOption": {

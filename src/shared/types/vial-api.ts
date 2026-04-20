@@ -155,7 +155,8 @@ export interface VialAPI {
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
-  typingAnalyticsGetKeymapSnapshotForRange(uid: string, machineHash: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
+  typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
+  typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

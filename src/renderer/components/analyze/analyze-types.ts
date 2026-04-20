@@ -2,7 +2,11 @@
 // Shared state keys for the Analyze tab. Kept here so the chart
 // components can import them without the whole view.
 
-export type AnalysisTabKey = 'wpm' | 'interval' | 'activity'
+export type AnalysisTabKey = 'wpm' | 'interval' | 'activity' | 'keyHeatmap'
+/** Normalization option used by the Heatmap tab so the key colours can
+ * be read as raw counts, rate (keys per hour), or share of the total
+ * strokes in the selected window. */
+export type HeatmapNormalization = 'absolute' | 'perHour' | 'shareOfTotal'
 export type DeviceScope = 'own' | 'all'
 /** Display unit for the Interval chart — the SQL stores keystroke
  * intervals in ms, but seconds are easier to reason about for pauses

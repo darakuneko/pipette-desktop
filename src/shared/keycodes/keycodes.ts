@@ -1189,6 +1189,7 @@ export {
   keycodeLabel,
   codeToLabel,
   keycodeTooltip,
+  resolveSnapshotLabel,
   getKeycodeRevision,
   recreateKeycodes,
   createUserKeycodes,

@@ -313,12 +313,35 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE,
+    async (_event, uid: unknown, layer: unknown, sinceMs: unknown, untilMs: unknown, scopedOwnHash: unknown): Promise<TypingHeatmapByCell> => {
+      if (typeof uid !== 'string' || uid.length === 0) return {}
+      if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
+      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return {}
+      if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return {}
+      const db = getTypingAnalyticsDB()
+      const sinceMinuteMs = Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS
+      const untilMinuteMs = Math.ceil(untilMs / MINUTE_MS) * MINUTE_MS
+      const machineHash = scopedOwnHash === true ? await getMachineHash() : undefined
+      const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash)
+      const out: TypingHeatmapByCell = {}
+      for (const [key, cell] of totals) {
+        out[key] = { total: cell.total, tap: cell.tap, hold: cell.hold }
+      }
+      return out
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE,
-    async (_event, uid: unknown, machineHash: unknown, fromMs: unknown, toMs: unknown): Promise<TypingKeymapSnapshot | null> => {
+    async (_event, uid: unknown, fromMs: unknown, toMs: unknown): Promise<TypingKeymapSnapshot | null> => {
       if (typeof uid !== 'string' || uid.length === 0) return null
-      if (typeof machineHash !== 'string' || machineHash.length === 0) return null
       if (typeof fromMs !== 'number' || !Number.isFinite(fromMs)) return null
       if (typeof toMs !== 'number' || !Number.isFinite(toMs)) return null
+      // Snapshots are only written by the own device (Record-start runs
+      // on connected devices), so the Analyze view looks up the own
+      // machineHash. Remote snapshots aren't transferred today.
+      const machineHash = await getMachineHash()
       return getKeymapSnapshotForRange(app.getPath('userData'), uid, machineHash, fromMs, toMs)
     },
   )

@@ -114,6 +114,8 @@ export class TypingAnalyticsDB {
   private readonly selectSessionsForUidStmt: Statement
   private readonly selectLocalKeyboardUidsStmt: Statement
   private readonly selectMatrixHeatmapStmt: Statement
+  private readonly selectMatrixHeatmapInRangeStmt: Statement
+  private readonly selectMatrixHeatmapInRangeForHashStmt: Statement
   private readonly selectKeyboardsWithTypingDataStmt: Statement
   private readonly selectDailySummariesForUidStmt: Statement
   private readonly selectDailySummariesForUidAndHashStmt: Statement
@@ -493,6 +495,44 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMinuteMs
+       GROUP BY m.row, m.col
+    `)
+
+    // Range-bounded matrix heatmap — used by the Analyze key-heatmap
+    // tab where the user picks an explicit [sinceMs, untilMs) window.
+    // Aggregates across every machine_hash (the Analyze tab can scope
+    // device-wise at the renderer, but the SQL stays device-agnostic
+    // so `deviceScope: 'all'` works without a second statement).
+    this.selectMatrixHeatmapInRangeStmt = this.db.prepare(`
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY m.row, m.col
+    `)
+
+    this.selectMatrixHeatmapInRangeForHashStmt = this.db.prepare(`
+      SELECT m.row AS row, m.col AS col,
+             SUM(m.count) AS total,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.layer = @layer
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
        GROUP BY m.row, m.col
     `)
 
@@ -968,6 +1008,36 @@ export class TypingAnalyticsDB {
     sinceMinuteMs: number,
   ): Map<string, { total: number; tap: number; hold: number }> {
     const rows = this.selectMatrixHeatmapStmt.all({ uid, machineHash, layer, sinceMinuteMs }) as Array<{
+      row: number
+      col: number
+      total: number
+      tap: number
+      hold: number
+    }>
+    const result = new Map<string, { total: number; tap: number; hold: number }>()
+    for (const r of rows) {
+      result.set(`${r.row},${r.col}`, { total: r.total, tap: r.tap, hold: r.hold })
+    }
+    return result
+  }
+
+  /** Range-bounded per-cell totals for the Analyze key-heatmap tab.
+   * `machineHash` is optional — omit to aggregate across every device
+   * ("All devices"), pass one to scope to a single hash. */
+  aggregateMatrixCountsForUidInRange(
+    uid: string,
+    layer: number,
+    sinceMs: number,
+    untilMs: number,
+    machineHash?: string,
+  ): Map<string, { total: number; tap: number; hold: number }> {
+    const stmt = machineHash !== undefined
+      ? this.selectMatrixHeatmapInRangeForHashStmt
+      : this.selectMatrixHeatmapInRangeStmt
+    const params = machineHash !== undefined
+      ? { uid, machineHash, layer, sinceMs, untilMs }
+      : { uid, layer, sinceMs, untilMs }
+    const rows = stmt.all(params) as Array<{
       row: number
       col: number
       total: number

@@ -49,6 +49,12 @@ interface Props {
    * still visually announce themselves when there is no tap data
    * yet. Ignored for non-masked keys. */
   heatmapInnerFill?: string | null
+  /** Bypasses the global keycode registration when rendering labels.
+   *  The Analyze view uses this so snapshots whose LT/LM composites are
+   *  not covered by the connected keyboard's current layer count still
+   *  get pretty multi-part labels. `masked` also dictates which render
+   *  branch (plain vs. tap/hold-split) the widget takes. */
+  labelOverride?: { outer: string; inner: string; masked: boolean }
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
@@ -71,6 +77,7 @@ function KeyWidgetInner({
   remapped,
   heatmapOuterFill,
   heatmapInnerFill,
+  labelOverride,
   onClick,
   onDoubleClick,
   onHover,
@@ -103,7 +110,7 @@ function KeyWidgetInner({
   // Heatmap sits below every interactive state so the typing-view
   // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
-  const masked = isMask(keycode)
+  const masked = labelOverride?.masked ?? isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
   let fillColor = KEY_BG_COLOR
   let invertText = false
@@ -122,12 +129,14 @@ function KeyWidgetInner({
   else if (remapped) labelColor = KEY_REMAP_COLOR
 
   // Label
-  const outerLabel = keycodeLabel(keycode)
+  const outerLabel = labelOverride?.outer ?? keycodeLabel(keycode)
   const innerLabel = maskKeycode
     ? keycodeLabel(maskKeycode)
-    : masked
-      ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
-      : ''
+    : labelOverride
+      ? labelOverride.inner
+      : masked
+        ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
+        : ''
 
   // Text rendering: split by \n for multi-line labels
   const labelLines = outerLabel.split('\n')
@@ -288,7 +297,9 @@ function KeyWidgetInner({
             fontFamily="sans-serif"
             style={{ pointerEvents: 'none' }}
           >
-            {keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')}
+            {labelOverride
+              ? labelOverride.outer
+              : keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')}
           </text>
           {/* Inner (base) label - always use normal text color against inner rect bg */}
           <text

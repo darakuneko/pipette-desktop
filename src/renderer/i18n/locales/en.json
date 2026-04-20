@@ -680,7 +680,22 @@
     "analysisTab": {
       "wpm": "WPM",
       "interval": "Interval",
-      "activity": "Activity"
+      "activity": "Activity",
+      "keyHeatmap": "Heatmap"
+    },
+    "keyHeatmap": {
+      "layer": "Layer",
+      "layerOption": "Layer {{i}}",
+      "noLayout": "Layout data not available for this snapshot.",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "ranking": {
+        "topN": "Top N",
+        "unusedN": "Shown",
+        "topHeading": "Most pressed (top {{n}})",
+        "unusedHeading": "Unpressed keys (first {{n}})",
+        "emptyTop": "No key presses in this range.",
+        "emptyUnused": "All layout keys were pressed at least once."
+      }
     },
     "filters": {
       "from": "From",
@@ -694,6 +709,12 @@
       "unitOption": {
         "sec": "Seconds",
         "ms": "Milliseconds"
+      },
+      "normalization": "Normalize",
+      "normalizationOption": {
+        "absolute": "Absolute",
+        "perHour": "Per hour",
+        "shareOfTotal": "Share of total"
       },
       "granularity": "Granularity",
       "granularityOption": {

@@ -239,8 +239,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
-  typingAnalyticsGetKeymapSnapshotForRange: (uid: string, machineHash: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, machineHash, fromMs, toMs),
+  typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, fromMs, toMs),
+  typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scopedOwnHash),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

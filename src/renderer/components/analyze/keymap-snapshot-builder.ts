@@ -6,6 +6,7 @@
 
 import type { KeyboardState } from '../../hooks/keyboard-types'
 import { EMPTY_UID } from '../../../shared/constants/protocol'
+import { serialize as serializeKeycode } from '../../../shared/keycodes/keycodes'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 
 export function buildKeymapSnapshot(
@@ -15,13 +16,19 @@ export function buildKeymapSnapshot(
   if (!kb.layout || kb.uid === EMPTY_UID) return null
   if (kb.layers <= 0 || kb.rows <= 0 || kb.cols <= 0) return null
 
-  const keymap: number[][][] = []
+  const keymap: string[][][] = []
   for (let layer = 0; layer < kb.layers; layer += 1) {
-    const rows: number[][] = []
+    const rows: string[][] = []
     for (let row = 0; row < kb.rows; row += 1) {
-      const cols: number[] = []
+      const cols: string[] = []
       for (let col = 0; col < kb.cols; col += 1) {
-        cols.push(kb.keymap.get(`${layer},${row},${col}`) ?? 0)
+        const kc = kb.keymap.get(`${layer},${row},${col}`) ?? 0
+        // Serialize at record-start time — the renderer holds the
+        // right vial-protocol context right now (LT range, custom
+        // keycodes, etc), and later Analyze reads happen without a
+        // live keyboard. Stashing the QMK id avoids the resolver
+        // having to re-acquire that context.
+        cols.push(serializeKeycode(kc))
       }
       rows.push(cols)
     }

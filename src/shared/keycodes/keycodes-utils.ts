@@ -433,6 +433,54 @@ export function keycodeTooltip(qmkId: string): string | undefined {
   return kc.qmkId
 }
 
+const LAYER_COMPOSITE_RE =
+  /^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)(\d+)(?:\((.+)\))?$/
+
+/** Resolve display labels for a serialized QMK id without depending on
+ *  the current `recreateKeyboardKeycodes` state. Falls back to standalone
+ *  pattern matching when the live registration does not cover the
+ *  composite, so snapshot viewers render pretty labels even for layer
+ *  counts the connected keyboard hasn't registered. */
+export function resolveSnapshotLabel(
+  qmkId: string,
+): { outer: string; inner: string; masked: boolean } {
+  if (!qmkId) return { outer: '', inner: '', masked: false }
+
+  const outerKc = findOuterKeycode(qmkId)
+  if (outerKc) {
+    if (isMask(qmkId)) {
+      const innerKc = findInnerKeycode(qmkId)
+      return {
+        outer: outerKc.label.replace(/\n?\(kc\)$/, ''),
+        inner: innerKc?.label ?? '',
+        masked: true,
+      }
+    }
+    return { outer: outerKc.label, inner: '', masked: false }
+  }
+
+  const layerComposite = qmkId.match(LAYER_COMPOSITE_RE)
+  if (layerComposite) {
+    const [, op, lyr, inner] = layerComposite
+    const outer = `${op} ${lyr}`
+    if (inner !== undefined) {
+      const innerKc = findKeycode(inner)
+      return { outer, inner: innerKc?.label ?? inner, masked: true }
+    }
+    return { outer, inner: '', masked: false }
+  }
+
+  const parenIdx = qmkId.indexOf('(')
+  if (parenIdx > 0 && qmkId.endsWith(')')) {
+    const op = qmkId.substring(0, parenIdx)
+    const inner = qmkId.substring(parenIdx + 1, qmkId.length - 1)
+    const innerKc = findKeycode(inner)
+    return { outer: op, inner: innerKc?.label ?? inner, masked: true }
+  }
+
+  return { outer: qmkId, inner: '', masked: false }
+}
+
 
 // --- Recreate keycodes ---
 

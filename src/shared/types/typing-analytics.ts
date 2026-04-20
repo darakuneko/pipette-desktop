@@ -110,10 +110,13 @@ export interface TypingKeymapSnapshot {
   savedAt: number
   layers: number
   matrix: { rows: number; cols: number }
-  /** `keymap[layer][row][col]` = raw keycode (as returned by the
-   * vial protocol for this device). Nested arrays keep the JSON
-   * readable when the file is inspected by hand. */
-  keymap: number[][][]
+  /** `keymap[layer][row][col]` = serialized QMK id string (e.g.
+   * `"KC_A"`, `"LT(0,KC_ESC)"`). The record-start side runs
+   * `serialize(rawKeycode)` with the device's current context (vial
+   * protocol version + layer count) so composite keycodes stay human
+   * readable; the Analyze view can drop the label straight into
+   * `KeyboardWidget` without re-resolving. */
+  keymap: string[][][]
   /** Layout definition used to plot the grid. Shape mirrors the
    * subset of `KeyboardDefinition` the renderer needs to lay out
    * key widgets (labels, key positions). */

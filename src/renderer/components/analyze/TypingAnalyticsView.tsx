@@ -7,10 +7,11 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, RangeMs } from './analyze-types'
+import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, RangeMs } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
+import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
@@ -29,9 +30,10 @@ const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
 const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['wpm', 'interval', 'activity']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
+const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 const DAY_MS = 86_400_000
 
 // Keep this table in sync with `GRANULARITIES` in analyze-bucket.ts;
@@ -83,7 +85,10 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   const [keyboards, setKeyboards] = useState<TypingKeyboardSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUid, setSelectedUid] = useState<string | null>(initialUid ?? null)
-  const [analysisTab, setAnalysisTab] = useState<AnalysisTabKey>('wpm')
+  // Default to Key heatmap — it's the most concrete overview when the
+  // snapshot is available. If the selected range has no snapshot, the
+  // visible-tabs effect below falls the user back to the next tab.
+  const [analysisTab, setAnalysisTab] = useState<AnalysisTabKey>('keyHeatmap')
   // Snapshot "now" at mount so the user's max boundary stays stable
   // while the page is open and we can reproducibly re-clip a stale
   // `to` when the user drags it above the wall clock we recorded.
@@ -95,6 +100,8 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
+  const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
+  const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -118,13 +125,23 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
     void refresh()
   }, [refresh])
 
+  useEffect(() => {
+    if (!selectedUid) { setKeymapSnapshot(null); return }
+    let cancelled = false
+    void window.vialAPI
+      .typingAnalyticsGetKeymapSnapshotForRange(selectedUid, range.fromMs, range.toMs)
+      .then((s) => { if (!cancelled) setKeymapSnapshot(s) })
+      .catch(() => { if (!cancelled) setKeymapSnapshot(null) })
+    return () => { cancelled = true }
+  }, [selectedUid, range])
+
   const selected = selectedUid
     ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
     : null
 
   return (
     <div
-      className="flex h-[70vh] min-h-0 gap-4"
+      className="flex min-h-[70vh] gap-4"
       data-testid="analyze-view"
     >
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
@@ -244,7 +261,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </select>
                 </label>
               )}
-              {analysisTab !== 'activity' && (
+              {(analysisTab === 'wpm' || analysisTab === 'interval') && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.granularity')}
                   <select
@@ -264,15 +281,40 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </select>
                 </label>
               )}
+              {analysisTab === 'keyHeatmap' && (
+                <label className={FILTER_LABEL}>
+                  {t('analyze.filters.normalization')}
+                  <select
+                    className={FILTER_SELECT}
+                    value={heatmapNormalization}
+                    onChange={(e) => setHeatmapNormalization(e.target.value as HeatmapNormalization)}
+                    data-testid="analyze-filter-normalization"
+                  >
+                    {HEATMAP_NORMALIZATIONS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`analyze.filters.normalizationOption.${key}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
+            <div className="flex-1 min-h-0 py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
                 <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} granularity={granularity} />
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} />
-              ) : (
+              ) : analysisTab === 'activity' ? (
                 <ActivityChart uid={selected.uid} range={range} deviceScope={deviceScope} />
-              )}
+              ) : analysisTab === 'keyHeatmap' ? (
+                keymapSnapshot !== null ? (
+                  <KeyHeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} normalization={heatmapNormalization} />
+                ) : (
+                  <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-keyheatmap-empty">
+                    {t('analyze.keyHeatmap.noSnapshot')}
+                  </div>
+                )
+              ) : null}
             </div>
           </>
         ) : (

@@ -19,13 +19,13 @@ describe('buildKeymapSnapshot', () => {
     expect(buildKeymapSnapshot(kb)).toBeNull()
   })
 
-  it('packs the keymap Map into layer/row/col arrays', () => {
+  it('packs the keymap Map into layer/row/col arrays of QMK ids', () => {
+    // KC_A=0x04, KC_B=0x05, KC_ESC=0x29
     const keymap = new Map<string, number>([
-      ['0,0,0', 10],
-      ['0,0,1', 11],
-      ['0,1,0', 12],
-      ['0,1,1', 13],
-      ['1,0,0', 20],
+      ['0,0,0', 0x04],
+      ['0,0,1', 0x05],
+      ['0,1,0', 0x29],
+      ['1,0,0', 0x04],
     ])
     const kb = makeState({
       uid: '0xAABB',
@@ -37,15 +37,15 @@ describe('buildKeymapSnapshot', () => {
     })
     const out = buildKeymapSnapshot(kb, 1_000)
     expect(out).not.toBeNull()
-    expect(out).toMatchObject({
-      uid: '0xAABB',
-      savedAt: 1_000,
-      layers: 2,
-      matrix: { rows: 2, cols: 2 },
-      keymap: [
-        [[10, 11], [12, 13]],
-        [[20, 0], [0, 0]],
-      ],
-    })
+    expect(out?.savedAt).toBe(1_000)
+    expect(out?.layers).toBe(2)
+    expect(out?.matrix).toEqual({ rows: 2, cols: 2 })
+    // The serializer turns each number into its QMK id; KC_NO ("0")
+    // is the zero fallback for cells the keymap didn't touch.
+    expect(out?.keymap[0][0][0]).toBe('KC_A')
+    expect(out?.keymap[0][0][1]).toBe('KC_B')
+    expect(out?.keymap[0][1][0]).toBe('KC_ESCAPE')
+    expect(out?.keymap[1][0][0]).toBe('KC_A')
+    expect(out?.keymap[1][1][1]).toBe('KC_NO')
   })
 })

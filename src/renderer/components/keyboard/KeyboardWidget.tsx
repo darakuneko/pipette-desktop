@@ -86,6 +86,11 @@ interface Props {
   /** Peak `hold` across `heatmapCells` — scales the outer rect of
    * masked LT/MT keys. */
   heatmapMaxHold?: number
+  /** Optional per-key pretty-label override keyed by `"row,col"`. The
+   *  Analyze view passes this so snapshot keymaps render with multi-part
+   *  LT/LM labels even when the connected keyboard does not currently
+   *  register those composites. */
+  labelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
@@ -114,6 +119,7 @@ function KeyboardWidgetInner({
   heatmapMaxTotal = 0,
   heatmapMaxTap = 0,
   heatmapMaxHold = 0,
+  labelOverrides,
   onKeyClick,
   onKeyDoubleClick,
   onEncoderClick,
@@ -211,6 +217,7 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
@@ -261,6 +268,7 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
             onHover={onKeyHover}
