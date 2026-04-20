@@ -502,7 +502,7 @@ export function TypingTestPane({
                       className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
                     >
                       {TYPING_HEATMAP_HALF_LIFE_OPTIONS.map((m) => (
-                        <option key={m} value={m}>{m}</option>
+                        <option key={m} value={m}>{t('editor.typingTest.heatmapHalfLifeOption', { minutes: m })}</option>
                       ))}
                     </select>
                   </div>
