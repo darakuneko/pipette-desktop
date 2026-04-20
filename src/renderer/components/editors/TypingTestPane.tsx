@@ -133,6 +133,10 @@ export function TypingTestPane({
       return
     }
     if (!recordingConsentAccepted) {
+      // Hide the REC overlay so the modal isn't visually overlapped
+      // by the popover; the cancel/accept handlers reopen it so the
+      // user lands back where they started.
+      setViewOnlyControlsOpen(false)
       setShowConsentModal(true)
       return
     }
@@ -142,8 +146,14 @@ export function TypingTestPane({
   const handleConsentAccept = useCallback(() => {
     onRecordingConsentAccepted?.()
     setShowConsentModal(false)
+    setViewOnlyControlsOpen(true)
     onRecordEnabledChange?.(true)
   }, [onRecordingConsentAccepted, onRecordEnabledChange])
+
+  const handleConsentCancel = useCallback(() => {
+    setShowConsentModal(false)
+    setViewOnlyControlsOpen(true)
+  }, [])
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
   const [mouseOver, setMouseOver] = useState(false)
 
@@ -290,7 +300,7 @@ export function TypingTestPane({
       {showConsentModal && (
         <TypingRecordingConsentModal
           onAccept={handleConsentAccept}
-          onCancel={() => setShowConsentModal(false)}
+          onCancel={handleConsentCancel}
         />
       )}
       {!viewOnly && (
