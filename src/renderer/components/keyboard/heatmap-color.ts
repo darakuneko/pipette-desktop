@@ -5,11 +5,22 @@
 
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 
-/** Maps a normalized 0-1 intensity to an HSL fill. 0 returns a soft
- * yellow tint; 1 returns a saturated red. Intensities above 1 are
- * clamped so the hottest key cannot go beyond full red. */
-export function heatmapFill(intensity: number): string {
-  const t = Math.max(0, Math.min(1, intensity))
+/** Below this transformed intensity the overlay is skipped so the
+ * default key background shows through. The check runs after the
+ * sqrt curve: 0.05 in t-space corresponds to 0.0025 of the raw max,
+ * so any key that ever received ≈0.25 % of the peak's hits still
+ * paints a visible tint. */
+const HEATMAP_MIN_T = 0.05
+
+/** Maps a normalized 0-1 intensity to an HSL fill, or `null` when the
+ * value is below the visibility floor. A sqrt (power = 0.5) curve
+ * stretches the low-frequency tail so rare keys still tint visibly
+ * while the top of the range compresses — standard treatment for the
+ * power-law distribution of keystrokes. */
+export function heatmapFill(intensity: number): string | null {
+  if (!Number.isFinite(intensity)) return null
+  const t = Math.sqrt(Math.max(0, Math.min(1, intensity)))
+  if (t < HEATMAP_MIN_T) return null
   // Hue slides from yellow (60°) to red (0°). Lightness drops so the
   // high end reads as a filled red key rather than a washed-out tint.
   const hue = Math.round(60 - 60 * t)

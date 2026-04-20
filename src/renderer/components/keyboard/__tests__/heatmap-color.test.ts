@@ -9,8 +9,16 @@ function cells(entries: Array<[string, TypingHeatmapCell]>): Map<string, TypingH
 }
 
 describe('heatmapFill', () => {
-  it('returns a yellow fill at intensity 0', () => {
-    expect(heatmapFill(0)).toContain('hsl(60, 70%,')
+  it('returns null below the visibility floor (sqrt(t) < 0.05)', () => {
+    // 0.0024 after sqrt is ~0.049 — still below the floor.
+    expect(heatmapFill(0)).toBeNull()
+    expect(heatmapFill(0.0024)).toBeNull()
+  })
+
+  it('returns a yellow tint just above the floor', () => {
+    // sqrt(0.01) = 0.1 → hue ≈ 54°, still in the yellow band.
+    const fill = heatmapFill(0.01) ?? ''
+    expect(fill).toMatch(/^hsl\(54, 70%, /)
   })
 
   it('returns a red fill at intensity 1', () => {
@@ -21,8 +29,10 @@ describe('heatmapFill', () => {
     expect(heatmapFill(5)).toBe(heatmapFill(1))
   })
 
-  it('clamps intensities below 0 to the yellow end', () => {
-    expect(heatmapFill(-0.5)).toBe(heatmapFill(0))
+  it('returns null for negative or non-finite input', () => {
+    expect(heatmapFill(-0.5)).toBeNull()
+    expect(heatmapFill(Number.NaN)).toBeNull()
+    expect(heatmapFill(Number.POSITIVE_INFINITY)).toBeNull()
   })
 })
 
