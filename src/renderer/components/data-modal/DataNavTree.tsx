@@ -190,15 +190,6 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNa
           ))}
         </Branch>
 
-        {/* Application */}
-        <Leaf
-          label={t('dataModal.application')}
-          depth={1}
-          active={isActivePath(activePath, { section: 'local', page: 'application' })}
-          onClick={() => onNavigate({ section: 'local', page: 'application' })}
-          testId="nav-local-application"
-        />
-
         {/* Typing */}
         <Branch
           label={t('dataModal.typing.title')}
@@ -228,6 +219,15 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNa
             ))
           )}
         </Branch>
+
+        {/* Application */}
+        <Leaf
+          label={t('dataModal.application')}
+          depth={1}
+          active={isActivePath(activePath, { section: 'local', page: 'application' })}
+          onClick={() => onNavigate({ section: 'local', page: 'application' })}
+          testId="nav-local-application"
+        />
       </Branch>
 
       {/* ── Sync ── */}
