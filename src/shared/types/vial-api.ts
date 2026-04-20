@@ -25,6 +25,7 @@ import type {
   TypingHeatmapByCell,
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
+  TypingKeymapSnapshot,
   TypingMinuteStatsRow,
   TypingTombstoneResult,
 } from './typing-analytics'
@@ -153,6 +154,8 @@ export interface VialAPI {
   typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
+  typingAnalyticsGetKeymapSnapshotForRange(uid: string, machineHash: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

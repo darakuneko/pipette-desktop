@@ -97,6 +97,29 @@ export interface TypingIntervalDailySummary {
   intervalMaxMs: number | null
 }
 
+/** Keymap snapshot taken at record-start time. Stored per (uid,
+ * machineHash) as a timestamped file so the Analyze key heatmap can
+ * render the layout that was active for a given range. Writes are
+ * skipped when the content matches the previous snapshot; the
+ * timestamp only advances when something the heatmap cares about
+ * actually changed. */
+export interface TypingKeymapSnapshot {
+  uid: string
+  machineHash: string
+  productName: string
+  savedAt: number
+  layers: number
+  matrix: { rows: number; cols: number }
+  /** `keymap[layer][row][col]` = raw keycode (as returned by the
+   * vial protocol for this device). Nested arrays keep the JSON
+   * readable when the file is inspected by hand. */
+  keymap: number[][][]
+  /** Layout definition used to plot the grid. Shape mirrors the
+   * subset of `KeyboardDefinition` the renderer needs to lay out
+   * key widgets (labels, key positions). */
+  layout: unknown
+}
+
 /** Minute-level row returned by the Analyze fetch. The Analyze view
  * pulls minute-raw data and buckets it on the client so the SQL layer
  * doesn't have to know about a user-chosen bucket size. `keystrokes`

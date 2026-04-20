@@ -41,6 +41,8 @@ const mockTypingAnalyticsListActivityGrid = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListActivityGridLocal = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListMinuteStats = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListMinuteStatsLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsSaveKeymapSnapshot = vi.fn().mockResolvedValue({ saved: false, savedAt: null })
+const mockTypingAnalyticsGetKeymapSnapshotForRange = vi.fn().mockResolvedValue(null)
 const mockTypingAnalyticsListRemoteHashes = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsListLocalDeviceDays = vi.fn().mockResolvedValue([])
 const mockTypingAnalyticsHasRemote = vi.fn().mockResolvedValue(false)
@@ -76,6 +78,8 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListActivityGridLocal: mockTypingAnalyticsListActivityGridLocal,
     typingAnalyticsListMinuteStats: mockTypingAnalyticsListMinuteStats,
     typingAnalyticsListMinuteStatsLocal: mockTypingAnalyticsListMinuteStatsLocal,
+    typingAnalyticsSaveKeymapSnapshot: mockTypingAnalyticsSaveKeymapSnapshot,
+    typingAnalyticsGetKeymapSnapshotForRange: mockTypingAnalyticsGetKeymapSnapshotForRange,
     typingAnalyticsListRemoteHashes: mockTypingAnalyticsListRemoteHashes,
     typingAnalyticsListLocalDeviceDays: mockTypingAnalyticsListLocalDeviceDays,
     typingAnalyticsHasRemote: mockTypingAnalyticsHasRemote,
@@ -148,6 +152,8 @@ describe('DataModal', () => {
     mockTypingAnalyticsListActivityGridLocal.mockResolvedValue([])
     mockTypingAnalyticsListMinuteStats.mockResolvedValue([])
     mockTypingAnalyticsListMinuteStatsLocal.mockResolvedValue([])
+    mockTypingAnalyticsSaveKeymapSnapshot.mockResolvedValue({ saved: false, savedAt: null })
+    mockTypingAnalyticsGetKeymapSnapshotForRange.mockResolvedValue(null)
     mockTypingAnalyticsListRemoteHashes.mockResolvedValue([])
     mockTypingAnalyticsListLocalDeviceDays.mockResolvedValue([])
     mockTypingAnalyticsHasRemote.mockResolvedValue(false)

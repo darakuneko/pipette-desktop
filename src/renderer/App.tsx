@@ -33,6 +33,7 @@ import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
+import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
@@ -294,6 +295,19 @@ export function App() {
   // toggle stays intact — useInputModes.analyticsSink is already
   // gated on typingTestViewOnly, so flipping the view off stops the
   // sink without touching the persisted typingRecordEnabled.
+  // Kick the record flag into the device-prefs store, and on the
+  // enable-edge fire a best-effort keymap snapshot save so the
+  // Analyze key heatmap has a layout anchor for every record session.
+  // Disabling record doesn't touch snapshots — they are a record-time
+  // history, not a toggle state.
+  const handleTypingRecordEnabledChange = useCallback((enabled: boolean) => {
+    devicePrefs.setTypingRecordEnabled(enabled)
+    if (!enabled) return
+    const snap = buildKeymapSnapshot(keyboard)
+    if (!snap) return
+    void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
+  }, [devicePrefs, keyboard])
+
   const handleViewAnalytics = useCallback(() => {
     setViewExitTransition(true)
     requestAnimationFrame(() => { requestAnimationFrame(() => {
@@ -767,7 +781,7 @@ export function App() {
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
-            onTypingRecordEnabledChange={devicePrefs.setTypingRecordEnabled}
+            onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
             typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
             onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
             typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}

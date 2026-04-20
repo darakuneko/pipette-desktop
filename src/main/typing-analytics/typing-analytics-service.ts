@@ -12,10 +12,12 @@ import type {
   TypingAnalyticsFingerprint,
   TypingAnalyticsKeyboard,
   TypingHeatmapByCell,
+  TypingKeymapSnapshot,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { log } from '../logger'
 import { ensureCacheIsFresh } from './cache-rebuild'
+import { getKeymapSnapshotForRange, saveKeymapSnapshotIfChanged } from './keymap-snapshots'
 import { buildFingerprint } from './fingerprint'
 import {
   MinuteBuffer,
@@ -281,6 +283,43 @@ export function setupTypingAnalyticsIpc(): void {
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
       return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT,
+    async (_event, partial: unknown): Promise<{ saved: boolean; savedAt: number | null }> => {
+      if (!partial || typeof partial !== 'object') return { saved: false, savedAt: null }
+      const s = partial as Partial<TypingKeymapSnapshot>
+      if (typeof s.uid !== 'string' || s.uid.length === 0) return { saved: false, savedAt: null }
+      try {
+        const machineHash = await getMachineHash()
+        const full: TypingKeymapSnapshot = {
+          uid: s.uid,
+          machineHash,
+          productName: typeof s.productName === 'string' ? s.productName : '',
+          savedAt: typeof s.savedAt === 'number' && Number.isFinite(s.savedAt) ? s.savedAt : Date.now(),
+          layers: typeof s.layers === 'number' ? s.layers : 0,
+          matrix: s.matrix ?? { rows: 0, cols: 0 },
+          keymap: Array.isArray(s.keymap) ? s.keymap : [],
+          layout: s.layout ?? null,
+        }
+        return await saveKeymapSnapshotIfChanged(app.getPath('userData'), full)
+      } catch (err) {
+        log.warn('[typing-analytics] saveKeymapSnapshot failed', err)
+        return { saved: false, savedAt: null }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE,
+    async (_event, uid: unknown, machineHash: unknown, fromMs: unknown, toMs: unknown): Promise<TypingKeymapSnapshot | null> => {
+      if (typeof uid !== 'string' || uid.length === 0) return null
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return null
+      if (typeof fromMs !== 'number' || !Number.isFinite(fromMs)) return null
+      if (typeof toMs !== 'number' || !Number.isFinite(toMs)) return null
+      return getKeymapSnapshotForRange(app.getPath('userData'), uid, machineHash, fromMs, toMs)
     },
   )
 }

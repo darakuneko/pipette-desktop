@@ -21,6 +21,7 @@ import type {
   TypingHeatmapByCell,
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
+  TypingKeymapSnapshot,
   TypingMinuteStatsRow,
   TypingTombstoneResult,
 } from '../shared/types/typing-analytics'
@@ -236,6 +237,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs),
   typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
+  typingAnalyticsGetKeymapSnapshotForRange: (uid: string, machineHash: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, machineHash, fromMs, toMs),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

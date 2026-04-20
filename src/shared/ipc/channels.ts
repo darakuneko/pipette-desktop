@@ -93,6 +93,8 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL: 'typing-analytics:list-interval-items-local',
   TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL: 'typing-analytics:list-activity-grid-local',
   TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL: 'typing-analytics:list-minute-stats-local',
+  TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT: 'typing-analytics:save-keymap-snapshot',
+  TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE: 'typing-analytics:get-keymap-snapshot-for-range',
   TYPING_ANALYTICS_LIST_REMOTE_HASHES: 'typing-analytics:list-remote-hashes',
   TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
   TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS: 'typing-analytics:list-local-device-days',
