@@ -638,7 +638,26 @@
     "placeholder": "Analysis charts coming soon.",
     "keyboardList": "Keyboards",
     "noKeyboards": "No typing data yet.",
-    "selectKeyboard": "Select a keyboard from the list."
+    "selectKeyboard": "Select a keyboard from the list.",
+    "tablistLabel": "Analysis type",
+    "analysisTab": {
+      "wpm": "WPM",
+      "interval": "Interval",
+      "heatmap": "Heatmap"
+    },
+    "filters": {
+      "period": "Period",
+      "periodOption": {
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "all": "All time"
+      },
+      "device": "Device",
+      "deviceOption": {
+        "own": "This device",
+        "all": "All devices"
+      }
+    }
   },
   "dataModal": {
     "title": "Data",

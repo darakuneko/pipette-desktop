@@ -637,7 +637,26 @@
     "placeholder": "分析チャートを準備中です。",
     "keyboardList": "キーボード",
     "noKeyboards": "まだ打鍵データがありません。",
-    "selectKeyboard": "一覧からキーボードを選択してください。"
+    "selectKeyboard": "一覧からキーボードを選択してください。",
+    "tablistLabel": "分析種別",
+    "analysisTab": {
+      "wpm": "WPM",
+      "interval": "間隔",
+      "heatmap": "ヒートマップ"
+    },
+    "filters": {
+      "period": "期間",
+      "periodOption": {
+        "7d": "直近 7 日",
+        "30d": "直近 30 日",
+        "all": "全期間"
+      },
+      "device": "デバイス",
+      "deviceOption": {
+        "own": "このデバイス",
+        "all": "全デバイス合算"
+      }
+    }
   },
   "dataModal": {
     "title": "データ",
