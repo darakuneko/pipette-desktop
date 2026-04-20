@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import type { AnalysisTabKey, DeviceScope, PeriodKey } from './analyze-types'
+import { HeatmapChart } from './HeatmapChart'
 import { IntervalChart } from './IntervalChart'
 import { WpmChart } from './WpmChart'
 
@@ -164,9 +165,7 @@ export function TypingAnalyticsView() {
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} period={period} deviceScope={deviceScope} />
               ) : (
-                <div className="py-6 text-center text-[13px] text-content-muted">
-                  {t('analyze.placeholder')}
-                </div>
+                <HeatmapChart uid={selected.uid} period={period} deviceScope={deviceScope} />
               )}
             </div>
           </>

@@ -649,6 +649,22 @@
         "max": "最大"
       }
     },
+    "heatmap": {
+      "tableLabel": "時間帯 × 曜日の活動量",
+      "hourHeader": "{{hour}}時",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} 打",
+      "legendLow": "0",
+      "legendHigh": "{{count}}",
+      "dow": {
+        "0": "日",
+        "1": "月",
+        "2": "火",
+        "3": "水",
+        "4": "木",
+        "5": "金",
+        "6": "土"
+      }
+    },
     "analysisTab": {
       "wpm": "WPM",
       "interval": "間隔",

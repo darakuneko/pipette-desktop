@@ -97,6 +97,16 @@ export interface TypingIntervalDailySummary {
   intervalMaxMs: number | null
 }
 
+/** One bucket of the Analyze activity heatmap (hour-of-day × day-of-week).
+ * `dow` follows SQLite's `strftime('%w', ...)`: 0 = Sunday ... 6 =
+ * Saturday. `hour` is local-time 0..23. `keystrokes` is the sum across
+ * every scope the query kept in scope. */
+export interface TypingActivityCell {
+  dow: number
+  hour: number
+  keystrokes: number
+}
+
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
  * that the release-edge classifier routed to the tap vs hold arm of

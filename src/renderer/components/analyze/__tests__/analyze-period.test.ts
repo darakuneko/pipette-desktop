@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, expect, it } from 'vitest'
-import { filterByPeriod, periodCutoffDay } from '../analyze-period'
+import { filterByPeriod, periodCutoffDay, periodSinceMs } from '../analyze-period'
 
 // Local-time Date — periodCutoffDay mirrors `strftime(..., 'localtime')`
 // on the SQL side, so the tests have to commit to a local timezone too.
@@ -45,6 +45,17 @@ describe('analyze-period', () => {
     it('returns a fresh array (callers are safe to sort in place)', () => {
       const out = filterByPeriod(rows, 'all', NOW)
       expect(out).not.toBe(rows)
+    })
+  })
+
+  describe('periodSinceMs', () => {
+    it('returns 0 for "all"', () => {
+      expect(periodSinceMs('all', NOW)).toBe(0)
+    })
+
+    it('returns local midnight of the N-day window start', () => {
+      expect(periodSinceMs('7d', NOW)).toBe(new Date(2026, 3, 14, 0, 0, 0, 0).getTime())
+      expect(periodSinceMs('30d', NOW)).toBe(new Date(2026, 2, 22, 0, 0, 0, 0).getTime())
     })
   })
 })

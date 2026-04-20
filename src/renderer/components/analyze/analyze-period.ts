@@ -31,3 +31,13 @@ export function filterByPeriod<T extends { date: string }>(rows: readonly T[], p
   if (cutoff === null) return rows.slice()
   return rows.filter((r) => r.date >= cutoff)
 }
+
+/** Inclusive lower bound for `period` as epoch ms — used by the
+ * activity-grid IPC which groups by local time at the SQL layer and
+ * therefore needs the cutoff in the same frame. Returns 0 for "all". */
+export function periodSinceMs(period: PeriodKey, now: Date = new Date()): number {
+  if (period === 'all') return 0
+  const days = period === '7d' ? 7 : 30
+  const cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate() - days + 1, 0, 0, 0, 0)
+  return cutoff.getTime()
+}

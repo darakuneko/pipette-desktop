@@ -25,6 +25,7 @@ import {
 import { SessionDetector, type FinalizedSession } from './session-detector'
 import {
   getTypingAnalyticsDB,
+  type TypingActivityCell,
   type TypingDailySummary,
   type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
@@ -239,6 +240,25 @@ export function setupTypingAnalyticsIpc(): void {
       return listTypingIntervalSummariesForHash(uid, ownHash)
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID,
+    async (_event, uid: unknown, sinceMs: unknown): Promise<TypingActivityCell[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      return listTypingActivityGrid(uid, since)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown): Promise<TypingActivityCell[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const ownHash = await getMachineHash()
+      return listTypingActivityGridForHash(uid, ownHash, since)
+    },
+  )
 }
 
 /**
@@ -295,6 +315,21 @@ export function listTypingIntervalSummariesForHash(
   machineHash: string,
 ): TypingIntervalDailySummary[] {
   return getTypingAnalyticsDB().listIntervalSummariesForUidAndHash(uid, machineHash)
+}
+
+/** Hour × day-of-week activity grid for the Analyze > Heatmap view.
+ * `sinceMs=0` returns the full history; positive values clip the SQL
+ * scan at the source. */
+export function listTypingActivityGrid(uid: string, sinceMs: number): TypingActivityCell[] {
+  return getTypingAnalyticsDB().listActivityGridForUid(uid, sinceMs)
+}
+
+export function listTypingActivityGridForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+): TypingActivityCell[] {
+  return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

@@ -650,6 +650,22 @@
         "max": "Max"
       }
     },
+    "heatmap": {
+      "tableLabel": "Hour × day-of-week activity",
+      "hourHeader": "{{hour}}:00",
+      "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} keys",
+      "legendLow": "0",
+      "legendHigh": "{{count}}",
+      "dow": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      }
+    },
     "analysisTab": {
       "wpm": "WPM",
       "interval": "Interval",

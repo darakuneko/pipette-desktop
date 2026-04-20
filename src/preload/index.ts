@@ -15,6 +15,7 @@ import type { AppConfig } from '../shared/types/app-config'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type {
+  TypingActivityCell,
   TypingAnalyticsEvent,
   TypingDailySummary,
   TypingHeatmapByCell,
@@ -226,6 +227,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS, uid),
   typingAnalyticsListIntervalItemsLocal: (uid: string): Promise<TypingIntervalDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL, uid),
+  typingAnalyticsListActivityGrid: (uid: string, sinceMs: number): Promise<TypingActivityCell[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID, uid, sinceMs),
+  typingAnalyticsListActivityGridLocal: (uid: string, sinceMs: number): Promise<TypingActivityCell[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL, uid, sinceMs),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

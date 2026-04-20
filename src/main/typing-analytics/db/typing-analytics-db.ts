@@ -90,6 +90,7 @@ export type {
   TypingKeyboardSummary,
   TypingDailySummary,
   TypingIntervalDailySummary,
+  TypingActivityCell,
   TypingTombstoneResult,
 } from '../../../shared/types/typing-analytics'
 
@@ -117,6 +118,8 @@ export class TypingAnalyticsDB {
   private readonly selectDailySummariesForUidAndHashStmt: Statement
   private readonly selectIntervalSummariesForUidStmt: Statement
   private readonly selectIntervalSummariesForUidAndHashStmt: Statement
+  private readonly selectActivityGridForUidStmt: Statement
+  private readonly selectActivityGridForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -586,6 +589,37 @@ export class TypingAnalyticsDB {
        ORDER BY date DESC
     `)
 
+    // Hour-of-day × day-of-week activity grid for the Analyze heatmap.
+    // Both dimensions are local-time via strftime to match the existing
+    // daily summaries. Callers pass @sinceMs to clip to a period
+    // (@sinceMs=0 = all time).
+    this.selectActivityGridForUidStmt = this.db.prepare(`
+      SELECT CAST(strftime('%w', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS dow,
+             CAST(strftime('%H', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+             SUM(t.keystrokes) AS keystrokes
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+       GROUP BY dow, hour
+    `)
+
+    this.selectActivityGridForUidAndHashStmt = this.db.prepare(`
+      SELECT CAST(strftime('%w', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS dow,
+             CAST(strftime('%H', t.minute_ts / 1000, 'unixepoch', 'localtime') AS INTEGER) AS hour,
+             SUM(t.keystrokes) AS keystrokes
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+       GROUP BY dow, hour
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -938,6 +972,24 @@ export class TypingAnalyticsDB {
     machineHash: string,
   ): TypingIntervalDailySummary[] {
     return this.selectIntervalSummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingIntervalDailySummary[]
+  }
+
+  /** Hour-of-day × day-of-week activity grid for a keyboard uid since
+   * `sinceMs` (use 0 for "all time"). Buckets with zero keystrokes are
+   * omitted from the result — callers zero-fill when rendering. */
+  listActivityGridForUid(uid: string, sinceMs: number): TypingActivityCell[] {
+    return this.selectActivityGridForUidStmt.all({ uid, sinceMs }) as TypingActivityCell[]
+  }
+
+  /** Same as {@link listActivityGridForUid} but restricted to a single
+   * machine_hash so the Analyze "This device" scope can exclude the
+   * contribution of other devices. */
+  listActivityGridForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+  ): TypingActivityCell[] {
+    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs }) as TypingActivityCell[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold
