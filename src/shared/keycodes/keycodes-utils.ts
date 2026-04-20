@@ -433,8 +433,10 @@ export function keycodeTooltip(qmkId: string): string | undefined {
   return kc.qmkId
 }
 
-const LAYER_COMPOSITE_RE =
-  /^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)(\d+)(?:\((.+)\))?$/
+// LT/LM write the layer digit directly after the op (`LT1(kc)`); MO-family
+// ops put the layer inside parens (`MO(1)`) and carry no inner keycode.
+const LAYER_MASK_RE = /^(LT|LM)(\d+)(?:\((.+)\))?$/
+const LAYER_SINGLE_RE = /^(MO|DF|PDF|TG|TT|OSL|TO)\((\d+)\)$/
 
 /** Resolve display labels for a serialized QMK id without depending on
  *  the current `recreateKeyboardKeycodes` state. Falls back to standalone
@@ -459,15 +461,21 @@ export function resolveSnapshotLabel(
     return { outer: outerKc.label, inner: '', masked: false }
   }
 
-  const layerComposite = qmkId.match(LAYER_COMPOSITE_RE)
-  if (layerComposite) {
-    const [, op, lyr, inner] = layerComposite
+  const layerMask = qmkId.match(LAYER_MASK_RE)
+  if (layerMask) {
+    const [, op, lyr, inner] = layerMask
     const outer = `${op} ${lyr}`
     if (inner !== undefined) {
       const innerKc = findKeycode(inner)
       return { outer, inner: innerKc?.label ?? inner, masked: true }
     }
     return { outer, inner: '', masked: false }
+  }
+
+  const layerSingle = qmkId.match(LAYER_SINGLE_RE)
+  if (layerSingle) {
+    const [, op, lyr] = layerSingle
+    return { outer: `${op}(${lyr})`, inner: '', masked: false }
   }
 
   const parenIdx = qmkId.indexOf('(')
