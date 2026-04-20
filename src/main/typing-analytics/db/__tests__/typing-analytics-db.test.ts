@@ -408,6 +408,19 @@ describe('TypingAnalyticsDB', () => {
       expect(ccdd.is_deleted).toBe(0)
     })
 
+    it('tombstoneRowsForUidHashInRange restricts the tombstone to a single machine_hash', () => {
+      const result = db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 5_000)
+      expect(result.charMinutes).toBe(1) // only scope-aabb-local
+      expect(result.matrixMinutes).toBe(1)
+      expect(result.minuteStats).toBe(1)
+      expect(result.sessions).toBe(1)
+      const conn = db.getConnection()
+      const localRow = conn.prepare('SELECT is_deleted FROM typing_char_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number }
+      const remoteRow = conn.prepare('SELECT is_deleted FROM typing_char_minute WHERE scope_id = ?').get('scope-aabb-remote') as { is_deleted: number }
+      expect(localRow.is_deleted).toBe(1)
+      expect(remoteRow.is_deleted).toBe(0)
+    })
+
     it('tombstoneRowsForUidInRange does not touch already-deleted rows', () => {
       db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
       // Second tombstone with a newer updated_at should not re-bump the already-deleted rows.
