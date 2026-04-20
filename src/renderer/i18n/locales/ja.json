@@ -689,11 +689,8 @@
       "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
       "ranking": {
         "topN": "上位",
-        "unusedN": "表示数",
-        "topHeading": "最頻キー (上位 {{n}})",
-        "unusedHeading": "未押下キー (先頭 {{n}})",
-        "emptyTop": "この期間に押下されたキーがありません。",
-        "emptyUnused": "全キーが 1 回以上押されています。"
+        "topHeading": "最頻キー",
+        "emptyTop": "この期間に押下されたキーがありません。"
       }
     },
     "filters": {

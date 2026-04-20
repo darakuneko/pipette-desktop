@@ -32,8 +32,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const [loading, setLoading] = useState(true)
   const [layer, setLayer] = useState(0)
   const [topN, setTopN] = useState<number>(10)
-  const [unusedN, setUnusedN] = useState<number>(10)
-  const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -100,41 +99,62 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
     return m
   }, [cells, normalization, range])
 
-  // Build the ranking list from every physical key in the layout so the
-  // "Top N" always has a stable universe — rows with zero presses sink
-  // to the bottom and the unused section picks them up. Labels use the
-  // raw QMK id (e.g. `LT1(kc)`) for compactness; duplicate ids get a
-  // `row,col` suffix so two LT1(kc) keys stay distinguishable.
+  // Build the ranking as one entry per (logical label, physical cell).
+  // A masked key contributes two rows — outer (total presses) and inner
+  // (tap emissions) — so users can see LT1 hold activity separately from
+  // the Bksp/Space it types. Cells that share a label (two LT1 keys, or
+  // two `A` keys in a split layout) get a `row,col` suffix appended so
+  // each physical key stays distinguishable in the list and hover
+  // highlights the exact cell.
   const rankings = useMemo(() => {
-    const participating: Array<{ key: string; rawLabel: string; count: number }> = []
-    if (layout && Array.isArray(layout.keys)) {
-      const labelCounts = new Map<string, number>()
-      for (const k of layout.keys) {
-        if (k.decal || k.ghost) continue
-        const key = `${k.row},${k.col}`
-        const rawLabel = (keycodes.get(key) ?? '') || key
-        labelCounts.set(rawLabel, (labelCounts.get(rawLabel) ?? 0) + 1)
-        participating.push({ key, rawLabel, count: heatmapCells.get(key)?.total ?? 0 })
-      }
-      for (const p of participating) {
-        if ((labelCounts.get(p.rawLabel) ?? 0) > 1) {
-          p.rawLabel = `${p.rawLabel} ${p.key}`
-        }
-      }
-    } else {
-      for (const [key, cell] of heatmapCells) {
-        const rawLabel = (keycodes.get(key) ?? '') || key
-        participating.push({ key, rawLabel, count: cell.total })
+    type Entry = { displayLabel: string; count: number; cell: string }
+    const raw: Array<{ baseLabel: string; count: number; cell: string }> = []
+    // Ranking wants the compact `LT1` form (no space) even though the
+    // key widget renders `LT 1` for legibility on the keycap itself.
+    const compactLayerOp = (label: string): string => {
+      const m = label.match(/^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)\s(\d+)$/)
+      return m ? `${m[1]}${m[2]}` : label
+    }
+    const push = (label: string, count: number, posKey: string) => {
+      if (!label) return
+      raw.push({ baseLabel: compactLayerOp(label), count, cell: posKey })
+    }
+    const source = layout && Array.isArray(layout.keys)
+      ? layout.keys.filter((k) => !k.decal && !k.ghost).map((k) => `${k.row},${k.col}`)
+      : Array.from(heatmapCells.keys())
+    for (const posKey of source) {
+      const qmkId = keycodes.get(posKey) ?? ''
+      const resolved = resolveSnapshotLabel(qmkId)
+      const cell = heatmapCells.get(posKey)
+      if (resolved.masked) {
+        push(resolved.outer, cell?.total ?? 0, posKey)
+        push(resolved.inner, cell?.tap ?? 0, posKey)
+      } else {
+        push(resolved.outer || qmkId || posKey, cell?.total ?? 0, posKey)
       }
     }
-    const sorted = [...participating].sort((a, b) => b.count - a.count)
-    const top = sorted.slice(0, topN).map((p) => ({ key: p.key, label: p.rawLabel, count: p.count }))
-    const unused = participating
-      .filter((p) => p.count === 0)
-      .slice(0, unusedN)
-      .map((p) => ({ key: p.key, label: p.rawLabel }))
-    return { top, unused }
-  }, [heatmapCells, keycodes, layout, topN, unusedN])
+    const freq = new Map<string, number>()
+    for (const r of raw) freq.set(r.baseLabel, (freq.get(r.baseLabel) ?? 0) + 1)
+    const all: Entry[] = raw.map((r) => {
+      if ((freq.get(r.baseLabel) ?? 0) <= 1) {
+        return { displayLabel: r.baseLabel, count: r.count, cell: r.cell }
+      }
+      const [row, col] = r.cell.split(',')
+      return {
+        displayLabel: `${r.baseLabel} Row:${row} Col:${col}`,
+        count: r.count,
+        cell: r.cell,
+      }
+    })
+    const top = [...all].sort((a, b) => b.count - a.count).slice(0, topN)
+    return { top }
+  }, [heatmapCells, keycodes, layout, topN])
+
+  const hoveredCells = useMemo(() => {
+    if (!hoveredLabel) return undefined
+    const match = rankings.top.find((e) => e.displayLabel === hoveredLabel)
+    return match ? new Set([match.cell]) : undefined
+  }, [hoveredLabel, rankings])
 
   const formatCount = (n: number): string => {
     if (normalization === 'shareOfTotal') return `${n.toFixed(2)}%`
@@ -142,16 +162,14 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
     return Math.round(n).toLocaleString()
   }
 
-  const { heatmapMaxTotal, heatmapMaxTap, heatmapMaxHold } = useMemo(() => {
+  const { heatmapMaxTotal, heatmapMaxTap } = useMemo(() => {
     let total = 0
     let tap = 0
-    let hold = 0
     for (const cell of heatmapCells.values()) {
       if (cell.total > total) total = cell.total
       if (cell.tap > tap) tap = cell.tap
-      if (cell.hold > hold) hold = cell.hold
     }
-    return { heatmapMaxTotal: total, heatmapMaxTap: tap, heatmapMaxHold: hold }
+    return { heatmapMaxTotal: total, heatmapMaxTap: tap }
   }, [heatmapCells])
 
   if (!layout || !Array.isArray(layout.keys)) {
@@ -182,8 +200,13 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           heatmapCells={heatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}
-          heatmapMaxHold={heatmapMaxHold}
-          highlightedKeys={hoveredKey ? new Set([hoveredKey]) : undefined}
+          // Zero-out the hold axis so the outer rect scales by total instead
+          // of hold — the ranking below is keyed by the physical cell's
+          // total press count, so the keymap colour has to read from the
+          // same axis or the "why is this redder than that?" question has
+          // no good answer.
+          heatmapMaxHold={0}
+          highlightedKeys={hoveredCells}
           readOnly
         />
       </div>
@@ -212,14 +235,14 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           </button>
         ))}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row" data-testid="analyze-keyheatmap-rankings">
+      <div className="flex min-h-0 flex-1 flex-col" data-testid="analyze-keyheatmap-rankings">
         <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-top-heading">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3
               id="analyze-keyheatmap-top-heading"
               className="text-[11px] font-semibold uppercase tracking-widest text-content-muted"
             >
-              {t('analyze.keyHeatmap.ranking.topHeading', { n: rankings.top.length })}
+              {t('analyze.keyHeatmap.ranking.topHeading')}
             </h3>
             <select
               className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
@@ -239,55 +262,17 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
             <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
               {rankings.top.map((entry, i) => (
                 <li
-                  key={entry.key}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 ${hoveredKey === entry.key ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
-                  onMouseEnter={() => setHoveredKey(entry.key)}
-                  onMouseLeave={() => setHoveredKey((k) => (k === entry.key ? null : k))}
+                  key={entry.displayLabel}
+                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 ${hoveredLabel === entry.displayLabel ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
+                  onMouseEnter={() => setHoveredLabel(entry.displayLabel)}
+                  onMouseLeave={() => setHoveredLabel((k) => (k === entry.displayLabel ? null : k))}
                 >
                   <span className="w-6 text-right text-content-muted">{i + 1}</span>
-                  <span className="flex-1 truncate font-mono text-content">{entry.label}</span>
+                  <span className="flex-1 min-w-0 truncate font-mono text-content">{entry.displayLabel}</span>
                   <span className="font-mono text-content-secondary">{formatCount(entry.count)}</span>
                 </li>
               ))}
             </ol>
-          )}
-        </section>
-        <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-unused-heading">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <h3
-              id="analyze-keyheatmap-unused-heading"
-              className="text-[11px] font-semibold uppercase tracking-widest text-content-muted"
-            >
-              {t('analyze.keyHeatmap.ranking.unusedHeading', { n: rankings.unused.length })}
-            </h3>
-            <select
-              className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
-              value={unusedN}
-              onChange={(e) => setUnusedN(Number.parseInt(e.target.value, 10))}
-              aria-label={t('analyze.keyHeatmap.ranking.unusedN')}
-              data-testid="analyze-keyheatmap-unused-n"
-            >
-              {TOP_N_OPTIONS.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </div>
-          {rankings.unused.length === 0 ? (
-            <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyUnused')}</div>
-          ) : (
-            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
-              {rankings.unused.map((entry) => (
-                <li
-                  key={entry.key}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-0.5 ${hoveredKey === entry.key ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
-                  onMouseEnter={() => setHoveredKey(entry.key)}
-                  onMouseLeave={() => setHoveredKey((k) => (k === entry.key ? null : k))}
-                >
-                  <span className="flex-1 truncate font-mono text-content">{entry.label}</span>
-                  <span className="font-mono text-content-muted">{entry.key}</span>
-                </li>
-              ))}
-            </ul>
           )}
         </section>
       </div>

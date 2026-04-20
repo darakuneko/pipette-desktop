@@ -690,11 +690,8 @@
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "ranking": {
         "topN": "Top N",
-        "unusedN": "Shown",
-        "topHeading": "Most pressed (top {{n}})",
-        "unusedHeading": "Unpressed keys (first {{n}})",
-        "emptyTop": "No key presses in this range.",
-        "emptyUnused": "All layout keys were pressed at least once."
+        "topHeading": "Most pressed",
+        "emptyTop": "No key presses in this range."
       }
     },
     "filters": {
