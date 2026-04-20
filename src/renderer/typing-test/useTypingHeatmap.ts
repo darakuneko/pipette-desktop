@@ -114,7 +114,9 @@ export function useTypingHeatmap({
     }
 
     const mergeObserved = (hits: Record<string, TypingHeatmapCell>): void => {
+      const seen = new Set<string>()
       for (const [k, hit] of Object.entries(hits)) {
+        seen.add(k)
         const prev = previousObserved.get(k) ?? { total: 0, tap: 0, hold: 0 }
         const delta = {
           total: Math.max(0, hit.total - prev.total),
@@ -129,6 +131,13 @@ export function useTypingHeatmap({
           tap: existing.tap + delta.tap,
           hold: existing.hold + delta.hold,
         })
+      }
+      // Drop the cached raw totals for keys that rolled out of the
+      // query window entirely — otherwise a later fresh hit on the
+      // same key would be treated as "below our last seen value" and
+      // ignored until it climbed back above the stale peak.
+      for (const k of Array.from(previousObserved.keys())) {
+        if (!seen.has(k)) previousObserved.delete(k)
       }
     }
 

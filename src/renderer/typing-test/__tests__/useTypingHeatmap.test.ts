@@ -121,6 +121,39 @@ describe('useTypingHeatmap', () => {
     expect(api).toHaveBeenCalledTimes(2)
   })
 
+  it('treats a key that rolled out of the window as "reset" on re-appearance', async () => {
+    // Bootstrap observes {1,2: 10}. The next poll returns no entry for
+    // that key (it fell out of the 5·τ query window). Later the key
+    // reappears with a low count; the hook must treat that count as a
+    // fresh delta, not compare it against the stale peak of 10.
+    const api = vi.fn<HeatmapFn>()
+      .mockResolvedValueOnce({ '1,2': cell(10) })
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ '1,2': cell(2) })
+    installVialApi(api)
+
+    const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
+    await act(async () => { await flushPromises() })
+
+    await act(async () => {
+      vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
+      await flushPromises()
+    })
+
+    await act(async () => {
+      vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
+      await flushPromises()
+    })
+
+    const decay = Math.exp(-TYPING_HEATMAP_POLL_MS * Math.LN2 / DEFAULT_HALF_LIFE_MS)
+    // After three polls: 10 (bootstrap) · decay² (two poll intervals) +
+    // 2 (fresh re-appearance treated as delta from 0). If the stale
+    // peak leaked through, the delta would be 0 and we'd only see the
+    // decayed bootstrap value.
+    const expected = 10 * decay * decay + 2
+    expect(result.current.cells?.get('1,2')?.total).toBeCloseTo(expected, 4)
+  })
+
   it('stays flat on a same-value poll (no double-counting of the minute bucket)', async () => {
     // The main-process query includes the full current-minute buffer
     // on every call, so raw totals repeat within a minute. The hook
