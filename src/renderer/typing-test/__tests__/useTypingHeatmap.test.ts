@@ -3,7 +3,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useTypingHeatmap, TYPING_HEATMAP_POLL_MS, TYPING_HEATMAP_WINDOW_MS } from '../useTypingHeatmap'
+import { useTypingHeatmap, TYPING_HEATMAP_POLL_MS, TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN } from '../useTypingHeatmap'
+
+const DEFAULT_HALF_LIFE_MS = TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN * 60 * 1_000
+const BOOTSTRAP_SPAN_MS = DEFAULT_HALF_LIFE_MS * 5
 import type { TypingHeatmapByCell } from '../../../shared/types/typing-analytics'
 
 // Minimal vialAPI surface — only the heatmap call is exercised here.
@@ -87,10 +90,12 @@ describe('useTypingHeatmap', () => {
     expect(result.current.maxHold).toBe(2)
     expect(api).toHaveBeenCalledTimes(1)
     const [, , sinceMs] = api.mock.calls[0]
-    expect(Date.now() - (sinceMs as number)).toBeCloseTo(TYPING_HEATMAP_WINDOW_MS, -2)
+    // Bootstrap span is 5 half-lives so the EMA converges on the first
+    // poll; the test asserts the contract, not a magic number.
+    expect(Date.now() - (sinceMs as number)).toBeCloseTo(BOOTSTRAP_SPAN_MS, -2)
   })
 
-  it('refetches on the poll interval', async () => {
+  it('refetches on the poll interval and accumulates via EMA decay', async () => {
     const api = vi.fn<HeatmapFn>()
       .mockResolvedValueOnce({ '1,2': cell(5) })
       .mockResolvedValueOnce({ '1,2': cell(12) })
@@ -104,7 +109,12 @@ describe('useTypingHeatmap', () => {
       vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
       await flushPromises()
     })
-    expect(result.current.cells?.get('1,2')?.total).toBe(12)
+    // After one poll interval: previous counter decays by
+    // exp(-pollMs·ln2/τ) and the newly observed hits add on top. This
+    // is the core property the EMA refactor is supposed to preserve.
+    const decay = Math.exp(-TYPING_HEATMAP_POLL_MS * Math.LN2 / DEFAULT_HALF_LIFE_MS)
+    const expected = 5 * decay + 12
+    expect(result.current.cells?.get('1,2')?.total).toBeCloseTo(expected, 4)
     expect(api).toHaveBeenCalledTimes(2)
   })
 

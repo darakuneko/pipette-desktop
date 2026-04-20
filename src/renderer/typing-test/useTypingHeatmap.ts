@@ -1,29 +1,37 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Polls the main-process typing-analytics heatmap API and exposes the
-// aggregated matrix press counts as a map for the KeyWidget heatmap
-// overlay. Only runs when recording is on; pauses/resets otherwise so
-// a stale overlay does not linger after the user toggles record off.
+// Polls the main-process typing-analytics heatmap API and exposes an
+// exponential-moving-average (EMA) of the matrix press counts. Each
+// poll multiplies every key's running total by exp(-Δt·ln2/τ) and adds
+// the hits observed since the previous poll, so the overlay decays
+// smoothly instead of snapping off a sliding window boundary.
 
 import { useEffect, useRef, useState } from 'react'
 import type { TypingHeatmapCell } from '../../shared/types/typing-analytics'
 
-/** One hour window backing the simplified typing-view heatmap. The full
- * statistics dashboard (Phase 5 item 1) will let the user pick a span;
- * this view intentionally has no controls. */
-export const TYPING_HEATMAP_WINDOW_MS = 60 * 60 * 1_000
+/** Default half-life (minutes) when the AppConfig value hasn't loaded
+ * yet. Mirrors DEFAULT_APP_CONFIG.typingHeatmapHalfLifeMin. */
+export const TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN = 5
 
 /** Poll cadence for the heatmap while the typing view is open with
- * recording on. The main-process query stays under one ms per call for
- * realistic row counts, so 5 s balances perceived freshness against DB
- * chatter. */
+ * recording on. Every poll decays the running counters by
+ * `exp(-pollMs·ln2/τ)` then adds the hits observed since the previous
+ * tick, so smaller values make the overlay more responsive at the
+ * cost of more DB calls. */
 export const TYPING_HEATMAP_POLL_MS = 5_000
+
+/** Bootstrap span = 5 half-lives. Past that, the weight any earlier
+ * hit contributes to the EMA is below 3%, so pre-filling the counters
+ * with the raw sum over that range is indistinguishable from having
+ * run the decay loop for 5τ and converges on the next poll. */
+const BOOTSTRAP_HALF_LIVES = 5
 
 export interface UseTypingHeatmapOptions {
   uid: string | null
   layer: number | null
   enabled: boolean
   pollIntervalMs?: number
-  windowMs?: number
+  /** Half-life in ms controlling how fast press counts decay. */
+  halfLifeMs?: number
 }
 
 export interface UseTypingHeatmapResult {
@@ -50,7 +58,7 @@ export function useTypingHeatmap({
   layer,
   enabled,
   pollIntervalMs = TYPING_HEATMAP_POLL_MS,
-  windowMs = TYPING_HEATMAP_WINDOW_MS,
+  halfLifeMs = TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN * 60 * 1_000,
 }: UseTypingHeatmapOptions): UseTypingHeatmapResult {
   const [cells, setCells] = useState<Map<string, TypingHeatmapCell> | null>(null)
   const [maxes, setMaxes] = useState<{ total: number; tap: number; hold: number }>({
@@ -70,7 +78,7 @@ export function useTypingHeatmap({
 
   useEffect(() => {
     // Disabled by anything — no uid yet, no layer resolved, or record
-    // is off. Clear any stale overlay so the UI does not show 1-hour-old
+    // is off. Clear any stale overlay so the UI does not show stale
     // data when the user flips record back on.
     if (!enabled || !uid || layer === null) {
       setCells(null)
@@ -78,37 +86,88 @@ export function useTypingHeatmap({
       return
     }
 
+    // Running EMA counters scoped to this effect instance so switching
+    // keyboard / layer / half-life resets them cleanly.
+    const counters = new Map<string, TypingHeatmapCell>()
+    let lastPollMs = Date.now()
     let cancelled = false
 
-    async function fetchOnce(): Promise<void> {
-      try {
-        const sinceMs = Date.now() - windowMs
-        const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
-        if (cancelled || !isMountedRef.current) return
-        const next = new Map<string, TypingHeatmapCell>(Object.entries(heat))
-        let maxTotal = 0
-        let maxTap = 0
-        let maxHold = 0
-        for (const cell of next.values()) {
-          if (cell.total > maxTotal) maxTotal = cell.total
-          if (cell.tap > maxTap) maxTap = cell.tap
-          if (cell.hold > maxHold) maxHold = cell.hold
+    const applyDecay = (dtMs: number): void => {
+      if (dtMs <= 0 || counters.size === 0) return
+      const factor = Math.exp(-dtMs * Math.LN2 / halfLifeMs)
+      // Floor below which a counter is treated as zero. Prevents
+      // long-dormant keys from staying in the map forever.
+      const EPS = 1e-3
+      for (const [k, cell] of counters) {
+        const next = { total: cell.total * factor, tap: cell.tap * factor, hold: cell.hold * factor }
+        if (next.total < EPS && next.tap < EPS && next.hold < EPS) {
+          counters.delete(k)
+        } else {
+          counters.set(k, next)
         }
-        setCells(next)
-        setMaxes({ total: maxTotal, tap: maxTap, hold: maxHold })
-      } catch {
-        // IPC errors are non-fatal — keep the last good snapshot so a
-        // transient failure doesn't wipe the overlay mid-typing.
       }
     }
 
-    void fetchOnce()
-    const handle = setInterval(fetchOnce, pollIntervalMs)
+    const mergeHits = (hits: Record<string, TypingHeatmapCell>): void => {
+      for (const [k, hit] of Object.entries(hits)) {
+        const existing = counters.get(k) ?? { total: 0, tap: 0, hold: 0 }
+        counters.set(k, {
+          total: existing.total + hit.total,
+          tap: existing.tap + hit.tap,
+          hold: existing.hold + hit.hold,
+        })
+      }
+    }
+
+    const publish = (): void => {
+      if (cancelled || !isMountedRef.current) return
+      let maxTotal = 0, maxTap = 0, maxHold = 0
+      for (const cell of counters.values()) {
+        if (cell.total > maxTotal) maxTotal = cell.total
+        if (cell.tap > maxTap) maxTap = cell.tap
+        if (cell.hold > maxHold) maxHold = cell.hold
+      }
+      setCells(new Map(counters))
+      setMaxes({ total: maxTotal, tap: maxTap, hold: maxHold })
+    }
+
+    async function bootstrap(): Promise<void> {
+      try {
+        // Pre-fill counters from the last 5·τ span so users see a
+        // meaningful overlay immediately instead of waiting for hits
+        // to accumulate. Beyond 5 half-lives the EMA weight is <3%.
+        const sinceMs = Date.now() - halfLifeMs * BOOTSTRAP_HALF_LIVES
+        const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
+        if (cancelled || !isMountedRef.current) return
+        mergeHits(heat)
+        lastPollMs = Date.now()
+        publish()
+      } catch {
+        /* non-fatal; next poll will retry */
+      }
+    }
+
+    async function poll(): Promise<void> {
+      try {
+        const now = Date.now()
+        applyDecay(now - lastPollMs)
+        const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, lastPollMs)
+        if (cancelled || !isMountedRef.current) return
+        mergeHits(heat)
+        lastPollMs = now
+        publish()
+      } catch {
+        // Keep the last good snapshot on transient failures.
+      }
+    }
+
+    void bootstrap()
+    const handle = setInterval(poll, pollIntervalMs)
     return () => {
       cancelled = true
       clearInterval(handle)
     }
-  }, [uid, layer, enabled, pollIntervalMs, windowMs])
+  }, [uid, layer, enabled, pollIntervalMs, halfLifeMs])
 
   return {
     cells,

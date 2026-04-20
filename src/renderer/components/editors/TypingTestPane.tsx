@@ -6,6 +6,7 @@ import { Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
+import { TYPING_HEATMAP_HALF_LIFE_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
@@ -40,6 +41,12 @@ export interface TypingTestPaneProps {
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   recordEnabled?: boolean
   onRecordEnabledChange?: (enabled: boolean) => void
+  /** EMA half-life in minutes for the typing-view heatmap overlay.
+   * Exposed as a REC-tab dropdown so the user can dial responsiveness
+   * (small values = fast decay, large values = slow decay / long
+   * memory). Backed by AppConfig.typingHeatmapHalfLifeMin. */
+  heatmapHalfLifeMin?: number
+  onHeatmapHalfLifeMinChange?: (minutes: number) => void
   /** Which tab of the view-only menu is currently open. Window shows
    * size / always-on-top controls; REC shows the recording toggle and
    * the entry point to the analytics page. Persisted per keyboard via
@@ -81,6 +88,8 @@ export function TypingTestPane({
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
   onRecordEnabledChange,
+  heatmapHalfLifeMin,
+  onHeatmapHalfLifeMinChange,
   menuTab = 'window',
   onMenuTabChange,
   onViewAnalytics,
@@ -100,6 +109,7 @@ export function TypingTestPane({
     uid: keyboardUid ?? null,
     layer: typingTest.effectiveLayer,
     enabled: !!viewOnly && !!recordEnabled,
+    halfLifeMs: (heatmapHalfLifeMin ?? 5) * 60 * 1_000,
   })
   const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
@@ -480,6 +490,22 @@ export function TypingTestPane({
                   >
                     {t('editor.typingTest.viewAnalytics')}
                   </button>
+                )}
+                {onHeatmapHalfLifeMinChange && (
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-content-muted">{t('editor.typingTest.heatmapHalfLifeShort')}</span>
+                    <select
+                      data-testid="heatmap-half-life-select"
+                      aria-label={t('editor.typingTest.heatmapHalfLife')}
+                      value={heatmapHalfLifeMin ?? 5}
+                      onChange={(e) => onHeatmapHalfLifeMinChange(Number(e.target.value))}
+                      className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                    >
+                      {TYPING_HEATMAP_HALF_LIFE_OPTIONS.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  </div>
                 )}
               </>
             )}
