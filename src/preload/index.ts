@@ -231,6 +231,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FETCH_REMOTE_DAY, uid, machineHash, utcDay),
   typingAnalyticsDeleteRemoteDay: (uid: string, machineHash: string, utcDay: string): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAY, uid, machineHash, utcDay),
+  typingAnalyticsExport: (uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EXPORT, uid, dates),
+  typingAnalyticsImport: (): Promise<{ result: { imported: number; rejections: { fileName: string; reason: string }[] }; cancelled: boolean }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_IMPORT),
 
   // --- Language Store (IPC to main) ---
   langList: (): Promise<LanguageListEntry[]> =>

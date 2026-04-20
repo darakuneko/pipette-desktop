@@ -881,6 +881,17 @@ async function reconcileOwnHashTypingAnalytics(
   return { state, mutated }
 }
 
+/** Snapshot of the user's appData Drive listing as a name-only set,
+ * for callers that need many existence checks (e.g. import). Returns
+ * `null` when the user is unauthenticated so the caller can fall back
+ * to a local-only check rather than rejecting outright. */
+export async function listRemoteFileNames(): Promise<Set<string> | null> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return null
+  const remoteFiles = await listFiles()
+  return new Set(remoteFiles.map((f) => f.name))
+}
+
 /** Distinct remote machineHash values (non-own) that cloud currently
  * holds any per-day file for under `uid`. Used by the Sync > Typing
  * subtree to discover remote devices before the user has ever opened

@@ -149,6 +149,8 @@ export interface VialAPI {
   typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
   typingAnalyticsDeleteRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
+  typingAnalyticsExport(uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }>
+  typingAnalyticsImport(): Promise<{ result: { imported: number; rejections: { fileName: string; reason: string }[] }; cancelled: boolean }>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>

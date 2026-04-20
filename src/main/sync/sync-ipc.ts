@@ -37,8 +37,13 @@ import {
   fetchRemoteTypingDay,
   listRemoteTypingDaysFor,
   listRemoteTypingHashesForUidFromCloud,
+  listRemoteFileNames,
   SyncCredentialError,
 } from './sync-service'
+import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
+import { getMachineHash } from '../typing-analytics/machine-hash'
+import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
+import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
@@ -542,6 +547,69 @@ export function setupSyncIpc(): void {
       if (typeof machineHash !== 'string' || machineHash.length === 0) return false
       if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
       return deleteRemoteTypingDay(uid, machineHash, utcDay)
+    },
+  )
+
+  // --- Typing analytics export / import ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_EXPORT,
+    async (_event, uid: unknown, dates: unknown): Promise<{ written: number; cancelled: boolean }> => {
+      if (typeof uid !== 'string' || uid.length === 0) {
+        return { written: 0, cancelled: true }
+      }
+      // Empty array short-circuits before opening the dialog so the user
+      // doesn't pick a directory just to receive zero files.
+      if (!Array.isArray(dates) || dates.length === 0 || dates.some((d) => typeof d !== 'string')) {
+        return { written: 0, cancelled: true }
+      }
+      const result = await dialog.showOpenDialog(getDialogWindow()!, {
+        title: 'Export typing data',
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { written: 0, cancelled: true }
+      }
+      const ownHash = await getMachineHash()
+      const userData = app.getPath('userData')
+      const filter = new Set(dates as string[])
+      const out = await exportTypingDataForKeyboard(userData, uid, ownHash, result.filePaths[0], filter)
+      return { written: out.written, cancelled: false }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_IMPORT,
+    async (): Promise<{ result: ImportResult; cancelled: boolean }> => {
+      const dialogResult = await dialog.showOpenDialog(getDialogWindow()!, {
+        title: 'Import typing data',
+        filters: [{ name: 'Typing data', extensions: ['jsonl'] }],
+        properties: ['openFile', 'multiSelections'],
+      })
+      const empty: ImportResult = { imported: 0, rejections: [] }
+      if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+        return { result: empty, cancelled: true }
+      }
+      const userData = app.getPath('userData')
+      // Pull the Drive listing once for the whole batch — without this
+      // each rejected-but-cloud-known import would round-trip the full
+      // appData listing again.
+      const remoteNames = await listRemoteFileNames()
+      const importResult = await importTypingDataFiles(userData, dialogResult.filePaths, {
+        cloudHasFile: remoteNames === null
+          ? null
+          // Cloud encrypts each sync unit as `<name>.enc`; the export
+          // form drops `.enc`, so flip it back here for the lookup.
+          : async (name) => remoteNames.has(name.replace(/\.jsonl$/, '.enc')),
+      })
+      if (importResult.imported > 0) {
+        try {
+          const ownHash = await getMachineHash()
+          await ensureCacheIsFresh(getTypingAnalyticsDB(), userData, ownHash, { force: true })
+        } catch (err) {
+          console.warn('[sync-ipc] typing-analytics import: cache rebuild failed; will retry on next launch', err)
+        }
+      }
+      return { result: importResult, cancelled: false }
     },
   )
 

@@ -25,6 +25,20 @@ interface Props {
 const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed'
 const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
 
+/** Local-time label for the next UTC midnight — used to tell the user
+ * when a `live-day-locked` import target will stop being the live day.
+ * Shows month/day together because the rollover often falls on the
+ * next local calendar day (e.g. JST sees UTC rollover at 09:00). */
+function utcRolloverLocalLabel(): string {
+  const now = Date.now()
+  const d = new Date(now)
+  const unlockMs = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1)
+  return new Date(unlockMs).toLocaleString(undefined, {
+    month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
 function formatActiveMs(ms: number): string {
   if (ms < 1_000) return `${ms} ms`
   const totalSec = Math.floor(ms / 1_000)
@@ -38,6 +52,12 @@ function formatActiveMs(ms: number): string {
 
 type ConfirmMode = 'selected' | 'all' | null
 
+type ImportStatus =
+  | { phase: 'importing' }
+  | { phase: 'exporting' }
+  | { phase: 'import-done'; imported: number; rejections: { fileName: string; reason: string }[] }
+  | { phase: 'export-done'; written: number }
+
 export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', machineHash, deviceLabel }: Props) {
   const { t } = useTranslation()
   const [summaries, setSummaries] = useState<TypingDailySummary[]>([])
@@ -45,6 +65,7 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>(null)
   const [busy, setBusy] = useState(false)
+  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null)
   const isSync = mode === 'sync' && typeof machineHash === 'string'
 
   const loadSummaries = useCallback(async () => {
@@ -147,9 +168,69 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
     }
   }, [uid, machineHash, isSync, summaries, loadSummaries, onDeleted])
 
+  const handleExport = useCallback(async () => {
+    if (selected.size === 0) return
+    setBusy(true)
+    setImportStatus({ phase: 'exporting' })
+    try {
+      const res = await window.vialAPI.typingAnalyticsExport(uid, Array.from(selected))
+      if (res.cancelled) {
+        setImportStatus(null)
+      } else {
+        setImportStatus({ phase: 'export-done', written: res.written })
+      }
+    } finally {
+      setBusy(false)
+    }
+  }, [uid, selected])
+
+  const handleImport = useCallback(async () => {
+    setBusy(true)
+    setImportStatus({ phase: 'importing' })
+    try {
+      const { result, cancelled } = await window.vialAPI.typingAnalyticsImport()
+      if (cancelled) {
+        setImportStatus(null)
+        return
+      }
+      setImportStatus({ phase: 'import-done', imported: result.imported, rejections: result.rejections })
+      if (result.imported > 0) {
+        await loadSummaries()
+        onDeleted?.()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }, [loadSummaries, onDeleted])
+
   const footer = (
     <div className="mt-4 border-t border-edge pt-3 shrink-0">
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {!isSync && confirmMode === null && (
+            <>
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                onClick={() => void handleExport()}
+                disabled={busy || selected.size === 0}
+                data-testid="typing-export"
+              >
+                {t('dataModal.typing.exportLabel')}
+              </button>
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                onClick={() => void handleImport()}
+                disabled={busy}
+                data-testid="typing-import"
+              >
+                {t('dataModal.typing.importLabel')}
+              </button>
+            </>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
         {confirmMode === 'selected' ? (
           <>
             <span className="text-sm text-danger">
@@ -218,9 +299,71 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
             </button>
           </>
         )}
+        </div>
       </div>
     </div>
   )
+
+  const bannerTone = (() => {
+    if (!importStatus) return ''
+    if (importStatus.phase === 'importing' || importStatus.phase === 'exporting') {
+      return 'border-edge bg-surface-dim text-content-secondary'
+    }
+    if (importStatus.phase === 'import-done' && importStatus.rejections.length > 0) {
+      return 'border-warning/40 bg-warning/10 text-warning'
+    }
+    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+  })()
+  const inProgress = importStatus?.phase === 'importing' || importStatus?.phase === 'exporting'
+  const importBanner = importStatus ? (
+    <div
+      className={`mb-2 flex items-start gap-2 rounded border px-3 py-2 text-[13px] shrink-0 ${bannerTone}`}
+      data-testid="typing-import-status"
+    >
+      <div className="flex-1 space-y-1 min-w-0">
+        {importStatus.phase === 'importing' && (
+          <div>{t('dataModal.typing.importStatus.importing')}</div>
+        )}
+        {importStatus.phase === 'exporting' && (
+          <div>{t('dataModal.typing.importStatus.exporting')}</div>
+        )}
+        {importStatus.phase === 'export-done' && (
+          <div>{t('dataModal.typing.importStatus.exported', { count: importStatus.written })}</div>
+        )}
+        {importStatus.phase === 'import-done' && (
+          <>
+            <div>{t('dataModal.typing.importStatus.imported', { count: importStatus.imported })}</div>
+            {importStatus.rejections.length > 0 && (
+              <ul className="list-disc pl-4 space-y-0.5">
+                {Array.from(
+                  importStatus.rejections.reduce((m, r) => m.set(r.reason, (m.get(r.reason) ?? 0) + 1), new Map<string, number>()),
+                ).map(([reason, count]) => (
+                  <li key={reason}>
+                    {t(`dataModal.typing.importStatus.reason.${reason}`, {
+                      defaultValue: reason,
+                      unlock: utcRolloverLocalLabel(),
+                    })}
+                    {count > 1 && <span className="ml-1 text-content-muted">(×{count})</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+      </div>
+      {!inProgress && (
+        <button
+          type="button"
+          className="text-content-muted hover:text-content"
+          onClick={() => setImportStatus(null)}
+          aria-label={t('common.close')}
+          data-testid="typing-import-status-dismiss"
+        >
+          ×
+        </button>
+      )}
+    </div>
+  ) : null
 
   if (loading) {
     return <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
@@ -229,6 +372,7 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
   if (summaries.length === 0) {
     return (
       <div className="flex flex-col h-full" data-testid="typing-empty">
+        {importBanner}
         <div className="flex-1 py-4 text-center text-[13px] text-content-muted">
           {t('dataModal.typing.noItems')}
         </div>
@@ -239,6 +383,7 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
 
   return (
     <div className="flex flex-col h-full" data-testid="typing-list">
+      {importBanner}
       <div className="flex items-center justify-between py-2 text-[13px] text-content-muted shrink-0">
         <span>
           {t('dataModal.typing.summaryHeader', {

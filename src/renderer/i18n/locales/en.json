@@ -673,8 +673,25 @@
       "selectRow": "Select {{date}}",
       "deleteSelected": "Delete selected ({{count}})",
       "deleteAll": "Delete all for this keyboard",
-      "confirmDeleteSelected": "Delete {{count}} day(s) of this device's records? Synced copies will drop too, days recorded by other devices remain.",
-      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? Synced copies will drop too, days recorded by other devices remain.",
+      "confirmDeleteSelected": "Delete {{count}} day(s) of this device's records? Synced copies will drop too, days recorded by other devices remain. Once deleted, those dates can no longer be re-imported — export first if you need a backup.",
+      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? Synced copies will drop too, days recorded by other devices remain. Once deleted, those dates can no longer be re-imported — export first if you need a backup.",
+      "exportLabel": "Export…",
+      "importLabel": "Import…",
+      "importStatus": {
+        "importing": "Importing…",
+        "exporting": "Exporting…",
+        "imported": "Imported {{count}} day(s).",
+        "exported": "Exported {{count}} day(s).",
+        "reason": {
+          "invalid-filename": "filename does not match the export pattern",
+          "live-day-locked": "this day's file is currently being recorded — unlocks at {{unlock}}",
+          "duplicate-in-batch": "another file in this batch already targeted the same day",
+          "no-matching-target": "no local or cloud copy of this day to overwrite",
+          "empty-or-invalid-content": "file is empty or contains invalid lines",
+          "rows-outside-day-window": "row timestamps fall outside the day the filename claims",
+          "read-error": "could not read the file"
+        }
+      },
       "noRemoteDevices": "No other devices have typed on this keyboard"
     }
   },

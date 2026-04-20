@@ -672,8 +672,25 @@
       "selectRow": "{{date}} を選択",
       "deleteSelected": "選択した日を削除 ({{count}})",
       "deleteAll": "このキーボードの全データを削除",
-      "confirmDeleteSelected": "このデバイスで記録された {{count}} 日分を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。",
-      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全ての日を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。",
+      "confirmDeleteSelected": "このデバイスで記録された {{count}} 日分を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全ての日を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "exportLabel": "Export…",
+      "importLabel": "Import…",
+      "importStatus": {
+        "importing": "取り込み中…",
+        "exporting": "書き出し中…",
+        "imported": "{{count}} 日分を取り込みました。",
+        "exported": "{{count}} 日分を書き出しました。",
+        "reason": {
+          "invalid-filename": "ファイル名が export 規則に一致しません",
+          "live-day-locked": "このファイルは現在記録中のためロックされています — {{unlock}} に解除",
+          "duplicate-in-batch": "同じ日付を指す別ファイルが同じバッチに含まれています",
+          "no-matching-target": "ローカルにもクラウドにもこの日付のデータがありません",
+          "empty-or-invalid-content": "ファイルが空、または不正な行が含まれます",
+          "rows-outside-day-window": "行の timestamp がファイル名の日付範囲外です",
+          "read-error": "ファイルを読み込めませんでした"
+        }
+      },
       "noRemoteDevices": "このキーボードを他のデバイスで打ったデータはありません"
     }
   },
