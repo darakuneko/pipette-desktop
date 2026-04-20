@@ -91,6 +91,7 @@ export type {
   TypingDailySummary,
   TypingIntervalDailySummary,
   TypingActivityCell,
+  TypingMinuteStatsRow,
   TypingTombstoneResult,
 } from '../../../shared/types/typing-analytics'
 
@@ -120,6 +121,8 @@ export class TypingAnalyticsDB {
   private readonly selectIntervalSummariesForUidAndHashStmt: Statement
   private readonly selectActivityGridForUidStmt: Statement
   private readonly selectActivityGridForUidAndHashStmt: Statement
+  private readonly selectMinuteStatsInRangeForUidStmt: Statement
+  private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -622,6 +625,52 @@ export class TypingAnalyticsDB {
        GROUP BY dow, hour
     `)
 
+    // Minute-raw rows for the Analyze WPM / Interval charts. The client
+    // buckets these based on the user-picked datetime range, so the SQL
+    // only groups by minute_ts (a scope can legitimately write to the
+    // same minute_ts bucket more than once when a machine_hash change
+    // lands; SUM / MIN / AVG / MAX merges those scopes into one row).
+    this.selectMinuteStatsInRangeForUidStmt = this.db.prepare(`
+      SELECT t.minute_ts AS minuteMs,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       ORDER BY t.minute_ts ASC
+    `)
+
+    this.selectMinuteStatsInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT t.minute_ts AS minuteMs,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       ORDER BY t.minute_ts ASC
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -994,6 +1043,25 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingActivityCell[] {
     return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingActivityCell[]
+  }
+
+  /** Minute-raw stats for the Analyze WPM / Interval charts over the
+   * `[sinceMs, untilMs)` window. Callers bucket these on the renderer
+   * side so the SQL layer is independent of the user-picked bucket
+   * width. Rows ordered by minute_ts ASC. */
+  listMinuteStatsInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingMinuteStatsRow[] {
+    return this.selectMinuteStatsInRangeForUidStmt.all({ uid, sinceMs, untilMs }) as TypingMinuteStatsRow[]
+  }
+
+  /** Same as {@link listMinuteStatsInRangeForUid} but restricted to a
+   * single machine_hash for the Analyze "This device" scope. */
+  listMinuteStatsInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingMinuteStatsRow[] {
+    return this.selectMinuteStatsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMinuteStatsRow[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

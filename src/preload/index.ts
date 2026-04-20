@@ -21,6 +21,7 @@ import type {
   TypingHeatmapByCell,
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
+  TypingMinuteStatsRow,
   TypingTombstoneResult,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
@@ -231,6 +232,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID, uid, sinceMs, untilMs),
   typingAnalyticsListActivityGridLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs),
+  typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

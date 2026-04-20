@@ -21,6 +21,7 @@ interface MockChartProps {
   deviceScope: string
   range: { fromMs: number; toMs: number }
   unit?: string
+  granularity?: 'auto' | number
 }
 
 function mockSummary(testId: string) {

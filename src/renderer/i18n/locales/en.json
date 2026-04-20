@@ -694,6 +694,23 @@
       "unitOption": {
         "sec": "Seconds",
         "ms": "Milliseconds"
+      },
+      "granularity": "Granularity",
+      "granularityOption": {
+        "auto": "Auto",
+        "min1": "1 min",
+        "min5": "5 min",
+        "min10": "10 min",
+        "min15": "15 min",
+        "min30": "30 min",
+        "hour1": "1 hour",
+        "hour3": "3 hours",
+        "hour6": "6 hours",
+        "hour12": "12 hours",
+        "day1": "1 day",
+        "day3": "3 days",
+        "week1": "1 week",
+        "month1": "1 month"
       }
     }
   },

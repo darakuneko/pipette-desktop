@@ -16,3 +16,9 @@ export interface RangeMs {
   fromMs: number
   toMs: number
 }
+
+/** Bucket-size choice for the Analyze charts. `'auto'` hands the
+ * decision back to `pickBucketMs`; a number is a hard override in ms
+ * (must be a member of the `GRANULARITIES` table to keep local-time
+ * snapping sensible). */
+export type GranularityChoice = 'auto' | number

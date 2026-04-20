@@ -97,6 +97,24 @@ export interface TypingIntervalDailySummary {
   intervalMaxMs: number | null
 }
 
+/** Minute-level row returned by the Analyze fetch. The Analyze view
+ * pulls minute-raw data and buckets it on the client so the SQL layer
+ * doesn't have to know about a user-chosen bucket size. `keystrokes`
+ * and `activeMs` are summed across every scope that contributed to
+ * that minute; the interval columns carry the SQL MIN/AVG/MAX across
+ * the contributing scopes and stay `null` when no scope recorded
+ * intervals. */
+export interface TypingMinuteStatsRow {
+  minuteMs: number
+  keystrokes: number
+  activeMs: number
+  intervalMinMs: number | null
+  intervalP25Ms: number | null
+  intervalP50Ms: number | null
+  intervalP75Ms: number | null
+  intervalMaxMs: number | null
+}
+
 /** One bucket of the Analyze activity heatmap (hour-of-day × day-of-week).
  * `dow` follows SQLite's `strftime('%w', ...)`: 0 = Sunday ... 6 =
  * Saturday. `hour` is local-time 0..23. `keystrokes` is the sum across

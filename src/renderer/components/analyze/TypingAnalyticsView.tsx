@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, IntervalUnit, RangeMs } from './analyze-types'
+import type { AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, RangeMs } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
 import { WpmChart } from './WpmChart'
@@ -33,6 +33,25 @@ const ANALYSIS_TABS: AnalysisTabKey[] = ['wpm', 'interval', 'activity']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const DAY_MS = 86_400_000
+
+// Keep this table in sync with `GRANULARITIES` in analyze-bucket.ts;
+// the first entry is the "let the chart decide" pseudo-choice.
+const GRANULARITY_OPTIONS: Array<{ value: GranularityChoice; labelKey: string }> = [
+  { value: 'auto', labelKey: 'auto' },
+  { value: 60_000, labelKey: 'min1' },
+  { value: 60_000 * 5, labelKey: 'min5' },
+  { value: 60_000 * 10, labelKey: 'min10' },
+  { value: 60_000 * 15, labelKey: 'min15' },
+  { value: 60_000 * 30, labelKey: 'min30' },
+  { value: 3_600_000, labelKey: 'hour1' },
+  { value: 3_600_000 * 3, labelKey: 'hour3' },
+  { value: 3_600_000 * 6, labelKey: 'hour6' },
+  { value: 3_600_000 * 12, labelKey: 'hour12' },
+  { value: DAY_MS, labelKey: 'day1' },
+  { value: DAY_MS * 3, labelKey: 'day3' },
+  { value: DAY_MS * 7, labelKey: 'week1' },
+  { value: DAY_MS * 30, labelKey: 'month1' },
+]
 
 /** `YYYY-MM-DDTHH:mm` serialisation (local timezone) that HTML's
  * `<input type="datetime-local">` expects. */
@@ -75,6 +94,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   }))
   const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
+  const [granularity, setGranularity] = useState<GranularityChoice>('auto')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -224,12 +244,32 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </select>
                 </label>
               )}
+              {analysisTab !== 'activity' && (
+                <label className={FILTER_LABEL}>
+                  {t('analyze.filters.granularity')}
+                  <select
+                    className={FILTER_SELECT}
+                    value={typeof granularity === 'number' ? String(granularity) : 'auto'}
+                    onChange={(e) => {
+                      const v = e.target.value
+                      setGranularity(v === 'auto' ? 'auto' : Number.parseInt(v, 10))
+                    }}
+                    data-testid="analyze-filter-granularity"
+                  >
+                    {GRANULARITY_OPTIONS.map((opt) => (
+                      <option key={opt.labelKey} value={typeof opt.value === 'number' ? String(opt.value) : 'auto'}>
+                        {t(`analyze.filters.granularityOption.${opt.labelKey}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
             <div className="flex-1 min-h-0 overflow-hidden py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
-                <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} />
+                <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} granularity={granularity} />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} />
+                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} />
               ) : (
                 <ActivityChart uid={selected.uid} range={range} deviceScope={deviceScope} />
               )}

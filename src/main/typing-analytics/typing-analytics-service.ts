@@ -29,6 +29,7 @@ import {
   type TypingDailySummary,
   type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
+  type TypingMinuteStatsRow,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import {
@@ -261,6 +262,27 @@ export function setupTypingAnalyticsIpc(): void {
       return listTypingActivityGridForHash(uid, ownHash, since, until)
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMinuteStatsInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
 }
 
 /**
@@ -338,6 +360,25 @@ export function listTypingActivityGridForHash(
   untilMs: number,
 ): TypingActivityCell[] {
   return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Minute-raw stats for the Analyze WPM / Interval charts over the
+ * `[sinceMs, untilMs)` window. Callers bucket these on the renderer. */
+export function listTypingMinuteStatsInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMinuteStatsRow[] {
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingMinuteStatsInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMinuteStatsRow[] {
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

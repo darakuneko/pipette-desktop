@@ -25,6 +25,7 @@ import type {
   TypingHeatmapByCell,
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
+  TypingMinuteStatsRow,
   TypingTombstoneResult,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
@@ -150,6 +151,8 @@ export interface VialAPI {
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
   typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
+  typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>
