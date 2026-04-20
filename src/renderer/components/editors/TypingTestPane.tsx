@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
+import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
@@ -41,6 +42,11 @@ export interface TypingTestPaneProps {
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   recordEnabled?: boolean
   onRecordEnabledChange?: (enabled: boolean) => void
+  /** Whether the user has accepted the typing-recording disclosure.
+   * The REC tab Start button gates on this — first-time enable opens
+   * the consent modal, subsequent enables skip it. */
+  recordingConsentAccepted?: boolean
+  onRecordingConsentAccepted?: () => void
   /** Window length in minutes for the typing-view heatmap overlay.
    * Exposed as a REC-tab dropdown so the user can dial how far back
    * the overlay reaches; data older than the window is dropped, data
@@ -89,6 +95,8 @@ export function TypingTestPane({
   onViewOnlyAlwaysOnTopChange,
   recordEnabled,
   onRecordEnabledChange,
+  recordingConsentAccepted,
+  onRecordingConsentAccepted,
   heatmapWindowMin,
   onHeatmapWindowMinChange,
   menuTab = 'window',
@@ -114,6 +122,28 @@ export function TypingTestPane({
   })
   const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const [showConsentModal, setShowConsentModal] = useState(false)
+
+  const handleRecordToggle = useCallback(() => {
+    if (!onRecordEnabledChange) return
+    // Stopping is always allowed without re-prompting; only the
+    // first transition from "off → on" needs the disclosure.
+    if (recordEnabled) {
+      onRecordEnabledChange(false)
+      return
+    }
+    if (!recordingConsentAccepted) {
+      setShowConsentModal(true)
+      return
+    }
+    onRecordEnabledChange(true)
+  }, [onRecordEnabledChange, recordEnabled, recordingConsentAccepted])
+
+  const handleConsentAccept = useCallback(() => {
+    onRecordingConsentAccepted?.()
+    setShowConsentModal(false)
+    onRecordEnabledChange?.(true)
+  }, [onRecordingConsentAccepted, onRecordEnabledChange])
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
   const [mouseOver, setMouseOver] = useState(false)
 
@@ -328,6 +358,12 @@ export function TypingTestPane({
                     onClose={() => setShowLanguageModal(false)}
                   />
                 )}
+                {showConsentModal && (
+                  <TypingRecordingConsentModal
+                    onAccept={handleConsentAccept}
+                    onCancel={() => setShowConsentModal(false)}
+                  />
+                )}
               </div>
               <div className="flex items-center gap-3">
                 {typingTestHistory && typingTestHistory.length > 0 && (
@@ -472,7 +508,7 @@ export function TypingTestPane({
                     aria-checked={recordEnabled ?? false}
                     data-testid="typing-record-toggle"
                     className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                    onClick={() => onRecordEnabledChange(!recordEnabled)}
+                    onClick={handleRecordToggle}
                     title={t('editor.typingTest.recordTooltip')}
                   >
                     {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}

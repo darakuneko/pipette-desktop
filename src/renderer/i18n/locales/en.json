@@ -288,6 +288,22 @@
       "heatmapWindow": "Heatmap window (minutes)",
       "heatmapWindowShort": "HeatMap",
       "heatmapWindowOption": "{{minutes}} min",
+      "consent": {
+        "title": "Enable typing analytics recording?",
+        "collectedHeading": "What we collect",
+        "collectedItems": [
+          "Per-minute character frequency",
+          "Per-key press counts (row/col/layer/keycode, tap vs hold)",
+          "Typing speed distribution (interval percentiles)"
+        ],
+        "notCollectedHeading": "What we do NOT collect",
+        "notCollectedItems": [
+          "Individual keystroke timing",
+          "Text content / passwords / specific words",
+          "Application context (which app or window)"
+        ],
+        "accept": "Enable"
+      },
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {

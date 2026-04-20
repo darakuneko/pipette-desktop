@@ -287,6 +287,22 @@
       "heatmapWindow": "ヒートマップの表示期間（分）",
       "heatmapWindowShort": "HeatMap",
       "heatmapWindowOption": "{{minutes}} 分",
+      "consent": {
+        "title": "タイピング分析の記録を有効にしますか？",
+        "collectedHeading": "収集する情報",
+        "collectedItems": [
+          "1 分単位の文字頻度",
+          "キー押下回数（row/col/layer/keycode、tap / hold 別）",
+          "タイピング速度の分布（interval パーセンタイル）"
+        ],
+        "notCollectedHeading": "収集しない情報",
+        "notCollectedItems": [
+          "個別の打鍵タイミング",
+          "入力テキスト / パスワード / 特定の単語",
+          "アプリケーション コンテキスト（どのアプリ・ウィンドウか）"
+        ],
+        "accept": "有効化"
+      },
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",
       "language": {

@@ -105,6 +105,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
+  typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
   typingHeatmapWindowMin, onTypingHeatmapWindowMinChange,
   typingViewMenuTab, onTypingViewMenuTabChange,
   onViewAnalytics,
@@ -935,6 +936,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onViewOnlyAlwaysOnTopChange={onTypingTestViewOnlyAlwaysOnTopChange}
               recordEnabled={typingRecordEnabled}
               onRecordEnabledChange={onTypingRecordEnabledChange}
+              recordingConsentAccepted={typingRecordingConsentAccepted}
+              onRecordingConsentAccepted={onTypingRecordingConsentAccepted}
               heatmapWindowMin={typingHeatmapWindowMin}
               onHeatmapWindowMinChange={onTypingHeatmapWindowMinChange}
               menuTab={typingViewMenuTab}
