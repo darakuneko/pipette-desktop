@@ -284,9 +284,9 @@
       "fitSize": "フィット",
       "baseLayer": "Base Layer",
       "baseLayerShort": "Base",
-      "heatmapHalfLife": "ヒートマップの半減期（分）",
-      "heatmapHalfLifeShort": "HeatMap",
-      "heatmapHalfLifeOption": "{{minutes}} 分",
+      "heatmapWindow": "ヒートマップの表示期間（分）",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} 分",
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",
       "language": {

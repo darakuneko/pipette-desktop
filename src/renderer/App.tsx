@@ -768,8 +768,8 @@ export function App() {
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
             onTypingRecordEnabledChange={devicePrefs.setTypingRecordEnabled}
-            typingHeatmapHalfLifeMin={appConfig.config.typingHeatmapHalfLifeMin}
-            onTypingHeatmapHalfLifeMinChange={(m) => appConfig.set('typingHeatmapHalfLifeMin', m as typeof appConfig.config.typingHeatmapHalfLifeMin)}
+            typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
+            onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}

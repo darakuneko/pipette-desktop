@@ -12,15 +12,17 @@ export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
 export type BasicViewType = 'ansi' | 'iso' | 'jis' | 'list'
 export type SplitKeyMode = 'split' | 'flat'
 
-/** Half-life options (minutes) for the typing-view EMA heatmap. The
- * UI exposes 1, 2, 3 minutes for "reactive" streams and then a 5-min
- * step up to an hour. Kept as a string-literal tuple so the renderer
- * dropdown, the AppConfig value, and the test fixtures all reference
- * the same canonical list. */
-export const TYPING_HEATMAP_HALF_LIFE_OPTIONS = [
+/** Window length options (minutes) for the typing-view heatmap. The
+ * UI exposes 1, 2, 3 minutes for "reactive" overlays and then a 5-min
+ * step up to an hour. Hits older than the window are dropped; inside
+ * the window each per-poll delta decays smoothly so the colour fades
+ * before it disappears. Kept as a string-literal tuple so the
+ * renderer dropdown, the AppConfig value, and the test fixtures all
+ * reference the same canonical list. */
+export const TYPING_HEATMAP_WINDOW_OPTIONS = [
   1, 2, 3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60,
 ] as const
-export type TypingHeatmapHalfLifeMin = typeof TYPING_HEATMAP_HALF_LIFE_OPTIONS[number]
+export type TypingHeatmapWindowMin = typeof TYPING_HEATMAP_WINDOW_OPTIONS[number]
 
 export interface AppConfig {
   autoSync: boolean
@@ -38,7 +40,7 @@ export interface AppConfig {
   defaultSplitKeyMode: SplitKeyMode
   defaultQuickSelect: boolean
   maxKeymapHistory: number
-  typingHeatmapHalfLifeMin: TypingHeatmapHalfLifeMin
+  typingHeatmapWindowMin: TypingHeatmapWindowMin
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -56,7 +58,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'defaultSplitKeyMode',
   'defaultQuickSelect',
   'maxKeymapHistory',
-  'typingHeatmapHalfLifeMin',
+  'typingHeatmapWindowMin',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -73,5 +75,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   defaultSplitKeyMode: 'split',
   defaultQuickSelect: false,
   maxKeymapHistory: 100,
-  typingHeatmapHalfLifeMin: 5,
+  typingHeatmapWindowMin: 5,
 }

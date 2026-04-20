@@ -285,9 +285,9 @@
       "fitSize": "Fit Size",
       "baseLayer": "Base Layer",
       "baseLayerShort": "Base",
-      "heatmapHalfLife": "Heatmap half-life (minutes)",
-      "heatmapHalfLifeShort": "HeatMap",
-      "heatmapHalfLifeOption": "{{minutes}} min",
+      "heatmapWindow": "Heatmap window (minutes)",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} min",
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {

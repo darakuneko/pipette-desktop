@@ -129,10 +129,10 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
-  /** Half-life in minutes for the typing-view EMA heatmap. Flows through
-   * AppConfig so the choice survives app restarts. */
-  typingHeatmapHalfLifeMin?: number
-  onTypingHeatmapHalfLifeMinChange?: (minutes: number) => void
+  /** Window length in minutes for the typing-view heatmap. Flows
+   * through AppConfig so the choice survives app restarts. */
+  typingHeatmapWindowMin?: number
+  onTypingHeatmapWindowMinChange?: (minutes: number) => void
   typingViewMenuTab?: TypingViewMenuTab
   onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
   /** Called when the typing-view REC tab triggers "View Analytics".

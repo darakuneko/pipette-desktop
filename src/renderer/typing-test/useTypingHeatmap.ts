@@ -1,37 +1,46 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Polls the main-process typing-analytics heatmap API and exposes an
-// exponential-moving-average (EMA) of the matrix press counts. Each
-// poll multiplies every key's running total by exp(-Δt·ln2/τ) and adds
-// the hits observed since the previous poll, so the overlay decays
-// smoothly instead of snapping off a sliding window boundary.
+// Polls the main-process typing-analytics heatmap API and exposes a
+// hybrid sliding-window + EMA snapshot of the matrix press counts.
+//
+// The user picks a window length in minutes (e.g. "5 min"). Each
+// 5-second poll diff'd against the previous raw fetch is stored as a
+// timestamped sample. On every recompute:
+//   - samples older than `windowMs` are dropped wholesale (hard cutoff)
+//   - the remaining samples are weighted by `exp(-age·ln2/τ)` with
+//     τ = windowMs / 5, so a hit fades smoothly as it nears the window
+//     edge instead of jumping off
+//
+// The result is a "data within the last N minutes, fading on the way
+// out" overlay that matches the user mental model of "this is what I
+// pressed in the last N minutes" without the saturated-forever
+// behaviour of pure EMA normalisation.
 
 import { useEffect, useRef, useState } from 'react'
 import type { TypingHeatmapCell } from '../../shared/types/typing-analytics'
 
-/** Default half-life (minutes) when the AppConfig value hasn't loaded
- * yet. Mirrors DEFAULT_APP_CONFIG.typingHeatmapHalfLifeMin. */
-export const TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN = 5
+/** Default window length (minutes) when the AppConfig value hasn't
+ * loaded yet. Mirrors DEFAULT_APP_CONFIG.typingHeatmapWindowMin. */
+export const TYPING_HEATMAP_DEFAULT_WINDOW_MIN = 5
 
 /** Poll cadence for the heatmap while the typing view is open with
- * recording on. Every poll decays the running counters by
- * `exp(-pollMs·ln2/τ)` then adds the hits observed since the previous
- * tick, so smaller values make the overlay more responsive at the
+ * recording on. Smaller values make the overlay more responsive at the
  * cost of more DB calls. */
 export const TYPING_HEATMAP_POLL_MS = 5_000
 
-/** Bootstrap span = 5 half-lives. Past that, the weight any earlier
- * hit contributes to the EMA is below 3%, so pre-filling the counters
- * with the raw sum over that range is indistinguishable from having
- * run the decay loop for 5τ and converges on the next poll. */
-const BOOTSTRAP_HALF_LIVES = 5
+/** Internal time constant of the smooth in-window decay. Picked so a
+ * sample at the far edge of the window contributes ≈3% of its
+ * undecayed weight — close enough to invisible that the hard cutoff
+ * isn't perceptible. */
+const WINDOW_TO_TAU_RATIO = 5
 
 export interface UseTypingHeatmapOptions {
   uid: string | null
   layer: number | null
   enabled: boolean
   pollIntervalMs?: number
-  /** Half-life in ms controlling how fast press counts decay. */
-  halfLifeMs?: number
+  /** Window length in ms. Hits older than this are removed from the
+   * sample buffer; hits within decay smoothly toward the edge. */
+  windowMs?: number
 }
 
 export interface UseTypingHeatmapResult {
@@ -41,16 +50,19 @@ export interface UseTypingHeatmapResult {
    * read `.total`; LT/MT renderers split outer vs inner using `.hold`
    * / `.tap`. */
   cells: Map<string, TypingHeatmapCell> | null
-  /** Peak `.total` across all cells — used to normalise the single-rect
-   * colour ramp on non-tap-hold keys. */
+  /** Peak `.total` ever observed in the running counters during this
+   * session — used to normalise the single-rect colour ramp on
+   * non-tap-hold keys without the "all-keys-decay-together" trap. */
   maxTotal: number
-  /** Peak `.tap` across all cells — normalises the inner (tap) rect
-   * ramp independently of `.hold` so the tap and hold heatmaps each
-   * reach full saturation in their own axis. */
+  /** Peak `.tap` ever observed. */
   maxTap: number
-  /** Peak `.hold` across all cells — normalises the outer (hold) rect
-   * ramp. */
+  /** Peak `.hold` ever observed. */
   maxHold: number
+}
+
+interface Sample {
+  tsMs: number
+  deltas: Map<string, TypingHeatmapCell>
 }
 
 export function useTypingHeatmap({
@@ -58,7 +70,7 @@ export function useTypingHeatmap({
   layer,
   enabled,
   pollIntervalMs = TYPING_HEATMAP_POLL_MS,
-  halfLifeMs = TYPING_HEATMAP_DEFAULT_HALF_LIFE_MIN * 60 * 1_000,
+  windowMs = TYPING_HEATMAP_DEFAULT_WINDOW_MIN * 60 * 1_000,
 }: UseTypingHeatmapOptions): UseTypingHeatmapResult {
   const [cells, setCells] = useState<Map<string, TypingHeatmapCell> | null>(null)
   const [maxes, setMaxes] = useState<{ total: number; tap: number; hold: number }>({
@@ -77,113 +89,106 @@ export function useTypingHeatmap({
   }, [])
 
   useEffect(() => {
-    // Disabled by anything — no uid yet, no layer resolved, or record
-    // is off. Clear any stale overlay so the UI does not show stale
-    // data when the user flips record back on.
     if (!enabled || !uid || layer === null) {
       setCells(null)
       setMaxes({ total: 0, tap: 0, hold: 0 })
       return
     }
 
-    // Running EMA counters + the per-key totals observed on the last
-    // fetch. Deltas are taken against `previousObserved`, not a
-    // wall-clock tail, because the main-process query rounds `sinceMs`
-    // to minute boundaries and includes the full live-minute buffer on
-    // every call. Subtracting the previous raw total gives us the
-    // true new-hit count between polls; a falling raw total (old
-    // minute rolled out of the fetch window) is clamped to zero so we
-    // don't accidentally subtract from the EMA.
-    const counters = new Map<string, TypingHeatmapCell>()
+    const tauMs = windowMs / WINDOW_TO_TAU_RATIO
+    // Time-stamped per-poll deltas. The recompute step drops samples
+    // older than `windowMs` and re-weights the rest, so we never need
+    // to incrementally subtract an aged contribution from a long-lived
+    // counter — the recompute is naturally consistent.
+    const samples: Sample[] = []
+    // Per-key raw totals from the last fetch. Deltas are taken against
+    // these because the main-process query rounds `sinceMs` to a
+    // minute boundary and folds the live-minute buffer in on every
+    // call — the diff cancels both sources of double-counting.
     const previousObserved = new Map<string, TypingHeatmapCell>()
-    // Running peak of each axis — captured *after* each merge so the
-    // normalised intensity = counter / peak actually shrinks when
-    // counters decay uniformly with no new input. Without this, every
-    // counter and the max both fade at the same rate and the hottest
-    // key would stay at ratio 1.0 (saturated red) forever.
+    // Strictly non-decreasing peak per axis so the colour ratio shrinks
+    // when the counter does. Without it, the "max counter / max counter"
+    // ratio would stay at 1.0 forever and the hottest key would never
+    // fade.
     const peak = { total: 0, tap: 0, hold: 0 }
-    let lastPollMs = Date.now()
     let cancelled = false
 
-    const applyDecay = (dtMs: number): void => {
-      if (dtMs <= 0 || counters.size === 0) return
-      const factor = Math.exp(-dtMs * Math.LN2 / halfLifeMs)
-      const EPS = 1e-3
-      for (const [k, cell] of counters) {
-        const next = { total: cell.total * factor, tap: cell.tap * factor, hold: cell.hold * factor }
-        if (next.total < EPS && next.tap < EPS && next.hold < EPS) {
-          counters.delete(k)
-        } else {
-          counters.set(k, next)
-        }
+    const dropExpired = (now: number): void => {
+      const cutoff = now - windowMs
+      while (samples.length > 0 && samples[0].tsMs < cutoff) {
+        samples.shift()
       }
     }
 
-    const mergeObserved = (hits: Record<string, TypingHeatmapCell>): void => {
+    const recomputeCounters = (now: number): Map<string, TypingHeatmapCell> => {
+      const counters = new Map<string, TypingHeatmapCell>()
+      for (const sample of samples) {
+        const age = Math.max(0, now - sample.tsMs)
+        const weight = Math.exp(-age * Math.LN2 / tauMs)
+        for (const [k, d] of sample.deltas) {
+          const c = counters.get(k) ?? { total: 0, tap: 0, hold: 0 }
+          c.total += d.total * weight
+          c.tap += d.tap * weight
+          c.hold += d.hold * weight
+          counters.set(k, c)
+        }
+      }
+      for (const c of counters.values()) {
+        if (c.total > peak.total) peak.total = c.total
+        if (c.tap > peak.tap) peak.tap = c.tap
+        if (c.hold > peak.hold) peak.hold = c.hold
+      }
+      return counters
+    }
+
+    const computeDelta = (heat: Record<string, TypingHeatmapCell>): Map<string, TypingHeatmapCell> => {
       const seen = new Set<string>()
-      for (const [k, hit] of Object.entries(hits)) {
+      const delta = new Map<string, TypingHeatmapCell>()
+      for (const [k, hit] of Object.entries(heat)) {
         seen.add(k)
         const prev = previousObserved.get(k) ?? { total: 0, tap: 0, hold: 0 }
-        const delta = {
+        const d = {
           total: Math.max(0, hit.total - prev.total),
           tap: Math.max(0, hit.tap - prev.tap),
           hold: Math.max(0, hit.hold - prev.hold),
         }
         previousObserved.set(k, hit)
-        if (delta.total === 0 && delta.tap === 0 && delta.hold === 0) continue
-        const existing = counters.get(k) ?? { total: 0, tap: 0, hold: 0 }
-        counters.set(k, {
-          total: existing.total + delta.total,
-          tap: existing.tap + delta.tap,
-          hold: existing.hold + delta.hold,
-        })
+        if (d.total > 0 || d.tap > 0 || d.hold > 0) delta.set(k, d)
       }
-      // Drop the cached raw totals for keys that rolled out of the
-      // query window entirely — otherwise a later fresh hit on the
-      // same key would be treated as "below our last seen value" and
-      // ignored until it climbed back above the stale peak.
+      // Drop the cached raw totals for keys that fell out of the query
+      // window so a later re-appearance is treated as a fresh delta
+      // rather than compared against a stale per-key peak.
       for (const k of Array.from(previousObserved.keys())) {
         if (!seen.has(k)) previousObserved.delete(k)
       }
-      // Absolute running peak — strictly non-decreasing, so the UI's
-      // `counter / peak` ratio decays with the counters and keys
-      // actually fade when input stops.
-      for (const cell of counters.values()) {
-        if (cell.total > peak.total) peak.total = cell.total
-        if (cell.tap > peak.tap) peak.tap = cell.tap
-        if (cell.hold > peak.hold) peak.hold = cell.hold
-      }
+      return delta
     }
 
-    const publish = (): void => {
+    const publish = (counters: Map<string, TypingHeatmapCell>): void => {
       if (cancelled || !isMountedRef.current) return
-      setCells(new Map(counters))
-      // Publish the running peak so the KeyWidget normalises against
-      // an absolute reference. The peak only grows, so `counter/peak`
-      // shrinks as the EMA decays with no new input and the overlay
-      // actually fades to transparent once τ-many windows pass.
+      setCells(counters)
       setMaxes({ total: peak.total, tap: peak.tap, hold: peak.hold })
     }
 
     async function bootstrap(): Promise<void> {
       try {
-        // Pre-fill counters from the last 5·τ span so the overlay
-        // looks populated the moment the user enters the view. The
-        // raw totals are recorded as the initial `previousObserved`
-        // snapshot — subsequent polls treat any increase above this
-        // as "new hits since bootstrap".
-        const sinceMs = Date.now() - halfLifeMs * BOOTSTRAP_HALF_LIVES
+        // Treat the bootstrap snapshot as a single sample anchored to
+        // `now`, so it gets a full window of life from the moment the
+        // user opens the view (even though those hits actually came
+        // earlier — we don't have per-hit timestamps to do better).
+        const sinceMs = Date.now() - windowMs
         const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
         if (cancelled || !isMountedRef.current) return
+        const now = Date.now()
+        const initial = new Map<string, TypingHeatmapCell>()
         for (const [k, hit] of Object.entries(heat)) {
-          counters.set(k, { total: hit.total, tap: hit.tap, hold: hit.hold })
-          previousObserved.set(k, hit)
-          if (hit.total > peak.total) peak.total = hit.total
-          if (hit.tap > peak.tap) peak.tap = hit.tap
-          if (hit.hold > peak.hold) peak.hold = hit.hold
+          if (hit.total > 0 || hit.tap > 0 || hit.hold > 0) {
+            initial.set(k, { ...hit })
+            previousObserved.set(k, hit)
+          }
         }
-        lastPollMs = Date.now()
-        publish()
+        if (initial.size > 0) samples.push({ tsMs: now, deltas: initial })
+        publish(recomputeCounters(now))
       } catch {
         /* non-fatal; next poll will retry */
       }
@@ -192,16 +197,13 @@ export function useTypingHeatmap({
     async function poll(): Promise<void> {
       try {
         const now = Date.now()
-        applyDecay(now - lastPollMs)
-        // Always fetch the same 5·τ span (not `lastPollMs`) so the
-        // delta vs `previousObserved` cancels the main-process query's
-        // minute-boundary rounding and live-buffer double counting.
-        const sinceMs = now - halfLifeMs * BOOTSTRAP_HALF_LIVES
+        dropExpired(now)
+        const sinceMs = now - windowMs
         const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
         if (cancelled || !isMountedRef.current) return
-        mergeObserved(heat)
-        lastPollMs = now
-        publish()
+        const delta = computeDelta(heat)
+        if (delta.size > 0) samples.push({ tsMs: now, deltas: delta })
+        publish(recomputeCounters(now))
       } catch {
         // Keep the last good snapshot on transient failures.
       }
@@ -213,7 +215,7 @@ export function useTypingHeatmap({
       cancelled = true
       clearInterval(handle)
     }
-  }, [uid, layer, enabled, pollIntervalMs, halfLifeMs])
+  }, [uid, layer, enabled, pollIntervalMs, windowMs])
 
   return {
     cells,
