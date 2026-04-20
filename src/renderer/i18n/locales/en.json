@@ -635,7 +635,10 @@
     "comingSoon": "Analytics dashboard — coming soon"
   },
   "analyze": {
-    "placeholder": "Analysis charts coming soon."
+    "placeholder": "Analysis charts coming soon.",
+    "keyboardList": "Keyboards",
+    "noKeyboards": "No typing data yet.",
+    "selectKeyboard": "Select a keyboard from the list."
   },
   "dataModal": {
     "title": "Data",

@@ -634,7 +634,10 @@
     "comingSoon": "分析ダッシュボード — 作成中"
   },
   "analyze": {
-    "placeholder": "分析チャートを準備中です。"
+    "placeholder": "分析チャートを準備中です。",
+    "keyboardList": "キーボード",
+    "noKeyboards": "まだ打鍵データがありません。",
+    "selectKeyboard": "一覧からキーボードを選択してください。"
   },
   "dataModal": {
     "title": "データ",
