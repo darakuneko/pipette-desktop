@@ -109,13 +109,37 @@ describe('useTypingHeatmap', () => {
       vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
       await flushPromises()
     })
-    // After one poll interval: previous counter decays by
-    // exp(-pollMs·ln2/τ) and the newly observed hits add on top. This
-    // is the core property the EMA refactor is supposed to preserve.
+    // After one poll interval: the previous counter decays by
+    // exp(-pollMs·ln2/τ) and the *delta* between the current raw
+    // total and the previous observed total is added on top. Raw
+    // totals come from the minute-bucketed query, so using deltas
+    // avoids double-counting the same minute across polls.
     const decay = Math.exp(-TYPING_HEATMAP_POLL_MS * Math.LN2 / DEFAULT_HALF_LIFE_MS)
-    const expected = 5 * decay + 12
+    const delta = 12 - 5
+    const expected = 5 * decay + delta
     expect(result.current.cells?.get('1,2')?.total).toBeCloseTo(expected, 4)
     expect(api).toHaveBeenCalledTimes(2)
+  })
+
+  it('stays flat on a same-value poll (no double-counting of the minute bucket)', async () => {
+    // The main-process query includes the full current-minute buffer
+    // on every call, so raw totals repeat within a minute. The hook
+    // must not treat a repeat as fresh hits.
+    const api = vi.fn<HeatmapFn>().mockResolvedValue({ '1,2': cell(7) })
+    installVialApi(api)
+
+    const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
+    await act(async () => { await flushPromises() })
+    expect(result.current.cells?.get('1,2')?.total).toBe(7)
+
+    await act(async () => {
+      vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
+      await flushPromises()
+    })
+
+    const decay = Math.exp(-TYPING_HEATMAP_POLL_MS * Math.LN2 / DEFAULT_HALF_LIFE_MS)
+    // No new hits arrived between polls — the EMA just decays.
+    expect(result.current.cells?.get('1,2')?.total).toBeCloseTo(7 * decay, 4)
   })
 
   it('refetches immediately when uid or layer changes', async () => {

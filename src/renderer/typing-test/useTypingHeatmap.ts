@@ -86,17 +86,22 @@ export function useTypingHeatmap({
       return
     }
 
-    // Running EMA counters scoped to this effect instance so switching
-    // keyboard / layer / half-life resets them cleanly.
+    // Running EMA counters + the per-key totals observed on the last
+    // fetch. Deltas are taken against `previousObserved`, not a
+    // wall-clock tail, because the main-process query rounds `sinceMs`
+    // to minute boundaries and includes the full live-minute buffer on
+    // every call. Subtracting the previous raw total gives us the
+    // true new-hit count between polls; a falling raw total (old
+    // minute rolled out of the fetch window) is clamped to zero so we
+    // don't accidentally subtract from the EMA.
     const counters = new Map<string, TypingHeatmapCell>()
+    const previousObserved = new Map<string, TypingHeatmapCell>()
     let lastPollMs = Date.now()
     let cancelled = false
 
     const applyDecay = (dtMs: number): void => {
       if (dtMs <= 0 || counters.size === 0) return
       const factor = Math.exp(-dtMs * Math.LN2 / halfLifeMs)
-      // Floor below which a counter is treated as zero. Prevents
-      // long-dormant keys from staying in the map forever.
       const EPS = 1e-3
       for (const [k, cell] of counters) {
         const next = { total: cell.total * factor, tap: cell.tap * factor, hold: cell.hold * factor }
@@ -108,13 +113,21 @@ export function useTypingHeatmap({
       }
     }
 
-    const mergeHits = (hits: Record<string, TypingHeatmapCell>): void => {
+    const mergeObserved = (hits: Record<string, TypingHeatmapCell>): void => {
       for (const [k, hit] of Object.entries(hits)) {
+        const prev = previousObserved.get(k) ?? { total: 0, tap: 0, hold: 0 }
+        const delta = {
+          total: Math.max(0, hit.total - prev.total),
+          tap: Math.max(0, hit.tap - prev.tap),
+          hold: Math.max(0, hit.hold - prev.hold),
+        }
+        previousObserved.set(k, hit)
+        if (delta.total === 0 && delta.tap === 0 && delta.hold === 0) continue
         const existing = counters.get(k) ?? { total: 0, tap: 0, hold: 0 }
         counters.set(k, {
-          total: existing.total + hit.total,
-          tap: existing.tap + hit.tap,
-          hold: existing.hold + hit.hold,
+          total: existing.total + delta.total,
+          tap: existing.tap + delta.tap,
+          hold: existing.hold + delta.hold,
         })
       }
     }
@@ -133,13 +146,18 @@ export function useTypingHeatmap({
 
     async function bootstrap(): Promise<void> {
       try {
-        // Pre-fill counters from the last 5·τ span so users see a
-        // meaningful overlay immediately instead of waiting for hits
-        // to accumulate. Beyond 5 half-lives the EMA weight is <3%.
+        // Pre-fill counters from the last 5·τ span so the overlay
+        // looks populated the moment the user enters the view. The
+        // raw totals are recorded as the initial `previousObserved`
+        // snapshot — subsequent polls treat any increase above this
+        // as "new hits since bootstrap".
         const sinceMs = Date.now() - halfLifeMs * BOOTSTRAP_HALF_LIVES
         const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
         if (cancelled || !isMountedRef.current) return
-        mergeHits(heat)
+        for (const [k, hit] of Object.entries(heat)) {
+          counters.set(k, { total: hit.total, tap: hit.tap, hold: hit.hold })
+          previousObserved.set(k, hit)
+        }
         lastPollMs = Date.now()
         publish()
       } catch {
@@ -151,9 +169,13 @@ export function useTypingHeatmap({
       try {
         const now = Date.now()
         applyDecay(now - lastPollMs)
-        const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, lastPollMs)
+        // Always fetch the same 5·τ span (not `lastPollMs`) so the
+        // delta vs `previousObserved` cancels the main-process query's
+        // minute-boundary rounding and live-buffer double counting.
+        const sinceMs = now - halfLifeMs * BOOTSTRAP_HALF_LIVES
+        const heat = await window.vialAPI.typingAnalyticsGetMatrixHeatmap(uid as string, layer as number, sinceMs)
         if (cancelled || !isMountedRef.current) return
-        mergeHits(heat)
+        mergeObserved(heat)
         lastPollMs = now
         publish()
       } catch {
