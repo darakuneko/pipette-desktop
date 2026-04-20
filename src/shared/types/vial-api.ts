@@ -148,8 +148,8 @@ export interface VialAPI {
   typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
   typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
-  typingAnalyticsListActivityGrid(uid: string, sinceMs: number): Promise<TypingActivityCell[]>
-  typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

@@ -629,25 +629,33 @@
       "licenseValue": "GPL-3.0-or-later"
     }
   },
-  "analytics": {
-    "title": "Analytics",
-    "backToKeyboard": "← {{name}}",
-    "comingSoon": "Analytics dashboard — coming soon"
-  },
   "analyze": {
     "placeholder": "Analysis charts coming soon.",
+    "pageTitle": "Analyze",
+    "back": "Back",
     "keyboardList": "Keyboards",
     "noKeyboards": "No typing data yet.",
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "wpm": {
+      "legend": "WPM",
+      "description": "Words per minute — keystrokes divided by 5, per minute of active typing."
+    },
     "interval": {
       "legend": {
-        "p25": "p25",
-        "iqr": "p25–p75",
-        "p50": "Median",
         "min": "Min",
+        "p25": "p25",
+        "p50": "Median",
+        "p75": "p75",
         "max": "Max"
+      },
+      "description": {
+        "min": "Shortest keystroke interval recorded within any minute of the day (fastest single moment).",
+        "p25": "Lower quartile — 25% of the minutes had shorter median intervals (daily average of each minute's p25).",
+        "p50": "Median — half the minutes had shorter intervals (daily average of each minute's median).",
+        "p75": "Upper quartile — 75% of the minutes had shorter median intervals (daily average of each minute's p75).",
+        "max": "Longest keystroke interval recorded within any minute of the day (longest pause inside a minute)."
       }
     },
     "heatmap": {
@@ -656,6 +664,9 @@
       "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} keys",
       "legendLow": "0",
       "legendHigh": "{{count}}",
+      "legendLowDesc": "No keystrokes recorded in this bucket for the selected period.",
+      "legendHighDesc": "Peak bucket in the selected period ({{count}} keystrokes). Cell opacity scales linearly from 0 to this value.",
+      "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak bucket in the selected period.",
       "dow": {
         "0": "Sun",
         "1": "Mon",
@@ -672,16 +683,17 @@
       "heatmap": "Heatmap"
     },
     "filters": {
-      "period": "Period",
-      "periodOption": {
-        "7d": "Last 7 days",
-        "30d": "Last 30 days",
-        "all": "All time"
-      },
+      "from": "From",
+      "to": "To",
       "device": "Device",
       "deviceOption": {
         "own": "This device",
         "all": "All devices"
+      },
+      "unit": "Display",
+      "unitOption": {
+        "sec": "Seconds",
+        "ms": "Milliseconds"
       }
     }
   },
@@ -717,7 +729,7 @@
       "title": "Typing",
       "noKeyboards": "No recorded typing data",
       "noItems": "No typing data for this keyboard",
-      "summaryHeader": "{{name}} — {{days}} day(s), {{keystrokes}} keystrokes total",
+      "summaryLine": "{{days}} day(s), {{keystrokes}} keystrokes total",
       "colDate": "Date",
       "colKeystrokes": "Keystrokes",
       "colActiveMs": "Active time",

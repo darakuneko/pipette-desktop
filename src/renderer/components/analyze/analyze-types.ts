@@ -3,5 +3,16 @@
 // components can import them without the whole view.
 
 export type AnalysisTabKey = 'wpm' | 'interval' | 'heatmap'
-export type PeriodKey = '7d' | '30d' | 'all'
 export type DeviceScope = 'own' | 'all'
+/** Display unit for the Interval chart — the SQL stores keystroke
+ * intervals in ms, but seconds are easier to reason about for pauses
+ * and most day-level medians. */
+export type IntervalUnit = 'ms' | 'sec'
+
+/** Inclusive-lower, exclusive-upper millisecond range used by every
+ * Analyze chart. `toMs` is the wall-clock the page was opened at and
+ * the chart UI caps it to "now" so the user cannot pick the future. */
+export interface RangeMs {
+  fromMs: number
+  toMs: number
+}

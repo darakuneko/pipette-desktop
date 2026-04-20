@@ -243,20 +243,22 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID,
-    async (_event, uid: unknown, sinceMs: unknown): Promise<TypingActivityCell[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingActivityCell[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
-      return listTypingActivityGrid(uid, since)
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingActivityGrid(uid, since, until)
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown): Promise<TypingActivityCell[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingActivityCell[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingActivityGridForHash(uid, ownHash, since)
+      return listTypingActivityGridForHash(uid, ownHash, since, until)
     },
   )
 }
@@ -317,19 +319,25 @@ export function listTypingIntervalSummariesForHash(
   return getTypingAnalyticsDB().listIntervalSummariesForUidAndHash(uid, machineHash)
 }
 
-/** Hour × day-of-week activity grid for the Analyze > Heatmap view.
- * `sinceMs=0` returns the full history; positive values clip the SQL
- * scan at the source. */
-export function listTypingActivityGrid(uid: string, sinceMs: number): TypingActivityCell[] {
-  return getTypingAnalyticsDB().listActivityGridForUid(uid, sinceMs)
+/** Hour × day-of-week activity grid for the Analyze > Heatmap view
+ * over the inclusive-lower, exclusive-upper `[sinceMs, untilMs)`
+ * window. Pass `sinceMs=0, untilMs=Number.MAX_SAFE_INTEGER` for the
+ * full history. */
+export function listTypingActivityGrid(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingActivityCell[] {
+  return getTypingAnalyticsDB().listActivityGridForUid(uid, sinceMs, untilMs)
 }
 
 export function listTypingActivityGridForHash(
   uid: string,
   machineHash: string,
   sinceMs: number,
+  untilMs: number,
 ): TypingActivityCell[] {
-  return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs)
+  return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

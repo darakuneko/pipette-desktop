@@ -1,27 +1,46 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Analyze > Interval — daily rhythm view. Shows the p25/p75 band as
-// an Area, the median (p50) as a line inside it, and faint min/max
-// whiskers for context. recharts has no boxplot primitive, but an
-// Area + Line stack over a shared time axis conveys the same shape
-// (central tendency + spread) without a custom SVG.
+// Analyze > Interval — daily rhythm view. Plots five series on a
+// logarithmic ms axis so sub-second quartiles stay legible even when
+// the day also contains very long pauses in min/max. Clicking a
+// legend entry toggles that line; the filled IQR band was dropped
+// because it made p25 invisible when the y-axis had to span 0..tens
+// of seconds.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Area, CartesianGrid, ComposedChart, Legend, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { TypingIntervalDailySummary } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, PeriodKey } from './analyze-types'
-import { filterByPeriod } from './analyze-period'
+import type { DeviceScope, IntervalUnit, RangeMs } from './analyze-types'
+import { filterByRange } from './analyze-period'
 
 interface Props {
   uid: string
-  period: PeriodKey
+  range: RangeMs
   deviceScope: DeviceScope
+  unit: IntervalUnit
 }
 
-export function IntervalChart({ uid, period, deviceScope }: Props) {
+const SERIES_KEYS = ['min', 'p25', 'p50', 'p75', 'max'] as const
+type SeriesKey = (typeof SERIES_KEYS)[number]
+
+// Five clearly distinct hues so the min/max whiskers don't fight the
+// central tendency lines visually. All series are drawn solid — the
+// old dashed whiskers were hard to tell apart at a glance.
+const SERIES_STYLE: Record<SeriesKey, string> = {
+  min: '#10b981',   // emerald — fastest interval
+  p25: '#06b6d4',   // cyan
+  p50: '#3b82f6',   // blue (primary median line)
+  p75: '#f59e0b',   // amber
+  max: '#ef4444',   // red — longest pause
+}
+
+export function IntervalChart({ uid, range, deviceScope, unit }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingIntervalDailySummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
+    min: false, p25: false, p50: false, p75: false, max: false,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -42,6 +61,29 @@ export function IntervalChart({ uid, period, deviceScope }: Props) {
     return () => { cancelled = true }
   }, [uid, deviceScope])
 
+  // Log-axis can't plot 0 ms, but min often legitimately rounds to 0
+  // on fast adjacent keystrokes. Clamp the axis floor at 1 ms so the
+  // Min line still shows up at the bottom edge instead of vanishing.
+  const clampForLog = (v: number | null): number | null =>
+    v === null ? null : Math.max(1, Math.round(v))
+  const chartData = useMemo(() => filterByRange(rows, range)
+    .slice()
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .map((r) => ({
+      date: r.date,
+      min: clampForLog(r.intervalMinMs),
+      p25: clampForLog(r.intervalP25Ms),
+      p50: clampForLog(r.intervalP50Ms),
+      p75: clampForLog(r.intervalP75Ms),
+      max: clampForLog(r.intervalMaxMs),
+    })), [rows, range])
+
+  const toggleSeries = (key: string): void => {
+    if ((SERIES_KEYS as readonly string[]).includes(key)) {
+      setHidden((prev) => ({ ...prev, [key as SeriesKey]: !prev[key as SeriesKey] }))
+    }
+  }
+
   if (loading) {
     return (
       <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-loading">
@@ -49,25 +91,6 @@ export function IntervalChart({ uid, period, deviceScope }: Props) {
       </div>
     )
   }
-
-  const chartData = filterByPeriod(rows, period)
-    .slice()
-    .sort((a, b) => a.date.localeCompare(b.date))
-    .map((r) => {
-      const p25 = r.intervalP25Ms ?? 0
-      const p75 = r.intervalP75Ms ?? 0
-      return {
-        date: r.date,
-        // stackId trick: Area between p25 and p75 = draw p25 (invisible)
-        // then a band of width (p75-p25) on top. Both are in the same
-        // stack group so recharts fills the gap.
-        p25: Math.round(p25),
-        iqr: Math.max(0, Math.round(p75 - p25)),
-        p50: r.intervalP50Ms === null ? null : Math.round(r.intervalP50Ms),
-        min: r.intervalMinMs === null ? null : Math.round(r.intervalMinMs),
-        max: r.intervalMaxMs === null ? null : Math.round(r.intervalMaxMs),
-      }
-    })
 
   if (chartData.length === 0) {
     return (
@@ -80,26 +103,63 @@ export function IntervalChart({ uid, period, deviceScope }: Props) {
   return (
     <div className="h-full w-full" data-testid="analyze-interval-chart">
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+        <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
           <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }} stroke="var(--color-edge)" />
           <YAxis
+            scale="log"
+            domain={['auto', 'auto']}
+            allowDataOverflow={false}
             tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
             stroke="var(--color-edge)"
-            label={{ value: 'ms', angle: -90, position: 'insideLeft', style: { fontSize: 11, fill: 'var(--color-content-muted)' } }}
+            tickFormatter={(v: number) => unit === 'sec' ? (v / 1000).toString() : v.toString()}
+            label={{
+              value: unit === 'sec' ? 'sec (log)' : 'ms (log)',
+              angle: -90,
+              position: 'insideLeft',
+              style: { fontSize: 11, fill: 'var(--color-content-muted)' },
+            }}
           />
           <Tooltip
             contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
             labelStyle={{ color: 'var(--color-content-secondary)' }}
             itemStyle={{ color: 'var(--color-content)' }}
+            formatter={(value) => {
+              const n = typeof value === 'number' ? value : Number(value)
+              if (!Number.isFinite(n)) return String(value)
+              return unit === 'sec' ? `${(n / 1000).toFixed(3)} s` : `${n} ms`
+            }}
           />
-          <Legend wrapperStyle={{ fontSize: 12 }} />
-          <Area type="monotone" dataKey="p25" stackId="iqr" stroke="transparent" fill="transparent" name={t('analyze.interval.legend.p25')} legendType="none" />
-          <Area type="monotone" dataKey="iqr" stackId="iqr" stroke="transparent" fill="var(--color-accent)" fillOpacity={0.15} name={t('analyze.interval.legend.iqr')} />
-          <Line type="monotone" dataKey="p50" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 2 }} name={t('analyze.interval.legend.p50')} connectNulls />
-          <Line type="monotone" dataKey="min" stroke="var(--color-content-muted)" strokeWidth={1} strokeDasharray="3 3" dot={false} name={t('analyze.interval.legend.min')} connectNulls />
-          <Line type="monotone" dataKey="max" stroke="var(--color-content-muted)" strokeWidth={1} strokeDasharray="3 3" dot={false} name={t('analyze.interval.legend.max')} connectNulls />
-        </ComposedChart>
+          <Legend
+            wrapperStyle={{ fontSize: 12, cursor: 'pointer' }}
+            onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
+            formatter={(value, entry) => {
+              const key = String(entry.dataKey ?? '') as SeriesKey
+              return (
+                <span
+                  className="inline-flex items-center gap-0.5"
+                  title={t(`analyze.interval.description.${key}`, { defaultValue: '' })}
+                  style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                >
+                  {value}
+                </span>
+              )
+            }}
+          />
+          {SERIES_KEYS.map((key) => (
+            <Line
+              key={key}
+              type="monotone"
+              dataKey={key}
+              stroke={SERIES_STYLE[key]}
+              strokeWidth={key === 'p50' ? 2 : 1.5}
+              dot={key === 'p50' ? { r: 2 } : false}
+              name={t(`analyze.interval.legend.${key}`)}
+              hide={hidden[key]}
+              connectNulls
+            />
+          ))}
+        </LineChart>
       </ResponsiveContainer>
     </div>
   )

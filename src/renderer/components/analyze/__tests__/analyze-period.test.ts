@@ -1,61 +1,45 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, expect, it } from 'vitest'
-import { filterByPeriod, periodCutoffDay, periodSinceMs } from '../analyze-period'
+import { filterByRange } from '../analyze-period'
 
-// Local-time Date — periodCutoffDay mirrors `strftime(..., 'localtime')`
-// on the SQL side, so the tests have to commit to a local timezone too.
-const NOW = new Date(2026, 3, 20, 12, 0, 0, 0)
+function dayStartLocal(y: number, m: number, d: number): number {
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime()
+}
+
+const NOW = new Date(2026, 3, 20, 14, 0, 0, 0) // 2026-04-20 14:00 local
+const NOW_MS = NOW.getTime()
 
 describe('analyze-period', () => {
-  describe('periodCutoffDay', () => {
-    it('returns null for "all"', () => {
-      expect(periodCutoffDay('all', NOW)).toBeNull()
-    })
-
-    it('returns the day N-1 days ago for a N-day window so today is included', () => {
-      expect(periodCutoffDay('7d', NOW)).toBe('2026-04-14')
-      expect(periodCutoffDay('30d', NOW)).toBe('2026-03-22')
-    })
-
-    it('respects month / year boundaries', () => {
-      const earlyApr = new Date(2026, 3, 2, 6, 0, 0, 0)
-      expect(periodCutoffDay('7d', earlyApr)).toBe('2026-03-27')
-    })
-  })
-
-  describe('filterByPeriod', () => {
+  describe('filterByRange', () => {
     const rows = [
-      { date: '2026-04-10', value: 1 },
-      { date: '2026-04-14', value: 2 },
-      { date: '2026-04-18', value: 3 },
-      { date: '2026-04-20', value: 4 },
+      { date: '2026-04-17', value: 1 },
+      { date: '2026-04-19', value: 2 },
+      { date: '2026-04-20', value: 3 },
     ]
 
-    it('returns everything for "all"', () => {
-      expect(filterByPeriod(rows, 'all', NOW)).toEqual(rows)
+    it('keeps only days whose local span overlaps the window', () => {
+      const from = dayStartLocal(2026, 4, 19)
+      const toMs = NOW_MS
+      expect(filterByRange(rows, { fromMs: from, toMs }).map((r) => r.value)).toEqual([2, 3])
     })
 
-    it('keeps rows whose date is on or after the cutoff', () => {
-      expect(filterByPeriod(rows, '7d', NOW).map((r) => r.date)).toEqual([
-        '2026-04-14', '2026-04-18', '2026-04-20',
-      ])
+    it('keeps the day that contains a sub-day boundary', () => {
+      // 2026-04-20 08:00 → 2026-04-20 14:00 still lives within the
+      // 2026-04-20 local day, so that day is kept.
+      const from = new Date(2026, 3, 20, 8, 0, 0, 0).getTime()
+      expect(filterByRange(rows, { fromMs: from, toMs: NOW_MS }).map((r) => r.value)).toEqual([3])
     })
 
-    it('returns a fresh array (callers are safe to sort in place)', () => {
-      const out = filterByPeriod(rows, 'all', NOW)
-      expect(out).not.toBe(rows)
-    })
-  })
-
-  describe('periodSinceMs', () => {
-    it('returns 0 for "all"', () => {
-      expect(periodSinceMs('all', NOW)).toBe(0)
+    it('drops rows with malformed dates', () => {
+      const bad = [{ date: 'not-a-date', value: 1 }, { date: '2026-04-20', value: 2 }]
+      expect(filterByRange(bad, { fromMs: dayStartLocal(2026, 4, 20), toMs: NOW_MS }).map((r) => r.value)).toEqual([2])
     })
 
-    it('returns local midnight of the N-day window start', () => {
-      expect(periodSinceMs('7d', NOW)).toBe(new Date(2026, 3, 14, 0, 0, 0, 0).getTime())
-      expect(periodSinceMs('30d', NOW)).toBe(new Date(2026, 2, 22, 0, 0, 0, 0).getTime())
+    it('returns an empty array when the window sits before all rows', () => {
+      const from = dayStartLocal(2020, 1, 1)
+      const to = dayStartLocal(2020, 1, 2)
+      expect(filterByRange(rows, { fromMs: from, toMs: to })).toEqual([])
     })
   })
 })

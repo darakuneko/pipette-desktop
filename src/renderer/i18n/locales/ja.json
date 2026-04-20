@@ -628,25 +628,33 @@
       "licenseValue": "GPL-3.0-or-later"
     }
   },
-  "analytics": {
-    "title": "分析",
-    "backToKeyboard": "← {{name}}",
-    "comingSoon": "分析ダッシュボード — 作成中"
-  },
   "analyze": {
     "placeholder": "分析チャートを準備中です。",
+    "pageTitle": "分析",
+    "back": "戻る",
     "keyboardList": "キーボード",
     "noKeyboards": "まだ打鍵データがありません。",
     "noData": "選択した期間にデータがありません。",
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
+    "wpm": {
+      "legend": "WPM",
+      "description": "Words per minute — アクティブ 1 分あたりの keystrokes を 5 で割った値 (英語 1 語 = 5 文字換算)。"
+    },
     "interval": {
       "legend": {
-        "p25": "p25",
-        "iqr": "p25–p75",
-        "p50": "中央値",
         "min": "最小",
+        "p25": "p25",
+        "p50": "中央値",
+        "p75": "p75",
         "max": "最大"
+      },
+      "description": {
+        "min": "1 日のどこかの 1 分で記録された最も短い打鍵間隔 (最速の瞬間)。",
+        "p25": "下側四分位 — 各分の p25 の日次平均。1/4 のタイミングがこれより短い。",
+        "p50": "中央値 — 各分の中央値の日次平均。半分のタイミングがこれより短い。",
+        "p75": "上側四分位 — 各分の p75 の日次平均。3/4 のタイミングがこれより短い。",
+        "max": "1 日のどこかの 1 分で記録された最も長い打鍵間隔 (途中の最長停止)。"
       }
     },
     "heatmap": {
@@ -655,6 +663,9 @@
       "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} 打",
       "legendLow": "0",
       "legendHigh": "{{count}}",
+      "legendLowDesc": "選択期間中にこのセルで打鍵がなかった状態。",
+      "legendHighDesc": "選択期間中のピーク値 ({{count}} 打)。セルの濃度は 0 からこの値まで線形にスケールします。",
+      "legendScaleDesc": "0 (空) から選択期間中のピーク値までの線形スケール。",
       "dow": {
         "0": "日",
         "1": "月",
@@ -671,16 +682,17 @@
       "heatmap": "ヒートマップ"
     },
     "filters": {
-      "period": "期間",
-      "periodOption": {
-        "7d": "直近 7 日",
-        "30d": "直近 30 日",
-        "all": "全期間"
-      },
+      "from": "From",
+      "to": "To",
       "device": "デバイス",
       "deviceOption": {
         "own": "このデバイス",
         "all": "全デバイス合算"
+      },
+      "unit": "表示",
+      "unitOption": {
+        "sec": "秒",
+        "ms": "ミリ秒"
       }
     }
   },
@@ -716,7 +728,7 @@
       "title": "タイピング",
       "noKeyboards": "タイピングデータがありません",
       "noItems": "このキーボードのタイピングデータはありません",
-      "summaryHeader": "{{name}} — {{days}} 日分 / 合計 {{keystrokes}} 打",
+      "summaryLine": "{{days}} 日分 / 合計 {{keystrokes}} 打",
       "colDate": "日付",
       "colKeystrokes": "打鍵数",
       "colActiveMs": "アクティブ時間",

@@ -7,19 +7,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingActivityCell } from '../../../shared/types/typing-analytics'
-import { periodSinceMs } from './analyze-period'
-import type { DeviceScope, PeriodKey } from './analyze-types'
+import type { DeviceScope, RangeMs } from './analyze-types'
 
 interface Props {
   uid: string
-  period: PeriodKey
+  range: RangeMs
   deviceScope: DeviceScope
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DOWS = [0, 1, 2, 3, 4, 5, 6] as const
 
-export function HeatmapChart({ uid, period, deviceScope }: Props) {
+export function HeatmapChart({ uid, range, deviceScope }: Props) {
   const { t } = useTranslation()
   const [cells, setCells] = useState<TypingActivityCell[]>([])
   const [loading, setLoading] = useState(true)
@@ -27,12 +26,11 @@ export function HeatmapChart({ uid, period, deviceScope }: Props) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const sinceMs = periodSinceMs(period)
     const load = async () => {
       try {
         const data = deviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListActivityGridLocal(uid, sinceMs)
-          : await window.vialAPI.typingAnalyticsListActivityGrid(uid, sinceMs)
+          ? await window.vialAPI.typingAnalyticsListActivityGridLocal(uid, range.fromMs, range.toMs)
+          : await window.vialAPI.typingAnalyticsListActivityGrid(uid, range.fromMs, range.toMs)
         if (!cancelled) setCells(data)
       } catch {
         if (!cancelled) setCells([])
@@ -42,7 +40,7 @@ export function HeatmapChart({ uid, period, deviceScope }: Props) {
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, period])
+  }, [uid, deviceScope, range])
 
   const { grid, max } = useMemo(() => {
     const g = new Map<string, number>()
@@ -124,14 +122,17 @@ export function HeatmapChart({ uid, period, deviceScope }: Props) {
         ))}
       </div>
       <div className="flex items-center gap-2 pt-1 text-content-muted">
-        <span>{t('analyze.heatmap.legendLow')}</span>
+        <span title={t('analyze.heatmap.legendLowDesc')}>{t('analyze.heatmap.legendLow')}</span>
         <div
           className="h-2 flex-1 rounded-sm"
+          title={t('analyze.heatmap.legendScaleDesc')}
           style={{
             background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))',
           }}
         />
-        <span>{t('analyze.heatmap.legendHigh', { count: max.toLocaleString() })}</span>
+        <span title={t('analyze.heatmap.legendHighDesc', { count: max.toLocaleString() })}>
+          {t('analyze.heatmap.legendHigh', { count: max.toLocaleString() })}
+        </span>
       </div>
     </div>
   )

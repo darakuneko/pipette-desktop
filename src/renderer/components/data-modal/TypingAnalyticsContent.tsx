@@ -7,7 +7,6 @@ import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 
 interface Props {
   uid: string
-  name: string
   /** Called after a delete (partial or full) clears the current view. */
   onDeleted?: () => void
   /** Local tab by default. `"sync"` flips this component into a
@@ -17,9 +16,6 @@ interface Props {
   /** Required for `mode === "sync"`. Identifies which remote device's
    * days are being shown and acted on. */
   machineHash?: string
-  /** Optional heading suffix (e.g. device label) appended next to the
-   * keyboard name for the Sync view. */
-  deviceLabel?: string
 }
 
 const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -58,7 +54,7 @@ type ImportStatus =
   | { phase: 'import-done'; imported: number; rejections: { fileName: string; reason: string }[] }
   | { phase: 'export-done'; written: number }
 
-export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', machineHash, deviceLabel }: Props) {
+export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machineHash }: Props) {
   const { t } = useTranslation()
   const [summaries, setSummaries] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -384,14 +380,11 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
   return (
     <div className="flex flex-col h-full" data-testid="typing-list">
       {importBanner}
-      <div className="flex items-center justify-between py-2 text-[13px] text-content-muted shrink-0">
-        <span>
-          {t('dataModal.typing.summaryHeader', {
-            name: deviceLabel ? `${name} — ${deviceLabel}` : name,
-            days: summaries.length,
-            keystrokes: totalKeystrokes.toLocaleString(),
-          })}
-        </span>
+      <div className="py-2 text-[13px] text-content-muted shrink-0">
+        {t('dataModal.typing.summaryLine', {
+          days: summaries.length,
+          keystrokes: totalKeystrokes.toLocaleString(),
+        })}
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
         <table className="w-full text-[13px]">

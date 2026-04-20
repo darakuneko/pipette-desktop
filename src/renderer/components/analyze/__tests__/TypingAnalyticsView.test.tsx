@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Smoke tests for the Analyze view shell. The chart components are
 // mocked out so we can exercise keyboard-list loading, analysis-tab
-// switching, and the period / device selects without dragging recharts
+// switching, and the datetime/device selects without dragging recharts
 // or real DB data into jsdom.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -16,23 +16,24 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../WpmChart', () => ({
-  WpmChart: (props: { uid: string; period: string; deviceScope: string }) => (
-    <div data-testid="mock-wpm">{`${props.uid}:${props.period}:${props.deviceScope}`}</div>
-  ),
-}))
+interface MockChartProps {
+  uid: string
+  deviceScope: string
+  range: { fromMs: number; toMs: number }
+  unit?: string
+}
 
-vi.mock('../IntervalChart', () => ({
-  IntervalChart: (props: { uid: string; period: string; deviceScope: string }) => (
-    <div data-testid="mock-interval">{`${props.uid}:${props.period}:${props.deviceScope}`}</div>
-  ),
-}))
+function mockSummary(testId: string) {
+  return (props: MockChartProps) => (
+    <div data-testid={testId}>
+      {`${props.uid}:${props.deviceScope}:range=${props.range.fromMs}-${props.range.toMs}${props.unit ? `:${props.unit}` : ''}`}
+    </div>
+  )
+}
 
-vi.mock('../HeatmapChart', () => ({
-  HeatmapChart: (props: { uid: string; period: string; deviceScope: string }) => (
-    <div data-testid="mock-heatmap">{`${props.uid}:${props.period}:${props.deviceScope}`}</div>
-  ),
-}))
+vi.mock('../WpmChart', () => ({ WpmChart: mockSummary('mock-wpm') }))
+vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval') }))
+vi.mock('../HeatmapChart', () => ({ HeatmapChart: mockSummary('mock-heatmap') }))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 let typingAnalyticsListKeyboardsSpy: ReturnType<typeof vi.spyOn>
@@ -51,6 +52,10 @@ const SAMPLE: TypingKeyboardSummary[] = [
 
 async function importView(): Promise<typeof import('../TypingAnalyticsView')> {
   return await import('../TypingAnalyticsView')
+}
+
+function wpmText(): string {
+  return screen.getByTestId('mock-wpm').textContent ?? ''
 }
 
 describe('TypingAnalyticsView', () => {
@@ -80,7 +85,7 @@ describe('TypingAnalyticsView', () => {
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('analyze-kb-uid-a')).toBeInTheDocument())
     expect(typingAnalyticsListKeyboardsSpy).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId('mock-wpm')).toHaveTextContent('uid-a:30d:own')
+    expect(wpmText()).toMatch(/^uid-a:own:range=\d+-\d+$/)
   })
 
   it('switches analysis tab to Interval and Heatmap', async () => {
@@ -90,11 +95,14 @@ describe('TypingAnalyticsView', () => {
     await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('analyze-tab-interval'))
-    expect(screen.getByTestId('mock-interval')).toHaveTextContent('uid-a:30d:own')
+    expect(screen.getByTestId('mock-interval').textContent).toMatch(/^uid-a:own:range=\d+-\d+:sec$/)
     expect(screen.queryByTestId('mock-wpm')).toBeNull()
 
+    fireEvent.change(screen.getByTestId('analyze-filter-unit'), { target: { value: 'ms' } })
+    expect(screen.getByTestId('mock-interval').textContent).toMatch(/:ms$/)
+
     fireEvent.click(screen.getByTestId('analyze-tab-heatmap'))
-    expect(screen.getByTestId('mock-heatmap')).toHaveTextContent('uid-a:30d:own')
+    expect(screen.getByTestId('mock-heatmap').textContent).toMatch(/^uid-a:own:range=\d+-\d+$/)
     expect(screen.queryByTestId('mock-interval')).toBeNull()
   })
 
@@ -104,19 +112,36 @@ describe('TypingAnalyticsView', () => {
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('analyze-kb-uid-b')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('analyze-kb-uid-b'))
-    expect(screen.getByTestId('mock-wpm')).toHaveTextContent('uid-b:30d:own')
+    expect(wpmText()).toMatch(/^uid-b:own:range=/)
   })
 
-  it('propagates period and device changes down into the chart', async () => {
+  it('preselects initialUid when the keyboard is in the list', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView initialUid="uid-b" />)
+    await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
+    expect(wpmText()).toMatch(/^uid-b:own:range=/)
+  })
+
+  it('falls back to the first keyboard when initialUid is not in the list', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView initialUid="uid-unknown" />)
+    await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
+    expect(wpmText()).toMatch(/^uid-a:own:range=/)
+  })
+
+  it('propagates datetime-range and device changes down into the chart', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
 
-    fireEvent.change(screen.getByTestId('analyze-filter-period'), { target: { value: '7d' } })
-    expect(screen.getByTestId('mock-wpm')).toHaveTextContent('uid-a:7d:own')
+    const expectedFrom = new Date('2026-04-19T00:00').getTime()
+    fireEvent.change(screen.getByTestId('analyze-filter-from'), { target: { value: '2026-04-19T00:00' } })
+    expect(wpmText()).toContain(`range=${expectedFrom}-`)
 
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
-    expect(screen.getByTestId('mock-wpm')).toHaveTextContent('uid-a:7d:all')
+    expect(wpmText()).toMatch(/^uid-a:all:range=/)
   })
 })

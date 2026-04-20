@@ -32,7 +32,7 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
-import { TypingAnalyticsPage } from './components/editors/TypingAnalyticsPage'
+import { AnalyzePage } from './components/analyze/AnalyzePage'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
@@ -657,8 +657,8 @@ export function App() {
 
       <div className="flex min-h-0 flex-1 flex-col">
         {analyticsPageOpen ? (
-          <TypingAnalyticsPage
-            deviceName={deviceName}
+          <AnalyzePage
+            initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
             onBack={handleAnalyticsBack}
           />
         ) : (

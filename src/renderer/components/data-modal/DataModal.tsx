@@ -214,7 +214,6 @@ export function DataModal({
         <TypingAnalyticsContent
           key={`typing-${path.uid}`}
           uid={path.uid}
-          name={path.name}
           onDeleted={() => { void nav.refreshTypingKeyboards() }}
         />
       )
@@ -225,10 +224,8 @@ export function DataModal({
         <TypingAnalyticsContent
           key={`sync-typing-${path.uid}-${path.machineHash}`}
           uid={path.uid}
-          name={path.name}
           mode="sync"
           machineHash={path.machineHash}
-          deviceLabel={path.deviceLabel}
           onDeleted={() => { void nav.refreshTypingKeyboards() }}
         />
       )

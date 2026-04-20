@@ -603,6 +603,7 @@ export class TypingAnalyticsDB {
          AND s.is_deleted = 0
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
        GROUP BY dow, hour
     `)
 
@@ -617,6 +618,7 @@ export class TypingAnalyticsDB {
          AND s.is_deleted = 0
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
        GROUP BY dow, hour
     `)
 
@@ -974,11 +976,12 @@ export class TypingAnalyticsDB {
     return this.selectIntervalSummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingIntervalDailySummary[]
   }
 
-  /** Hour-of-day × day-of-week activity grid for a keyboard uid since
-   * `sinceMs` (use 0 for "all time"). Buckets with zero keystrokes are
+  /** Hour-of-day × day-of-week activity grid for a keyboard uid in
+   * `[sinceMs, untilMs)`. Pass `Number.MAX_SAFE_INTEGER` for untilMs to
+   * include "now and onwards". Buckets with zero keystrokes are
    * omitted from the result — callers zero-fill when rendering. */
-  listActivityGridForUid(uid: string, sinceMs: number): TypingActivityCell[] {
-    return this.selectActivityGridForUidStmt.all({ uid, sinceMs }) as TypingActivityCell[]
+  listActivityGridForUid(uid: string, sinceMs: number, untilMs: number): TypingActivityCell[] {
+    return this.selectActivityGridForUidStmt.all({ uid, sinceMs, untilMs }) as TypingActivityCell[]
   }
 
   /** Same as {@link listActivityGridForUid} but restricted to a single
@@ -988,8 +991,9 @@ export class TypingAnalyticsDB {
     uid: string,
     machineHash: string,
     sinceMs: number,
+    untilMs: number,
   ): TypingActivityCell[] {
-    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs }) as TypingActivityCell[]
+    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingActivityCell[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

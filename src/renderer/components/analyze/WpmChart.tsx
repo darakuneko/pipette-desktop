@@ -7,14 +7,14 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, PeriodKey } from './analyze-types'
-import { filterByPeriod } from './analyze-period'
+import type { DeviceScope, RangeMs } from './analyze-types'
+import { filterByRange } from './analyze-period'
 
 interface Props {
   uid: string
-  period: PeriodKey
+  range: RangeMs
   deviceScope: DeviceScope
 }
 
@@ -23,7 +23,7 @@ function computeWpm(keystrokes: number, activeMs: number): number {
   return (keystrokes / 5) * 60_000 / activeMs
 }
 
-export function WpmChart({ uid, period, deviceScope }: Props) {
+export function WpmChart({ uid, range, deviceScope }: Props) {
   const { t } = useTranslation()
   const [summaries, setSummaries] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -55,7 +55,7 @@ export function WpmChart({ uid, period, deviceScope }: Props) {
     )
   }
 
-  const chartData = filterByPeriod(summaries, period)
+  const chartData = filterByRange(summaries, range)
     .slice()
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((s) => ({
@@ -83,7 +83,23 @@ export function WpmChart({ uid, period, deviceScope }: Props) {
             labelStyle={{ color: 'var(--color-content-secondary)' }}
             itemStyle={{ color: 'var(--color-content)' }}
           />
-          <Line type="monotone" dataKey="wpm" stroke="var(--color-accent)" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+          <Legend
+            wrapperStyle={{ fontSize: 12 }}
+            formatter={(value) => (
+              <span title={t('analyze.wpm.description')} style={{ color: 'var(--color-content)' }}>
+                {value}
+              </span>
+            )}
+          />
+          <Line
+            type="monotone"
+            dataKey="wpm"
+            name={t('analyze.wpm.legend')}
+            stroke="var(--color-accent)"
+            strokeWidth={2}
+            dot={{ r: 3 }}
+            activeDot={{ r: 5 }}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>

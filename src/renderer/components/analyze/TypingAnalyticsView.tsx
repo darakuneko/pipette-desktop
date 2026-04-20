@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, PeriodKey } from './analyze-types'
+import type { AnalysisTabKey, DeviceScope, IntervalUnit, RangeMs } from './analyze-types'
 import { HeatmapChart } from './HeatmapChart'
 import { IntervalChart } from './IntervalChart'
 import { WpmChart } from './WpmChart'
@@ -30,17 +30,51 @@ const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
 const ANALYSIS_TABS: AnalysisTabKey[] = ['wpm', 'interval', 'heatmap']
-const PERIOD_OPTIONS: PeriodKey[] = ['7d', '30d', 'all']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
+const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
+const DAY_MS = 86_400_000
 
-export function TypingAnalyticsView() {
+/** `YYYY-MM-DDTHH:mm` serialisation (local timezone) that HTML's
+ * `<input type="datetime-local">` expects. */
+function toLocalInputValue(ms: number): string {
+  const d = new Date(ms)
+  const y = d.getFullYear().toString().padStart(4, '0')
+  const m = (d.getMonth() + 1).toString().padStart(2, '0')
+  const day = d.getDate().toString().padStart(2, '0')
+  const h = d.getHours().toString().padStart(2, '0')
+  const mi = d.getMinutes().toString().padStart(2, '0')
+  return `${y}-${m}-${day}T${h}:${mi}`
+}
+
+function fromLocalInputValue(value: string): number | null {
+  const ms = new Date(value).getTime()
+  return Number.isFinite(ms) ? ms : null
+}
+
+interface TypingAnalyticsViewProps {
+  /** Pre-select this keyboard on mount if it exists in the current
+   * analytics data. Used when entering the Analyze page from the
+   * typing view — the user has already committed to one keyboard and
+   * shouldn't have to re-pick it. */
+  initialUid?: string
+}
+
+export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {}) {
   const { t } = useTranslation()
   const [keyboards, setKeyboards] = useState<TypingKeyboardSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedUid, setSelectedUid] = useState<string | null>(null)
+  const [selectedUid, setSelectedUid] = useState<string | null>(initialUid ?? null)
   const [analysisTab, setAnalysisTab] = useState<AnalysisTabKey>('wpm')
-  const [period, setPeriod] = useState<PeriodKey>('30d')
+  // Snapshot "now" at mount so the user's max boundary stays stable
+  // while the page is open and we can reproducibly re-clip a stale
+  // `to` when the user drags it above the wall clock we recorded.
+  const [nowMs] = useState<number>(() => Date.now())
+  const [range, setRange] = useState<RangeMs>(() => ({
+    fromMs: Date.now() - DAY_MS,
+    toMs: Date.now(),
+  }))
   const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
+  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -49,6 +83,7 @@ export function TypingAnalyticsView() {
       setKeyboards(list)
       setSelectedUid((prev) => {
         if (prev && list.some((kb) => kb.uid === prev)) return prev
+        if (initialUid && list.some((kb) => kb.uid === initialUid)) return initialUid
         return list[0]?.uid ?? null
       })
     } catch {
@@ -57,7 +92,7 @@ export function TypingAnalyticsView() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [initialUid])
 
   useEffect(() => {
     void refresh()
@@ -95,7 +130,6 @@ export function TypingAnalyticsView() {
                 data-testid={`analyze-kb-${kb.uid}`}
               >
                 <span className="block font-medium">{kb.productName || kb.uid}</span>
-                <span className="block font-mono text-[10px] text-content-muted">{kb.uid}</span>
               </button>
             ))}
           </div>
@@ -129,19 +163,34 @@ export function TypingAnalyticsView() {
               data-testid="analyze-filters"
             >
               <label className={FILTER_LABEL}>
-                {t('analyze.filters.period')}
-                <select
+                {t('analyze.filters.from')}
+                <input
+                  type="datetime-local"
                   className={FILTER_SELECT}
-                  value={period}
-                  onChange={(e) => setPeriod(e.target.value as PeriodKey)}
-                  data-testid="analyze-filter-period"
-                >
-                  {PERIOD_OPTIONS.map((key) => (
-                    <option key={key} value={key}>
-                      {t(`analyze.filters.periodOption.${key}`)}
-                    </option>
-                  ))}
-                </select>
+                  value={toLocalInputValue(range.fromMs)}
+                  max={toLocalInputValue(Math.min(range.toMs, nowMs))}
+                  onChange={(e) => {
+                    const ms = fromLocalInputValue(e.target.value)
+                    if (ms === null) return
+                    setRange((prev) => ({ fromMs: Math.min(ms, prev.toMs), toMs: prev.toMs }))
+                  }}
+                  data-testid="analyze-filter-from"
+                />
+              </label>
+              <label className={FILTER_LABEL}>
+                {t('analyze.filters.to')}
+                <input
+                  type="datetime-local"
+                  className={FILTER_SELECT}
+                  value={toLocalInputValue(range.toMs)}
+                  max={toLocalInputValue(nowMs)}
+                  onChange={(e) => {
+                    const ms = fromLocalInputValue(e.target.value)
+                    if (ms === null) return
+                    setRange((prev) => ({ fromMs: prev.fromMs, toMs: Math.min(Math.max(ms, prev.fromMs), nowMs) }))
+                  }}
+                  data-testid="analyze-filter-to"
+                />
               </label>
               <label className={FILTER_LABEL}>
                 {t('analyze.filters.device')}
@@ -158,14 +207,31 @@ export function TypingAnalyticsView() {
                   ))}
                 </select>
               </label>
+              {analysisTab === 'interval' && (
+                <label className={FILTER_LABEL}>
+                  {t('analyze.filters.unit')}
+                  <select
+                    className={FILTER_SELECT}
+                    value={intervalUnit}
+                    onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
+                    data-testid="analyze-filter-unit"
+                  >
+                    {INTERVAL_UNITS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`analyze.filters.unitOption.${key}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </div>
-            <div className="flex-1 min-h-0 overflow-auto py-2" data-testid="analyze-chart">
+            <div className="flex-1 min-h-0 overflow-hidden py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
-                <WpmChart uid={selected.uid} period={period} deviceScope={deviceScope} />
+                <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart uid={selected.uid} period={period} deviceScope={deviceScope} />
+                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} />
               ) : (
-                <HeatmapChart uid={selected.uid} period={period} deviceScope={deviceScope} />
+                <HeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} />
               )}
             </div>
           </>

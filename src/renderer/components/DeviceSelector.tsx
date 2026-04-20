@@ -7,7 +7,7 @@ import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { DeviceInfo } from '../../shared/types/protocol'
 import type { SyncStatusType } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
-import { TypingAnalyticsView } from './analyze/TypingAnalyticsView'
+import { AnalyzePage } from './analyze/AnalyzePage'
 
 const DEVICE_ENTRY_CLASS =
   'flex w-full items-center gap-3.5 rounded-lg border border-edge p-3.5 text-left transition-colors hover:border-accent hover:bg-accent/10 disabled:opacity-50'
@@ -103,9 +103,13 @@ export function DeviceSelector({
     return pipetteFileKeyboards.find((k) => k.uid === selectedFileUid)?.name ?? ''
   }, [selectedFileUid, pipetteFileKeyboards])
 
+  if (tab === 'analyze') {
+    return <AnalyzePage onBack={() => setTab('keyboard')} />
+  }
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-surface">
-      <div className={`w-full ${tab === 'analyze' ? 'max-w-6xl' : 'max-w-sm'} rounded-2xl bg-surface-alt px-8 pb-7 pt-9 shadow-lg`}>
+      <div className="w-full max-w-sm rounded-2xl bg-surface-alt px-8 pb-7 pt-9 shadow-lg">
         <div className="mb-7 flex items-center justify-between">
           <h1 className="text-xl font-bold text-content">
             {t('app.title')}
@@ -329,10 +333,6 @@ export function DeviceSelector({
               {t('app.loadPipetteFile')}
             </button>
           </div>
-        )}
-
-        {tab === 'analyze' && (
-          <TypingAnalyticsView />
         )}
 
         {deviceWarning && (
