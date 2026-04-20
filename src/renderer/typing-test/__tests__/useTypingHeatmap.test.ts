@@ -154,6 +154,38 @@ describe('useTypingHeatmap', () => {
     expect(result.current.cells?.get('1,2')?.total).toBeCloseTo(expected, 4)
   })
 
+  it('peak normaliser stays fixed while counters decay so the overlay fades away', async () => {
+    // Bootstrap puts a single key at 10 counts. Subsequent polls see
+    // no new input (same raw total → delta 0), so counters decay
+    // freely while the published peak stays at the bootstrap value.
+    // Without an absolute peak the counter/peak ratio would stay at
+    // 1.0 forever and the overlay would never dim.
+    const api = vi.fn<HeatmapFn>().mockResolvedValue({ '1,2': cell(10) })
+    installVialApi(api)
+
+    const { result } = renderHook(() => useTypingHeatmap({ uid: '0xAABB', layer: 0, enabled: true }))
+    await act(async () => { await flushPromises() })
+    expect(result.current.maxTotal).toBe(10)
+    expect(result.current.cells?.get('1,2')?.total).toBe(10)
+
+    // Simulate ~1 half-life of idle polling.
+    const polls = Math.round(DEFAULT_HALF_LIFE_MS / TYPING_HEATMAP_POLL_MS)
+    for (let i = 0; i < polls; i++) {
+      await act(async () => {
+        vi.advanceTimersByTime(TYPING_HEATMAP_POLL_MS)
+        await flushPromises()
+      })
+    }
+
+    // The published peak is unchanged — that's the point.
+    expect(result.current.maxTotal).toBe(10)
+    // The counter has roughly halved (EMA half-life), so the
+    // ratio drops to ~0.5 and the overlay actually fades.
+    const counter = result.current.cells?.get('1,2')?.total ?? 0
+    expect(counter / 10).toBeLessThan(0.6)
+    expect(counter / 10).toBeGreaterThan(0.4)
+  })
+
   it('stays flat on a same-value poll (no double-counting of the minute bucket)', async () => {
     // The main-process query includes the full current-minute buffer
     // on every call, so raw totals repeat within a minute. The hook

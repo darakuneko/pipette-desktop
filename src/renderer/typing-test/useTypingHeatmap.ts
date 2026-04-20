@@ -96,6 +96,12 @@ export function useTypingHeatmap({
     // don't accidentally subtract from the EMA.
     const counters = new Map<string, TypingHeatmapCell>()
     const previousObserved = new Map<string, TypingHeatmapCell>()
+    // Running peak of each axis — captured *after* each merge so the
+    // normalised intensity = counter / peak actually shrinks when
+    // counters decay uniformly with no new input. Without this, every
+    // counter and the max both fade at the same rate and the hottest
+    // key would stay at ratio 1.0 (saturated red) forever.
+    const peak = { total: 0, tap: 0, hold: 0 }
     let lastPollMs = Date.now()
     let cancelled = false
 
@@ -139,18 +145,24 @@ export function useTypingHeatmap({
       for (const k of Array.from(previousObserved.keys())) {
         if (!seen.has(k)) previousObserved.delete(k)
       }
+      // Absolute running peak — strictly non-decreasing, so the UI's
+      // `counter / peak` ratio decays with the counters and keys
+      // actually fade when input stops.
+      for (const cell of counters.values()) {
+        if (cell.total > peak.total) peak.total = cell.total
+        if (cell.tap > peak.tap) peak.tap = cell.tap
+        if (cell.hold > peak.hold) peak.hold = cell.hold
+      }
     }
 
     const publish = (): void => {
       if (cancelled || !isMountedRef.current) return
-      let maxTotal = 0, maxTap = 0, maxHold = 0
-      for (const cell of counters.values()) {
-        if (cell.total > maxTotal) maxTotal = cell.total
-        if (cell.tap > maxTap) maxTap = cell.tap
-        if (cell.hold > maxHold) maxHold = cell.hold
-      }
       setCells(new Map(counters))
-      setMaxes({ total: maxTotal, tap: maxTap, hold: maxHold })
+      // Publish the running peak so the KeyWidget normalises against
+      // an absolute reference. The peak only grows, so `counter/peak`
+      // shrinks as the EMA decays with no new input and the overlay
+      // actually fades to transparent once τ-many windows pass.
+      setMaxes({ total: peak.total, tap: peak.tap, hold: peak.hold })
     }
 
     async function bootstrap(): Promise<void> {
@@ -166,6 +178,9 @@ export function useTypingHeatmap({
         for (const [k, hit] of Object.entries(heat)) {
           counters.set(k, { total: hit.total, tap: hit.tap, hold: hit.hold })
           previousObserved.set(k, hit)
+          if (hit.total > peak.total) peak.total = hit.total
+          if (hit.tap > peak.tap) peak.tap = hit.tap
+          if (hit.hold > peak.hold) peak.hold = hit.hold
         }
         lastPollMs = Date.now()
         publish()
