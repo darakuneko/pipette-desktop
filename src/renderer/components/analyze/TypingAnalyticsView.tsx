@@ -141,7 +141,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
 
   return (
     <div
-      className="flex min-h-[70vh] gap-4"
+      className="flex h-full min-h-[70vh] gap-4"
       data-testid="analyze-view"
     >
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">

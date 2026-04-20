@@ -173,8 +173,8 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const layerOptions = Array.from({ length: Math.max(1, snapshot.layers) }, (_, i) => i)
 
   return (
-    <div className="flex flex-col gap-3" data-testid="analyze-keyheatmap-chart">
-      <div className="flex justify-center overflow-auto">
+    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-keyheatmap-chart">
+      <div className="flex shrink-0 justify-center overflow-auto">
         <KeyboardWidget
           keys={layout.keys}
           keycodes={keycodes}
@@ -188,7 +188,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
         />
       </div>
       <div
-        className="flex flex-wrap items-center justify-end gap-1 text-[12px]"
+        className="flex shrink-0 flex-wrap items-center justify-end gap-1 text-[12px]"
         role="tablist"
         aria-label={t('analyze.keyHeatmap.layer')}
         data-testid="analyze-keyheatmap-layers"
@@ -212,8 +212,8 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           </button>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2" data-testid="analyze-keyheatmap-rankings">
-        <section aria-labelledby="analyze-keyheatmap-top-heading">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row" data-testid="analyze-keyheatmap-rankings">
+        <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-top-heading">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3
               id="analyze-keyheatmap-top-heading"
@@ -236,7 +236,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           {rankings.top.length === 0 ? (
             <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyTop')}</div>
           ) : (
-            <ol className="max-h-64 space-y-1 overflow-y-auto text-[12px]">
+            <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
               {rankings.top.map((entry, i) => (
                 <li
                   key={entry.key}
@@ -252,7 +252,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
             </ol>
           )}
         </section>
-        <section aria-labelledby="analyze-keyheatmap-unused-heading">
+        <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-unused-heading">
           <div className="mb-2 flex items-center justify-between gap-2">
             <h3
               id="analyze-keyheatmap-unused-heading"
@@ -275,7 +275,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           {rankings.unused.length === 0 ? (
             <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyUnused')}</div>
           ) : (
-            <ul className="max-h-64 space-y-1 overflow-y-auto text-[12px]">
+            <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
               {rankings.unused.map((entry) => (
                 <li
                   key={entry.key}

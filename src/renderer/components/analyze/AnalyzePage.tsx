@@ -16,7 +16,7 @@ interface Props {
 export function AnalyzePage({ onBack, initialUid }: Props) {
   const { t } = useTranslation()
   return (
-    <div className="flex min-h-screen flex-col bg-surface" data-testid="analyze-page">
+    <div className="flex h-screen flex-col bg-surface" data-testid="analyze-page">
       <header className="flex items-center gap-3 border-b border-edge px-8 py-5">
         <button
           type="button"
