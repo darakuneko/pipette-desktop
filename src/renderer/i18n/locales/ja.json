@@ -39,6 +39,7 @@
     "loadDummy": "JSONファイルから読み込み…",
     "keyboardTab": "デバイス",
     "fileTab": "ファイル",
+    "analyzeTab": "分析",
     "loadPipetteFile": ".pipetteファイルを読み込み…",
     "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できます。ライティングとマトリクステスター以外の全機能が利用可能です。",
     "selectKeyboard": "ローカル保存ファイルを選択",
@@ -631,6 +632,9 @@
     "title": "分析",
     "backToKeyboard": "← {{name}}",
     "comingSoon": "分析ダッシュボード — 作成中"
+  },
+  "analyze": {
+    "placeholder": "分析チャートを準備中です。"
   },
   "dataModal": {
     "title": "データ",

@@ -7,6 +7,7 @@ import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { DeviceInfo } from '../../shared/types/protocol'
 import type { SyncStatusType } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
+import { TypingAnalyticsView } from './analyze/TypingAnalyticsView'
 
 const DEVICE_ENTRY_CLASS =
   'flex w-full items-center gap-3.5 rounded-lg border border-edge p-3.5 text-left transition-colors hover:border-accent hover:bg-accent/10 disabled:opacity-50'
@@ -71,7 +72,7 @@ export function DeviceSelector({
   onClearError,
 }: Props) {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<'keyboard' | 'file'>('keyboard')
+  const [tab, setTab] = useState<'keyboard' | 'file' | 'analyze'>('keyboard')
   // null = keyboard list, string = selected keyboard UID showing entries
   const [selectedFileUid, setSelectedFileUid] = useState<string | null>(null)
 
@@ -160,6 +161,14 @@ export function DeviceSelector({
             data-testid="tab-file"
           >
             {t('app.fileTab')}
+          </button>
+          <button
+            type="button"
+            className={`${TAB_CLASS} ${tab === 'analyze' ? TAB_ACTIVE : TAB_INACTIVE}`}
+            onClick={() => { setTab('analyze'); onClearError?.() }}
+            data-testid="tab-analyze"
+          >
+            {t('app.analyzeTab')}
           </button>
         </div>
 
@@ -320,6 +329,10 @@ export function DeviceSelector({
               {t('app.loadPipetteFile')}
             </button>
           </div>
+        )}
+
+        {tab === 'analyze' && (
+          <TypingAnalyticsView />
         )}
 
         {deviceWarning && (

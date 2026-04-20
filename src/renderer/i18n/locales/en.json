@@ -39,6 +39,7 @@
     "loadDummy": "Load from JSON file…",
     "keyboardTab": "Device",
     "fileTab": "File",
+    "analyzeTab": "Analyze",
     "loadPipetteFile": "Load .pipette file…",
     "loadPipetteFileDescription": "Open a .pipette file for offline editing. All features except lighting and matrix tester are available.",
     "noSavedFiles": "No saved files",
@@ -632,6 +633,9 @@
     "title": "Analytics",
     "backToKeyboard": "← {{name}}",
     "comingSoon": "Analytics dashboard — coming soon"
+  },
+  "analyze": {
+    "placeholder": "Analysis charts coming soon."
   },
   "dataModal": {
     "title": "Data",
