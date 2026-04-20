@@ -641,6 +641,15 @@
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "interval": {
+      "legend": {
+        "p25": "p25",
+        "iqr": "p25–p75",
+        "p50": "Median",
+        "min": "Min",
+        "max": "Max"
+      }
+    },
     "analysisTab": {
       "wpm": "WPM",
       "interval": "Interval",

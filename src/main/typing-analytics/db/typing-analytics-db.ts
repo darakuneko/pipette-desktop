@@ -89,6 +89,7 @@ export interface SessionExportRow extends SessionRow {
 export type {
   TypingKeyboardSummary,
   TypingDailySummary,
+  TypingIntervalDailySummary,
   TypingTombstoneResult,
 } from '../../../shared/types/typing-analytics'
 
@@ -114,6 +115,8 @@ export class TypingAnalyticsDB {
   private readonly selectKeyboardsWithTypingDataStmt: Statement
   private readonly selectDailySummariesForUidStmt: Statement
   private readonly selectDailySummariesForUidAndHashStmt: Statement
+  private readonly selectIntervalSummariesForUidStmt: Statement
+  private readonly selectIntervalSummariesForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -544,6 +547,45 @@ export class TypingAnalyticsDB {
        ORDER BY date DESC
     `)
 
+    // Daily envelope + mean of the per-minute interval quartiles.
+    // min/max are taken across every minute that carries a non-null
+    // value; p25/p50/p75 are unweighted means (close enough for a
+    // rhythm overview, and cheap on the existing column layout).
+    this.selectIntervalSummariesForUidStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.interval_p50_ms IS NOT NULL
+       GROUP BY date
+       ORDER BY date DESC
+    `)
+
+    this.selectIntervalSummariesForUidAndHashStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             MIN(t.interval_min_ms) AS intervalMinMs,
+             AVG(t.interval_p25_ms) AS intervalP25Ms,
+             AVG(t.interval_p50_ms) AS intervalP50Ms,
+             AVG(t.interval_p75_ms) AS intervalP75Ms,
+             MAX(t.interval_max_ms) AS intervalMaxMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.interval_p50_ms IS NOT NULL
+       GROUP BY date
+       ORDER BY date DESC
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -879,6 +921,23 @@ export class TypingAnalyticsDB {
     machineHash: string,
   ): TypingDailySummary[] {
     return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingDailySummary[]
+  }
+
+  /** Daily interval summaries (min/p25/p50/p75/max) for a keyboard uid,
+   * grouped by local calendar day and ordered newest first. Minutes
+   * with no interval data (single-keystroke minutes) are excluded. */
+  listIntervalSummariesForUid(uid: string): TypingIntervalDailySummary[] {
+    return this.selectIntervalSummariesForUidStmt.all({ uid }) as TypingIntervalDailySummary[]
+  }
+
+  /** Same as {@link listIntervalSummariesForUid} but restricted to one
+   * machine_hash so the Analyze view can show only the active device's
+   * rhythm without any remote contribution. */
+  listIntervalSummariesForUidAndHash(
+    uid: string,
+    machineHash: string,
+  ): TypingIntervalDailySummary[] {
+    return this.selectIntervalSummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingIntervalDailySummary[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

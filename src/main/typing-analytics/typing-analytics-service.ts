@@ -26,6 +26,7 @@ import { SessionDetector, type FinalizedSession } from './session-detector'
 import {
   getTypingAnalyticsDB,
   type TypingDailySummary,
+  type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
@@ -221,6 +222,23 @@ export function setupTypingAnalyticsIpc(): void {
       return listDeviceDays(app.getPath('userData'), uid, machineHash)
     },
   )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS,
+    async (_event, uid: unknown): Promise<TypingIntervalDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      return listTypingIntervalSummaries(uid)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL,
+    async (_event, uid: unknown): Promise<TypingIntervalDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const ownHash = await getMachineHash()
+      return listTypingIntervalSummariesForHash(uid, ownHash)
+    },
+  )
 }
 
 /**
@@ -261,6 +279,22 @@ export function listTypingKeyboards(): TypingKeyboardSummary[] {
 /** Day-level summaries for one keyboard uid, newest first. */
 export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
   return getTypingAnalyticsDB().listDailySummariesForUid(uid)
+}
+
+/** Pure-cache lookup for the Analyze > Interval chart. Returns every
+ * day's envelope + mean quartile across every scope that shares `uid`. */
+export function listTypingIntervalSummaries(uid: string): TypingIntervalDailySummary[] {
+  return getTypingAnalyticsDB().listIntervalSummariesForUid(uid)
+}
+
+/** Same as {@link listTypingIntervalSummaries} but restricted to one
+ * machine hash — powers the Analyze device filter when scoped to this
+ * device only. */
+export function listTypingIntervalSummariesForHash(
+  uid: string,
+  machineHash: string,
+): TypingIntervalDailySummary[] {
+  return getTypingAnalyticsDB().listIntervalSummariesForUidAndHash(uid, machineHash)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import type { AnalysisTabKey, DeviceScope, PeriodKey } from './analyze-types'
+import { IntervalChart } from './IntervalChart'
 import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
@@ -160,6 +161,8 @@ export function TypingAnalyticsView() {
             <div className="flex-1 min-h-0 overflow-auto py-2" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
                 <WpmChart uid={selected.uid} period={period} deviceScope={deviceScope} />
+              ) : analysisTab === 'interval' ? (
+                <IntervalChart uid={selected.uid} period={period} deviceScope={deviceScope} />
               ) : (
                 <div className="py-6 text-center text-[13px] text-content-muted">
                   {t('analyze.placeholder')}

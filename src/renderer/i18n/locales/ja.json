@@ -640,6 +640,15 @@
     "noData": "選択した期間にデータがありません。",
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
+    "interval": {
+      "legend": {
+        "p25": "p25",
+        "iqr": "p25–p75",
+        "p50": "中央値",
+        "min": "最小",
+        "max": "最大"
+      }
+    },
     "analysisTab": {
       "wpm": "WPM",
       "interval": "間隔",

@@ -22,6 +22,7 @@ import type {
   TypingAnalyticsEvent,
   TypingDailySummary,
   TypingHeatmapByCell,
+  TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingTombstoneResult,
 } from './typing-analytics'
@@ -144,6 +145,8 @@ export interface VialAPI {
   typingAnalyticsListItemsLocal(uid: string): Promise<TypingDailySummary[]>
   typingAnalyticsListRemoteHashes(uid: string): Promise<string[]>
   typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
+  typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

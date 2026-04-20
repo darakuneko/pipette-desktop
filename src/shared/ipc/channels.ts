@@ -82,11 +82,13 @@ export const IpcChannels = {
   TYPING_ANALYTICS_FLUSH: 'typing-analytics:flush',
   TYPING_ANALYTICS_LIST_KEYBOARDS: 'typing-analytics:list-keyboards',
   TYPING_ANALYTICS_LIST_ITEMS: 'typing-analytics:list-items',
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS: 'typing-analytics:list-interval-items',
   TYPING_ANALYTICS_DELETE_ITEMS: 'typing-analytics:delete-items',
   TYPING_ANALYTICS_DELETE_ALL: 'typing-analytics:delete-all',
   TYPING_ANALYTICS_GET_MATRIX_HEATMAP: 'typing-analytics:get-matrix-heatmap',
   // v7 Local/Sync split — hash-scoped list and delete
   TYPING_ANALYTICS_LIST_ITEMS_LOCAL: 'typing-analytics:list-items-local',
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL: 'typing-analytics:list-interval-items-local',
   TYPING_ANALYTICS_LIST_REMOTE_HASHES: 'typing-analytics:list-remote-hashes',
   TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
   TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS: 'typing-analytics:list-local-device-days',

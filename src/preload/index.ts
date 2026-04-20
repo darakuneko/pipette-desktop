@@ -18,6 +18,7 @@ import type {
   TypingAnalyticsEvent,
   TypingDailySummary,
   TypingHeatmapByCell,
+  TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingTombstoneResult,
 } from '../shared/types/typing-analytics'
@@ -221,6 +222,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES, uid),
   typingAnalyticsListItemsForHash: (uid: string, machineHash: string): Promise<TypingDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash),
+  typingAnalyticsListIntervalItems: (uid: string): Promise<TypingIntervalDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS, uid),
+  typingAnalyticsListIntervalItemsLocal: (uid: string): Promise<TypingIntervalDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL, uid),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

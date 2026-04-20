@@ -80,6 +80,23 @@ export interface TypingDailySummary {
   activeMs: number
 }
 
+/** Day-level inter-keystroke interval summary. The per-minute rows
+ * already carry min/p25/p50/p75/max, and the aggregate picks the
+ * envelope (min/max) plus the mean of the per-minute quartiles — an
+ * approximation of the day's central tendency that is cheap to compute
+ * on the existing schema. Days with no recorded intervals (e.g. only
+ * a single keystroke per minute for the entire day) are omitted from
+ * the result instead of returning all-`null` rows; the nullable field
+ * types are kept broad for forward compatibility. */
+export interface TypingIntervalDailySummary {
+  date: string
+  intervalMinMs: number | null
+  intervalP25Ms: number | null
+  intervalP50Ms: number | null
+  intervalP75Ms: number | null
+  intervalMaxMs: number | null
+}
+
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
  * that the release-edge classifier routed to the tap vs hold arm of
