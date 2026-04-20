@@ -212,20 +212,20 @@ export function TypingAnalyticsContent({ uid, name, onDeleted, mode = 'local', m
               <button
                 type="button"
                 className={BTN_SECONDARY}
-                onClick={() => void handleExport()}
-                disabled={busy || selected.size === 0}
-                data-testid="typing-export"
-              >
-                {t('dataModal.typing.exportLabel')}
-              </button>
-              <button
-                type="button"
-                className={BTN_SECONDARY}
                 onClick={() => void handleImport()}
                 disabled={busy}
                 data-testid="typing-import"
               >
                 {t('dataModal.typing.importLabel')}
+              </button>
+              <button
+                type="button"
+                className={BTN_SECONDARY}
+                onClick={() => void handleExport()}
+                disabled={busy || selected.size === 0}
+                data-testid="typing-export"
+              >
+                {t('dataModal.typing.exportLabel')}
               </button>
             </>
           )}
