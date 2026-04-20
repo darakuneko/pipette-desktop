@@ -240,7 +240,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
               {rankings.top.map((entry, i) => (
                 <li
                   key={entry.key}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 odd:bg-surface-dim/40 ${hoveredKey === entry.key ? 'bg-accent/10' : ''}`}
+                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 ${hoveredKey === entry.key ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
                   onMouseEnter={() => setHoveredKey(entry.key)}
                   onMouseLeave={() => setHoveredKey((k) => (k === entry.key ? null : k))}
                 >
@@ -279,7 +279,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
               {rankings.unused.map((entry) => (
                 <li
                   key={entry.key}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-0.5 odd:bg-surface-dim/40 ${hoveredKey === entry.key ? 'bg-accent/10' : ''}`}
+                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-0.5 ${hoveredKey === entry.key ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
                   onMouseEnter={() => setHoveredKey(entry.key)}
                   onMouseLeave={() => setHoveredKey((k) => (k === entry.key ? null : k))}
                 >
