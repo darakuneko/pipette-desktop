@@ -287,6 +287,12 @@ export function TypingTestPane({
 
   return (
     <>
+      {showConsentModal && (
+        <TypingRecordingConsentModal
+          onAccept={handleConsentAccept}
+          onCancel={() => setShowConsentModal(false)}
+        />
+      )}
       {!viewOnly && (
         <TypingTestView
           state={typingTest.state}
@@ -356,12 +362,6 @@ export function TypingTestPane({
                     currentLanguage={typingTest.language}
                     onSelectLanguage={onLanguageChange}
                     onClose={() => setShowLanguageModal(false)}
-                  />
-                )}
-                {showConsentModal && (
-                  <TypingRecordingConsentModal
-                    onAccept={handleConsentAccept}
-                    onCancel={() => setShowConsentModal(false)}
                   />
                 )}
               </div>
