@@ -8,10 +8,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-
-type AnalysisTabKey = 'wpm' | 'interval' | 'heatmap'
-type PeriodKey = '7d' | '30d' | 'all'
-type DeviceScope = 'own' | 'all'
+import type { AnalysisTabKey, DeviceScope, PeriodKey } from './analyze-types'
+import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
   'block w-full rounded-md border px-3 py-2 text-left text-[13px] transition-colors'
@@ -159,8 +157,14 @@ export function TypingAnalyticsView() {
                 </select>
               </label>
             </div>
-            <div className="flex-1 min-h-0 overflow-auto py-2 text-[13px] text-content-muted" data-testid="analyze-chart">
-              {t('analyze.placeholder')}
+            <div className="flex-1 min-h-0 overflow-auto py-2" data-testid="analyze-chart">
+              {analysisTab === 'wpm' ? (
+                <WpmChart uid={selected.uid} period={period} deviceScope={deviceScope} />
+              ) : (
+                <div className="py-6 text-center text-[13px] text-content-muted">
+                  {t('analyze.placeholder')}
+                </div>
+              )}
             </div>
           </>
         ) : (

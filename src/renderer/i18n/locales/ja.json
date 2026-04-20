@@ -637,6 +637,7 @@
     "placeholder": "分析チャートを準備中です。",
     "keyboardList": "キーボード",
     "noKeyboards": "まだ打鍵データがありません。",
+    "noData": "選択した期間にデータがありません。",
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
     "analysisTab": {

@@ -638,6 +638,7 @@
     "placeholder": "Analysis charts coming soon.",
     "keyboardList": "Keyboards",
     "noKeyboards": "No typing data yet.",
+    "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
     "analysisTab": {
