@@ -174,7 +174,7 @@ vi.mock('../typing-analytics/sync-state', () => ({
 
 vi.stubGlobal('fetch', vi.fn())
 
-import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn } from '../sync/sync-crypto'
+import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn, retrievePasswordResult as mockRetrievePasswordResultFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
@@ -196,6 +196,7 @@ import {
   registerPreSyncQuitFinalizer,
   registerBeforeQuitFinalizer,
   deleteRemoteTypingDay,
+  fetchRemoteTypingDay,
   _resetForTests,
 } from '../sync/sync-service'
 import { app } from 'electron'
@@ -2073,6 +2074,175 @@ describe('sync-service', () => {
       await executeSync('upload')
 
       expect(mockDeleteFile).not.toHaveBeenCalled()
+    })
+
+    // --- Same-day re-upload dedup: current day keeps `uploaded` at 1 ---
+    it('same-day re-upload: uploaded array stays a single entry across repeated flushes', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: {},
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      await writeDayFile('2026-04-18')
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+
+      // First upload: cloud empty, `uploaded` grows by one.
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      await executeSync('upload')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+
+      // Second upload: cloud now has the file; the implementation passes
+      // the existing drive id to uploadFile (update-in-place), and
+      // `uploaded` stays deduped to a single day.
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      await executeSync('upload')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- fetchRemoteTypingDay branches ---
+    describe('fetchRemoteTypingDay branches', () => {
+      it('returns false when the user is not authenticated', async () => {
+        vi.mocked(mockRetrievePasswordResultFn).mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' })
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, '2026-04-18')
+        expect(ok).toBe(false)
+        expect(mockListFiles).not.toHaveBeenCalled()
+      })
+
+      it('returns false when the requested cloud file is missing', async () => {
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, '2026-04-18')
+        expect(ok).toBe(false)
+        expect(mockDownloadFile).not.toHaveBeenCalled()
+      })
+
+      it('own-hash is treated as a no-op (mergeDeviceDayBundle early-returns)', async () => {
+        const day = '2026-04-18'
+        mockListFiles.mockResolvedValue([
+          cloudDriveFile(OWN_HASH, day),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile.mockResolvedValue({
+          version: 1,
+          syncUnit: `keyboards/${UID}/devices/${OWN_HASH}/days/${day}`,
+          updatedAt: '2026-04-18T00:00:00.000Z',
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'typing-analytics-device',
+            key: `${UID}|${OWN_HASH}|${day}`,
+            index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': '' },
+          }),
+        })
+
+        const ok = await fetchRemoteTypingDay(UID, OWN_HASH, day)
+        expect(ok).toBe(true)
+        // Download + decrypt ran (we don't short-circuit before decrypt),
+        // but no cache apply because mergeDeviceDayBundle exits when
+        // machineHash === ownHash.
+        expect(mockApplyRowsToCache).not.toHaveBeenCalled()
+      })
+
+      it('remote day download: file written locally and rows replayed', async () => {
+        const day = '2026-04-18'
+        const payload = JSON.stringify({ id: 'y', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
+        mockReadRows.mockResolvedValue({
+          rows: [{ id: 'y', kind: 'scope', updated_at: 1, payload: {} }],
+          lastId: 'y',
+          partialLineSkipped: false,
+        })
+        mockListFiles.mockResolvedValue([
+          cloudDriveFile(REMOTE_HASH, day),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile.mockResolvedValue({
+          version: 1,
+          syncUnit: `keyboards/${UID}/devices/${REMOTE_HASH}/days/${day}`,
+          updatedAt: '2026-04-18T00:00:00.000Z',
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'typing-analytics-device',
+            key: `${UID}|${REMOTE_HASH}|${day}`,
+            index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': payload },
+          }),
+        })
+
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, day)
+        expect(ok).toBe(true)
+        expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(true)
+        expect(mockApplyRowsToCache).toHaveBeenCalled()
+      })
+    })
+
+    // --- v1 state → executeSync triggers orphan reconcile on first run ---
+    it('v1-shaped state: first executeSync upload treats reconciled_at missing as pending', async () => {
+      // Simulate a v1-migrated state: the migration leaves `reconciled_at`
+      // as an empty object, so `isReconcilePending` returns true for any
+      // key. The first upload pass must perform orphan cleanup and then
+      // stamp `reconciled_at`.
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: {},
+        reconciled_at: {}, // empty map — no key has been reconciled yet
+        last_synced_at: 0,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'), // cloud orphan
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-16')
+      expect(typeof mockSyncState?.reconciled_at[pointerKey(OWN_HASH)]).toBe('number')
+    })
+
+    // --- 0:00 UTC crossing delete: one local date spans two UTC days ---
+    it('local-date delete spanning 0:00 UTC unlinks both UTC day files', async () => {
+      // A non-UTC wall-clock timezone interprets "2026-04-18" as a 24h
+      // window that includes the last hours of UTC 2026-04-17 and early
+      // hours of 2026-04-18. The delete must unlink both.
+      await writeDayFile('2026-04-17')
+      await writeDayFile('2026-04-18')
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-17'),
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      // Simulate "both days already gone locally" (the TZ-straddling
+      // delete path in typing-analytics-service maps one local date to
+      // two UTC days and unlinks each). Here we verify reconcile rule 2
+      // fires for both in the same pass.
+      const { unlink } = await import('node:fs/promises')
+      await unlink(ownDayPath('2026-04-17'))
+      await unlink(ownDayPath('2026-04-18'))
+
+      await executeSync('upload')
+
+      const deletedIds = mockDeleteFile.mock.calls.map((c) => c[0]).sort()
+      expect(deletedIds).toEqual([
+        'drive-test-machine-hash-2026-04-17',
+        'drive-test-machine-hash-2026-04-18',
+      ])
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual([])
     })
   })
 })
