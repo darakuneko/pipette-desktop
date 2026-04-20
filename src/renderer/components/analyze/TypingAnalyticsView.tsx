@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import type { AnalysisTabKey, DeviceScope, IntervalUnit, RangeMs } from './analyze-types'
-import { HeatmapChart } from './HeatmapChart'
+import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
 import { WpmChart } from './WpmChart'
 
@@ -29,7 +29,7 @@ const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
 const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['wpm', 'interval', 'heatmap']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['wpm', 'interval', 'activity']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const DAY_MS = 86_400_000
@@ -231,7 +231,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} />
               ) : (
-                <HeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} />
+                <ActivityChart uid={selected.uid} range={range} deviceScope={deviceScope} />
               )}
             </div>
           </>

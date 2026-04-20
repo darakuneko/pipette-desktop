@@ -33,7 +33,7 @@ function mockSummary(testId: string) {
 
 vi.mock('../WpmChart', () => ({ WpmChart: mockSummary('mock-wpm') }))
 vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval') }))
-vi.mock('../HeatmapChart', () => ({ HeatmapChart: mockSummary('mock-heatmap') }))
+vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 let typingAnalyticsListKeyboardsSpy: ReturnType<typeof vi.spyOn>
@@ -101,8 +101,8 @@ describe('TypingAnalyticsView', () => {
     fireEvent.change(screen.getByTestId('analyze-filter-unit'), { target: { value: 'ms' } })
     expect(screen.getByTestId('mock-interval').textContent).toMatch(/:ms$/)
 
-    fireEvent.click(screen.getByTestId('analyze-tab-heatmap'))
-    expect(screen.getByTestId('mock-heatmap').textContent).toMatch(/^uid-a:own:range=\d+-\d+$/)
+    fireEvent.click(screen.getByTestId('analyze-tab-activity'))
+    expect(screen.getByTestId('mock-activity').textContent).toMatch(/^uid-a:own:range=\d+-\d+$/)
     expect(screen.queryByTestId('mock-interval')).toBeNull()
   })
 

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Analyze > Heatmap — hour-of-day × day-of-week activity grid. recharts
-// has no first-class heatmap, so the grid is a plain CSS-grid of
-// 24 × 7 rects whose opacity scales with the cell's keystrokes. The
-// color token is shared with WPM / Interval so themes stay coherent.
+// Analyze > Activity — hour-of-day × day-of-week keystroke-count grid.
+// Scoped as "activity" to stay clearly separate from the per-key
+// matrix intensity view in the typing test. recharts has no dedicated
+// grid primitive here, so the chart is a plain CSS-grid of 24 × 7
+// rects whose opacity scales with the bucket's keystrokes.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -18,7 +19,7 @@ interface Props {
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DOWS = [0, 1, 2, 3, 4, 5, 6] as const
 
-export function HeatmapChart({ uid, range, deviceScope }: Props) {
+export function ActivityChart({ uid, range, deviceScope }: Props) {
   const { t } = useTranslation()
   const [cells, setCells] = useState<TypingActivityCell[]>([])
   const [loading, setLoading] = useState(true)
@@ -56,7 +57,7 @@ export function HeatmapChart({ uid, range, deviceScope }: Props) {
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-heatmap-loading">
+      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-loading">
         {t('common.loading')}
       </div>
     )
@@ -64,19 +65,19 @@ export function HeatmapChart({ uid, range, deviceScope }: Props) {
 
   if (max === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-heatmap-empty">
+      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-empty">
         {t('analyze.noData')}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-1 text-[11px]" data-testid="analyze-heatmap-chart">
+    <div className="flex flex-col gap-1 text-[11px]" data-testid="analyze-activity-chart">
       <div
         className="grid gap-[2px]"
         style={{ gridTemplateColumns: 'auto repeat(24, minmax(0, 1fr))' }}
         role="table"
-        aria-label={t('analyze.heatmap.tableLabel')}
+        aria-label={t('analyze.activity.tableLabel')}
       >
         <div role="row" className="contents">
           <div role="columnheader" aria-hidden="true" />
@@ -84,7 +85,7 @@ export function HeatmapChart({ uid, range, deviceScope }: Props) {
             <div
               key={`h-${h}`}
               role="columnheader"
-              aria-label={t('analyze.heatmap.hourHeader', { hour: h })}
+              aria-label={t('analyze.activity.hourHeader', { hour: h })}
               className="text-center text-content-muted"
             >
               {h % 3 === 0 ? h.toString().padStart(2, '0') : ''}
@@ -94,13 +95,13 @@ export function HeatmapChart({ uid, range, deviceScope }: Props) {
         {DOWS.map((d) => (
           <div key={`row-${d}`} role="row" className="contents">
             <div role="rowheader" className="pr-2 text-right text-content-muted">
-              {t(`analyze.heatmap.dow.${d}`)}
+              {t(`analyze.activity.dow.${d}`)}
             </div>
             {HOURS.map((h) => {
               const v = grid.get(`${d}:${h}`) ?? 0
               const opacity = max === 0 ? 0 : Math.max(v === 0 ? 0 : 0.08, v / max)
-              const cellLabel = t('analyze.heatmap.cellTitle', {
-                dow: t(`analyze.heatmap.dow.${d}`),
+              const cellLabel = t('analyze.activity.cellTitle', {
+                dow: t(`analyze.activity.dow.${d}`),
                 hour: h,
                 keystrokes: v.toLocaleString(),
               })
@@ -122,16 +123,16 @@ export function HeatmapChart({ uid, range, deviceScope }: Props) {
         ))}
       </div>
       <div className="flex items-center gap-2 pt-1 text-content-muted">
-        <span title={t('analyze.heatmap.legendLowDesc')}>{t('analyze.heatmap.legendLow')}</span>
+        <span title={t('analyze.activity.legendLowDesc')}>{t('analyze.activity.legendLow')}</span>
         <div
           className="h-2 flex-1 rounded-sm"
-          title={t('analyze.heatmap.legendScaleDesc')}
+          title={t('analyze.activity.legendScaleDesc')}
           style={{
             background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))',
           }}
         />
-        <span title={t('analyze.heatmap.legendHighDesc', { count: max.toLocaleString() })}>
-          {t('analyze.heatmap.legendHigh', { count: max.toLocaleString() })}
+        <span title={t('analyze.activity.legendHighDesc', { count: max.toLocaleString() })}>
+          {t('analyze.activity.legendHigh', { count: max.toLocaleString() })}
         </span>
       </div>
     </div>

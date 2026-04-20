@@ -658,7 +658,7 @@
         "max": "Longest keystroke interval recorded within any minute of the day (longest pause inside a minute)."
       }
     },
-    "heatmap": {
+    "activity": {
       "tableLabel": "Hour × day-of-week activity",
       "hourHeader": "{{hour}}:00",
       "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} keys",
@@ -680,7 +680,7 @@
     "analysisTab": {
       "wpm": "WPM",
       "interval": "Interval",
-      "heatmap": "Heatmap"
+      "activity": "Activity"
     },
     "filters": {
       "from": "From",

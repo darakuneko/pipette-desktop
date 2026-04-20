@@ -657,7 +657,7 @@
         "max": "1 日のどこかの 1 分で記録された最も長い打鍵間隔 (途中の最長停止)。"
       }
     },
-    "heatmap": {
+    "activity": {
       "tableLabel": "時間帯 × 曜日の活動量",
       "hourHeader": "{{hour}}時",
       "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} 打",
@@ -679,7 +679,7 @@
     "analysisTab": {
       "wpm": "WPM",
       "interval": "間隔",
-      "heatmap": "ヒートマップ"
+      "activity": "活動量"
     },
     "filters": {
       "from": "From",

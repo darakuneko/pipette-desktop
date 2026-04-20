@@ -2,7 +2,7 @@
 // Shared state keys for the Analyze tab. Kept here so the chart
 // components can import them without the whole view.
 
-export type AnalysisTabKey = 'wpm' | 'interval' | 'heatmap'
+export type AnalysisTabKey = 'wpm' | 'interval' | 'activity'
 export type DeviceScope = 'own' | 'all'
 /** Display unit for the Interval chart — the SQL stores keystroke
  * intervals in ms, but seconds are easier to reason about for pauses
