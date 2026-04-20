@@ -291,6 +291,7 @@ export function DataModal({
             <DataNavTree
               storedKeyboards={nav.storedKeyboards}
               typingKeyboards={nav.typingKeyboards}
+              hasRemoteTyping={nav.hasRemoteTyping}
               activePath={nav.activePath}
               onNavigate={nav.setActivePath}
               isExpanded={nav.isExpanded}

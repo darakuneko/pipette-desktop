@@ -27,6 +27,7 @@ export function resetDataNavCache(): void {
 export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOptions) {
   const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
   const [typingKeyboards, setTypingKeyboards] = useState<TypingKeyboardSummary[]>([])
+  const [hasRemoteTyping, setHasRemoteTyping] = useState(false)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     () => cachedExpandedNodes ?? new Set(),
   )
@@ -125,13 +126,18 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   }, [])
 
   const refreshTypingKeyboards = useCallback(async () => {
-    try {
-      const keyboards = await window.vialAPI.typingAnalyticsListKeyboards()
-      setTypingKeyboards(keyboards)
-    } catch {
-      setTypingKeyboards([])
-    }
-  }, [])
+    // The remote-typing probe is fire-and-forget alongside the local
+    // listing — both feed Sync > Typing visibility decisions and hiding
+    // it on a transient cloud failure is the safer default.
+    const [keyboards, hasRemote] = await Promise.all([
+      window.vialAPI.typingAnalyticsListKeyboards().catch(() => [] as TypingKeyboardSummary[]),
+      syncEnabled
+        ? window.vialAPI.typingAnalyticsHasRemote().catch(() => false)
+        : Promise.resolve(false),
+    ])
+    setTypingKeyboards(keyboards)
+    setHasRemoteTyping(hasRemote)
+  }, [syncEnabled])
 
   const onSyncKeyboardSelect = useCallback(
     async (uid: string, name: string) => {
@@ -184,6 +190,7 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
   return {
     storedKeyboards,
     typingKeyboards,
+    hasRemoteTyping,
     expandedNodes,
     toggleExpand,
     isExpanded,

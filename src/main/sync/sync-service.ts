@@ -892,6 +892,26 @@ export async function listRemoteFileNames(): Promise<Set<string> | null> {
   return new Set(remoteFiles.map((f) => f.name))
 }
 
+/** True iff cloud currently holds at least one typing per-day file
+ * owned by a non-own device. Used to decide whether the Sync > Typing
+ * nav subtree is worth showing at all — a single listing is much
+ * cheaper than expanding every keyboard. Returns `false` when the
+ * user is unauthenticated. */
+export async function hasAnyRemoteTypingData(): Promise<boolean> {
+  const credentials = await requireSyncCredentials()
+  if (!credentials.ok) return false
+  const ownHash = await getMachineHash()
+  const remoteFiles = await listFiles()
+  for (const file of remoteFiles) {
+    const unit = syncUnitFromFileName(file.name)
+    if (!unit) continue
+    const ref = parseTypingAnalyticsDeviceDaySyncUnit(unit)
+    if (!ref || ref.machineHash === ownHash) continue
+    return true
+  }
+  return false
+}
+
 /** Distinct remote machineHash values (non-own) that cloud currently
  * holds any per-day file for under `uid`. Used by the Sync > Typing
  * subtree to discover remote devices before the user has ever opened

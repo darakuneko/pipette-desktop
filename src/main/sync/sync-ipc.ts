@@ -35,6 +35,7 @@ import {
   setPasswordAndValidate,
   deleteRemoteTypingDay,
   fetchRemoteTypingDay,
+  hasAnyRemoteTypingData,
   listRemoteTypingDaysFor,
   listRemoteTypingHashesForUidFromCloud,
   listRemoteFileNames,
@@ -513,6 +514,11 @@ export function setupSyncIpc(): void {
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
 
   // --- Typing analytics cloud operations (Sync tab) ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_HAS_REMOTE,
+    async (): Promise<boolean> => hasAnyRemoteTypingData(),
+  )
+
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES,
     async (_event, uid: unknown): Promise<string[]> => {

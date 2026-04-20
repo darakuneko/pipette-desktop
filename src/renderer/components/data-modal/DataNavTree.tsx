@@ -10,6 +10,7 @@ import type { TypingKeyboardSummary } from '../../../shared/types/typing-analyti
 interface Props {
   storedKeyboards: StoredKeyboardInfo[]
   typingKeyboards: TypingKeyboardSummary[]
+  hasRemoteTyping: boolean
   activePath: DataNavPath | null
   onNavigate: (path: DataNavPath) => void
   isExpanded: (nodeId: string) => boolean
@@ -119,7 +120,7 @@ function Branch({ label, depth, open, onToggle, testId, children }: BranchProps)
   )
 }
 
-export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid, remoteTypingHashes, ensureRemoteTypingHashes }: Props) {
+export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping, activePath, onNavigate, isExpanded, onToggle, showHubTab, hubKeyboardNames, syncScanResult, syncScanning, onSyncKeyboardSelect, downloadingUid, downloadErrorByUid, remoteTypingHashes, ensureRemoteTypingHashes }: Props) {
   const { t } = useTranslation()
 
   function resolveSyncKeyboardName(uid: string): string {
@@ -293,8 +294,10 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNa
               </Branch>
             )}
             {/* Typing — per-keyboard, per-device subtree powered by the
-                local cache so startup stays quiet. Expanding a keyboard
+                local cache so startup stays quiet. Hidden entirely when
+                cloud has no non-own typing data; expanding a keyboard
                 triggers a lazy fetch of its remote hashes. */}
+            {hasRemoteTyping && (
             <Branch
               label={t('dataModal.typing.title')}
               depth={1}
@@ -369,6 +372,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, activePath, onNa
                 })
               )}
             </Branch>
+            )}
           </>
         )}
       </Branch>

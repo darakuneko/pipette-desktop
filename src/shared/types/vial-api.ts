@@ -145,6 +145,7 @@ export interface VialAPI {
   typingAnalyticsListRemoteHashes(uid: string): Promise<string[]>
   typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
+  typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>
   typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
