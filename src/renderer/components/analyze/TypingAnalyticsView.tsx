@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
@@ -35,6 +35,7 @@ const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
 const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
+const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 const DAY_MS = 86_400_000
 
@@ -114,6 +115,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   const [intervalViewMode, setIntervalViewMode] = useState<IntervalViewMode>('timeSeries')
   const [wpmViewMode, setWpmViewMode] = useState<WpmViewMode>('timeSeries')
   const [wpmMinActiveMs, setWpmMinActiveMs] = useState<number>(DEFAULT_WPM_MIN_ACTIVE_MS)
+  const [activityMetric, setActivityMetric] = useState<ActivityMetric>('keystrokes')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
@@ -295,6 +297,42 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </label>
                 </>
               )}
+              {analysisTab === 'activity' && (
+                <>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.activityMetric')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={activityMetric}
+                      onChange={(e) => setActivityMetric(e.target.value as ActivityMetric)}
+                      data-testid="analyze-filter-activity-metric"
+                    >
+                      {ACTIVITY_METRICS.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.activityMetricOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {activityMetric === 'wpm' && (
+                    <label className={FILTER_LABEL}>
+                      {t('analyze.filters.wpmMinSample')}
+                      <select
+                        className={FILTER_SELECT}
+                        value={String(wpmMinActiveMs)}
+                        onChange={(e) => setWpmMinActiveMs(Number.parseInt(e.target.value, 10))}
+                        data-testid="analyze-filter-activity-min-sample"
+                      >
+                        {WPM_MIN_SAMPLE_OPTIONS.map((opt) => (
+                          <option key={opt.labelKey} value={String(opt.value)}>
+                            {t(`analyze.filters.wpmMinSampleOption.${opt.labelKey}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
               {analysisTab === 'interval' && (
                 <>
                   <label className={FILTER_LABEL}>
@@ -380,7 +418,13 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
               ) : analysisTab === 'activity' ? (
-                <ActivityChart uid={selected.uid} range={range} deviceScope={deviceScope} />
+                <ActivityChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScope}
+                  metric={activityMetric}
+                  minActiveMs={wpmMinActiveMs}
+                />
               ) : analysisTab === 'keyHeatmap' ? (
                 keymapSnapshot !== null ? (
                   <KeyHeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} normalization={heatmapNormalization} />

@@ -716,13 +716,43 @@
     },
     "activity": {
       "tableLabel": "時間帯 × 曜日の活動量",
+      "tableLabelWpm": "時間帯 × 曜日の WPM",
       "hourHeader": "{{hour}}時",
       "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} 打",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} 打 / {{activeDuration}})",
       "legendLow": "0",
       "legendHigh": "{{count}}",
+      "legendHighWpm": "{{wpm}} WPM",
       "legendLowDesc": "選択期間中にこのセルで打鍵がなかった状態。",
       "legendHighDesc": "選択期間中のピーク値 ({{count}} 打)。セルの濃度は 0 からこの値まで線形にスケールします。",
+      "legendHighDescWpm": "選択期間中のピーク WPM ({{wpm}} WPM)。セルの濃度はこの値まで線形にスケール。薄く表示されるセルは Min sample 閾値を満たしていない状態。",
       "legendScaleDesc": "0 (空) から選択期間中のピーク値までの線形スケール。",
+      "summaryDowValue": "{{dow}} - 打鍵数: {{keystrokes}}",
+      "summaryHourValue": "{{hour}}時 - 打鍵数: {{keystrokes}}",
+      "cellKeystrokesValue": "{{dow}} {{hour}} - 打鍵数: {{keystrokes}}",
+      "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
+      "keystrokes": {
+        "summary": {
+          "label": "活動量サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "mostFrequentDow": "最頻曜日",
+          "mostFrequentHour": "最頻時間帯",
+          "peakCell": "ピークセル",
+          "activeCells": "活動セル数"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "活動量 WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakCell": "ピークセル",
+          "lowestCell": "最遅セル",
+          "activeCells": "活動セル数"
+        }
+      },
       "dow": {
         "0": "日",
         "1": "月",
@@ -797,6 +827,11 @@
         "min1": "1分",
         "min2": "2分",
         "min5": "5分"
+      },
+      "activityMetric": "指標",
+      "activityMetricOption": {
+        "keystrokes": "打鍵数",
+        "wpm": "WPM"
       },
       "normalization": "正規化",
       "normalizationOption": {

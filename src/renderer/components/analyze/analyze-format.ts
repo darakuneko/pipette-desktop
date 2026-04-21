@@ -27,6 +27,12 @@ export function formatBucketAxisLabel(ms: number, bucketMs: number): string {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
+/** `HH:00` label for an hour-of-day tick (0..23). Shared between the
+ * WPM time-of-day bar chart and the Activity grid's cell title. */
+export function formatHourLabel(hour: number): string {
+  return `${hour.toString().padStart(2, '0')}:00`
+}
+
 export interface WeightedSample {
   value: number
   weight: number

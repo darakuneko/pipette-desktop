@@ -21,7 +21,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Responsive
 import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
-import { formatActiveDuration, formatBucketAxisLabel } from './analyze-format'
+import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
 import {
   buildHourOfDayWpm,
   buildWpmTimeSeriesSummaryFromBuckets,
@@ -47,12 +47,8 @@ interface Props {
 const ACTIVE_BAR_COLOR = 'var(--color-accent)'
 const INACTIVE_BAR_COLOR = 'var(--color-surface-dim)'
 
-function formatHour(hour: number): string {
-  return `${hour.toString().padStart(2, '0')}:00`
-}
-
 function formatHourWithWpm(hour: number, wpm: number): string {
-  return `${formatHour(hour)} (${formatWpm(wpm)} WPM)`
+  return `${formatHourLabel(hour)} (${formatWpm(wpm)} WPM)`
 }
 
 export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs }: Props) {
@@ -140,7 +136,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     }
     const barData = hourOfDay.bins.map((b) => ({
       hour: b.hour,
-      label: formatHour(b.hour),
+      label: formatHourLabel(b.hour),
       wpm: Math.round(b.wpm * 10) / 10,
       keystrokes: b.keystrokes,
       activeMs: b.activeMs,

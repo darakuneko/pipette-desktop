@@ -717,13 +717,43 @@
     },
     "activity": {
       "tableLabel": "Hour × day-of-week activity",
+      "tableLabelWpm": "Hour × day-of-week WPM",
       "hourHeader": "{{hour}}:00",
       "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} keys",
+      "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} keys / {{activeDuration}})",
       "legendLow": "0",
       "legendHigh": "{{count}}",
+      "legendHighWpm": "{{wpm}} WPM",
       "legendLowDesc": "No keystrokes recorded in this bucket for the selected period.",
       "legendHighDesc": "Peak bucket in the selected period ({{count}} keystrokes). Cell opacity scales linearly from 0 to this value.",
+      "legendHighDescWpm": "Peak WPM in the selected period ({{wpm}} WPM). Cell opacity scales linearly to this value. Desaturated cells did not meet the Min sample threshold.",
       "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak bucket in the selected period.",
+      "summaryDowValue": "{{dow}} - {{keystrokes}} keys",
+      "summaryHourValue": "{{hour}}:00 - {{keystrokes}} keys",
+      "cellKeystrokesValue": "{{dow}} {{hour}} - {{keystrokes}} keys",
+      "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
+      "keystrokes": {
+        "summary": {
+          "label": "Activity summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "mostFrequentDow": "Busiest day",
+          "mostFrequentHour": "Busiest hour",
+          "peakCell": "Peak cell",
+          "activeCells": "Active cells"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "Activity WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakCell": "Peak cell",
+          "lowestCell": "Slowest cell",
+          "activeCells": "Active cells"
+        }
+      },
       "dow": {
         "0": "Sun",
         "1": "Mon",
@@ -798,6 +828,11 @@
         "min1": "1 min",
         "min2": "2 min",
         "min5": "5 min"
+      },
+      "activityMetric": "Metric",
+      "activityMetricOption": {
+        "keystrokes": "Keystrokes",
+        "wpm": "WPM"
       },
       "normalization": "Normalize",
       "normalizationOption": {

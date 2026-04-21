@@ -22,6 +22,11 @@ export type IntervalViewMode = 'timeSeries' | 'distribution'
  * `timeOfDay` aggregates WPM by hour-of-day (0..23 local). */
 export type WpmViewMode = 'timeSeries' | 'timeOfDay'
 
+/** Activity tab metric. `keystrokes` is the classic press-count
+ * heatmap; `wpm` colors the same grid by WPM derived from the pooled
+ * minute-stats of that (dow, hour) cell. */
+export type ActivityMetric = 'keystrokes' | 'wpm'
+
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and
  * the chart UI caps it to "now" so the user cannot pick the future. */

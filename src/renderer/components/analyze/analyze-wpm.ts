@@ -28,6 +28,19 @@ export function computeWpm(keystrokes: number, activeMs: number): number {
   return (keystrokes / 5) * 60_000 / activeMs
 }
 
+/** Whether a (keystrokes, activeMs, wpm) cell/bucket contributes to
+ * peak / lowest WPM figures. Zero-activity cells and cells that fall
+ * short of `minActiveMs` are excluded so short bursts don't hijack
+ * the extremes. */
+export function isWpmQualified(
+  keystrokes: number,
+  activeMs: number,
+  wpm: number,
+  minActiveMs: number,
+): boolean {
+  return activeMs >= minActiveMs && keystrokes > 0 && wpm > 0
+}
+
 export function formatWpm(v: number): string {
   if (!Number.isFinite(v)) return '—'
   return v.toFixed(1)
@@ -172,7 +185,7 @@ export function buildHourOfDayWpm({
     const ks = keystrokesPerHour[hour]
     const ms = activeMsPerHour[hour]
     const wpm = computeWpm(ks, ms)
-    const qualified = ms >= minActiveMs && ks > 0 && wpm > 0
+    const qualified = isWpmQualified(ks, ms, wpm, minActiveMs)
     bins.push({ hour, keystrokes: ks, activeMs: ms, wpm, qualified })
   }
 
