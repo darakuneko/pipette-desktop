@@ -112,9 +112,6 @@ const LayerKeyboard = memo(function LayerKeyboard({
       data-testid={`analyze-keyheatmap-layer-panel-${layer}`}
       data-group-idx={groupIdx}
     >
-      <span className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
-        {t('analyze.keyHeatmap.layerOption', { i: layer })}
-      </span>
       <KeyboardWidget
         keys={layout.keys}
         keycodes={keycodes}
@@ -127,6 +124,9 @@ const LayerKeyboard = memo(function LayerKeyboard({
         readOnly
         scale={scale}
       />
+      <span className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
+        {t('analyze.keyHeatmap.layerOption', { i: layer })}
+      </span>
     </button>
   )
 })
@@ -445,35 +445,6 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-keyheatmap-chart">
-      <div
-        className="flex shrink-0 flex-wrap items-center gap-1 text-[12px]"
-        role="group"
-        aria-label={t('analyze.keyHeatmap.layer')}
-        data-testid="analyze-keyheatmap-layers"
-      >
-        {layerOptions.map((i) => {
-          const isSelected = selectedLayers.includes(i)
-          const isDisabled = !isSelected && selectedLayers.length >= MAX_LAYERS
-          return (
-            <button
-              key={i}
-              type="button"
-              aria-pressed={isSelected}
-              aria-label={t('analyze.keyHeatmap.layerOption', { i })}
-              onClick={() => toggleLayer(i)}
-              disabled={isDisabled}
-              className={`flex w-8 shrink-0 items-center justify-center rounded-md border py-1.5 text-[12px] font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                isSelected
-                  ? 'border-accent bg-accent text-content-inverse'
-                  : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
-              }`}
-              data-testid={`analyze-keyheatmap-layer-${i}`}
-            >
-              {i}
-            </button>
-          )
-        })}
-      </div>
       <div className="shrink-0" data-testid="analyze-keyheatmap-panels">
         <div
           className={`grid justify-center gap-2 ${
@@ -504,6 +475,35 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           )
         })}
         </div>
+      </div>
+      <div
+        className="flex shrink-0 flex-wrap items-center justify-end gap-1 text-[12px]"
+        role="group"
+        aria-label={t('analyze.keyHeatmap.layer')}
+        data-testid="analyze-keyheatmap-layers"
+      >
+        {layerOptions.map((i) => {
+          const isSelected = selectedLayers.includes(i)
+          const isDisabled = !isSelected && selectedLayers.length >= MAX_LAYERS
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-pressed={isSelected}
+              aria-label={t('analyze.keyHeatmap.layerOption', { i })}
+              onClick={() => toggleLayer(i)}
+              disabled={isDisabled}
+              className={`flex w-8 shrink-0 items-center justify-center rounded-md border py-1.5 text-[12px] font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                isSelected
+                  ? 'border-accent bg-accent text-content-inverse'
+                  : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+              }`}
+              data-testid={`analyze-keyheatmap-layer-${i}`}
+            >
+              {i}
+            </button>
+          )
+        })}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
