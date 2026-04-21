@@ -656,6 +656,40 @@
         "p50": "Median — half the minutes had shorter intervals (daily average of each minute's median).",
         "p75": "Upper quartile — 75% of the minutes had shorter median intervals (daily average of each minute's p75).",
         "max": "Longest keystroke interval recorded within any minute of the day (longest pause inside a minute)."
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "Estimated keystrokes",
+        "summary": {
+          "label": "Typing rhythm summary",
+          "totalKeystrokes": "Total keystrokes",
+          "medianP50": "Median interval",
+          "fast": "Fast (<200ms)",
+          "normal": "Normal (200-500ms)",
+          "slow": "Slow (500ms-2s)",
+          "pause": "Pause (>=2s)",
+          "longestPause": "Longest pause"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "Interval summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "medianP50": "Weighted median interval",
+          "shortest": "Shortest interval",
+          "longestPause": "Longest pause"
+        }
       }
     },
     "activity": {
@@ -724,6 +758,11 @@
       "unitOption": {
         "sec": "Seconds",
         "ms": "Milliseconds"
+      },
+      "intervalViewMode": "View",
+      "intervalViewModeOption": {
+        "timeSeries": "Time series",
+        "distribution": "Distribution"
       },
       "normalization": "Normalize",
       "normalizationOption": {

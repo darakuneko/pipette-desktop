@@ -655,6 +655,40 @@
         "p50": "中央値 — 各分の中央値の日次平均。半分のタイミングがこれより短い。",
         "p75": "上側四分位 — 各分の p75 の日次平均。3/4 のタイミングがこれより短い。",
         "max": "1 日のどこかの 1 分で記録された最も長い打鍵間隔 (途中の最長停止)。"
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "推定打鍵数",
+        "summary": {
+          "label": "打鍵リズムサマリ",
+          "totalKeystrokes": "合計打鍵",
+          "medianP50": "中央値インターバル",
+          "fast": "高速 (<200ms)",
+          "normal": "標準 (200-500ms)",
+          "slow": "緩慢 (500ms-2s)",
+          "pause": "ポーズ (>=2s)",
+          "longestPause": "最長ポーズ"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "インターバルサマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "medianP50": "重み付き中央値",
+          "shortest": "最短インターバル",
+          "longestPause": "最長ポーズ"
+        }
       }
     },
     "activity": {
@@ -723,6 +757,11 @@
       "unitOption": {
         "sec": "秒",
         "ms": "ミリ秒"
+      },
+      "intervalViewMode": "ビュー",
+      "intervalViewModeOption": {
+        "timeSeries": "時系列",
+        "distribution": "分布"
       },
       "normalization": "正規化",
       "normalizationOption": {

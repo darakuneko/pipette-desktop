@@ -13,6 +13,11 @@ export type DeviceScope = 'own' | 'all'
  * and most day-level medians. */
 export type IntervalUnit = 'ms' | 'sec'
 
+/** Interval tab view mode. `timeSeries` is the original quartile line
+ * chart; `distribution` renders the per-bin keystroke histogram (a.k.a.
+ * typing-rhythm distribution). */
+export type IntervalViewMode = 'timeSeries' | 'distribution'
+
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and
  * the chart UI caps it to "now" so the user cannot pick the future. */

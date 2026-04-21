@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, RangeMs } from './analyze-types'
+import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
@@ -33,6 +33,7 @@ const FILTER_SELECT =
 const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
+const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 const DAY_MS = 86_400_000
 
@@ -99,6 +100,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   }))
   const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
+  const [intervalViewMode, setIntervalViewMode] = useState<IntervalViewMode>('timeSeries')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
@@ -229,39 +231,58 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   data-testid="analyze-filter-to"
                 />
               </label>
-              <label className={FILTER_LABEL}>
-                {t('analyze.filters.device')}
-                <select
-                  className={FILTER_SELECT}
-                  value={deviceScope}
-                  onChange={(e) => setDeviceScope(e.target.value as DeviceScope)}
-                  data-testid="analyze-filter-device"
-                >
-                  {DEVICE_SCOPES.map((key) => (
-                    <option key={key} value={key}>
-                      {t(`analyze.filters.deviceOption.${key}`)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              {analysisTab === 'interval' && (
+              {!(analysisTab === 'interval' && intervalViewMode === 'distribution') && (
                 <label className={FILTER_LABEL}>
-                  {t('analyze.filters.unit')}
+                  {t('analyze.filters.device')}
                   <select
                     className={FILTER_SELECT}
-                    value={intervalUnit}
-                    onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
-                    data-testid="analyze-filter-unit"
+                    value={deviceScope}
+                    onChange={(e) => setDeviceScope(e.target.value as DeviceScope)}
+                    data-testid="analyze-filter-device"
                   >
-                    {INTERVAL_UNITS.map((key) => (
+                    {DEVICE_SCOPES.map((key) => (
                       <option key={key} value={key}>
-                        {t(`analyze.filters.unitOption.${key}`)}
+                        {t(`analyze.filters.deviceOption.${key}`)}
                       </option>
                     ))}
                   </select>
                 </label>
               )}
-              {(analysisTab === 'wpm' || analysisTab === 'interval') && (
+              {analysisTab === 'interval' && (
+                <>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.intervalViewMode')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={intervalViewMode}
+                      onChange={(e) => setIntervalViewMode(e.target.value as IntervalViewMode)}
+                      data-testid="analyze-filter-interval-view-mode"
+                    >
+                      {INTERVAL_VIEW_MODES.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.intervalViewModeOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.unit')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={intervalUnit}
+                      onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
+                      data-testid="analyze-filter-unit"
+                    >
+                      {INTERVAL_UNITS.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.unitOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
+              {(analysisTab === 'wpm' || (analysisTab === 'interval' && intervalViewMode === 'timeSeries')) && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.granularity')}
                   <select
@@ -303,7 +324,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
               {analysisTab === 'wpm' ? (
                 <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} granularity={granularity} />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} />
+                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
               ) : analysisTab === 'activity' ? (
                 <ActivityChart uid={selected.uid} range={range} deviceScope={deviceScope} />
               ) : analysisTab === 'keyHeatmap' ? (

@@ -1,16 +1,31 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Analyze > Interval — keystroke-interval rhythm view. Fetches
-// minute-raw rows and buckets them on the client so sub-hour ranges
-// can zoom in while multi-day ranges still stay readable. Five lines
-// on a logarithmic ms axis (min / p25 / p50 / p75 / max); clicking a
-// legend entry toggles that line.
+// Analyze > Interval — keystroke-interval rhythm view. Two modes:
+//
+//  - `timeSeries`: fetches minute-raw rows, buckets them on the client,
+//    and plots min / p25 / p50 / p75 / max on a logarithmic ms axis so
+//    sub-hour ranges can zoom in while multi-day ranges stay readable.
+//    Clicking a legend entry toggles that line.
+//
+//  - `distribution`: treats each minute as four samples at (min, p25,
+//    p50, p75) with weight `keystrokes / 4` and rolls them into an
+//    interval histogram. See analyze-histogram.ts for the rationale
+//    (max is excluded — it picks up idle outliers and is surfaced
+//    separately as "longest pause" in the summary line).
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, GranularityChoice, IntervalUnit, RangeMs } from './analyze-types'
+import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
+import {
+  buildIntervalHistogram,
+  buildIntervalTimeSeriesSummary,
+  formatActiveDuration,
+  type IntervalRhythmSummary,
+  type IntervalTimeSeriesSummary,
+  type RhythmBandId,
+} from './analyze-histogram'
 
 interface Props {
   uid: string
@@ -18,6 +33,7 @@ interface Props {
   deviceScope: DeviceScope
   unit: IntervalUnit
   granularity: GranularityChoice
+  viewMode: IntervalViewMode
 }
 
 const SERIES_KEYS = ['min', 'p25', 'p50', 'p75', 'max'] as const
@@ -34,6 +50,15 @@ const SERIES_STYLE: Record<SeriesKey, string> = {
   max: '#ef4444',
 }
 
+// Band palette blended from the timeSeries quartile colours so the
+// histogram stays visually related to the line chart.
+const RHYTHM_BAND_COLORS: Record<RhythmBandId, string> = {
+  fast: '#10b981',
+  normal: '#3b82f6',
+  slow: '#f59e0b',
+  pause: '#ef4444',
+}
+
 function formatAxis(ms: number, bucketMs: number): string {
   const d = new Date(ms)
   const pad = (n: number): string => n.toString().padStart(2, '0')
@@ -41,7 +66,20 @@ function formatAxis(ms: number, bucketMs: number): string {
   return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Props) {
+function formatIntervalValue(ms: number, unit: IntervalUnit): string {
+  if (!Number.isFinite(ms)) return '—'
+  if (unit === 'sec') {
+    return ms >= 1000 ? `${(ms / 1000).toFixed(2)} s` : `${(ms / 1000).toFixed(3)} s`
+  }
+  return `${Math.round(ms)} ms`
+}
+
+function formatShare(v: number): string {
+  if (!Number.isFinite(v)) return '—'
+  return `${(v * 100).toFixed(1)}%`
+}
+
+export function IntervalChart({ uid, range, deviceScope, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,12 +87,19 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
     min: false, p25: false, p50: false, p75: false, max: false,
   })
 
+  // Distribution mode needs per-scope raw quartiles — the cross-scope
+  // `all` query already aggregates MIN / AVG / MAX over contributing
+  // scopes, so redistributing those meta-aggregates as "four samples
+  // per minute" would muddy the histogram. Force `own` here and hide
+  // the device filter at the parent when the user picks Distribution.
+  const effectiveDeviceScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const load = async () => {
       try {
-        const data = deviceScope === 'own'
+        const data = effectiveDeviceScope === 'own'
           ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
           : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
         if (!cancelled) setRows(data)
@@ -66,7 +111,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, range])
+  }, [uid, effectiveDeviceScope, range])
 
   // Log-axis can't plot 0 ms, but min often legitimately rounds to 0
   // on fast adjacent keystrokes. Clamp the axis floor at 1 ms so the
@@ -78,15 +123,48 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),
     [range, granularity],
   )
-  const chartData = useMemo(() => bucketMinuteStats(rows, range, bucketMs)
-    .map((b) => ({
+  const chartData = useMemo(() => {
+    if (viewMode !== 'timeSeries') return []
+    return bucketMinuteStats(rows, range, bucketMs).map((b) => ({
       bucketStartMs: b.bucketStartMs,
       min: clampForLog(b.intervalMinMs),
       p25: clampForLog(b.intervalP25Ms),
       p50: clampForLog(b.intervalP50Ms),
       p75: clampForLog(b.intervalP75Ms),
       max: clampForLog(b.intervalMaxMs),
-    })), [rows, range, bucketMs])
+    }))
+  }, [rows, range, bucketMs, viewMode])
+
+  const histogram = useMemo(
+    () => (viewMode === 'distribution' ? buildIntervalHistogram(rows, range) : null),
+    [rows, range, viewMode],
+  )
+  const timeSeriesSummary = useMemo(
+    () => (viewMode === 'timeSeries' ? buildIntervalTimeSeriesSummary(rows, range) : null),
+    [rows, range, viewMode],
+  )
+  // Keep `weight` as the raw float so bar heights stay proportional to
+  // the precomputed shares; rounding is applied only for the tooltip
+  // display below. Otherwise sub-0.5 bins snap to zero and the bar /
+  // share pair disagree.
+  const distributionData = useMemo(() => {
+    if (histogram === null) return []
+    return histogram.bins.map((b) => ({
+      id: b.id,
+      label: t(`analyze.interval.bin.${b.id}`),
+      weight: b.weight,
+      share: b.share,
+      band: b.band,
+    }))
+  }, [histogram, t])
+  const distributionItems = useMemo(
+    () => (histogram === null ? null : toDistributionItems(histogram.summary, unit)),
+    [histogram, unit],
+  )
+  const timeSeriesItems = useMemo(
+    () => (timeSeriesSummary === null ? null : toTimeSeriesItems(timeSeriesSummary, unit)),
+    [timeSeriesSummary, unit],
+  )
 
   const toggleSeries = (key: string): void => {
     if ((SERIES_KEYS as readonly string[]).includes(key)) {
@@ -102,6 +180,62 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
     )
   }
 
+  if (viewMode === 'distribution') {
+    if (histogram === null || histogram.totalWeight <= 0) {
+      return (
+        <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-empty">
+          {t('analyze.noData')}
+        </div>
+      )
+    }
+    return (
+      <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-interval-distribution">
+        <div className="flex-1 min-h-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={distributionData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
+              <XAxis
+                dataKey="label"
+                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                stroke="var(--color-edge)"
+                interval={0}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                stroke="var(--color-edge)"
+                tickFormatter={(v: number) => Math.round(v).toLocaleString()}
+              />
+              <Tooltip
+                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
+                labelStyle={{ color: 'var(--color-content-secondary)' }}
+                itemStyle={{ color: 'var(--color-content)' }}
+                formatter={(_, __, entry) => {
+                  const w = Number(entry?.payload?.weight ?? 0)
+                  const s = Number(entry?.payload?.share ?? 0)
+                  return [
+                    `${Math.round(w).toLocaleString()} (${formatShare(s)})`,
+                    t('analyze.interval.distribution.tooltipLabel'),
+                  ]
+                }}
+              />
+              <Bar dataKey="weight" isAnimationActive={false}>
+                {distributionData.map((d) => (
+                  <Cell key={d.id} fill={RHYTHM_BAND_COLORS[d.band]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        {distributionItems !== null && (
+          <RhythmSummaryTable
+            items={distributionItems}
+            ariaLabelKey="analyze.interval.distribution.summary.label"
+          />
+        )}
+      </div>
+    )
+  }
+
   if (chartData.length === 0) {
     return (
       <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-empty">
@@ -111,9 +245,10 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
   }
 
   return (
-    <div className="h-full w-full" data-testid="analyze-interval-chart">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+    <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-interval-chart">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
           <XAxis
             dataKey="bucketStartMs"
@@ -179,6 +314,63 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity }: Pr
           ))}
         </LineChart>
       </ResponsiveContainer>
+      </div>
+      {timeSeriesItems !== null && (
+        <RhythmSummaryTable
+          items={timeSeriesItems}
+          ariaLabelKey="analyze.interval.timeSeries.summary.label"
+        />
+      )}
     </div>
   )
+}
+
+interface IntervalSummaryItem {
+  labelKey: string
+  value: string
+}
+
+interface RhythmSummaryTableProps {
+  items: ReadonlyArray<IntervalSummaryItem>
+  ariaLabelKey: string
+}
+
+function RhythmSummaryTable({ items, ariaLabelKey }: RhythmSummaryTableProps) {
+  const { t } = useTranslation()
+  return (
+    <div
+      className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-4 gap-y-1 border-t border-edge pt-2 text-[12px]"
+      data-testid="analyze-interval-summary"
+      aria-label={t(ariaLabelKey)}
+    >
+      {items.map((r) => (
+        <div key={r.labelKey} className="flex items-baseline justify-between gap-2">
+          <span className="text-content-muted">{t(r.labelKey)}</span>
+          <span className="font-medium text-content">{r.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function toDistributionItems(summary: IntervalRhythmSummary, unit: IntervalUnit): IntervalSummaryItem[] {
+  return [
+    { labelKey: 'analyze.interval.distribution.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
+    { labelKey: 'analyze.interval.distribution.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
+    { labelKey: 'analyze.interval.distribution.summary.fast', value: formatShare(summary.fastShare) },
+    { labelKey: 'analyze.interval.distribution.summary.normal', value: formatShare(summary.normalShare) },
+    { labelKey: 'analyze.interval.distribution.summary.slow', value: formatShare(summary.slowShare) },
+    { labelKey: 'analyze.interval.distribution.summary.pause', value: formatShare(summary.pauseShare) },
+    { labelKey: 'analyze.interval.distribution.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+  ]
+}
+
+function toTimeSeriesItems(summary: IntervalTimeSeriesSummary, unit: IntervalUnit): IntervalSummaryItem[] {
+  return [
+    { labelKey: 'analyze.interval.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
+    { labelKey: 'analyze.interval.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
+    { labelKey: 'analyze.interval.timeSeries.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
+    { labelKey: 'analyze.interval.timeSeries.summary.shortest', value: summary.shortestIntervalMs === null ? '—' : formatIntervalValue(summary.shortestIntervalMs, unit) },
+    { labelKey: 'analyze.interval.timeSeries.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+  ]
 }
