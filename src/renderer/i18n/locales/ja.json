@@ -685,6 +685,8 @@
     "keyHeatmap": {
       "layer": "レイヤー",
       "layerOption": "レイヤー {{i}}",
+      "layerOptionMulti": "レイヤー {{layers}}",
+      "bondToggle": "レイヤー {{i}} を別グループと結合",
       "noLayout": "このスナップショットにレイアウトデータがありません。",
       "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
       "ranking": {

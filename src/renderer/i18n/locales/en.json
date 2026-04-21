@@ -686,6 +686,8 @@
     "keyHeatmap": {
       "layer": "Layer",
       "layerOption": "Layer {{i}}",
+      "layerOptionMulti": "Layer {{layers}}",
+      "bondToggle": "Bond Layer {{i}} with another group",
       "noLayout": "Layout data not available for this snapshot.",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "ranking": {
