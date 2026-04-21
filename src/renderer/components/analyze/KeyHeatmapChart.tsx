@@ -14,7 +14,7 @@ import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
 
-const TOP_N_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+const FREQUENT_USED_N_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 const AGGREGATE_MODES = ['cell', 'char'] as const
 type AggregateMode = typeof AGGREGATE_MODES[number]
 const KEY_GROUPS = ['all', 'char', 'modifier', 'layerOp'] as const
@@ -37,7 +37,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const [cells, setCells] = useState<TypingHeatmapByCell>({})
   const [loading, setLoading] = useState(true)
   const [layer, setLayer] = useState(0)
-  const [topN, setTopN] = useState<number>(10)
+  const [frequentUsedN, setFrequentUsedN] = useState<number>(10)
   const [aggregateMode, setAggregateMode] = useState<AggregateMode>('cell')
   const [keyGroupFilter, setKeyGroupFilter] = useState<KeyGroupFilter>('all')
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
@@ -232,13 +232,13 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
         }
       })
     }
-    const top = [...entries].sort((a, b) => b.count - a.count).slice(0, topN)
-    return { top }
-  }, [heatmapCells, keycodes, layout, topN, aggregateMode, keyGroupFilter])
+    const frequentUsed = [...entries].sort((a, b) => b.count - a.count).slice(0, frequentUsedN)
+    return { frequentUsed }
+  }, [heatmapCells, keycodes, layout, frequentUsedN, aggregateMode, keyGroupFilter])
 
   const hoveredCells = useMemo(() => {
     if (!hoveredLabel) return undefined
-    const match = rankings.top.find((e) => e.displayLabel === hoveredLabel)
+    const match = rankings.frequentUsed.find((e) => e.displayLabel === hoveredLabel)
     return match ? match.cells : undefined
   }, [hoveredLabel, rankings])
 
@@ -354,13 +354,13 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
         ))}
       </div>
       <div className="flex min-h-0 flex-1 flex-col" data-testid="analyze-keyheatmap-rankings">
-        <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-top-heading">
+        <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-frequent-used">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3
-              id="analyze-keyheatmap-top-heading"
+              id="analyze-keyheatmap-frequent-used"
               className="text-[11px] font-semibold uppercase tracking-widest text-content-muted"
             >
-              {t('analyze.keyHeatmap.ranking.topHeading')}
+              {t('analyze.keyHeatmap.ranking.frequentUsed')}
             </h3>
             <div className="flex flex-wrap items-center gap-2">
               <select
@@ -387,22 +387,22 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
               </select>
               <select
                 className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
-                value={topN}
-                onChange={(e) => setTopN(Number.parseInt(e.target.value, 10))}
-                aria-label={t('analyze.keyHeatmap.ranking.topN')}
-                data-testid="analyze-keyheatmap-top-n"
+                value={frequentUsedN}
+                onChange={(e) => setFrequentUsedN(Number.parseInt(e.target.value, 10))}
+                aria-label={t('analyze.keyHeatmap.ranking.frequentUsedN')}
+                data-testid="analyze-keyheatmap-frequent-used-n"
               >
-                {TOP_N_OPTIONS.map((n) => (
+                {FREQUENT_USED_N_OPTIONS.map((n) => (
                   <option key={n} value={n}>{n}</option>
                 ))}
               </select>
             </div>
           </div>
-          {rankings.top.length === 0 ? (
-            <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyTop')}</div>
+          {rankings.frequentUsed.length === 0 ? (
+            <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyFrequentUsed')}</div>
           ) : (
             <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
-              {rankings.top.map((entry, i) => {
+              {rankings.frequentUsed.map((entry, i) => {
                 const showRatio = entry.maskedOuter && entry.total > 0
                 const tapPct = showRatio ? Math.round((entry.tap / entry.total) * 100) : 0
                 return (

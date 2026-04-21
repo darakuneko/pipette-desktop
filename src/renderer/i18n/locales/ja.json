@@ -688,11 +688,11 @@
       "noLayout": "このスナップショットにレイアウトデータがありません。",
       "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
       "ranking": {
-        "topN": "上位",
-        "topHeading": "最頻キー",
+        "frequentUsedN": "上位",
+        "frequentUsed": "よく使うキー",
         "aggregate": "集計",
         "aggregateOption": {
-          "cell": "物理キー",
+          "cell": "物理",
           "char": "文字"
         },
         "keyGroup": "グループ",
@@ -702,7 +702,7 @@
           "modifier": "修飾",
           "layerOp": "レイヤー操作"
         },
-        "emptyTop": "この期間に押下されたキーがありません。"
+        "emptyFrequentUsed": "この期間に押下されたキーがありません。"
       }
     },
     "filters": {
