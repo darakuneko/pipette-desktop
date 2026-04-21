@@ -690,6 +690,18 @@
       "ranking": {
         "topN": "上位",
         "topHeading": "最頻キー",
+        "aggregate": "集計",
+        "aggregateOption": {
+          "cell": "物理キー",
+          "char": "文字"
+        },
+        "keyGroup": "グループ",
+        "keyGroupOption": {
+          "all": "すべて",
+          "char": "文字",
+          "modifier": "モディファイア",
+          "layerOp": "レイヤー操作"
+        },
         "emptyTop": "この期間に押下されたキーがありません。"
       }
     },

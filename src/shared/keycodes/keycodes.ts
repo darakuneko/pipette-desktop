@@ -1150,6 +1150,7 @@ export function setKeycodeMidi(arr: Keycode[]): void { KEYCODES_MIDI = arr }
 // --- Re-export types and utils for backward compatibility ---
 
 export type { KeycodeOptions, CustomKeycodeDefinition, KeyboardKeycodeContext } from './keycodes-types'
+export type { KeycodeGroup } from './keycodes-utils'
 export {
   resolve,
   isLMKeycode,
@@ -1190,6 +1191,7 @@ export {
   codeToLabel,
   keycodeTooltip,
   resolveSnapshotLabel,
+  keycodeGroup,
   getKeycodeRevision,
   recreateKeycodes,
   createUserKeycodes,

@@ -691,6 +691,18 @@
       "ranking": {
         "topN": "Top N",
         "topHeading": "Most pressed",
+        "aggregate": "Aggregate",
+        "aggregateOption": {
+          "cell": "By cell",
+          "char": "By character"
+        },
+        "keyGroup": "Group",
+        "keyGroupOption": {
+          "all": "All",
+          "char": "Character",
+          "modifier": "Modifier",
+          "layerOp": "Layer op"
+        },
         "emptyTop": "No key presses in this range."
       }
     },

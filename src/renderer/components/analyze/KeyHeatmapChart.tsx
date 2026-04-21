@@ -9,11 +9,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
-import { resolveSnapshotLabel } from '../../../shared/keycodes/keycodes'
+import { resolveSnapshotLabel, keycodeGroup } from '../../../shared/keycodes/keycodes'
+import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
 
 const TOP_N_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+const AGGREGATE_MODES = ['cell', 'char'] as const
+type AggregateMode = typeof AGGREGATE_MODES[number]
+const KEY_GROUPS = ['all', 'char', 'modifier', 'layerOp'] as const
+type KeyGroupFilter = typeof KEY_GROUPS[number]
+const MASK_INNER_RE = /\((.+)\)$/
 
 interface Props {
   uid: string
@@ -32,6 +38,8 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const [loading, setLoading] = useState(true)
   const [layer, setLayer] = useState(0)
   const [topN, setTopN] = useState<number>(10)
+  const [aggregateMode, setAggregateMode] = useState<AggregateMode>('cell')
+  const [keyGroupFilter, setKeyGroupFilter] = useState<KeyGroupFilter>('all')
   const [hoveredLabel, setHoveredLabel] = useState<string | null>(null)
 
   useEffect(() => {
@@ -99,25 +107,30 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
     return m
   }, [cells, normalization, range])
 
-  // Build the ranking as one entry per (logical label, physical cell).
-  // A masked key contributes two rows — outer (total presses) and inner
-  // (tap emissions) — so users can see LT1 hold activity separately from
-  // the Bksp/Space it types. Cells that share a label (two LT1 keys, or
-  // two `A` keys in a split layout) get a `row,col` suffix appended so
-  // each physical key stays distinguishable in the list and hover
-  // highlights the exact cell.
+  // Build the ranking by walking every layout cell, emitting one raw
+  // entry per logical action the cell can take. Layer/mod-tap masks
+  // produce two entries — the outer (total presses) and the inner (tap
+  // emissions) — so LT1(Bksp) shows both its `LT1` hold activity and
+  // the `Bksp` characters it types. Downstream we either present each
+  // physical cell separately (`cell` mode, with `Row:N Col:N` suffix
+  // when a label repeats) or sum by base label across cells (`char`
+  // mode). `keyGroupFilter` trims the list to modifier / character /
+  // layer-op entries, and masked-outer entries also carry their tap and
+  // total so the row can print a `tap% / hold%` split.
   const rankings = useMemo(() => {
-    type Entry = { displayLabel: string; count: number; cell: string }
-    const raw: Array<{ baseLabel: string; count: number; cell: string }> = []
-    // Ranking wants the compact `LT1` form (no space) even though the
-    // key widget renders `LT 1` for legibility on the keycap itself.
+    type RawEntry = {
+      baseLabel: string
+      cell: string
+      count: number
+      group: KeycodeGroup
+      maskedOuter: boolean
+      tap: number
+      total: number
+    }
+    const raw: RawEntry[] = []
     const compactLayerOp = (label: string): string => {
       const m = label.match(/^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)\s(\d+)$/)
       return m ? `${m[1]}${m[2]}` : label
-    }
-    const push = (label: string, count: number, posKey: string) => {
-      if (!label) return
-      raw.push({ baseLabel: compactLayerOp(label), count, cell: posKey })
     }
     const source = layout && Array.isArray(layout.keys)
       ? layout.keys.filter((k) => !k.decal && !k.ghost).map((k) => `${k.row},${k.col}`)
@@ -126,35 +139,140 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
       const qmkId = keycodes.get(posKey) ?? ''
       const resolved = resolveSnapshotLabel(qmkId)
       const cell = heatmapCells.get(posKey)
+      const total = cell?.total ?? 0
+      const tap = cell?.tap ?? 0
       if (resolved.masked) {
-        push(resolved.outer, cell?.total ?? 0, posKey)
-        push(resolved.inner, cell?.tap ?? 0, posKey)
+        if (resolved.outer) {
+          raw.push({
+            baseLabel: compactLayerOp(resolved.outer),
+            cell: posKey,
+            count: total,
+            group: keycodeGroup(qmkId),
+            maskedOuter: true,
+            tap,
+            total,
+          })
+        }
+        if (resolved.inner) {
+          const innerMatch = MASK_INNER_RE.exec(qmkId)
+          const innerQmkId = innerMatch ? innerMatch[1] : ''
+          raw.push({
+            baseLabel: resolved.inner,
+            cell: posKey,
+            count: tap,
+            group: keycodeGroup(innerQmkId),
+            maskedOuter: false,
+            tap: 0,
+            total: 0,
+          })
+        }
       } else {
-        push(resolved.outer || qmkId || posKey, cell?.total ?? 0, posKey)
+        raw.push({
+          baseLabel: compactLayerOp(resolved.outer || qmkId || posKey),
+          cell: posKey,
+          count: total,
+          group: keycodeGroup(qmkId),
+          maskedOuter: false,
+          tap: 0,
+          total: 0,
+        })
       }
     }
-    const freq = new Map<string, number>()
-    for (const r of raw) freq.set(r.baseLabel, (freq.get(r.baseLabel) ?? 0) + 1)
-    const all: Entry[] = raw.map((r) => {
-      if ((freq.get(r.baseLabel) ?? 0) <= 1) {
-        return { displayLabel: r.baseLabel, count: r.count, cell: r.cell }
+
+    const filtered = keyGroupFilter === 'all'
+      ? raw
+      : raw.filter((r) => r.group === keyGroupFilter)
+
+    type Entry = {
+      displayLabel: string
+      count: number
+      cells: Set<string>
+      maskedOuter: boolean
+      tap: number
+      total: number
+    }
+    let entries: Entry[]
+    if (aggregateMode === 'char') {
+      const byBase = new Map<string, Entry>()
+      for (const r of filtered) {
+        let e = byBase.get(r.baseLabel)
+        if (!e) {
+          e = {
+            displayLabel: r.baseLabel,
+            count: 0,
+            cells: new Set<string>(),
+            maskedOuter: r.maskedOuter,
+            tap: 0,
+            total: 0,
+          }
+          byBase.set(r.baseLabel, e)
+        }
+        e.count += r.count
+        e.cells.add(r.cell)
+        if (r.maskedOuter) {
+          e.maskedOuter = true
+          e.tap += r.tap
+          e.total += r.total
+        }
       }
-      const [row, col] = r.cell.split(',')
-      return {
-        displayLabel: `${r.baseLabel} Row:${row} Col:${col}`,
-        count: r.count,
-        cell: r.cell,
-      }
-    })
-    const top = [...all].sort((a, b) => b.count - a.count).slice(0, topN)
+      entries = Array.from(byBase.values())
+    } else {
+      const freq = new Map<string, number>()
+      for (const r of filtered) freq.set(r.baseLabel, (freq.get(r.baseLabel) ?? 0) + 1)
+      entries = filtered.map((r) => {
+        const shared = (freq.get(r.baseLabel) ?? 0) > 1
+        const [row, col] = r.cell.split(',')
+        return {
+          displayLabel: shared ? `${r.baseLabel} Row:${row} Col:${col}` : r.baseLabel,
+          count: r.count,
+          cells: new Set([r.cell]),
+          maskedOuter: r.maskedOuter,
+          tap: r.tap,
+          total: r.total,
+        }
+      })
+    }
+    const top = [...entries].sort((a, b) => b.count - a.count).slice(0, topN)
     return { top }
-  }, [heatmapCells, keycodes, layout, topN])
+  }, [heatmapCells, keycodes, layout, topN, aggregateMode, keyGroupFilter])
 
   const hoveredCells = useMemo(() => {
     if (!hoveredLabel) return undefined
     const match = rankings.top.find((e) => e.displayLabel === hoveredLabel)
-    return match ? new Set([match.cell]) : undefined
+    return match ? match.cells : undefined
   }, [hoveredLabel, rankings])
+
+  // Filter what the keyboard widget paints so the heatmap colours match
+  // the ranking pane. A masked cell's outer and inner parts are judged
+  // independently: `LT1(KC_BSPACE)` under `layerOp` keeps only the
+  // outer (LT1) coloured, under `char` keeps only the inner (Bksp).
+  // Cells where neither part matches are dropped entirely.
+  const filteredHeatmapCells = useMemo(() => {
+    if (keyGroupFilter === 'all') return heatmapCells
+    const m = new Map<string, TypingHeatmapCell>()
+    for (const [posKey, cell] of heatmapCells) {
+      const qmkId = keycodes.get(posKey) ?? ''
+      const masked = resolveSnapshotLabel(qmkId).masked
+      const outerMatch = keycodeGroup(qmkId) === keyGroupFilter
+      let innerMatch = false
+      if (masked) {
+        const innerExec = MASK_INNER_RE.exec(qmkId)
+        const innerQmkId = innerExec ? innerExec[1] : ''
+        innerMatch = keycodeGroup(innerQmkId) === keyGroupFilter
+      }
+      if (!outerMatch && !innerMatch) continue
+      if (!masked) {
+        m.set(posKey, cell)
+        continue
+      }
+      m.set(posKey, {
+        total: outerMatch ? cell.total : 0,
+        tap: innerMatch ? cell.tap : 0,
+        hold: outerMatch ? cell.hold : 0,
+      })
+    }
+    return m
+  }, [heatmapCells, keycodes, keyGroupFilter])
 
   const formatCount = (n: number): string => {
     if (normalization === 'shareOfTotal') return `${n.toFixed(2)}%`
@@ -165,12 +283,12 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const { heatmapMaxTotal, heatmapMaxTap } = useMemo(() => {
     let total = 0
     let tap = 0
-    for (const cell of heatmapCells.values()) {
+    for (const cell of filteredHeatmapCells.values()) {
       if (cell.total > total) total = cell.total
       if (cell.tap > tap) tap = cell.tap
     }
     return { heatmapMaxTotal: total, heatmapMaxTap: tap }
-  }, [heatmapCells])
+  }, [filteredHeatmapCells])
 
   if (!layout || !Array.isArray(layout.keys)) {
     return (
@@ -197,7 +315,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           keys={layout.keys}
           keycodes={keycodes}
           labelOverrides={labelOverrides}
-          heatmapCells={heatmapCells}
+          heatmapCells={filteredHeatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}
           // Zero-out the hold axis so the outer rect scales by total instead
@@ -237,41 +355,74 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
       </div>
       <div className="flex min-h-0 flex-1 flex-col" data-testid="analyze-keyheatmap-rankings">
         <section className="flex min-h-0 flex-1 flex-col" aria-labelledby="analyze-keyheatmap-top-heading">
-          <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
             <h3
               id="analyze-keyheatmap-top-heading"
               className="text-[11px] font-semibold uppercase tracking-widest text-content-muted"
             >
               {t('analyze.keyHeatmap.ranking.topHeading')}
             </h3>
-            <select
-              className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
-              value={topN}
-              onChange={(e) => setTopN(Number.parseInt(e.target.value, 10))}
-              aria-label={t('analyze.keyHeatmap.ranking.topN')}
-              data-testid="analyze-keyheatmap-top-n"
-            >
-              {TOP_N_OPTIONS.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+                value={aggregateMode}
+                onChange={(e) => setAggregateMode(e.target.value as AggregateMode)}
+                aria-label={t('analyze.keyHeatmap.ranking.aggregate')}
+                data-testid="analyze-keyheatmap-aggregate"
+              >
+                {AGGREGATE_MODES.map((m) => (
+                  <option key={m} value={m}>{t(`analyze.keyHeatmap.ranking.aggregateOption.${m}`)}</option>
+                ))}
+              </select>
+              <select
+                className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+                value={keyGroupFilter}
+                onChange={(e) => setKeyGroupFilter(e.target.value as KeyGroupFilter)}
+                aria-label={t('analyze.keyHeatmap.ranking.keyGroup')}
+                data-testid="analyze-keyheatmap-keygroup"
+              >
+                {KEY_GROUPS.map((g) => (
+                  <option key={g} value={g}>{t(`analyze.keyHeatmap.ranking.keyGroupOption.${g}`)}</option>
+                ))}
+              </select>
+              <select
+                className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+                value={topN}
+                onChange={(e) => setTopN(Number.parseInt(e.target.value, 10))}
+                aria-label={t('analyze.keyHeatmap.ranking.topN')}
+                data-testid="analyze-keyheatmap-top-n"
+              >
+                {TOP_N_OPTIONS.map((n) => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
+            </div>
           </div>
           {rankings.top.length === 0 ? (
             <div className="text-[12px] text-content-muted">{t('analyze.keyHeatmap.ranking.emptyTop')}</div>
           ) : (
             <ol className="min-h-0 flex-1 space-y-1 overflow-y-auto text-[12px]">
-              {rankings.top.map((entry, i) => (
-                <li
-                  key={entry.displayLabel}
-                  className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 ${hoveredLabel === entry.displayLabel ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
-                  onMouseEnter={() => setHoveredLabel(entry.displayLabel)}
-                  onMouseLeave={() => setHoveredLabel((k) => (k === entry.displayLabel ? null : k))}
-                >
-                  <span className="w-6 text-right text-content-muted">{i + 1}</span>
-                  <span className="flex-1 min-w-0 truncate font-mono text-content">{entry.displayLabel}</span>
-                  <span className="font-mono text-content-secondary">{formatCount(entry.count)}</span>
-                </li>
-              ))}
+              {rankings.top.map((entry, i) => {
+                const showRatio = entry.maskedOuter && entry.total > 0
+                const tapPct = showRatio ? Math.round((entry.tap / entry.total) * 100) : 0
+                return (
+                  <li
+                    key={entry.displayLabel}
+                    className={`flex cursor-pointer items-center gap-2 rounded px-2 py-1 ${hoveredLabel === entry.displayLabel ? 'bg-accent/10' : 'odd:bg-surface-dim/40'}`}
+                    onMouseEnter={() => setHoveredLabel(entry.displayLabel)}
+                    onMouseLeave={() => setHoveredLabel((k) => (k === entry.displayLabel ? null : k))}
+                  >
+                    <span className="w-6 text-right text-content-muted">{i + 1}</span>
+                    <span className="flex-1 min-w-0 truncate font-mono text-content">{entry.displayLabel}</span>
+                    {showRatio && (
+                      <span className="font-mono text-[11px] text-content-muted">
+                        tap:{tapPct}% / hold:{100 - tapPct}%
+                      </span>
+                    )}
+                    <span className="font-mono text-content-secondary">{formatCount(entry.count)}</span>
+                  </li>
+                )
+              })}
             </ol>
           )}
         </section>
