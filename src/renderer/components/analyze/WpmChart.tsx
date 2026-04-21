@@ -18,9 +18,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
+import type {
+  TypingBksMinuteRow,
+  TypingMinuteStatsRow,
+} from '../../../shared/types/typing-analytics'
+import type { DeviceScope, GranularityChoice, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
+import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
 import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
 import {
   buildHourOfDayWpm,
@@ -42,7 +46,13 @@ interface Props {
    * toward peak / lowest / weighted-median WPM. Does not gate the
    * chart itself — every bucket is still plotted. */
   minActiveMs: number
+  /** Whether to overlay the Bksp% (error-proxy) line in timeSeries
+   * mode. Ignored in `timeOfDay` because the hour-bar shape doesn't
+   * align with the per-bucket Bksp series. */
+  errorProxy: WpmErrorProxy
 }
+
+const ERROR_PROXY_COLOR = '#ef4444'
 
 const ACTIVE_BAR_COLOR = 'var(--color-accent)'
 const INACTIVE_BAR_COLOR = 'var(--color-surface-dim)'
@@ -51,10 +61,21 @@ function formatHourWithWpm(hour: number, wpm: number): string {
   return `${formatHourLabel(hour)} (${formatWpm(wpm)} WPM)`
 }
 
-export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs }: Props) {
+type WpmLineKey = 'wpm' | 'bksPercent'
+
+export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs, errorProxy }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
+  const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
   const [loading, setLoading] = useState(true)
+  // Legend toggle state — same pattern the Interval chart uses so the
+  // user can dim a line by clicking its legend entry.
+  const [hidden, setHidden] = useState<Record<WpmLineKey, boolean>>({ wpm: false, bksPercent: false })
+  const toggleSeries = (key: string): void => {
+    if (key === 'wpm' || key === 'bksPercent') {
+      setHidden((prev) => ({ ...prev, [key]: !prev[key] }))
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -75,6 +96,30 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     return () => { cancelled = true }
   }, [uid, deviceScope, range])
 
+  // Bks-minute fetch is scoped to the error-proxy overlay: it only
+  // runs in timeSeries mode with the toggle on, so users paying no
+  // attention to Bksp% don't pay its bandwidth.
+  const errorProxyActive = viewMode === 'timeSeries' && errorProxy === 'on'
+  useEffect(() => {
+    if (!errorProxyActive) {
+      setBksRows([])
+      return
+    }
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = deviceScope === 'own'
+          ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
+          : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
+        if (!cancelled) setBksRows(data)
+      } catch {
+        if (!cancelled) setBksRows([])
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [uid, deviceScope, range, errorProxyActive])
+
   const bucketMs = useMemo(
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),
     [range, granularity],
@@ -86,14 +131,36 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     () => (viewMode === 'timeSeries' ? bucketMinuteStats(rows, range, bucketMs) : null),
     [rows, range, bucketMs, viewMode],
   )
+  const bksRate = useMemo(
+    () => (errorProxyActive
+      ? buildBksRateBuckets({ bksRows, minuteRows: rows, range, bucketMs })
+      : null),
+    [errorProxyActive, bksRows, rows, range, bucketMs],
+  )
+  const bksByBucket = useMemo(() => {
+    const map = new Map<number, number | null>()
+    if (bksRate === null) return map
+    for (const b of bksRate.buckets) map.set(b.bucketStartMs, b.bksPercent)
+    return map
+  }, [bksRate])
+
   const chartData = useMemo(
     () => buckets === null
       ? []
-      : buckets.map((b) => ({
-          bucketStartMs: b.bucketStartMs,
-          wpm: Math.round(computeWpm(b.keystrokes, b.activeMs) * 10) / 10,
-        })),
-    [buckets],
+      : buckets.map((b) => {
+          const bks = bksByBucket.get(b.bucketStartMs)
+          return {
+            bucketStartMs: b.bucketStartMs,
+            wpm: Math.round(computeWpm(b.keystrokes, b.activeMs) * 10) / 10,
+            // `null` keeps recharts from drawing a point; the Bksp line
+            // uses `connectNulls` so gaps bridge visually without
+            // hallucinating zero-rate buckets.
+            bksPercent: bks === undefined || bks === null
+              ? null
+              : Math.round(bks * 10) / 10,
+          }
+        }),
+    [buckets, bksByBucket],
   )
 
   const timeSeriesSummary = useMemo<WpmTimeSeriesSummary | null>(
@@ -110,8 +177,8 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
 
   const timeSeriesItems = useMemo<AnalyzeSummaryItem[] | null>(() => {
     if (timeSeriesSummary === null) return null
-    return toTimeSeriesItems(timeSeriesSummary)
-  }, [timeSeriesSummary])
+    return toTimeSeriesItems(timeSeriesSummary, errorProxyActive ? bksRate?.summary ?? null : null)
+  }, [timeSeriesSummary, errorProxyActive, bksRate])
 
   const hourOfDayItems = useMemo<AnalyzeSummaryItem[] | null>(() => {
     if (hourOfDay === null) return null
@@ -214,22 +281,50 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
               stroke="var(--color-edge)"
               tickFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
             />
-            <YAxis tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }} stroke="var(--color-edge)" allowDecimals />
+            <YAxis yAxisId="wpm" tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }} stroke="var(--color-edge)" allowDecimals />
+            {errorProxyActive && (
+              <YAxis
+                yAxisId="bks"
+                orientation="right"
+                domain={[0, 'auto']}
+                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                stroke="var(--color-edge)"
+                tickFormatter={(v: number) => `${v}%`}
+                width={40}
+              />
+            )}
             <Tooltip
               contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
               labelStyle={{ color: 'var(--color-content-secondary)' }}
               itemStyle={{ color: 'var(--color-content)' }}
               labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
+              formatter={(value, _name, item) => {
+                if (item?.dataKey === 'bksPercent') {
+                  if (value === null || value === undefined) return ['—', t('analyze.wpm.errorProxy.legend')]
+                  const n = typeof value === 'number' ? value : Number(value)
+                  return [`${n.toFixed(1)}%`, t('analyze.wpm.errorProxy.legend')]
+                }
+                return [value as string | number, t('analyze.wpm.legend')]
+              }}
             />
             <Legend
-              wrapperStyle={{ fontSize: 12 }}
-              formatter={(value) => (
-                <span title={t('analyze.wpm.description')} style={{ color: 'var(--color-content)' }}>
-                  {value}
-                </span>
-              )}
+              wrapperStyle={{ fontSize: 12, cursor: 'pointer' }}
+              onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
+              formatter={(value, entry) => {
+                const key = String(entry.dataKey ?? '') as WpmLineKey
+                const isBks = key === 'bksPercent'
+                return (
+                  <span
+                    title={isBks ? t('analyze.wpm.errorProxy.description') : t('analyze.wpm.description')}
+                    style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                  >
+                    {value}
+                  </span>
+                )
+              }}
             />
             <Line
+              yAxisId="wpm"
               type="monotone"
               dataKey="wpm"
               name={t('analyze.wpm.legend')}
@@ -237,7 +332,25 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
+              isAnimationActive={false}
+              hide={hidden.wpm}
             />
+            {errorProxyActive && (
+              <Line
+                yAxisId="bks"
+                type="monotone"
+                dataKey="bksPercent"
+                name={t('analyze.wpm.errorProxy.legend')}
+                stroke={ERROR_PROXY_COLOR}
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                dot={false}
+                connectNulls
+                activeDot={{ r: 4 }}
+                isAnimationActive={false}
+                hide={hidden.bksPercent}
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -252,8 +365,11 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
   )
 }
 
-function toTimeSeriesItems(summary: WpmTimeSeriesSummary): AnalyzeSummaryItem[] {
-  return [
+function toTimeSeriesItems(
+  summary: WpmTimeSeriesSummary,
+  bks: BksRateSummary | null,
+): AnalyzeSummaryItem[] {
+  const items: AnalyzeSummaryItem[] = [
     { labelKey: 'analyze.wpm.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.wpm.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
     { labelKey: 'analyze.wpm.timeSeries.summary.overallWpm', value: formatWpm(summary.overallWpm) },
@@ -261,6 +377,19 @@ function toTimeSeriesItems(summary: WpmTimeSeriesSummary): AnalyzeSummaryItem[] 
     { labelKey: 'analyze.wpm.timeSeries.summary.lowestWpm', value: summary.lowestWpm === null ? '—' : formatWpm(summary.lowestWpm) },
     { labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm', value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm) },
   ]
+  if (bks !== null) {
+    items.push(
+      {
+        labelKey: 'analyze.wpm.timeSeries.summary.totalBackspaces',
+        value: bks.totalBackspaces.toLocaleString(),
+      },
+      {
+        labelKey: 'analyze.wpm.timeSeries.summary.overallBksPercent',
+        value: bks.overallBksPercent === null ? '—' : `${bks.overallBksPercent.toFixed(1)}%`,
+      },
+    )
+  }
+  return items
 }
 
 function toHourOfDayItems(summary: HourOfDayWpmSummary): AnalyzeSummaryItem[] {

@@ -93,6 +93,7 @@ export type {
   TypingActivityCell,
   TypingMinuteStatsRow,
   TypingSessionRow,
+  TypingBksMinuteRow,
   TypingTombstoneResult,
 } from '../../../shared/types/typing-analytics'
 
@@ -128,6 +129,8 @@ export class TypingAnalyticsDB {
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
   private readonly selectSessionsInRangeForUidAndHashStmt: Statement
+  private readonly selectBksMinuteInRangeForUidStmt: Statement
+  private readonly selectBksMinuteInRangeForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -750,6 +753,63 @@ export class TypingAnalyticsDB {
        ORDER BY t.start_ms ASC
     `)
 
+    // Per-minute Backspace counts for the Analyze error-proxy
+    // overlay. Sourced from `typing_matrix_minute` so all capture
+    // paths (HID matrix reads, typing-test, Vial input) contribute.
+    //
+    // Matching three Backspace shapes:
+    //   - `KC_BSPC` direct (keycode == 0x2A = 42) → every press counts
+    //   - `LT(layer, KC_BSPC)` (0x4000-0x4FFF, inner byte == 0x2A)
+    //     → count only `tap_count`; holds activate a layer, not delete
+    //   - `MT(mod, KC_BSPC)` (0x2000-0x2FFF, inner byte == 0x2A)
+    //     → same tap-count rule, holds are modifiers
+    //
+    // Rows with zero Backspace contribution are filtered by `HAVING`
+    // so the result only carries minutes that actually registered a
+    // delete — matches the renderer's "skip empty bucket" behaviour.
+    this.selectBksMinuteInRangeForUidStmt = this.db.prepare(`
+      SELECT t.minute_ts AS minuteMs,
+             SUM(CASE
+               WHEN t.keycode = 42 THEN t.count
+               WHEN (t.keycode & 255) = 42
+                 AND ((t.keycode & 57344) = 16384 OR (t.keycode & 57344) = 8192)
+               THEN t.tap_count
+               ELSE 0
+             END) AS backspaceCount
+        FROM typing_matrix_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       HAVING backspaceCount > 0
+       ORDER BY t.minute_ts ASC
+    `)
+
+    this.selectBksMinuteInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT t.minute_ts AS minuteMs,
+             SUM(CASE
+               WHEN t.keycode = 42 THEN t.count
+               WHEN (t.keycode & 255) = 42
+                 AND ((t.keycode & 57344) = 16384 OR (t.keycode & 57344) = 8192)
+               THEN t.tap_count
+               ELSE 0
+             END) AS backspaceCount
+        FROM typing_matrix_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       HAVING backspaceCount > 0
+       ORDER BY t.minute_ts ASC
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -1188,6 +1248,24 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingSessionRow[] {
     return this.selectSessionsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingSessionRow[]
+  }
+
+  /** Per-minute Backspace-share aggregate for `[sinceMs, untilMs)`.
+   * Only minutes that received typing-test input contribute; general
+   * matrix-path typing does not feed `typing_char_minute`. */
+  listBksMinuteInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingBksMinuteRow[] {
+    return this.selectBksMinuteInRangeForUidStmt.all({ uid, sinceMs, untilMs }) as TypingBksMinuteRow[]
+  }
+
+  /** Same as {@link listBksMinuteInRangeForUid} but restricted to a
+   * single machine_hash for the Analyze "This device" scope. */
+  listBksMinuteInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingBksMinuteRow[] {
+    return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingBksMinuteRow[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

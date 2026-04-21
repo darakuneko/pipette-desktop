@@ -33,6 +33,7 @@ import {
   type TypingKeyboardSummary,
   type TypingMinuteStatsRow,
   type TypingSessionRow,
+  type TypingBksMinuteRow,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import {
@@ -309,6 +310,27 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingBksMinuteRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingBksMinuteInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingBksMinuteRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingBksMinuteInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT,
     async (_event, partial: unknown): Promise<{ saved: boolean; savedAt: number | null }> => {
       if (!partial || typeof partial !== 'object') return { saved: false, savedAt: null }
@@ -482,6 +504,24 @@ export function listTypingSessionsInRangeForHash(
   untilMs: number,
 ): TypingSessionRow[] {
   return getTypingAnalyticsDB().listSessionsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Per-minute character counts for the Analyze error-proxy overlay. */
+export function listTypingBksMinuteInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingBksMinuteRow[] {
+  return getTypingAnalyticsDB().listBksMinuteInRangeForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingBksMinuteInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingBksMinuteRow[] {
+  return getTypingAnalyticsDB().listBksMinuteInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

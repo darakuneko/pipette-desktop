@@ -160,6 +160,19 @@ export interface TypingSessionRow {
   endMs: number
 }
 
+/** Per-minute Backspace count aggregate used by the Analyze
+ * error-proxy overlay. Sourced from `typing_matrix_minute` so every
+ * path (matrix HID reads, typing-test, Vial input) contributes — not
+ * just typing-test. Tap-hold keys (e.g. `LT(1, KC_BSPC)`) count only
+ * their `tap_count` (actual Backspace taps); holds that mean a layer
+ * activation are excluded. Total keystrokes for the ratio come from
+ * the minute-stats fetch the WPM chart already runs, so this IPC
+ * stays narrow. */
+export interface TypingBksMinuteRow {
+  minuteMs: number
+  backspaceCount: number
+}
+
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
  * that the release-edge classifier routed to the tap vs hold arm of

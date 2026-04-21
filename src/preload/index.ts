@@ -24,6 +24,7 @@ import type {
   TypingKeymapSnapshot,
   TypingMinuteStatsRow,
   TypingSessionRow,
+  TypingBksMinuteRow,
   TypingTombstoneResult,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
@@ -242,6 +243,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS, uid, sinceMs, untilMs),
   typingAnalyticsListSessionsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsListBksMinute: (uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE, uid, sinceMs, untilMs),
+  typingAnalyticsListBksMinuteLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
   typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>

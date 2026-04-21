@@ -648,8 +648,14 @@
           "overallWpm": "平均WPM",
           "peakWpm": "ピークWPM",
           "lowestWpm": "最低WPM",
-          "weightedMedianWpm": "重み付き中央値WPM"
+          "weightedMedianWpm": "重み付き中央値WPM",
+          "totalBackspaces": "Backspace 合計",
+          "overallBksPercent": "平均 Bksp %"
         }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "取得した打鍵のうち Backspace の割合。matrix-event ストリームから集計するので、typing-test 以外の通常打鍵も対象。"
       },
       "timeOfDay": {
         "tooltipLabel": "時間帯",
@@ -849,6 +855,11 @@
         "min1": "1分",
         "min2": "2分",
         "min5": "5分"
+      },
+      "wpmErrorProxy": "エラー推定",
+      "wpmErrorProxyOption": {
+        "on": "ON",
+        "off": "OFF"
       },
       "activityMetric": "指標",
       "activityMetricOption": {

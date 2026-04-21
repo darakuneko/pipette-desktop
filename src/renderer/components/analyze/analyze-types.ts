@@ -22,6 +22,10 @@ export type IntervalViewMode = 'timeSeries' | 'distribution'
  * `timeOfDay` aggregates WPM by hour-of-day (0..23 local). */
 export type WpmViewMode = 'timeSeries' | 'timeOfDay'
 
+/** Whether the WPM time-series chart overlays a Bksp% error-proxy
+ * line. Only relevant in the `timeSeries` view. */
+export type WpmErrorProxy = 'on' | 'off'
+
 /** Activity tab metric. `keystrokes` is the classic press-count
  * heatmap; `wpm` colors the same grid by WPM derived from the pooled
  * minute-stats of that (dow, hour) cell. `sessions` swaps the grid

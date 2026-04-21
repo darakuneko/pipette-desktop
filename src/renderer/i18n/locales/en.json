@@ -649,8 +649,14 @@
           "overallWpm": "Overall WPM",
           "peakWpm": "Peak WPM",
           "lowestWpm": "Lowest WPM",
-          "weightedMedianWpm": "Weighted median WPM"
+          "weightedMedianWpm": "Weighted median WPM",
+          "totalBackspaces": "Total Backspaces",
+          "overallBksPercent": "Overall Bksp %"
         }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "Share of captured keystrokes that were Backspace. Sourced from the matrix-event stream so all typing contributes, not just typing tests."
       },
       "timeOfDay": {
         "tooltipLabel": "Hour",
@@ -850,6 +856,11 @@
         "min1": "1 min",
         "min2": "2 min",
         "min5": "5 min"
+      },
+      "wpmErrorProxy": "Error proxy",
+      "wpmErrorProxyOption": {
+        "on": "On",
+        "off": "Off"
       },
       "activityMetric": "Metric",
       "activityMetricOption": {
