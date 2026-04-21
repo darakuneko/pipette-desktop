@@ -699,7 +699,7 @@
         "keyGroupOption": {
           "all": "すべて",
           "char": "文字",
-          "modifier": "モディファイア",
+          "modifier": "修飾",
           "layerOp": "レイヤー操作"
         },
         "emptyTop": "この期間に押下されたキーがありません。"
