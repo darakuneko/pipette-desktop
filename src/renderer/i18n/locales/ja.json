@@ -692,6 +692,10 @@
       "ranking": {
         "frequentUsedN": "上位",
         "frequentUsed": "よく使うキー",
+        "colKey": "キー",
+        "colLayer": "レイヤー",
+        "colMatrix": "マトリクス",
+        "colCount": "回数",
         "aggregate": "集計",
         "aggregateOption": {
           "cell": "物理",

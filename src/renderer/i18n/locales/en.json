@@ -693,6 +693,10 @@
       "ranking": {
         "frequentUsedN": "Top N",
         "frequentUsed": "Frequently Used",
+        "colKey": "Key",
+        "colLayer": "Layer",
+        "colMatrix": "Matrix",
+        "colCount": "Count",
         "aggregate": "Aggregate",
         "aggregateOption": {
           "cell": "By cell",

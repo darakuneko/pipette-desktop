@@ -80,14 +80,20 @@ const LayerKeyboard = memo(function LayerKeyboard({
     () => filterCellsByGroup(groupHeatmapCells, keycodes, keyGroupFilter),
     [groupHeatmapCells, keycodes, keyGroupFilter],
   )
-  const { heatmapMaxTotal, heatmapMaxTap } = useMemo(() => {
-    let total = 0
+  // A single unified max drives the outer rect colour so masked cells
+  // (painted by `hold`) and non-masked cells (painted by `total`) share
+  // the same scale. Otherwise an LT1 hovering at its own peak looks as
+  // red as a character key at its peak despite having a much smaller
+  // absolute count.
+  const { heatmapMaxOuter, heatmapMaxTap } = useMemo(() => {
+    let outer = 0
     let tap = 0
     for (const cell of filteredHeatmapCells.values()) {
-      if (cell.total > total) total = cell.total
+      const outerVal = cell.hold > 0 ? cell.hold : cell.total
+      if (outerVal > outer) outer = outerVal
       if (cell.tap > tap) tap = cell.tap
     }
-    return { heatmapMaxTotal: total, heatmapMaxTap: tap }
+    return { heatmapMaxOuter: outer, heatmapMaxTap: tap }
   }, [filteredHeatmapCells])
 
   const borderClass = isMergeCandidate
@@ -114,9 +120,9 @@ const LayerKeyboard = memo(function LayerKeyboard({
         keycodes={keycodes}
         labelOverrides={labelOverrides}
         heatmapCells={filteredHeatmapCells}
-        heatmapMaxTotal={heatmapMaxTotal}
+        heatmapMaxTotal={heatmapMaxOuter}
         heatmapMaxTap={heatmapMaxTap}
-        heatmapMaxHold={0}
+        heatmapMaxHold={heatmapMaxOuter}
         highlightedKeys={highlightedCells}
         readOnly
         scale={scale}
@@ -135,6 +141,16 @@ interface RankingTableProps {
   t: TFunction
 }
 
+// Fixed sub-column widths so header and data rows align. The `Layer`
+// sub-column is dropped when no group contains multiple layers — the
+// group header already pins the layer in that case.
+const SUB_GRID_WITH_LAYER = {
+  gridTemplateColumns: 'minmax(0, 7rem) 4.5rem 8rem 5rem',
+}
+const SUB_GRID_NO_LAYER = {
+  gridTemplateColumns: 'minmax(0, 7rem) 8rem 5rem',
+}
+
 const RankingTable = memo(function RankingTable({
   groups,
   groupRankings,
@@ -146,24 +162,50 @@ const RankingTable = memo(function RankingTable({
 }: RankingTableProps) {
   const maxRank = Math.max(1, ...groupRankings.map((r) => r.length))
   const rows = Math.min(frequentUsedN, maxRank)
-  const gridTemplate = { gridTemplateColumns: `2.5rem repeat(${groups.length}, minmax(0, 1fr))` }
+  const showLayerCol = groups.some((g) => g.length > 1)
+  const subGrid = showLayerCol ? SUB_GRID_WITH_LAYER : SUB_GRID_NO_LAYER
+  // Each group cell is `sub-grid content + px-2 padding` wide; plus the
+  // rank column. Compute the explicit total so the grid rows don't grow
+  // to fill the parent's extra space.
+  const perGroupRem = showLayerCol ? 27 : 22
+  const totalWidthRem = 2.5 + groups.length * perGroupRem
+  const outerGrid = {
+    gridTemplateColumns: `2.5rem repeat(${groups.length}, auto)`,
+    width: `${totalWidthRem}rem`,
+  }
   const groupLabelFor = (group: number[]): string => group.length === 1
     ? t('analyze.keyHeatmap.layerOption', { i: group[0] })
     : t('analyze.keyHeatmap.layerOptionMulti', { layers: group.join(', ') })
   const anyEntry = rows > 0 && groupRankings.some((r) => r.length > 0)
   return (
-    <div className="flex min-h-0 flex-1 flex-col" data-testid="analyze-keyheatmap-ranking">
+    <div className="flex min-h-0 w-fit flex-1 flex-col" data-testid="analyze-keyheatmap-ranking">
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <div
-          className="sticky top-0 grid border-b border-edge bg-surface text-[11px] font-semibold text-content-muted"
-          style={gridTemplate}
-        >
-          <div />
-          {groups.map((group, i) => (
-            <div key={group.join('-')} className="truncate px-2 py-1" data-testid={`analyze-keyheatmap-ranking-head-${i}`}>
-              {groupLabelFor(group)}
-            </div>
-          ))}
+        <div className="sticky top-0 z-10 bg-surface">
+          <div
+            className="grid text-[11px] font-semibold text-content-muted"
+            style={outerGrid}
+          >
+            <div />
+            {groups.map((group, i) => (
+              <div key={group.join('-')} className="truncate px-2 py-1" data-testid={`analyze-keyheatmap-ranking-head-${i}`}>
+                {groupLabelFor(group)}
+              </div>
+            ))}
+          </div>
+          <div
+            className="grid border-b border-edge text-[10px] font-semibold uppercase tracking-wider text-content-muted"
+            style={outerGrid}
+          >
+            <div />
+            {groups.map((group) => (
+              <div key={group.join('-')} className="grid items-center gap-2 px-2 py-1" style={subGrid}>
+                <span className="truncate">{t('analyze.keyHeatmap.ranking.colKey')}</span>
+                {showLayerCol && <span>{t('analyze.keyHeatmap.ranking.colLayer')}</span>}
+                <span>{t('analyze.keyHeatmap.ranking.colMatrix')}</span>
+                <span className="text-right">{t('analyze.keyHeatmap.ranking.colCount')}</span>
+              </div>
+            ))}
+          </div>
         </div>
         {!anyEntry ? (
           <div className="py-2 text-[12px] text-content-muted">
@@ -174,31 +216,29 @@ const RankingTable = memo(function RankingTable({
             <div
               key={rankIdx}
               className={`grid text-[12px] ${rankIdx % 2 === 1 ? 'bg-surface-dim/40' : ''}`}
-              style={gridTemplate}
+              style={outerGrid}
             >
               <span className="px-2 py-1 text-right text-content-muted">{rankIdx + 1}</span>
               {groups.map((group, gIdx) => {
                 const entry = groupRankings[gIdx]?.[rankIdx]
                 if (!entry) return <span key={group.join('-')} />
                 const key = `${gIdx}:${entry.displayLabel}`
-                const showRatio = entry.maskedOuter && entry.total > 0
-                const tapPct = showRatio ? Math.round((entry.tap / entry.total) * 100) : 0
                 return (
                   <div
                     key={group.join('-')}
-                    className={`flex cursor-pointer items-center gap-2 px-2 py-1 ${
+                    className={`grid cursor-pointer items-center gap-2 px-2 py-1 ${
                       hoveredKey === key ? 'bg-accent/10' : ''
                     }`}
+                    style={subGrid}
                     onMouseEnter={() => setHoveredKey(() => key)}
                     onMouseLeave={() => setHoveredKey((prev) => (prev === key ? null : prev))}
                   >
-                    <span className="flex-1 min-w-0 truncate font-mono text-content">{entry.displayLabel}</span>
-                    {showRatio && (
-                      <span className="font-mono text-[11px] text-content-muted">
-                        {tapPct}/{100 - tapPct}
-                      </span>
+                    <span className="min-w-0 truncate font-mono text-content">{entry.keyLabel}</span>
+                    {showLayerCol && (
+                      <span className="font-mono text-[11px] text-content-muted">{entry.layerLabel}</span>
                     )}
-                    <span className="font-mono text-content-secondary">{formatCount(entry.count)}</span>
+                    <span className="font-mono text-[11px] text-content-muted">{entry.matrixLabel}</span>
+                    <span className="text-right font-mono text-content-secondary">{formatCount(entry.count)}</span>
                   </div>
                 )
               })}
@@ -314,30 +354,13 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   }
 
   const handleKeyboardClick = (layer: number) => {
-    const currentGroup = groups[groupOf(groups, layer)]
-    const isBonded = !!currentGroup && currentGroup.length > 1
-    if (isBonded) {
+    if (mergeCandidate !== null) {
+      if (mergeCandidate === layer) {
+        setMergeCandidate(null)
+        return
+      }
       setGroups((prev) => {
-        const result: number[][] = []
-        for (const g of prev) {
-          if (g.includes(layer)) {
-            const without = g.filter((l) => l !== layer)
-            if (without.length > 0) result.push(without)
-            result.push([layer])
-          } else {
-            result.push(g)
-          }
-        }
-        return result
-      })
-      setMergeCandidate(null)
-      return
-    }
-    setMergeCandidate((candidate) => {
-      if (candidate === null) return layer
-      if (candidate === layer) return null
-      setGroups((prev) => {
-        const candidateGroupIdx = prev.findIndex((g) => g.includes(candidate))
+        const candidateGroupIdx = prev.findIndex((g) => g.includes(mergeCandidate))
         const targetGroupIdx = prev.findIndex((g) => g.includes(layer))
         if (candidateGroupIdx === -1 || targetGroupIdx === -1 || candidateGroupIdx === targetGroupIdx) {
           return prev
@@ -353,8 +376,48 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
         }
         return result
       })
-      return null
-    })
+      setMergeCandidate(null)
+      return
+    }
+    const currentGroupIdx = groupOf(groups, layer)
+    const currentGroup = groups[currentGroupIdx]
+    const isBonded = !!currentGroup && currentGroup.length > 1
+    if (isBonded) {
+      setGroups((prev) => {
+        const result: number[][] = []
+        for (const g of prev) {
+          if (g.includes(layer)) {
+            const without = g.filter((l) => l !== layer)
+            if (without.length > 0) result.push(without)
+            result.push([layer])
+          } else {
+            result.push(g)
+          }
+        }
+        return result
+      })
+      return
+    }
+    // Standalone click with a single existing bonded group → auto-merge
+    // into it so the user doesn't have to pre-select the bond first.
+    const bondedGroupIdx = groups.findIndex((g) => g.length > 1)
+    const multipleBonded = groups.filter((g) => g.length > 1).length > 1
+    if (bondedGroupIdx !== -1 && !multipleBonded) {
+      setGroups((prev) => {
+        const merged = [...new Set([...prev[bondedGroupIdx], ...prev[currentGroupIdx]])]
+          .sort((x, y) => x - y)
+        const lower = Math.min(bondedGroupIdx, currentGroupIdx)
+        const result: number[][] = []
+        for (let i = 0; i < prev.length; i += 1) {
+          if (i === lower) result.push(merged)
+          else if (i === bondedGroupIdx || i === currentGroupIdx) continue
+          else result.push(prev[i])
+        }
+        return result
+      })
+      return
+    }
+    setMergeCandidate(layer)
   }
 
   if (!layout || !Array.isArray(layout.keys)) {
@@ -442,7 +505,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
         })}
         </div>
       </div>
-      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
         <h3 className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
           {t('analyze.keyHeatmap.ranking.frequentUsed')}
         </h3>

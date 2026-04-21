@@ -124,11 +124,11 @@ export function filterCellsByGroup(
 
 export type RankingEntry = {
   displayLabel: string
+  keyLabel: string
+  layerLabel: string
+  matrixLabel: string
   count: number
   cellsByLayer: Map<number, Set<string>>
-  maskedOuter: boolean
-  tap: number
-  total: number
 }
 
 function addCell(entry: RankingEntry, layer: number, posKey: string): void {
@@ -157,9 +157,6 @@ export function buildGroupRankings(
     cell: string
     count: number
     group: KeycodeGroup
-    maskedOuter: boolean
-    tap: number
-    total: number
   }
   const groupSum: Record<string, { total: number; tap: number; hold: number }> = {}
   for (const layerId of group) {
@@ -192,11 +189,8 @@ export function buildGroupRankings(
             baseLabel: compactLayerOp(resolved.outer),
             layer: layerId,
             cell: posKey,
-            count: total,
+            count: total - tap,
             group: keycodeGroup(qmkId),
-            maskedOuter: true,
-            tap,
-            total,
           })
         }
         if (resolved.inner) {
@@ -208,9 +202,6 @@ export function buildGroupRankings(
             cell: posKey,
             count: tap,
             group: keycodeGroup(innerQmkId),
-            maskedOuter: false,
-            tap: 0,
-            total: 0,
           })
         }
       } else {
@@ -220,9 +211,6 @@ export function buildGroupRankings(
           cell: posKey,
           count: total,
           group: keycodeGroup(qmkId),
-          maskedOuter: false,
-          tap: 0,
-          total: 0,
         })
       }
     }
@@ -239,21 +227,16 @@ export function buildGroupRankings(
       if (!e) {
         e = {
           displayLabel: r.baseLabel,
+          keyLabel: r.baseLabel,
+          layerLabel: '',
+          matrixLabel: '',
           count: 0,
           cellsByLayer: new Map(),
-          maskedOuter: r.maskedOuter,
-          tap: 0,
-          total: 0,
         }
         byBase.set(r.baseLabel, e)
       }
       e.count += r.count
       addCell(e, r.layer, r.cell)
-      if (r.maskedOuter) {
-        e.maskedOuter = true
-        e.tap += r.tap
-        e.total += r.total
-      }
     }
     entries = Array.from(byBase.values())
   } else {
@@ -262,6 +245,8 @@ export function buildGroupRankings(
     for (const r of filtered) freq.set(r.baseLabel, (freq.get(r.baseLabel) ?? 0) + 1)
     entries = filtered.map((r) => {
       const [row, col] = r.cell.split(',')
+      const matrixLabel = `Row:${row} Col:${col}`
+      const layerLabel = isMultiLayer ? `L${r.layer}` : ''
       const displayLabel = isMultiLayer
         ? `${r.baseLabel} Layer${r.layer} Row:${row} Col:${col}`
         : (freq.get(r.baseLabel) ?? 0) > 1
@@ -271,11 +256,11 @@ export function buildGroupRankings(
       cellsByLayer.set(r.layer, new Set([r.cell]))
       return {
         displayLabel,
+        keyLabel: r.baseLabel,
+        layerLabel,
+        matrixLabel,
         count: r.count,
         cellsByLayer,
-        maskedOuter: r.maskedOuter,
-        tap: r.tap,
-        total: r.total,
       }
     })
   }
