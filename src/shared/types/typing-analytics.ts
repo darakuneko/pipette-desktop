@@ -151,6 +151,15 @@ export interface TypingActivityCell {
   keystrokes: number
 }
 
+/** One live row from `typing_sessions`, used by the Analyze session
+ * distribution view. `id` is the stable session identifier; duration
+ * is computed at the renderer as `endMs - startMs`. */
+export interface TypingSessionRow {
+  id: string
+  startMs: number
+  endMs: number
+}
+
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
  * that the release-edge classifier routed to the tap vs hold arm of

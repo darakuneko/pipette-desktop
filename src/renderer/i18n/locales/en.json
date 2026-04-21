@@ -754,6 +754,28 @@
           "activeCells": "Active cells"
         }
       },
+      "sessions": {
+        "tooltipLabel": "Sessions",
+        "tooltipValue": "{{count}} sessions ({{share}}%)",
+        "bin": {
+          "lt5Min": "<5 min",
+          "5to15Min": "5-15 min",
+          "15to30Min": "15-30 min",
+          "30to60Min": "30-60 min",
+          "1to2Hours": "1-2 h",
+          "2to4Hours": "2-4 h",
+          "gtFourHours": ">4 h"
+        },
+        "summary": {
+          "label": "Session distribution summary",
+          "sessionCount": "Session count",
+          "totalDuration": "Total duration",
+          "meanDuration": "Mean duration",
+          "medianDuration": "Median duration",
+          "longestDuration": "Longest session",
+          "shortestDuration": "Shortest session"
+        }
+      },
       "dow": {
         "0": "Sun",
         "1": "Mon",
@@ -832,7 +854,8 @@
       "activityMetric": "Metric",
       "activityMetricOption": {
         "keystrokes": "Keystrokes",
-        "wpm": "WPM"
+        "wpm": "WPM",
+        "sessions": "Sessions"
       },
       "normalization": "Normalize",
       "normalizationOption": {

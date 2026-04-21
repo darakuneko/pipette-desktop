@@ -1,13 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Analyze > Activity — 24 × 7 grid of either keystroke counts or WPM
-// by (day-of-week × hour-of-day). Both metrics share the same grid
-// (dow on the y-axis, hour on the x-axis); only the cell color and
-// summary row change between modes. See `analyze-activity.ts` for the
-// aggregation rules.
+// Analyze > Activity — three metrics that share the Activity tab:
+//
+//  - `keystrokes` / `wpm`: 24 × 7 grid keyed by local (dow, hour).
+//    Both derive from the minute-stats fetch; only the cell color and
+//    summary row change between the two.
+//
+//  - `sessions`: session-length histogram sourced from
+//    `typing_sessions`. A completely different data source and render
+//    shape from the grid, kept in the same tab because it still
+//    answers the "when / how much did I type?" question the Activity
+//    tab exists to answer.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import type {
+  TypingMinuteStatsRow,
+  TypingSessionRow,
+} from '../../../shared/types/typing-analytics'
 import {
   ACTIVITY_CELL_COUNT,
   ACTIVITY_HOUR_COUNT,
@@ -17,6 +27,10 @@ import {
   type ActivityWpmSummary,
 } from './analyze-activity'
 import { formatActiveDuration, formatHourLabel } from './analyze-format'
+import {
+  buildSessionHistogram,
+  type SessionDistributionSummary,
+} from './analyze-sessions'
 import { AnalyzeSummaryTable, type AnalyzeSummaryItem } from './analyze-summary-table'
 import { formatWpm } from './analyze-wpm'
 import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
@@ -28,14 +42,27 @@ interface Props {
   metric: ActivityMetric
   /** Minimum `activeMs` per cell to count toward WPM peak / lowest
    * selection. Shared with the WPM tab's Min-sample filter. Has no
-   * effect in `keystrokes` mode. */
+   * effect in `keystrokes` or `sessions` modes. */
   minActiveMs: number
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DOWS = [0, 1, 2, 3, 4, 5, 6] as const
 
-export function ActivityChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {
+export function ActivityChart(props: Props) {
+  if (props.metric === 'sessions') {
+    return (
+      <SessionDistributionChart
+        uid={props.uid}
+        range={props.range}
+        deviceScope={props.deviceScope}
+      />
+    )
+  }
+  return <ActivityGridChart {...props} />
+}
+
+function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -165,6 +192,115 @@ export function ActivityChart({ uid, range, deviceScope, metric, minActiveMs }: 
   )
 }
 
+interface SessionChartProps {
+  uid: string
+  range: RangeMs
+  deviceScope: DeviceScope
+}
+
+function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps) {
+  const { t } = useTranslation()
+  const [sessions, setSessions] = useState<TypingSessionRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    const load = async () => {
+      try {
+        const data = deviceScope === 'own'
+          ? await window.vialAPI.typingAnalyticsListSessionsLocal(uid, range.fromMs, range.toMs)
+          : await window.vialAPI.typingAnalyticsListSessions(uid, range.fromMs, range.toMs)
+        if (!cancelled) setSessions(data)
+      } catch {
+        if (!cancelled) setSessions([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [uid, deviceScope, range])
+
+  const histogram = useMemo(() => buildSessionHistogram(sessions), [sessions])
+  const chartData = useMemo(
+    () => histogram.bins.map((b) => ({
+      id: b.id,
+      label: t(`analyze.activity.sessions.bin.${b.id}`),
+      count: b.count,
+      share: b.share,
+    })),
+    [histogram, t],
+  )
+  const summaryItems = useMemo<AnalyzeSummaryItem[] | null>(
+    () => histogram.summary.sessionCount === 0 ? null : toSessionsItems(histogram.summary),
+    [histogram],
+  )
+
+  if (loading) {
+    return (
+      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-loading">
+        {t('common.loading')}
+      </div>
+    )
+  }
+
+  if (histogram.summary.sessionCount === 0) {
+    return (
+      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-empty">
+        {t('analyze.noData')}
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex h-full w-full flex-col gap-2" data-testid="analyze-activity-sessions">
+      <div className="flex-1 min-h-0">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} margin={{ top: 10, right: 20, bottom: 20, left: 10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+              stroke="var(--color-edge)"
+              interval={0}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+              stroke="var(--color-edge)"
+              allowDecimals={false}
+            />
+            <Tooltip
+              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
+              labelStyle={{ color: 'var(--color-content-secondary)' }}
+              itemStyle={{ color: 'var(--color-content)' }}
+              formatter={(_, __, entry) => {
+                const c = Number(entry?.payload?.count ?? 0)
+                const s = Number(entry?.payload?.share ?? 0)
+                return [
+                  t('analyze.activity.sessions.tooltipValue', {
+                    count: c.toLocaleString(),
+                    share: (s * 100).toFixed(1),
+                  }),
+                  t('analyze.activity.sessions.tooltipLabel'),
+                ]
+              }}
+            />
+            <Bar dataKey="count" fill="var(--color-accent)" isAnimationActive={false} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      {summaryItems !== null && (
+        <AnalyzeSummaryTable
+          items={summaryItems}
+          ariaLabelKey="analyze.activity.sessions.summary.label"
+          testId="analyze-activity-summary"
+        />
+      )}
+    </div>
+  )
+}
+
 interface CellAppearance {
   opacity: number
   /** `< 1` desaturates the cell to flag "not enough sample to trust"
@@ -267,5 +403,16 @@ function toWpmItems(
     { labelKey: 'analyze.activity.wpm.summary.peakCell', value: summary.peakCell === null ? '—' : formatCell(summary.peakCell, t, 'wpm') },
     { labelKey: 'analyze.activity.wpm.summary.lowestCell', value: summary.lowestCell === null ? '—' : formatCell(summary.lowestCell, t, 'wpm') },
     { labelKey: 'analyze.activity.wpm.summary.activeCells', value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}` },
+  ]
+}
+
+function toSessionsItems(summary: SessionDistributionSummary): AnalyzeSummaryItem[] {
+  return [
+    { labelKey: 'analyze.activity.sessions.summary.sessionCount', value: summary.sessionCount.toLocaleString() },
+    { labelKey: 'analyze.activity.sessions.summary.totalDuration', value: formatActiveDuration(summary.totalDurationMs) },
+    { labelKey: 'analyze.activity.sessions.summary.meanDuration', value: summary.meanDurationMs === null ? '—' : formatActiveDuration(summary.meanDurationMs) },
+    { labelKey: 'analyze.activity.sessions.summary.medianDuration', value: summary.medianDurationMs === null ? '—' : formatActiveDuration(summary.medianDurationMs) },
+    { labelKey: 'analyze.activity.sessions.summary.longestDuration', value: summary.longestDurationMs === null ? '—' : formatActiveDuration(summary.longestDurationMs) },
+    { labelKey: 'analyze.activity.sessions.summary.shortestDuration', value: summary.shortestDurationMs === null ? '—' : formatActiveDuration(summary.shortestDurationMs) },
   ]
 }

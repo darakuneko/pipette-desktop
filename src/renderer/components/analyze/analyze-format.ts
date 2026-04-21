@@ -55,3 +55,29 @@ export function weightedMedian(samples: ReadonlyArray<WeightedSample>): number |
   }
   return sorted[sorted.length - 1].value
 }
+
+/** Unweighted median. Returns `null` for an empty input; averages the
+ * middle two on an even-sized sample. */
+export function median(values: readonly number[]): number | null {
+  if (values.length === 0) return null
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = sorted.length >> 1
+  if (sorted.length % 2 === 1) return sorted[mid]
+  return (sorted[mid - 1] + sorted[mid]) / 2
+}
+
+/** Generic bucket-lookup for bin tables whose upper edge is `toMs`
+ * (exclusive) or `null` for the unbounded tail. Non-finite / negative
+ * inputs clamp to the first bucket so bad data stays visible. */
+export function findBucketIndex<T extends { toMs: number | null }>(
+  bins: readonly T[],
+  value: number,
+): number {
+  if (!Number.isFinite(value) || value < 0) return 0
+  for (let i = 0; i < bins.length; i += 1) {
+    const top = bins[i].toMs
+    if (top === null) return i
+    if (value < top) return i
+  }
+  return bins.length - 1
+}

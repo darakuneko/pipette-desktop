@@ -27,6 +27,7 @@ import type {
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
   TypingMinuteStatsRow,
+  TypingSessionRow,
   TypingTombstoneResult,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
@@ -154,6 +155,8 @@ export interface VialAPI {
   typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListSessions(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
+  typingAnalyticsListSessionsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
   typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
   typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell>

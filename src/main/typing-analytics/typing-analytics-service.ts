@@ -32,6 +32,7 @@ import {
   type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
   type TypingMinuteStatsRow,
+  type TypingSessionRow,
   type TypingTombstoneResult,
 } from './db/typing-analytics-db'
 import {
@@ -287,6 +288,27 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingSessionRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingSessionsInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingSessionRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingSessionsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT,
     async (_event, partial: unknown): Promise<{ saved: boolean; savedAt: number | null }> => {
       if (!partial || typeof partial !== 'object') return { saved: false, savedAt: null }
@@ -441,6 +463,25 @@ export function listTypingMinuteStatsInRangeForHash(
   untilMs: number,
 ): TypingMinuteStatsRow[] {
   return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Live sessions that intersect `[sinceMs, untilMs)`. Powers the
+ * Analyze session-distribution histogram. */
+export function listTypingSessionsInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingSessionRow[] {
+  return getTypingAnalyticsDB().listSessionsInRangeForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingSessionsInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingSessionRow[] {
+  return getTypingAnalyticsDB().listSessionsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

@@ -18,7 +18,7 @@
 //   out at the scale this chart is meant for.
 
 import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import { weightedMedian, type WeightedSample } from './analyze-format'
+import { findBucketIndex, weightedMedian, type WeightedSample } from './analyze-format'
 import type { RangeMs } from './analyze-types'
 
 /** Rhythm band — coarser bucketing of `IntervalHistogramBin` for the
@@ -95,13 +95,7 @@ const BINS: readonly BinDef[] = [
 /** Bin index for a given interval (ms). The bottom bin catches 0 /
  * negative values; the top bin catches everything `>= 10000 ms`. */
 export function findBinIndex(ms: number): number {
-  if (!Number.isFinite(ms) || ms < 0) return 0
-  for (let i = 0; i < BINS.length; i += 1) {
-    const b = BINS[i]
-    if (b.toMs === null) return i
-    if (ms < b.toMs) return i
-  }
-  return BINS.length - 1
+  return findBucketIndex(BINS, ms)
 }
 
 /** Summary of typical-rhythm metrics computed alongside the histogram.

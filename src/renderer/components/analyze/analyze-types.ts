@@ -24,8 +24,9 @@ export type WpmViewMode = 'timeSeries' | 'timeOfDay'
 
 /** Activity tab metric. `keystrokes` is the classic press-count
  * heatmap; `wpm` colors the same grid by WPM derived from the pooled
- * minute-stats of that (dow, hour) cell. */
-export type ActivityMetric = 'keystrokes' | 'wpm'
+ * minute-stats of that (dow, hour) cell. `sessions` swaps the grid
+ * out for a duration histogram sourced from `typing_sessions`. */
+export type ActivityMetric = 'keystrokes' | 'wpm' | 'sessions'
 
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and

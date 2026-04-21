@@ -35,7 +35,7 @@ const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
 const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
-const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm']
+const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm', 'sessions']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 const DAY_MS = 86_400_000
 

@@ -92,6 +92,7 @@ export type {
   TypingIntervalDailySummary,
   TypingActivityCell,
   TypingMinuteStatsRow,
+  TypingSessionRow,
   TypingTombstoneResult,
 } from '../../../shared/types/typing-analytics'
 
@@ -125,6 +126,8 @@ export class TypingAnalyticsDB {
   private readonly selectActivityGridForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
+  private readonly selectSessionsInRangeForUidStmt: Statement
+  private readonly selectSessionsInRangeForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -711,6 +714,42 @@ export class TypingAnalyticsDB {
        ORDER BY t.minute_ts ASC
     `)
 
+    // Sessions whose start falls inside [@sinceMs, @untilMs). We filter
+    // on `start_ms` so "last 24 hours" captures every session the user
+    // started today regardless of how long it ran — containment on both
+    // edges excluded too many real-world sessions (a 30-minute run
+    // that straddles the window boundary would otherwise vanish). The
+    // session's *full* length is still reported; that matches how the
+    // user experienced it.
+    this.selectSessionsInRangeForUidStmt = this.db.prepare(`
+      SELECT t.id AS id,
+             t.start_ms AS startMs,
+             t.end_ms AS endMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY t.start_ms ASC
+    `)
+
+    this.selectSessionsInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT t.id AS id,
+             t.start_ms AS startMs,
+             t.end_ms AS endMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY t.start_ms ASC
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -1132,6 +1171,23 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingMinuteStatsRow[] {
     return this.selectMinuteStatsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMinuteStatsRow[]
+  }
+
+  /** Live sessions that intersect `[sinceMs, untilMs)` for a keyboard
+   * uid. Powers the Analyze session-distribution histogram. */
+  listSessionsInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingSessionRow[] {
+    return this.selectSessionsInRangeForUidStmt.all({ uid, sinceMs, untilMs }) as TypingSessionRow[]
+  }
+
+  /** Same as {@link listSessionsInRangeForUid} but restricted to a
+   * single machine_hash for the Analyze "This device" scope. */
+  listSessionsInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingSessionRow[] {
+    return this.selectSessionsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingSessionRow[]
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

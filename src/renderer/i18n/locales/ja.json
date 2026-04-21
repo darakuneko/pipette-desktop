@@ -753,6 +753,28 @@
           "activeCells": "活動セル数"
         }
       },
+      "sessions": {
+        "tooltipLabel": "セッション",
+        "tooltipValue": "{{count}} 件 ({{share}}%)",
+        "bin": {
+          "lt5Min": "5分未満",
+          "5to15Min": "5-15分",
+          "15to30Min": "15-30分",
+          "30to60Min": "30-60分",
+          "1to2Hours": "1-2時間",
+          "2to4Hours": "2-4時間",
+          "gtFourHours": "4時間以上"
+        },
+        "summary": {
+          "label": "セッション分布サマリ",
+          "sessionCount": "セッション数",
+          "totalDuration": "合計時間",
+          "meanDuration": "平均セッション長",
+          "medianDuration": "中央値セッション長",
+          "longestDuration": "最長セッション",
+          "shortestDuration": "最短セッション"
+        }
+      },
       "dow": {
         "0": "日",
         "1": "月",
@@ -831,7 +853,8 @@
       "activityMetric": "指標",
       "activityMetricOption": {
         "keystrokes": "打鍵数",
-        "wpm": "WPM"
+        "wpm": "WPM",
+        "sessions": "セッション"
       },
       "normalization": "正規化",
       "normalizationOption": {
