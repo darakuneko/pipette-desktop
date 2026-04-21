@@ -2,12 +2,12 @@
 
 import { describe, expect, it } from 'vitest'
 import type { TypingMinuteStatsRow } from '../../../../shared/types/typing-analytics'
+import { formatActiveDuration } from '../analyze-format'
 import {
   HISTOGRAM_BIN_IDS,
   buildIntervalHistogram,
   buildIntervalTimeSeriesSummary,
   findBinIndex,
-  formatActiveDuration,
 } from '../analyze-histogram'
 
 const MINUTE = 60_000

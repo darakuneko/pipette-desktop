@@ -18,6 +18,7 @@
 //   out at the scale this chart is meant for.
 
 import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
+import { weightedMedian, type WeightedSample } from './analyze-format'
 import type { RangeMs } from './analyze-types'
 
 /** Rhythm band — coarser bucketing of `IntervalHistogramBin` for the
@@ -141,7 +142,7 @@ export function buildIntervalHistogram(
   const weights = new Array<number>(BINS.length).fill(0)
   let totalKeystrokes = 0
   let longestPauseMs: number | null = null
-  const p50Samples: Array<{ p50: number; weight: number }> = []
+  const p50Samples: WeightedSample[] = []
 
   for (const r of rows) {
     if (r.minuteMs < range.fromMs || r.minuteMs >= range.toMs) continue
@@ -159,7 +160,7 @@ export function buildIntervalHistogram(
       weights[findBinIndex(q)] += perSample
     }
     if (r.intervalP50Ms !== null) {
-      p50Samples.push({ p50: r.intervalP50Ms, weight: r.keystrokes })
+      p50Samples.push({ value: r.intervalP50Ms, weight: r.keystrokes })
     }
     if (r.intervalMaxMs !== null) {
       longestPauseMs = longestPauseMs === null
@@ -200,23 +201,6 @@ export function buildIntervalHistogram(
   }
 }
 
-/** Weighted median of a (value, weight) sample set. Returns `null` when
- * the weight total is zero. Linear interpolation is skipped — the
- * nearest-observation definition is close enough for a summary label. */
-function weightedMedian(samples: ReadonlyArray<{ p50: number; weight: number }>): number | null {
-  if (samples.length === 0) return null
-  const sorted = [...samples].sort((a, b) => a.p50 - b.p50)
-  const total = sorted.reduce((s, r) => s + r.weight, 0)
-  if (total <= 0) return null
-  const half = total / 2
-  let acc = 0
-  for (const s of sorted) {
-    acc += s.weight
-    if (acc >= half) return s.p50
-  }
-  return sorted[sorted.length - 1].p50
-}
-
 /** Summary numbers for the Interval tab's time-series mode. Shares /
  * band splits are distribution-specific and deliberately omitted — the
  * line chart already visualises the quartile envelope over time, so
@@ -246,7 +230,7 @@ export function buildIntervalTimeSeriesSummary(
   let activeMs = 0
   let shortestIntervalMs: number | null = null
   let longestPauseMs: number | null = null
-  const p50Samples: Array<{ p50: number; weight: number }> = []
+  const p50Samples: WeightedSample[] = []
 
   for (const r of rows) {
     if (r.minuteMs < range.fromMs || r.minuteMs >= range.toMs) continue
@@ -266,7 +250,7 @@ export function buildIntervalTimeSeriesSummary(
         : Math.max(longestPauseMs, r.intervalMaxMs)
     }
     if (r.intervalP50Ms !== null) {
-      p50Samples.push({ p50: r.intervalP50Ms, weight: r.keystrokes })
+      p50Samples.push({ value: r.intervalP50Ms, weight: r.keystrokes })
     }
   }
 
@@ -279,16 +263,3 @@ export function buildIntervalTimeSeriesSummary(
   }
 }
 
-/** Human-friendly elapsed-time formatter for the active-typing total.
- * Chooses the coarsest unit pair (`Xh Ym`, `Xm Ys`, `Xs`) that still
- * carries information so short sessions don't show `0h 0m`. */
-export function formatActiveDuration(ms: number): string {
-  if (!Number.isFinite(ms) || ms <= 0) return '0s'
-  const totalSec = Math.floor(ms / 1_000)
-  const hours = Math.floor(totalSec / 3_600)
-  const minutes = Math.floor((totalSec % 3_600) / 60)
-  const seconds = totalSec % 60
-  if (hours > 0) return `${hours}h ${minutes}m`
-  if (minutes > 0) return `${minutes}m ${seconds}s`
-  return `${seconds}s`
-}

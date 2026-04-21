@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
-import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
+import type { AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
@@ -34,8 +34,19 @@ const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activ
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
+const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 const DAY_MS = 86_400_000
+
+const WPM_MIN_SAMPLE_OPTIONS: Array<{ value: number; labelKey: string }> = [
+  { value: 30_000, labelKey: 'sec30' },
+  { value: 60_000, labelKey: 'min1' },
+  { value: 60_000 * 2, labelKey: 'min2' },
+  { value: 60_000 * 5, labelKey: 'min5' },
+]
+// Default to the `1 min` entry so the dropdown and state never drift
+// apart when the option list is reordered.
+const DEFAULT_WPM_MIN_ACTIVE_MS = WPM_MIN_SAMPLE_OPTIONS.find((o) => o.labelKey === 'min1')?.value ?? 60_000
 
 // Keep this table in sync with `GRANULARITIES` in analyze-bucket.ts;
 // the first entry is the "let the chart decide" pseudo-choice.
@@ -101,6 +112,8 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
   const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
   const [intervalViewMode, setIntervalViewMode] = useState<IntervalViewMode>('timeSeries')
+  const [wpmViewMode, setWpmViewMode] = useState<WpmViewMode>('timeSeries')
+  const [wpmMinActiveMs, setWpmMinActiveMs] = useState<number>(DEFAULT_WPM_MIN_ACTIVE_MS)
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
@@ -248,6 +261,40 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </select>
                 </label>
               )}
+              {analysisTab === 'wpm' && (
+                <>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.wpmViewMode')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={wpmViewMode}
+                      onChange={(e) => setWpmViewMode(e.target.value as WpmViewMode)}
+                      data-testid="analyze-filter-wpm-view-mode"
+                    >
+                      {WPM_VIEW_MODES.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.wpmViewModeOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.wpmMinSample')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={String(wpmMinActiveMs)}
+                      onChange={(e) => setWpmMinActiveMs(Number.parseInt(e.target.value, 10))}
+                      data-testid="analyze-filter-wpm-min-sample"
+                    >
+                      {WPM_MIN_SAMPLE_OPTIONS.map((opt) => (
+                        <option key={opt.labelKey} value={String(opt.value)}>
+                          {t(`analyze.filters.wpmMinSampleOption.${opt.labelKey}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </>
+              )}
               {analysisTab === 'interval' && (
                 <>
                   <label className={FILTER_LABEL}>
@@ -282,7 +329,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </label>
                 </>
               )}
-              {(analysisTab === 'wpm' || (analysisTab === 'interval' && intervalViewMode === 'timeSeries')) && (
+              {((analysisTab === 'wpm' && wpmViewMode === 'timeSeries') || (analysisTab === 'interval' && intervalViewMode === 'timeSeries')) && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.granularity')}
                   <select
@@ -322,7 +369,14 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
             </div>
             <div className="flex-1 min-h-0 py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
-                <WpmChart uid={selected.uid} range={range} deviceScope={deviceScope} granularity={granularity} />
+                <WpmChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScope}
+                  granularity={granularity}
+                  viewMode={wpmViewMode}
+                  minActiveMs={wpmMinActiveMs}
+                />
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
               ) : analysisTab === 'activity' ? (

@@ -18,6 +18,10 @@ export type IntervalUnit = 'ms' | 'sec'
  * typing-rhythm distribution). */
 export type IntervalViewMode = 'timeSeries' | 'distribution'
 
+/** WPM tab view mode. `timeSeries` is the original line chart;
+ * `timeOfDay` aggregates WPM by hour-of-day (0..23 local). */
+export type WpmViewMode = 'timeSeries' | 'timeOfDay'
+
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and
  * the chart UI caps it to "now" so the user cannot pick the future. */

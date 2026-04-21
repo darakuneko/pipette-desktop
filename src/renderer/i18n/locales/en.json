@@ -640,7 +640,30 @@
     "tablistLabel": "Analysis type",
     "wpm": {
       "legend": "WPM",
-      "description": "Words per minute — keystrokes divided by 5, per minute of active typing."
+      "description": "Words per minute — keystrokes divided by 5, per minute of active typing.",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakWpm": "Peak WPM",
+          "lowestWpm": "Lowest WPM",
+          "weightedMedianWpm": "Weighted median WPM"
+        }
+      },
+      "timeOfDay": {
+        "tooltipLabel": "Hour",
+        "summary": {
+          "label": "Time-of-day WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakHour": "Peak hour",
+          "lowestHour": "Slowest hour",
+          "activeHours": "Active hours"
+        }
+      }
     },
     "interval": {
       "legend": {
@@ -763,6 +786,18 @@
       "intervalViewModeOption": {
         "timeSeries": "Time series",
         "distribution": "Distribution"
+      },
+      "wpmViewMode": "View",
+      "wpmViewModeOption": {
+        "timeSeries": "Time series",
+        "timeOfDay": "Time of day"
+      },
+      "wpmMinSample": "Min sample",
+      "wpmMinSampleOption": {
+        "sec30": "30s",
+        "min1": "1 min",
+        "min2": "2 min",
+        "min5": "5 min"
       },
       "normalization": "Normalize",
       "normalizationOption": {

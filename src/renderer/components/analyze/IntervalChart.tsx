@@ -18,14 +18,15 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Responsive
 import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
+import { formatActiveDuration, formatBucketAxisLabel } from './analyze-format'
 import {
   buildIntervalHistogram,
   buildIntervalTimeSeriesSummary,
-  formatActiveDuration,
   type IntervalRhythmSummary,
   type IntervalTimeSeriesSummary,
   type RhythmBandId,
 } from './analyze-histogram'
+import { AnalyzeSummaryTable, type AnalyzeSummaryItem } from './analyze-summary-table'
 
 interface Props {
   uid: string
@@ -57,13 +58,6 @@ const RHYTHM_BAND_COLORS: Record<RhythmBandId, string> = {
   normal: '#3b82f6',
   slow: '#f59e0b',
   pause: '#ef4444',
-}
-
-function formatAxis(ms: number, bucketMs: number): string {
-  const d = new Date(ms)
-  const pad = (n: number): string => n.toString().padStart(2, '0')
-  if (bucketMs >= 86_400_000) return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 function formatIntervalValue(ms: number, unit: IntervalUnit): string {
@@ -227,7 +221,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
           </ResponsiveContainer>
         </div>
         {distributionItems !== null && (
-          <RhythmSummaryTable
+          <AnalyzeSummaryTable
             items={distributionItems}
             ariaLabelKey="analyze.interval.distribution.summary.label"
           />
@@ -256,7 +250,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
             domain={[range.fromMs, range.toMs]}
             tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
             stroke="var(--color-edge)"
-            tickFormatter={(v: number) => formatAxis(v, bucketMs)}
+            tickFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
           />
           <YAxis
             scale="log"
@@ -276,7 +270,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
             contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
             labelStyle={{ color: 'var(--color-content-secondary)' }}
             itemStyle={{ color: 'var(--color-content)' }}
-            labelFormatter={(v: number) => formatAxis(v, bucketMs)}
+            labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
             formatter={(value) => {
               const n = typeof value === 'number' ? value : Number(value)
               if (!Number.isFinite(n)) return String(value)
@@ -316,7 +310,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
       </ResponsiveContainer>
       </div>
       {timeSeriesItems !== null && (
-        <RhythmSummaryTable
+        <AnalyzeSummaryTable
           items={timeSeriesItems}
           ariaLabelKey="analyze.interval.timeSeries.summary.label"
         />
@@ -325,35 +319,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
   )
 }
 
-interface IntervalSummaryItem {
-  labelKey: string
-  value: string
-}
-
-interface RhythmSummaryTableProps {
-  items: ReadonlyArray<IntervalSummaryItem>
-  ariaLabelKey: string
-}
-
-function RhythmSummaryTable({ items, ariaLabelKey }: RhythmSummaryTableProps) {
-  const { t } = useTranslation()
-  return (
-    <div
-      className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-4 gap-y-1 border-t border-edge pt-2 text-[12px]"
-      data-testid="analyze-interval-summary"
-      aria-label={t(ariaLabelKey)}
-    >
-      {items.map((r) => (
-        <div key={r.labelKey} className="flex items-baseline justify-between gap-2">
-          <span className="text-content-muted">{t(r.labelKey)}</span>
-          <span className="font-medium text-content">{r.value}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function toDistributionItems(summary: IntervalRhythmSummary, unit: IntervalUnit): IntervalSummaryItem[] {
+function toDistributionItems(summary: IntervalRhythmSummary, unit: IntervalUnit): AnalyzeSummaryItem[] {
   return [
     { labelKey: 'analyze.interval.distribution.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.interval.distribution.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
@@ -365,7 +331,7 @@ function toDistributionItems(summary: IntervalRhythmSummary, unit: IntervalUnit)
   ]
 }
 
-function toTimeSeriesItems(summary: IntervalTimeSeriesSummary, unit: IntervalUnit): IntervalSummaryItem[] {
+function toTimeSeriesItems(summary: IntervalTimeSeriesSummary, unit: IntervalUnit): AnalyzeSummaryItem[] {
   return [
     { labelKey: 'analyze.interval.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.interval.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },

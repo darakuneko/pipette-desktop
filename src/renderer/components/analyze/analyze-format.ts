@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Shared formatters and stats helpers for the Analyze charts. Kept
+// chart-neutral so both the WPM and Interval tabs (and any future
+// chart) can pull from a single source of truth.
+
+/** Human-friendly elapsed-time formatter used for "active typing
+ * time" across the Analyze summaries. Chooses the coarsest unit pair
+ * (`Xh Ym`, `Xm Ys`, `Xs`) that still carries information. */
+export function formatActiveDuration(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return '0s'
+  const totalSec = Math.floor(ms / 1_000)
+  const hours = Math.floor(totalSec / 3_600)
+  const minutes = Math.floor((totalSec % 3_600) / 60)
+  const seconds = totalSec % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
+}
+
+/** X-axis tick formatter for the time-series charts. Below a day the
+ * label includes the clock (`MM-DD HH:mm`); from a day granularity up
+ * the clock is dropped (`MM-DD`). */
+export function formatBucketAxisLabel(ms: number, bucketMs: number): string {
+  const d = new Date(ms)
+  const pad = (n: number): string => n.toString().padStart(2, '0')
+  if (bucketMs >= 86_400_000) return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+export interface WeightedSample {
+  value: number
+  weight: number
+}
+
+/** Weighted median of `(value, weight)` samples. Returns `null` when
+ * no sample contributes non-zero weight. Uses the nearest-observation
+ * definition (no interpolation) — the charts treat the figure as a
+ * summary label, not a statistical publication. */
+export function weightedMedian(samples: ReadonlyArray<WeightedSample>): number | null {
+  if (samples.length === 0) return null
+  const sorted = [...samples].sort((a, b) => a.value - b.value)
+  const total = sorted.reduce((s, r) => s + r.weight, 0)
+  if (total <= 0) return null
+  const half = total / 2
+  let acc = 0
+  for (const s of sorted) {
+    acc += s.weight
+    if (acc >= half) return s.value
+  }
+  return sorted[sorted.length - 1].value
+}

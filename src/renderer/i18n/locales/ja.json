@@ -639,7 +639,30 @@
     "tablistLabel": "分析種別",
     "wpm": {
       "legend": "WPM",
-      "description": "Words per minute — アクティブ 1 分あたりの keystrokes を 5 で割った値 (英語 1 語 = 5 文字換算)。"
+      "description": "Words per minute — アクティブ 1 分あたりの keystrokes を 5 で割った値 (英語 1 語 = 5 文字換算)。",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakWpm": "ピークWPM",
+          "lowestWpm": "最低WPM",
+          "weightedMedianWpm": "重み付き中央値WPM"
+        }
+      },
+      "timeOfDay": {
+        "tooltipLabel": "時間帯",
+        "summary": {
+          "label": "時間帯別 WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakHour": "ピーク時間帯",
+          "lowestHour": "最遅時間帯",
+          "activeHours": "活動時間帯数"
+        }
+      }
     },
     "interval": {
       "legend": {
@@ -762,6 +785,18 @@
       "intervalViewModeOption": {
         "timeSeries": "時系列",
         "distribution": "分布"
+      },
+      "wpmViewMode": "ビュー",
+      "wpmViewModeOption": {
+        "timeSeries": "時系列",
+        "timeOfDay": "時間帯別"
+      },
+      "wpmMinSample": "最小サンプル",
+      "wpmMinSampleOption": {
+        "sec30": "30秒",
+        "min1": "1分",
+        "min2": "2分",
+        "min5": "5分"
       },
       "normalization": "正規化",
       "normalizationOption": {
