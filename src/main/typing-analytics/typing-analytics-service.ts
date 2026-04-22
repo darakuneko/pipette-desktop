@@ -333,6 +333,7 @@ export function setupTypingAnalyticsIpc(): void {
 
   const emptyPeakRecords = (): PeakRecords => ({
     peakWpm: null,
+    lowestWpm: null,
     peakKeystrokesPerMin: null,
     peakKeystrokesPerDay: null,
     longestSession: null,

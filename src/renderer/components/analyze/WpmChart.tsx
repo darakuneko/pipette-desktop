@@ -19,9 +19,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type {
+  PeakRecords,
   TypingBksMinuteRow,
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
+import { formatDateTime } from '../editors/store-modal-shared'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
@@ -34,7 +36,8 @@ import {
   type HourOfDayWpmSummary,
   type WpmTimeSeriesSummary,
 } from './analyze-wpm'
-import { AnalyzeSummaryTable, type AnalyzeSummaryItem } from './analyze-summary-table'
+import type { AnalyzeSummaryItem } from './analyze-summary-table'
+import { AnalyzeStatGrid } from './stat-card'
 
 interface Props {
   uid: string
@@ -67,6 +70,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
+  const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
   const [loading, setLoading] = useState(true)
   // Legend toggle state — same pattern the Interval chart uses so the
   // user can dim a line by clicking its legend entry.
@@ -119,6 +123,25 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     void load()
     return () => { cancelled = true }
   }, [uid, deviceScope, range, errorProxyActive])
+
+  // Peak / lowest WPM come from a narrow aggregation IPC rather than
+  // the timeseries rows so they reflect the entire range (including
+  // minutes the bucket granularity may collapse away). The summary
+  // below surfaces them as time-stamped cards.
+  useEffect(() => {
+    if (!uid) {
+      setPeakRecords(null)
+      return
+    }
+    let cancelled = false
+    const fetchFn = deviceScope === 'own'
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal
+      : window.vialAPI.typingAnalyticsGetPeakRecords
+    void fetchFn(uid, range.fromMs, range.toMs)
+      .then((r) => { if (!cancelled) setPeakRecords(r) })
+      .catch(() => { if (!cancelled) setPeakRecords(null) })
+    return () => { cancelled = true }
+  }, [uid, deviceScope, range])
 
   const bucketMs = useMemo(
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),
@@ -177,8 +200,8 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
 
   const timeSeriesItems = useMemo<AnalyzeSummaryItem[] | null>(() => {
     if (timeSeriesSummary === null) return null
-    return toTimeSeriesItems(timeSeriesSummary, errorProxyActive ? bksRate?.summary ?? null : null)
-  }, [timeSeriesSummary, errorProxyActive, bksRate])
+    return toTimeSeriesItems(timeSeriesSummary, errorProxyActive ? bksRate?.summary ?? null : null, peakRecords)
+  }, [timeSeriesSummary, errorProxyActive, bksRate, peakRecords])
 
   const hourOfDayItems = useMemo<AnalyzeSummaryItem[] | null>(() => {
     if (hourOfDay === null) return null
@@ -249,7 +272,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
           </ResponsiveContainer>
         </div>
         {hourOfDayItems !== null && (
-          <AnalyzeSummaryTable
+          <AnalyzeStatGrid
             items={hourOfDayItems}
             ariaLabelKey="analyze.wpm.timeOfDay.summary.label"
             testId="analyze-wpm-summary"
@@ -355,7 +378,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
         </ResponsiveContainer>
       </div>
       {timeSeriesItems !== null && (
-        <AnalyzeSummaryTable
+        <AnalyzeStatGrid
           items={timeSeriesItems}
           ariaLabelKey="analyze.wpm.timeSeries.summary.label"
           testId="analyze-wpm-summary"
@@ -368,14 +391,34 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
 function toTimeSeriesItems(
   summary: WpmTimeSeriesSummary,
   bks: BksRateSummary | null,
+  peaks: PeakRecords | null,
 ): AnalyzeSummaryItem[] {
   const items: AnalyzeSummaryItem[] = [
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.peakWpm',
+      value: peaks?.peakWpm ? formatWpm(peaks.peakWpm.value) : '—',
+      context: peaks?.peakWpm ? formatDateTime(peaks.peakWpm.atMs) : undefined,
+    },
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.lowestWpm',
+      value: peaks?.lowestWpm ? formatWpm(peaks.lowestWpm.value) : '—',
+      context: peaks?.lowestWpm ? formatDateTime(peaks.lowestWpm.atMs) : undefined,
+    },
+    { labelKey: 'analyze.wpm.timeSeries.summary.overallWpm', value: formatWpm(summary.overallWpm) },
+    { labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm', value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm) },
+    // Row break at 4-column grid — everything below is keystroke volume.
     { labelKey: 'analyze.wpm.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.wpm.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
-    { labelKey: 'analyze.wpm.timeSeries.summary.overallWpm', value: formatWpm(summary.overallWpm) },
-    { labelKey: 'analyze.wpm.timeSeries.summary.peakWpm', value: summary.peakWpm === null ? '—' : formatWpm(summary.peakWpm) },
-    { labelKey: 'analyze.wpm.timeSeries.summary.lowestWpm', value: summary.lowestWpm === null ? '—' : formatWpm(summary.lowestWpm) },
-    { labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm', value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm) },
+    {
+      labelKey: 'analyze.peak.peakKeystrokesPerMin',
+      value: peaks?.peakKeystrokesPerMin ? peaks.peakKeystrokesPerMin.value.toLocaleString() : '—',
+      context: peaks?.peakKeystrokesPerMin ? formatDateTime(peaks.peakKeystrokesPerMin.atMs) : undefined,
+    },
+    {
+      labelKey: 'analyze.peak.peakKeystrokesPerDay',
+      value: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.value.toLocaleString() : '—',
+      context: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.day : undefined,
+    },
   ]
   if (bks !== null) {
     items.push(

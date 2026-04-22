@@ -16,7 +16,6 @@ import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
-import { PeakRecordsCard } from './PeakRecordsCard'
 import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
@@ -504,16 +503,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
               ) : analysisTab === 'activity' ? (
-                <div className="flex h-full flex-col gap-2 min-h-0 overflow-y-auto">
-                  <ActivityChart
-                    uid={selected.uid}
-                    range={range}
-                    deviceScope={deviceScope}
-                    metric={activityMetric}
-                    minActiveMs={wpmMinActiveMs}
-                  />
-                  <PeakRecordsCard uid={selected.uid} range={range} deviceScope={deviceScope} />
-                </div>
+                <ActivityChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScope}
+                  metric={activityMetric}
+                  minActiveMs={wpmMinActiveMs}
+                />
               ) : analysisTab === 'keyHeatmap' ? (
                 keymapSnapshot !== null ? (
                   <KeyHeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} normalization={heatmapNormalization} />

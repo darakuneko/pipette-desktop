@@ -649,7 +649,7 @@
           "peakWpm": "Peak WPM",
           "lowestWpm": "Lowest WPM",
           "weightedMedianWpm": "Weighted median WPM",
-          "totalBackspaces": "Total Backspaces",
+          "totalBackspaces": "Total Bksp",
           "overallBksPercent": "Overall Bksp %"
         }
       },
@@ -888,12 +888,10 @@
       }
     },
     "peak": {
-      "peakWpm": "Peak WPM",
       "peakKeystrokesPerMin": "Peak K/min",
       "peakKeystrokesPerDay": "Peak K/day",
-      "longestSession": "Longest session",
+      "longestSession": "Longest session (min)",
       "unit": {
-        "wpm": "WPM",
         "kpm": "K/min",
         "kpd": "K/day",
         "minutes": "min"

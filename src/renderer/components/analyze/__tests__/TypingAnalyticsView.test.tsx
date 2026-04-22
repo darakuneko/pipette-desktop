@@ -45,6 +45,7 @@ let typingAnalyticsGetSnapshotSpy: ReturnType<typeof vi.spyOn>
 
 const emptyPeakRecords = {
   peakWpm: null,
+  lowestWpm: null,
   peakKeystrokesPerMin: null,
   peakKeystrokesPerDay: null,
   longestSession: null,

@@ -15,10 +15,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import type { TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
+import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
-import { formatActiveDuration, formatBucketAxisLabel } from './analyze-format'
+import { formatBucketAxisLabel } from './analyze-format'
+import { formatDateTime } from '../editors/store-modal-shared'
 import {
   buildIntervalHistogram,
   buildIntervalTimeSeriesSummary,
@@ -26,7 +27,8 @@ import {
   type IntervalTimeSeriesSummary,
   type RhythmBandId,
 } from './analyze-histogram'
-import { AnalyzeSummaryTable, type AnalyzeSummaryItem } from './analyze-summary-table'
+import type { AnalyzeSummaryItem } from './analyze-summary-table'
+import { AnalyzeStatGrid } from './stat-card'
 
 interface Props {
   uid: string
@@ -76,6 +78,7 @@ function formatShare(v: number): string {
 export function IntervalChart({ uid, range, deviceScope, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
+  const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
   const [loading, setLoading] = useState(true)
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     min: false, p25: false, p50: false, p75: false, max: false,
@@ -104,6 +107,24 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
       }
     }
     void load()
+    return () => { cancelled = true }
+  }, [uid, effectiveDeviceScope, range])
+
+  // Longest session comes from a narrow aggregation IPC rather than
+  // the minute-stats rows so it surfaces the run that straddles bucket
+  // boundaries. Displayed alongside the interval summary below.
+  useEffect(() => {
+    if (!uid) {
+      setPeakRecords(null)
+      return
+    }
+    let cancelled = false
+    const fetchFn = effectiveDeviceScope === 'own'
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal
+      : window.vialAPI.typingAnalyticsGetPeakRecords
+    void fetchFn(uid, range.fromMs, range.toMs)
+      .then((r) => { if (!cancelled) setPeakRecords(r) })
+      .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
   }, [uid, effectiveDeviceScope, range])
 
@@ -152,12 +173,12 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
     }))
   }, [histogram, t])
   const distributionItems = useMemo(
-    () => (histogram === null ? null : toDistributionItems(histogram.summary, unit)),
-    [histogram, unit],
+    () => (histogram === null ? null : toDistributionItems(histogram.summary, unit, peakRecords)),
+    [histogram, unit, peakRecords],
   )
   const timeSeriesItems = useMemo(
-    () => (timeSeriesSummary === null ? null : toTimeSeriesItems(timeSeriesSummary, unit)),
-    [timeSeriesSummary, unit],
+    () => (timeSeriesSummary === null ? null : toTimeSeriesItems(timeSeriesSummary, unit, peakRecords)),
+    [timeSeriesSummary, unit, peakRecords],
   )
 
   const toggleSeries = (key: string): void => {
@@ -221,7 +242,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
           </ResponsiveContainer>
         </div>
         {distributionItems !== null && (
-          <AnalyzeSummaryTable
+          <AnalyzeStatGrid
             items={distributionItems}
             ariaLabelKey="analyze.interval.distribution.summary.label"
           />
@@ -310,7 +331,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
       </ResponsiveContainer>
       </div>
       {timeSeriesItems !== null && (
-        <AnalyzeSummaryTable
+        <AnalyzeStatGrid
           items={timeSeriesItems}
           ariaLabelKey="analyze.interval.timeSeries.summary.label"
         />
@@ -319,24 +340,39 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
   )
 }
 
-function toDistributionItems(summary: IntervalRhythmSummary, unit: IntervalUnit): AnalyzeSummaryItem[] {
+function longestSessionItem(peaks: PeakRecords | null): AnalyzeSummaryItem {
+  return {
+    labelKey: 'analyze.peak.longestSession',
+    value: peaks?.longestSession ? String(Math.round(peaks.longestSession.durationMs / 60000)) : '—',
+    context: peaks?.longestSession ? formatDateTime(peaks.longestSession.startedAtMs) : undefined,
+  }
+}
+
+function toDistributionItems(
+  summary: IntervalRhythmSummary,
+  unit: IntervalUnit,
+  peaks: PeakRecords | null,
+): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.interval.distribution.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.interval.distribution.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
     { labelKey: 'analyze.interval.distribution.summary.fast', value: formatShare(summary.fastShare) },
     { labelKey: 'analyze.interval.distribution.summary.normal', value: formatShare(summary.normalShare) },
     { labelKey: 'analyze.interval.distribution.summary.slow', value: formatShare(summary.slowShare) },
     { labelKey: 'analyze.interval.distribution.summary.pause', value: formatShare(summary.pauseShare) },
     { labelKey: 'analyze.interval.distribution.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+    longestSessionItem(peaks),
   ]
 }
 
-function toTimeSeriesItems(summary: IntervalTimeSeriesSummary, unit: IntervalUnit): AnalyzeSummaryItem[] {
+function toTimeSeriesItems(
+  summary: IntervalTimeSeriesSummary,
+  unit: IntervalUnit,
+  peaks: PeakRecords | null,
+): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.interval.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
-    { labelKey: 'analyze.interval.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
     { labelKey: 'analyze.interval.timeSeries.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
     { labelKey: 'analyze.interval.timeSeries.summary.shortest', value: summary.shortestIntervalMs === null ? '—' : formatIntervalValue(summary.shortestIntervalMs, unit) },
     { labelKey: 'analyze.interval.timeSeries.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+    longestSessionItem(peaks),
   ]
 }

@@ -180,6 +180,7 @@ export interface TypingBksMinuteRow {
  * longest session is the biggest duration from typing_sessions. */
 export interface PeakRecords {
   peakWpm: { value: number; atMs: number } | null
+  lowestWpm: { value: number; atMs: number } | null
   peakKeystrokesPerMin: { value: number; atMs: number } | null
   peakKeystrokesPerDay: { value: number; day: string } | null
   longestSession: { durationMs: number; startedAtMs: number } | null

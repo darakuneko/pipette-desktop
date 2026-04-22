@@ -134,6 +134,8 @@ export class TypingAnalyticsDB {
   private readonly selectBksMinuteInRangeForUidAndHashStmt: Statement
   private readonly selectPeakWpmInRangeForUidStmt: Statement
   private readonly selectPeakWpmInRangeForUidAndHashStmt: Statement
+  private readonly selectLowestWpmInRangeForUidStmt: Statement
+  private readonly selectLowestWpmInRangeForUidAndHashStmt: Statement
   private readonly selectPeakKpmInRangeForUidStmt: Statement
   private readonly selectPeakKpmInRangeForUidAndHashStmt: Statement
   private readonly selectPeakKpdInRangeForUidStmt: Statement
@@ -867,6 +869,53 @@ export class TypingAnalyticsDB {
        LIMIT 1
     `)
 
+    // Lowest WPM uses the same subquery but sorts ASC. Zero-keystroke
+    // minutes still sneak in as "0 WPM" so we exclude them too.
+    this.selectLowestWpmInRangeForUidStmt = this.db.prepare(`
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+         AND total.keystrokes > 0
+       ORDER BY value ASC
+       LIMIT 1
+    `)
+
+    this.selectLowestWpmInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.machine_hash = @machineHash
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+         AND total.keystrokes > 0
+       ORDER BY value ASC
+       LIMIT 1
+    `)
+
     this.selectPeakKpmInRangeForUidStmt = this.db.prepare(`
       SELECT SUM(t.keystrokes) AS value, t.minute_ts AS atMs
         FROM typing_minute_stats t
@@ -1424,11 +1473,13 @@ export class TypingAnalyticsDB {
   getPeakRecordsInRangeForUid(uid: string, sinceMs: number, untilMs: number): PeakRecords {
     const params = { uid, sinceMs, untilMs }
     const wpm = this.selectPeakWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
+    const low = this.selectLowestWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const kpd = this.selectPeakKpdInRangeForUidStmt.get(params) as { day: string; value: number } | undefined
     const sess = this.selectLongestSessionInRangeForUidStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
     return {
       peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
+      lowestWpm: low ? { value: low.value, atMs: low.atMs } : null,
       peakKeystrokesPerMin: kpm ? { value: kpm.value, atMs: kpm.atMs } : null,
       peakKeystrokesPerDay: kpd ? { value: kpd.value, day: kpd.day } : null,
       longestSession: sess ? { durationMs: sess.durationMs, startedAtMs: sess.startedAtMs } : null,
@@ -1445,11 +1496,13 @@ export class TypingAnalyticsDB {
   ): PeakRecords {
     const params = { uid, machineHash, sinceMs, untilMs }
     const wpm = this.selectPeakWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
+    const low = this.selectLowestWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const kpd = this.selectPeakKpdInRangeForUidAndHashStmt.get(params) as { day: string; value: number } | undefined
     const sess = this.selectLongestSessionInRangeForUidAndHashStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
     return {
       peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
+      lowestWpm: low ? { value: low.value, atMs: low.atMs } : null,
       peakKeystrokesPerMin: kpm ? { value: kpm.value, atMs: kpm.atMs } : null,
       peakKeystrokesPerDay: kpd ? { value: kpd.value, day: kpd.day } : null,
       longestSession: sess ? { durationMs: sess.durationMs, startedAtMs: sess.startedAtMs } : null,

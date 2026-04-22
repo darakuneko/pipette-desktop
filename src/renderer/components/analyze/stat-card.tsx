@@ -48,7 +48,7 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
   const { t } = useTranslation()
   return (
     <div
-      className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+      className="grid shrink-0 grid-cols-2 gap-2 sm:grid-cols-4"
       aria-label={t(ariaLabelKey)}
       data-testid={testId}
     >

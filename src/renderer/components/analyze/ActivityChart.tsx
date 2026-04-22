@@ -384,8 +384,6 @@ function toKeystrokesItems(
   const hour = summary.mostFrequentHour
   const peak = summary.peakCell
   return [
-    { labelKey: 'analyze.activity.keystrokes.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
-    { labelKey: 'analyze.activity.keystrokes.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
     {
       labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow',
       value: dow === null ? '—' : t(`analyze.activity.dow.${dow.dow}`),
@@ -413,8 +411,6 @@ function toWpmItems(
   const peak = summary.peakCell
   const lowest = summary.lowestCell
   return [
-    { labelKey: 'analyze.activity.wpm.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
-    { labelKey: 'analyze.activity.wpm.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
     { labelKey: 'analyze.activity.wpm.summary.overallWpm', value: formatWpm(summary.overallWpm) },
     {
       labelKey: 'analyze.activity.wpm.summary.peakCell',

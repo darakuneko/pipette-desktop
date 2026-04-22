@@ -645,10 +645,10 @@
           "totalKeystrokes": "合計打鍵",
           "activeDuration": "実打鍵時間",
           "overallWpm": "平均WPM",
-          "peakWpm": "ピークWPM",
+          "peakWpm": "最高 WPM",
           "lowestWpm": "最低WPM",
           "weightedMedianWpm": "重み付き中央値WPM",
-          "totalBackspaces": "Backspace 合計",
+          "totalBackspaces": "Bksp 合計",
           "overallBksPercent": "平均 Bksp %"
         }
       },
@@ -887,12 +887,10 @@
       }
     },
     "peak": {
-      "peakWpm": "最高 WPM",
       "peakKeystrokesPerMin": "1 分最大打鍵",
       "peakKeystrokesPerDay": "1 日最大打鍵",
-      "longestSession": "最長セッション",
+      "longestSession": "最長セッション (分)",
       "unit": {
-        "wpm": "WPM",
         "kpm": "回/分",
         "kpd": "回/日",
         "minutes": "分"
