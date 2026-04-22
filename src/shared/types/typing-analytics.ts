@@ -173,6 +173,18 @@ export interface TypingBksMinuteRow {
   backspaceCount: number
 }
 
+/** Wire format for the Peak Records summary cards at the top of the
+ * Analyze view. Each field is null when there is no data in the
+ * queried range. Per-minute peaks come from typing_minute_stats;
+ * per-day peaks roll up the same table by local calendar day;
+ * longest session is the biggest duration from typing_sessions. */
+export interface PeakRecords {
+  peakWpm: { value: number; atMs: number } | null
+  peakKeystrokesPerMin: { value: number; atMs: number } | null
+  peakKeystrokesPerDay: { value: number; day: string } | null
+  longestSession: { durationMs: number; startedAtMs: number } | null
+}
+
 /** One cell of the typing-view heatmap. `total` is the overall press
  * count for the cell; `tap` and `hold` are the portions of that total
  * that the release-edge classifier routed to the tap vs hold arm of

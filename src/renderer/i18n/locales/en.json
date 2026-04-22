@@ -631,7 +631,6 @@
   },
   "analyze": {
     "placeholder": "Analysis charts coming soon.",
-    "pageTitle": "Analyze",
     "back": "Back",
     "keyboardList": "Keyboards",
     "noKeyboards": "No typing data yet.",
@@ -738,6 +737,10 @@
       "summaryHourValue": "{{hour}}:00 - {{keystrokes}} keys",
       "cellKeystrokesValue": "{{dow}} {{hour}} - {{keystrokes}} keys",
       "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
+      "summary": {
+        "keysContext": "{{count}} keys",
+        "wpmContext": "{{wpm}} WPM"
+      },
       "keystrokes": {
         "summary": {
           "label": "Activity summary",
@@ -882,6 +885,18 @@
         "right-middle": "Rm",
         "right-ring": "Rr",
         "right-pinky": "Rp"
+      }
+    },
+    "peak": {
+      "peakWpm": "Peak WPM",
+      "peakKeystrokesPerMin": "Peak K/min",
+      "peakKeystrokesPerDay": "Peak K/day",
+      "longestSession": "Longest session",
+      "unit": {
+        "wpm": "WPM",
+        "kpm": "K/min",
+        "kpd": "K/day",
+        "minutes": "min"
       }
     },
     "filters": {

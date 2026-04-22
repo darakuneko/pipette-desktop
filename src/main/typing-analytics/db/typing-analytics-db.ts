@@ -95,6 +95,7 @@ export type {
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
+  PeakRecords,
 } from '../../../shared/types/typing-analytics'
 
 export class TypingAnalyticsDB {
@@ -131,6 +132,14 @@ export class TypingAnalyticsDB {
   private readonly selectSessionsInRangeForUidAndHashStmt: Statement
   private readonly selectBksMinuteInRangeForUidStmt: Statement
   private readonly selectBksMinuteInRangeForUidAndHashStmt: Statement
+  private readonly selectPeakWpmInRangeForUidStmt: Statement
+  private readonly selectPeakWpmInRangeForUidAndHashStmt: Statement
+  private readonly selectPeakKpmInRangeForUidStmt: Statement
+  private readonly selectPeakKpmInRangeForUidAndHashStmt: Statement
+  private readonly selectPeakKpdInRangeForUidStmt: Statement
+  private readonly selectPeakKpdInRangeForUidAndHashStmt: Statement
+  private readonly selectLongestSessionInRangeForUidStmt: Statement
+  private readonly selectLongestSessionInRangeForUidAndHashStmt: Statement
   private readonly selectRemoteHashesForUidStmt: Statement
   private readonly selectOwnScopeIdsForUidStmt: Statement
   private readonly selectLiveCharMinutesForScopeStmt: Statement
@@ -810,6 +819,147 @@ export class TypingAnalyticsDB {
        ORDER BY t.minute_ts ASC
     `)
 
+    // Peak records: four narrow aggregates that feed the summary cards
+    // at the top of Analyze. Each statement returns at most one row.
+    // The WPM formula is `keystrokes * 12000 / active_ms` (five chars
+    // per word, sixty thousand ms per minute); active_ms == 0 rows are
+    // filtered out so the division is always safe.
+    this.selectPeakWpmInRangeForUidStmt = this.db.prepare(`
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectPeakWpmInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT (total.keystrokes * 12000.0 / total.active_ms) AS value,
+             total.minute_ts AS atMs
+        FROM (
+          SELECT t.minute_ts,
+                 SUM(t.keystrokes) AS keystrokes,
+                 SUM(t.active_ms) AS active_ms
+            FROM typing_minute_stats t
+            JOIN typing_scopes s ON s.id = t.scope_id
+           WHERE s.keyboard_uid = @uid
+             AND s.machine_hash = @machineHash
+             AND s.is_deleted = 0
+             AND t.is_deleted = 0
+             AND t.minute_ts >= @sinceMs
+             AND t.minute_ts < @untilMs
+           GROUP BY t.minute_ts
+        ) AS total
+       WHERE total.active_ms > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectPeakKpmInRangeForUidStmt = this.db.prepare(`
+      SELECT SUM(t.keystrokes) AS value, t.minute_ts AS atMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectPeakKpmInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT SUM(t.keystrokes) AS value, t.minute_ts AS atMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY t.minute_ts
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectPeakKpdInRangeForUidStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS day,
+             SUM(t.keystrokes) AS value
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY day
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectPeakKpdInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', t.minute_ts / 1000, 'unixepoch', 'localtime') AS day,
+             SUM(t.keystrokes) AS value
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY day
+       HAVING value > 0
+       ORDER BY value DESC
+       LIMIT 1
+    `)
+
+    this.selectLongestSessionInRangeForUidStmt = this.db.prepare(`
+      SELECT (t.end_ms - t.start_ms) AS durationMs,
+             t.start_ms AS startedAtMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY durationMs DESC
+       LIMIT 1
+    `)
+
+    this.selectLongestSessionInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT (t.end_ms - t.start_ms) AS durationMs,
+             t.start_ms AS startedAtMs
+        FROM typing_sessions t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.start_ms >= @sinceMs
+         AND t.start_ms < @untilMs
+       ORDER BY durationMs DESC
+       LIMIT 1
+    `)
+
     // Remote devices (machine_hash != @ownHash) that currently hold at
     // least one live minute-stats row for this keyboard. Powers the
     // Sync > Typing > Device tree: each returned hash gets its own
@@ -1266,6 +1416,44 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingBksMinuteRow[] {
     return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingBksMinuteRow[]
+  }
+
+  /** Peak records for the Analyze summary cards across every scope of
+   * this keyboard in the range. Any metric with no qualifying rows
+   * comes back as null so the UI can render an empty placeholder. */
+  getPeakRecordsInRangeForUid(uid: string, sinceMs: number, untilMs: number): PeakRecords {
+    const params = { uid, sinceMs, untilMs }
+    const wpm = this.selectPeakWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
+    const kpm = this.selectPeakKpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
+    const kpd = this.selectPeakKpdInRangeForUidStmt.get(params) as { day: string; value: number } | undefined
+    const sess = this.selectLongestSessionInRangeForUidStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
+    return {
+      peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
+      peakKeystrokesPerMin: kpm ? { value: kpm.value, atMs: kpm.atMs } : null,
+      peakKeystrokesPerDay: kpd ? { value: kpd.value, day: kpd.day } : null,
+      longestSession: sess ? { durationMs: sess.durationMs, startedAtMs: sess.startedAtMs } : null,
+    }
+  }
+
+  /** Same as {@link getPeakRecordsInRangeForUid} but restricted to a
+   * single machine_hash (the Analyze "This device" scope). */
+  getPeakRecordsInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): PeakRecords {
+    const params = { uid, machineHash, sinceMs, untilMs }
+    const wpm = this.selectPeakWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
+    const kpm = this.selectPeakKpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
+    const kpd = this.selectPeakKpdInRangeForUidAndHashStmt.get(params) as { day: string; value: number } | undefined
+    const sess = this.selectLongestSessionInRangeForUidAndHashStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
+    return {
+      peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
+      peakKeystrokesPerMin: kpm ? { value: kpm.value, atMs: kpm.atMs } : null,
+      peakKeystrokesPerDay: kpd ? { value: kpd.value, day: kpd.day } : null,
+      longestSession: sess ? { durationMs: sess.durationMs, startedAtMs: sess.startedAtMs } : null,
+    }
   }
 
   /** machine_hash values for remote devices (non-@ownHash) that hold

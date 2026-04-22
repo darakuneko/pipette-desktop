@@ -13,6 +13,7 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts ? `${key}:${JSON.stringify(opts)}` : key,
+    i18n: { language: 'en' },
   }),
 }))
 
@@ -42,10 +43,20 @@ const mockGetSnapshot = vi.fn<() => Promise<TypingKeymapSnapshot | null>>()
 let typingAnalyticsListKeyboardsSpy: ReturnType<typeof vi.spyOn>
 let typingAnalyticsGetSnapshotSpy: ReturnType<typeof vi.spyOn>
 
+const emptyPeakRecords = {
+  peakWpm: null,
+  peakKeystrokesPerMin: null,
+  peakKeystrokesPerDay: null,
+  longestSession: null,
+}
+
 Object.defineProperty(window, 'vialAPI', {
   value: {
     typingAnalyticsListKeyboards: () => Promise.resolve([] as TypingKeyboardSummary[]),
     typingAnalyticsGetKeymapSnapshotForRange: () => Promise.resolve(null as TypingKeymapSnapshot | null),
+    typingAnalyticsGetPeakRecords: () => Promise.resolve(emptyPeakRecords),
+    typingAnalyticsGetPeakRecordsLocal: () => Promise.resolve(emptyPeakRecords),
+    pipetteSettingsGet: () => Promise.resolve(null),
   },
   writable: true,
 })

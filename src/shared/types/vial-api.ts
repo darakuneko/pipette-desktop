@@ -30,6 +30,7 @@ import type {
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
+  PeakRecords,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
@@ -160,6 +161,8 @@ export interface VialAPI {
   typingAnalyticsListSessionsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsListBksMinute(uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]>
   typingAnalyticsListBksMinuteLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsGetPeakRecords(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
   typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
   typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell>

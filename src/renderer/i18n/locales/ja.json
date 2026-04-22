@@ -630,7 +630,6 @@
   },
   "analyze": {
     "placeholder": "分析チャートを準備中です。",
-    "pageTitle": "分析",
     "back": "戻る",
     "keyboardList": "キーボード",
     "noKeyboards": "まだ打鍵データがありません。",
@@ -737,6 +736,10 @@
       "summaryHourValue": "{{hour}}時 - 打鍵数: {{keystrokes}}",
       "cellKeystrokesValue": "{{dow}} {{hour}} - 打鍵数: {{keystrokes}}",
       "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
+      "summary": {
+        "keysContext": "{{count}} 回",
+        "wpmContext": "{{wpm}} WPM"
+      },
       "keystrokes": {
         "summary": {
           "label": "活動量サマリ",
@@ -881,6 +884,18 @@
         "right-middle": "右中",
         "right-ring": "右薬",
         "right-pinky": "右小"
+      }
+    },
+    "peak": {
+      "peakWpm": "最高 WPM",
+      "peakKeystrokesPerMin": "1 分最大打鍵",
+      "peakKeystrokesPerDay": "1 日最大打鍵",
+      "longestSession": "最長セッション",
+      "unit": {
+        "wpm": "WPM",
+        "kpm": "回/分",
+        "kpd": "回/日",
+        "minutes": "分"
       }
     },
     "filters": {

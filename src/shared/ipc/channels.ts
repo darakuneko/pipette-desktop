@@ -97,6 +97,8 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL: 'typing-analytics:list-minute-stats-local',
   TYPING_ANALYTICS_LIST_SESSIONS_LOCAL: 'typing-analytics:list-sessions-local',
   TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL: 'typing-analytics:list-bks-minute-local',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS: 'typing-analytics:get-peak-records',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL: 'typing-analytics:get-peak-records-local',
   TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT: 'typing-analytics:save-keymap-snapshot',
   TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE: 'typing-analytics:get-keymap-snapshot-for-range',
   TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE: 'typing-analytics:get-matrix-heatmap-for-range',

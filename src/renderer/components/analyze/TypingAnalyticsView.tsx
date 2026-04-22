@@ -6,6 +6,7 @@
 // in by C4–C6.
 
 import { useCallback, useEffect, useState } from 'react'
+import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
@@ -15,6 +16,7 @@ import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
+import { PeakRecordsCard } from './PeakRecordsCard'
 import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
@@ -95,9 +97,14 @@ interface TypingAnalyticsViewProps {
    * typing view — the user has already committed to one keyboard and
    * shouldn't have to re-pick it. */
   initialUid?: string
+  /** When provided, the sidebar renders a Back button above the
+   * keyboard list that invokes this handler. Omit to hide the button
+   * (e.g. when the Analyze view is embedded somewhere without a
+   * meaningful "back" destination). */
+  onBack?: () => void
 }
 
-export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {}) {
+export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewProps = {}) {
   const { t } = useTranslation()
   const [keyboards, setKeyboards] = useState<TypingKeyboardSummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -201,6 +208,17 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
       data-testid="analyze-view"
     >
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
+        {onBack && (
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 self-start rounded-md border border-edge px-2 py-1 text-[12px] text-content-secondary transition-colors hover:text-content"
+            onClick={onBack}
+            data-testid="analyze-back"
+          >
+            <ArrowLeft size={12} aria-hidden="true" />
+            {t('analyze.back')}
+          </button>
+        )}
         <h3 className="px-1 text-[11px] font-semibold uppercase tracking-widest text-content-muted">
           {t('analyze.keyboardList')}
         </h3>
@@ -486,13 +504,16 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
               ) : analysisTab === 'activity' ? (
-                <ActivityChart
-                  uid={selected.uid}
-                  range={range}
-                  deviceScope={deviceScope}
-                  metric={activityMetric}
-                  minActiveMs={wpmMinActiveMs}
-                />
+                <div className="flex h-full flex-col gap-2 min-h-0 overflow-y-auto">
+                  <ActivityChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScope={deviceScope}
+                    metric={activityMetric}
+                    minActiveMs={wpmMinActiveMs}
+                  />
+                  <PeakRecordsCard uid={selected.uid} range={range} deviceScope={deviceScope} />
+                </div>
               ) : analysisTab === 'keyHeatmap' ? (
                 keymapSnapshot !== null ? (
                   <KeyHeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} normalization={heatmapNormalization} />

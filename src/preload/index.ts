@@ -26,6 +26,7 @@ import type {
   TypingSessionRow,
   TypingBksMinuteRow,
   TypingTombstoneResult,
+  PeakRecords,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
@@ -247,6 +248,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE, uid, sinceMs, untilMs),
   typingAnalyticsListBksMinuteLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsGetPeakRecords: (uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS, uid, sinceMs, untilMs),
+  typingAnalyticsGetPeakRecordsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
   typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>

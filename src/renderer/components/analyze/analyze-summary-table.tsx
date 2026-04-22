@@ -8,6 +8,13 @@ import { useTranslation } from 'react-i18next'
 export interface AnalyzeSummaryItem {
   labelKey: string
   value: string
+  /** Optional small-text suffix shown next to the value (e.g. "WPM",
+   * "keys"). Ignored by {@link AnalyzeSummaryTable}; consumed by the
+   * card-grid renderer. */
+  unit?: string
+  /** Optional second line below the value (e.g. "323 keys" underneath
+   * a "Tue" dow label). Ignored by {@link AnalyzeSummaryTable}. */
+  context?: string
 }
 
 interface Props {

@@ -35,6 +35,7 @@ import {
   type TypingSessionRow,
   type TypingBksMinuteRow,
   type TypingTombstoneResult,
+  type PeakRecords,
 } from './db/typing-analytics-db'
 import {
   typingAnalyticsDeviceDaySyncUnit,
@@ -330,6 +331,34 @@ export function setupTypingAnalyticsIpc(): void {
     },
   )
 
+  const emptyPeakRecords = (): PeakRecords => ({
+    peakWpm: null,
+    peakKeystrokesPerMin: null,
+    peakKeystrokesPerDay: null,
+    longestSession: null,
+  })
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+      if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return getTypingPeakRecordsInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+      if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return getTypingPeakRecordsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT,
     async (_event, partial: unknown): Promise<{ saved: boolean; savedAt: number | null }> => {
@@ -522,6 +551,23 @@ export function listTypingBksMinuteInRangeForHash(
   untilMs: number,
 ): TypingBksMinuteRow[] {
   return getTypingAnalyticsDB().listBksMinuteInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+export function getTypingPeakRecordsInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): PeakRecords {
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUid(uid, sinceMs, untilMs)
+}
+
+export function getTypingPeakRecordsInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): PeakRecords {
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

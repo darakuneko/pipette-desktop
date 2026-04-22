@@ -31,7 +31,8 @@ import {
   buildSessionHistogram,
   type SessionDistributionSummary,
 } from './analyze-sessions'
-import { AnalyzeSummaryTable, type AnalyzeSummaryItem } from './analyze-summary-table'
+import type { AnalyzeSummaryItem } from './analyze-summary-table'
+import { AnalyzeStatGrid } from './stat-card'
 import { formatWpm } from './analyze-wpm'
 import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
 
@@ -182,7 +183,7 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
         </span>
       </div>
       {summaryItems !== null && (
-        <AnalyzeSummaryTable
+        <AnalyzeStatGrid
           items={summaryItems}
           ariaLabelKey={metric === 'wpm' ? 'analyze.activity.wpm.summary.label' : 'analyze.activity.keystrokes.summary.label'}
           testId="analyze-activity-summary"
@@ -291,7 +292,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
         </ResponsiveContainer>
       </div>
       {summaryItems !== null && (
-        <AnalyzeSummaryTable
+        <AnalyzeStatGrid
           items={summaryItems}
           ariaLabelKey="analyze.activity.sessions.summary.label"
           testId="analyze-activity-summary"
@@ -349,45 +350,58 @@ function cellAppearance(
   }
 }
 
-function formatCell(
+function keysContext(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  keystrokes: number,
+): string {
+  return t('analyze.activity.summary.keysContext', { count: keystrokes.toLocaleString() })
+}
+
+function cellValueContext(
   cell: ActivityCell,
   t: (key: string, opts?: Record<string, unknown>) => string,
   metric: ActivityMetric,
-): string {
+): { value: string; context: string } {
   const dow = t(`analyze.activity.dow.${cell.dow}`)
   const hour = formatHourLabel(cell.hour)
   if (metric === 'wpm') {
-    return t('analyze.activity.cellWpmValue', { dow, hour, wpm: formatWpm(cell.wpm) })
+    return {
+      value: `${dow} ${hour}`,
+      context: t('analyze.activity.summary.wpmContext', { wpm: formatWpm(cell.wpm) }),
+    }
   }
-  return t('analyze.activity.cellKeystrokesValue', {
-    dow,
-    hour,
-    keystrokes: cell.keystrokes.toLocaleString(),
-  })
+  return {
+    value: `${dow} ${hour}`,
+    context: keysContext(t, cell.keystrokes),
+  }
 }
 
 function toKeystrokesItems(
   summary: ActivityKeystrokesSummary,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): AnalyzeSummaryItem[] {
-  const dowLabel = summary.mostFrequentDow === null
-    ? '—'
-    : t('analyze.activity.summaryDowValue', {
-        dow: t(`analyze.activity.dow.${summary.mostFrequentDow.dow}`),
-        keystrokes: summary.mostFrequentDow.keystrokes.toLocaleString(),
-      })
-  const hourLabel = summary.mostFrequentHour === null
-    ? '—'
-    : t('analyze.activity.summaryHourValue', {
-        hour: summary.mostFrequentHour.hour.toString().padStart(2, '0'),
-        keystrokes: summary.mostFrequentHour.keystrokes.toLocaleString(),
-      })
+  const dow = summary.mostFrequentDow
+  const hour = summary.mostFrequentHour
+  const peak = summary.peakCell
   return [
     { labelKey: 'analyze.activity.keystrokes.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.activity.keystrokes.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
-    { labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow', value: dowLabel },
-    { labelKey: 'analyze.activity.keystrokes.summary.mostFrequentHour', value: hourLabel },
-    { labelKey: 'analyze.activity.keystrokes.summary.peakCell', value: summary.peakCell === null ? '—' : formatCell(summary.peakCell, t, 'keystrokes') },
+    {
+      labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow',
+      value: dow === null ? '—' : t(`analyze.activity.dow.${dow.dow}`),
+      context: dow === null ? undefined : keysContext(t, dow.keystrokes),
+    },
+    {
+      labelKey: 'analyze.activity.keystrokes.summary.mostFrequentHour',
+      value: hour === null ? '—' : `${hour.hour.toString().padStart(2, '0')}:00`,
+      context: hour === null ? undefined : keysContext(t, hour.keystrokes),
+    },
+    {
+      labelKey: 'analyze.activity.keystrokes.summary.peakCell',
+      ...(peak === null
+        ? { value: '—' }
+        : cellValueContext(peak, t, 'keystrokes')),
+    },
     { labelKey: 'analyze.activity.keystrokes.summary.activeCells', value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}` },
   ]
 }
@@ -396,12 +410,20 @@ function toWpmItems(
   summary: ActivityWpmSummary,
   t: (key: string, opts?: Record<string, unknown>) => string,
 ): AnalyzeSummaryItem[] {
+  const peak = summary.peakCell
+  const lowest = summary.lowestCell
   return [
     { labelKey: 'analyze.activity.wpm.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
     { labelKey: 'analyze.activity.wpm.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
     { labelKey: 'analyze.activity.wpm.summary.overallWpm', value: formatWpm(summary.overallWpm) },
-    { labelKey: 'analyze.activity.wpm.summary.peakCell', value: summary.peakCell === null ? '—' : formatCell(summary.peakCell, t, 'wpm') },
-    { labelKey: 'analyze.activity.wpm.summary.lowestCell', value: summary.lowestCell === null ? '—' : formatCell(summary.lowestCell, t, 'wpm') },
+    {
+      labelKey: 'analyze.activity.wpm.summary.peakCell',
+      ...(peak === null ? { value: '—' } : cellValueContext(peak, t, 'wpm')),
+    },
+    {
+      labelKey: 'analyze.activity.wpm.summary.lowestCell',
+      ...(lowest === null ? { value: '—' } : cellValueContext(lowest, t, 'wpm')),
+    },
     { labelKey: 'analyze.activity.wpm.summary.activeCells', value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}` },
   ]
 }
