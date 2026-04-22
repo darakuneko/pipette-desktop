@@ -6,6 +6,7 @@ import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import type { KleKey } from '../../../shared/kle/types'
 import {
   FINGER_LIST,
+  HAND_OF_FINGER,
   buildErgonomicsContext,
   estimateErgonomicsWithContext,
   type FingerType,
@@ -56,10 +57,16 @@ function zeroRowCounts(): RowCategoryCounts {
  * `heatmap` is expected to already reflect the caller's layer grouping
  * and normalization (see sumAndNormalizeGroupCells). Cells whose
  * `row,col` key is not present in `allKeys` are silently skipped.
+ *
+ * `fingerOverrides` wins over the geometry estimate when set. The hand
+ * is re-derived from the override finger so "Y taken with the left
+ * hand" reclassifies both the finger AND the hand in one click. Row
+ * category is never overridden — it is a physical-layout property.
  */
 export function aggregateErgonomics(
   heatmap: Map<string, TypingHeatmapCell>,
   allKeys: KleKey[],
+  fingerOverrides?: Record<string, FingerType>,
 ): ErgonomicsAggregation {
   const result: ErgonomicsAggregation = {
     finger: zeroFingerCounts(),
@@ -79,15 +86,18 @@ export function aggregateErgonomics(
     if (!(count > 0)) continue
     const key = keyByPos.get(posKey)
     if (!key) continue
-    const meta = estimateErgonomicsWithContext(key, ctx)
+    const estimate = estimateErgonomicsWithContext(key, ctx)
+    const override = fingerOverrides?.[posKey]
+    const finger = override ?? estimate.finger
+    const hand = override ? HAND_OF_FINGER[override] : estimate.hand
     result.total += count
-    if (meta.finger) {
-      result.finger[meta.finger] += count
+    if (finger) {
+      result.finger[finger] += count
     } else {
       result.unmappedFinger += count
     }
-    if (meta.hand) result.hand[meta.hand] += count
-    if (meta.row) result.row[meta.row] += count
+    if (hand) result.hand[hand] += count
+    if (estimate.row) result.row[estimate.row] += count
   }
   return result
 }

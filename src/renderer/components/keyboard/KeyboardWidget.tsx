@@ -91,6 +91,11 @@ interface Props {
    *  LT/LM labels even when the connected keyboard does not currently
    *  register those composites. */
   labelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
+  /** Optional per-key background fill keyed by `"row,col"`. Lives below
+   *  the interactive and heatmap fill layers so pressed/selected/etc.
+   *  still win. Used by the Finger Assignment modal to paint each key
+   *  with its finger colour. */
+  keyColors?: Map<string, string>
   onKeyClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onKeyDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onEncoderClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
@@ -120,6 +125,7 @@ function KeyboardWidgetInner({
   heatmapMaxTap = 0,
   heatmapMaxHold = 0,
   labelOverrides,
+  keyColors,
   onKeyClick,
   onKeyDoubleClick,
   onEncoderClick,
@@ -217,6 +223,7 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            customFill={keyColors?.get(posKey) ?? null}
             labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}
@@ -268,6 +275,7 @@ function KeyboardWidgetInner({
             remapped={remappedKeys?.has(posKey)}
             heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
             heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            customFill={keyColors?.get(posKey) ?? null}
             labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
             onDoubleClick={readOnly ? undefined : onKeyDoubleClick}

@@ -9,6 +9,25 @@ import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
+import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
+
+const FINGER_SET = new Set<FingerType>(FINGER_LIST)
+const KEY_POS_RE = /^\d+,\d+$/
+
+function isValidAnalyzeSettings(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const obj = value as Record<string, unknown>
+  if ('fingerAssignments' in obj && obj.fingerAssignments != null) {
+    const fa = obj.fingerAssignments
+    if (typeof fa !== 'object' || Array.isArray(fa)) return false
+    for (const [k, v] of Object.entries(fa as Record<string, unknown>)) {
+      if (!KEY_POS_RE.test(k)) return false
+      if (typeof v !== 'string' || !FINGER_SET.has(v as FingerType)) return false
+    }
+  }
+  return true
+}
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
@@ -45,6 +64,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
   if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
+  if ('analyze' in obj && !isValidAnalyzeSettings(obj.analyze)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -89,6 +109,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingSyncSpanDays: parsed.typingSyncSpanDays,
       typingViewMenuTab: parsed.typingViewMenuTab,
       viewMode: parsed.viewMode,
+      analyze: parsed.analyze,
     }
   } catch {
     return null

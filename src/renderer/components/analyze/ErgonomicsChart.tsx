@@ -22,7 +22,7 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
-import type { RowCategory } from '../../../shared/kle/kle-ergonomics'
+import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
 
@@ -31,6 +31,7 @@ interface Props {
   range: RangeMs
   deviceScope: DeviceScope
   snapshot: TypingKeymapSnapshot
+  fingerOverrides?: Record<string, FingerType>
 }
 
 // Display rows top-to-bottom (function row first → thumb last)
@@ -136,6 +137,7 @@ export function ErgonomicsChart({
   range,
   deviceScope,
   snapshot,
+  fingerOverrides,
 }: Props) {
   const { t } = useTranslation()
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
@@ -186,8 +188,8 @@ export function ErgonomicsChart({
   const keys = layout?.keys ?? []
 
   const aggregation = useMemo(
-    () => aggregateErgonomics(mergedHeatmap, keys),
-    [mergedHeatmap, keys],
+    () => aggregateErgonomics(mergedHeatmap, keys, fingerOverrides),
+    [mergedHeatmap, keys, fingerOverrides],
   )
 
   const fingerData: BarDatum[] = FINGER_LIST.map((f) => ({

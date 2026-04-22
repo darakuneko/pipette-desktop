@@ -49,6 +49,10 @@ interface Props {
    * still visually announce themselves when there is no tap data
    * yet. Ignored for non-masked keys. */
   heatmapInnerFill?: string | null
+  /** Direct background override. Sits below every interactive / heatmap
+   * state so "pressed" and friends still win. Used by the Finger
+   * Assignment modal to paint keys in their estimated finger colour. */
+  customFill?: string | null
   /** Bypasses the global keycode registration when rendering labels.
    *  The Analyze view uses this so snapshots whose LT/LM composites are
    *  not covered by the connected keyboard's current layer count still
@@ -77,6 +81,7 @@ function KeyWidgetInner({
   remapped,
   heatmapOuterFill,
   heatmapInnerFill,
+  customFill,
   labelOverride,
   onClick,
   onDoubleClick,
@@ -106,7 +111,7 @@ function KeyWidgetInner({
 
   // Key fill color (always use theme colors, ignore KLE color overrides)
   // Priority: pressed > selected > multiSelected > highlighted > everPressed
-  //           > hover > heatmap > default
+  //           > hover > heatmap > customFill > default
   // Heatmap sits below every interactive state so the typing-view
   // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
@@ -121,6 +126,7 @@ function KeyWidgetInner({
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
   else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
   else if (heatmapOuterFill) fillColor = heatmapOuterFill
+  else if (customFill) fillColor = customFill
 
   // Label text color: inverted when key is selected/highlighted, remap color
   // for remapped keys in non-mask mode, default otherwise

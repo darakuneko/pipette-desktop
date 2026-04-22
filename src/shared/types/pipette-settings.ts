@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { FingerType } from '../kle/kle-ergonomics'
 import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing-analytics'
 
 export interface TypingTestResult {
@@ -38,6 +39,16 @@ export function isTypingSyncSpanDays(value: unknown): value is TypingSyncSpanDay
   return typeof value === 'number' && (ALLOWED_TYPING_SYNC_SPAN_DAYS as readonly number[]).includes(value)
 }
 
+/** Per-keyboard Analyze-tab settings. Lives under `PipetteSettings.analyze`
+ * so future analyze settings (filter persistence etc.) can share the same
+ * namespace without cluttering the top-level PipetteSettings shape. */
+export interface AnalyzeSettings {
+  /** Override map from `"row,col"` to FingerType. When a key is absent,
+   * the Ergonomics tab falls back to the geometry-based estimate. The
+   * hand is always derived from the finger, so it isn't stored separately. */
+  fingerAssignments?: Record<string, FingerType>
+}
+
 export interface PipetteSettings {
   _rev: 1
   keyboardLayout: string
@@ -64,5 +75,6 @@ export interface PipetteSettings {
   quickSelect?: boolean
   keymapScale?: number
   viewMode?: ViewMode
+  analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time
 }

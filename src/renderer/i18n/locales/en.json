@@ -860,6 +860,30 @@
         "thumb": "Thumb"
       }
     },
+    "fingerAssignment": {
+      "button": "Finger assignment",
+      "title": "Finger assignment",
+      "subtitle": "Click a key to override the estimated finger. The hand follows the finger automatically.",
+      "save": "Save",
+      "reset": "Reset to estimate",
+      "resetAll": "Reset all",
+      "noSnapshot": "No keymap snapshot available for this range.",
+      "popoverLabel": "Select finger",
+      "leftHand": "Left hand",
+      "rightHand": "Right hand",
+      "shortLabel": {
+        "left-pinky": "Lp",
+        "left-ring": "Lr",
+        "left-middle": "Lm",
+        "left-index": "Li",
+        "left-thumb": "Lt",
+        "right-thumb": "Rt",
+        "right-index": "Ri",
+        "right-middle": "Rm",
+        "right-ring": "Rr",
+        "right-pinky": "Rp"
+      }
+    },
     "filters": {
       "from": "From",
       "to": "To",

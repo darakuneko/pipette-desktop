@@ -131,6 +131,30 @@ describe('aggregateErgonomics', () => {
     expect(result.finger['left-pinky']).toBe(0)
   })
 
+  it('honours fingerOverrides and re-derives hand from the override', () => {
+    // Y (1,6) normally maps to right-index / right. Override to left-index.
+    const heat = new Map([['1,6', cell(8)]])
+    const result = aggregateErgonomics(heat, keys, { '1,6': 'left-index' })
+    expect(result.finger['left-index']).toBe(8)
+    expect(result.finger['right-index']).toBe(0)
+    expect(result.hand.left).toBe(8)
+    expect(result.hand.right).toBe(0)
+    // Row category is a physical property, overrides should not affect it.
+    expect(result.row.top).toBe(8)
+  })
+
+  it('leaves non-overridden cells on the geometry estimate', () => {
+    const heat = new Map([
+      ['1,1', cell(3)],  // Q → left-pinky (estimate, no override)
+      ['1,6', cell(5)],  // Y → override to left-index
+    ])
+    const result = aggregateErgonomics(heat, keys, { '1,6': 'left-index' })
+    expect(result.finger['left-pinky']).toBe(3)
+    expect(result.finger['left-index']).toBe(5)
+    expect(result.hand.left).toBe(8)
+    expect(result.hand.right).toBe(0)
+  })
+
   it('aggregates a full QWERTY home row as 6 left + 7 right on home', () => {
     const heat = new Map([
       ['2,0', cell(1)],  // Caps

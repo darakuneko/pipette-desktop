@@ -859,6 +859,30 @@
         "thumb": "親指段"
       }
     },
+    "fingerAssignment": {
+      "button": "指割り当て",
+      "title": "指割り当て設定",
+      "subtitle": "キーをクリックして推定値を上書きできます。手は指から自動で決まります。",
+      "save": "保存",
+      "reset": "推定に戻す",
+      "resetAll": "全てリセット",
+      "noSnapshot": "この期間のキーマップスナップショットがありません。",
+      "popoverLabel": "指の選択",
+      "leftHand": "左手",
+      "rightHand": "右手",
+      "shortLabel": {
+        "left-pinky": "左小",
+        "left-ring": "左薬",
+        "left-middle": "左中",
+        "left-index": "左人",
+        "left-thumb": "左親",
+        "right-thumb": "右親",
+        "right-index": "右人",
+        "right-middle": "右中",
+        "right-ring": "右薬",
+        "right-pinky": "右小"
+      }
+    },
     "filters": {
       "from": "From",
       "to": "To",

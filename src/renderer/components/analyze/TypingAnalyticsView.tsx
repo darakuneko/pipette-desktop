@@ -8,9 +8,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
+import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { WpmChart } from './WpmChart'
@@ -122,6 +124,8 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
+  const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
+  const [fingerModalOpen, setFingerModalOpen] = useState(false)
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -154,6 +158,38 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
       .catch(() => { if (!cancelled) setKeymapSnapshot(null) })
     return () => { cancelled = true }
   }, [selectedUid, range])
+
+  useEffect(() => {
+    if (!selectedUid) { setFingerAssignments({}); return }
+    let cancelled = false
+    void window.vialAPI
+      .pipetteSettingsGet(selectedUid)
+      .then((prefs) => {
+        if (cancelled) return
+        setFingerAssignments(prefs?.analyze?.fingerAssignments ?? {})
+      })
+      .catch(() => { if (!cancelled) setFingerAssignments({}) })
+    return () => { cancelled = true }
+  }, [selectedUid])
+
+  const handleFingerAssignmentsSave = useCallback(
+    async (next: Record<string, FingerType>) => {
+      setFingerAssignments(next)
+      if (!selectedUid) return
+      try {
+        const prefs = await window.vialAPI.pipetteSettingsGet(selectedUid)
+        if (!prefs) return
+        const hasAny = Object.keys(next).length > 0
+        const analyze = hasAny
+          ? { ...prefs.analyze, fingerAssignments: next }
+          : { ...prefs.analyze, fingerAssignments: undefined }
+        await window.vialAPI.pipetteSettingsSet(selectedUid, { ...prefs, analyze })
+      } catch {
+        // best-effort save
+      }
+    },
+    [selectedUid],
+  )
 
   const selected = selectedUid
     ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
@@ -424,6 +460,17 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                   </select>
                 </label>
               )}
+              {analysisTab === 'ergonomics' && (
+                <button
+                  type="button"
+                  className="ml-auto rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
+                  onClick={() => setFingerModalOpen(true)}
+                  disabled={keymapSnapshot === null}
+                  data-testid="analyze-finger-assignment-open"
+                >
+                  {t('analyze.fingerAssignment.button')}
+                </button>
+              )}
             </div>
             <div className="flex-1 min-h-0 py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
@@ -456,7 +503,7 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                 )
               ) : analysisTab === 'ergonomics' ? (
                 keymapSnapshot !== null ? (
-                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} />
+                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} fingerOverrides={fingerAssignments} />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-no-snapshot">
                     {t('analyze.ergonomics.noSnapshot')}
@@ -471,6 +518,13 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
           </div>
         )}
       </section>
+      <FingerAssignmentModal
+        isOpen={fingerModalOpen}
+        onClose={() => setFingerModalOpen(false)}
+        snapshot={keymapSnapshot}
+        assignments={fingerAssignments}
+        onSave={handleFingerAssignmentsSave}
+      />
     </div>
   )
 }
