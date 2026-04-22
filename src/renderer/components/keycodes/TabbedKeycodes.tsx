@@ -9,6 +9,7 @@ import { useAppConfig } from '../../hooks/useAppConfig'
 import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { getLayoutsForViewType } from './display-keyboard-defs'
 import { X } from 'lucide-react'
+import { Tooltip } from '../ui/Tooltip'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
 import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
@@ -478,15 +479,17 @@ export function TabbedKeycodes({
           <div className="ml-auto flex shrink-0 items-center gap-2 border-b-2 border-b-transparent py-1.5">
             {tabBarRight}
             {onClose && (
-              <button
-                type="button"
-                data-testid="tabbed-keycodes-close"
-                className="rounded p-1 text-content-secondary hover:bg-surface-dim hover:text-content"
-                onClick={onClose}
-                aria-label={t('common.close')}
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
+              <Tooltip content={t('common.close')}>
+                <button
+                  type="button"
+                  data-testid="tabbed-keycodes-close"
+                  className="rounded p-1 text-content-secondary hover:bg-surface-dim hover:text-content"
+                  onClick={onClose}
+                  aria-label={t('common.close')}
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </Tooltip>
             )}
           </div>
         )}

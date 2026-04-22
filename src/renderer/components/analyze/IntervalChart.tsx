@@ -29,6 +29,7 @@ import {
 } from './analyze-histogram'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
+import { Tooltip as UITooltip } from '../ui/Tooltip'
 
 interface Props {
   uid: string
@@ -303,14 +304,21 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
             onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
             formatter={(value, entry) => {
               const key = String(entry.dataKey ?? '') as SeriesKey
+              const description = t(`analyze.interval.description.${key}`, { defaultValue: '' })
               return (
-                <span
-                  className="inline-flex items-center gap-0.5"
-                  title={t(`analyze.interval.description.${key}`, { defaultValue: '' })}
-                  style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                <UITooltip
+                  content={description}
+                  disabled={!description}
+                  wrapperAs="span"
+                  bubbleAs="span"
+                  wrapperClassName="inline-flex items-center gap-0.5"
                 >
-                  {value}
-                </span>
+                  <span
+                    style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                  >
+                    {value}
+                  </span>
+                </UITooltip>
               )
             }}
           />
@@ -343,6 +351,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
 function longestSessionItem(peaks: PeakRecords | null): AnalyzeSummaryItem {
   return {
     labelKey: 'analyze.peak.longestSession',
+    descriptionKey: 'analyze.peak.longestSessionDesc',
     value: peaks?.longestSession ? String(Math.round(peaks.longestSession.durationMs / 60000)) : '—',
     context: peaks?.longestSession ? formatDateTime(peaks.longestSession.startedAtMs) : undefined,
   }
@@ -354,12 +363,36 @@ function toDistributionItems(
   peaks: PeakRecords | null,
 ): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.interval.distribution.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
-    { labelKey: 'analyze.interval.distribution.summary.fast', value: formatShare(summary.fastShare) },
-    { labelKey: 'analyze.interval.distribution.summary.normal', value: formatShare(summary.normalShare) },
-    { labelKey: 'analyze.interval.distribution.summary.slow', value: formatShare(summary.slowShare) },
-    { labelKey: 'analyze.interval.distribution.summary.pause', value: formatShare(summary.pauseShare) },
-    { labelKey: 'analyze.interval.distribution.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+    {
+      labelKey: 'analyze.interval.distribution.summary.medianP50',
+      descriptionKey: 'analyze.interval.distribution.summary.medianP50Desc',
+      value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit),
+    },
+    {
+      labelKey: 'analyze.interval.distribution.summary.fast',
+      descriptionKey: 'analyze.interval.distribution.summary.fastDesc',
+      value: formatShare(summary.fastShare),
+    },
+    {
+      labelKey: 'analyze.interval.distribution.summary.normal',
+      descriptionKey: 'analyze.interval.distribution.summary.normalDesc',
+      value: formatShare(summary.normalShare),
+    },
+    {
+      labelKey: 'analyze.interval.distribution.summary.slow',
+      descriptionKey: 'analyze.interval.distribution.summary.slowDesc',
+      value: formatShare(summary.slowShare),
+    },
+    {
+      labelKey: 'analyze.interval.distribution.summary.pause',
+      descriptionKey: 'analyze.interval.distribution.summary.pauseDesc',
+      value: formatShare(summary.pauseShare),
+    },
+    {
+      labelKey: 'analyze.interval.distribution.summary.longestPause',
+      descriptionKey: 'analyze.interval.distribution.summary.longestPauseDesc',
+      value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit),
+    },
     longestSessionItem(peaks),
   ]
 }
@@ -370,9 +403,21 @@ function toTimeSeriesItems(
   peaks: PeakRecords | null,
 ): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.interval.timeSeries.summary.medianP50', value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit) },
-    { labelKey: 'analyze.interval.timeSeries.summary.shortest', value: summary.shortestIntervalMs === null ? '—' : formatIntervalValue(summary.shortestIntervalMs, unit) },
-    { labelKey: 'analyze.interval.timeSeries.summary.longestPause', value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit) },
+    {
+      labelKey: 'analyze.interval.timeSeries.summary.medianP50',
+      descriptionKey: 'analyze.interval.timeSeries.summary.medianP50Desc',
+      value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit),
+    },
+    {
+      labelKey: 'analyze.interval.timeSeries.summary.shortest',
+      descriptionKey: 'analyze.interval.timeSeries.summary.shortestDesc',
+      value: summary.shortestIntervalMs === null ? '—' : formatIntervalValue(summary.shortestIntervalMs, unit),
+    },
+    {
+      labelKey: 'analyze.interval.timeSeries.summary.longestPause',
+      descriptionKey: 'analyze.interval.timeSeries.summary.longestPauseDesc',
+      value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit),
+    },
     longestSessionItem(peaks),
   ]
 }

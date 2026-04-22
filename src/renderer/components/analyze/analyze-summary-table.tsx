@@ -15,6 +15,10 @@ export interface AnalyzeSummaryItem {
   /** Optional second line below the value (e.g. "323 keys" underneath
    * a "Tue" dow label). Ignored by {@link AnalyzeSummaryTable}. */
   context?: string
+  /** Optional i18n key for a hover tooltip describing the stat.
+   * Ignored by {@link AnalyzeSummaryTable}; consumed by the
+   * card-grid renderer. */
+  descriptionKey?: string
 }
 
 interface Props {

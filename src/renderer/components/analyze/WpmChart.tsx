@@ -38,6 +38,7 @@ import {
 } from './analyze-wpm'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
+import { Tooltip as UITooltip } from '../ui/Tooltip'
 
 interface Props {
   uid: string
@@ -337,12 +338,17 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
                 const key = String(entry.dataKey ?? '') as WpmLineKey
                 const isBks = key === 'bksPercent'
                 return (
-                  <span
-                    title={isBks ? t('analyze.wpm.errorProxy.description') : t('analyze.wpm.description')}
-                    style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                  <UITooltip
+                    content={isBks ? t('analyze.wpm.errorProxy.description') : t('analyze.wpm.description')}
+                    wrapperAs="span"
+                    bubbleAs="span"
                   >
-                    {value}
-                  </span>
+                    <span
+                      style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
+                    >
+                      {value}
+                    </span>
+                  </UITooltip>
                 )
               }}
             />
@@ -396,26 +402,46 @@ function toTimeSeriesItems(
   const items: AnalyzeSummaryItem[] = [
     {
       labelKey: 'analyze.wpm.timeSeries.summary.peakWpm',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.peakWpmDesc',
       value: peaks?.peakWpm ? formatWpm(peaks.peakWpm.value) : '—',
       context: peaks?.peakWpm ? formatDateTime(peaks.peakWpm.atMs) : undefined,
     },
     {
       labelKey: 'analyze.wpm.timeSeries.summary.lowestWpm',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.lowestWpmDesc',
       value: peaks?.lowestWpm ? formatWpm(peaks.lowestWpm.value) : '—',
       context: peaks?.lowestWpm ? formatDateTime(peaks.lowestWpm.atMs) : undefined,
     },
-    { labelKey: 'analyze.wpm.timeSeries.summary.overallWpm', value: formatWpm(summary.overallWpm) },
-    { labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm', value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm) },
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.overallWpm',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.overallWpmDesc',
+      value: formatWpm(summary.overallWpm),
+    },
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpmDesc',
+      value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm),
+    },
     // Row break at 4-column grid — everything below is keystroke volume.
-    { labelKey: 'analyze.wpm.timeSeries.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
-    { labelKey: 'analyze.wpm.timeSeries.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.totalKeystrokes',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.totalKeystrokesDesc',
+      value: summary.totalKeystrokes.toLocaleString(),
+    },
+    {
+      labelKey: 'analyze.wpm.timeSeries.summary.activeDuration',
+      descriptionKey: 'analyze.wpm.timeSeries.summary.activeDurationDesc',
+      value: formatActiveDuration(summary.activeMs),
+    },
     {
       labelKey: 'analyze.peak.peakKeystrokesPerMin',
+      descriptionKey: 'analyze.peak.peakKeystrokesPerMinDesc',
       value: peaks?.peakKeystrokesPerMin ? peaks.peakKeystrokesPerMin.value.toLocaleString() : '—',
       context: peaks?.peakKeystrokesPerMin ? formatDateTime(peaks.peakKeystrokesPerMin.atMs) : undefined,
     },
     {
       labelKey: 'analyze.peak.peakKeystrokesPerDay',
+      descriptionKey: 'analyze.peak.peakKeystrokesPerDayDesc',
       value: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.value.toLocaleString() : '—',
       context: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.day : undefined,
     },
@@ -424,10 +450,12 @@ function toTimeSeriesItems(
     items.push(
       {
         labelKey: 'analyze.wpm.timeSeries.summary.totalBackspaces',
+        descriptionKey: 'analyze.wpm.timeSeries.summary.totalBackspacesDesc',
         value: bks.totalBackspaces.toLocaleString(),
       },
       {
         labelKey: 'analyze.wpm.timeSeries.summary.overallBksPercent',
+        descriptionKey: 'analyze.wpm.timeSeries.summary.overallBksPercentDesc',
         value: bks.overallBksPercent === null ? '—' : `${bks.overallBksPercent.toFixed(1)}%`,
       },
     )
@@ -437,11 +465,35 @@ function toTimeSeriesItems(
 
 function toHourOfDayItems(summary: HourOfDayWpmSummary): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.wpm.timeOfDay.summary.totalKeystrokes', value: summary.totalKeystrokes.toLocaleString() },
-    { labelKey: 'analyze.wpm.timeOfDay.summary.activeDuration', value: formatActiveDuration(summary.activeMs) },
-    { labelKey: 'analyze.wpm.timeOfDay.summary.overallWpm', value: formatWpm(summary.overallWpm) },
-    { labelKey: 'analyze.wpm.timeOfDay.summary.peakHour', value: summary.peakHour === null ? '—' : formatHourWithWpm(summary.peakHour.hour, summary.peakHour.wpm) },
-    { labelKey: 'analyze.wpm.timeOfDay.summary.lowestHour', value: summary.lowestHour === null ? '—' : formatHourWithWpm(summary.lowestHour.hour, summary.lowestHour.wpm) },
-    { labelKey: 'analyze.wpm.timeOfDay.summary.activeHours', value: `${summary.activeHours} / 24` },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.totalKeystrokes',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.totalKeystrokesDesc',
+      value: summary.totalKeystrokes.toLocaleString(),
+    },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.activeDuration',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.activeDurationDesc',
+      value: formatActiveDuration(summary.activeMs),
+    },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.overallWpm',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.overallWpmDesc',
+      value: formatWpm(summary.overallWpm),
+    },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.peakHour',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.peakHourDesc',
+      value: summary.peakHour === null ? '—' : formatHourWithWpm(summary.peakHour.hour, summary.peakHour.wpm),
+    },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.lowestHour',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.lowestHourDesc',
+      value: summary.lowestHour === null ? '—' : formatHourWithWpm(summary.lowestHour.hour, summary.lowestHour.wpm),
+    },
+    {
+      labelKey: 'analyze.wpm.timeOfDay.summary.activeHours',
+      descriptionKey: 'analyze.wpm.timeOfDay.summary.activeHoursDesc',
+      value: `${summary.activeHours} / 24`,
+    },
   ]
 }

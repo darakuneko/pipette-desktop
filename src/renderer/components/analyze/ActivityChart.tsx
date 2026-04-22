@@ -33,6 +33,7 @@ import {
 } from './analyze-sessions'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
+import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
 import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
 
@@ -99,6 +100,14 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
       : toKeystrokesItems(grid.keystrokesSummary, t)
   }, [grid, metric, t])
 
+  const peak = metric === 'wpm' ? grid.maxWpm : grid.maxKeystrokes
+
+  // Precomputed before the early returns below so Rules of Hooks stay satisfied.
+  const cellsAppearance = useMemo(
+    () => grid.cells.map((cell) => cellAppearance(cell, metric, peak, t)),
+    [grid, metric, peak, t],
+  )
+
   if (loading) {
     return (
       <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-loading">
@@ -115,8 +124,6 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
       </div>
     )
   }
-
-  const peak = metric === 'wpm' ? grid.maxWpm : grid.maxKeystrokes
 
   return (
     <div className="flex flex-col gap-2 text-[11px]" data-testid="analyze-activity-chart">
@@ -145,42 +152,63 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
               {t(`analyze.activity.dow.${d}`)}
             </div>
             {HOURS.map((h) => {
-              const cell = grid.cells[d * ACTIVITY_HOUR_COUNT + h]
-              const { opacity, saturation, title } = cellAppearance(cell, metric, peak, t)
+              const index = d * ACTIVITY_HOUR_COUNT + h
+              const cell = grid.cells[index]
+              const { opacity, saturation, title } = cellsAppearance[index]
               return (
-                <div
+                <UITooltip
                   key={`c-${d}-${h}`}
-                  className="aspect-square rounded-sm"
-                  style={{
-                    backgroundColor: peak === 0 || cell === undefined || cell.keystrokes === 0
-                      ? 'var(--color-surface-dim)'
-                      : 'var(--color-accent)',
-                    opacity,
-                    filter: saturation < 1 ? `saturate(${saturation})` : undefined,
+                  content={title}
+                  disabled={!title}
+                  describedByOn="wrapper"
+                  wrapperClassName="aspect-square"
+                  wrapperProps={{
+                    role: 'cell',
+                    'aria-label': title,
                   }}
-                  title={title}
-                  aria-label={title}
-                  role="cell"
-                />
+                >
+                  <div
+                    className="h-full w-full rounded-sm"
+                    style={{
+                      backgroundColor: peak === 0 || cell === undefined || cell.keystrokes === 0
+                        ? 'var(--color-surface-dim)'
+                        : 'var(--color-accent)',
+                      opacity,
+                      filter: saturation < 1 ? `saturate(${saturation})` : undefined,
+                    }}
+                    aria-hidden="true"
+                  />
+                </UITooltip>
               )
             })}
           </div>
         ))}
       </div>
       <div className="flex items-center gap-2 pt-1 text-content-muted">
-        <span title={t('analyze.activity.legendLowDesc')}>{t('analyze.activity.legendLow')}</span>
-        <div
-          className="h-2 flex-1 rounded-sm"
-          title={t('analyze.activity.legendScaleDesc')}
-          style={{ background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))' }}
-        />
-        <span title={metric === 'wpm'
-          ? t('analyze.activity.legendHighDescWpm', { wpm: formatWpm(peak) })
-          : t('analyze.activity.legendHighDesc', { count: peak.toLocaleString() })}>
-          {metric === 'wpm'
-            ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(peak) })
-            : t('analyze.activity.legendHigh', { count: peak.toLocaleString() })}
-        </span>
+        <UITooltip content={t('analyze.activity.legendLowDesc')} wrapperAs="span">
+          <span>{t('analyze.activity.legendLow')}</span>
+        </UITooltip>
+        <UITooltip
+          content={t('analyze.activity.legendScaleDesc')}
+          wrapperClassName="h-2 flex-1 rounded-sm"
+          wrapperProps={{
+            style: { background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))' },
+          }}
+        >
+          <div className="h-full w-full" aria-hidden="true" />
+        </UITooltip>
+        <UITooltip
+          content={metric === 'wpm'
+            ? t('analyze.activity.legendHighDescWpm', { wpm: formatWpm(peak) })
+            : t('analyze.activity.legendHighDesc', { count: peak.toLocaleString() })}
+          wrapperAs="span"
+        >
+          <span>
+            {metric === 'wpm'
+              ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(peak) })
+              : t('analyze.activity.legendHigh', { count: peak.toLocaleString() })}
+          </span>
+        </UITooltip>
       </div>
       {summaryItems !== null && (
         <AnalyzeStatGrid
@@ -386,21 +414,28 @@ function toKeystrokesItems(
   return [
     {
       labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow',
+      descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentDowDesc',
       value: dow === null ? '—' : t(`analyze.activity.dow.${dow.dow}`),
       context: dow === null ? undefined : keysContext(t, dow.keystrokes),
     },
     {
       labelKey: 'analyze.activity.keystrokes.summary.mostFrequentHour',
+      descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentHourDesc',
       value: hour === null ? '—' : `${hour.hour.toString().padStart(2, '0')}:00`,
       context: hour === null ? undefined : keysContext(t, hour.keystrokes),
     },
     {
       labelKey: 'analyze.activity.keystrokes.summary.peakCell',
+      descriptionKey: 'analyze.activity.keystrokes.summary.peakCellDesc',
       ...(peak === null
         ? { value: '—' }
         : cellValueContext(peak, t, 'keystrokes')),
     },
-    { labelKey: 'analyze.activity.keystrokes.summary.activeCells', value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}` },
+    {
+      labelKey: 'analyze.activity.keystrokes.summary.activeCells',
+      descriptionKey: 'analyze.activity.keystrokes.summary.activeCellsDesc',
+      value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}`,
+    },
   ]
 }
 
@@ -411,26 +446,60 @@ function toWpmItems(
   const peak = summary.peakCell
   const lowest = summary.lowestCell
   return [
-    { labelKey: 'analyze.activity.wpm.summary.overallWpm', value: formatWpm(summary.overallWpm) },
+    {
+      labelKey: 'analyze.activity.wpm.summary.overallWpm',
+      descriptionKey: 'analyze.activity.wpm.summary.overallWpmDesc',
+      value: formatWpm(summary.overallWpm),
+    },
     {
       labelKey: 'analyze.activity.wpm.summary.peakCell',
+      descriptionKey: 'analyze.activity.wpm.summary.peakCellDesc',
       ...(peak === null ? { value: '—' } : cellValueContext(peak, t, 'wpm')),
     },
     {
       labelKey: 'analyze.activity.wpm.summary.lowestCell',
+      descriptionKey: 'analyze.activity.wpm.summary.lowestCellDesc',
       ...(lowest === null ? { value: '—' } : cellValueContext(lowest, t, 'wpm')),
     },
-    { labelKey: 'analyze.activity.wpm.summary.activeCells', value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}` },
+    {
+      labelKey: 'analyze.activity.wpm.summary.activeCells',
+      descriptionKey: 'analyze.activity.wpm.summary.activeCellsDesc',
+      value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}`,
+    },
   ]
 }
 
 function toSessionsItems(summary: SessionDistributionSummary): AnalyzeSummaryItem[] {
   return [
-    { labelKey: 'analyze.activity.sessions.summary.sessionCount', value: summary.sessionCount.toLocaleString() },
-    { labelKey: 'analyze.activity.sessions.summary.totalDuration', value: formatActiveDuration(summary.totalDurationMs) },
-    { labelKey: 'analyze.activity.sessions.summary.meanDuration', value: summary.meanDurationMs === null ? '—' : formatActiveDuration(summary.meanDurationMs) },
-    { labelKey: 'analyze.activity.sessions.summary.medianDuration', value: summary.medianDurationMs === null ? '—' : formatActiveDuration(summary.medianDurationMs) },
-    { labelKey: 'analyze.activity.sessions.summary.longestDuration', value: summary.longestDurationMs === null ? '—' : formatActiveDuration(summary.longestDurationMs) },
-    { labelKey: 'analyze.activity.sessions.summary.shortestDuration', value: summary.shortestDurationMs === null ? '—' : formatActiveDuration(summary.shortestDurationMs) },
+    {
+      labelKey: 'analyze.activity.sessions.summary.sessionCount',
+      descriptionKey: 'analyze.activity.sessions.summary.sessionCountDesc',
+      value: summary.sessionCount.toLocaleString(),
+    },
+    {
+      labelKey: 'analyze.activity.sessions.summary.totalDuration',
+      descriptionKey: 'analyze.activity.sessions.summary.totalDurationDesc',
+      value: formatActiveDuration(summary.totalDurationMs),
+    },
+    {
+      labelKey: 'analyze.activity.sessions.summary.meanDuration',
+      descriptionKey: 'analyze.activity.sessions.summary.meanDurationDesc',
+      value: summary.meanDurationMs === null ? '—' : formatActiveDuration(summary.meanDurationMs),
+    },
+    {
+      labelKey: 'analyze.activity.sessions.summary.medianDuration',
+      descriptionKey: 'analyze.activity.sessions.summary.medianDurationDesc',
+      value: summary.medianDurationMs === null ? '—' : formatActiveDuration(summary.medianDurationMs),
+    },
+    {
+      labelKey: 'analyze.activity.sessions.summary.longestDuration',
+      descriptionKey: 'analyze.activity.sessions.summary.longestDurationDesc',
+      value: summary.longestDurationMs === null ? '—' : formatActiveDuration(summary.longestDurationMs),
+    },
+    {
+      labelKey: 'analyze.activity.sessions.summary.shortestDuration',
+      descriptionKey: 'analyze.activity.sessions.summary.shortestDurationDesc',
+      value: summary.shortestDurationMs === null ? '—' : formatActiveDuration(summary.shortestDurationMs),
+    },
   ]
 }

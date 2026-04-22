@@ -10,6 +10,7 @@ import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
+import { Tooltip } from '../ui/Tooltip'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
@@ -512,17 +513,18 @@ export function TypingTestPane({
             {menuTab === 'rec' && (
               <>
                 {onRecordEnabledChange && (
-                  <button
-                    type="button"
-                    role="menuitemcheckbox"
-                    aria-checked={recordEnabled ?? false}
-                    data-testid="typing-record-toggle"
-                    className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                    onClick={handleRecordToggle}
-                    title={t('editor.typingTest.recordTooltip')}
-                  >
-                    {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}
-                  </button>
+                  <Tooltip content={t('editor.typingTest.recordTooltip')}>
+                    <button
+                      type="button"
+                      role="menuitemcheckbox"
+                      aria-checked={recordEnabled ?? false}
+                      data-testid="typing-record-toggle"
+                      className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                      onClick={handleRecordToggle}
+                    >
+                      {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}
+                    </button>
+                  </Tooltip>
                 )}
                 {onViewAnalytics && (
                   <button

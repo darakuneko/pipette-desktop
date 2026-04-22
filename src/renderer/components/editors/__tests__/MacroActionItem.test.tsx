@@ -150,6 +150,28 @@ describe('MacroActionItem', () => {
       expect(screen.getByTestId('macro-add-keycode')).toBeInTheDocument()
     })
 
+    it('wires aria-describedby on macro-edit-action button to a tooltip', () => {
+      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
+      render(
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} onEditClick={vi.fn()} />,
+      )
+      const editBtn = screen.getByTestId('macro-edit-action')
+      const tooltipId = editBtn.getAttribute('aria-describedby')
+      expect(tooltipId).toMatch(/.+/)
+      expect(document.getElementById(tooltipId ?? '')?.getAttribute('role')).toBe('tooltip')
+    })
+
+    it('wires aria-describedby on macro-add-keycode button to a tooltip', () => {
+      const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }
+      render(
+        <MacroActionItem action={tapAction} index={0} {...defaultCallbacks} focusMode selectedKeycodeIndex={0} />,
+      )
+      const addBtn = screen.getByTestId('macro-add-keycode')
+      const tooltipId = addBtn.getAttribute('aria-describedby')
+      expect(tooltipId).toMatch(/.+/)
+      expect(document.getElementById(tooltipId ?? '')?.getAttribute('role')).toBe('tooltip')
+    })
+
     it('calls onKeycodeAdd when + button is clicked in edit mode', () => {
       const onKeycodeAdd = vi.fn()
       const tapAction: MacroAction = { type: 'tap', keycodes: [0x41] }

@@ -644,13 +644,21 @@
         "summary": {
           "label": "WPM summary",
           "totalKeystrokes": "Total keystrokes",
+          "totalKeystrokesDesc": "Total keystrokes counted across every active minute.",
           "activeDuration": "Active typing time",
+          "activeDurationDesc": "Total minutes with at least one keystroke, shown as hours and minutes.",
           "overallWpm": "Overall WPM",
+          "overallWpmDesc": "Keystrokes-weighted average WPM across all active minutes.",
           "peakWpm": "Peak WPM",
+          "peakWpmDesc": "Highest bucket-level WPM reached in the selected period.",
           "lowestWpm": "Lowest WPM",
+          "lowestWpmDesc": "Lowest WPM recorded among active buckets in the selected period.",
           "weightedMedianWpm": "Weighted median WPM",
+          "weightedMedianWpmDesc": "Minute-level WPM at which half of the keystrokes typed faster and half slower.",
           "totalBackspaces": "Total Bksp",
-          "overallBksPercent": "Overall Bksp %"
+          "totalBackspacesDesc": "Total Backspace key presses captured from the matrix event stream.",
+          "overallBksPercent": "Overall Bksp %",
+          "overallBksPercentDesc": "Share of captured keystrokes that were Backspace."
         }
       },
       "errorProxy": {
@@ -662,11 +670,17 @@
         "summary": {
           "label": "Time-of-day WPM summary",
           "totalKeystrokes": "Total keystrokes",
+          "totalKeystrokesDesc": "Total keystrokes aggregated across every hour of the selected range.",
           "activeDuration": "Active typing time",
+          "activeDurationDesc": "Sum of active minutes across every hour of the selected range.",
           "overallWpm": "Overall WPM",
+          "overallWpmDesc": "Keystrokes-weighted average WPM across every hour of the selected range.",
           "peakHour": "Peak hour",
+          "peakHourDesc": "Hour of day with the highest weighted WPM.",
           "lowestHour": "Slowest hour",
-          "activeHours": "Active hours"
+          "lowestHourDesc": "Hour of day with the lowest weighted WPM, ignoring hours that never saw activity.",
+          "activeHours": "Active hours",
+          "activeHoursDesc": "Number of hours of the day that had at least one active minute in the selected range."
         }
       }
     },
@@ -702,11 +716,17 @@
           "label": "Typing rhythm summary",
           "totalKeystrokes": "Total keystrokes",
           "medianP50": "Median interval",
+          "medianP50Desc": "Median keystroke interval weighted by keystroke count.",
           "fast": "Fast (<200ms)",
+          "fastDesc": "Share of intervals shorter than 200ms.",
           "normal": "Normal (200-500ms)",
+          "normalDesc": "Share of intervals between 200ms and 500ms.",
           "slow": "Slow (500ms-2s)",
+          "slowDesc": "Share of intervals between 500ms and 2s.",
           "pause": "Pause (>=2s)",
-          "longestPause": "Longest pause"
+          "pauseDesc": "Share of intervals of 2s or longer.",
+          "longestPause": "Longest pause",
+          "longestPauseDesc": "Longest pause observed within a minute in the selected period."
         }
       },
       "timeSeries": {
@@ -715,8 +735,11 @@
           "totalKeystrokes": "Total keystrokes",
           "activeDuration": "Active typing time",
           "medianP50": "Weighted median interval",
+          "medianP50Desc": "Keystrokes-weighted median interval across the selected period.",
           "shortest": "Shortest interval",
-          "longestPause": "Longest pause"
+          "shortestDesc": "Shortest single-keystroke interval recorded in the selected period.",
+          "longestPause": "Longest pause",
+          "longestPauseDesc": "Longest pause recorded inside any minute of the selected period."
         }
       }
     },
@@ -747,9 +770,13 @@
           "totalKeystrokes": "Total keystrokes",
           "activeDuration": "Active typing time",
           "mostFrequentDow": "Busiest day",
+          "mostFrequentDowDesc": "Day of week with the highest total keystrokes in the selected period.",
           "mostFrequentHour": "Busiest hour",
+          "mostFrequentHourDesc": "Hour of day with the highest total keystrokes.",
           "peakCell": "Peak cell",
-          "activeCells": "Active cells"
+          "peakCellDesc": "Hour × day-of-week cell with the highest keystroke count.",
+          "activeCells": "Active cells",
+          "activeCellsDesc": "Number of hour × day-of-week cells (out of 168) with at least one keystroke."
         }
       },
       "wpm": {
@@ -758,9 +785,13 @@
           "totalKeystrokes": "Total keystrokes",
           "activeDuration": "Active typing time",
           "overallWpm": "Overall WPM",
+          "overallWpmDesc": "Keystrokes-weighted average WPM across every active cell.",
           "peakCell": "Peak cell",
+          "peakCellDesc": "Hour × day-of-week cell with the highest weighted WPM.",
           "lowestCell": "Slowest cell",
-          "activeCells": "Active cells"
+          "lowestCellDesc": "Hour × day-of-week cell with the lowest weighted WPM among active cells.",
+          "activeCells": "Active cells",
+          "activeCellsDesc": "Number of hour × day-of-week cells (out of 168) with at least one keystroke."
         }
       },
       "sessions": {
@@ -778,11 +809,17 @@
         "summary": {
           "label": "Session distribution summary",
           "sessionCount": "Session count",
+          "sessionCountDesc": "Number of typing sessions recorded in the selected period.",
           "totalDuration": "Total duration",
+          "totalDurationDesc": "Sum of every typing session's active duration.",
           "meanDuration": "Mean duration",
+          "meanDurationDesc": "Average active duration per typing session.",
           "medianDuration": "Median duration",
+          "medianDurationDesc": "Median active duration across sessions.",
           "longestDuration": "Longest session",
-          "shortestDuration": "Shortest session"
+          "longestDurationDesc": "Longest single session in the selected period.",
+          "shortestDuration": "Shortest session",
+          "shortestDurationDesc": "Shortest single session in the selected period."
         }
       },
       "dow": {
@@ -889,8 +926,11 @@
     },
     "peak": {
       "peakKeystrokesPerMin": "Peak K/min",
+      "peakKeystrokesPerMinDesc": "Highest minute-level keystroke count ever recorded for this device.",
       "peakKeystrokesPerDay": "Peak K/day",
+      "peakKeystrokesPerDayDesc": "Highest daily keystroke count ever recorded for this device.",
       "longestSession": "Longest session (min)",
+      "longestSessionDesc": "Longest session (in minutes) ever recorded for this device.",
       "unit": {
         "kpm": "K/min",
         "kpd": "K/day",

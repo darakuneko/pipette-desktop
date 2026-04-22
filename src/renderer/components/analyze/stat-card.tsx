@@ -6,6 +6,7 @@
 
 import { useTranslation } from 'react-i18next'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
+import { Tooltip as UITooltip } from '../ui/Tooltip'
 
 interface Props {
   label: string
@@ -13,12 +14,15 @@ interface Props {
   unit?: string
   context?: string
   testid?: string
+  /** Description shown in a hover tooltip over the whole card. When
+   * unset the card is rendered plain, without a tooltip wrapper. */
+  description?: string
 }
 
-export function StatCard({ label, value, unit, context, testid }: Props) {
-  return (
+export function StatCard({ label, value, unit, context, testid, description }: Props) {
+  const card = (
     <div
-      className="flex flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2"
+      className="flex h-full flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2"
       data-testid={testid}
     >
       <span className="text-[10px] font-semibold uppercase tracking-widest text-content-muted">
@@ -31,6 +35,18 @@ export function StatCard({ label, value, unit, context, testid }: Props) {
       {/* Non-breaking space keeps heights aligned when context is empty */}
       <span className="text-[10px] text-content-muted">{context || ' '}</span>
     </div>
+  )
+
+  if (!description) return card
+
+  return (
+    <UITooltip
+      content={description}
+      wrapperClassName="w-full"
+      className="max-w-xs whitespace-normal"
+    >
+      {card}
+    </UITooltip>
   )
 }
 
@@ -59,6 +75,7 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
           value={item.value}
           unit={item.unit}
           context={item.context}
+          description={item.descriptionKey ? t(item.descriptionKey) : undefined}
         />
       ))}
     </div>

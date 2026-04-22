@@ -643,13 +643,21 @@
         "summary": {
           "label": "WPM サマリ",
           "totalKeystrokes": "合計打鍵",
+          "totalKeystrokesDesc": "全アクティブ分の打鍵数の合計。",
           "activeDuration": "実打鍵時間",
+          "activeDurationDesc": "打鍵が 1 回以上あった分を合計した時間 (時分表示)。",
           "overallWpm": "平均WPM",
+          "overallWpmDesc": "全アクティブ分の打鍵数で重み付けした平均 WPM。",
           "peakWpm": "最高 WPM",
+          "peakWpmDesc": "選択期間中に記録されたバケット単位の最大 WPM。",
           "lowestWpm": "最低WPM",
+          "lowestWpmDesc": "選択期間中にアクティブだったバケットのうち最小 WPM。",
           "weightedMedianWpm": "重み付き中央値WPM",
+          "weightedMedianWpmDesc": "打鍵数の半分がこれより速く、半分がこれより遅かった分単位の WPM。",
           "totalBackspaces": "Bksp 合計",
-          "overallBksPercent": "平均 Bksp %"
+          "totalBackspacesDesc": "matrix-event から取得した Backspace 打鍵数の合計。",
+          "overallBksPercent": "平均 Bksp %",
+          "overallBksPercentDesc": "取得した打鍵数のうち Backspace の占める割合。"
         }
       },
       "errorProxy": {
@@ -661,11 +669,17 @@
         "summary": {
           "label": "時間帯別 WPM サマリ",
           "totalKeystrokes": "合計打鍵",
+          "totalKeystrokesDesc": "選択期間内の全時間帯を合計した打鍵数。",
           "activeDuration": "実打鍵時間",
+          "activeDurationDesc": "選択期間内の全時間帯を合計した実打鍵時間。",
           "overallWpm": "平均WPM",
+          "overallWpmDesc": "選択期間内の全時間帯を打鍵数で重み付けした平均 WPM。",
           "peakHour": "ピーク時間帯",
+          "peakHourDesc": "重み付け WPM が最大となる時間帯。",
           "lowestHour": "最遅時間帯",
-          "activeHours": "活動時間帯数"
+          "lowestHourDesc": "重み付け WPM が最小となる時間帯 (打鍵のない時間帯は除外)。",
+          "activeHours": "活動時間帯数",
+          "activeHoursDesc": "選択期間内で 1 回以上打鍵があった時間帯の数 (24 中)。"
         }
       }
     },
@@ -701,11 +715,17 @@
           "label": "打鍵リズムサマリ",
           "totalKeystrokes": "合計打鍵",
           "medianP50": "中央値インターバル",
+          "medianP50Desc": "打鍵数で重み付けした中央値インターバル。",
           "fast": "高速 (<200ms)",
+          "fastDesc": "インターバルが 200ms 未満の割合。",
           "normal": "標準 (200-500ms)",
+          "normalDesc": "インターバルが 200ms〜500ms の割合。",
           "slow": "緩慢 (500ms-2s)",
+          "slowDesc": "インターバルが 500ms〜2s の割合。",
           "pause": "ポーズ (>=2s)",
-          "longestPause": "最長ポーズ"
+          "pauseDesc": "インターバルが 2s 以上の割合。",
+          "longestPause": "最長ポーズ",
+          "longestPauseDesc": "選択期間内の分単位で観測された最長ポーズ。"
         }
       },
       "timeSeries": {
@@ -714,8 +734,11 @@
           "totalKeystrokes": "合計打鍵",
           "activeDuration": "実打鍵時間",
           "medianP50": "重み付き中央値",
+          "medianP50Desc": "選択期間内の打鍵数で重み付けした中央値インターバル。",
           "shortest": "最短インターバル",
-          "longestPause": "最長ポーズ"
+          "shortestDesc": "選択期間内で記録された最短の単一打鍵インターバル。",
+          "longestPause": "最長ポーズ",
+          "longestPauseDesc": "選択期間内の分単位で観測された最長ポーズ。"
         }
       }
     },
@@ -746,9 +769,13 @@
           "totalKeystrokes": "合計打鍵",
           "activeDuration": "実打鍵時間",
           "mostFrequentDow": "最頻曜日",
+          "mostFrequentDowDesc": "選択期間内で合計打鍵数が最大だった曜日。",
           "mostFrequentHour": "最頻時間帯",
+          "mostFrequentHourDesc": "合計打鍵数が最大だった時間帯。",
           "peakCell": "ピークセル",
-          "activeCells": "活動セル数"
+          "peakCellDesc": "時間帯 × 曜日のセルで合計打鍵数が最大のもの。",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1 回以上打鍵があったセル数 (168 中)。"
         }
       },
       "wpm": {
@@ -757,9 +784,13 @@
           "totalKeystrokes": "合計打鍵",
           "activeDuration": "実打鍵時間",
           "overallWpm": "平均WPM",
+          "overallWpmDesc": "アクティブな全セルの打鍵数で重み付けした平均 WPM。",
           "peakCell": "ピークセル",
+          "peakCellDesc": "時間帯 × 曜日のセルで重み付け WPM が最大のもの。",
           "lowestCell": "最遅セル",
-          "activeCells": "活動セル数"
+          "lowestCellDesc": "アクティブなセルの中で重み付け WPM が最小のもの。",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1 回以上打鍵があったセル数 (168 中)。"
         }
       },
       "sessions": {
@@ -777,11 +808,17 @@
         "summary": {
           "label": "セッション分布サマリ",
           "sessionCount": "セッション数",
+          "sessionCountDesc": "選択期間内に記録されたタイピングセッション数。",
           "totalDuration": "合計時間",
+          "totalDurationDesc": "全タイピングセッションの実打鍵時間の合計。",
           "meanDuration": "平均セッション長",
+          "meanDurationDesc": "タイピングセッションごとの平均実打鍵時間。",
           "medianDuration": "中央値セッション長",
+          "medianDurationDesc": "タイピングセッションの実打鍵時間の中央値。",
           "longestDuration": "最長セッション",
-          "shortestDuration": "最短セッション"
+          "longestDurationDesc": "選択期間内で最長のセッション。",
+          "shortestDuration": "最短セッション",
+          "shortestDurationDesc": "選択期間内で最短のセッション。"
         }
       },
       "dow": {
@@ -888,8 +925,11 @@
     },
     "peak": {
       "peakKeystrokesPerMin": "1 分最大打鍵",
+      "peakKeystrokesPerMinDesc": "このデバイスで記録された分単位の打鍵数の最大値。",
       "peakKeystrokesPerDay": "1 日最大打鍵",
+      "peakKeystrokesPerDayDesc": "このデバイスで記録された日単位の打鍵数の最大値。",
       "longestSession": "最長セッション (分)",
+      "longestSessionDesc": "このデバイスで記録された最長セッション (分)。",
       "unit": {
         "kpm": "回/分",
         "kpd": "回/日",

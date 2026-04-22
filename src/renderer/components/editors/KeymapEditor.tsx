@@ -30,7 +30,8 @@ import { MIN_SCALE, MAX_SCALE, PANEL_COLLAPSED_WIDTH, EMPTY_KEYCODES, EMPTY_REMA
 export type { KeymapEditorHandle } from './keymap-editor-types'
 import { KeyboardPane } from './KeyboardPane'
 import { LayerListPanel } from './LayerListPanel'
-import { IconTooltip, ScaleInput, toggleButtonClass } from './keymap-editor-toolbar'
+import { ScaleInput, toggleButtonClass } from './keymap-editor-toolbar'
+import { Tooltip } from '../ui/Tooltip'
 import { QmkSettingsModals } from './QmkSettingsModal'
 import { useInputModes } from './useInputModes'
 import { useKeymapMultiSelect } from './useKeymapMultiSelect'
@@ -830,32 +831,37 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           </button>
         </div>
         <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
-          <button type="button" aria-label={t('editor.keymap.zoomIn')}
-            className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
-            disabled={pickerEffectiveScale >= MAX_SCALE}
-            onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
-            <ZoomIn size={14} aria-hidden="true" />
-          </button>
+          <Tooltip content={t('editor.keymap.zoomIn')}>
+            <button type="button" aria-label={t('editor.keymap.zoomIn')}
+              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              disabled={pickerEffectiveScale >= MAX_SCALE}
+              onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
+              <ZoomIn size={14} aria-hidden="true" />
+            </button>
+          </Tooltip>
           <ScaleInput scale={pickerEffectiveScale} onScaleChange={(delta) => {
             if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, +(pickerEffectiveScale + delta).toFixed(1))))
             else onScaleChange?.(delta)
           }} />
-          <button type="button" aria-label={t('editor.keymap.zoomOut')}
-            className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
-            disabled={pickerEffectiveScale <= MIN_SCALE}
-            onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
-            <ZoomOut size={14} aria-hidden="true" />
-          </button>
+          <Tooltip content={t('editor.keymap.zoomOut')}>
+            <button type="button" aria-label={t('editor.keymap.zoomOut')}
+              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              disabled={pickerEffectiveScale <= MIN_SCALE}
+              onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
+              <ZoomOut size={14} aria-hidden="true" />
+            </button>
+          </Tooltip>
         </div>
         <div className={`flex min-w-0 items-center gap-1 overflow-x-auto ${pickerBrowseMode ? 'invisible' : ''}`}>
           {Array.from({ length: pickerData.totalLayers }, (_, i) => {
             const label = pickerData.names?.[i]?.trim()
             return (
-              <button key={i} type="button" className={layerBtnClass(pickerLayer === i)}
-                title={label || undefined}
-                onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
-                {label || i}
-              </button>
+              <Tooltip key={i} content={label} disabled={!label}>
+                <button type="button" className={layerBtnClass(pickerLayer === i)}
+                  onClick={() => { setPickerLayer(i); multiSelect.clearPickerSelection() }}>
+                  {label || i}
+                </button>
+              </Tooltip>
             )
           })}
         </div>
@@ -869,32 +875,32 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     <div className="flex shrink-0 flex-col items-center gap-3 self-stretch" style={{ width: PANEL_COLLAPSED_WIDTH }}>
       {!typingTestMode && (
         <>
-          <IconTooltip label={t('editor.keymap.undo')}>
+          <Tooltip content={t('editor.keymap.undo')} side="right">
             <button type="button" data-testid="undo-button" aria-label={t('editor.keymap.undo')} className={zoomButtonClass} disabled={!history.canUndo} onClick={() => void handleUndo()}>
               <Undo2 size={16} aria-hidden="true" />
             </button>
-          </IconTooltip>
-          <IconTooltip label={t('editor.keymap.redo')}>
+          </Tooltip>
+          <Tooltip content={t('editor.keymap.redo')} side="right">
             <button type="button" data-testid="redo-button" aria-label={t('editor.keymap.redo')} className={zoomButtonClass} disabled={!history.canRedo} onClick={() => void handleRedo()}>
               <Redo2 size={16} aria-hidden="true" />
             </button>
-          </IconTooltip>
+          </Tooltip>
         </>
       )}
       <div className="flex-1" />
       {!typingTestMode && onScaleChange && (
         <>
-          <IconTooltip label={t('editor.keymap.zoomIn')}>
+          <Tooltip content={t('editor.keymap.zoomIn')} side="right">
             <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')} className={zoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
               <ZoomIn size={16} aria-hidden="true" />
             </button>
-          </IconTooltip>
+          </Tooltip>
           <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
-          <IconTooltip label={t('editor.keymap.zoomOut')}>
+          <Tooltip content={t('editor.keymap.zoomOut')} side="right">
             <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')} className={zoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
               <ZoomOut size={16} aria-hidden="true" />
             </button>
-          </IconTooltip>
+          </Tooltip>
         </>
       )}
       <div className="flex-1" />
@@ -991,13 +997,15 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             tabFooterContent={tabFooterContent} tabContentOverride={tabContentOverride}
             basicViewType={basicViewType} splitKeyMode={splitKeyMode} remapLabel={remapLabel}
             tabBarRight={
-              <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}
-                aria-expanded={layoutPanelOpen} aria-controls="keycodes-overlay-panel"
-                className={`rounded p-1 transition-colors ${layoutPanelOpen ? 'bg-surface-dim text-accent' : 'text-content-secondary hover:bg-surface-dim hover:text-content'}`}
-                onClick={() => { setLayoutPanelOpen((prev) => { if (!prev) onOverlayOpen?.(); return !prev }) }}
-              >
-                <SlidersHorizontal size={16} aria-hidden="true" />
-              </button>
+              <Tooltip content={t('editorSettings.title')}>
+                <button ref={layoutButtonRef} type="button" aria-label={t('editorSettings.title')}
+                  aria-expanded={layoutPanelOpen} aria-controls="keycodes-overlay-panel"
+                  className={`rounded p-1 transition-colors ${layoutPanelOpen ? 'bg-surface-dim text-accent' : 'text-content-secondary hover:bg-surface-dim hover:text-content'}`}
+                  onClick={() => { setLayoutPanelOpen((prev) => { if (!prev) onOverlayOpen?.(); return !prev }) }}
+                >
+                  <SlidersHorizontal size={16} aria-hidden="true" />
+                </button>
+              </Tooltip>
             }
             panelOverlay={
               <div id="keycodes-overlay-panel" ref={layoutPanelRef}
