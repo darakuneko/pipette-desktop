@@ -796,7 +796,8 @@
       "wpm": "WPM",
       "interval": "Interval",
       "activity": "Activity",
-      "keyHeatmap": "Heatmap"
+      "keyHeatmap": "Heatmap",
+      "ergonomics": "Ergonomics"
     },
     "keyHeatmap": {
       "layer": "Layer",
@@ -825,6 +826,38 @@
           "layerOp": "Layer op"
         },
         "emptyFrequentUsed": "No key presses in this range."
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "Finger Load",
+      "handBalance": "Hand Balance",
+      "rowUsage": "Row Usage",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "noLayout": "Layout data not available for this snapshot.",
+      "noData": "No keystrokes recorded in this range.",
+      "finger": {
+        "left-pinky": "L Pinky",
+        "left-ring": "L Ring",
+        "left-middle": "L Middle",
+        "left-index": "L Index",
+        "left-thumb": "L Thumb",
+        "right-thumb": "R Thumb",
+        "right-index": "R Index",
+        "right-middle": "R Middle",
+        "right-ring": "R Ring",
+        "right-pinky": "R Pinky"
+      },
+      "hand": {
+        "left": "Left",
+        "right": "Right"
+      },
+      "rowCategory": {
+        "function": "Function",
+        "number": "Number",
+        "top": "Top",
+        "home": "Home",
+        "bottom": "Bottom",
+        "thumb": "Thumb"
       }
     },
     "filters": {

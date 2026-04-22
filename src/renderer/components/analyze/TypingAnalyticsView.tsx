@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
+import { ErgonomicsChart } from './ErgonomicsChart'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { WpmChart } from './WpmChart'
@@ -30,7 +31,7 @@ const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
 const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
@@ -451,6 +452,14 @@ export function TypingAnalyticsView({ initialUid }: TypingAnalyticsViewProps = {
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-keyheatmap-empty">
                     {t('analyze.keyHeatmap.noSnapshot')}
+                  </div>
+                )
+              ) : analysisTab === 'ergonomics' ? (
+                keymapSnapshot !== null ? (
+                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} />
+                ) : (
+                  <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-no-snapshot">
+                    {t('analyze.ergonomics.noSnapshot')}
                   </div>
                 )
               ) : null}

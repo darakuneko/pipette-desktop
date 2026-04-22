@@ -795,7 +795,8 @@
       "wpm": "WPM",
       "interval": "間隔",
       "activity": "活動量",
-      "keyHeatmap": "ヒートマップ"
+      "keyHeatmap": "ヒートマップ",
+      "ergonomics": "エルゴノミクス"
     },
     "keyHeatmap": {
       "layer": "レイヤー",
@@ -824,6 +825,38 @@
           "layerOp": "レイヤー操作"
         },
         "emptyFrequentUsed": "この期間に押下されたキーがありません。"
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "指別打鍵量",
+      "handBalance": "左右バランス",
+      "rowUsage": "段別打鍵量",
+      "noSnapshot": "この期間のキーマップスナップショットがありません。レコーディングを開始して取得してください。",
+      "noLayout": "このスナップショットにはレイアウト情報がありません。",
+      "noData": "この期間の打鍵データがありません。",
+      "finger": {
+        "left-pinky": "左小指",
+        "left-ring": "左薬指",
+        "left-middle": "左中指",
+        "left-index": "左人差し指",
+        "left-thumb": "左親指",
+        "right-thumb": "右親指",
+        "right-index": "右人差し指",
+        "right-middle": "右中指",
+        "right-ring": "右薬指",
+        "right-pinky": "右小指"
+      },
+      "hand": {
+        "left": "左手",
+        "right": "右手"
+      },
+      "rowCategory": {
+        "function": "F 行",
+        "number": "数字行",
+        "top": "上段",
+        "home": "ホーム行",
+        "bottom": "下段",
+        "thumb": "親指段"
       }
     },
     "filters": {
