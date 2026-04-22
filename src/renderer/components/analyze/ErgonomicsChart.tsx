@@ -61,6 +61,7 @@ const Section = memo(function Section({
   height,
   testId,
 }: SectionProps) {
+  const { t } = useTranslation()
   return (
     <div data-testid={testId}>
       <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">
@@ -117,7 +118,7 @@ const Section = memo(function Section({
                       borderRadius: 4,
                     }}
                   >
-                    {label}: {formatted}
+                    {label}: {formatted} {t('analyze.unit.keys')}
                   </div>
                 )
               }}

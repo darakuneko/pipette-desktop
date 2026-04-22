@@ -259,7 +259,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
                   const ks = Number(entry?.payload?.keystrokes ?? 0)
                   const ms = Number(entry?.payload?.activeMs ?? 0)
                   return [
-                    `${formatWpm(wpm)} WPM — ${ks.toLocaleString()} keys / ${formatActiveDuration(ms)}`,
+                    `${formatWpm(wpm)} WPM — ${ks.toLocaleString()} ${t('analyze.unit.keys')} / ${formatActiveDuration(ms)}`,
                     t('analyze.wpm.timeOfDay.tooltipLabel'),
                   ]
                 }}

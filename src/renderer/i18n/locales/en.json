@@ -637,6 +637,9 @@
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "unit": {
+      "keys": "keys"
+    },
     "wpm": {
       "legend": "WPM",
       "description": "Words per minute — keystrokes divided by 5, per minute of active typing.",
@@ -747,21 +750,17 @@
       "tableLabel": "Hour × day-of-week activity",
       "tableLabelWpm": "Hour × day-of-week WPM",
       "hourHeader": "{{hour}}:00",
-      "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} keys",
-      "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} keys / {{activeDuration}})",
+      "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
       "legendLow": "0",
-      "legendHigh": "{{count}}",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
       "legendHighWpm": "{{wpm}} WPM",
       "legendLowDesc": "No keystrokes recorded in this bucket for the selected period.",
-      "legendHighDesc": "Peak bucket in the selected period ({{count}} keystrokes). Cell opacity scales linearly from 0 to this value.",
+      "legendHighDesc": "Peak bucket in the selected period ({{count}} $t(analyze.unit.keys)). Cell opacity scales linearly from 0 to this value.",
       "legendHighDescWpm": "Peak WPM in the selected period ({{wpm}} WPM). Cell opacity scales linearly to this value. Desaturated cells did not meet the Min sample threshold.",
       "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak bucket in the selected period.",
-      "summaryDowValue": "{{dow}} - {{keystrokes}} keys",
-      "summaryHourValue": "{{hour}}:00 - {{keystrokes}} keys",
-      "cellKeystrokesValue": "{{dow}} {{hour}} - {{keystrokes}} keys",
-      "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
       "summary": {
-        "keysContext": "{{count}} keys",
+        "keysContext": "{{count}} $t(analyze.unit.keys)",
         "wpmContext": "{{wpm}} WPM"
       },
       "keystrokes": {

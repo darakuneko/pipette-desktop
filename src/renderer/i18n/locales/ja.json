@@ -636,6 +636,9 @@
     "noData": "選択した期間にデータがありません。",
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
+    "unit": {
+      "keys": "回"
+    },
     "wpm": {
       "legend": "WPM",
       "description": "Words per minute — アクティブ 1 分あたりの keystrokes を 5 で割った値 (英語 1 語 = 5 文字換算)。",
@@ -746,21 +749,17 @@
       "tableLabel": "時間帯 × 曜日の活動量",
       "tableLabelWpm": "時間帯 × 曜日の WPM",
       "hourHeader": "{{hour}}時",
-      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} 打",
-      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} 打 / {{activeDuration}})",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
       "legendLow": "0",
-      "legendHigh": "{{count}}",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
       "legendHighWpm": "{{wpm}} WPM",
       "legendLowDesc": "選択期間中にこのセルで打鍵がなかった状態。",
-      "legendHighDesc": "選択期間中のピーク値 ({{count}} 打)。セルの濃度は 0 からこの値まで線形にスケールします。",
+      "legendHighDesc": "選択期間中のピーク値 ({{count}} $t(analyze.unit.keys))。セルの濃度は 0 からこの値まで線形にスケールします。",
       "legendHighDescWpm": "選択期間中のピーク WPM ({{wpm}} WPM)。セルの濃度はこの値まで線形にスケール。薄く表示されるセルは Min sample 閾値を満たしていない状態。",
       "legendScaleDesc": "0 (空) から選択期間中のピーク値までの線形スケール。",
-      "summaryDowValue": "{{dow}} - 打鍵数: {{keystrokes}}",
-      "summaryHourValue": "{{hour}}時 - 打鍵数: {{keystrokes}}",
-      "cellKeystrokesValue": "{{dow}} {{hour}} - 打鍵数: {{keystrokes}}",
-      "cellWpmValue": "{{dow}} {{hour}} - {{wpm}} WPM",
       "summary": {
-        "keysContext": "{{count}} 回",
+        "keysContext": "{{count}} $t(analyze.unit.keys)",
         "wpmContext": "{{wpm}} WPM"
       },
       "keystrokes": {
