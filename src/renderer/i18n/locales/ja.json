@@ -637,7 +637,8 @@
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
     "unit": {
-      "keys": "回"
+      "keys": "回",
+      "activations": "回"
     },
     "wpm": {
       "legend": "WPM",
@@ -879,8 +880,11 @@
     },
     "layer": {
       "title": "レイヤー別打鍵数",
+      "activationsTitle": "レイヤー起動回数",
       "layerLabel": "レイヤー {{layer}}",
-      "noData": "この期間にレイヤー別の打鍵記録がありません。"
+      "noData": "この期間にレイヤー別の打鍵記録がありません。",
+      "noActivations": "この期間にレイヤー操作キーの押下記録がありません。",
+      "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。"
     },
     "fingerAssignment": {
       "button": "指割り当て",
@@ -958,6 +962,12 @@
         "wpm": "WPM",
         "sessions": "セッション"
       },
+      "layerViewMode": "表示",
+      "layerViewModeOption": {
+        "keystrokes": "打鍵数",
+        "activations": "起動回数"
+      },
+      "layerBaseLayer": "ベース",
       "normalization": "正規化",
       "normalizationOption": {
         "absolute": "絶対数",

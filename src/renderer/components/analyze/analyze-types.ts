@@ -32,6 +32,14 @@ export type WpmErrorProxy = 'on' | 'off'
  * out for a duration histogram sourced from `typing_sessions`. */
 export type ActivityMetric = 'keystrokes' | 'wpm' | 'sessions'
 
+/** Layer tab view mode. `keystrokes` sums every press while a given
+ * layer was active (what was typed while there). `activations` sums
+ * how many times a layer-op keycode dispatched to that layer (how
+ * often the layer was reached). The two metrics compare well side by
+ * side — e.g. "same activations, vastly different keystrokes" flags a
+ * layer that's often touched but seldom typed on. */
+export type LayerViewMode = 'keystrokes' | 'activations'
+
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and
  * the chart UI caps it to "now" so the user cannot pick the future. */

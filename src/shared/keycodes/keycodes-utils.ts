@@ -458,6 +458,38 @@ const CHAR_LOCK_APP_RE =
 const CHAR_NUMPAD_RE = /^KC_P[A-Z0-9_]+$/
 const CHAR_INTL_RE = /^KC_(JPN|INT|LANG|KANA|RO)/
 
+export interface LayerOpTarget {
+  /** Target layer index encoded in the op (e.g. `3` for `MO(3)` or `LT3(KC_A)`). */
+  layer: number
+  /** How many times the op activates the target layer per recorded press.
+   * `'press'` — every press activates (MO / TG / TO / DF / PDF / OSL / TT).
+   * `'hold'` — only the hold arm activates; taps go to the inner keycode
+   * without touching the layer stack (LT / LM). */
+  kind: 'press' | 'hold'
+}
+
+/** Parse a serialized layer-op QMK id and return the target layer index
+ * plus which press category (full count vs. hold-only) contributes to
+ * "the user activated that layer". Returns `null` for anything that
+ * isn't a layer op. Purely pattern-based so it works without relying
+ * on `RAWCODES_MAP` / `recreateKeycodes()` state. */
+export function getLayerOpTarget(qmkId: string): LayerOpTarget | null {
+  if (!qmkId) return null
+  const mask = qmkId.match(LAYER_MASK_RE)
+  if (mask) {
+    const layer = Number.parseInt(mask[2], 10)
+    if (!Number.isFinite(layer) || layer < 0) return null
+    return { layer, kind: 'hold' }
+  }
+  const single = qmkId.match(LAYER_SINGLE_RE)
+  if (single) {
+    const layer = Number.parseInt(single[2], 10)
+    if (!Number.isFinite(layer) || layer < 0) return null
+    return { layer, kind: 'press' }
+  }
+  return null
+}
+
 /** Classify a QMK id into one of the high-level groups the Analyze
  *  ranking filter offers. Pattern-based so it works without depending on
  *  the current keyboard registration (snapshot viewer may see composites

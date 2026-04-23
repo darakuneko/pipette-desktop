@@ -92,6 +92,7 @@ export type {
   TypingIntervalDailySummary,
   TypingActivityCell,
   TypingLayerUsageRow,
+  TypingMatrixCellRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -129,6 +130,8 @@ export class TypingAnalyticsDB {
   private readonly selectActivityGridForUidAndHashStmt: Statement
   private readonly selectLayerUsageForUidStmt: Statement
   private readonly selectLayerUsageForUidAndHashStmt: Statement
+  private readonly selectMatrixCellsForUidStmt: Statement
+  private readonly selectMatrixCellsForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
@@ -717,6 +720,48 @@ export class TypingAnalyticsDB {
          AND m.minute_ts < @untilMs
        GROUP BY m.layer
        ORDER BY m.layer ASC
+    `)
+
+    // Per-(layer, row, col) totals for the Analyze > Layer activations
+    // mode. The aggregator in the renderer looks up each cell's
+    // serialized QMK id from the keymap snapshot and dispatches
+    // layer-op keycodes (MO / LT / TG / etc.) to their target layer.
+    // We keep tap/hold splits alongside the total because LT / LM
+    // only activate the layer on the hold arm — the tap arm goes to
+    // the inner keycode and must not be counted.
+    this.selectMatrixCellsForUidStmt = this.db.prepare(`
+      SELECT m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY m.layer, m.row, m.col
+    `)
+
+    this.selectMatrixCellsForUidAndHashStmt = this.db.prepare(`
+      SELECT m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY m.layer, m.row, m.col
     `)
 
     // Minute-raw rows for the Analyze WPM / Interval charts. The client
@@ -1467,6 +1512,25 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingLayerUsageRow[] {
     return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingLayerUsageRow[]
+  }
+
+  /** Per-(layer, row, col) press totals for the Analyze > Layer
+   * activations mode. The renderer pairs each row with the keymap
+   * snapshot to recover the QMK id and dispatch layer-op counts to
+   * their target layer. */
+  listMatrixCellsForUid(uid: string, sinceMs: number, untilMs: number): TypingMatrixCellRow[] {
+    return this.selectMatrixCellsForUidStmt.all({ uid, sinceMs, untilMs }) as TypingMatrixCellRow[]
+  }
+
+  /** Same as {@link listMatrixCellsForUid} but restricted to one
+   * machine_hash for the Analyze "This device" scope. */
+  listMatrixCellsForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingMatrixCellRow[] {
+    return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMatrixCellRow[]
   }
 
   /** Minute-raw stats for the Analyze WPM / Interval charts over the

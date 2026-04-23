@@ -1192,6 +1192,7 @@ export {
   keycodeTooltip,
   resolveSnapshotLabel,
   keycodeGroup,
+  getLayerOpTarget,
   getKeycodeRevision,
   recreateKeycodes,
   createUserKeycodes,

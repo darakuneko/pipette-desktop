@@ -638,7 +638,8 @@
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
     "unit": {
-      "keys": "keys"
+      "keys": "keys",
+      "activations": "activations"
     },
     "wpm": {
       "legend": "WPM",
@@ -880,8 +881,11 @@
     },
     "layer": {
       "title": "Keystrokes per layer",
+      "activationsTitle": "Layer activations",
       "layerLabel": "Layer {{layer}}",
-      "noData": "No layer activity recorded in this range."
+      "noData": "No layer activity recorded in this range.",
+      "noActivations": "No layer-op keys pressed in this range.",
+      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one."
     },
     "fingerAssignment": {
       "button": "Finger assignment",
@@ -959,6 +963,12 @@
         "wpm": "WPM",
         "sessions": "Sessions"
       },
+      "layerViewMode": "View",
+      "layerViewModeOption": {
+        "keystrokes": "Keystrokes",
+        "activations": "Activations"
+      },
+      "layerBaseLayer": "Base",
       "normalization": "Normalize",
       "normalizationOption": {
         "absolute": "Absolute",

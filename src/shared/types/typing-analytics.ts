@@ -174,6 +174,24 @@ export interface TypingLayerUsageRow {
   keystrokes: number
 }
 
+/** Per-cell press totals for the Analyze > Layer activations view.
+ * Aggregated across every machine hash (or scoped to one via the
+ * `*ForHash` variant) and every minute in the window. The
+ * renderer maps (layer, row, col) to `snapshot.keymap[layer][row][col]`
+ * to recover the serialized QMK id, then dispatches layer-op keycodes
+ * to their target layer via {@link getLayerOpTarget}. `count` is the
+ * total press count for the cell; `tap` / `hold` split that total for
+ * LT / LM keys (tap goes to the inner keycode, hold activates the
+ * layer). Non-tap-hold keys leave tap/hold at 0. */
+export interface TypingMatrixCellRow {
+  layer: number
+  row: number
+  col: number
+  count: number
+  tap: number
+  hold: number
+}
+
 /** Per-minute Backspace count aggregate used by the Analyze
  * error-proxy overlay. Sourced from `typing_matrix_minute` so every
  * path (matrix HID reads, typing-test, Vial input) contributes — not

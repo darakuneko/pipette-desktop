@@ -32,6 +32,7 @@ import {
   type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
   type TypingLayerUsageRow,
+  type TypingMatrixCellRow,
   type TypingMinuteStatsRow,
   type TypingSessionRow,
   type TypingBksMinuteRow,
@@ -291,6 +292,27 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMatrixCellsInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingMatrixCellsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS,
     async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
@@ -537,6 +559,25 @@ export function listTypingLayerUsageInRangeForHash(
   untilMs: number,
 ): TypingLayerUsageRow[] {
   return getTypingAnalyticsDB().listLayerUsageForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Per-cell matrix totals for the Analyze > Layer activations mode.
+ * Aggregates across every machine hash. */
+export function listTypingMatrixCellsInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMatrixCellRow[] {
+  return getTypingAnalyticsDB().listMatrixCellsForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingMatrixCellsInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMatrixCellRow[] {
+  return getTypingAnalyticsDB().listMatrixCellsForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Minute-raw stats for the Analyze WPM / Interval charts over the

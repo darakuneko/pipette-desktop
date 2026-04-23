@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -43,6 +43,7 @@ const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
 const WPM_ERROR_PROXY_MODES: WpmErrorProxy[] = ['on', 'off']
 const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm', 'sessions']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
+const LAYER_VIEW_MODES: LayerViewMode[] = ['keystrokes', 'activations']
 const DAY_MS = 86_400_000
 
 const WPM_MIN_SAMPLE_OPTIONS: Array<{ value: number; labelKey: string }> = [
@@ -130,6 +131,12 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [activityMetric, setActivityMetric] = useState<ActivityMetric>('keystrokes')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
+  const [layerViewMode, setLayerViewMode] = useState<LayerViewMode>('keystrokes')
+  // Base layer for the Activations view — dropped from both the
+  // aggregation and the bar list. Users whose default-layer is not 0
+  // point the selector at their real base so `LT0(KC_ESC)` hold and
+  // similar "no-op" layer ops don't count as transitions.
+  const [layerBaseLayer, setLayerBaseLayer] = useState<number>(0)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
@@ -165,6 +172,16 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       .catch(() => { if (!cancelled) setKeymapSnapshot(null) })
     return () => { cancelled = true }
   }, [selectedUid, range])
+
+  // Reset the Base Layer select when the snapshot's layer count shrinks
+  // past the current selection (device switch, keymap edit). Without
+  // this, a stale `layerBaseLayer` would render an out-of-range <option>
+  // and the aggregator would silently skip nothing meaningful.
+  useEffect(() => {
+    if (keymapSnapshot && layerBaseLayer >= keymapSnapshot.layers) {
+      setLayerBaseLayer(0)
+    }
+  }, [keymapSnapshot, layerBaseLayer])
 
   useEffect(() => {
     if (!selectedUid) { setFingerAssignments({}); return }
@@ -489,6 +506,42 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   {t('analyze.fingerAssignment.button')}
                 </button>
               )}
+              {analysisTab === 'layer' && (
+                <>
+                  <label className={FILTER_LABEL}>
+                    {t('analyze.filters.layerViewMode')}
+                    <select
+                      className={FILTER_SELECT}
+                      value={layerViewMode}
+                      onChange={(e) => setLayerViewMode(e.target.value as LayerViewMode)}
+                      data-testid="analyze-filter-layer-view-mode"
+                    >
+                      {LAYER_VIEW_MODES.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.layerViewModeOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {layerViewMode === 'activations' && keymapSnapshot !== null && keymapSnapshot.layers > 1 && (
+                    <label className={FILTER_LABEL}>
+                      {t('analyze.filters.layerBaseLayer')}
+                      <select
+                        className={FILTER_SELECT}
+                        value={layerBaseLayer}
+                        onChange={(e) => setLayerBaseLayer(Number(e.target.value))}
+                        data-testid="analyze-filter-layer-base-layer"
+                      >
+                        {Array.from({ length: keymapSnapshot.layers }, (_, i) => (
+                          <option key={i} value={i}>
+                            {t('analyze.layer.layerLabel', { layer: i })}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
             </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
@@ -528,7 +581,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </div>
                 )
               ) : analysisTab === 'layer' ? (
-                <LayerUsageChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} />
+                <LayerUsageChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} viewMode={layerViewMode} baseLayer={layerBaseLayer} />
               ) : null}
             </div>
           </>

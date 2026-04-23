@@ -633,4 +633,80 @@ describe('TypingAnalyticsDB', () => {
       expect(rows).toEqual([{ layer: 0, keystrokes: 3 }])
     })
   })
+
+  describe('listMatrixCellsForUid (Analyze > Layer activations)', () => {
+    const stats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+    function writeMatrix(
+      scopeId: string,
+      minuteTs: number,
+      row: number,
+      col: number,
+      layer: number,
+      count: number,
+      tapCount = 0,
+      holdCount = 0,
+      updatedAt = 1_000,
+    ): void {
+      db.writeMinute(
+        { scopeId, minuteTs, ...stats },
+        [],
+        [{ scopeId, minuteTs, row, col, layer, keycode: 0x04, count, tapCount, holdCount }],
+        updatedAt,
+      )
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('groups per-(layer,row,col) with tap / hold splits preserved', () => {
+      writeMatrix('scope-local', 60_000, 0, 1, 0, 4, 3, 1)
+      writeMatrix('scope-local', 120_000, 0, 1, 0, 2, 1, 1) // same cell → sums
+      writeMatrix('scope-local', 60_000, 0, 2, 0, 5)
+      const rows = db.listMatrixCellsForUid('0xAABB', 60_000, 240_000)
+      // Order is not guaranteed; compare as sets.
+      expect(rows).toHaveLength(2)
+      const byKey = new Map(rows.map((r) => [`${r.layer},${r.row},${r.col}`, r]))
+      expect(byKey.get('0,0,1')).toEqual({ layer: 0, row: 0, col: 1, count: 6, tap: 4, hold: 2 })
+      expect(byKey.get('0,0,2')).toEqual({ layer: 0, row: 0, col: 2, count: 5, tap: 0, hold: 0 })
+    })
+
+    it('keeps per-layer rows distinct', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-local', 60_000, 0, 0, 1, 7)
+      const rows = db.listMatrixCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toHaveLength(2)
+      expect(rows.find((r) => r.layer === 0)).toEqual({ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 })
+      expect(rows.find((r) => r.layer === 1)).toEqual({ layer: 1, row: 0, col: 0, count: 7, tap: 0, hold: 0 })
+    })
+
+    it('drops rows outside the window and respects tombstones', () => {
+      writeMatrix('scope-local', 30_000, 0, 0, 0, 100) // before window
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 7) // inclusive lower
+      db.mergeMatrixMinute({
+        scopeId: 'scope-local', minuteTs: 60_000, row: 0, col: 0, layer: 0, keycode: 0x04, count: 0,
+        updatedAt: 5_000, isDeleted: true,
+      })
+      writeMatrix('scope-local', 120_000, 0, 0, 0, 3) // survives
+      const rows = db.listMatrixCellsForUid('0xAABB', 60_000, 240_000)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toEqual({ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 })
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-other-uid', 60_000, 0, 0, 0, 99)
+      const rows = db.listMatrixCellsForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([{ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 }])
+    })
+
+    it('listMatrixCellsForUidAndHash restricts to one machine', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-other-machine', 60_000, 0, 0, 0, 4)
+      const rows = db.listMatrixCellsForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows).toEqual([{ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 }])
+    })
+  })
 })

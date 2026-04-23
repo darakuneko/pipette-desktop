@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Analyze > Layer — per-layer keystroke totals. Reads the
-// `typing_matrix_minute.layer` column (which records the live-active
-// layer at press time) grouped by layer, so the value already reflects
-// MO / LT / TG / etc. activations without keycode re-decoding.
+// Analyze > Layer — per-layer keystroke totals AND layer-op
+// activations, switched via the view mode toggle.
 //
-// Snapshot is optional: when provided it fixes the displayed layer
-// count (and the renderer zero-fills gaps); otherwise the bar chart
-// shows just the layers that actually received presses.
+// - Keystrokes: reads `typing_matrix_minute.layer` (GROUP BY layer),
+//   so MO / LT / TG activations are already reflected without keycode
+//   decoding. Works without a snapshot.
+// - Activations: aggregates per-cell matrix totals, looks up each
+//   cell's serialized QMK id in the keymap snapshot, and dispatches
+//   layer-op keycodes to their target layer. Requires a snapshot;
+//   falls back to the "snapshot needed" state without one.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,53 +24,128 @@ import {
 import type {
   TypingKeymapSnapshot,
   TypingLayerUsageRow,
+  TypingMatrixCellRow,
 } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, RangeMs } from './analyze-types'
-import { buildLayerBars } from './analyze-layer-usage'
+import type { DeviceScope, LayerViewMode, RangeMs } from './analyze-types'
+import {
+  aggregateLayerActivations,
+  aggregateLayerKeystrokes,
+  buildLayerBarsFromCounts,
+  type LayerBar,
+} from './analyze-layer-usage'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
+
+interface AxisTickProps {
+  x?: number
+  y?: number
+  payload?: { value?: string | number }
+}
+
+// Matches recharts' default tick typography so the axis stays
+// visually consistent with Ergonomics / Activity / WPM tabs.
+const AXIS_TICK_FONT_SIZE = 11
+const AXIS_TICK_LINE_HEIGHT = 13
+// Small inward padding from the axis line so single-line labels line
+// up with the tick itself (empirical, matches recharts' stock tick).
+const AXIS_TICK_FIRST_LINE_DY = 4
+const AXIS_TICK_X_OFFSET = -4
+
+/** Wrap a YAxis tick's value onto multiple lines using `\n`. recharts
+ * ships a single-line default; we need two lines here so a bar tagged
+ * with a layer name (e.g. "Layer 0\nBase") doesn't squish the axis
+ * width out to 200+px. Keeps the font styling identical to the stock
+ * tick so the chart looks consistent with the other Analyze tabs. */
+function MultiLineYAxisTick({ x, y, payload }: AxisTickProps): JSX.Element {
+  const raw = payload?.value
+  const text = typeof raw === 'string' ? raw : String(raw ?? '')
+  const lines = text.split('\n')
+  // Vertical-center the block around the tick's y coordinate so the
+  // label stays aligned with its bar regardless of line count.
+  const startDy = -((lines.length - 1) * AXIS_TICK_LINE_HEIGHT) / 2
+  return (
+    <g transform={`translate(${x ?? 0},${y ?? 0})`}>
+      <text
+        x={AXIS_TICK_X_OFFSET}
+        y={0}
+        dy={startDy}
+        textAnchor="end"
+        fill="var(--color-content-muted)"
+        fontSize={AXIS_TICK_FONT_SIZE}
+      >
+        {lines.map((line, i) => (
+          <tspan key={i} x={AXIS_TICK_X_OFFSET} dy={i === 0 ? AXIS_TICK_FIRST_LINE_DY : AXIS_TICK_LINE_HEIGHT}>
+            {line}
+          </tspan>
+        ))}
+      </text>
+    </g>
+  )
+}
 
 interface Props {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
-  /** Optional snapshot. When present its `layers` count fixes the
-   * x-axis (including zero-usage layers); otherwise the chart falls
-   * back to the highest layer index that actually received presses. */
+  /** Optional snapshot. Keystrokes mode still works without one
+   * (zero-fills against the max observed layer); activations mode
+   * needs it to resolve layer-op keycodes. */
   snapshot: TypingKeymapSnapshot | null
+  viewMode: LayerViewMode
+  /** Base layer the user is analyzing against. Activations mode
+   * drops this layer from both the aggregation and the bar list so
+   * "layer X held while already on X" (e.g. `LT0(KC_ESC)` hold with
+   * base=0) doesn't masquerade as a transition. Keystrokes mode
+   * ignores this field and shows every layer. */
+  baseLayer: number
 }
 
-export function LayerUsageChart({ uid, range, deviceScope, snapshot }: Props) {
+export function LayerUsageChart({ uid, range, deviceScope, snapshot, viewMode, baseLayer }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
+  const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
   const [layerNames, setLayerNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const fetchRows =
-      deviceScope === 'own'
-        ? window.vialAPI.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
-        : window.vialAPI.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
-    void fetchRows
-      .then((result) => {
+    const api = window.vialAPI
+    const ownScoped = deviceScope === 'own'
+    const run = async (): Promise<void> => {
+      try {
+        switch (viewMode) {
+          case 'activations': {
+            const result = ownScoped
+              ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
+              : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
+            if (!cancelled) setCells(Array.isArray(result) ? result : [])
+            return
+          }
+          case 'keystrokes': {
+            const result = ownScoped
+              ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
+              : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
+            if (!cancelled) setRows(Array.isArray(result) ? result : [])
+            return
+          }
+        }
+      } catch {
         if (cancelled) return
-        setRows(Array.isArray(result) ? result : [])
-      })
-      .catch(() => {
-        if (!cancelled) setRows([])
-      })
-      .finally(() => {
+        if (viewMode === 'activations') setCells([])
+        else setRows([])
+      } finally {
         if (!cancelled) setLoading(false)
-      })
+      }
+    }
+    void run()
     return () => {
       cancelled = true
     }
-  }, [uid, range, deviceScope])
+  }, [uid, range, deviceScope, viewMode])
 
   // Settings tracks `uid` only — layer names don't change per range /
-  // deviceScope, so merging this with the rows fetch would re-hit the
-  // settings store on every filter tweak.
+  // deviceScope / viewMode, so merging this with the rows fetch would
+  // re-hit the settings store on every filter tweak.
   useEffect(() => {
     let cancelled = false
     void window.vialAPI
@@ -85,17 +162,45 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot }: Props) {
     }
   }, [uid])
 
-  const bars = useMemo(
-    () =>
-      buildLayerBars(
-        rows,
-        snapshot?.layers ?? 0,
-        layerNames,
-        (layer) => t('analyze.layer.layerLabel', { layer }),
-      ),
-    [rows, snapshot, layerNames, t],
-  )
+  // Activations is the only mode that excludes the base layer; any
+  // other mode should behave as if no exclusion is active so the
+  // `useMemo` doesn't re-aggregate when the (hidden) Base Layer
+  // select changes in keystrokes mode.
+  const effectiveExcludeLayer = viewMode === 'activations' ? baseLayer : undefined
 
+  const bars = useMemo(() => {
+    const fallbackLabel = (layer: number): string =>
+      t('analyze.layer.layerLabel', { layer })
+    const byLayer = ((): Map<number, number> => {
+      switch (viewMode) {
+        case 'keystrokes':
+          return aggregateLayerKeystrokes(rows)
+        case 'activations':
+          return snapshot !== null
+            ? aggregateLayerActivations(cells, snapshot, { excludeLayer: effectiveExcludeLayer })
+            : new Map()
+      }
+    })()
+    return buildLayerBarsFromCounts(byLayer, snapshot?.layers ?? 0, layerNames, fallbackLabel, {
+      excludeLayer: effectiveExcludeLayer,
+    })
+  }, [viewMode, snapshot, cells, rows, layerNames, t, effectiveExcludeLayer])
+
+  const title =
+    viewMode === 'activations'
+      ? t('analyze.layer.activationsTitle')
+      : t('analyze.layer.title')
+
+  if (viewMode === 'activations' && snapshot === null) {
+    return (
+      <div
+        className="py-4 text-center text-[13px] text-content-muted"
+        data-testid="analyze-layer-no-snapshot"
+      >
+        {t('analyze.layer.requiresSnapshot')}
+      </div>
+    )
+  }
   if (loading) {
     return (
       <div
@@ -106,14 +211,14 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot }: Props) {
       </div>
     )
   }
-  const totalKeystrokes = bars.reduce((acc, b) => acc + b.keystrokes, 0)
-  if (bars.length === 0 || totalKeystrokes === 0) {
+  const totalValue = bars.reduce((acc, b) => acc + b.value, 0)
+  if (bars.length === 0 || totalValue === 0) {
     return (
       <div
         className="py-4 text-center text-[13px] text-content-muted"
         data-testid="analyze-layer-empty"
       >
-        {t('analyze.layer.noData')}
+        {t(viewMode === 'activations' ? 'analyze.layer.noActivations' : 'analyze.layer.noData')}
       </div>
     )
   }
@@ -124,7 +229,7 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot }: Props) {
       data-testid="analyze-layer"
     >
       <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">
-        {t('analyze.layer.title')}
+        {title}
       </h4>
       <div className="flex-1 min-h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -137,16 +242,30 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot }: Props) {
             <XAxis type="number" stroke="var(--color-content-muted)" fontSize={11} />
             <YAxis
               type="category"
-              dataKey="label"
+              dataKey="axisLabel"
               stroke="var(--color-content-muted)"
               fontSize={11}
               width={120}
+              tick={<MultiLineYAxisTick />}
             />
             <Tooltip
               cursor={{ fill: 'var(--color-surface-dim)' }}
-              content={(props) => <KeystrokeCountTooltip {...props} />}
+              content={(props) => {
+                // The axis uses the multi-line `axisLabel`, but the
+                // tooltip should show the original "Layer 0 · Base"
+                // single-line form — read it from the hovered bar's
+                // datum rather than recharts' category label.
+                const hovered = props.payload?.[0]?.payload as LayerBar | undefined
+                return (
+                  <KeystrokeCountTooltip
+                    {...props}
+                    label={hovered?.label ?? props.label}
+                    unitKey={viewMode === 'activations' ? 'analyze.unit.activations' : 'analyze.unit.keys'}
+                  />
+                )
+              }}
             />
-            <Bar dataKey="keystrokes" fill="var(--color-accent)" />
+            <Bar dataKey="value" fill="var(--color-accent)" />
           </BarChart>
         </ResponsiveContainer>
       </div>
