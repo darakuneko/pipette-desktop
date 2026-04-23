@@ -6,9 +6,15 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { createHash } from 'node:crypto'
-import nodeMachineId from 'node-machine-id'
 import { dismissNotificationModal, isAvailable } from './doc-capture-common'
+import {
+  DUMMY_SNAPSHOTS,
+  DUMMY_TA_UID,
+  seedDummySnapshots,
+  restoreSnapshots,
+  seedDummyTypingAnalytics,
+  restoreTypingAnalytics,
+} from './analyze-seed'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -162,340 +168,6 @@ async function connectDevice(page: Page): Promise<boolean> {
   await page.waitForTimeout(2000)
   console.log(`Connected to ${DEVICE_NAME}`)
   return true
-}
-
-// --- Dummy snapshot data for File tab ---
-
-const DUMMY_SNAPSHOTS = [
-  {
-    uid: 'doc-dummy-uid-1',
-    name: 'Corne',
-    entries: [
-      { id: 'doc-snap-1', label: 'Default', filename: 'Corne_2026-03-10T12-00-00.pipette', savedAt: '2026-03-10T12:00:00.000Z', updatedAt: '2026-03-15T09:30:00.000Z', vilVersion: 2 },
-      { id: 'doc-snap-2', label: 'Gaming', filename: 'Corne_2026-03-12T14-30-00.pipette', savedAt: '2026-03-12T14:30:00.000Z', vilVersion: 2 },
-    ],
-  },
-  {
-    uid: 'doc-dummy-uid-2',
-    name: 'Sofle',
-    entries: [
-      { id: 'doc-snap-3', label: 'Work', filename: 'Sofle_2026-03-08T09-00-00.pipette', savedAt: '2026-03-08T09:00:00.000Z', vilVersion: 2 },
-    ],
-  },
-]
-
-function seedDummySnapshots(snapshotBase: string): Map<string, string | null> {
-  const backups = new Map<string, string | null>()
-  for (const kb of DUMMY_SNAPSHOTS) {
-    const dir = join(snapshotBase, kb.uid, 'snapshots')
-    mkdirSync(dir, { recursive: true })
-    const indexPath = join(dir, 'index.json')
-    backups.set(indexPath, existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null)
-    writeFileSync(indexPath, JSON.stringify({ uid: kb.uid, entries: kb.entries }, null, 2), 'utf-8')
-  }
-  return backups
-}
-
-function restoreSnapshots(backups: Map<string, string | null>): void {
-  for (const [path, original] of backups) {
-    if (original != null) {
-      writeFileSync(path, original, 'utf-8')
-    } else {
-      try { unlinkSync(path) } catch { /* ignore */ }
-    }
-  }
-}
-
-// --- Dummy typing-analytics data (Analyze page — Layer tab) ---
-
-// Seeded as JSONL master files so the SQLite cache rebuilds from them on
-// app startup. The scope row uses the user's current machineHash (read
-// from sync_state.json) so the seed shows up in the default `own` device
-// scope. Cleanup deletes our JSONL / snapshot files and resets
-// sync_state.json, letting the next real launch rebuild to the empty
-// state we started from.
-
-const DUMMY_TA_UID = 'doc-ta-keyboard-1'
-const DUMMY_TA_SCOPE_ID = 'doc-ta-scope-1'
-const DUMMY_TA_SESSION_ID = 'doc-ta-session-1'
-const DUMMY_TA_PRODUCT_NAME = 'GPK60-63R (docs)'
-const DUMMY_TA_LAYERS = 3
-const DUMMY_TA_ROWS = 5
-const DUMMY_TA_COLS = 14
-
-// Keymap layout with layer-op keys on layer 0 so the Activations view has
-// more than one target layer to render. Cells not listed default to KC_A.
-const DUMMY_TA_LAYER_OPS: Record<string, string> = {
-  '0,0,0': 'MO(1)',
-  '0,0,1': 'LT1(KC_ESC)',
-  '0,0,2': 'TG(2)',
-  '0,0,3': 'TO(1)',
-  '0,0,4': 'OSL(2)',
-}
-
-interface TypingAnalyticsSeedBackup {
-  jsonlPath: string
-  snapshotPath: string
-  syncStatePath: string
-  dbPath: string
-}
-
-function readMachineHashFromSyncState(syncStatePath: string): string | null {
-  if (!existsSync(syncStatePath)) return null
-  try {
-    const raw = readFileSync(syncStatePath, 'utf-8')
-    const parsed = JSON.parse(raw) as { my_device_id?: unknown }
-    return typeof parsed.my_device_id === 'string' ? parsed.my_device_id : null
-  } catch {
-    return null
-  }
-}
-
-// Mirrors the algorithm in src/main/typing-analytics/machine-hash.ts so
-// the seed's scope lands in the same `own` device scope the main
-// process will compute on app launch — even after a prior run's restore
-// deleted sync_state.json.
-async function computeMachineHash(userDataPath: string): Promise<string> {
-  const installationIdPath = join(userDataPath, 'local', 'installation-id')
-  const installationId = readFileSync(installationIdPath, 'utf-8').trim()
-  const rawMachineId = await nodeMachineId.machineId(true)
-  return createHash('sha256').update(rawMachineId).update(installationId).digest('hex')
-}
-
-function buildDummyKeymap(): string[][][] {
-  const keymap: string[][][] = []
-  for (let layer = 0; layer < DUMMY_TA_LAYERS; layer += 1) {
-    const layerRows: string[][] = []
-    for (let row = 0; row < DUMMY_TA_ROWS; row += 1) {
-      const cols: string[] = []
-      for (let col = 0; col < DUMMY_TA_COLS; col += 1) {
-        const override = DUMMY_TA_LAYER_OPS[`${layer},${row},${col}`]
-        cols.push(override ?? 'KC_A')
-      }
-      layerRows.push(cols)
-    }
-    keymap.push(layerRows)
-  }
-  return keymap
-}
-
-// Minute-sized slices over the last 4 hours give the WPM / Interval /
-// Activity tabs some shape without bloating the seed.
-function dummyMinuteOffsets(): number[] {
-  return [240, 180, 120, 60, 30, 15, 10, 5, 3, 1]
-}
-
-function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
-  const scopeRow = {
-    id: `scope|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}`,
-    kind: 'scope',
-    updated_at: nowMs,
-    payload: {
-      id: DUMMY_TA_SCOPE_ID,
-      machineHash,
-      osPlatform: 'linux',
-      osRelease: '6.8.0-docs',
-      osArch: 'x64',
-      keyboardUid: DUMMY_TA_UID,
-      keyboardVendorId: 0x4153,
-      keyboardProductId: 0x4d47,
-      keyboardProductName: DUMMY_TA_PRODUCT_NAME,
-    },
-  }
-  const sessionRow = {
-    id: `session|${encodeURIComponent(DUMMY_TA_SESSION_ID)}`,
-    kind: 'session',
-    updated_at: nowMs,
-    payload: {
-      id: DUMMY_TA_SESSION_ID,
-      scopeId: DUMMY_TA_SCOPE_ID,
-      startMs: nowMs - 4 * 3_600_000,
-      endMs: nowMs - 60_000,
-    },
-  }
-
-  const matrixRows: unknown[] = []
-  const statsRows: unknown[] = []
-  const minuteBase = Math.floor((nowMs - 60_000) / 60_000) * 60_000
-  for (const offset of dummyMinuteOffsets()) {
-    const minuteTs = minuteBase - offset * 60_000
-    // Layer 0 bulk typing — base layer covers most presses.
-    for (let col = 0; col < 6; col += 1) {
-      matrixRows.push({
-        id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|1|${col}|0`,
-        kind: 'matrix-minute',
-        updated_at: nowMs,
-        payload: {
-          scopeId: DUMMY_TA_SCOPE_ID,
-          minuteTs,
-          row: 1,
-          col,
-          layer: 0,
-          keycode: 4 + col,
-          count: 12 + col,
-          tapCount: 12 + col,
-          holdCount: 0,
-        },
-      })
-    }
-    // Layer 0 layer-op keys — `count` feeds MO/TG/TO/OSL activations,
-    // `holdCount` feeds the LT1 activation.
-    for (const [col, qmkCol] of [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]] as const) {
-      const isLtHold = qmkCol === 1
-      matrixRows.push({
-        id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|0|${col}|0`,
-        kind: 'matrix-minute',
-        updated_at: nowMs,
-        payload: {
-          scopeId: DUMMY_TA_SCOPE_ID,
-          minuteTs,
-          row: 0,
-          col: qmkCol,
-          layer: 0,
-          keycode: 0,
-          count: 3,
-          tapCount: isLtHold ? 1 : 3,
-          holdCount: isLtHold ? 2 : 0,
-        },
-      })
-    }
-    // Layer 1 / 2 — a few keystrokes so Keystrokes view shows multi-bar.
-    matrixRows.push({
-      id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|2|3|1`,
-      kind: 'matrix-minute',
-      updated_at: nowMs,
-      payload: {
-        scopeId: DUMMY_TA_SCOPE_ID,
-        minuteTs,
-        row: 2,
-        col: 3,
-        layer: 1,
-        keycode: 7,
-        count: 5,
-        tapCount: 5,
-        holdCount: 0,
-      },
-    })
-    matrixRows.push({
-      id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|2|5|2`,
-      kind: 'matrix-minute',
-      updated_at: nowMs,
-      payload: {
-        scopeId: DUMMY_TA_SCOPE_ID,
-        minuteTs,
-        row: 2,
-        col: 5,
-        layer: 2,
-        keycode: 9,
-        count: 2,
-        tapCount: 2,
-        holdCount: 0,
-      },
-    })
-    const minuteKeystrokes = 6 * (12 + 2) + 3 * 5 + 5 + 2
-    statsRows.push({
-      id: `stats|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,
-      kind: 'minute-stats',
-      updated_at: nowMs,
-      payload: {
-        scopeId: DUMMY_TA_SCOPE_ID,
-        minuteTs,
-        keystrokes: minuteKeystrokes,
-        activeMs: 60_000,
-        intervalAvgMs: 180,
-        intervalMinMs: 40,
-        intervalP25Ms: 90,
-        intervalP50Ms: 160,
-        intervalP75Ms: 260,
-        intervalMaxMs: 520,
-      },
-    })
-  }
-
-  const allRows = [scopeRow, sessionRow, ...matrixRows, ...statsRows]
-  return allRows.map((r) => JSON.stringify(r)).join('\n') + '\n'
-}
-
-function buildDummyKeymapSnapshot(machineHash: string, savedAt: number): Record<string, unknown> {
-  return {
-    uid: DUMMY_TA_UID,
-    machineHash,
-    productName: DUMMY_TA_PRODUCT_NAME,
-    savedAt,
-    layers: DUMMY_TA_LAYERS,
-    matrix: { rows: DUMMY_TA_ROWS, cols: DUMMY_TA_COLS },
-    keymap: buildDummyKeymap(),
-    layout: {},
-  }
-}
-
-function toUtcDate(ms: number): string {
-  const d = new Date(ms)
-  const y = d.getUTCFullYear().toString().padStart(4, '0')
-  const m = (d.getUTCMonth() + 1).toString().padStart(2, '0')
-  const day = d.getUTCDate().toString().padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-async function seedDummyTypingAnalytics(userDataPath: string, nowMs: number): Promise<TypingAnalyticsSeedBackup> {
-  const syncStatePath = join(userDataPath, 'local', 'typing-analytics', 'sync_state.json')
-  const dbPath = join(userDataPath, 'local', 'typing-analytics.db')
-
-  // Prefer the cached hash from sync_state when it already exists (fast
-  // path), otherwise recompute it from node-machine-id + installation-id
-  // so the seed still lands in the user's `own` scope on runs that
-  // follow a previous helper's restore pass.
-  const machineHash =
-    readMachineHashFromSyncState(syncStatePath) ?? (await computeMachineHash(userDataPath))
-
-  const jsonlPath = join(
-    userDataPath,
-    'sync',
-    'keyboards',
-    DUMMY_TA_UID,
-    'devices',
-    machineHash,
-    `${toUtcDate(nowMs)}.jsonl`,
-  )
-  const snapshotSavedAt = nowMs - 4 * 3_600_000
-  const snapshotPath = join(
-    userDataPath,
-    'typing-analytics',
-    'keymaps',
-    DUMMY_TA_UID,
-    machineHash,
-    `${snapshotSavedAt}.json`,
-  )
-
-  mkdirSync(join(userDataPath, 'sync', 'keyboards', DUMMY_TA_UID, 'devices', machineHash), {
-    recursive: true,
-  })
-  mkdirSync(join(userDataPath, 'typing-analytics', 'keymaps', DUMMY_TA_UID, machineHash), {
-    recursive: true,
-  })
-
-  writeFileSync(jsonlPath, buildDummyJsonlContent(machineHash, nowMs), 'utf-8')
-  writeFileSync(
-    snapshotPath,
-    JSON.stringify(buildDummyKeymapSnapshot(machineHash, snapshotSavedAt)),
-    'utf-8',
-  )
-
-  // Force ensureCacheIsFresh to rebuild from the JSONL master on next launch.
-  try { unlinkSync(syncStatePath) } catch { /* ignore */ }
-
-  return { jsonlPath, snapshotPath, syncStatePath, dbPath }
-}
-
-// Delete every file we seeded plus the cache artifacts so the next real
-// app launch runs `ensureCacheIsFresh` on an empty JSONL master and
-// rebuilds a clean DB. Restoring the original DB / sync_state would race
-// against the Electron process's own shutdown writes — simpler to just
-// force a fresh rebuild.
-function restoreTypingAnalytics(backup: TypingAnalyticsSeedBackup): void {
-  for (const path of [backup.jsonlPath, backup.snapshotPath, backup.syncStatePath, backup.dbPath]) {
-    try { unlinkSync(path) } catch { /* ignore */ }
-  }
 }
 
 // --- Phase 1: Device Selection ---
@@ -723,8 +395,8 @@ async function captureSettingsModal(page: Page): Promise<void> {
 // Captures the Analyze page from the device-selection screen. Real typing data
 // is required for the charts to render; when no data exists on this machine,
 // the sidebar is empty and we fall back to capturing only the overview so the
-// guide still has a reference image. The Layer-tab sub-screenshots are skipped
-// in that case.
+// guide still has a reference image. The per-tab sub-screenshots (Heatmap,
+// WPM, Interval, Activity, Ergonomics, Layer) are skipped in that case.
 async function captureAnalyzePage(page: Page): Promise<void> {
   console.log('\n--- Phase 1.8: Analyze Page ---')
 
@@ -749,6 +421,101 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     await page.waitForTimeout(500)
   } else {
     console.log('  [warn] no keyboards listed — capturing overview only')
+  }
+
+  // Heatmap: requires a snapshot; empty state is captured if none exists.
+  const heatmapTab = page.locator('[data-testid="analyze-tab-keyHeatmap"]')
+  if (await isAvailable(heatmapTab)) {
+    await heatmapTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-heatmap', { fullPage: true })
+  } else {
+    console.log('  [skip] analyze-tab-keyHeatmap not found')
+  }
+
+  const wpmTab = page.locator('[data-testid="analyze-tab-wpm"]')
+  if (await isAvailable(wpmTab)) {
+    await wpmTab.click()
+    await page.waitForTimeout(800)
+    const wpmViewMode = page.locator('[data-testid="analyze-filter-wpm-view-mode"]')
+    if (await isAvailable(wpmViewMode)) {
+      await wpmViewMode.selectOption('timeSeries')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-wpm-time-series', { fullPage: true })
+      await wpmViewMode.selectOption('timeOfDay')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-wpm-time-of-day', { fullPage: true })
+    } else {
+      console.log('  [warn] wpm view-mode select not found — capturing default only')
+      await captureNamed(page, 'analyze-wpm-time-series', { fullPage: true })
+    }
+  } else {
+    console.log('  [skip] analyze-tab-wpm not found')
+  }
+
+  const intervalTab = page.locator('[data-testid="analyze-tab-interval"]')
+  if (await isAvailable(intervalTab)) {
+    await intervalTab.click()
+    await page.waitForTimeout(800)
+    const intervalViewMode = page.locator('[data-testid="analyze-filter-interval-view-mode"]')
+    if (await isAvailable(intervalViewMode)) {
+      await intervalViewMode.selectOption('timeSeries')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
+      await intervalViewMode.selectOption('distribution')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-interval-distribution', { fullPage: true })
+    } else {
+      console.log('  [warn] interval view-mode select not found — capturing default only')
+      await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
+    }
+  } else {
+    console.log('  [skip] analyze-tab-interval not found')
+  }
+
+  // Activity: one representative capture (keystrokes metric) keeps the guide compact.
+  const activityTab = page.locator('[data-testid="analyze-tab-activity"]')
+  if (await isAvailable(activityTab)) {
+    await activityTab.click()
+    await page.waitForTimeout(800)
+    const activityMetric = page.locator('[data-testid="analyze-filter-activity-metric"]')
+    if (await isAvailable(activityMetric)) {
+      await activityMetric.selectOption('keystrokes')
+      await page.waitForTimeout(500)
+    }
+    await captureNamed(page, 'analyze-activity-keystrokes', { fullPage: true })
+  } else {
+    console.log('  [skip] analyze-tab-activity not found')
+  }
+
+  const ergonomicsTab = page.locator('[data-testid="analyze-tab-ergonomics"]')
+  if (await isAvailable(ergonomicsTab)) {
+    await ergonomicsTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-ergonomics', { fullPage: true })
+
+    // Open button is disabled when no snapshot is available — gate on isEnabled.
+    const fingerBtn = page.locator('[data-testid="analyze-finger-assignment-open"]')
+    if ((await isAvailable(fingerBtn)) && (await fingerBtn.isEnabled())) {
+      await fingerBtn.click()
+      await page.waitForTimeout(500)
+      const fingerModal = page.locator('[data-testid="finger-assignment-modal"]')
+      if (await isAvailable(fingerModal)) {
+        // Element screenshot so the modal fills the frame instead of the dimmed backdrop.
+        await captureNamed(page, 'analyze-finger-assignment-modal', { element: fingerModal })
+        const closeBtn = page.locator('[data-testid="finger-assignment-close"]')
+        if (await isAvailable(closeBtn)) {
+          await closeBtn.click()
+          await page.waitForTimeout(500)
+        }
+      } else {
+        console.log('  [warn] finger-assignment-modal did not open')
+      }
+    } else {
+      console.log('  [warn] finger-assignment button not available — modal capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-ergonomics not found')
   }
 
   const layerTab = page.locator('[data-testid="analyze-tab-layer"]')
@@ -1513,7 +1280,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-overview, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-ergonomics, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(page)
     if (!connected) {

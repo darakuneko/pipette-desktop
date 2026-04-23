@@ -28,7 +28,7 @@
     "test:e2e": "playwright test",
     "test:e2e:dev": "E2E_MODE=dev playwright test",
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
-    "doc:screenshots": "tsx e2e/helpers/doc-capture.ts"
+    "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts"
   },
   "dependencies": {
     "@zxcvbn-ts/core": "^3.0.4",

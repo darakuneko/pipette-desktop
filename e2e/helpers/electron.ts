@@ -7,6 +7,16 @@ import { fileURLToPath } from 'node:url'
 
 const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 
+export interface LaunchAppOptions {
+  /**
+   * Runs after Electron's main process is up but before the first
+   * BrowserWindow is awaited — the right spot to seed master files
+   * into the userData directory so `ensureCacheIsFresh` rebuilds the
+   * SQLite cache from them as the renderer loads.
+   */
+  onMainReady?: (ctx: { app: ElectronApplication; userDataPath: string }) => Promise<void>
+}
+
 /**
  * Launch the Electron app for E2E testing.
  * Requires a production build: run `pnpm build` before E2E tests.
@@ -16,7 +26,7 @@ const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
  * overridden via ELECTRON_RENDERER_URL. Only localhost URLs are
  * supported (CSP and navigation allowlist restrict other hosts).
  */
-export async function launchApp(): Promise<{
+export async function launchApp(opts: LaunchAppOptions = {}): Promise<{
   app: ElectronApplication
   page: Page
 }> {
@@ -29,7 +39,7 @@ export async function launchApp(): Promise<{
 
   const app = await electron.launch({
     args: [
-      resolve(PROJECT_ROOT, 'out/main/index.cjs'),
+      resolve(PROJECT_ROOT, 'out/main/index.js'),
       '--no-sandbox',
       '--disable-gpu-sandbox',
     ],
@@ -39,6 +49,11 @@ export async function launchApp(): Promise<{
       ...(isDev ? { ELECTRON_RENDERER_URL: rendererUrl } : {}),
     },
   })
+
+  if (opts.onMainReady) {
+    const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
+    await opts.onMainReady({ app, userDataPath })
+  }
 
   // Wait for the first BrowserWindow to appear
   const page = await app.firstWindow()
