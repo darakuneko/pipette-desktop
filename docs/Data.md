@@ -54,6 +54,30 @@ Settings tied to a specific keyboard, identified by its unique ID.
 | Typing test language | Selected language pack |
 | Typing view preferences | Compact window size and always-on-top setting |
 
+### Typing Analytics
+
+Per-keyboard typing history that feeds the Analyze page (see OPERATION-GUIDE §1.4). Recorded while you are in Typing View and the Record toggle in the typing-test pane is set to Start; typing-test results flow into the same stream.
+
+| Item | Description |
+|------|-------------|
+| Keystroke events | Per-keystroke records aggregated into minute buckets |
+| Minute stats | WPM, Backspace %, interval percentiles, and other per-minute summaries |
+| Matrix activity | Per-cell press counts with the active layer at the time |
+| Sessions | Start / end markers for each typing session |
+| Keymap snapshots | Point-in-time keymap captures used to resolve heatmap positions and layer-op targets |
+
+**What is synced, what is local cache**
+
+| Storage | Path (under user data directory) | Scope |
+|---------|-----------------------------------|-------|
+| Per-device typing log (master) | `sync/keyboards/{uid}/devices/{machineHash}/{YYYY-MM-DD}.jsonl` | **Synced** across your signed-in devices |
+| Keymap snapshots (master) | `typing-analytics/keymaps/{uid}/{machineHash}/*.json` | Local only (per machine) |
+| Query cache (SQLite) | `local/typing-analytics.db` | Local only — rebuilt from the JSONL master when missing or stale |
+
+The JSONL master is the source of truth and survives cache rebuilds. When the app can't find the SQLite cache (first launch on a new machine, file corruption, schema upgrade), it replays the JSONL log to rebuild it; no data is lost.
+
+**Layer names in the chart** come from Per-Keyboard Settings above, not from typing analytics — renaming a layer in the layer panel updates the axis label in Analyze the next time you open it.
+
 ### Snapshots
 
 Complete point-in-time captures of a keyboard's state. Each snapshot contains:

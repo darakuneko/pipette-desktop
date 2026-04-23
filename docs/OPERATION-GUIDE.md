@@ -83,6 +83,75 @@ Per-entry actions in the favorites list:
 
 A **breadcrumb navigation** at the top of the content area shows the current path (e.g., "Local › Favorites › Tap Dance")
 
+### 1.4 Analyze
+
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, and per-layer usage. Data is recorded while you are in Typing View (the compact window opened from the status bar) and the Record toggle in the typing-test pane is set to Start. Typing-test results are recorded in the same stream.
+
+**Access**
+
+There are two entry points:
+
+- **Analyze tab** on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged
+- **View Analytics** button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back
+
+**Keyboard list (sidebar)**
+
+The left sidebar lists every keyboard that has recorded typing data. Pick one to populate the charts; keyboards with no data never appear.
+
+**Analysis tabs**
+
+Switch between six analyses with the tab bar above the chart:
+
+| Tab | What it shows |
+|-----|---------------|
+| **Heatmap** | Press count per physical key, overlaid on the keymap (per layer). Requires a keymap snapshot in range |
+| **WPM** | Words-per-minute over time, or by hour of day |
+| **Interval** | Keystroke interval percentiles (min / p25 / median / p75 / max), as a time series or a distribution |
+| **Activity** | Hour × day-of-week grid colored by keystrokes, WPM, or sessions |
+| **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor. Requires a snapshot |
+| **Layer** | Per-layer keystroke counts or layer-op activations |
+
+The Heatmap, Ergonomics, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
+
+**Common filters**
+
+The following filters are always available:
+
+- **From** / **To** — the time range to analyze (defaults to the last 24 hours)
+- **Device** — `This device` shows only data recorded on this machine; `All devices` also includes data synced from other machines. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
+
+Individual tabs add their own filters above the chart (view mode, granularity, normalization, unit, etc.); those are described per tab in the sections below.
+
+#### Layer
+
+The Layer tab breaks usage down by keyboard layer.
+
+**View Mode**
+
+- **Keystrokes** — sums every press at the layer that was active at the time. Reflects `MO`, `LT`, `TG`, and any other layer op live, because the active layer is recorded when the press happens. Works with or without a keymap snapshot
+
+  ![Analyze — Layer Keystrokes](screenshots/analyze-layer-keystrokes.png)
+
+- **Activations** — counts how many times each layer was *reached* through a layer-op keycode. Requires a keymap snapshot so the layer-op target can be resolved:
+  - `MO` / `TG` / `TO` / `DF` / `PDF` / `OSL` / `TT` — counted on press
+  - `LT` / `LM` — counted only on hold (so a tapped `LT0(KC_ESC)` doesn't look like a layer transition)
+
+  ![Analyze — Layer Activations](screenshots/analyze-layer-activations.png)
+
+**Base Layer**
+
+Appears only in Activations mode on keyboards with two or more layers. Selects the layer you are analyzing from — that layer is dropped from the bar list so a "hold the same layer you're already on" press (e.g., `LT0(KC_ESC)` while base = 0) doesn't show up as a transition.
+
+**Layer names**
+
+If you have named layers in the layer panel (see §2.3), the name is appended to the axis label (e.g., `Layer 0 · Base`) so you can tell layers apart without counting.
+
+**Empty states**
+
+- **Keystrokes, no activity** — nothing pressed in range
+- **Activations, no activity** — no layer-op keys pressed in range
+- **Activations, no snapshot** — "Layer activations need a keymap snapshot. Start a record session in this range to capture one." Keystrokes mode keeps working without a snapshot
+
 ---
 
 ## 2. Keymap Editor

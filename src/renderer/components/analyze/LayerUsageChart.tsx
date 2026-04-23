@@ -265,7 +265,7 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot, viewMode, b
                 )
               }}
             />
-            <Bar dataKey="value" fill="var(--color-accent)" />
+            <Bar dataKey="value" fill="var(--color-accent)" isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
