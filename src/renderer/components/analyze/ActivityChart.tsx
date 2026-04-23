@@ -161,6 +161,7 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
                   content={title}
                   disabled={!title}
                   describedByOn="wrapper"
+                  align={h === ACTIVITY_HOUR_COUNT - 1 ? 'end' : 'center'}
                   wrapperClassName="aspect-square"
                   wrapperProps={{
                     role: 'cell',

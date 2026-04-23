@@ -902,7 +902,7 @@
     "fingerAssignment": {
       "button": "Finger assignment",
       "title": "Finger assignment",
-      "subtitle": "Click a key to override the estimated finger. The hand follows the finger automatically.",
+      "subtitle": "Click a key to override the estimated finger.",
       "save": "Save",
       "reset": "Reset to estimate",
       "resetAll": "Reset all",

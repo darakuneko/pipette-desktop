@@ -489,7 +489,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 </button>
               )}
             </div>
-            <div className="flex-1 min-h-0 py-2 [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
+            <div className="flex-1 min-h-0 py-2 overflow-x-clip [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
                 <WpmChart
                   uid={selected.uid}
