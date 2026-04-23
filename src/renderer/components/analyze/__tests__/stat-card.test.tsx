@@ -11,8 +11,9 @@ vi.mock('react-i18next', () => ({
     t: (key: string) => {
       const map: Record<string, string> = {
         'analyze.peak.peakKeystrokesPerMin': 'Peak K/min',
-        'analyze.peak.peakKeystrokesPerMinDesc': 'Highest keystrokes per minute.',
         'analyze.peak.peakKeystrokesPerDay': 'Peak K/day',
+        'analyze.peak.longestSession': 'Longest session (min)',
+        'analyze.peak.longestSessionDesc': 'Longest continuous typing run, separated by 5+ minutes of idle.',
         'grid-label': 'Grid Label',
       }
       return map[key] ?? key
@@ -86,15 +87,15 @@ describe('AnalyzeStatGrid', () => {
   it('forwards descriptionKey to StatCard so a tooltip is rendered', () => {
     const items: AnalyzeSummaryItem[] = [
       {
-        labelKey: 'analyze.peak.peakKeystrokesPerMin',
-        descriptionKey: 'analyze.peak.peakKeystrokesPerMinDesc',
-        value: '300',
+        labelKey: 'analyze.peak.longestSession',
+        descriptionKey: 'analyze.peak.longestSessionDesc',
+        value: '120',
       },
     ]
     render(
       <AnalyzeStatGrid items={items} ariaLabelKey="grid-label" />,
     )
     const tooltip = screen.getByRole('tooltip')
-    expect(tooltip.textContent).toBe('Highest keystrokes per minute.')
+    expect(tooltip.textContent).toBe('Longest continuous typing run, separated by 5+ minutes of idle.')
   })
 })

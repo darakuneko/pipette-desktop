@@ -12,7 +12,8 @@ export type TooltipElement = 'div' | 'span'
  *
  * Wraps the trigger in `wrapperAs` (default `div`) with `group/tt relative
  * inline-block` and renders a CSS-driven bubble (`bubbleAs`, default `div`)
- * that shows on hover or focus-within. Short-text only (`whitespace-nowrap`).
+ * that shows on hover or focus-within. Bubble uses `whitespace-pre-line` so
+ * `\n` in `content` renders as a line break (consistent with NotificationModal).
  *
  * `describedByOn='trigger'` clones the child and merges `aria-describedby`;
  * `describedByOn='wrapper'` leaves the child alone and puts the reference on
@@ -39,7 +40,7 @@ export interface TooltipProps {
 }
 
 const BUBBLE_BASE =
-  'pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-nowrap opacity-0 transition-opacity group-hover/tt:opacity-100 group-focus-within/tt:opacity-100'
+  'pointer-events-none absolute z-50 w-max rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-pre-line opacity-0 transition-opacity group-hover/tt:opacity-100 group-focus-within/tt:opacity-100'
 
 const WRAPPER_BASE = 'group/tt relative inline-block'
 

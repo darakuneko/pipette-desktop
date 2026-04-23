@@ -449,7 +449,6 @@ function toWpmItems(
   return [
     {
       labelKey: 'analyze.activity.wpm.summary.overallWpm',
-      descriptionKey: 'analyze.activity.wpm.summary.overallWpmDesc',
       value: formatWpm(summary.overallWpm),
     },
     {
@@ -474,32 +473,26 @@ function toSessionsItems(summary: SessionDistributionSummary): AnalyzeSummaryIte
   return [
     {
       labelKey: 'analyze.activity.sessions.summary.sessionCount',
-      descriptionKey: 'analyze.activity.sessions.summary.sessionCountDesc',
       value: summary.sessionCount.toLocaleString(),
     },
     {
       labelKey: 'analyze.activity.sessions.summary.totalDuration',
-      descriptionKey: 'analyze.activity.sessions.summary.totalDurationDesc',
       value: formatActiveDuration(summary.totalDurationMs),
     },
     {
       labelKey: 'analyze.activity.sessions.summary.meanDuration',
-      descriptionKey: 'analyze.activity.sessions.summary.meanDurationDesc',
       value: summary.meanDurationMs === null ? '—' : formatActiveDuration(summary.meanDurationMs),
     },
     {
       labelKey: 'analyze.activity.sessions.summary.medianDuration',
-      descriptionKey: 'analyze.activity.sessions.summary.medianDurationDesc',
       value: summary.medianDurationMs === null ? '—' : formatActiveDuration(summary.medianDurationMs),
     },
     {
       labelKey: 'analyze.activity.sessions.summary.longestDuration',
-      descriptionKey: 'analyze.activity.sessions.summary.longestDurationDesc',
       value: summary.longestDurationMs === null ? '—' : formatActiveDuration(summary.longestDurationMs),
     },
     {
       labelKey: 'analyze.activity.sessions.summary.shortestDuration',
-      descriptionKey: 'analyze.activity.sessions.summary.shortestDurationDesc',
       value: summary.shortestDurationMs === null ? '—' : formatActiveDuration(summary.shortestDurationMs),
     },
   ]

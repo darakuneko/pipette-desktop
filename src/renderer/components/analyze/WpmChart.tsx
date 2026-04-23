@@ -402,46 +402,38 @@ function toTimeSeriesItems(
   const items: AnalyzeSummaryItem[] = [
     {
       labelKey: 'analyze.wpm.timeSeries.summary.peakWpm',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.peakWpmDesc',
       value: peaks?.peakWpm ? formatWpm(peaks.peakWpm.value) : '—',
       context: peaks?.peakWpm ? formatDateTime(peaks.peakWpm.atMs) : undefined,
     },
     {
       labelKey: 'analyze.wpm.timeSeries.summary.lowestWpm',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.lowestWpmDesc',
       value: peaks?.lowestWpm ? formatWpm(peaks.lowestWpm.value) : '—',
       context: peaks?.lowestWpm ? formatDateTime(peaks.lowestWpm.atMs) : undefined,
     },
     {
       labelKey: 'analyze.wpm.timeSeries.summary.overallWpm',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.overallWpmDesc',
       value: formatWpm(summary.overallWpm),
     },
     {
       labelKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpm',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.weightedMedianWpmDesc',
       value: summary.weightedMedianWpm === null ? '—' : formatWpm(summary.weightedMedianWpm),
     },
     // Row break at 4-column grid — everything below is keystroke volume.
     {
       labelKey: 'analyze.wpm.timeSeries.summary.totalKeystrokes',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.totalKeystrokesDesc',
       value: summary.totalKeystrokes.toLocaleString(),
     },
     {
       labelKey: 'analyze.wpm.timeSeries.summary.activeDuration',
-      descriptionKey: 'analyze.wpm.timeSeries.summary.activeDurationDesc',
       value: formatActiveDuration(summary.activeMs),
     },
     {
       labelKey: 'analyze.peak.peakKeystrokesPerMin',
-      descriptionKey: 'analyze.peak.peakKeystrokesPerMinDesc',
       value: peaks?.peakKeystrokesPerMin ? peaks.peakKeystrokesPerMin.value.toLocaleString() : '—',
       context: peaks?.peakKeystrokesPerMin ? formatDateTime(peaks.peakKeystrokesPerMin.atMs) : undefined,
     },
     {
       labelKey: 'analyze.peak.peakKeystrokesPerDay',
-      descriptionKey: 'analyze.peak.peakKeystrokesPerDayDesc',
       value: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.value.toLocaleString() : '—',
       context: peaks?.peakKeystrokesPerDay ? peaks.peakKeystrokesPerDay.day : undefined,
     },
@@ -450,7 +442,6 @@ function toTimeSeriesItems(
     items.push(
       {
         labelKey: 'analyze.wpm.timeSeries.summary.totalBackspaces',
-        descriptionKey: 'analyze.wpm.timeSeries.summary.totalBackspacesDesc',
         value: bks.totalBackspaces.toLocaleString(),
       },
       {
@@ -467,17 +458,14 @@ function toHourOfDayItems(summary: HourOfDayWpmSummary): AnalyzeSummaryItem[] {
   return [
     {
       labelKey: 'analyze.wpm.timeOfDay.summary.totalKeystrokes',
-      descriptionKey: 'analyze.wpm.timeOfDay.summary.totalKeystrokesDesc',
       value: summary.totalKeystrokes.toLocaleString(),
     },
     {
       labelKey: 'analyze.wpm.timeOfDay.summary.activeDuration',
-      descriptionKey: 'analyze.wpm.timeOfDay.summary.activeDurationDesc',
       value: formatActiveDuration(summary.activeMs),
     },
     {
       labelKey: 'analyze.wpm.timeOfDay.summary.overallWpm',
-      descriptionKey: 'analyze.wpm.timeOfDay.summary.overallWpmDesc',
       value: formatWpm(summary.overallWpm),
     },
     {

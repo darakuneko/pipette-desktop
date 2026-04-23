@@ -50,7 +50,7 @@ export function StatCard({ label, value, unit, context, testid, description, too
       content={description}
       align={tooltipAlign}
       wrapperClassName="block h-full w-full"
-      className={tooltipAlign === 'end' ? 'max-w-xs !whitespace-normal' : undefined}
+      className={tooltipAlign === 'end' ? 'max-w-xs' : undefined}
     >
       {card}
     </UITooltip>

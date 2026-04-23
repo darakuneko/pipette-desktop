@@ -237,6 +237,17 @@ describe('Tooltip', () => {
     expect(wrapper?.getAttribute('aria-describedby')).toBe(`existing-id ${bubble.id}`)
   })
 
+  it('uses whitespace-pre-line on the bubble so "\\n" in content renders as a line break', () => {
+    render(
+      <Tooltip content={'first line\nsecond line'}>
+        <button type="button">Trigger</button>
+      </Tooltip>,
+    )
+    const bubble = screen.getByRole('tooltip')
+    expect(bubble.className).toContain('whitespace-pre-line')
+    expect(bubble.textContent).toBe('first line\nsecond line')
+  })
+
   it('lets wrapperClassName override wrapperProps.className on the wrapper', () => {
     const { container } = render(
       <Tooltip

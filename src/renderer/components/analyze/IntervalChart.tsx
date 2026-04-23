@@ -365,7 +365,6 @@ function toDistributionItems(
   return [
     {
       labelKey: 'analyze.interval.distribution.summary.medianP50',
-      descriptionKey: 'analyze.interval.distribution.summary.medianP50Desc',
       value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit),
     },
     {
@@ -390,7 +389,6 @@ function toDistributionItems(
     },
     {
       labelKey: 'analyze.interval.distribution.summary.longestPause',
-      descriptionKey: 'analyze.interval.distribution.summary.longestPauseDesc',
       value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit),
     },
     longestSessionItem(peaks),
@@ -405,17 +403,14 @@ function toTimeSeriesItems(
   return [
     {
       labelKey: 'analyze.interval.timeSeries.summary.medianP50',
-      descriptionKey: 'analyze.interval.timeSeries.summary.medianP50Desc',
       value: summary.weightedMedianP50Ms === null ? '—' : formatIntervalValue(summary.weightedMedianP50Ms, unit),
     },
     {
       labelKey: 'analyze.interval.timeSeries.summary.shortest',
-      descriptionKey: 'analyze.interval.timeSeries.summary.shortestDesc',
       value: summary.shortestIntervalMs === null ? '—' : formatIntervalValue(summary.shortestIntervalMs, unit),
     },
     {
       labelKey: 'analyze.interval.timeSeries.summary.longestPause',
-      descriptionKey: 'analyze.interval.timeSeries.summary.longestPauseDesc',
       value: summary.longestPauseMs === null ? '—' : formatIntervalValue(summary.longestPauseMs, unit),
     },
     longestSessionItem(peaks),
