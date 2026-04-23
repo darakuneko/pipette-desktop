@@ -122,6 +122,153 @@ The following filters are always available:
 
 Individual tabs add their own filters above the chart (view mode, granularity, normalization, unit, etc.); those are described per tab in the sections below.
 
+#### Heatmap
+
+The Heatmap tab counts every press per physical key and paints the result on the keymap layout, one layer at a time. It's useful for spotting over- or under-used keys per layer and for tuning the layout.
+
+**Keymap panel**
+
+Keys are tinted by press count (dim = low, saturated accent = high). When a keyboard has more than one layer, a layer toggle bar appears above the panel (**Layer 0**, **Layer 1**, …) and each button shows the per-layer count. Hovering a key opens a tooltip inside the chart with the bound keycode and the count; the tooltip never spills outside the heatmap frame.
+
+**Ranking controls**
+
+Below the heatmap is a ranking table. Four filters control what it shows:
+
+- **Normalize** — `Absolute` (raw count), `Per hour` (count ÷ active hours), `Share of total` (% of total presses in range)
+- **Aggregate** — `By cell` collapses every press of the same physical cell; `By character` collapses every press of the same keycode regardless of where on the keymap it sits
+- **Group** — `All`, `Character`, `Modifier`, `Layer op`
+- **Top N** — 10 / 20 / 30 / … / 100
+
+Columns are **Key**, **Layer** (only when the group spans multiple layers), **Matrix**, **Count**.
+
+![Analyze — Heatmap](screenshots/analyze-heatmap.png)
+
+**Empty states**
+
+- **No snapshot** — "No keymap snapshot recorded for this range. Start a record session to capture one."
+- **No layout** — "Layout data not available for this snapshot." The snapshot exists but lacks KLE geometry
+- **No activity** — "No key presses in this range." Ranking table only
+
+#### WPM
+
+The WPM tab charts Words Per Minute — keystrokes per minute divided by 5 — either as a time series or binned by hour of day.
+
+**View Mode**
+
+- **Time series** — WPM over the selected range as a line chart. When **Error proxy** is On, a red dashed line plots **Bksp %** on a secondary right-hand axis (0–100 %), letting you see speed and error rate together
+
+  ![Analyze — WPM Time Series](screenshots/analyze-wpm-time-series.png)
+
+- **Time of day** — Bar chart of the 24 hours in the local day. Each bar is the average WPM for that hour across the range. Bars that did not meet **Min sample** render in a muted tone
+
+  ![Analyze — WPM Time of Day](screenshots/analyze-wpm-time-of-day.png)
+
+**Min sample** (both views)
+
+`30s`, `1 min`, `2 min`, `5 min`. Minutes with fewer keystrokes than the chosen WPM-worth-of-keys threshold are dropped from the chart so very light sessions don't skew the line.
+
+**Error proxy** (Time series only)
+
+`On` / `Off`. On mode adds the **Bksp %** companion line to the WPM line. Click a legend entry to hide or show either line.
+
+**Granularity** (Time series only)
+
+Bucket width of the time series (`Auto`, `1 min`, `5 min`, … `1 week`, `1 month`).
+
+**Summary cards**
+
+- **Time series** — Total keystrokes, Active typing time, Overall WPM, Peak WPM, Lowest WPM, Weighted median WPM, Peak K/min, Peak K/day, and (Error proxy On only) Total Bksp + Overall Bksp %
+- **Time of day** — Total keystrokes, Active typing time, Overall WPM, Peak hour, Slowest hour, Active hours (N / 24)
+
+#### Interval
+
+The Interval tab visualizes the time between consecutive keystrokes, either as percentile lines over time or as a distribution histogram.
+
+**View Mode**
+
+- **Time series** — Five percentile lines on a log-scale Y axis: **Min**, **p25**, **Median**, **p75**, **Max**. The Median line is drawn thickest. Click a legend entry to hide a line. The Y-axis label reads `sec (log)` or `ms (log)` depending on Display
+
+  ![Analyze — Interval Time Series](screenshots/analyze-interval-time-series.png)
+
+- **Distribution** — Bar chart of nine fixed bins (`<50ms`, `50-100ms`, `100-200ms`, `200-500ms`, `500ms-1s`, `1-2s`, `2-5s`, `5-10s`, `>10s`). Bars are colored by band: **Fast** (green, <200ms), **Normal** (blue, 200–500ms), **Slow** (orange, 500ms–2s), **Pause** (red, ≥2s). The **Device** filter is hidden in Distribution mode because bins are always computed from this device alone
+
+  ![Analyze — Interval Distribution](screenshots/analyze-interval-distribution.png)
+
+**Display** (both views)
+
+`Seconds` / `Milliseconds`. Switches the unit used in tooltips and on the Y axis. The distribution bin labels stay in their native unit.
+
+**Granularity** (Time series only)
+
+Same options as WPM.
+
+**Summary cards**
+
+- **Time series** — Total keystrokes, Active typing time, Weighted median interval, Shortest interval (per min), Longest interval (per min)
+- **Distribution** — Total keystrokes, Median interval, Fast (<200ms) share, Normal (200–500ms) share, Slow (500ms–2s) share, Pause (≥2s) share, Longest interval (per min), Longest session
+
+#### Activity
+
+The Activity tab groups typing by day-of-week × hour so you can see when you actually type.
+
+**Metric**
+
+- **Keystrokes** — a 24 × 7 grid colored by keystroke count. Empty cells are dim, the busiest cell is fully saturated. Hovering a cell shows the count in the browser's title tooltip
+
+  ![Analyze — Activity Keystrokes](screenshots/analyze-activity-keystrokes.png)
+
+- **WPM** — same grid, colored by average WPM per cell. Cells that don't meet **Min sample** are desaturated instead of pinning the color scale
+- **Sessions** — histogram of session lengths in seven bins (`<5 min`, `5-15 min`, `15-30 min`, `30-60 min`, `1-2 h`, `2-4 h`, `>4 h`). A session is continuous typing separated by 5+ minutes of idle
+
+**Min sample** (Metric = WPM only)
+
+Same options as the WPM tab.
+
+**Peak records**
+
+Four stat cards above the grid summarize the peaks across the selected range: Peak WPM, Peak K/min, Peak K/day, Longest session (min). They stay visible for every metric so you always see the overall highs at a glance.
+
+**Summary cards**
+
+Under the grid, the summary depends on the metric:
+
+- **Keystrokes** — Total keystrokes, Active typing time, Busiest day, Busiest hour, Peak cell, Active cells (N / 168)
+- **WPM** — Total keystrokes, Active typing time, Overall WPM, Peak cell, Slowest cell, Active cells (N / 168)
+- **Sessions** — Session count, Total duration, Mean duration, Median duration, Longest session, Shortest session
+
+#### Ergonomics
+
+The Ergonomics tab reports the physical load of your typing — per finger, per hand, per row — based on the key → finger assignment in the snapshot keymap.
+
+Like Heatmap, this view needs a keymap snapshot that overlaps the range.
+
+**Sections**
+
+Three bar charts stack vertically:
+
+1. **Finger Load** — 10 vertical bars, one per finger from left pinky to right pinky
+2. **Hand Balance** — 2 horizontal bars (Left / Right)
+3. **Row Usage** — 6 horizontal bars (Function / Number / Top / Home / Bottom / Thumb)
+
+![Analyze — Ergonomics](screenshots/analyze-ergonomics.png)
+
+**Finger assignment**
+
+Each key is auto-assigned to a finger based on the layout's KLE metadata (column position and the standard column-to-finger mapping). Click the **Finger assignment** button at the top of the tab to override any key manually:
+
+![Analyze — Finger Assignment](screenshots/analyze-finger-assignment-modal.png)
+
+- Each key shows a short finger code (`Lp`, `Lr`, `Lm`, `Li`, `Lt` / `Rt`, `Ri`, `Rm`, `Rr`, `Rp`). Manually overridden keys are prefixed with `*`
+- Click a key → popover to pick a finger
+- **Save** persists the overrides; **Reset all** clears every override (disabled when there are none). **Reset to estimate** in the per-key popover clears just that key
+- Overrides apply immediately once you close the modal — Finger Load, Hand Balance, and Row Usage all recompute
+
+**Empty states**
+
+- **No snapshot** — same message as Heatmap
+- **No layout** — "Layout data not available for this snapshot."
+- **No activity** — "No keystrokes recorded in this range."
+
 #### Layer
 
 The Layer tab breaks usage down by keyboard layer.
