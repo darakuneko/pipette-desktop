@@ -557,4 +557,80 @@ describe('TypingAnalyticsDB', () => {
       expect(cell).toEqual({ total: 4, tap: 2, hold: 1 })
     })
   })
+
+  describe('listLayerUsageForUid (Analyze > Layer)', () => {
+    const stats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+    function writeMatrix(scopeId: string, minuteTs: number, row: number, col: number, layer: number, count: number, updatedAt = 1_000): void {
+      db.writeMinute(
+        { scopeId, minuteTs, ...stats },
+        [],
+        [{ scopeId, minuteTs, row, col, layer, keycode: 0x04, count }],
+        updatedAt,
+      )
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('groups keystrokes by layer within the [since, until) window', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-local', 60_000, 0, 1, 0, 2) // layer 0 accumulates
+      writeMatrix('scope-local', 120_000, 0, 0, 1, 7) // layer 1
+      writeMatrix('scope-local', 180_000, 0, 0, 2, 4) // layer 2
+      const rows = db.listLayerUsageForUid('0xAABB', 60_000, 240_000)
+      expect(rows).toEqual([
+        { layer: 0, keystrokes: 5 },
+        { layer: 1, keystrokes: 7 },
+        { layer: 2, keystrokes: 4 },
+      ])
+    })
+
+    it('drops rows outside the [since, until) window', () => {
+      writeMatrix('scope-local', 30_000, 0, 0, 0, 100) // before window
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 7) // inclusive lower bound
+      writeMatrix('scope-local', 240_000, 0, 0, 1, 999) // excluded upper bound
+      const rows = db.listLayerUsageForUid('0xAABB', 60_000, 240_000)
+      expect(rows).toEqual([{ layer: 0, keystrokes: 7 }])
+    })
+
+    it('aggregates across machines by default (all-devices scope)', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-other-machine', 60_000, 0, 0, 0, 4)
+      const rows = db.listLayerUsageForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([{ layer: 0, keystrokes: 7 }])
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-other-uid', 60_000, 0, 0, 0, 99)
+      const rows = db.listLayerUsageForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([{ layer: 0, keystrokes: 3 }])
+    })
+
+    it('excludes tombstoned matrix rows and tombstoned scopes', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 5)
+      db.mergeMatrixMinute({
+        scopeId: 'scope-local', minuteTs: 60_000, row: 0, col: 0, layer: 0, keycode: 0x04, count: 0,
+        updatedAt: 5_000, isDeleted: true,
+      })
+      writeMatrix('scope-other-machine', 60_000, 0, 0, 0, 8)
+      db.mergeScope({
+        ...sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }),
+        updatedAt: 5_000,
+        isDeleted: true,
+      })
+      const rows = db.listLayerUsageForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([])
+    })
+
+    it('listLayerUsageForUidAndHash restricts to one machine', () => {
+      writeMatrix('scope-local', 60_000, 0, 0, 0, 3)
+      writeMatrix('scope-other-machine', 60_000, 0, 0, 0, 4)
+      const rows = db.listLayerUsageForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows).toEqual([{ layer: 0, keystrokes: 3 }])
+    })
+  })
 })

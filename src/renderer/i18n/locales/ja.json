@@ -813,7 +813,8 @@
       "interval": "間隔",
       "activity": "活動量",
       "keyHeatmap": "ヒートマップ",
-      "ergonomics": "エルゴノミクス"
+      "ergonomics": "エルゴノミクス",
+      "layer": "レイヤー"
     },
     "keyHeatmap": {
       "layer": "レイヤー",
@@ -875,6 +876,11 @@
         "bottom": "下段",
         "thumb": "親指段"
       }
+    },
+    "layer": {
+      "title": "レイヤー別打鍵数",
+      "layerLabel": "レイヤー {{layer}}",
+      "noData": "この期間にレイヤー別の打鍵記録がありません。"
     },
     "fingerAssignment": {
       "button": "指割り当て",

@@ -26,6 +26,7 @@ import type {
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
+  TypingLayerUsageRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -155,6 +156,8 @@ export interface VialAPI {
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
   typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
+  typingAnalyticsListLayerUsage(uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListLayerUsageLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]>
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListSessions(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>

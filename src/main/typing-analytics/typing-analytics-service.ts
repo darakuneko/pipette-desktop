@@ -31,6 +31,7 @@ import {
   type TypingDailySummary,
   type TypingIntervalDailySummary,
   type TypingKeyboardSummary,
+  type TypingLayerUsageRow,
   type TypingMinuteStatsRow,
   type TypingSessionRow,
   type TypingBksMinuteRow,
@@ -269,6 +270,27 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingLayerUsageRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingLayerUsageInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingLayerUsageRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingLayerUsageInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS,
     async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
@@ -496,6 +518,25 @@ export function listTypingActivityGridForHash(
   untilMs: number,
 ): TypingActivityCell[] {
   return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Per-layer keystroke totals for the Analyze > Layer tab. Covers
+ * `[sinceMs, untilMs)` and aggregates across every machine hash. */
+export function listTypingLayerUsageInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingLayerUsageRow[] {
+  return getTypingAnalyticsDB().listLayerUsageForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingLayerUsageInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingLayerUsageRow[] {
+  return getTypingAnalyticsDB().listLayerUsageForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Minute-raw stats for the Analyze WPM / Interval charts over the

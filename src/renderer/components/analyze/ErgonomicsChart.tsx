@@ -25,6 +25,7 @@ import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
 import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
+import { KeystrokeCountTooltip } from './analyze-tooltip'
 
 interface Props {
   uid: string
@@ -61,7 +62,6 @@ const Section = memo(function Section({
   height,
   testId,
 }: SectionProps) {
-  const { t } = useTranslation()
   return (
     <div data-testid={testId}>
       <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">
@@ -103,25 +103,7 @@ const Section = memo(function Section({
             )}
             <Tooltip
               cursor={{ fill: 'var(--color-surface-dim)' }}
-              content={({ active, label, payload }) => {
-                if (!active || !payload?.length) return null
-                const value = payload[0]?.value
-                const formatted = typeof value === 'number' ? value.toLocaleString() : value
-                return (
-                  <div
-                    style={{
-                      backgroundColor: 'var(--color-surface)',
-                      border: '1px solid var(--color-edge)',
-                      color: 'var(--color-content)',
-                      fontSize: 12,
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                    }}
-                  >
-                    {label}: {formatted} {t('analyze.unit.keys')}
-                  </div>
-                )
-              }}
+              content={(props) => <KeystrokeCountTooltip {...props} />}
             />
             <Bar dataKey="value" fill="var(--color-accent)" />
           </BarChart>

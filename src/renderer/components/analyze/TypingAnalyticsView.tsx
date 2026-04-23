@@ -16,6 +16,7 @@ import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
+import { LayerUsageChart } from './LayerUsageChart'
 import { WpmChart } from './WpmChart'
 
 const SIDE_BTN_BASE =
@@ -34,7 +35,7 @@ const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
 const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'layer']
 const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
@@ -526,6 +527,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.ergonomics.noSnapshot')}
                   </div>
                 )
+              ) : analysisTab === 'layer' ? (
+                <LayerUsageChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} />
               ) : null}
             </div>
           </>

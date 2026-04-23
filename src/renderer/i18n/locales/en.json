@@ -814,7 +814,8 @@
       "interval": "Interval",
       "activity": "Activity",
       "keyHeatmap": "Heatmap",
-      "ergonomics": "Ergonomics"
+      "ergonomics": "Ergonomics",
+      "layer": "Layer"
     },
     "keyHeatmap": {
       "layer": "Layer",
@@ -876,6 +877,11 @@
         "bottom": "Bottom",
         "thumb": "Thumb"
       }
+    },
+    "layer": {
+      "title": "Keystrokes per layer",
+      "layerLabel": "Layer {{layer}}",
+      "noData": "No layer activity recorded in this range."
     },
     "fingerAssignment": {
       "button": "Finger assignment",

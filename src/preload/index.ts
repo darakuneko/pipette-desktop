@@ -22,6 +22,7 @@ import type {
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
+  TypingLayerUsageRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -236,6 +237,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID, uid, sinceMs, untilMs),
   typingAnalyticsListActivityGridLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsListLayerUsage: (uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE, uid, sinceMs, untilMs),
+  typingAnalyticsListLayerUsageLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs),
   typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>

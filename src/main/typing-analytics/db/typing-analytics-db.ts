@@ -91,6 +91,7 @@ export type {
   TypingDailySummary,
   TypingIntervalDailySummary,
   TypingActivityCell,
+  TypingLayerUsageRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -126,6 +127,8 @@ export class TypingAnalyticsDB {
   private readonly selectIntervalSummariesForUidAndHashStmt: Statement
   private readonly selectActivityGridForUidStmt: Statement
   private readonly selectActivityGridForUidAndHashStmt: Statement
+  private readonly selectLayerUsageForUidStmt: Statement
+  private readonly selectLayerUsageForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
@@ -680,6 +683,40 @@ export class TypingAnalyticsDB {
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
        GROUP BY dow, hour
+    `)
+
+    // Per-layer keystroke totals for the Analyze > Layer tab. `layer`
+    // is the live-active layer recorded on each press, so the GROUP BY
+    // already reflects MO / LT / TG / etc. activations without having
+    // to re-decode layer-op keycodes. Hash-scoped variant filters by
+    // `machine_hash` the same way the activity-grid pair does.
+    this.selectLayerUsageForUidStmt = this.db.prepare(`
+      SELECT m.layer AS layer,
+             SUM(m.count) AS keystrokes
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY m.layer
+       ORDER BY m.layer ASC
+    `)
+
+    this.selectLayerUsageForUidAndHashStmt = this.db.prepare(`
+      SELECT m.layer AS layer,
+             SUM(m.count) AS keystrokes
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY m.layer
+       ORDER BY m.layer ASC
     `)
 
     // Minute-raw rows for the Analyze WPM / Interval charts. The client
@@ -1411,6 +1448,25 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingActivityCell[] {
     return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingActivityCell[]
+  }
+
+  /** Per-layer keystroke totals for the Analyze > Layer tab. Layers
+   * with zero keystrokes in the window are omitted; callers zero-fill
+   * against the current snapshot's layer count. Rows ordered by layer
+   * index ASC. */
+  listLayerUsageForUid(uid: string, sinceMs: number, untilMs: number): TypingLayerUsageRow[] {
+    return this.selectLayerUsageForUidStmt.all({ uid, sinceMs, untilMs }) as TypingLayerUsageRow[]
+  }
+
+  /** Same as {@link listLayerUsageForUid} but restricted to one
+   * machine_hash for the Analyze "This device" scope. */
+  listLayerUsageForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingLayerUsageRow[] {
+    return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingLayerUsageRow[]
   }
 
   /** Minute-raw stats for the Analyze WPM / Interval charts over the

@@ -160,6 +160,20 @@ export interface TypingSessionRow {
   endMs: number
 }
 
+/** One bucket of the Analyze > Layer tab, showing how many keystrokes
+ * were recorded while a given layer was the active one (so the value
+ * reflects both how often the layer is reached AND how much was typed
+ * once there). Sourced from `typing_matrix_minute` grouped by its
+ * `layer` column — that column records the live-active layer at
+ * press time, so it already reflects MO / LT / TG / etc. activations
+ * without re-decoding keycodes. Layers with zero keystrokes in the
+ * window are omitted; the renderer zero-fills against the current
+ * snapshot's layer count. */
+export interface TypingLayerUsageRow {
+  layer: number
+  keystrokes: number
+}
+
 /** Per-minute Backspace count aggregate used by the Analyze
  * error-proxy overlay. Sourced from `typing_matrix_minute` so every
  * path (matrix HID reads, typing-test, Vial input) contributes — not
