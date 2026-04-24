@@ -32,8 +32,9 @@ interface Props {
   range: RangeMs
   deviceScope: DeviceScope
   snapshot: TypingKeymapSnapshot
-  normalization: HeatmapNormalization
 }
+
+const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 
 interface LayerKeyboardProps {
   layer: number
@@ -254,7 +255,7 @@ function groupOf(groups: number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
 }
 
-export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalization }: Props) {
+export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
   const { t } = useTranslation()
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
   const [loading, setLoading] = useState(true)
@@ -264,6 +265,10 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
   const [frequentUsedN, setFrequentUsedN] = useState<number>(10)
   const [aggregateMode, setAggregateMode] = useState<AggregateMode>('cell')
   const [keyGroupFilter, setKeyGroupFilter] = useState<KeyGroupFilter>('all')
+  // Normalization sits with the other ranking-level filters below the
+  // keyboard rather than on the global filter row so the full control
+  // panel for the Heatmap tab stays co-located.
+  const [normalization, setNormalization] = useState<HeatmapNormalization>('absolute')
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
 
   useEffect(() => {
@@ -510,6 +515,17 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, normalizati
           {t('analyze.keyHeatmap.ranking.frequentUsed')}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
+          <select
+            className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+            value={normalization}
+            onChange={(e) => setNormalization(e.target.value as HeatmapNormalization)}
+            aria-label={t('analyze.filters.normalization')}
+            data-testid="analyze-keyheatmap-normalization"
+          >
+            {HEATMAP_NORMALIZATIONS.map((n) => (
+              <option key={n} value={n}>{t(`analyze.filters.normalizationOption.${n}`)}</option>
+            ))}
+          </select>
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
             value={aggregateMode}

@@ -736,7 +736,7 @@
       "tableLabelWpm": "時間帯 × 曜日の WPM",
       "hourHeader": "{{hour}}時",
       "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)",
-      "cellTitleShare": "{{dow}} {{hour}}時 — 総打鍵の {{share}}% ({{keystrokes}} $t(analyze.unit.keys))",
+      "cellTitleWithShare": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys) (総打鍵の {{share}}%)",
       "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
       "legendLow": "0",
       "legendHigh": "{{count}} $t(analyze.unit.keys)",
@@ -746,8 +746,7 @@
       "legendHighDescWpm": "ピーク WPM ({{wpm}} WPM)\nセルの濃度はこの値まで線形にスケール\n薄く表示されるセルは Min sample 閾値を満たしていない",
       "legendScaleDesc": "0 (空) からピーク値までの線形スケール",
       "summary": {
-        "keysContext": "{{count}} $t(analyze.unit.keys)",
-        "shareContext": "総打鍵の {{share}}%",
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
         "wpmContext": "{{wpm}} WPM"
       },
       "keystrokes": {

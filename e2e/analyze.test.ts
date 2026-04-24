@@ -86,7 +86,7 @@ test.describe('Heatmap tab', () => {
 
   test('normalization select exposes all three modes', async () => {
     await switchTab('keyHeatmap')
-    const sel = page.locator('[data-testid="analyze-filter-normalization"]')
+    const sel = page.locator('[data-testid="analyze-keyheatmap-normalization"]')
     await expect(sel).toBeVisible()
     await sel.selectOption('perHour')
     await expect(sel).toHaveValue('perHour')

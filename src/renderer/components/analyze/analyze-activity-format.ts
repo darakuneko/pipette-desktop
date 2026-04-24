@@ -12,31 +12,27 @@ import type {
 } from './analyze-activity'
 import { ACTIVITY_CELL_COUNT } from './analyze-activity'
 import type { SessionDistributionSummary } from './analyze-sessions'
-import type { ActivityMetric, SharedNormalization } from './analyze-types'
+import type { ActivityMetric } from './analyze-types'
 import { formatActiveDuration, formatHourLabel, formatSharePercent } from './analyze-format'
 import { formatWpm } from './analyze-wpm'
 
 type T = (key: string, opts?: Record<string, unknown>) => string
 
-function keysContext(
-  t: T,
-  keystrokes: number,
-  normalization: SharedNormalization,
-  total: number,
-): string {
-  if (normalization === 'shareOfTotal') {
-    return t('analyze.activity.summary.shareContext', {
-      share: formatSharePercent(total > 0 ? keystrokes / total : 0),
-    })
-  }
-  return t('analyze.activity.summary.keysContext', { count: keystrokes.toLocaleString() })
+/** Keystroke count with the share-of-total appended so both signals
+ * sit on the card without a normalize toggle. Callers pass `total`
+ * from the same grid's summary; a `0` total collapses the share to
+ * `'0.0'` (never divides by zero). */
+function keysContext(t: T, keystrokes: number, total: number): string {
+  return t('analyze.activity.summary.keysContext', {
+    count: keystrokes.toLocaleString(),
+    share: formatSharePercent(total > 0 ? keystrokes / total : 0),
+  })
 }
 
 function cellValueContext(
   cell: ActivityCell,
   t: T,
   metric: ActivityMetric,
-  normalization: SharedNormalization = 'absolute',
   total = 0,
 ): { value: string; context: string } {
   const dow = t(`analyze.activity.dow.${cell.dow}`)
@@ -49,14 +45,13 @@ function cellValueContext(
   }
   return {
     value: `${dow} ${hour}`,
-    context: keysContext(t, cell.keystrokes, normalization, total),
+    context: keysContext(t, cell.keystrokes, total),
   }
 }
 
 export function toKeystrokesItems(
   summary: ActivityKeystrokesSummary,
   t: T,
-  normalization: SharedNormalization,
 ): AnalyzeSummaryItem[] {
   const dow = summary.mostFrequentDow
   const hour = summary.mostFrequentHour
@@ -67,20 +62,20 @@ export function toKeystrokesItems(
       labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow',
       descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentDowDesc',
       value: dow === null ? '—' : t(`analyze.activity.dow.${dow.dow}`),
-      context: dow === null ? undefined : keysContext(t, dow.keystrokes, normalization, total),
+      context: dow === null ? undefined : keysContext(t, dow.keystrokes, total),
     },
     {
       labelKey: 'analyze.activity.keystrokes.summary.mostFrequentHour',
       descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentHourDesc',
       value: hour === null ? '—' : `${hour.hour.toString().padStart(2, '0')}:00`,
-      context: hour === null ? undefined : keysContext(t, hour.keystrokes, normalization, total),
+      context: hour === null ? undefined : keysContext(t, hour.keystrokes, total),
     },
     {
       labelKey: 'analyze.activity.keystrokes.summary.peakCell',
       descriptionKey: 'analyze.activity.keystrokes.summary.peakCellDesc',
       ...(peak === null
         ? { value: '—' }
-        : cellValueContext(peak, t, 'keystrokes', normalization, total)),
+        : cellValueContext(peak, t, 'keystrokes', total)),
     },
     {
       labelKey: 'analyze.activity.keystrokes.summary.activeCells',

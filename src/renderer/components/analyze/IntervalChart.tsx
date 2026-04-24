@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs, SharedNormalization } from './analyze-types'
+import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
 import { formatDateTime } from '../editors/store-modal-shared'
@@ -38,9 +38,6 @@ interface Props {
   unit: IntervalUnit
   granularity: GranularityChoice
   viewMode: IntervalViewMode
-  /** Only consulted in `distribution` mode — swaps the bars between
-   * raw weight and share-of-total (%). Time-series view ignores it. */
-  normalization: SharedNormalization
 }
 
 const SERIES_KEYS = ['min', 'p25', 'p50', 'p75', 'max'] as const
@@ -79,7 +76,7 @@ function formatShare(v: number): string {
   return `${formatSharePercent(v)}%`
 }
 
-export function IntervalChart({ uid, range, deviceScope, unit, granularity, viewMode, normalization }: Props) {
+export function IntervalChart({ uid, range, deviceScope, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
@@ -165,9 +162,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
   // Keep `weight` as the raw float so bar heights stay proportional to
   // the precomputed shares; rounding is applied only for the tooltip
   // display below. Otherwise sub-0.5 bins snap to zero and the bar /
-  // share pair disagree. `sharePercent` backs the bar height in
-  // `shareOfTotal` mode so Recharts sees a linear [0..100] domain
-  // instead of [0..1] (keeps ticks legible and clamps edge rounding).
+  // share pair disagree.
   const distributionData = useMemo(() => {
     if (histogram === null) return []
     return histogram.bins.map((b) => ({
@@ -175,11 +170,9 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
       label: t(`analyze.interval.bin.${b.id}`),
       weight: b.weight,
       share: b.share,
-      sharePercent: b.share * 100,
       band: b.band,
     }))
   }, [histogram, t])
-  const distributionBarKey = normalization === 'shareOfTotal' ? 'sharePercent' : 'weight'
   const distributionItems = useMemo(
     () => (histogram === null ? null : toDistributionItems(histogram.summary, unit, peakRecords)),
     [histogram, unit, peakRecords],
@@ -226,11 +219,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
               <YAxis
                 tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
-                tickFormatter={(v: number) =>
-                  normalization === 'shareOfTotal'
-                    ? `${v.toFixed(0)}%`
-                    : Math.round(v).toLocaleString()
-                }
+                tickFormatter={(v: number) => Math.round(v).toLocaleString()}
               />
               <Tooltip
                 contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
@@ -239,13 +228,13 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
                 formatter={(_, __, entry) => {
                   const w = Number(entry?.payload?.weight ?? 0)
                   const s = Number(entry?.payload?.share ?? 0)
-                  const primary = normalization === 'shareOfTotal'
-                    ? `${formatShare(s)} (${Math.round(w).toLocaleString()})`
-                    : `${Math.round(w).toLocaleString()} (${formatShare(s)})`
-                  return [primary, t('analyze.interval.distribution.tooltipLabel')]
+                  return [
+                    `${Math.round(w).toLocaleString()} (${formatShare(s)})`,
+                    t('analyze.interval.distribution.tooltipLabel'),
+                  ]
                 }}
               />
-              <Bar dataKey={distributionBarKey} isAnimationActive={false}>
+              <Bar dataKey="weight" isAnimationActive={false}>
                 {distributionData.map((d) => (
                   <Cell key={d.id} fill={RHYTHM_BAND_COLORS[d.band]} />
                 ))}

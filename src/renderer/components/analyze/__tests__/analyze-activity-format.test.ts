@@ -40,31 +40,36 @@ describe('formatSharePercent', () => {
 })
 
 describe('toKeystrokesItems', () => {
-  it('shows raw keystroke counts in absolute mode', () => {
-    const items = toKeystrokesItems(summary, t, 'absolute')
+  it('shows both raw count and share-of-total in every summary context', () => {
+    const items = toKeystrokesItems(summary, t)
     const dowContext = items[0].context ?? ''
+    const hourContext = items[1].context ?? ''
     const peakContext = items[2].context ?? ''
+    // Busiest day: 800 / 2000 = 40.0%
     expect(dowContext).toContain('analyze.activity.summary.keysContext')
     expect(dowContext).toContain('"count":"800"')
-    expect(peakContext).toContain('analyze.activity.summary.keysContext')
-    expect(peakContext).toContain('"count":"500"')
-  })
-
-  it('shows share-of-total percentages in shareOfTotal mode', () => {
-    const items = toKeystrokesItems(summary, t, 'shareOfTotal')
-    const dowContext = items[0].context ?? ''
-    const peakContext = items[2].context ?? ''
-    expect(dowContext).toContain('analyze.activity.summary.shareContext')
-    // 800 / 2000 = 40.0%
     expect(dowContext).toContain('"share":"40.0"')
-    // 500 / 2000 = 25.0%
-    expect(peakContext).toContain('analyze.activity.summary.shareContext')
+    // Busiest hour: 600 / 2000 = 30.0%
+    expect(hourContext).toContain('"count":"600"')
+    expect(hourContext).toContain('"share":"30.0"')
+    // Peak cell: 500 / 2000 = 25.0%
+    expect(peakContext).toContain('"count":"500"')
     expect(peakContext).toContain('"share":"25.0"')
   })
 
-  it('keeps the Active cells line untouched across modes (no context swap)', () => {
-    const abs = toKeystrokesItems(summary, t, 'absolute')[3]
-    const share = toKeystrokesItems(summary, t, 'shareOfTotal')[3]
-    expect(abs.value).toBe(share.value)
+  it('collapses share to 0.0 when the total is empty', () => {
+    const zeroed: ActivityKeystrokesSummary = {
+      ...summary,
+      totalKeystrokes: 0,
+      mostFrequentDow: { dow: 2, keystrokes: 0 },
+    }
+    const ctx = toKeystrokesItems(zeroed, t)[0].context ?? ''
+    expect(ctx).toContain('"share":"0.0"')
+  })
+
+  it('leaves the Active cells row untouched (no share annotation)', () => {
+    const items = toKeystrokesItems(summary, t)
+    expect(items[3].value).toBe('12 / 168')
+    expect(items[3].context).toBeUndefined()
   })
 })

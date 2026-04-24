@@ -120,7 +120,7 @@ The following filters are always available:
 - **From** / **To** — the time range to analyze (defaults to the last 24 hours)
 - **Device** — `This device` shows only data recorded on this machine; `All devices` also includes data synced from other machines. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
 
-Individual tabs add their own filters above the chart (view mode, granularity, normalization, unit, etc.); those are described per tab in the sections below.
+Individual tabs add their own filters above the chart (view mode, granularity, unit, etc.); those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
 
 #### Heatmap
 
@@ -213,7 +213,7 @@ The Activity tab groups typing by day-of-week × hour so you can see when you ac
 
 **Metric**
 
-- **Keystrokes** — a 24 × 7 grid colored by keystroke count. Empty cells are dim, the busiest cell is fully saturated. Hovering a cell shows the count in the browser's title tooltip
+- **Keystrokes** — a 24 × 7 grid colored by keystroke count. Empty cells are dim, the busiest cell is fully saturated. Hovering a non-empty cell shows both the raw count and its share of the range total (e.g. `Mon 09:00 — 1,234 keys (5.2% of total)`); empty cells stay at `0 keys`
 
   ![Analyze — Activity Keystrokes](screenshots/analyze-activity-keystrokes.png)
 
@@ -232,7 +232,7 @@ Four stat cards above the grid summarize the peaks across the selected range: Pe
 
 Under the grid, the summary depends on the metric:
 
-- **Keystrokes** — Total keystrokes, Active typing time, Busiest day, Busiest hour, Peak cell, Active cells (N / 168)
+- **Keystrokes** — Total keystrokes, Active typing time, Busiest day, Busiest hour, Peak cell, Active cells (N / 168). The count context under each card also carries its share of the range total (e.g. `800 keys (40.0%)`)
 - **WPM** — Total keystrokes, Active typing time, Overall WPM, Peak cell, Slowest cell, Active cells (N / 168)
 - **Sessions** — Session count, Total duration, Mean duration, Median duration, Longest session, Shortest session
 

@@ -177,35 +177,6 @@ describe('TypingAnalyticsView', () => {
     expect(text('mock-wpm')).toMatch(/^uid-a:own:range=/)
   })
 
-  it('shows the shared-normalization select only in Interval distribution / Activity keystrokes / Activity sessions', async () => {
-    mockListKeyboards.mockResolvedValue(SAMPLE)
-    const { TypingAnalyticsView } = await importView()
-    render(<TypingAnalyticsView />)
-    await waitFor(() => expect(screen.getByTestId('analyze-keyheatmap-empty')).toBeInTheDocument())
-
-    // Heatmap tab keeps its own normalize select; the shared one stays hidden.
-    expect(screen.getByTestId('analyze-filter-normalization')).toBeInTheDocument()
-    expect(screen.queryByTestId('analyze-filter-shared-normalization')).toBeNull()
-
-    // WPM tab has no normalize concept.
-    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
-    expect(screen.queryByTestId('analyze-filter-shared-normalization')).toBeNull()
-
-    // Interval → timeSeries is the default, still hidden. Switch to distribution → shown.
-    fireEvent.click(screen.getByTestId('analyze-tab-interval'))
-    expect(screen.queryByTestId('analyze-filter-shared-normalization')).toBeNull()
-    fireEvent.change(screen.getByTestId('analyze-filter-interval-view-mode'), { target: { value: 'distribution' } })
-    expect(screen.getByTestId('analyze-filter-shared-normalization')).toBeInTheDocument()
-
-    // Activity → keystrokes shows it, wpm hides it, sessions shows it again.
-    fireEvent.click(screen.getByTestId('analyze-tab-activity'))
-    expect(screen.getByTestId('analyze-filter-shared-normalization')).toBeInTheDocument()
-    fireEvent.change(screen.getByTestId('analyze-filter-activity-metric'), { target: { value: 'wpm' } })
-    expect(screen.queryByTestId('analyze-filter-shared-normalization')).toBeNull()
-    fireEvent.change(screen.getByTestId('analyze-filter-activity-metric'), { target: { value: 'sessions' } })
-    expect(screen.getByTestId('analyze-filter-shared-normalization')).toBeInTheDocument()
-  })
-
   it('propagates datetime-range and device changes down into the chart', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()

@@ -737,7 +737,7 @@
       "tableLabelWpm": "Hour × day-of-week WPM",
       "hourHeader": "{{hour}}:00",
       "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys)",
-      "cellTitleShare": "{{dow}} {{hour}}:00 — {{share}}% of total ({{keystrokes}} $t(analyze.unit.keys))",
+      "cellTitleWithShare": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys) ({{share}}% of total)",
       "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
       "legendLow": "0",
       "legendHigh": "{{count}} $t(analyze.unit.keys)",
@@ -747,8 +747,7 @@
       "legendHighDescWpm": "Peak WPM ({{wpm}} WPM).\nCell opacity scales linearly to this value.\nDesaturated cells did not meet the Min sample threshold.",
       "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak.",
       "summary": {
-        "keysContext": "{{count}} $t(analyze.unit.keys)",
-        "shareContext": "{{share}}% of total",
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
         "wpmContext": "{{wpm}} WPM"
       },
       "keystrokes": {

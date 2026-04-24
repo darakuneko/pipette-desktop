@@ -36,7 +36,7 @@ import { AnalyzeStatGrid } from './stat-card'
 import { StreakGoalCard } from './StreakGoalCard'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
-import type { ActivityMetric, DeviceScope, RangeMs, SharedNormalization } from './analyze-types'
+import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
 
 interface Props {
   uid: string
@@ -47,12 +47,6 @@ interface Props {
    * selection. Shared with the WPM tab's Min-sample filter. Has no
    * effect in `keystrokes` or `sessions` modes. */
   minActiveMs: number
-  /** Controls how `keystrokes` tooltips / summaries and the `sessions`
-   * bar are presented. The grid cell *colour* keeps its peak-based
-   * scale in both cases so intensity contrast stays legible — only the
-   * displayed numbers switch to share-of-total. The `wpm` metric
-   * ignores this prop entirely. */
-  normalization: SharedNormalization
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -65,7 +59,6 @@ export function ActivityChart(props: Props) {
         uid={props.uid}
         range={props.range}
         deviceScope={props.deviceScope}
-        normalization={props.normalization}
       />
     )
     : <ActivityGridChart {...props} />
@@ -77,7 +70,7 @@ export function ActivityChart(props: Props) {
   )
 }
 
-function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs, normalization }: Props) {
+function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -111,15 +104,15 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs, norma
     if (grid.cells.length === 0) return null
     return metric === 'wpm'
       ? toWpmItems(grid.wpmSummary, t)
-      : toKeystrokesItems(grid.keystrokesSummary, t, normalization)
-  }, [grid, metric, t, normalization])
+      : toKeystrokesItems(grid.keystrokesSummary, t)
+  }, [grid, metric, t])
 
   const peak = metric === 'wpm' ? grid.maxWpm : grid.maxKeystrokes
 
   // Precomputed before the early returns below so Rules of Hooks stay satisfied.
   const cellsAppearance = useMemo(
-    () => grid.cells.map((cell) => cellAppearance(cell, metric, peak, t, normalization, totalKeystrokes)),
-    [grid, metric, peak, t, normalization, totalKeystrokes],
+    () => grid.cells.map((cell) => cellAppearance(cell, metric, peak, t, totalKeystrokes)),
+    [grid, metric, peak, t, totalKeystrokes],
   )
 
   if (loading) {
@@ -241,10 +234,9 @@ interface SessionChartProps {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
-  normalization: SharedNormalization
 }
 
-function SessionDistributionChart({ uid, range, deviceScope, normalization }: SessionChartProps) {
+function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps) {
   const { t } = useTranslation()
   const [sessions, setSessions] = useState<TypingSessionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -269,19 +261,15 @@ function SessionDistributionChart({ uid, range, deviceScope, normalization }: Se
   }, [uid, deviceScope, range])
 
   const histogram = useMemo(() => buildSessionHistogram(sessions), [sessions])
-  // `sharePercent` mirrors `IntervalChart` — see its note for why the
-  // [0..100] domain keeps the Y-axis ticks legible.
   const chartData = useMemo(
     () => histogram.bins.map((b) => ({
       id: b.id,
       label: t(`analyze.activity.sessions.bin.${b.id}`),
       count: b.count,
       share: b.share,
-      sharePercent: b.share * 100,
     })),
     [histogram, t],
   )
-  const barKey = normalization === 'shareOfTotal' ? 'sharePercent' : 'count'
   const summaryItems = useMemo<AnalyzeSummaryItem[] | null>(
     () => histogram.summary.sessionCount === 0 ? null : toSessionsItems(histogram.summary),
     [histogram],
@@ -318,12 +306,7 @@ function SessionDistributionChart({ uid, range, deviceScope, normalization }: Se
             <YAxis
               tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
               stroke="var(--color-edge)"
-              allowDecimals={normalization === 'shareOfTotal'}
-              tickFormatter={
-                normalization === 'shareOfTotal'
-                  ? (v: number) => `${v.toFixed(0)}%`
-                  : undefined
-              }
+              allowDecimals={false}
             />
             <Tooltip
               contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
@@ -341,7 +324,7 @@ function SessionDistributionChart({ uid, range, deviceScope, normalization }: Se
                 ]
               }}
             />
-            <Bar dataKey={barKey} fill="var(--color-accent)" isAnimationActive={false} />
+            <Bar dataKey="count" fill="var(--color-accent)" isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -369,20 +352,15 @@ function cellAppearance(
   metric: ActivityMetric,
   peak: number,
   t: (key: string, opts?: Record<string, unknown>) => string,
-  normalization: SharedNormalization,
   totalKeystrokes: number,
 ): CellAppearance {
   const dowLabel = cell ? t(`analyze.activity.dow.${cell.dow}`) : ''
   if (cell === undefined || cell.keystrokes === 0) {
-    const emptyTitle = metric !== 'wpm' && normalization === 'shareOfTotal'
-      ? t('analyze.activity.cellTitleShare', {
-          dow: dowLabel,
-          hour: cell?.hour ?? 0,
-          share: '0.0',
-          keystrokes: 0,
-        })
-      : t('analyze.activity.cellTitle', { dow: dowLabel, hour: cell?.hour ?? 0, keystrokes: 0 })
-    return { opacity: 0, saturation: 1, title: emptyTitle }
+    return {
+      opacity: 0,
+      saturation: 1,
+      title: t('analyze.activity.cellTitle', { dow: dowLabel, hour: cell?.hour ?? 0, keystrokes: 0 }),
+    }
   }
   if (metric === 'wpm') {
     const opacity = peak === 0 ? 0 : Math.max(0.08, cell.wpm / peak)
@@ -399,21 +377,14 @@ function cellAppearance(
     }
   }
   const opacity = peak === 0 ? 0 : Math.max(0.08, cell.keystrokes / peak)
-  const title = normalization === 'shareOfTotal'
-    ? t('analyze.activity.cellTitleShare', {
-        dow: dowLabel,
-        hour: cell.hour,
-        share: formatSharePercent(totalKeystrokes > 0 ? cell.keystrokes / totalKeystrokes : 0),
-        keystrokes: cell.keystrokes.toLocaleString(),
-      })
-    : t('analyze.activity.cellTitle', {
-        dow: dowLabel,
-        hour: cell.hour,
-        keystrokes: cell.keystrokes.toLocaleString(),
-      })
   return {
     opacity,
     saturation: 1,
-    title,
+    title: t('analyze.activity.cellTitleWithShare', {
+      dow: dowLabel,
+      hour: cell.hour,
+      keystrokes: cell.keystrokes.toLocaleString(),
+      share: formatSharePercent(totalKeystrokes > 0 ? cell.keystrokes / totalKeystrokes : 0),
+    }),
   }
 }
