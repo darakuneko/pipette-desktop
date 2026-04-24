@@ -102,8 +102,18 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
   })
 
   const persistGoal = useCallback(async (next: GoalPair) => {
-    const current = await window.vialAPI.pipetteSettingsGet(uid)
-    if (!current) return
+    // Keyboards without a prior settings file return null from
+    // `pipetteSettingsGet`. Bootstrap a minimum valid PipetteSettings
+    // so the first goal edit can create the file instead of silently
+    // dropping the write (which used to leave the draft stuck and the
+    // "changes cleared" warning visible).
+    const fetched = await window.vialAPI.pipetteSettingsGet(uid)
+    const current: PipetteSettings = fetched ?? settings ?? {
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+    }
     const prevAnalyze = current.analyze ?? {}
     const prevHistory: GoalHistoryEntry[] = prevAnalyze.goalHistory ?? []
     const prevKeystrokes = prevAnalyze.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES
@@ -138,7 +148,7 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
     } catch {
       setSettings(current)
     }
-  }, [uid])
+  }, [settings, uid])
 
   const items: AnalyzeSummaryItem[] = [
     {
@@ -151,16 +161,6 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
       labelKey: 'analyze.streakGoal.longestStreakLabel',
       value: String(longest),
       unit: t('analyze.streakGoal.daysUnit'),
-      context: (
-        <button
-          type="button"
-          onClick={() => setHistoryOpen(true)}
-          className="block w-full rounded border border-edge bg-surface px-2 py-1 text-[11px] text-content-secondary transition-colors hover:border-accent hover:text-content"
-          data-testid="analyze-streak-goal-history-open"
-        >
-          {t('analyze.streakGoal.historyButton')}
-        </button>
-      ),
     },
     {
       labelKey: 'analyze.streakGoal.goalLabel',
@@ -175,7 +175,20 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
   ]
 
   return (
-    <>
+    <section className="flex flex-col gap-2" data-testid="analyze-streak-goal-section">
+      <div className="flex items-center gap-3">
+        <h3 className="text-[13px] font-semibold text-content">
+          {t('analyze.streakGoal.sectionTitle')}
+        </h3>
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(true)}
+          className="rounded border border-edge bg-surface px-3 py-1 text-[11px] text-content-secondary transition-colors hover:border-accent hover:text-content"
+          data-testid="analyze-streak-goal-history-open"
+        >
+          {t('analyze.streakGoal.historyButton')}
+        </button>
+      </div>
       <AnalyzeStatGrid
         items={items}
         ariaLabelKey="analyze.streakGoal.ariaLabel"
@@ -186,7 +199,7 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
         onClose={() => setHistoryOpen(false)}
         achievements={achievements}
       />
-    </>
+    </section>
   )
 }
 
@@ -301,16 +314,13 @@ function InlineNumberField({
 }: InlineNumberFieldProps) {
   const { t } = useTranslation()
   const [draft, setDraft] = useState(String(value))
-  const [armed, setArmed] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
-  // Flag used to suppress the blur-driven stageChange right after an
-  // Esc cancel — without it, the blur would re-read the stale `draft`
-  // closure and re-arm the confirm state against the value the user
-  // just reverted.
+  // Suppresses the blur-driven stageChange right after an Esc cancel —
+  // without it, the blur would read the stale `draft` closure and
+  // clobber the reverted parent state.
   const cancellingRef = useRef(false)
 
   useEffect(() => { setDraft(String(value)) }, [value])
-  useEffect(() => { if (!confirmPending) setArmed(false) }, [confirmPending])
 
   const parseDraft = (): number | null => {
     const parsed = Number.parseInt(draft, 10)
@@ -327,16 +337,10 @@ function InlineNumberField({
       setDraft(String(value))
       return
     }
-    if (parsed !== value) {
-      onChange(parsed)
-      setArmed(true)
-      return
-    }
-    setArmed(false)
+    if (parsed !== value) onChange(parsed)
   }
 
   const handleConfirm = () => {
-    setArmed(false)
     void onCommit()
   }
 
@@ -344,7 +348,6 @@ function InlineNumberField({
     cancellingRef.current = true
     setDraft(String(persistedValue))
     onChange(persistedValue)
-    setArmed(false)
     inputRef.current?.blur()
     onCancel?.()
   }
@@ -359,21 +362,20 @@ function InlineNumberField({
         onChange={(e) => setDraft(e.target.value)}
         onBlur={stageChange}
         onKeyDown={(e) => {
-          if (e.key === 'Enter') {
-            if (armed) handleConfirm()
-            else stageChange()
-          } else if (e.key === 'Escape') {
-            handleCancel()
-          }
+          if (e.key === 'Enter') stageChange()
+          else if (e.key === 'Escape') handleCancel()
         }}
         aria-label={ariaLabel}
         data-testid={testid}
         className="w-20 border-b border-edge bg-transparent p-0 text-[18px] font-bold text-content outline-none focus:border-accent"
       />
-      {armed && confirmPending && (
+      {confirmPending && (
         <button
           type="button"
-          onClick={handleConfirm}
+          // `onMouseDown` fires before the input's blur, so clicking
+          // commit never triggers a stale stageChange that would
+          // unmount this button mid-click.
+          onMouseDown={(e) => { e.preventDefault(); handleConfirm() }}
           className="rounded border border-accent bg-accent/10 px-1.5 py-0.5 text-[10px] text-content hover:bg-accent/20"
           data-testid={`${testid}-confirm`}
         >

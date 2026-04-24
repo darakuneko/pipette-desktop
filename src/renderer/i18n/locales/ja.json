@@ -922,12 +922,13 @@
       }
     },
     "streakGoal": {
+      "sectionTitle": "打鍵記録連続日数",
       "ariaLabel": "連続記録日数と打鍵記録目標設定のサマリ",
-      "currentStreakLabel": "現在の連続記録日数",
+      "currentStreakLabel": "現在",
       "currentStreakDesc": "現在のサイクルで連続達成した日数\n目標日数に達すると履歴に記録後リセット",
       "currentValue": "{{current}}/{{goalDays}} 日",
-      "longestStreakLabel": "履歴中最長連続記録日数",
-      "goalLabel": "打鍵記録目標設定",
+      "longestStreakLabel": "履歴中最長",
+      "goalLabel": "目標設定",
       "goalDaysAria": "目標連続日数",
       "goalKeystrokesAria": "1 日あたりの目標打鍵数",
       "changeWarning": "目標を変更すると現在のカウントがクリアされます",

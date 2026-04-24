@@ -923,12 +923,13 @@
       }
     },
     "streakGoal": {
+      "sectionTitle": "Goal streak records",
       "ariaLabel": "Goal streak and daily keystroke goal summary",
-      "currentStreakLabel": "Current goal streak",
+      "currentStreakLabel": "Current",
       "currentStreakDesc": "Days completed in the current cycle\nResets after reaching the target days",
       "currentValue": "{{current}}/{{goalDays}} days",
-      "longestStreakLabel": "Longest goal streak in history",
-      "goalLabel": "Daily keystroke goal",
+      "longestStreakLabel": "Longest in history",
+      "goalLabel": "Goal settings",
       "goalDaysAria": "Target consecutive days",
       "goalKeystrokesAria": "Target keystrokes per day",
       "changeWarning": "Changing the goal clears the current cycle counter",
