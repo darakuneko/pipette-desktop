@@ -242,20 +242,6 @@ function InlineGoalSettings({ goalDays, goalKeystrokes, onSave }: InlineGoalSett
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
         <span className="inline-flex items-baseline gap-1">
           <InlineNumberField
-            value={daysDraft}
-            onChange={setDaysDraft}
-            persistedValue={goalDays}
-            onCancel={cancelAll}
-            min={1}
-            confirmPending={pendingDays}
-            onCommit={commit}
-            ariaLabel={t('analyze.streakGoal.goalDaysAria')}
-            testid="analyze-streak-goal-days"
-          />
-          <span className="text-[11px] text-content-muted">{t('analyze.streakGoal.daysUnit')}</span>
-        </span>
-        <span className="inline-flex items-baseline gap-1">
-          <InlineNumberField
             value={keystrokesDraft}
             onChange={setKeystrokesDraft}
             persistedValue={goalKeystrokes}
@@ -267,6 +253,20 @@ function InlineGoalSettings({ goalDays, goalKeystrokes, onSave }: InlineGoalSett
             testid="analyze-streak-goal-keystrokes"
           />
           <span className="text-[11px] text-content-muted">{t('analyze.streakGoal.keystrokesUnit')}</span>
+        </span>
+        <span className="inline-flex items-baseline gap-1">
+          <InlineNumberField
+            value={daysDraft}
+            onChange={setDaysDraft}
+            persistedValue={goalDays}
+            onCancel={cancelAll}
+            min={1}
+            confirmPending={pendingDays}
+            onCommit={commit}
+            ariaLabel={t('analyze.streakGoal.goalDaysAria')}
+            testid="analyze-streak-goal-days"
+          />
+          <span className="text-[11px] text-content-muted">{t('analyze.streakGoal.daysUnit')}</span>
         </span>
       </div>
       {hasPending && (
