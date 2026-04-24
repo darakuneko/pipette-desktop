@@ -404,6 +404,18 @@ export function findInnerKeycode(qmkId: string): Keycode | undefined {
   return findKeycode(qmkId)
 }
 
+/**
+ * Returns inner mask argument as qmkId when known, otherwise raw inner text.
+ * This preserves remapped display labels for nested keycodes that are no longer
+ * resolvable as canonical keycodes.
+ */
+export function findInnerKeycodeText(qmkId: string): string {
+  if (!isMask(qmkId)) return ''
+  const inner = qmkId.substring(qmkId.indexOf('(') + 1, qmkId.length - 1).trim()
+  if (inner.length === 0) return ''
+  return findKeycode(inner)?.qmkId ?? inner
+}
+
 export function findByRecorderAlias(alias: string): Keycode | undefined {
   return recorderAliasToKeycode.get(alias)
 }

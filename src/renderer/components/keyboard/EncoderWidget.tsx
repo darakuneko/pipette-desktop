@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { memo, useId } from 'react'
-import { keycodeLabel, isMask, findInnerKeycode } from '../../../shared/keycodes/keycodes'
+import { keycodeLabel, isMask, findInnerKeycodeText } from '../../../shared/keycodes/keycodes'
 import type { KleKey } from '../../../shared/kle/types'
 import {
   KEY_UNIT,
@@ -11,11 +11,13 @@ import {
   KEY_SELECTED_COLOR,
   KEY_TEXT_COLOR,
   KEY_MASK_RECT_COLOR,
+  KEY_REMAP_COLOR,
 } from './constants'
 
 interface Props {
   kleKey: KleKey
   keycode: string
+  remapped?: boolean
   selected?: boolean
   selectedMaskPart?: boolean
   onClick?: (key: KleKey, direction: number, maskClicked: boolean) => void
@@ -26,6 +28,7 @@ interface Props {
 function EncoderWidgetInner({
   kleKey,
   keycode,
+  remapped,
   selected,
   selectedMaskPart,
   onClick,
@@ -48,6 +51,7 @@ function EncoderWidgetInner({
   const innerSelected = selected && selectedMaskPart && masked
   const fillColor = selected && !innerSelected ? KEY_SELECTED_COLOR : KEY_BG_COLOR
   const labelColor = selected && !innerSelected ? 'var(--content-inverse)' : KEY_TEXT_COLOR
+  const innerLabelColor = remapped ? KEY_REMAP_COLOR : KEY_TEXT_COLOR
   const fontSize = Math.max(8, Math.min(12, 12 * scale))
   const outerBorderActive = selected && !innerSelected
 
@@ -85,7 +89,7 @@ function EncoderWidgetInner({
 
   // --- Masked: split display with inner rect clipped to circle ---
   const outerLabel = keycodeLabel(keycode).split('\n')[0]
-  const innerLabel = keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '').split('\n')[0]
+  const innerLabel = keycodeLabel(findInnerKeycodeText(keycode)).split('\n')[0]
   const innerBorderActive = !!innerSelected
 
   // Inner rect: bottom 50% of circle, fully inside the circle
@@ -134,7 +138,7 @@ function EncoderWidgetInner({
       </text>
       {/* Inner label (basic key) */}
       <text x={cx} y={innerLabelY} textAnchor="middle" dominantBaseline="central"
-        fill={KEY_TEXT_COLOR} fontSize={fontSize} fontFamily="sans-serif" style={{ pointerEvents: 'none' }}>
+        fill={innerLabelColor} fontSize={fontSize} fontFamily="sans-serif" style={{ pointerEvents: 'none' }}>
         {innerLabel}
       </text>
     </g>

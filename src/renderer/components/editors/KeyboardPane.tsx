@@ -16,6 +16,7 @@ export interface KeyboardPaneProps {
   keys: KleKey[]
   keycodes: Map<string, string>
   encoderKeycodes: Map<string, [string, string]>
+  encoderRemappedKeys?: Set<string>
   selectedKey: { row: number; col: number } | null
   selectedEncoder: { idx: number; dir: number } | null
   selectedMaskPart: boolean
@@ -44,6 +45,7 @@ export function KeyboardPane({
   keys,
   keycodes,
   encoderKeycodes,
+  encoderRemappedKeys,
   selectedKey,
   selectedEncoder,
   selectedMaskPart,
@@ -80,6 +82,7 @@ export function KeyboardPane({
           keys={keys}
           keycodes={keycodes}
           encoderKeycodes={encoderKeycodes}
+          encoderRemappedKeys={encoderRemappedKeys}
           selectedKey={isActive ? selectedKey : null}
           selectedEncoder={isActive ? selectedEncoder : null}
           selectedMaskPart={isActive ? selectedMaskPart : false}

@@ -13,16 +13,60 @@ function getRemapTable(layout: KeyboardLayoutId): Record<string, string> | null 
   return def.map
 }
 
+function isLiteralToken(token: string): boolean {
+  return /^-?(?:0x[0-9a-f]+|\d+)$/i.test(token)
+}
+
+function splitTopLevelArgs(content: string): string[] {
+  const args: string[] = []
+  let start = 0
+  let depth = 0
+
+  for (let i = 0; i < content.length; i++) {
+    const ch = content[i]
+    if (ch === '(') {
+      depth++
+    } else if (ch === ')') {
+      depth = Math.max(0, depth - 1)
+    } else if (ch === ',' && depth === 0) {
+      args.push(content.slice(start, i))
+      start = i + 1
+    }
+  }
+
+  args.push(content.slice(start))
+  return args
+}
+
+function remapNestedKeycode(qmkId: string, table: Record<string, string>): string {
+  const direct = table[qmkId]
+  if (direct !== undefined) return direct
+
+  const openIdx = qmkId.indexOf('(')
+  if (openIdx <= 0 || !qmkId.endsWith(')')) return qmkId
+
+  const head = qmkId.slice(0, openIdx)
+  const inner = qmkId.slice(openIdx + 1, -1)
+  const args = splitTopLevelArgs(inner)
+  if (args.length === 0) return qmkId
+
+  const remappedArgs = args.map((arg) => {
+    const trimmed = arg.trim()
+    if (trimmed.length === 0 || isLiteralToken(trimmed)) return trimmed
+    return remapNestedKeycode(trimmed, table)
+  })
+
+  return `${head}(${remappedArgs.join(',')})`
+}
+
 export function remapKeycode(qmkId: string, layout: KeyboardLayoutId): string {
   const table = getRemapTable(layout)
   if (!table) return qmkId
-  return table[qmkId] ?? qmkId
+  return remapNestedKeycode(qmkId, table)
 }
 
 export function isRemappedKeycode(qmkId: string, layout: KeyboardLayoutId): boolean {
-  const table = getRemapTable(layout)
-  if (!table) return false
-  return qmkId in table
+  return remapKeycode(qmkId, layout) !== qmkId
 }
 
 interface UseKeyboardLayoutReturn {

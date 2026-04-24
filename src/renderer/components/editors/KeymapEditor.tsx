@@ -530,7 +530,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         const posKey = `${r},${c}`
         const qmkId = serialize(code)
         keycodes.set(posKey, remap(qmkId))
-        if (!isMask(qmkId) && checkRemapped(qmkId)) remapped.add(posKey)
+        if (checkRemapped(qmkId)) remapped.add(posKey)
       }
     }
     return { keycodes, remapped }
@@ -538,30 +538,45 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   const buildEncoderKeycodesForLayer = useCallback((layer: number) => {
     const map = new Map<string, [string, string]>()
+    const remapped = new Set<string>()
+    const checkRemapped = isRemapped ?? (() => false)
     for (let i = 0; i < encoderCount; i++) {
       const cw = encoderLayout.get(`${layer},${i},0`) ?? 0
       const ccw = encoderLayout.get(`${layer},${i},1`) ?? 0
-      map.set(String(i), [remap(serialize(cw)), remap(serialize(ccw))])
+      const cwQmk = serialize(cw)
+      const ccwQmk = serialize(ccw)
+      map.set(String(i), [remap(cwQmk), remap(ccwQmk)])
+      if (checkRemapped(cwQmk)) remapped.add(`${i},0`)
+      if (checkRemapped(ccwQmk)) remapped.add(`${i},1`)
     }
-    return map
-  }, [encoderLayout, encoderCount, remap])
+    return { keycodes: map, remapped }
+  }, [encoderLayout, encoderCount, remap, isRemapped])
 
   const { keycodes: layerKeycodes, remapped: remappedKeys } = useMemo(() => buildKeycodesForLayer(currentLayer), [buildKeycodesForLayer, currentLayer])
-  const layerEncoderKeycodes = useMemo(() => buildEncoderKeycodesForLayer(currentLayer), [buildEncoderKeycodesForLayer, currentLayer])
+  const { keycodes: layerEncoderKeycodes, remapped: layerEncoderRemapped } = useMemo(
+    () => buildEncoderKeycodesForLayer(currentLayer),
+    [buildEncoderKeycodesForLayer, currentLayer],
+  )
 
 
   const { keycodes: typingTestKeycodes, remapped: typingTestRemapped } = useMemo(
     () => typingTestMode ? buildKeycodesForLayer(typingTest.effectiveLayer) : { keycodes: EMPTY_KEYCODES, remapped: EMPTY_REMAPPED },
     [buildKeycodesForLayer, typingTest.effectiveLayer, typingTestMode])
   const typingTestEncoderKeycodes = useMemo(
-    () => typingTestMode ? buildEncoderKeycodesForLayer(typingTest.effectiveLayer) : EMPTY_ENCODER_KEYCODES,
+    () => typingTestMode ? buildEncoderKeycodesForLayer(typingTest.effectiveLayer).keycodes : EMPTY_ENCODER_KEYCODES,
     [buildEncoderKeycodesForLayer, typingTest.effectiveLayer, typingTestMode])
+  const typingTestEncoderRemapped = useMemo(
+    () => typingTestMode ? buildEncoderKeycodesForLayer(typingTest.effectiveLayer).remapped : EMPTY_REMAPPED,
+    [buildEncoderKeycodesForLayer, typingTest.effectiveLayer, typingTestMode],
+  )
 
   // --- Layout picker keycodes ---
   const { keycodes: pickerKeycodes, remapped: pickerRemapped } = useMemo(
     () => buildKeycodesForLayer(pickerLayer), [buildKeycodesForLayer, pickerLayer])
-  const pickerEncoderKeycodes = useMemo(
-    () => buildEncoderKeycodesForLayer(pickerLayer), [buildEncoderKeycodesForLayer, pickerLayer])
+  const { keycodes: pickerEncoderKeycodes, remapped: pickerEncoderRemapped } = useMemo(
+    () => buildEncoderKeycodesForLayer(pickerLayer),
+    [buildEncoderKeycodesForLayer, pickerLayer],
+  )
 
   // Build ordered keycode numbers for picker multi-select (Shift+click range)
   const pickerTabKeycodeNumbers = useMemo(() => {
@@ -684,8 +699,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
 
   // Layout picker: keyboard-as-keycode-picker shown inside the picker panel
   const pickerData = pickerFileData
-    ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
-    : { keys: layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
+    ? { keys: pickerFileData.layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, encoderRemapped: pickerEncoderRemapped, remapped: pickerRemapped, layoutOpts: pickerFileData.layoutOptions, totalLayers: pickerFileData.layers, names: pickerFileData.layerNames }
+    : { keys: layout.keys, keycodes: pickerKeycodes, encoderKeycodes: pickerEncoderKeycodes, encoderRemapped: pickerEncoderRemapped, remapped: pickerRemapped, layoutOpts: effectiveLayoutOptions, totalLayers: layers, names: layerNames }
 
   const pickerEffectiveScale = pickerFileData ? (pickerScale ?? scaleProp) : scaleProp
   const activPickerKeycodes = pickerFileData ? filePickerKeycodes : pickerKeycodes
@@ -779,6 +794,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           <div ref={pickerContainerRef} className="picker-hover-keys relative flex h-full min-h-0 items-center justify-center">
             <KeyboardPane
               paneId="secondary" isActive={true}              keys={pickerData.keys} keycodes={activPickerKeycodes} encoderKeycodes={pickerData.encoderKeycodes}
+              encoderRemappedKeys={pickerData.encoderRemapped}
               selectedKey={null} selectedEncoder={null} selectedMaskPart={false} selectedKeycode={null}
               remappedKeys={pickerData.remapped} multiSelectedKeys={pickerHighlightPositions}
               layoutOptions={pickerData.layoutOpts} scale={pickerEffectiveScale}
@@ -907,6 +923,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               pressedKeys={pressedKeys}
               keycodes={typingTestKeycodes}
               encoderKeycodes={typingTestEncoderKeycodes}
+              encoderRemappedKeys={typingTestEncoderRemapped}
               remappedKeys={typingTestRemapped}
               layoutOptions={effectiveLayoutOptions}
               scale={scaleProp}
@@ -923,6 +940,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           ) : (
             <KeyboardPane
               paneId="primary" isActive={true}              keys={layout.keys} keycodes={layerKeycodes} encoderKeycodes={layerEncoderKeycodes}
+              encoderRemappedKeys={layerEncoderRemapped}
               selectedKey={selectedKey} selectedEncoder={selectedEncoder} selectedMaskPart={selectedMaskPart} selectedKeycode={selectedKeycode}
               pressedKeys={matrixMode ? pressedKeys : undefined} everPressedKeys={matrixMode ? everPressedKeys : undefined}
               remappedKeys={remappedKeys} multiSelectedKeys={multiSelectedKeys}

@@ -1184,6 +1184,7 @@ export {
   findKeycodeByLabel,
   findOuterKeycode,
   findInnerKeycode,
+  findInnerKeycodeText,
   findByRecorderAlias,
   findByQmkId,
   keycodeLabel,

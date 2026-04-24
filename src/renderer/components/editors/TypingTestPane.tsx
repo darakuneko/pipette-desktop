@@ -25,6 +25,7 @@ export interface TypingTestPaneProps {
   pressedKeys: Set<string>
   keycodes: Map<string, string>
   encoderKeycodes: Map<string, [string, string]>
+  encoderRemappedKeys?: Set<string>
   remappedKeys: Set<string>
   layoutOptions: Map<number, number>
   scale: number
@@ -50,6 +51,7 @@ export function TypingTestPane({
   pressedKeys,
   keycodes,
   encoderKeycodes,
+  encoderRemappedKeys,
   remappedKeys,
   layoutOptions,
   scale,
@@ -293,6 +295,7 @@ export function TypingTestPane({
             keys={keys}
             keycodes={keycodes}
             encoderKeycodes={encoderKeycodes}
+            encoderRemappedKeys={encoderRemappedKeys}
             selectedKey={null}
             selectedEncoder={null}
             selectedMaskPart={false}

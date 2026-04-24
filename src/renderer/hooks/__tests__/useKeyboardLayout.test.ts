@@ -136,6 +136,24 @@ describe('remapKeycode', () => {
     })
   })
 
+  describe('nested key remapping', () => {
+    it('remaps inner keycodes while preserving LT wrapper', () => {
+      expect(remapKeycode('LT0(KC_Y)', 'german')).toBe('LT0(Z)')
+    })
+
+    it('remaps inner keycodes while preserving modifier wrappers', () => {
+      expect(remapKeycode('LALT(KC_Y)', 'german')).toBe('LALT(Z)')
+    })
+
+    it('remaps nested arguments recursively', () => {
+      expect(remapKeycode('LALT(LSFT(KC_Y))', 'german')).toBe('LALT(LSFT(Z))')
+    })
+
+    it('keeps numeric arguments unchanged for wrapper expressions', () => {
+      expect(remapKeycode('LT(1,KC_Y)', 'german')).toBe('LT(1,Z)')
+    })
+  })
+
   describe('French mapping', () => {
     it('remaps French AZERTY keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'french')).toBe('A')
@@ -167,6 +185,11 @@ describe('isRemappedKeycode', () => {
     expect(isRemappedKeycode('KC_Z', 'german')).toBe(true)
     expect(isRemappedKeycode('KC_LBRACKET', 'german')).toBe(true)
     expect(isRemappedKeycode('KC_SCOLON', 'german')).toBe(true)
+    expect(isRemappedKeycode('LT0(KC_Y)', 'german')).toBe(true)
+  })
+
+  it('returns true for nested remaps in other layouts as well', () => {
+    expect(isRemappedKeycode('LALT(KC_Q)', 'french')).toBe(true)
   })
 
   it('returns false for non-remapped keys in German layout', () => {

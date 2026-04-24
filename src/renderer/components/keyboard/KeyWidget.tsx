@@ -5,7 +5,7 @@ import {
   keycodeLabel,
   isMask,
   findOuterKeycode,
-  findInnerKeycode,
+  findInnerKeycodeText,
 } from '../../../shared/keycodes/keycodes'
 import type { KleKey } from '../../../shared/kle/types'
 import {
@@ -102,14 +102,16 @@ function KeyWidgetInner({
   // for remapped keys in non-mask mode, default otherwise
   let labelColor = KEY_TEXT_COLOR
   if (invertText) labelColor = 'var(--content-inverse)'
-  else if (remapped) labelColor = KEY_REMAP_COLOR
+  else if (remapped && !masked) labelColor = KEY_REMAP_COLOR
+  const outerLabelColor = labelColor
+  const innerLabelColor = remapped ? KEY_REMAP_COLOR : KEY_TEXT_COLOR
 
   // Label
   const outerLabel = keycodeLabel(keycode)
   const innerLabel = maskKeycode
     ? keycodeLabel(maskKeycode)
     : masked
-      ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
+      ? keycodeLabel(findInnerKeycodeText(keycode))
       : ''
 
   // Text rendering: split by \n for multi-line labels
@@ -262,7 +264,7 @@ function KeyWidgetInner({
             y={y + h * 0.25}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={labelColor}
+            fill={outerLabelColor}
             fontSize={fontSize * 0.85}
             fontFamily="sans-serif"
             style={{ pointerEvents: 'none' }}
@@ -275,7 +277,7 @@ function KeyWidgetInner({
             y={innerY + innerH / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={KEY_TEXT_COLOR}
+            fill={innerLabelColor}
             fontSize={fontSize * 0.85}
             fontFamily="sans-serif"
             style={{ pointerEvents: 'none' }}

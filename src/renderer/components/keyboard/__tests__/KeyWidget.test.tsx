@@ -13,6 +13,7 @@ import {
   KEY_BORDER_COLOR,
   KEY_MASK_RECT_COLOR,
   KEY_TEXT_COLOR,
+  KEY_REMAP_COLOR,
 } from '../constants'
 import type { KleKey } from '../../../../shared/kle/types'
 
@@ -23,6 +24,10 @@ vi.mock('../../../../shared/keycodes/keycodes', () => ({
   isMask: () => mockIsMask,
   findOuterKeycode: () => ({ qmkId: 'LT0' }),
   findInnerKeycode: () => ({ qmkId: 'KC_A' }),
+  findInnerKeycodeText: (qmkId: string) => {
+    if (qmkId === 'LT0(Ä)') return 'Ä'
+    return 'KC_A'
+  },
 }))
 
 function makeKey(overrides: Partial<KleKey> = {}): KleKey {
@@ -296,6 +301,39 @@ describe('KeyWidget', () => {
       // Both labels use normal text color since outer has no fill
       expect(texts[0].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
       expect(texts[1].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
+    })
+
+    it('keeps displaying inner fallback text when inner keycode is not canonical', () => {
+      mockIsMask = true
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="LT0(Ä)" />
+        </svg>,
+      )
+      const texts = container.querySelectorAll('text')
+      expect(texts[1].textContent).toBe('Ä')
+    })
+
+    it('uses remap color for inner masked label when key is remapped', () => {
+      mockIsMask = true
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="LT0(KC_A)" remapped />
+        </svg>,
+      )
+      const texts = container.querySelectorAll('text')
+      expect(texts[1].getAttribute('fill')).toBe(KEY_REMAP_COLOR)
+    })
+
+    it('does not mark outer masked label as remapped when only inner changed', () => {
+      mockIsMask = true
+      const { container } = render(
+        <svg>
+          <KeyWidget kleKey={makeKey()} keycode="LT0(KC_A)" remapped />
+        </svg>,
+      )
+      const texts = container.querySelectorAll('text')
+      expect(texts[0].getAttribute('fill')).toBe(KEY_TEXT_COLOR)
     })
 
     it('shows accent border on non-masked key even if selectedMaskPart leaks true', () => {

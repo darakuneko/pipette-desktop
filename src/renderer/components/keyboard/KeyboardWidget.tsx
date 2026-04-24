@@ -63,6 +63,7 @@ interface Props {
   keycodes: Map<string, string>
   maskKeycodes?: Map<string, string>
   encoderKeycodes?: Map<string, [string, string]>
+  encoderRemappedKeys?: Set<string>
   selectedKey?: { row: number; col: number } | null
   selectedEncoder?: { idx: number; dir: 0 | 1 } | null
   pressedKeys?: Set<string>
@@ -87,6 +88,7 @@ function KeyboardWidgetInner({
   keycodes,
   maskKeycodes,
   encoderKeycodes,
+  encoderRemappedKeys,
   selectedKey,
   selectedEncoder,
   selectedMaskPart,
@@ -170,6 +172,7 @@ function KeyboardWidgetInner({
               key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
               kleKey={key}
               keycode={kc}
+              remapped={encoderRemappedKeys?.has(`${key.encoderIdx},${key.encoderDir}`)}
               selected={false}
               onClick={readOnly ? undefined : onEncoderClick}
               onDoubleClick={readOnly ? undefined : onEncoderDoubleClick}
@@ -216,6 +219,7 @@ function KeyboardWidgetInner({
               key={`enc-${key.encoderIdx}-${key.encoderDir}-${idx}`}
               kleKey={key}
               keycode={kc}
+              remapped={encoderRemappedKeys?.has(`${key.encoderIdx},${key.encoderDir}`)}
               selected
               selectedMaskPart={selectedMaskPart}
               onClick={readOnly ? undefined : onEncoderClick}
