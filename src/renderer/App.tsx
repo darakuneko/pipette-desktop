@@ -289,24 +289,35 @@ export function App() {
     }) })
   }, [devicePrefs])
 
-  // Navigate from the typing-view REC tab to the analytics page.
-  // Same resize-before-swap choreography as exitViewOnlyMode so the
-  // editor chrome doesn't flash at the old compact size. The record
-  // toggle stays intact — useInputModes.analyticsSink is already
-  // gated on typingTestViewOnly, so flipping the view off stops the
-  // sink without touching the persisted typingRecordEnabled.
-  // Kick the record flag into the device-prefs store, and on the
-  // enable-edge fire a best-effort keymap snapshot save so the
-  // Analyze key heatmap has a layout anchor for every record session.
-  // Disabling record doesn't touch snapshots — they are a record-time
-  // history, not a toggle state.
+  // Persist the record toggle — snapshot capture is handled by the
+  // recording-active effect below so any path that activates recording
+  // (direct toggle, view re-entry with persisted ON, cold-start after
+  // device connect) produces a layout anchor, not just the toggle
+  // edge.
   const handleTypingRecordEnabledChange = useCallback((enabled: boolean) => {
     devicePrefs.setTypingRecordEnabled(enabled)
-    if (!enabled) return
+  }, [devicePrefs])
+
+  // Save a keymap snapshot every time recording activates or the
+  // active keyboard changes while recording is already active. A
+  // keyboard edit made between sessions (user tweaks a layer, comes
+  // back, hits Record) must produce a new snapshot so the Analyze
+  // heatmap reflects the layout actually in use — not a stale one
+  // from the previous toggle-ON. `saveKeymapSnapshotIfChanged` on
+  // main dedupes by content, so re-firing on unrelated keyboard
+  // state churn is cheap (no file write when the keymap is equal).
+  const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
+  useEffect(() => {
+    const active = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+    const uid = keyboard.uid
+    const prev = recordingSnapshotRef.current
+    recordingSnapshotRef.current = { active, uid }
+    if (!active) return
+    if (prev.active && prev.uid === uid) return
     const snap = buildKeymapSnapshot(keyboard)
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
-  }, [devicePrefs, keyboard])
+  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, keyboard])
 
   const handleViewAnalytics = useCallback(() => {
     setViewExitTransition(true)
