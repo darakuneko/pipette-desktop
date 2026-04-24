@@ -17,18 +17,26 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+type MockScope = 'own' | 'all' | { kind: 'hash'; machineHash: string }
+
 interface MockChartProps {
   uid: string
-  deviceScope: string
+  deviceScope: MockScope
   range: { fromMs: number; toMs: number }
   unit?: string
   granularity?: 'auto' | number
 }
 
+// Serialise the scope so the hash-scope object round-trips into a
+// comparable string in the `textContent` snapshot assertions.
+function scopeText(scope: MockScope): string {
+  return typeof scope === 'string' ? scope : `hash:${scope.machineHash}`
+}
+
 function mockSummary(testId: string) {
   return (props: MockChartProps) => (
     <div data-testid={testId}>
-      {`${props.uid}:${props.deviceScope}:range=${props.range.fromMs}-${props.range.toMs}${props.unit ? `:${props.unit}` : ''}`}
+      {`${props.uid}:${scopeText(props.deviceScope)}:range=${props.range.fromMs}-${props.range.toMs}${props.unit ? `:${props.unit}` : ''}`}
     </div>
   )
 }
@@ -37,6 +45,7 @@ vi.mock('../WpmChart', () => ({ WpmChart: mockSummary('mock-wpm') }))
 vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval') }))
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
+vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 const mockGetSnapshot = vi.fn<() => Promise<TypingKeymapSnapshot | null>>()
@@ -56,6 +65,11 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListKeyboards: () => Promise.resolve([] as TypingKeyboardSummary[]),
     typingAnalyticsGetKeymapSnapshotForRange: () => Promise.resolve(null as TypingKeymapSnapshot | null),
     typingAnalyticsListKeymapSnapshots: () => Promise.resolve([]),
+    typingAnalyticsListRemoteHashes: () => Promise.resolve([] as string[]),
+    // Ergonomics/Heatmap charts call into the matrix-heatmap endpoint
+    // when rendered for real (not all tests mock them out), so stub it
+    // with an empty payload to avoid `undefined is not a function`.
+    typingAnalyticsGetMatrixHeatmapForRange: () => Promise.resolve({}),
     typingAnalyticsGetPeakRecords: () => Promise.resolve(emptyPeakRecords),
     typingAnalyticsGetPeakRecordsLocal: () => Promise.resolve(emptyPeakRecords),
     pipetteSettingsGet: () => Promise.resolve(null),
@@ -199,6 +213,94 @@ describe('TypingAnalyticsView', () => {
 
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
     expect(text('mock-wpm')).toMatch(/^uid-a:all:range=/)
+  })
+
+  it('renders an option per remote hash in the Device select', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockResolvedValue(['hashone12345678901234', 'hashtwo12345678901234'])
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
+    const select = (await screen.findByTestId('analyze-filter-device')) as HTMLSelectElement
+    const values = Array.from(select.options).map((o) => o.value)
+    expect(values).toEqual([
+      'own',
+      'all',
+      'hash:hashone12345678901234',
+      'hash:hashtwo12345678901234',
+    ])
+    hashSpy.mockRestore()
+  })
+
+  it('propagates hash scope selection into chart props', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockResolvedValue(['hashone12345678901234'])
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
+    fireEvent.change(screen.getByTestId('analyze-filter-device'), {
+      target: { value: 'hash:hashone12345678901234' },
+    })
+    await waitFor(() => {
+      expect(text('mock-wpm')).toMatch(/^uid-a:hash:hashone12345678901234:range=/)
+    })
+    hashSpy.mockRestore()
+  })
+
+  it('auto-closes the finger-assignment modal when the scope flips to a hash', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    mockGetSnapshot.mockResolvedValue(SNAPSHOT)
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockResolvedValue(['remote12345678901234'])
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
+    // Open the modal under own scope via the Ergonomics tab button.
+    fireEvent.click(screen.getByTestId('analyze-tab-ergonomics'))
+    const openButton = await screen.findByTestId('analyze-finger-assignment-open')
+    fireEvent.click(openButton)
+    await waitFor(() => expect(screen.getByTestId('finger-assignment-modal')).toBeInTheDocument())
+    // Switch to a remote hash — modal should auto-close because the
+    // effective snapshot drops to null.
+    fireEvent.change(screen.getByTestId('analyze-filter-device'), {
+      target: { value: 'hash:remote12345678901234' },
+    })
+    await waitFor(() => expect(screen.queryByTestId('finger-assignment-modal')).toBeNull())
+    hashSpy.mockRestore()
+  })
+
+  it('falls back to own when a persisted hash is missing from the remote list', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          deviceScope: { kind: 'hash', machineHash: 'stalehash123' },
+        },
+      },
+    })
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockResolvedValue(['otherhash456'])
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
+    await waitFor(() => {
+      expect(text('mock-wpm')).toMatch(/^uid-a:own:range=/)
+    })
+    hashSpy.mockRestore()
+    getSpy.mockRestore()
   })
 
   it('fires syncAnalyticsNow for the initial keyboard on Analyze mount', async () => {

@@ -16,6 +16,7 @@ import type { GoalHistoryEntry, PipetteSettings } from '../../../shared/types/pi
 import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES, DEFAULT_PIPETTE_SETTINGS } from '../../../shared/types/pipette-settings'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import {
   byDate,
@@ -41,16 +42,20 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
   const [settings, setSettings] = useState<PipetteSettings | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
 
+  const scopeKey = scopeToSelectValue(deviceScope)
+
   useEffect(() => {
     let cancelled = false
-    const fetcher = deviceScope === 'own'
-      ? window.vialAPI.typingAnalyticsListItemsLocal
-      : window.vialAPI.typingAnalyticsListItems
-    fetcher(uid)
+    const dailyPromise = isHashScope(deviceScope)
+      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash)
+      : isOwnScope(deviceScope)
+        ? window.vialAPI.typingAnalyticsListItemsLocal(uid)
+        : window.vialAPI.typingAnalyticsListItems(uid)
+    void dailyPromise
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
     return () => { cancelled = true }
-  }, [uid, deviceScope])
+  }, [uid, scopeKey])
 
   useEffect(() => {
     let cancelled = false

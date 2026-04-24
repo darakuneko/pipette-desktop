@@ -21,8 +21,12 @@ import {
   INTERVAL_VIEW_MODES,
   LAYER_VIEW_MODES,
   WPM_VIEW_MODES,
+  isHashScope,
+  isOwnScope,
+  scopeFromSelectValue,
+  scopeToSelectValue,
 } from '../../../shared/types/analyze-filters'
-import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
@@ -158,6 +162,14 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [snapshotSummaries, setSnapshotSummaries] = useState<TypingKeymapSnapshotSummary[]>([])
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
+  // Remote machine hashes populate the Device select's per-hash
+  // options. `loaded` gates the "persisted hash no longer exists"
+  // fallback — without it a slow fetch would clobber a valid
+  // persisted selection before the list resolves.
+  const [remoteHashes, setRemoteHashes] = useState<{ list: string[]; loaded: boolean }>({
+    list: [],
+    loaded: false,
+  })
   // Analytics-only sync runs on Analyze mount (see
   // .claude/rules/settings-persistence.md). The ref tracks per-keyboard
   // last-successful timestamps so switching between keyboards doesn't
@@ -246,6 +258,57 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       .catch(() => { if (!cancelled) setFingerAssignments({}) })
     return () => { cancelled = true }
   }, [selectedUid])
+
+  // Remote machine hashes (excluding own) power the Device select's
+  // per-hash options. Mark `loaded` after the fetch resolves so the
+  // fallback below doesn't race the first paint and wipe a valid
+  // persisted hash selection.
+  useEffect(() => {
+    if (!selectedUid) {
+      setRemoteHashes({ list: [], loaded: false })
+      return
+    }
+    let cancelled = false
+    setRemoteHashes({ list: [], loaded: false })
+    void window.vialAPI
+      .typingAnalyticsListRemoteHashes(selectedUid)
+      .then((list) => { if (!cancelled) setRemoteHashes({ list, loaded: true }) })
+      // Keep `loaded: false` on error so a transient IPC failure
+      // doesn't wipe a valid persisted hash selection through the
+      // "missing from list" fallback below.
+      .catch(() => { if (!cancelled) setRemoteHashes({ list: [], loaded: false }) })
+    return () => { cancelled = true }
+  }, [selectedUid])
+
+  // Fallback: if the persisted scope points at a machine hash that no
+  // longer exists in the remote list, drop back to `'own'`. Only runs
+  // after the list has resolved so a slow fetch can't strip a valid
+  // selection on first mount.
+  useEffect(() => {
+    if (!remoteHashes.loaded) return
+    if (!isHashScope(deviceScope)) return
+    if (!remoteHashes.list.includes(deviceScope.machineHash)) {
+      setDeviceScope('own')
+    }
+  }, [remoteHashes, deviceScope, setDeviceScope])
+
+  // Snapshots are only ever saved for the own machine hash (see
+  // service-side comment). When the user picks a remote hash we must
+  // suppress the own snapshot so Heatmap / Ergonomics / Layer
+  // activations don't render another device's data against the local
+  // keymap.
+  const effectiveSnapshot = isOwnScope(deviceScope) ? keymapSnapshot : null
+
+  // Auto-close the finger-assignment modal if the user flips to a
+  // remote scope mid-edit — the modal mutates the own snapshot, so
+  // keeping it visible under a hash scope would mean "editing the
+  // local keymap while looking at someone else's data". The open
+  // button is already disabled in that state.
+  useEffect(() => {
+    if (effectiveSnapshot === null && fingerModalOpen) {
+      setFingerModalOpen(false)
+    }
+  }, [effectiveSnapshot, fingerModalOpen])
 
   // Pull + push typing-analytics for the selected keyboard on mount /
   // keyboard switch. Rate-limited to one pass per 5 minutes per uid
@@ -418,13 +481,25 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   {t('analyze.filters.device')}
                   <select
                     className={FILTER_SELECT}
-                    value={deviceScope}
-                    onChange={(e) => setDeviceScope(e.target.value as DeviceScope)}
+                    value={scopeToSelectValue(deviceScope)}
+                    onChange={(e) => {
+                      const next = scopeFromSelectValue(e.target.value)
+                      if (next !== null) setDeviceScope(next)
+                    }}
                     data-testid="analyze-filter-device"
                   >
                     {DEVICE_SCOPES.map((key) => (
                       <option key={key} value={key}>
                         {t(`analyze.filters.deviceOption.${key}`)}
+                      </option>
+                    ))}
+                    {remoteHashes.list.map((hash) => (
+                      <option
+                        key={hash}
+                        value={scopeToSelectValue({ kind: 'hash', machineHash: hash })}
+                        title={hash}
+                      >
+                        {t('analyze.filters.deviceOption.hashShort', { hash: hash.slice(0, 8) })}
                       </option>
                     ))}
                   </select>
@@ -559,7 +634,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   type="button"
                   className="ml-auto rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
                   onClick={() => setFingerModalOpen(true)}
-                  disabled={keymapSnapshot === null}
+                  disabled={effectiveSnapshot === null}
                   data-testid="analyze-finger-assignment-open"
                 >
                   {t('analyze.fingerAssignment.button')}
@@ -582,7 +657,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                       ))}
                     </select>
                   </label>
-                  {layerFilter.viewMode === 'activations' && keymapSnapshot !== null && keymapSnapshot.layers > 1 && (
+                  {layerFilter.viewMode === 'activations' && effectiveSnapshot !== null && effectiveSnapshot.layers > 1 && (
                     <label className={FILTER_LABEL}>
                       {t('analyze.filters.layerBaseLayer')}
                       <select
@@ -591,7 +666,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                         onChange={(e) => setLayer({ baseLayer: Number(e.target.value) })}
                         data-testid="analyze-filter-layer-base-layer"
                       >
-                        {Array.from({ length: keymapSnapshot.layers }, (_, i) => (
+                        {Array.from({ length: effectiveSnapshot.layers }, (_, i) => (
                           <option key={i} value={i}>
                             {t('analyze.layer.layerLabel', { layer: i })}
                           </option>
@@ -630,12 +705,12 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   minActiveMs={wpmFilter.minActiveMs}
                 />
               ) : analysisTab === 'keyHeatmap' ? (
-                keymapSnapshot !== null ? (
+                effectiveSnapshot !== null ? (
                   <KeyHeatmapChart
                     uid={selected.uid}
                     range={range}
                     deviceScope={deviceScope}
-                    snapshot={keymapSnapshot}
+                    snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
                   />
@@ -645,8 +720,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </div>
                 )
               ) : analysisTab === 'ergonomics' ? (
-                keymapSnapshot !== null ? (
-                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} fingerOverrides={fingerAssignments} />
+                effectiveSnapshot !== null ? (
+                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={effectiveSnapshot} fingerOverrides={fingerAssignments} />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-no-snapshot">
                     {t('analyze.ergonomics.noSnapshot')}
@@ -657,7 +732,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   uid={selected.uid}
                   range={range}
                   deviceScope={deviceScope}
-                  snapshot={keymapSnapshot}
+                  snapshot={effectiveSnapshot}
                   viewMode={layerFilter.viewMode}
                   baseLayer={layerFilter.baseLayer}
                 />
@@ -673,7 +748,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       <FingerAssignmentModal
         isOpen={fingerModalOpen}
         onClose={() => setFingerModalOpen(false)}
-        snapshot={keymapSnapshot}
+        snapshot={effectiveSnapshot}
         assignments={fingerAssignments}
         onSave={handleFingerAssignmentsSave}
       />

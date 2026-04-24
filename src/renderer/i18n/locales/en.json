@@ -960,7 +960,8 @@
       "device": "Device",
       "deviceOption": {
         "own": "This device",
-        "all": "All devices"
+        "all": "All devices",
+        "hashShort": "{{hash}}…"
       },
       "unit": "Display",
       "unitOption": {

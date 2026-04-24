@@ -26,6 +26,7 @@ import type {
   TypingLayerUsageRow,
   TypingMatrixCellRow,
 } from '../../../shared/types/typing-analytics'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, LayerViewMode, RangeMs } from './analyze-types'
 import {
   aggregateLayerActivations,
@@ -106,25 +107,30 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot, viewMode, b
   const [layerNames, setLayerNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
+  const scopeKey = scopeToSelectValue(deviceScope)
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const api = window.vialAPI
-    const ownScoped = deviceScope === 'own'
     const run = async (): Promise<void> => {
       try {
         switch (viewMode) {
           case 'activations': {
-            const result = ownScoped
-              ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
-              : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
+            const result = isHashScope(deviceScope)
+              ? await api.typingAnalyticsListMatrixCellsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+              : isOwnScope(deviceScope)
+                ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
+                : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
             if (!cancelled) setCells(Array.isArray(result) ? result : [])
             return
           }
           case 'keystrokes': {
-            const result = ownScoped
-              ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
-              : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
+            const result = isHashScope(deviceScope)
+              ? await api.typingAnalyticsListLayerUsageForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+              : isOwnScope(deviceScope)
+                ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
+                : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
             if (!cancelled) setRows(Array.isArray(result) ? result : [])
             return
           }
@@ -141,7 +147,7 @@ export function LayerUsageChart({ uid, range, deviceScope, snapshot, viewMode, b
     return () => {
       cancelled = true
     }
-  }, [uid, range, deviceScope, viewMode])
+  }, [uid, range, scopeKey, viewMode])
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would

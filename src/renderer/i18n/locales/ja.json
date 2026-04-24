@@ -959,7 +959,8 @@
       "device": "デバイス",
       "deviceOption": {
         "own": "このデバイス",
-        "all": "全デバイス合算"
+        "all": "全デバイス合算",
+        "hashShort": "{{hash}}…"
       },
       "unit": "表示",
       "unitOption": {

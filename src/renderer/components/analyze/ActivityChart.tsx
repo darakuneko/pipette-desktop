@@ -36,6 +36,7 @@ import { AnalyzeStatGrid } from './stat-card'
 import { StreakGoalCard } from './StreakGoalCard'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
 
 interface Props {
@@ -74,15 +75,18 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
+  const scopeKey = scopeToSelectValue(deviceScope)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const load = async () => {
       try {
-        const data = deviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-          : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
+        const data = isHashScope(deviceScope)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(deviceScope)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
         if (!cancelled) setRows(data)
       } catch {
         if (!cancelled) setRows([])
@@ -92,7 +96,7 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, range])
+  }, [uid, scopeKey, range])
 
   const grid = useMemo(
     () => buildActivityGrid({ rows, range, minActiveMs }),
@@ -240,15 +244,18 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
   const { t } = useTranslation()
   const [sessions, setSessions] = useState<TypingSessionRow[]>([])
   const [loading, setLoading] = useState(true)
+  const scopeKey = scopeToSelectValue(deviceScope)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const load = async () => {
       try {
-        const data = deviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListSessionsLocal(uid, range.fromMs, range.toMs)
-          : await window.vialAPI.typingAnalyticsListSessions(uid, range.fromMs, range.toMs)
+        const data = isHashScope(deviceScope)
+          ? await window.vialAPI.typingAnalyticsListSessionsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(deviceScope)
+            ? await window.vialAPI.typingAnalyticsListSessionsLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListSessions(uid, range.fromMs, range.toMs)
         if (!cancelled) setSessions(data)
       } catch {
         if (!cancelled) setSessions([])
@@ -258,7 +265,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, range])
+  }, [uid, scopeKey, range])
 
   const histogram = useMemo(() => buildSessionHistogram(sessions), [sessions])
   const chartData = useMemo(

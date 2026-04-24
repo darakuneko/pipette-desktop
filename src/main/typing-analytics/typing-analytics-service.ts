@@ -16,6 +16,7 @@ import type {
   TypingKeymapSnapshotSummary,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
+import { isHashScope, isOwnScope, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
 import { ensureCacheIsFresh } from './cache-rebuild'
 import {
@@ -129,6 +130,18 @@ export function setupTypingAnalytics(): Promise<void> {
   return initialization
 }
 
+/** Factory for the "no records found" sentinel shared by every
+ * peak-records handler. Module-level so the FOR_HASH handler (registered
+ * before the other peak handlers in source order) can reference it
+ * without hitting the temporal-dead-zone of a function-scoped `const`. */
+const emptyPeakRecords = (): PeakRecords => ({
+  peakWpm: null,
+  lowestWpm: null,
+  peakKeystrokesPerMin: null,
+  peakKeystrokesPerDay: null,
+  longestSession: null,
+})
+
 /**
  * Register typing-analytics IPC handlers. Called synchronously at startup so
  * the handler is in place before the renderer creates the first BrowserWindow;
@@ -225,6 +238,92 @@ export function setupTypingAnalyticsIpc(): void {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       return listTypingDailySummariesForHash(uid, machineHash)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown): Promise<TypingIntervalDailySummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      return listTypingIntervalSummariesForHash(uid, machineHash)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingActivityCell[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingActivityGridForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingLayerUsageRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingLayerUsageInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMatrixCellsInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMinuteStatsInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingSessionRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingSessionsInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingBksMinuteRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingBksMinuteInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+      if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return emptyPeakRecords()
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return getTypingPeakRecordsInRangeForHash(uid, machineHash, since, until)
     },
   )
 
@@ -380,14 +479,6 @@ export function setupTypingAnalyticsIpc(): void {
     },
   )
 
-  const emptyPeakRecords = (): PeakRecords => ({
-    peakWpm: null,
-    lowestWpm: null,
-    peakKeystrokesPerMin: null,
-    peakKeystrokesPerDay: null,
-    longestSession: null,
-  })
-
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS,
     async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
@@ -437,15 +528,24 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE,
-    async (_event, uid: unknown, layer: unknown, sinceMs: unknown, untilMs: unknown, scopedOwnHash: unknown): Promise<TypingHeatmapByCell> => {
+    async (_event, uid: unknown, layer: unknown, sinceMs: unknown, untilMs: unknown, scope: unknown): Promise<TypingHeatmapByCell> => {
       if (typeof uid !== 'string' || uid.length === 0) return {}
       if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return {}
       if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return {}
+      const parsedScope = parseDeviceScope(scope)
+      if (parsedScope === null) return {}
       const db = getTypingAnalyticsDB()
       const sinceMinuteMs = Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS
       const untilMinuteMs = Math.ceil(untilMs / MINUTE_MS) * MINUTE_MS
-      const machineHash = scopedOwnHash === true ? await getMachineHash() : undefined
+      // `undefined` means "all hashes merged" at the DB layer; own scope
+      // injects the local hash so the same API shape covers all three
+      // scope kinds without caller gymnastics.
+      const machineHash = isOwnScope(parsedScope)
+        ? await getMachineHash()
+        : isHashScope(parsedScope)
+          ? parsedScope.machineHash
+          : undefined
       const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash)
       const out: TypingHeatmapByCell = {}
       for (const [key, cell] of totals) {

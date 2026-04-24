@@ -16,6 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
@@ -88,18 +89,23 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
   // Distribution mode needs per-scope raw quartiles — the cross-scope
   // `all` query already aggregates MIN / AVG / MAX over contributing
   // scopes, so redistributing those meta-aggregates as "four samples
-  // per minute" would muddy the histogram. Force `own` here and hide
-  // the device filter at the parent when the user picks Distribution.
+  // per minute" would muddy the histogram. Force `own` for distribution
+  // regardless of the outer scope (including per-hash selections) and
+  // hide the device filter at the parent when the user picks
+  // Distribution.
   const effectiveDeviceScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
+  const scopeKey = scopeToSelectValue(effectiveDeviceScope)
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const load = async () => {
       try {
-        const data = effectiveDeviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-          : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
+        const data = isHashScope(effectiveDeviceScope)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(effectiveDeviceScope)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
         if (!cancelled) setRows(data)
       } catch {
         if (!cancelled) setRows([])
@@ -109,7 +115,7 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, effectiveDeviceScope, range])
+  }, [uid, scopeKey, range])
 
   // Longest session comes from a narrow aggregation IPC rather than
   // the minute-stats rows so it surfaces the run that straddles bucket
@@ -120,14 +126,16 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
       return
     }
     let cancelled = false
-    const fetchFn = effectiveDeviceScope === 'own'
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal
-      : window.vialAPI.typingAnalyticsGetPeakRecords
-    void fetchFn(uid, range.fromMs, range.toMs)
+    const peakPromise = isHashScope(effectiveDeviceScope)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs)
+      : isOwnScope(effectiveDeviceScope)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs)
+    void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, effectiveDeviceScope, range])
+  }, [uid, scopeKey, range])
 
   // Log-axis can't plot 0 ms, but min often legitimately rounds to 0
   // on fast adjacent keystrokes. Clamp the axis floor at 1 ms so the

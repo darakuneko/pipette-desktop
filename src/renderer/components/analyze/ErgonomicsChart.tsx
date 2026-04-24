@@ -23,6 +23,7 @@ import type {
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
 import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics'
+import { scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
@@ -140,6 +141,8 @@ export function ErgonomicsChart({
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
   const [loading, setLoading] = useState(true)
 
+  const scopeKey = scopeToSelectValue(deviceScope)
+
   useEffect(() => {
     let cancelled = false
     const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
@@ -158,7 +161,7 @@ export function ErgonomicsChart({
             l,
             range.fromMs,
             range.toMs,
-            deviceScope === 'own',
+            deviceScope,
           )
           .catch(() => ({} as TypingHeatmapByCell)),
       ),
@@ -174,7 +177,7 @@ export function ErgonomicsChart({
     return () => {
       cancelled = true
     }
-  }, [uid, range, deviceScope, snapshot])
+  }, [uid, range, scopeKey, snapshot])
 
   const mergedHeatmap = useMemo(
     () => mergeLayerHeatmaps(layerCells),

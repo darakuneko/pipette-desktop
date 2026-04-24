@@ -4,8 +4,69 @@
 // renderer hook can depend on a single source of truth without the
 // shared -> renderer direction the codebase forbids.
 
+/** Static "all-hash" options. Dynamic per-hash selections live under
+ * `HashDeviceScope` — the select UI mixes both. Keep this export name
+ * so callers that iterate the built-in choices (`DEVICE_SCOPES.map`)
+ * keep working without knowing about hash scopes. */
 export const DEVICE_SCOPES = ['own', 'all'] as const
-export type DeviceScope = typeof DEVICE_SCOPES[number]
+export type StaticDeviceScope = typeof DEVICE_SCOPES[number]
+
+/** Individual remote machine-hash scope — picked from the Device
+ * select when a user has data from another machine synced in. */
+export interface HashDeviceScope {
+  kind: 'hash'
+  machineHash: string
+}
+
+export type DeviceScope = StaticDeviceScope | HashDeviceScope
+
+export function isOwnScope(scope: DeviceScope): scope is 'own' {
+  return scope === 'own'
+}
+
+export function isAllScope(scope: DeviceScope): scope is 'all' {
+  return scope === 'all'
+}
+
+export function isHashScope(scope: DeviceScope): scope is HashDeviceScope {
+  return typeof scope === 'object' && scope !== null && scope.kind === 'hash'
+}
+
+/** IPC boundary parser. Returns `null` for anything that isn't a
+ * valid `DeviceScope` so main-side handlers can reject cleanly. */
+export function parseDeviceScope(value: unknown): DeviceScope | null {
+  if (value === 'own' || value === 'all') return value
+  if (typeof value === 'object' && value !== null) {
+    const o = value as Record<string, unknown>
+    if (
+      o.kind === 'hash' &&
+      typeof o.machineHash === 'string' &&
+      o.machineHash.length > 0
+    ) {
+      return { kind: 'hash', machineHash: o.machineHash }
+    }
+  }
+  return null
+}
+
+const HASH_SELECT_PREFIX = 'hash:'
+
+/** `<select value>` serialiser. Static scopes round-trip as-is;
+ * hash scopes are encoded as `'hash:<machineHash>'`. */
+export function scopeToSelectValue(scope: DeviceScope): string {
+  return isHashScope(scope) ? `${HASH_SELECT_PREFIX}${scope.machineHash}` : scope
+}
+
+/** Inverse of `scopeToSelectValue`. Returns `null` for unknown values
+ * (e.g. stale option values after the remote hash list changed). */
+export function scopeFromSelectValue(value: string): DeviceScope | null {
+  if (value === 'own' || value === 'all') return value
+  if (value.startsWith(HASH_SELECT_PREFIX)) {
+    const hash = value.slice(HASH_SELECT_PREFIX.length)
+    return hash.length > 0 ? { kind: 'hash', machineHash: hash } : null
+  }
+  return null
+}
 
 export const HEATMAP_NORMALIZATIONS = ['absolute', 'perHour', 'shareOfTotal'] as const
 export type HeatmapNormalization = typeof HEATMAP_NORMALIZATIONS[number]
@@ -164,7 +225,7 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
-  if (o.deviceScope !== undefined && !includesAs(DEVICE_SCOPES, o.deviceScope)) return false
+  if (o.deviceScope !== undefined && parseDeviceScope(o.deviceScope) === null) return false
   if (!isValidHeatmapFilters(o.heatmap)) return false
   if (!isValidWpmFilters(o.wpm)) return false
   if (!isValidIntervalFilters(o.interval)) return false

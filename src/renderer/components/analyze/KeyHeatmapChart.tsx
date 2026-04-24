@@ -12,7 +12,7 @@ import type { TFunction } from 'i18next'
 import type { TypingHeatmapByCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
-import { HEATMAP_NORMALIZATIONS } from '../../../shared/types/analyze-filters'
+import { HEATMAP_NORMALIZATIONS, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
 import {
@@ -272,9 +272,11 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
   const [mergeCandidate, setMergeCandidate] = useState<number | null>(null)
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
 
+  const scopeKey = scopeToSelectValue(deviceScope)
+
   useEffect(() => {
     setLayerCells(new Map())
-  }, [uid, range, deviceScope])
+  }, [uid, range, scopeKey])
 
   const selectedLayersKey = selectedLayers.join(',')
   useEffect(() => {
@@ -287,7 +289,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
     setLoading(true)
     void Promise.all(layersToFetch.map((layer) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope === 'own')
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope)
         .catch(() => ({} as TypingHeatmapByCell)),
     )).then((results) => {
       if (cancelled) return
@@ -299,7 +301,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [uid, range, deviceScope, selectedLayersKey])
+  }, [uid, range, scopeKey, selectedLayersKey])
 
   const layout = snapshot.layout as KeyboardLayout | null
 

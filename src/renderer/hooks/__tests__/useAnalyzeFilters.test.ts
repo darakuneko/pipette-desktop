@@ -147,6 +147,36 @@ describe('useAnalyzeFilters', () => {
     expect(setSpy).not.toHaveBeenCalled()
   })
 
+  it('round-trips a hash deviceScope through load → setter → flush', async () => {
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          deviceScope: { kind: 'hash', machineHash: 'abcd1234' },
+        },
+      },
+    })
+    const { result } = renderHook(() => useAnalyzeFilters('uid-h'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.deviceScope).toEqual({ kind: 'hash', machineHash: 'abcd1234' })
+
+    setSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+    act(() => { result.current.setDeviceScope({ kind: 'hash', machineHash: 'ffff0000' }) })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(setSpy).toHaveBeenCalledTimes(1)
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScope).toEqual({
+      kind: 'hash',
+      machineHash: 'ffff0000',
+    })
+  })
+
   it('bootstraps a minimal PipetteSettings when pipetteSettingsGet returns null', async () => {
     getSpy.mockResolvedValue(null)
     const { result } = renderHook(() => useAnalyzeFilters('uid-new'))

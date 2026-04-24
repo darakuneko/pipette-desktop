@@ -110,6 +110,17 @@ export const IpcChannels = {
   TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE: 'typing-analytics:get-matrix-heatmap-for-range',
   TYPING_ANALYTICS_LIST_REMOTE_HASHES: 'typing-analytics:list-remote-hashes',
   TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
+  // Per-hash variants used by the Analyze Device select when scoping
+  // to a specific remote machine hash. `*Local` is own-hash only, `*`
+  // is all-hash merged; these fill in "pick one remote hash".
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_FOR_HASH: 'typing-analytics:list-interval-items-for-hash',
+  TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH: 'typing-analytics:list-activity-grid-for-hash',
+  TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH: 'typing-analytics:list-layer-usage-for-hash',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH: 'typing-analytics:list-matrix-cells-for-hash',
+  TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH: 'typing-analytics:list-minute-stats-for-hash',
+  TYPING_ANALYTICS_LIST_SESSIONS_FOR_HASH: 'typing-analytics:list-sessions-for-hash',
+  TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH: 'typing-analytics:list-bks-minute-for-hash',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH: 'typing-analytics:get-peak-records-for-hash',
   TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS: 'typing-analytics:list-local-device-days',
   TYPING_ANALYTICS_HAS_REMOTE: 'typing-analytics:has-remote',
   TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES: 'typing-analytics:list-remote-cloud-hashes',

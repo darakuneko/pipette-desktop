@@ -24,6 +24,7 @@ import type {
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
 import { formatDateTime } from '../editors/store-modal-shared'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
@@ -78,14 +79,21 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     }
   }
 
+  // Encode the scope into a stable primitive so effect dependencies
+  // don't retrigger on every render when the parent rebuilds the
+  // discriminated union object.
+  const scopeKey = scopeToSelectValue(deviceScope)
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const load = async () => {
       try {
-        const data = deviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-          : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
+        const data = isHashScope(deviceScope)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(deviceScope)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
         if (!cancelled) setRows(data)
       } catch {
         if (!cancelled) setRows([])
@@ -95,7 +103,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, range])
+  }, [uid, scopeKey, range])
 
   // The Bksp% overlay is always available in timeSeries mode; users
   // who don't want it click the legend to hide the line instead of
@@ -109,9 +117,11 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     let cancelled = false
     const load = async () => {
       try {
-        const data = deviceScope === 'own'
-          ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
-          : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
+        const data = isHashScope(deviceScope)
+          ? await window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(deviceScope)
+            ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
         if (!cancelled) setBksRows(data)
       } catch {
         if (!cancelled) setBksRows([])
@@ -119,7 +129,7 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, deviceScope, range, errorProxyActive])
+  }, [uid, scopeKey, range, errorProxyActive])
 
   // Peak / lowest WPM come from a narrow aggregation IPC rather than
   // the timeseries rows so they reflect the entire range (including
@@ -131,14 +141,16 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
       return
     }
     let cancelled = false
-    const fetchFn = deviceScope === 'own'
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal
-      : window.vialAPI.typingAnalyticsGetPeakRecords
-    void fetchFn(uid, range.fromMs, range.toMs)
+    const peakPromise = isHashScope(deviceScope)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+      : isOwnScope(deviceScope)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs)
+    void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, deviceScope, range])
+  }, [uid, scopeKey, range])
 
   const bucketMs = useMemo(
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),
