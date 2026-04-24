@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { GoalHistoryEntry, PipetteSettings } from '../../../shared/types/pipette-settings'
-import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES } from '../../../shared/types/pipette-settings'
+import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES, DEFAULT_PIPETTE_SETTINGS } from '../../../shared/types/pipette-settings'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import type { DeviceScope, RangeMs } from './analyze-types'
@@ -108,12 +108,7 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
     // dropping the write (which used to leave the draft stuck and the
     // "changes cleared" warning visible).
     const fetched = await window.vialAPI.pipetteSettingsGet(uid)
-    const current: PipetteSettings = fetched ?? settings ?? {
-      _rev: 1,
-      keyboardLayout: 'qwerty',
-      autoAdvance: true,
-      layerNames: [],
-    }
+    const current: PipetteSettings = fetched ?? settings ?? DEFAULT_PIPETTE_SETTINGS
     const prevAnalyze = current.analyze ?? {}
     const prevHistory: GoalHistoryEntry[] = prevAnalyze.goalHistory ?? []
     const prevKeystrokes = prevAnalyze.goalKeystrokes ?? DEFAULT_GOAL_KEYSTROKES

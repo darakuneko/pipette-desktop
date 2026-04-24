@@ -11,6 +11,8 @@ import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { TypingHeatmapByCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
+import { HEATMAP_NORMALIZATIONS } from '../../../shared/types/analyze-filters'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
 import {
@@ -32,9 +34,13 @@ interface Props {
   range: RangeMs
   deviceScope: DeviceScope
   snapshot: TypingKeymapSnapshot
+  /** Persisted filter state for this tab — `selectedLayers` / `groups`
+   * / ranking controls / normalization. Lifted to `TypingAnalyticsView`
+   * so `useAnalyzeFilters` can round-trip the values through
+   * `PipetteSettings.analyze.filters.heatmap`. */
+  heatmap: Required<HeatmapFilters>
+  onHeatmapChange: (patch: Partial<HeatmapFilters>) => void
 }
-
-const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
 
 interface LayerKeyboardProps {
   layer: number
@@ -255,20 +261,15 @@ function groupOf(groups: number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
 }
 
-export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
+export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, onHeatmapChange }: Props) {
   const { t } = useTranslation()
+  const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
   const [loading, setLoading] = useState(true)
-  const [selectedLayers, setSelectedLayers] = useState<number[]>([0])
-  const [groups, setGroups] = useState<number[][]>([[0]])
+  // `mergeCandidate` and `hoveredKey` stay component-local — they're
+  // transient interaction state (pre-bond click, row hover) and don't
+  // belong in per-keyboard persisted filters.
   const [mergeCandidate, setMergeCandidate] = useState<number | null>(null)
-  const [frequentUsedN, setFrequentUsedN] = useState<number>(10)
-  const [aggregateMode, setAggregateMode] = useState<AggregateMode>('cell')
-  const [keyGroupFilter, setKeyGroupFilter] = useState<KeyGroupFilter>('all')
-  // Normalization sits with the other ranking-level filters below the
-  // keyboard rather than on the global filter row so the full control
-  // panel for the Heatmap tab stays co-located.
-  const [normalization, setNormalization] = useState<HeatmapNormalization>('absolute')
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
 
   useEffect(() => {
@@ -346,16 +347,18 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
   const toggleLayer = (layer: number) => {
     if (selectedLayers.includes(layer)) {
       if (selectedLayers.length === 1) return
-      setSelectedLayers((prev) => prev.filter((l) => l !== layer))
-      setGroups((prev) => prev
+      const nextLayers = selectedLayers.filter((l) => l !== layer)
+      const nextGroups = groups
         .map((g) => g.filter((l) => l !== layer))
-        .filter((g) => g.length > 0))
+        .filter((g) => g.length > 0)
+      onHeatmapChange({ selectedLayers: nextLayers, groups: nextGroups })
       setMergeCandidate(null)
       return
     }
     if (selectedLayers.length >= MAX_LAYERS) return
-    setSelectedLayers((prev) => [...prev, layer].sort((a, b) => a - b))
-    setGroups((prev) => [...prev, [layer]])
+    const nextLayers = [...selectedLayers, layer].sort((a, b) => a - b)
+    const nextGroups = [...groups, [layer]]
+    onHeatmapChange({ selectedLayers: nextLayers, groups: nextGroups })
   }
 
   const handleKeyboardClick = (layer: number) => {
@@ -364,23 +367,20 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
         setMergeCandidate(null)
         return
       }
-      setGroups((prev) => {
-        const candidateGroupIdx = prev.findIndex((g) => g.includes(mergeCandidate))
-        const targetGroupIdx = prev.findIndex((g) => g.includes(layer))
-        if (candidateGroupIdx === -1 || targetGroupIdx === -1 || candidateGroupIdx === targetGroupIdx) {
-          return prev
-        }
-        const merged = [...new Set([...prev[candidateGroupIdx], ...prev[targetGroupIdx]])]
+      const candidateGroupIdx = groups.findIndex((g) => g.includes(mergeCandidate))
+      const targetGroupIdx = groups.findIndex((g) => g.includes(layer))
+      if (candidateGroupIdx !== -1 && targetGroupIdx !== -1 && candidateGroupIdx !== targetGroupIdx) {
+        const merged = [...new Set([...groups[candidateGroupIdx], ...groups[targetGroupIdx]])]
           .sort((x, y) => x - y)
         const result: number[][] = []
         const lower = Math.min(candidateGroupIdx, targetGroupIdx)
-        for (let i = 0; i < prev.length; i += 1) {
+        for (let i = 0; i < groups.length; i += 1) {
           if (i === lower) result.push(merged)
           else if (i === candidateGroupIdx || i === targetGroupIdx) continue
-          else result.push(prev[i])
+          else result.push(groups[i])
         }
-        return result
-      })
+        onHeatmapChange({ groups: result })
+      }
       setMergeCandidate(null)
       return
     }
@@ -388,19 +388,17 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
     const currentGroup = groups[currentGroupIdx]
     const isBonded = !!currentGroup && currentGroup.length > 1
     if (isBonded) {
-      setGroups((prev) => {
-        const result: number[][] = []
-        for (const g of prev) {
-          if (g.includes(layer)) {
-            const without = g.filter((l) => l !== layer)
-            if (without.length > 0) result.push(without)
-            result.push([layer])
-          } else {
-            result.push(g)
-          }
+      const result: number[][] = []
+      for (const g of groups) {
+        if (g.includes(layer)) {
+          const without = g.filter((l) => l !== layer)
+          if (without.length > 0) result.push(without)
+          result.push([layer])
+        } else {
+          result.push(g)
         }
-        return result
-      })
+      }
+      onHeatmapChange({ groups: result })
       return
     }
     // Standalone click with a single existing bonded group → auto-merge
@@ -408,18 +406,16 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
     const bondedGroupIdx = groups.findIndex((g) => g.length > 1)
     const multipleBonded = groups.filter((g) => g.length > 1).length > 1
     if (bondedGroupIdx !== -1 && !multipleBonded) {
-      setGroups((prev) => {
-        const merged = [...new Set([...prev[bondedGroupIdx], ...prev[currentGroupIdx]])]
-          .sort((x, y) => x - y)
-        const lower = Math.min(bondedGroupIdx, currentGroupIdx)
-        const result: number[][] = []
-        for (let i = 0; i < prev.length; i += 1) {
-          if (i === lower) result.push(merged)
-          else if (i === bondedGroupIdx || i === currentGroupIdx) continue
-          else result.push(prev[i])
-        }
-        return result
-      })
+      const merged = [...new Set([...groups[bondedGroupIdx], ...groups[currentGroupIdx]])]
+        .sort((x, y) => x - y)
+      const lower = Math.min(bondedGroupIdx, currentGroupIdx)
+      const result: number[][] = []
+      for (let i = 0; i < groups.length; i += 1) {
+        if (i === lower) result.push(merged)
+        else if (i === bondedGroupIdx || i === currentGroupIdx) continue
+        else result.push(groups[i])
+      }
+      onHeatmapChange({ groups: result })
       return
     }
     setMergeCandidate(layer)
@@ -518,7 +514,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
             value={normalization}
-            onChange={(e) => setNormalization(e.target.value as HeatmapNormalization)}
+            onChange={(e) => onHeatmapChange({ normalization: e.target.value as HeatmapNormalization })}
             aria-label={t('analyze.filters.normalization')}
             data-testid="analyze-keyheatmap-normalization"
           >
@@ -529,7 +525,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
             value={aggregateMode}
-            onChange={(e) => setAggregateMode(e.target.value as AggregateMode)}
+            onChange={(e) => onHeatmapChange({ aggregateMode: e.target.value as AggregateMode })}
             aria-label={t('analyze.keyHeatmap.ranking.aggregate')}
             data-testid="analyze-keyheatmap-aggregate"
           >
@@ -540,7 +536,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
             value={keyGroupFilter}
-            onChange={(e) => setKeyGroupFilter(e.target.value as KeyGroupFilter)}
+            onChange={(e) => onHeatmapChange({ keyGroupFilter: e.target.value as KeyGroupFilter })}
             aria-label={t('analyze.keyHeatmap.ranking.keyGroup')}
             data-testid="analyze-keyheatmap-keygroup"
           >
@@ -551,7 +547,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot }: Props) {
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
             value={frequentUsedN}
-            onChange={(e) => setFrequentUsedN(Number.parseInt(e.target.value, 10))}
+            onChange={(e) => onHeatmapChange({ frequentUsedN: Number.parseInt(e.target.value, 10) })}
             aria-label={t('analyze.keyHeatmap.ranking.frequentUsedN')}
             data-testid="analyze-keyheatmap-frequent-used-n"
           >

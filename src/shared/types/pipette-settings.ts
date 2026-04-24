@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { FingerType } from '../kle/kle-ergonomics'
+import type { AnalyzeFilterSettings } from './analyze-filters'
 import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing-analytics'
 
 export interface TypingTestResult {
@@ -75,11 +76,31 @@ export interface AnalyzeSettings {
    * were earned. Latest entry is the still-active goal snapshot; older
    * entries cover the window `[effectiveFrom, nextEntry.effectiveFrom)`. */
   goalHistory?: GoalHistoryEntry[]
+  /** Per-tab filter state for the Analyze dashboard (device scope,
+   * heatmap ranking controls, WPM / Interval / Activity / Layer view
+   * modes). `range` intentionally stays renderer-local — the default
+   * 7-day window reopens each session so users aren't greeted with a
+   * stale absolute window. */
+  filters?: AnalyzeFilterSettings
 }
 
 /** Fallback used when no per-keyboard goal has been saved yet. */
 export const DEFAULT_GOAL_KEYSTROKES = 1000
 export const DEFAULT_GOAL_DAYS = 10
+
+/** Minimum-valid `PipetteSettings` used to bootstrap the settings
+ * file when `pipetteSettingsGet` resolves to `null` (brand-new
+ * keyboard, no prior write). Consumers spread their own `analyze` /
+ * other-field edits onto this base so a first-time edit can create
+ * the file instead of silently dropping the write. `_rev` / keyboard
+ * layout / `autoAdvance` / `layerNames` are the fields the
+ * main-process validator requires. */
+export const DEFAULT_PIPETTE_SETTINGS: PipetteSettings = {
+  _rev: 1,
+  keyboardLayout: 'qwerty',
+  autoAdvance: true,
+  layerNames: [],
+}
 
 export interface PipetteSettings {
   _rev: 1

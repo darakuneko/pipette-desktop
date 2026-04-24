@@ -10,7 +10,16 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
+import {
+  ACTIVITY_METRICS,
+  DEVICE_SCOPES,
+  INTERVAL_UNITS,
+  INTERVAL_VIEW_MODES,
+  LAYER_VIEW_MODES,
+  WPM_VIEW_MODES,
+} from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -36,13 +45,13 @@ const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
 const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'layer']
-const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
-const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
-const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
-const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
-const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm', 'sessions']
-const LAYER_VIEW_MODES: LayerViewMode[] = ['keystrokes', 'activations']
 const DAY_MS = 86_400_000
+/** Default analyze window: most keyboards generate enough data in a
+ * week for the charts to feel populated without the user needing to
+ * reach for the From / To pickers on every entry. Absolute `fromMs` /
+ * `toMs` are re-seeded on each mount so persisted filters never drag
+ * a stale range forward. */
+const DEFAULT_RANGE_DAYS = 7
 
 const WPM_MIN_SAMPLE_OPTIONS: Array<{ value: number; labelKey: string }> = [
   { value: 30_000, labelKey: 'sec30' },
@@ -50,9 +59,6 @@ const WPM_MIN_SAMPLE_OPTIONS: Array<{ value: number; labelKey: string }> = [
   { value: 60_000 * 2, labelKey: 'min2' },
   { value: 60_000 * 5, labelKey: 'min5' },
 ]
-// Default to the `1 min` entry so the dropdown and state never drift
-// apart when the option list is reordered.
-const DEFAULT_WPM_MIN_ACTIVE_MS = WPM_MIN_SAMPLE_OPTIONS.find((o) => o.labelKey === 'min1')?.value ?? 60_000
 
 // Keep this table in sync with `GRANULARITIES` in analyze-bucket.ts;
 // the first entry is the "let the chart decide" pseudo-choice.
@@ -116,23 +122,31 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // while the page is open and we can reproducibly re-clip a stale
   // `to` when the user drags it above the wall clock we recorded.
   const [nowMs] = useState<number>(() => Date.now())
+  // `range` is intentionally not persisted — each session opens on a
+  // fresh 7-day window so an old absolute span can't drag forward
+  // into an empty view. The user still keeps whatever they scrolled
+  // to across keyboard / tab switches within the session.
   const [range, setRange] = useState<RangeMs>(() => ({
-    fromMs: Date.now() - DAY_MS,
+    fromMs: Date.now() - DAY_MS * DEFAULT_RANGE_DAYS,
     toMs: Date.now(),
   }))
-  const [deviceScope, setDeviceScope] = useState<DeviceScope>('own')
-  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('sec')
-  const [intervalViewMode, setIntervalViewMode] = useState<IntervalViewMode>('timeSeries')
-  const [wpmViewMode, setWpmViewMode] = useState<WpmViewMode>('timeSeries')
-  const [wpmMinActiveMs, setWpmMinActiveMs] = useState<number>(DEFAULT_WPM_MIN_ACTIVE_MS)
-  const [activityMetric, setActivityMetric] = useState<ActivityMetric>('keystrokes')
-  const [granularity, setGranularity] = useState<GranularityChoice>('auto')
-  const [layerViewMode, setLayerViewMode] = useState<LayerViewMode>('keystrokes')
-  // Base layer for the Activations view — dropped from both the
-  // aggregation and the bar list. Users whose default-layer is not 0
-  // point the selector at their real base so `LT0(KC_ESC)` hold and
-  // similar "no-op" layer ops don't count as transitions.
-  const [layerBaseLayer, setLayerBaseLayer] = useState<number>(0)
+  const {
+    filters: {
+      deviceScope,
+      heatmap: heatmapFilter,
+      wpm: wpmFilter,
+      interval: intervalFilter,
+      activity: activityFilter,
+      layer: layerFilter,
+    },
+    ready: filtersReady,
+    setDeviceScope,
+    setHeatmap,
+    setWpm,
+    setInterval: setIntervalFilter,
+    setActivity,
+    setLayer,
+  } = useAnalyzeFilters(selectedUid)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
@@ -171,13 +185,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   // Reset the Base Layer select when the snapshot's layer count shrinks
   // past the current selection (device switch, keymap edit). Without
-  // this, a stale `layerBaseLayer` would render an out-of-range <option>
-  // and the aggregator would silently skip nothing meaningful.
+  // this, a stale baseLayer would render an out-of-range <option> and
+  // the aggregator would silently skip nothing meaningful.
   useEffect(() => {
-    if (keymapSnapshot && layerBaseLayer >= keymapSnapshot.layers) {
-      setLayerBaseLayer(0)
+    if (keymapSnapshot && layerFilter.baseLayer >= keymapSnapshot.layers) {
+      setLayer({ baseLayer: 0 })
     }
-  }, [keymapSnapshot, layerBaseLayer])
+  }, [keymapSnapshot, layerFilter.baseLayer, setLayer])
 
   useEffect(() => {
     if (!selectedUid) { setFingerAssignments({}); return }
@@ -283,8 +297,11 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               ))}
             </div>
             <div
-              className="flex flex-wrap items-center gap-3 border-b border-edge pb-3"
+              className={`flex flex-wrap items-center gap-3 border-b border-edge pb-3 ${
+                !filtersReady ? 'pointer-events-none opacity-60' : ''
+              }`}
               data-testid="analyze-filters"
+              aria-busy={!filtersReady}
             >
               <label className={FILTER_LABEL}>
                 {t('analyze.filters.from')}
@@ -316,7 +333,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   data-testid="analyze-filter-to"
                 />
               </label>
-              {!(analysisTab === 'interval' && intervalViewMode === 'distribution') && (
+              {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.device')}
                   <select
@@ -339,8 +356,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.wpmViewMode')}
                     <select
                       className={FILTER_SELECT}
-                      value={wpmViewMode}
-                      onChange={(e) => setWpmViewMode(e.target.value as WpmViewMode)}
+                      value={wpmFilter.viewMode}
+                      onChange={(e) => setWpm({ viewMode: e.target.value as WpmViewMode })}
                       data-testid="analyze-filter-wpm-view-mode"
                     >
                       {WPM_VIEW_MODES.map((key) => (
@@ -354,8 +371,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.wpmMinSample')}
                     <select
                       className={FILTER_SELECT}
-                      value={String(wpmMinActiveMs)}
-                      onChange={(e) => setWpmMinActiveMs(Number.parseInt(e.target.value, 10))}
+                      value={String(wpmFilter.minActiveMs)}
+                      onChange={(e) => setWpm({ minActiveMs: Number.parseInt(e.target.value, 10) })}
                       data-testid="analyze-filter-wpm-min-sample"
                     >
                       {WPM_MIN_SAMPLE_OPTIONS.map((opt) => (
@@ -373,8 +390,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.activityMetric')}
                     <select
                       className={FILTER_SELECT}
-                      value={activityMetric}
-                      onChange={(e) => setActivityMetric(e.target.value as ActivityMetric)}
+                      value={activityFilter.metric}
+                      onChange={(e) => setActivity({ metric: e.target.value as ActivityMetric })}
                       data-testid="analyze-filter-activity-metric"
                     >
                       {ACTIVITY_METRICS.map((key) => (
@@ -384,13 +401,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                       ))}
                     </select>
                   </label>
-                  {activityMetric === 'wpm' && (
+                  {activityFilter.metric === 'wpm' && (
                     <label className={FILTER_LABEL}>
                       {t('analyze.filters.wpmMinSample')}
                       <select
                         className={FILTER_SELECT}
-                        value={String(wpmMinActiveMs)}
-                        onChange={(e) => setWpmMinActiveMs(Number.parseInt(e.target.value, 10))}
+                        value={String(wpmFilter.minActiveMs)}
+                        onChange={(e) => setWpm({ minActiveMs: Number.parseInt(e.target.value, 10) })}
                         data-testid="analyze-filter-activity-min-sample"
                       >
                         {WPM_MIN_SAMPLE_OPTIONS.map((opt) => (
@@ -409,8 +426,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.intervalViewMode')}
                     <select
                       className={FILTER_SELECT}
-                      value={intervalViewMode}
-                      onChange={(e) => setIntervalViewMode(e.target.value as IntervalViewMode)}
+                      value={intervalFilter.viewMode}
+                      onChange={(e) => setIntervalFilter({ viewMode: e.target.value as IntervalViewMode })}
                       data-testid="analyze-filter-interval-view-mode"
                     >
                       {INTERVAL_VIEW_MODES.map((key) => (
@@ -424,8 +441,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.unit')}
                     <select
                       className={FILTER_SELECT}
-                      value={intervalUnit}
-                      onChange={(e) => setIntervalUnit(e.target.value as IntervalUnit)}
+                      value={intervalFilter.unit}
+                      onChange={(e) => setIntervalFilter({ unit: e.target.value as IntervalUnit })}
                       data-testid="analyze-filter-unit"
                     >
                       {INTERVAL_UNITS.map((key) => (
@@ -437,15 +454,15 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </label>
                 </>
               )}
-              {((analysisTab === 'wpm' && wpmViewMode === 'timeSeries') || (analysisTab === 'interval' && intervalViewMode === 'timeSeries')) && (
+              {((analysisTab === 'wpm' && wpmFilter.viewMode === 'timeSeries') || (analysisTab === 'interval' && intervalFilter.viewMode === 'timeSeries')) && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.granularity')}
                   <select
                     className={FILTER_SELECT}
-                    value={typeof granularity === 'number' ? String(granularity) : 'auto'}
+                    value={typeof wpmFilter.granularity === 'number' ? String(wpmFilter.granularity) : 'auto'}
                     onChange={(e) => {
                       const v = e.target.value
-                      setGranularity(v === 'auto' ? 'auto' : Number.parseInt(v, 10))
+                      setWpm({ granularity: v === 'auto' ? 'auto' : Number.parseInt(v, 10) })
                     }}
                     data-testid="analyze-filter-granularity"
                   >
@@ -474,8 +491,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.filters.layerViewMode')}
                     <select
                       className={FILTER_SELECT}
-                      value={layerViewMode}
-                      onChange={(e) => setLayerViewMode(e.target.value as LayerViewMode)}
+                      value={layerFilter.viewMode}
+                      onChange={(e) => setLayer({ viewMode: e.target.value as LayerViewMode })}
                       data-testid="analyze-filter-layer-view-mode"
                     >
                       {LAYER_VIEW_MODES.map((key) => (
@@ -485,13 +502,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                       ))}
                     </select>
                   </label>
-                  {layerViewMode === 'activations' && keymapSnapshot !== null && keymapSnapshot.layers > 1 && (
+                  {layerFilter.viewMode === 'activations' && keymapSnapshot !== null && keymapSnapshot.layers > 1 && (
                     <label className={FILTER_LABEL}>
                       {t('analyze.filters.layerBaseLayer')}
                       <select
                         className={FILTER_SELECT}
-                        value={layerBaseLayer}
-                        onChange={(e) => setLayerBaseLayer(Number(e.target.value))}
+                        value={layerFilter.baseLayer}
+                        onChange={(e) => setLayer({ baseLayer: Number(e.target.value) })}
                         data-testid="analyze-filter-layer-base-layer"
                       >
                         {Array.from({ length: keymapSnapshot.layers }, (_, i) => (
@@ -511,23 +528,37 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   uid={selected.uid}
                   range={range}
                   deviceScope={deviceScope}
-                  granularity={granularity}
-                  viewMode={wpmViewMode}
-                  minActiveMs={wpmMinActiveMs}
+                  granularity={wpmFilter.granularity}
+                  viewMode={wpmFilter.viewMode}
+                  minActiveMs={wpmFilter.minActiveMs}
                 />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
+                <IntervalChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScope}
+                  unit={intervalFilter.unit}
+                  granularity={wpmFilter.granularity}
+                  viewMode={intervalFilter.viewMode}
+                />
               ) : analysisTab === 'activity' ? (
                 <ActivityChart
                   uid={selected.uid}
                   range={range}
                   deviceScope={deviceScope}
-                  metric={activityMetric}
-                  minActiveMs={wpmMinActiveMs}
+                  metric={activityFilter.metric}
+                  minActiveMs={wpmFilter.minActiveMs}
                 />
               ) : analysisTab === 'keyHeatmap' ? (
                 keymapSnapshot !== null ? (
-                  <KeyHeatmapChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} />
+                  <KeyHeatmapChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScope={deviceScope}
+                    snapshot={keymapSnapshot}
+                    heatmap={heatmapFilter}
+                    onHeatmapChange={setHeatmap}
+                  />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-keyheatmap-empty">
                     {t('analyze.keyHeatmap.noSnapshot')}
@@ -542,7 +573,14 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </div>
                 )
               ) : analysisTab === 'layer' ? (
-                <LayerUsageChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={keymapSnapshot} viewMode={layerViewMode} baseLayer={layerBaseLayer} />
+                <LayerUsageChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScope}
+                  snapshot={keymapSnapshot}
+                  viewMode={layerFilter.viewMode}
+                  baseLayer={layerFilter.baseLayer}
+                />
               ) : null}
             </div>
           </>

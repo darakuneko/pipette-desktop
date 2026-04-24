@@ -58,6 +58,10 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsGetPeakRecords: () => Promise.resolve(emptyPeakRecords),
     typingAnalyticsGetPeakRecordsLocal: () => Promise.resolve(emptyPeakRecords),
     pipetteSettingsGet: () => Promise.resolve(null),
+    // `useAnalyzeFilters` debounces filter writes through this setter.
+    // Stubbing it with a no-op keeps the tests focused on prop
+    // propagation without waiting on the 300 ms flush timer.
+    pipetteSettingsSet: () => Promise.resolve({ success: true as const }),
   },
   writable: true,
 })

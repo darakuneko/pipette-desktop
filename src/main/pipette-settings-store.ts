@@ -9,14 +9,11 @@ import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
+import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
 import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
 
 const FINGER_SET = new Set<FingerType>(FINGER_LIST)
 const KEY_POS_RE = /^\d+,\d+$/
-
-function isPositiveInt(v: unknown): v is number {
-  return typeof v === 'number' && Number.isInteger(v) && v >= 1
-}
 
 function isValidIsoTimestamp(v: unknown): v is string {
   if (typeof v !== 'string' || v.length === 0) return false
@@ -51,6 +48,7 @@ function isValidAnalyzeSettings(value: unknown): boolean {
     if (!Array.isArray(obj.goalHistory)) return false
     if (!obj.goalHistory.every(isValidGoalHistoryEntry)) return false
   }
+  if ('filters' in obj && obj.filters != null && !isValidAnalyzeFilterSettings(obj.filters)) return false
   return true
 }
 

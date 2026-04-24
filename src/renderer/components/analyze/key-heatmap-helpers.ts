@@ -8,10 +8,8 @@ import { resolveSnapshotLabel, keycodeGroup } from '../../../shared/keycodes/key
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 
-export const AGGREGATE_MODES = ['cell', 'char'] as const
-export type AggregateMode = typeof AGGREGATE_MODES[number]
-export const KEY_GROUPS = ['all', 'char', 'modifier', 'layerOp'] as const
-export type KeyGroupFilter = typeof KEY_GROUPS[number]
+export { AGGREGATE_MODES, KEY_GROUPS } from '../../../shared/types/analyze-filters'
+export type { AggregateMode, KeyGroupFilter } from '../../../shared/types/analyze-filters'
 
 const MASK_INNER_RE = /\((.+)\)$/
 const COMPACT_LAYER_OP_RE = /^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)\s(\d+)$/
