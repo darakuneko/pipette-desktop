@@ -33,6 +33,7 @@ import {
 } from './analyze-sessions'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
+import { StreakGoalCard } from './StreakGoalCard'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
 import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
@@ -52,16 +53,21 @@ const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DOWS = [0, 1, 2, 3, 4, 5, 6] as const
 
 export function ActivityChart(props: Props) {
-  if (props.metric === 'sessions') {
-    return (
+  const body = props.metric === 'sessions'
+    ? (
       <SessionDistributionChart
         uid={props.uid}
         range={props.range}
         deviceScope={props.deviceScope}
       />
     )
-  }
-  return <ActivityGridChart {...props} />
+    : <ActivityGridChart {...props} />
+  return (
+    <div className="flex h-full w-full flex-col gap-3">
+      <div className="flex-1 min-h-0">{body}</div>
+      <StreakGoalCard uid={props.uid} deviceScope={props.deviceScope} range={props.range} />
+    </div>
+  )
 }
 
 function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {

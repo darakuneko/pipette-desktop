@@ -3,22 +3,32 @@
 // Layout-only component — every page decides its own item list and
 // ARIA label via the i18n keys passed in.
 
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export interface AnalyzeSummaryItem {
   labelKey: string
-  value: string
+  /** The primary metric shown inside the card. Typically a preformatted
+   * string; accepts a ReactNode so callers can inject a custom inline
+   * editor (e.g. the editable Daily-goal value). */
+  value: ReactNode
   /** Optional small-text suffix shown next to the value (e.g. "WPM",
    * "keys"). Ignored by {@link AnalyzeSummaryTable}; consumed by the
    * card-grid renderer. */
   unit?: string
   /** Optional second line below the value (e.g. "323 keys" underneath
-   * a "Tue" dow label). Ignored by {@link AnalyzeSummaryTable}. */
-  context?: string
+   * a "Tue" dow label). Accepts a ReactNode so callers can embed a
+   * button or richer content in the context slot. Ignored by
+   * {@link AnalyzeSummaryTable}. */
+  context?: ReactNode
   /** Optional i18n key for a hover tooltip describing the stat.
    * Ignored by {@link AnalyzeSummaryTable}; consumed by the
    * card-grid renderer. */
   descriptionKey?: string
+  /** Optional top-right affordance for the card variant (e.g. an inline
+   * edit button). Ignored by {@link AnalyzeSummaryTable}; only the
+   * card-grid renderer forwards it to the underlying StatCard. */
+  action?: ReactNode
 }
 
 interface Props {

@@ -4,6 +4,7 @@
 // label / value / unit / context stack, same typography, same
 // surface/border tokens.
 
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { Tooltip as UITooltip, type TooltipAlign } from '../ui/Tooltip'
@@ -12,9 +13,9 @@ const GRID_COLS = 4
 
 interface Props {
   label: string
-  value: string
+  value: ReactNode
   unit?: string
-  context?: string
+  context?: ReactNode
   testid?: string
   /** Description shown in a hover tooltip over the whole card. When
    * unset the card is rendered plain, without a tooltip wrapper. */
@@ -23,10 +24,16 @@ interface Props {
    * `center`; callers may set `end` for the right-most card in a row so
    * the bubble cannot overflow the viewport on the right. */
   tooltipAlign?: TooltipAlign
+  /** Optional affordance rendered in the card's top-right corner —
+   * used e.g. by the Daily Goal card to expose an inline edit button.
+   * Kept generic so future cards can drop in their own trigger
+   * without bespoke layout code. The action sits outside the tooltip
+   * trigger area so clicking it doesn't fight the description bubble. */
+  action?: ReactNode
 }
 
-export function StatCard({ label, value, unit, context, testid, description, tooltipAlign = 'center' }: Props) {
-  const card = (
+export function StatCard({ label, value, unit, context, testid, description, tooltipAlign = 'center', action }: Props) {
+  const body = (
     <div
       className="flex h-full flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2"
       data-testid={testid}
@@ -43,17 +50,26 @@ export function StatCard({ label, value, unit, context, testid, description, too
     </div>
   )
 
-  if (!description) return card
-
-  return (
+  const content = description ? (
     <UITooltip
       content={description}
       align={tooltipAlign}
       wrapperClassName="block h-full w-full"
-      className={tooltipAlign === 'end' ? 'max-w-xs' : undefined}
+      className="max-w-xs"
     >
-      {card}
+      {body}
     </UITooltip>
+  ) : body
+
+  // Render `action` as a sibling of the tooltip trigger (not inside it)
+  // so that hovering/focusing the action doesn't also pop the card's
+  // description tooltip.
+  if (!action) return content
+  return (
+    <div className="relative h-full">
+      {content}
+      <div className="absolute right-2 top-2">{action}</div>
+    </div>
   )
 }
 
@@ -77,10 +93,11 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
       data-testid={testId}
     >
       {items.map((item, index) => {
-        // Only the last column on a full row is the visual right edge;
-        // a partial final row leaves trailing cells in the middle of
-        // the grid and should still center-align its tooltips.
-        const isRightMost = index % GRID_COLS === GRID_COLS - 1
+        // Anchor tooltips inward on the edge columns so their bubbles
+        // can't overflow the viewport; partial final rows leave middle
+        // cells that still look best center-aligned.
+        const col = index % GRID_COLS
+        const tooltipAlign = col === 0 ? 'start' : col === GRID_COLS - 1 ? 'end' : 'center'
         return (
           <StatCard
             key={item.labelKey}
@@ -89,7 +106,8 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
             unit={item.unit}
             context={item.context}
             description={item.descriptionKey ? t(item.descriptionKey) : undefined}
-            tooltipAlign={isRightMost ? 'end' : 'center'}
+            tooltipAlign={tooltipAlign}
+            action={item.action}
           />
         )
       })}

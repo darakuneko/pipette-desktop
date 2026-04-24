@@ -14,6 +14,25 @@ import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
 const FINGER_SET = new Set<FingerType>(FINGER_LIST)
 const KEY_POS_RE = /^\d+,\d+$/
 
+function isPositiveInt(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1
+}
+
+function isValidIsoTimestamp(v: unknown): v is string {
+  if (typeof v !== 'string' || v.length === 0) return false
+  const ms = Date.parse(v)
+  return Number.isFinite(ms)
+}
+
+function isValidGoalHistoryEntry(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const obj = value as Record<string, unknown>
+  if (!isPositiveInt(obj.days)) return false
+  if (!isPositiveInt(obj.keystrokes)) return false
+  if (!isValidIsoTimestamp(obj.effectiveFrom)) return false
+  return true
+}
+
 function isValidAnalyzeSettings(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
@@ -25,6 +44,12 @@ function isValidAnalyzeSettings(value: unknown): boolean {
       if (!KEY_POS_RE.test(k)) return false
       if (typeof v !== 'string' || !FINGER_SET.has(v as FingerType)) return false
     }
+  }
+  if ('goalDays' in obj && obj.goalDays != null && !isPositiveInt(obj.goalDays)) return false
+  if ('goalKeystrokes' in obj && obj.goalKeystrokes != null && !isPositiveInt(obj.goalKeystrokes)) return false
+  if ('goalHistory' in obj && obj.goalHistory != null) {
+    if (!Array.isArray(obj.goalHistory)) return false
+    if (!obj.goalHistory.every(isValidGoalHistoryEntry)) return false
   }
   return true
 }

@@ -39,6 +39,18 @@ export function isTypingSyncSpanDays(value: unknown): value is TypingSyncSpanDay
   return typeof value === 'number' && (ALLOWED_TYPING_SYNC_SPAN_DAYS as readonly number[]).includes(value)
 }
 
+/** One entry of the per-keyboard goal change history. Kept in ISO 8601
+ * timestamp form so same-day edits can still be ordered (the "keep
+ * latest within a day" rule is UI-driven; the store only normalizes
+ * and validates shape). `days` / `keystrokes` carry the snapshot that
+ * was active from `effectiveFrom` until the next entry (or "now" for
+ * the last one). */
+export interface GoalHistoryEntry {
+  days: number
+  keystrokes: number
+  effectiveFrom: string
+}
+
 /** Per-keyboard Analyze-tab settings. Lives under `PipetteSettings.analyze`
  * so future analyze settings (filter persistence etc.) can share the same
  * namespace without cluttering the top-level PipetteSettings shape. */
@@ -47,7 +59,27 @@ export interface AnalyzeSettings {
    * the Ergonomics tab falls back to the geometry-based estimate. The
    * hand is always derived from the finger, so it isn't stored separately. */
   fingerAssignments?: Record<string, FingerType>
+  /** Current daily keystroke goal (streak threshold) used by the Analyze
+   * Streak / Goal cards. Minimum 1 — the UI and the main validator
+   * reject zero / negative values so the `>= goal` semantics stay
+   * intact. Hit-day count is local-calendar (`strftime('%Y-%m-%d', ...,
+   * 'localtime')`). */
+  goalKeystrokes?: number
+  /** Number of consecutive goal-met days required to "record" one
+   * achievement cycle. Reaching this threshold resets the Current streak
+   * card to `0/{goalDays}` and appends a new entry to the derived
+   * achievement list. Minimum 1. */
+  goalDays?: number
+  /** Timeline of goal edits. The Current card recomputes against this
+   * so past cycles stay valued at the goal that was active when they
+   * were earned. Latest entry is the still-active goal snapshot; older
+   * entries cover the window `[effectiveFrom, nextEntry.effectiveFrom)`. */
+  goalHistory?: GoalHistoryEntry[]
 }
+
+/** Fallback used when no per-keyboard goal has been saved yet. */
+export const DEFAULT_GOAL_KEYSTROKES = 1000
+export const DEFAULT_GOAL_DAYS = 10
 
 export interface PipetteSettings {
   _rev: 1

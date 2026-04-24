@@ -922,6 +922,32 @@
         "minutes": "min"
       }
     },
+    "streakGoal": {
+      "ariaLabel": "Goal streak and daily keystroke goal summary",
+      "currentStreakLabel": "Current goal streak",
+      "currentStreakDesc": "Days completed in the current cycle\nResets after reaching the target days",
+      "currentValue": "{{current}}/{{goalDays}} days",
+      "longestStreakLabel": "Longest goal streak in history",
+      "goalLabel": "Daily keystroke goal",
+      "goalDaysAria": "Target consecutive days",
+      "goalKeystrokesAria": "Target keystrokes per day",
+      "changeWarning": "Changing the goal clears the current cycle counter",
+      "confirm": "Confirm",
+      "daysUnit": "days",
+      "keystrokesUnit": "keystrokes/day",
+      "historyButton": "Achievement history",
+      "historyTitle": "Goal achievement history",
+      "historyEmpty": "No completed cycles yet",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} days / {{keystrokes}} keystrokes",
+      "historyColumn": {
+        "period": "Period",
+        "goal": "Goal",
+        "days": "Days",
+        "total": "Total keystrokes",
+        "average": "Avg / day"
+      }
+    },
     "filters": {
       "from": "From",
       "to": "To",

@@ -921,6 +921,32 @@
         "minutes": "分"
       }
     },
+    "streakGoal": {
+      "ariaLabel": "連続記録日数と打鍵記録目標設定のサマリ",
+      "currentStreakLabel": "現在の連続記録日数",
+      "currentStreakDesc": "現在のサイクルで連続達成した日数\n目標日数に達すると履歴に記録後リセット",
+      "currentValue": "{{current}}/{{goalDays}} 日",
+      "longestStreakLabel": "履歴中最長連続記録日数",
+      "goalLabel": "打鍵記録目標設定",
+      "goalDaysAria": "目標連続日数",
+      "goalKeystrokesAria": "1 日あたりの目標打鍵数",
+      "changeWarning": "目標を変更すると現在のカウントがクリアされます",
+      "confirm": "確定",
+      "daysUnit": "日",
+      "keystrokesUnit": "回/日",
+      "historyButton": "達成履歴",
+      "historyTitle": "達成履歴",
+      "historyEmpty": "達成履歴はまだありません",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} 日 / {{keystrokes}} 回",
+      "historyColumn": {
+        "period": "期間",
+        "goal": "目標",
+        "days": "日数",
+        "total": "合計打鍵数",
+        "average": "平均 / 日"
+      }
+    },
     "filters": {
       "from": "From",
       "to": "To",
