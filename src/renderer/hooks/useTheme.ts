@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAppConfig } from './useAppConfig'
 import type { ThemeMode } from '../../shared/types/app-config'
+import { useEffectiveTheme, type EffectiveTheme } from './useEffectiveTheme'
 
 export type { ThemeMode }
-export type EffectiveTheme = 'light' | 'dark'
+export type { EffectiveTheme }
+export { useEffectiveTheme }
 
 const DARK_CLASS = 'dark'
 const MEDIA_QUERY = '(prefers-color-scheme: dark)'

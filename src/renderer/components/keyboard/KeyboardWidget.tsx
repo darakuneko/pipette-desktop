@@ -8,6 +8,7 @@ import { EncoderWidget } from './EncoderWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
 import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-color'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 
 /** Rotate point (px, py) by `angle` degrees around center (cx, cy). */
 export function rotatePoint(
@@ -135,6 +136,8 @@ function KeyboardWidgetInner({
   readOnly = false,
   scale = 1,
 }: Props) {
+  const effectiveTheme = useEffectiveTheme()
+
   // Reposition selected layout alternatives to align with option 0, then filter
   const visibleKeys = useMemo(() => {
     if (!layoutOptions || layoutOptions.size === 0) return keys
@@ -221,8 +224,9 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
-            heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
-            heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey, effectiveTheme)}
+            heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey, effectiveTheme)}
+            effectiveTheme={effectiveTheme}
             customFill={keyColors?.get(posKey) ?? null}
             labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
@@ -273,8 +277,9 @@ function KeyboardWidgetInner({
             highlighted={highlightedKeys?.has(posKey)}
             everPressed={everPressedKeys?.has(posKey)}
             remapped={remappedKeys?.has(posKey)}
-            heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey)}
-            heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey)}
+            heatmapOuterFill={outerHeatmapFillForCell(heatmapCells, heatmapMaxHold, heatmapMaxTotal, posKey, effectiveTheme)}
+            heatmapInnerFill={innerHeatmapFillForCell(heatmapCells, heatmapMaxTap, posKey, effectiveTheme)}
+            effectiveTheme={effectiveTheme}
             customFill={keyColors?.get(posKey) ?? null}
             labelOverride={labelOverrides?.get(posKey)}
             onClick={readOnly ? undefined : onKeyClick}
