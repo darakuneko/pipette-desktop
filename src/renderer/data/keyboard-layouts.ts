@@ -545,6 +545,38 @@ export const KEYBOARD_LAYOUTS: KeyboardLayoutDef[] = [
   },
 
   {
+    id: 'german-mac',
+    name: 'German (MAC)',
+    map: {
+      KC_GRAVE: '°\n^',
+      KC_2: '"\n2',
+      KC_3: '§\n3',
+      KC_5: '%\n5\u2003[',
+      KC_6: '&\n6\u2003]',
+      KC_7: '/\n7\u2003|',
+      KC_8: '(\n8\u2003{',
+      KC_9: ')\n9\u2003}',
+      KC_0: '=\n0',
+      KC_MINUS: '?\nß',
+      KC_EQUAL: '`\n´',
+      KC_E: 'E\n €',
+      KC_Y: 'Z',
+      KC_LBRACKET: 'Ü',
+      KC_RBRACKET: '*\n+',
+      KC_L: 'L\n @',
+      KC_COLN: 'ö',
+      KC_SCOLON: 'Ö',
+      KC_QUOTE: 'Ä',
+      KC_NONUS_HASH: "'\n#",
+      KC_NONUS_BSLASH: '>\n<',
+      KC_Z: 'Y',
+      KC_COMMA: ';\n,',
+      KC_DOT: ':\n.',
+      KC_SLASH: '_\n-',
+    },
+  },
+
+  {
     id: 'hebrew',
     name: 'Hebrew (Standard)',
     map: {
