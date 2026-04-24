@@ -270,7 +270,6 @@
       "alwaysOnTop": "最前面",
       "recordStart": "開始",
       "recordStop": "停止",
-      "recordTooltip": "このキーボードの入力解析記録をオンオフ",
       "viewAnalytics": "分析ビュー",
       "tab": {
         "window": "ウィンドウ",

@@ -271,7 +271,6 @@
       "alwaysOnTop": "top",
       "recordStart": "Start",
       "recordStop": "Stop",
-      "recordTooltip": "Toggle typing analytics recording for this keyboard",
       "viewAnalytics": "View Analytics",
       "tab": {
         "window": "Window",
