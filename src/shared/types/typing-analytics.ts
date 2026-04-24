@@ -123,6 +123,19 @@ export interface TypingKeymapSnapshot {
   layout: unknown
 }
 
+/** Metadata-only view of {@link TypingKeymapSnapshot}. Powers the
+ * Analyze snapshot timeline — the heavy `keymap` / `layout` payloads
+ * are omitted so the renderer only pays for what the tick markers
+ * need. */
+export interface TypingKeymapSnapshotSummary {
+  uid: string
+  machineHash: string
+  productName: string
+  savedAt: number
+  layers: number
+  matrix: { rows: number; cols: number }
+}
+
 /** Minute-level row returned by the Analyze fetch. The Analyze view
  * pulls minute-raw data and buckets it on the client so the SQL layer
  * doesn't have to know about a user-chosen bucket size. `keystrokes`

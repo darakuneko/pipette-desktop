@@ -55,6 +55,7 @@ Object.defineProperty(window, 'vialAPI', {
   value: {
     typingAnalyticsListKeyboards: () => Promise.resolve([] as TypingKeyboardSummary[]),
     typingAnalyticsGetKeymapSnapshotForRange: () => Promise.resolve(null as TypingKeymapSnapshot | null),
+    typingAnalyticsListKeymapSnapshots: () => Promise.resolve([]),
     typingAnalyticsGetPeakRecords: () => Promise.resolve(emptyPeakRecords),
     typingAnalyticsGetPeakRecordsLocal: () => Promise.resolve(emptyPeakRecords),
     pipetteSettingsGet: () => Promise.resolve(null),

@@ -640,6 +640,11 @@
       "keys": "keys",
       "activations": "activations"
     },
+    "snapshotTimeline": {
+      "title": "Keymap snapshots",
+      "current": "Current keymap",
+      "custom": "— Custom range —"
+    },
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",

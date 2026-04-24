@@ -22,6 +22,7 @@ import type {
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
   TypingMinuteStatsRow,
@@ -266,6 +267,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
   typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, fromMs, toMs),
+  typingAnalyticsListKeymapSnapshots: (uid: string): Promise<TypingKeymapSnapshotSummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS, uid),
   typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scopedOwnHash),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>

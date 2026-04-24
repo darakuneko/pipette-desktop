@@ -7,7 +7,10 @@
 
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
+import type {
+  TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
+} from '../../shared/types/typing-analytics'
 
 /** `userData/typing-analytics/keymaps/{uid}/{machineHash}/`. All
  * files inside are `<savedAt>.json` snapshots. */
@@ -113,4 +116,38 @@ export async function getKeymapSnapshotForRange(
   }
   if (pick === null) return null
   return readSnapshotFile(join(snapshotDir(userDataDir, uid, machineHash), `${pick}.json`))
+}
+
+/** Metadata-only listing for the Analyze snapshot timeline. Walks
+ * every `<savedAt>.json` in the (uid, machineHash) directory,
+ * strips the heavy `keymap` / `layout` payloads, and returns the
+ * remaining fields sorted ascending by `savedAt`. Files that fail to
+ * parse are skipped silently — the timeline only shows what is
+ * currently readable. */
+export async function listKeymapSnapshotSummaries(
+  userDataDir: string,
+  uid: string,
+  machineHash: string,
+): Promise<TypingKeymapSnapshotSummary[]> {
+  const dir = snapshotDir(userDataDir, uid, machineHash)
+  const saveds = await listSavedAts(userDataDir, uid, machineHash)
+  // Read files in parallel — a user with a history of keymap edits can
+  // easily accumulate dozens of snapshots; sequential awaits pay a
+  // per-file syscall latency that adds up on cold caches.
+  const snaps = await Promise.all(
+    saveds.map((savedAt) => readSnapshotFile(join(dir, `${savedAt}.json`))),
+  )
+  const out: TypingKeymapSnapshotSummary[] = []
+  for (const snap of snaps) {
+    if (!snap) continue
+    out.push({
+      uid: snap.uid,
+      machineHash: snap.machineHash,
+      productName: snap.productName,
+      savedAt: snap.savedAt,
+      layers: snap.layers,
+      matrix: snap.matrix,
+    })
+  }
+  return out
 }

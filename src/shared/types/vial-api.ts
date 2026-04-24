@@ -26,6 +26,7 @@ import type {
   TypingIntervalDailySummary,
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
   TypingMinuteStatsRow,
@@ -171,6 +172,7 @@ export interface VialAPI {
   typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
   typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
+  typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>
   typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scopedOwnHash: boolean): Promise<TypingHeatmapByCell>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>

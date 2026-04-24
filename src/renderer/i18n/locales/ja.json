@@ -639,6 +639,11 @@
       "keys": "回",
       "activations": "回"
     },
+    "snapshotTimeline": {
+      "title": "キーマップ履歴",
+      "current": "現在のキーマップ",
+      "custom": "— カスタム範囲 —"
+    },
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nアクティブ 1 分あたりの打鍵数を 5 で割った値 (英語 1 語 = 5 文字換算)",

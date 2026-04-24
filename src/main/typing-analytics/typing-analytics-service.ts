@@ -13,11 +13,16 @@ import type {
   TypingAnalyticsKeyboard,
   TypingHeatmapByCell,
   TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { log } from '../logger'
 import { ensureCacheIsFresh } from './cache-rebuild'
-import { getKeymapSnapshotForRange, saveKeymapSnapshotIfChanged } from './keymap-snapshots'
+import {
+  getKeymapSnapshotForRange,
+  listKeymapSnapshotSummaries,
+  saveKeymapSnapshotIfChanged,
+} from './keymap-snapshots'
 import { buildFingerprint } from './fingerprint'
 import {
   MinuteBuffer,
@@ -461,6 +466,18 @@ export function setupTypingAnalyticsIpc(): void {
       // machineHash. Remote snapshots aren't transferred today.
       const machineHash = await getMachineHash()
       return getKeymapSnapshotForRange(app.getPath('userData'), uid, machineHash, fromMs, toMs)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS,
+    async (_event, uid: unknown): Promise<TypingKeymapSnapshotSummary[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      // Only own-device snapshots are persisted locally; the timeline
+      // mirrors `getKeymapSnapshotForRange` and resolves the machine
+      // hash internally so callers don't pass it across IPC.
+      const machineHash = await getMachineHash()
+      return listKeymapSnapshotSummaries(app.getPath('userData'), uid, machineHash)
     },
   )
 }

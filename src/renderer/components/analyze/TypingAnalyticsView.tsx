@@ -8,7 +8,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type {
+  TypingKeyboardSummary,
+  TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
+} from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import {
   ACTIVITY_METRICS,
@@ -25,8 +29,10 @@ import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
+import { KeymapSnapshotTimeline } from './KeymapSnapshotTimeline'
 import { LayerUsageChart } from './LayerUsageChart'
 import { WpmChart } from './WpmChart'
+import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
 const SIDE_BTN_BASE =
   'block w-full rounded-md border px-3 py-2 text-left text-[13px] transition-colors'
@@ -39,10 +45,6 @@ const TAB_BTN_BASE =
   'rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
-
-const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
-const FILTER_SELECT =
-  'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
 
 const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'layer']
 const DAY_MS = 86_400_000
@@ -153,6 +155,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     setLayer,
   } = useAnalyzeFilters(selectedUid)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
+  const [snapshotSummaries, setSnapshotSummaries] = useState<TypingKeymapSnapshotSummary[]>([])
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
   // Analytics-only sync runs on Analyze mount (see
@@ -194,6 +197,32 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       .catch(() => { if (!cancelled) setKeymapSnapshot(null) })
     return () => { cancelled = true }
   }, [selectedUid, range])
+
+  // Snapshot timeline data is uid-scoped, not range-scoped — we want
+  // every snapshot the user has ever recorded so the options stay
+  // stable across range edits. Re-fetch only when the keyboard
+  // changes. On the first fetch for a given uid, jump the primary
+  // range to the latest snapshot's active window so the user lands on
+  // "current keymap" data; subsequent range edits within the same
+  // keyboard are not overridden.
+  const autoSetRangeForUidRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (!selectedUid) { setSnapshotSummaries([]); return }
+    let cancelled = false
+    void window.vialAPI
+      .typingAnalyticsListKeymapSnapshots(selectedUid)
+      .then((list) => {
+        if (cancelled) return
+        setSnapshotSummaries(list)
+        if (list.length > 0 && autoSetRangeForUidRef.current !== selectedUid) {
+          const latest = list[list.length - 1]
+          setRange({ fromMs: latest.savedAt, toMs: nowMs })
+          autoSetRangeForUidRef.current = selectedUid
+        }
+      })
+      .catch(() => { if (!cancelled) setSnapshotSummaries([]) })
+    return () => { cancelled = true }
+  }, [selectedUid, nowMs])
 
   // Reset the Base Layer select when the snapshot's layer count shrinks
   // past the current selection (device switch, keymap edit). Without
@@ -339,6 +368,21 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               data-testid="analyze-filters"
               aria-busy={!filtersReady || syncingAnalytics}
             >
+              <KeymapSnapshotTimeline
+                summaries={snapshotSummaries}
+                range={range}
+                nowMs={nowMs}
+                onRangeChange={(next) => setRange((prev) => {
+                  const fromMs = Math.min(next.fromMs, next.toMs)
+                  const toMs = Math.min(next.toMs, nowMs)
+                  // Re-selecting the active option must not invalidate
+                  // the range-dependent effects (snapshot fetch, chart
+                  // rerenders). Return the previous reference when the
+                  // clamp lands on the same window.
+                  if (prev.fromMs === fromMs && prev.toMs === toMs) return prev
+                  return { fromMs, toMs }
+                })}
+              />
               <label className={FILTER_LABEL}>
                 {t('analyze.filters.from')}
                 <input
