@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, HeatmapNormalization, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, SharedNormalization, WpmErrorProxy, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -43,6 +43,7 @@ const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
 const WPM_ERROR_PROXY_MODES: WpmErrorProxy[] = ['on', 'off']
 const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm', 'sessions']
 const HEATMAP_NORMALIZATIONS: HeatmapNormalization[] = ['absolute', 'perHour', 'shareOfTotal']
+const SHARED_NORMALIZATIONS: SharedNormalization[] = ['absolute', 'shareOfTotal']
 const LAYER_VIEW_MODES: LayerViewMode[] = ['keystrokes', 'activations']
 const DAY_MS = 86_400_000
 
@@ -131,6 +132,11 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [activityMetric, setActivityMetric] = useState<ActivityMetric>('keystrokes')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [heatmapNormalization, setHeatmapNormalization] = useState<HeatmapNormalization>('absolute')
+  // Shared across Interval distribution / Activity keystrokes / Activity
+  // sessions. Kept on the view so the user's choice persists as they
+  // hop between those three surfaces (which all answer the same "what
+  // slice of total is this?" question).
+  const [sharedNormalization, setSharedNormalization] = useState<SharedNormalization>('absolute')
   const [layerViewMode, setLayerViewMode] = useState<LayerViewMode>('keystrokes')
   // Base layer for the Activations view — dropped from both the
   // aggregation and the bar list. Users whose default-layer is not 0
@@ -495,6 +501,24 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </select>
                 </label>
               )}
+              {((analysisTab === 'interval' && intervalViewMode === 'distribution')
+                || (analysisTab === 'activity' && (activityMetric === 'keystrokes' || activityMetric === 'sessions'))) && (
+                <label className={FILTER_LABEL}>
+                  {t('analyze.filters.normalization')}
+                  <select
+                    className={FILTER_SELECT}
+                    value={sharedNormalization}
+                    onChange={(e) => setSharedNormalization(e.target.value as SharedNormalization)}
+                    data-testid="analyze-filter-shared-normalization"
+                  >
+                    {SHARED_NORMALIZATIONS.map((key) => (
+                      <option key={key} value={key}>
+                        {t(`analyze.filters.normalizationOption.${key}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
               {analysisTab === 'ergonomics' && (
                 <button
                   type="button"
@@ -555,7 +579,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   errorProxy={wpmErrorProxy}
                 />
               ) : analysisTab === 'interval' ? (
-                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />
+                <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} normalization={sharedNormalization} />
               ) : analysisTab === 'activity' ? (
                 <ActivityChart
                   uid={selected.uid}
@@ -563,6 +587,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   deviceScope={deviceScope}
                   metric={activityMetric}
                   minActiveMs={wpmMinActiveMs}
+                  normalization={sharedNormalization}
                 />
               ) : analysisTab === 'keyHeatmap' ? (
                 keymapSnapshot !== null ? (

@@ -737,6 +737,7 @@
       "tableLabelWpm": "Hour × day-of-week WPM",
       "hourHeader": "{{hour}}:00",
       "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleShare": "{{dow}} {{hour}}:00 — {{share}}% of total ({{keystrokes}} $t(analyze.unit.keys))",
       "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
       "legendLow": "0",
       "legendHigh": "{{count}} $t(analyze.unit.keys)",
@@ -747,6 +748,7 @@
       "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak.",
       "summary": {
         "keysContext": "{{count}} $t(analyze.unit.keys)",
+        "shareContext": "{{share}}% of total",
         "wpmContext": "{{wpm}} WPM"
       },
       "keystrokes": {

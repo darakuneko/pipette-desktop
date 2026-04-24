@@ -23,20 +23,20 @@ import {
   ACTIVITY_HOUR_COUNT,
   buildActivityGrid,
   type ActivityCell,
-  type ActivityKeystrokesSummary,
-  type ActivityWpmSummary,
 } from './analyze-activity'
-import { formatActiveDuration, formatHourLabel } from './analyze-format'
+import { formatActiveDuration, formatSharePercent } from './analyze-format'
 import {
-  buildSessionHistogram,
-  type SessionDistributionSummary,
-} from './analyze-sessions'
+  toKeystrokesItems,
+  toSessionsItems,
+  toWpmItems,
+} from './analyze-activity-format'
+import { buildSessionHistogram } from './analyze-sessions'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { StreakGoalCard } from './StreakGoalCard'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
-import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
+import type { ActivityMetric, DeviceScope, RangeMs, SharedNormalization } from './analyze-types'
 
 interface Props {
   uid: string
@@ -47,6 +47,12 @@ interface Props {
    * selection. Shared with the WPM tab's Min-sample filter. Has no
    * effect in `keystrokes` or `sessions` modes. */
   minActiveMs: number
+  /** Controls how `keystrokes` tooltips / summaries and the `sessions`
+   * bar are presented. The grid cell *colour* keeps its peak-based
+   * scale in both cases so intensity contrast stays legible — only the
+   * displayed numbers switch to share-of-total. The `wpm` metric
+   * ignores this prop entirely. */
+  normalization: SharedNormalization
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
@@ -59,6 +65,7 @@ export function ActivityChart(props: Props) {
         uid={props.uid}
         range={props.range}
         deviceScope={props.deviceScope}
+        normalization={props.normalization}
       />
     )
     : <ActivityGridChart {...props} />
@@ -70,7 +77,7 @@ export function ActivityChart(props: Props) {
   )
 }
 
-function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {
+function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs, normalization }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -99,19 +106,20 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
     [rows, range, minActiveMs],
   )
 
+  const totalKeystrokes = grid.keystrokesSummary.totalKeystrokes
   const summaryItems = useMemo<AnalyzeSummaryItem[] | null>(() => {
     if (grid.cells.length === 0) return null
     return metric === 'wpm'
       ? toWpmItems(grid.wpmSummary, t)
-      : toKeystrokesItems(grid.keystrokesSummary, t)
-  }, [grid, metric, t])
+      : toKeystrokesItems(grid.keystrokesSummary, t, normalization)
+  }, [grid, metric, t, normalization])
 
   const peak = metric === 'wpm' ? grid.maxWpm : grid.maxKeystrokes
 
   // Precomputed before the early returns below so Rules of Hooks stay satisfied.
   const cellsAppearance = useMemo(
-    () => grid.cells.map((cell) => cellAppearance(cell, metric, peak, t)),
-    [grid, metric, peak, t],
+    () => grid.cells.map((cell) => cellAppearance(cell, metric, peak, t, normalization, totalKeystrokes)),
+    [grid, metric, peak, t, normalization, totalKeystrokes],
   )
 
   if (loading) {
@@ -233,9 +241,10 @@ interface SessionChartProps {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
+  normalization: SharedNormalization
 }
 
-function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps) {
+function SessionDistributionChart({ uid, range, deviceScope, normalization }: SessionChartProps) {
   const { t } = useTranslation()
   const [sessions, setSessions] = useState<TypingSessionRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -260,15 +269,19 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
   }, [uid, deviceScope, range])
 
   const histogram = useMemo(() => buildSessionHistogram(sessions), [sessions])
+  // `sharePercent` mirrors `IntervalChart` — see its note for why the
+  // [0..100] domain keeps the Y-axis ticks legible.
   const chartData = useMemo(
     () => histogram.bins.map((b) => ({
       id: b.id,
       label: t(`analyze.activity.sessions.bin.${b.id}`),
       count: b.count,
       share: b.share,
+      sharePercent: b.share * 100,
     })),
     [histogram, t],
   )
+  const barKey = normalization === 'shareOfTotal' ? 'sharePercent' : 'count'
   const summaryItems = useMemo<AnalyzeSummaryItem[] | null>(
     () => histogram.summary.sessionCount === 0 ? null : toSessionsItems(histogram.summary),
     [histogram],
@@ -305,7 +318,12 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
             <YAxis
               tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
               stroke="var(--color-edge)"
-              allowDecimals={false}
+              allowDecimals={normalization === 'shareOfTotal'}
+              tickFormatter={
+                normalization === 'shareOfTotal'
+                  ? (v: number) => `${v.toFixed(0)}%`
+                  : undefined
+              }
             />
             <Tooltip
               contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
@@ -317,13 +335,13 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
                 return [
                   t('analyze.activity.sessions.tooltipValue', {
                     count: c.toLocaleString(),
-                    share: (s * 100).toFixed(1),
+                    share: formatSharePercent(s),
                   }),
                   t('analyze.activity.sessions.tooltipLabel'),
                 ]
               }}
             />
-            <Bar dataKey="count" fill="var(--color-accent)" isAnimationActive={false} />
+            <Bar dataKey={barKey} fill="var(--color-accent)" isAnimationActive={false} />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -351,14 +369,20 @@ function cellAppearance(
   metric: ActivityMetric,
   peak: number,
   t: (key: string, opts?: Record<string, unknown>) => string,
+  normalization: SharedNormalization,
+  totalKeystrokes: number,
 ): CellAppearance {
   const dowLabel = cell ? t(`analyze.activity.dow.${cell.dow}`) : ''
   if (cell === undefined || cell.keystrokes === 0) {
-    return {
-      opacity: 0,
-      saturation: 1,
-      title: t('analyze.activity.cellTitle', { dow: dowLabel, hour: cell?.hour ?? 0, keystrokes: 0 }),
-    }
+    const emptyTitle = metric !== 'wpm' && normalization === 'shareOfTotal'
+      ? t('analyze.activity.cellTitleShare', {
+          dow: dowLabel,
+          hour: cell?.hour ?? 0,
+          share: '0.0',
+          keystrokes: 0,
+        })
+      : t('analyze.activity.cellTitle', { dow: dowLabel, hour: cell?.hour ?? 0, keystrokes: 0 })
+    return { opacity: 0, saturation: 1, title: emptyTitle }
   }
   if (metric === 'wpm') {
     const opacity = peak === 0 ? 0 : Math.max(0.08, cell.wpm / peak)
@@ -375,132 +399,21 @@ function cellAppearance(
     }
   }
   const opacity = peak === 0 ? 0 : Math.max(0.08, cell.keystrokes / peak)
+  const title = normalization === 'shareOfTotal'
+    ? t('analyze.activity.cellTitleShare', {
+        dow: dowLabel,
+        hour: cell.hour,
+        share: formatSharePercent(totalKeystrokes > 0 ? cell.keystrokes / totalKeystrokes : 0),
+        keystrokes: cell.keystrokes.toLocaleString(),
+      })
+    : t('analyze.activity.cellTitle', {
+        dow: dowLabel,
+        hour: cell.hour,
+        keystrokes: cell.keystrokes.toLocaleString(),
+      })
   return {
     opacity,
     saturation: 1,
-    title: t('analyze.activity.cellTitle', {
-      dow: dowLabel,
-      hour: cell.hour,
-      keystrokes: cell.keystrokes.toLocaleString(),
-    }),
+    title,
   }
-}
-
-function keysContext(
-  t: (key: string, opts?: Record<string, unknown>) => string,
-  keystrokes: number,
-): string {
-  return t('analyze.activity.summary.keysContext', { count: keystrokes.toLocaleString() })
-}
-
-function cellValueContext(
-  cell: ActivityCell,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-  metric: ActivityMetric,
-): { value: string; context: string } {
-  const dow = t(`analyze.activity.dow.${cell.dow}`)
-  const hour = formatHourLabel(cell.hour)
-  if (metric === 'wpm') {
-    return {
-      value: `${dow} ${hour}`,
-      context: t('analyze.activity.summary.wpmContext', { wpm: formatWpm(cell.wpm) }),
-    }
-  }
-  return {
-    value: `${dow} ${hour}`,
-    context: keysContext(t, cell.keystrokes),
-  }
-}
-
-function toKeystrokesItems(
-  summary: ActivityKeystrokesSummary,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): AnalyzeSummaryItem[] {
-  const dow = summary.mostFrequentDow
-  const hour = summary.mostFrequentHour
-  const peak = summary.peakCell
-  return [
-    {
-      labelKey: 'analyze.activity.keystrokes.summary.mostFrequentDow',
-      descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentDowDesc',
-      value: dow === null ? '—' : t(`analyze.activity.dow.${dow.dow}`),
-      context: dow === null ? undefined : keysContext(t, dow.keystrokes),
-    },
-    {
-      labelKey: 'analyze.activity.keystrokes.summary.mostFrequentHour',
-      descriptionKey: 'analyze.activity.keystrokes.summary.mostFrequentHourDesc',
-      value: hour === null ? '—' : `${hour.hour.toString().padStart(2, '0')}:00`,
-      context: hour === null ? undefined : keysContext(t, hour.keystrokes),
-    },
-    {
-      labelKey: 'analyze.activity.keystrokes.summary.peakCell',
-      descriptionKey: 'analyze.activity.keystrokes.summary.peakCellDesc',
-      ...(peak === null
-        ? { value: '—' }
-        : cellValueContext(peak, t, 'keystrokes')),
-    },
-    {
-      labelKey: 'analyze.activity.keystrokes.summary.activeCells',
-      descriptionKey: 'analyze.activity.keystrokes.summary.activeCellsDesc',
-      value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}`,
-    },
-  ]
-}
-
-function toWpmItems(
-  summary: ActivityWpmSummary,
-  t: (key: string, opts?: Record<string, unknown>) => string,
-): AnalyzeSummaryItem[] {
-  const peak = summary.peakCell
-  const lowest = summary.lowestCell
-  return [
-    {
-      labelKey: 'analyze.activity.wpm.summary.overallWpm',
-      value: formatWpm(summary.overallWpm),
-    },
-    {
-      labelKey: 'analyze.activity.wpm.summary.peakCell',
-      descriptionKey: 'analyze.activity.wpm.summary.peakCellDesc',
-      ...(peak === null ? { value: '—' } : cellValueContext(peak, t, 'wpm')),
-    },
-    {
-      labelKey: 'analyze.activity.wpm.summary.lowestCell',
-      descriptionKey: 'analyze.activity.wpm.summary.lowestCellDesc',
-      ...(lowest === null ? { value: '—' } : cellValueContext(lowest, t, 'wpm')),
-    },
-    {
-      labelKey: 'analyze.activity.wpm.summary.activeCells',
-      descriptionKey: 'analyze.activity.wpm.summary.activeCellsDesc',
-      value: `${summary.activeCells} / ${ACTIVITY_CELL_COUNT}`,
-    },
-  ]
-}
-
-function toSessionsItems(summary: SessionDistributionSummary): AnalyzeSummaryItem[] {
-  return [
-    {
-      labelKey: 'analyze.activity.sessions.summary.sessionCount',
-      value: summary.sessionCount.toLocaleString(),
-    },
-    {
-      labelKey: 'analyze.activity.sessions.summary.totalDuration',
-      value: formatActiveDuration(summary.totalDurationMs),
-    },
-    {
-      labelKey: 'analyze.activity.sessions.summary.meanDuration',
-      value: summary.meanDurationMs === null ? '—' : formatActiveDuration(summary.meanDurationMs),
-    },
-    {
-      labelKey: 'analyze.activity.sessions.summary.medianDuration',
-      value: summary.medianDurationMs === null ? '—' : formatActiveDuration(summary.medianDurationMs),
-    },
-    {
-      labelKey: 'analyze.activity.sessions.summary.longestDuration',
-      value: summary.longestDurationMs === null ? '—' : formatActiveDuration(summary.longestDurationMs),
-    },
-    {
-      labelKey: 'analyze.activity.sessions.summary.shortestDuration',
-      value: summary.shortestDurationMs === null ? '—' : formatActiveDuration(summary.shortestDurationMs),
-    },
-  ]
 }

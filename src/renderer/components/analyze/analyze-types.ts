@@ -7,6 +7,12 @@ export type AnalysisTabKey = 'wpm' | 'interval' | 'activity' | 'keyHeatmap' | 'e
  * be read as raw counts, rate (keys per hour), or share of the total
  * strokes in the selected window. */
 export type HeatmapNormalization = 'absolute' | 'perHour' | 'shareOfTotal'
+/** Normalization option shared by the "cross-tab" charts that display
+ * a single distribution signal — Interval distribution, Activity
+ * keystrokes grid, and Activity sessions histogram. `perHour` is
+ * intentionally omitted here: for these surfaces the only meaningful
+ * alternative to absolute counts is the share-of-total breakdown. */
+export type SharedNormalization = 'absolute' | 'shareOfTotal'
 export type DeviceScope = 'own' | 'all'
 /** Display unit for the Interval chart — the SQL stores keystroke
  * intervals in ms, but seconds are easier to reason about for pauses

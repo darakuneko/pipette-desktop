@@ -33,6 +33,15 @@ export function formatHourLabel(hour: number): string {
   return `${hour.toString().padStart(2, '0')}:00`
 }
 
+/** Convert a [0,1] fraction to a one-decimal percentage *number* string
+ * (no `%` suffix so i18n templates can control the glyph). Non-finite
+ * inputs — including `0/0` or `k/0` when a caller passes a divided
+ * ratio — collapse to `'0.0'` so the rendered cells stay readable. */
+export function formatSharePercent(fraction: number): string {
+  if (!Number.isFinite(fraction)) return '0.0'
+  return (fraction * 100).toFixed(1)
+}
+
 export interface WeightedSample {
   value: number
   weight: number
