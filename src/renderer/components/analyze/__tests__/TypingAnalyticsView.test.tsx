@@ -411,6 +411,22 @@ describe('TypingAnalyticsView', () => {
     syncSpy.mockRestore()
   })
 
+  it('keeps the snapshot under the all-devices scope', async () => {
+    // Regression: the snapshot gate used to be `isOwnScope ? snap : null`
+    // which swallowed `'all'` too, even though `'all'` aggregates the
+    // own device in. The mock-chart only renders when the tab picks the
+    // non-null branch, so a returning testid proves the snapshot stayed.
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    mockGetSnapshot.mockResolvedValue(SNAPSHOT)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
+    fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
+    await waitFor(() => expect(text('mock-keyheatmap')).toMatch(/^uid-a:all:range=/))
+    fireEvent.click(screen.getByTestId('analyze-tab-ergonomics'))
+    await waitFor(() => expect(screen.getByTestId('mock-ergonomics')).toBeInTheDocument())
+  })
+
   it('fires syncAnalyticsNow again when the selected keyboard switches', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const syncSpy = vi.spyOn(window.vialAPI, 'syncAnalyticsNow').mockResolvedValue(true)

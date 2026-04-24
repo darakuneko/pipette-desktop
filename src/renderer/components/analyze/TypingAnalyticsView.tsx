@@ -22,7 +22,6 @@ import {
   LAYER_VIEW_MODES,
   WPM_VIEW_MODES,
   isHashScope,
-  isOwnScope,
   scopeFromSelectValue,
   scopeToSelectValue,
 } from '../../../shared/types/analyze-filters'
@@ -311,11 +310,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   }, [remoteHashes, deviceScope, setDeviceScope])
 
   // Snapshots are only ever saved for the own machine hash (see
-  // service-side comment). When the user picks a remote hash we must
-  // suppress the own snapshot so Heatmap / Ergonomics / Layer
-  // activations don't render another device's data against the local
-  // keymap.
-  const effectiveSnapshot = isOwnScope(deviceScope) ? keymapSnapshot : null
+  // service-side comment). Suppress only when the user picks a
+  // specific remote hash — `'all'` aggregates the own device in too,
+  // so the local keymap is the best-available layout reference.
+  // Gating on `isOwnScope` instead would blank the `'all'` Heatmap /
+  // Ergonomics / Layer-activations tabs even though the underlying
+  // aggregate query returns data.
+  const effectiveSnapshot = isHashScope(deviceScope) ? null : keymapSnapshot
 
   // Uid-prefixed filter — the backend allows parallel per-uid
   // analytics syncs, so a plain analytics-prefix filter would display
