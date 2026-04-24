@@ -14,6 +14,7 @@ import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
 import { deleteFilesByPrefix, deleteFile } from './google-drive'
 import {
+  executeAnalyticsSync,
   executeSync,
   hasPendingChanges,
   cancelPendingChanges,
@@ -512,6 +513,15 @@ export function setupSyncIpc(): void {
 
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
+
+  // --- Analyze-panel analytics sync (separate mutex) ---
+  secureHandle(
+    IpcChannels.SYNC_ANALYTICS_NOW,
+    async (_event, uid: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      return executeAnalyticsSync(uid)
+    },
+  )
 
   // --- Typing analytics cloud operations (Sync tab) ---
   secureHandle(

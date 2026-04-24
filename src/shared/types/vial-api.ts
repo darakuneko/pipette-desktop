@@ -202,6 +202,7 @@ export interface VialAPI {
   syncFetchRemoteBundle(syncUnit: string): Promise<unknown>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncCheckPasswordExists(): Promise<boolean>
+  syncAnalyticsNow(uid: string): Promise<boolean>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store

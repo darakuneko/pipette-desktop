@@ -20,7 +20,13 @@ import { unlink } from 'node:fs/promises'
 import { pLimit } from '../../shared/concurrency'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { mergeEntries, gcTombstones } from './merge'
-import { readIndexFile, bundleSyncUnit, collectAllSyncUnits } from './sync-bundle'
+import {
+  readIndexFile,
+  bundleSyncUnit,
+  collectAllSyncUnits,
+  collectAnalyticsSyncUnitsForUid,
+  isAnalyticsSyncUnit,
+} from './sync-bundle'
 import {
   applyRemoteKeyboardMetaIndex,
   backfillKeyboardMeta,
@@ -141,6 +147,10 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   return syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
 }
 
+// Re-export the analytics-sync-unit detector so existing callers
+// (sync-ipc, tests) keep importing it from sync-service.
+export { isAnalyticsSyncUnit }
+
 async function listLocalKeyboardUids(): Promise<Set<string>> {
   const userData = app.getPath('userData')
   const keyboardsDir = join(userData, 'sync', 'keyboards')
@@ -154,13 +164,20 @@ async function listLocalKeyboardUids(): Promise<Set<string>> {
   return uids
 }
 
-function shouldDownloadSyncUnit(
+export function shouldDownloadSyncUnit(
   syncUnit: string | null,
   scope: SyncScope,
   localKeyboardUids: Set<string>,
 ): boolean {
   if (!syncUnit) return false
   if (!matchesScope(syncUnit, scope)) return false
+  // Keyboard-connect initial sync (useDeviceAutoSync) passes a
+  // `{ favorites: true, keyboard }` scope. typing-analytics is pulled
+  // separately when the Analyze panel opens — skip it here so the
+  // connect progress bar stays short.
+  if (typeof scope === 'object' && 'favorites' in scope && isAnalyticsSyncUnit(syncUnit)) {
+    return false
+  }
   // Lazy: when scope is 'all' only download keyboards/<uid>/* that already exist locally.
   // Explicit keyboard scopes always download in full.
   if (syncUnit.startsWith('keyboards/') && scope === 'all') {
@@ -1126,6 +1143,8 @@ async function pollForRemoteChanges(): Promise<void> {
     const changedFiles = remoteFiles.filter((file) => {
       if (lastKnownRemoteState.get(file.name) === file.modifiedTime) return false
       const syncUnit = syncUnitFromFileName(file.name)
+      // analytics: handled by executeAnalyticsSync (Analyze panel mount).
+      if (syncUnit && isAnalyticsSyncUnit(syncUnit)) return false
       return shouldDownloadSyncUnit(syncUnit, 'all', localKeyboardUids)
     })
 
@@ -1172,6 +1191,80 @@ export function stopPolling(): void {
   if (pollTimer) {
     clearInterval(pollTimer)
     pollTimer = null
+  }
+}
+
+// --- Analyze-panel analytics sync ---
+
+/** Per-uid mutex so switching between keyboards while the previous
+ * sync is still running doesn't immediately skip the new uid. Uses
+ * a Set instead of a single flag so `uid-a` and `uid-b` can proceed
+ * in parallel — the cloud file namespace (`keyboards/{uid}/devices/*`)
+ * is disjoint across uids so there is no conflict. */
+const analyticsSyncingUids = new Set<string>()
+
+/** Pull + push typing-analytics bundles for one keyboard, triggered
+ * from the Analyze panel mount. Runs on its own per-uid mutex so
+ * polling / manual sync stay untouched — the cloud file namespace is
+ * disjoint (only `keyboards/{uid}/devices/*` is written) so there is
+ * no conflict with the global `isSyncing` path.
+ *
+ * Returns true on a fully-successful pass so the caller can stamp a
+ * rate-limit timestamp; returns false on skip (this uid is already
+ * syncing or credentials are missing) or on any per-unit failure so
+ * the caller can retry on the next Analyze mount. */
+export async function executeAnalyticsSync(uid: string): Promise<boolean> {
+  if (analyticsSyncingUids.has(uid)) return false
+  analyticsSyncingUids.add(uid)
+  try {
+    const credentials = await requireSyncCredentials()
+    if (!credentials.ok) return false
+    const password = credentials.password
+
+    const remoteFiles = await listFiles()
+    const prefix = `keyboards/${uid}/devices/`
+    let anyFailure = false
+    const limit = pLimit(SYNC_CONCURRENCY)
+    // Units `mergeWithRemote` already handled — it uploads any
+    // divergence internally, so the push pass can skip them.
+    const mergedUnits = new Set<string>()
+
+    await Promise.allSettled(
+      remoteFiles.map((file) =>
+        limit(async () => {
+          const unit = syncUnitFromFileName(file.name)
+          if (!unit || !isAnalyticsSyncUnit(unit)) return
+          if (!unit.startsWith(prefix)) return
+          try {
+            await mergeWithRemote(file.id, unit, password, remoteFiles)
+            mergedUnits.add(unit)
+          } catch {
+            anyFailure = true
+          }
+        }),
+      ),
+    )
+
+    const localUnits = await collectAnalyticsSyncUnitsForUid(uid)
+    await Promise.allSettled(
+      localUnits
+        .filter((unit) => !mergedUnits.has(unit))
+        .map((unit) =>
+          limit(async () => {
+            try {
+              await syncOrUpload(unit, password, remoteFiles)
+            } catch {
+              anyFailure = true
+            }
+          }),
+        ),
+    )
+
+    return !anyFailure
+  } catch {
+    return false
+  } finally {
+    analyticsSyncingUids.delete(uid)
   }
 }
 

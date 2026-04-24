@@ -178,8 +178,10 @@ import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mo
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
+  isAnalyticsSyncUnit,
   matchesScope,
   notifyChange,
+  shouldDownloadSyncUnit,
   setProgressCallback,
   startPolling,
   stopPolling,
@@ -1338,6 +1340,47 @@ describe('sync-service', () => {
         expect(matchesScope(null, 'all')).toBe(true)
         expect(matchesScope(null, 'favorites')).toBe(false)
         expect(matchesScope(null, { keyboard: '0x1234' })).toBe(false)
+      })
+    })
+
+    describe('isAnalyticsSyncUnit', () => {
+      it('identifies v7 per-day typing-analytics units', () => {
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/devices/hashabc/days/2026-04-19')).toBe(true)
+        expect(isAnalyticsSyncUnit('keyboards/uid-a/devices/machineHash-xyz')).toBe(true)
+      })
+
+      it('rejects non-analytics keyboard sub-units', () => {
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/settings')).toBe(false)
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/snapshots')).toBe(false)
+        expect(isAnalyticsSyncUnit('keyboards/0x1234')).toBe(false)
+      })
+
+      it('rejects unrelated units', () => {
+        expect(isAnalyticsSyncUnit('favorites/macro')).toBe(false)
+        expect(isAnalyticsSyncUnit('meta/keyboard-names')).toBe(false)
+        expect(isAnalyticsSyncUnit('')).toBe(false)
+      })
+    })
+
+    describe('shouldDownloadSyncUnit', () => {
+      const local = new Set(['uid-a'])
+      const analyticsUnit = 'keyboards/uid-a/devices/hash/days/2026-04-19'
+      const settingsUnit = 'keyboards/uid-a/settings'
+      const favoritesUnit = 'favorites/macro'
+
+      it("keeps analytics when scope is 'all' (manual sync path)", () => {
+        expect(shouldDownloadSyncUnit(analyticsUnit, 'all', local)).toBe(true)
+      })
+
+      it('keeps analytics when scope is an explicit keyboard scope (manual keyboard sync)', () => {
+        expect(shouldDownloadSyncUnit(analyticsUnit, { keyboard: 'uid-a' }, local)).toBe(true)
+      })
+
+      it('drops analytics when scope is the connect-time favorites+keyboard shape', () => {
+        const scope = { favorites: true as const, keyboard: 'uid-a' }
+        expect(shouldDownloadSyncUnit(analyticsUnit, scope, local)).toBe(false)
+        expect(shouldDownloadSyncUnit(settingsUnit, scope, local)).toBe(true)
+        expect(shouldDownloadSyncUnit(favoritesUnit, scope, local)).toBe(true)
       })
     })
 

@@ -339,6 +339,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SYNC_DELETE_FILES, fileIds),
   syncCheckPasswordExists: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.SYNC_CHECK_PASSWORD_EXISTS),
+  syncAnalyticsNow: (uid: string): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.SYNC_ANALYTICS_NOW, uid),
   syncOnPendingChange: (callback: (pending: boolean) => void): (() => void) => {
     const handler = (_event: Electron.IpcRendererEvent, pending: boolean): void => {
       callback(pending)

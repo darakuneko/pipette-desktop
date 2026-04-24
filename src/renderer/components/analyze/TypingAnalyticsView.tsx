@@ -5,7 +5,7 @@
 // device-scope filters. The chart bodies are stubbed here and filled
 // in by C4–C6.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
@@ -52,6 +52,11 @@ const DAY_MS = 86_400_000
  * `toMs` are re-seeded on each mount so persisted filters never drag
  * a stale range forward. */
 const DEFAULT_RANGE_DAYS = 7
+/** How long a successful `syncAnalyticsNow` result satisfies the Analyze
+ * panel before the next selection / re-mount re-triggers a pull+push.
+ * Only successes count — failures fall through so the next mount can
+ * retry immediately. */
+const ANALYTICS_SYNC_RATE_LIMIT_MS = 5 * 60_000
 
 const WPM_MIN_SAMPLE_OPTIONS: Array<{ value: number; labelKey: string }> = [
   { value: 30_000, labelKey: 'sec30' },
@@ -150,6 +155,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
+  // Analytics-only sync runs on Analyze mount (see
+  // .claude/rules/settings-persistence.md). The ref tracks per-keyboard
+  // last-successful timestamps so switching between keyboards doesn't
+  // share a single bucket. `syncingAnalytics` gates the filter row the
+  // same way `filtersReady` does.
+  const [syncingAnalytics, setSyncingAnalytics] = useState(false)
+  const lastAnalyticsSyncSuccessAtRef = useRef<Map<string, number>>(new Map())
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -203,6 +215,30 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         setFingerAssignments(prefs?.analyze?.fingerAssignments ?? {})
       })
       .catch(() => { if (!cancelled) setFingerAssignments({}) })
+    return () => { cancelled = true }
+  }, [selectedUid])
+
+  // Pull + push typing-analytics for the selected keyboard on mount /
+  // keyboard switch. Rate-limited to one pass per 5 minutes per uid
+  // (success-only) so rapid re-selects don't hammer Drive. Silent
+  // failure — filter row lock releases in `finally` regardless, so the
+  // user never gets stuck.
+  useEffect(() => {
+    if (!selectedUid) return
+    const last = lastAnalyticsSyncSuccessAtRef.current.get(selectedUid) ?? 0
+    if (Date.now() - last < ANALYTICS_SYNC_RATE_LIMIT_MS) return
+    let cancelled = false
+    setSyncingAnalytics(true)
+    void window.vialAPI
+      .syncAnalyticsNow(selectedUid)
+      .then((ok) => {
+        if (cancelled) return
+        if (ok) {
+          lastAnalyticsSyncSuccessAtRef.current.set(selectedUid, Date.now())
+        }
+      })
+      .catch(() => { /* silent — next mount retries */ })
+      .finally(() => { if (!cancelled) setSyncingAnalytics(false) })
     return () => { cancelled = true }
   }, [selectedUid])
 
@@ -298,10 +334,10 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
             </div>
             <div
               className={`flex flex-wrap items-center gap-3 border-b border-edge pb-3 ${
-                !filtersReady ? 'pointer-events-none opacity-60' : ''
+                !filtersReady || syncingAnalytics ? 'pointer-events-none opacity-60' : ''
               }`}
               data-testid="analyze-filters"
-              aria-busy={!filtersReady}
+              aria-busy={!filtersReady || syncingAnalytics}
             >
               <label className={FILTER_LABEL}>
                 {t('analyze.filters.from')}

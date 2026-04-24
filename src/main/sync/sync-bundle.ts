@@ -127,6 +127,39 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   return { type, key: parts[1], index, files }
 }
 
+/** typing-analytics v6 flat + v7 per-day sync units. Identified
+ * through the existing parsers so the shape (including `utcDay`
+ * validation for v7) is single-sourced and drifts with the parsers,
+ * not with a separate regex. Connect-time initial sync and 3-minute
+ * polling skip these; the Analyze panel pulls them on demand via
+ * `executeAnalyticsSync`. See `.claude/rules/settings-persistence.md`. */
+export function isAnalyticsSyncUnit(syncUnit: string): boolean {
+  return parseTypingAnalyticsDeviceDaySyncUnit(syncUnit) !== null
+      || parseTypingAnalyticsDeviceSyncUnit(syncUnit) !== null
+}
+
+/** Own-hash typing-analytics units for one keyboard. Narrower than
+ * `collectAllSyncUnits` + filter — no favorites/snapshots/settings
+ * scan, no remote-unaware reconcile. Used by the Analyze panel mount
+ * sync. */
+export async function collectAnalyticsSyncUnitsForUid(uid: string): Promise<string[]> {
+  const userData = app.getPath('userData')
+  const units: string[] = []
+  try {
+    const machineHash = await getMachineHash()
+    // v6 flat mirror (harmless no-op when the file is absent — bundle
+    // returns null and the caller skips it). Kept so mixed v6/v7
+    // installs stay uploadable.
+    units.push(typingAnalyticsDeviceSyncUnit(uid, machineHash))
+    for (const day of await listDeviceDays(userData, uid, machineHash)) {
+      units.push(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+    }
+  } catch (err) {
+    log('warn', `typing-analytics per-uid scan failed for ${uid}: ${String(err)}`)
+  }
+  return units
+}
+
 export async function collectAllSyncUnits(): Promise<string[]> {
   const userData = app.getPath('userData')
   const units: string[] = FAVORITE_TYPES.map((type) => `favorites/${type}`)

@@ -72,6 +72,7 @@ export const IpcChannels = {
   SYNC_FETCH_REMOTE_BUNDLE: 'sync:fetch-remote-bundle',
   SYNC_DELETE_FILES: 'sync:delete-files',
   SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
+  SYNC_ANALYTICS_NOW: 'sync:analytics-now',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',

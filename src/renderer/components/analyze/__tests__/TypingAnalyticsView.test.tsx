@@ -62,6 +62,9 @@ Object.defineProperty(window, 'vialAPI', {
     // Stubbing it with a no-op keeps the tests focused on prop
     // propagation without waiting on the 300 ms flush timer.
     pipetteSettingsSet: () => Promise.resolve({ success: true as const }),
+    // Analyze mount pulls analytics via this IPC. Resolving `false`
+    // keeps the rate-limit ref unset so nothing leaks across tests.
+    syncAnalyticsNow: () => Promise.resolve(false),
   },
   writable: true,
 })
@@ -195,5 +198,25 @@ describe('TypingAnalyticsView', () => {
 
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
     expect(text('mock-wpm')).toMatch(/^uid-a:all:range=/)
+  })
+
+  it('fires syncAnalyticsNow for the initial keyboard on Analyze mount', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const syncSpy = vi.spyOn(window.vialAPI, 'syncAnalyticsNow').mockResolvedValue(true)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(syncSpy).toHaveBeenCalledWith('uid-a'))
+    syncSpy.mockRestore()
+  })
+
+  it('fires syncAnalyticsNow again when the selected keyboard switches', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const syncSpy = vi.spyOn(window.vialAPI, 'syncAnalyticsNow').mockResolvedValue(true)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(syncSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-kb-uid-b'))
+    await waitFor(() => expect(syncSpy).toHaveBeenCalledWith('uid-b'))
+    syncSpy.mockRestore()
   })
 })
