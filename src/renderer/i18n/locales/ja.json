@@ -35,7 +35,7 @@
     "connecting": "接続中{{dots}}",
     "selectDevices": "デバイスを選択",
     "connectedTo": "{{name}} に接続中",
-    "udevHelp": "Linuxでデバイスが見つからない場合は、udevルールがインストールされていることを確認してください。詳細はプロジェクトのREADMEを参照してください。",
+    "udevHelp": "Linuxでデバイスが見つからない場合は、udevルールがインストールされていることを確認してください。詳細はVialのユーザーマニュアルを参照してください。",
     "loadDummy": "JSONファイルから読み込み…",
     "keyboardTab": "デバイス",
     "fileTab": "ファイル",
