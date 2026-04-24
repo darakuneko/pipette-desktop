@@ -27,8 +27,11 @@ import {
   scopeToSelectValue,
 } from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import type { SyncProgress } from '../../../shared/types/sync'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
+import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
+import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { IntervalChart } from './IntervalChart'
@@ -159,16 +162,25 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     setLayer,
   } = useAnalyzeFilters(selectedUid)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
+  const [snapshotLoading, setSnapshotLoading] = useState(false)
   const [snapshotSummaries, setSnapshotSummaries] = useState<TypingKeymapSnapshotSummary[]>([])
+  const [summariesLoading, setSummariesLoading] = useState(false)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
+  const [fingersLoading, setFingersLoading] = useState(false)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
-  // Remote machine hashes populate the Device select's per-hash
-  // options. `loaded` gates the "persisted hash no longer exists"
-  // fallback — without it a slow fetch would clobber a valid
-  // persisted selection before the list resolves.
-  const [remoteHashes, setRemoteHashes] = useState<{ list: string[]; loaded: boolean }>({
+  // `loaded` gates the "persisted hash no longer exists" fallback so a
+  // slow fetch doesn't clobber a valid selection before the list
+  // resolves; `error` lets the loading-phase overlay release after a
+  // transient IPC failure instead of stalling on "preparing" forever.
+  // The two are distinct because the fallback must not fire on error.
+  const [remoteHashes, setRemoteHashes] = useState<{
+    list: string[]
+    loaded: boolean
+    error: boolean
+  }>({
     list: [],
     loaded: false,
+    error: false,
   })
   // Analytics-only sync runs on Analyze mount (see
   // .claude/rules/settings-persistence.md). The ref tracks per-keyboard
@@ -201,12 +213,14 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   }, [refresh])
 
   useEffect(() => {
-    if (!selectedUid) { setKeymapSnapshot(null); return }
+    if (!selectedUid) { setKeymapSnapshot(null); setSnapshotLoading(false); return }
     let cancelled = false
+    setSnapshotLoading(true)
     void window.vialAPI
       .typingAnalyticsGetKeymapSnapshotForRange(selectedUid, range.fromMs, range.toMs)
       .then((s) => { if (!cancelled) setKeymapSnapshot(s) })
       .catch(() => { if (!cancelled) setKeymapSnapshot(null) })
+      .finally(() => { if (!cancelled) setSnapshotLoading(false) })
     return () => { cancelled = true }
   }, [selectedUid, range])
 
@@ -219,8 +233,9 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // keyboard are not overridden.
   const autoSetRangeForUidRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!selectedUid) { setSnapshotSummaries([]); return }
+    if (!selectedUid) { setSnapshotSummaries([]); setSummariesLoading(false); return }
     let cancelled = false
+    setSummariesLoading(true)
     void window.vialAPI
       .typingAnalyticsListKeymapSnapshots(selectedUid)
       .then((list) => {
@@ -233,6 +248,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         }
       })
       .catch(() => { if (!cancelled) setSnapshotSummaries([]) })
+      .finally(() => { if (!cancelled) setSummariesLoading(false) })
     return () => { cancelled = true }
   }, [selectedUid, nowMs])
 
@@ -247,8 +263,9 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   }, [keymapSnapshot, layerFilter.baseLayer, setLayer])
 
   useEffect(() => {
-    if (!selectedUid) { setFingerAssignments({}); return }
+    if (!selectedUid) { setFingerAssignments({}); setFingersLoading(false); return }
     let cancelled = false
+    setFingersLoading(true)
     void window.vialAPI
       .pipetteSettingsGet(selectedUid)
       .then((prefs) => {
@@ -256,6 +273,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         setFingerAssignments(prefs?.analyze?.fingerAssignments ?? {})
       })
       .catch(() => { if (!cancelled) setFingerAssignments({}) })
+      .finally(() => { if (!cancelled) setFingersLoading(false) })
     return () => { cancelled = true }
   }, [selectedUid])
 
@@ -265,18 +283,18 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // persisted hash selection.
   useEffect(() => {
     if (!selectedUid) {
-      setRemoteHashes({ list: [], loaded: false })
+      setRemoteHashes({ list: [], loaded: false, error: false })
       return
     }
     let cancelled = false
-    setRemoteHashes({ list: [], loaded: false })
+    setRemoteHashes({ list: [], loaded: false, error: false })
     void window.vialAPI
       .typingAnalyticsListRemoteHashes(selectedUid)
-      .then((list) => { if (!cancelled) setRemoteHashes({ list, loaded: true }) })
-      // Keep `loaded: false` on error so a transient IPC failure
-      // doesn't wipe a valid persisted hash selection through the
-      // "missing from list" fallback below.
-      .catch(() => { if (!cancelled) setRemoteHashes({ list: [], loaded: false }) })
+      .then((list) => { if (!cancelled) setRemoteHashes({ list, loaded: true, error: false }) })
+      // `loaded: false` on error keeps the "missing from list" fallback
+      // from wiping a valid persisted hash selection; `error: true`
+      // lets the overlay release instead of stalling on preparing.
+      .catch(() => { if (!cancelled) setRemoteHashes({ list: [], loaded: false, error: true }) })
     return () => { cancelled = true }
   }, [selectedUid])
 
@@ -298,6 +316,29 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // activations don't render another device's data against the local
   // keymap.
   const effectiveSnapshot = isOwnScope(deviceScope) ? keymapSnapshot : null
+
+  // Uid-prefixed filter — the backend allows parallel per-uid
+  // analytics syncs, so a plain analytics-prefix filter would display
+  // progress for a keyboard the user is no longer looking at.
+  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null)
+  useEffect(() => {
+    if (!selectedUid) { setSyncProgress(null); return }
+    const prefix = `keyboards/${selectedUid}/devices/`
+    return window.vialAPI.syncOnProgress((p) => {
+      if (!p.syncUnit?.startsWith(prefix)) return
+      setSyncProgress(p)
+    })
+  }, [selectedUid])
+
+  const currentPhase = resolveAnalyzeLoadingPhase({
+    keyboardsLoading: loading,
+    filtersReady,
+    syncing: syncingAnalytics,
+    snapshotLoading,
+    summariesLoading,
+    fingersLoading,
+    remoteHashesLoading: !!selectedUid && !remoteHashes.loaded && !remoteHashes.error,
+  })
 
   // Auto-close the finger-assignment modal if the user flips to a
   // remote scope mid-edit — the modal mutates the own snapshot, so
@@ -330,7 +371,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         }
       })
       .catch(() => { /* silent — next mount retries */ })
-      .finally(() => { if (!cancelled) setSyncingAnalytics(false) })
+      .finally(() => {
+        if (cancelled) return
+        setSyncingAnalytics(false)
+        // Clear any stale progress frame so the next entry does not
+        // flash the tail-end of the previous run.
+        setSyncProgress(null)
+      })
     return () => { cancelled = true }
   }, [selectedUid])
 
@@ -359,9 +406,21 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   return (
     <div
-      className="flex h-full min-h-[70vh] gap-4"
+      className="relative flex h-full min-h-[70vh] gap-4"
       data-testid="analyze-view"
     >
+      {currentPhase !== null && (
+        <ConnectingOverlay
+          // Analytics syncs per keyboard, so the name doubles as
+          // "which device is this overlay for" when the user mentally
+          // context-switches between keyboards in the sidebar.
+          deviceName={selected?.productName ?? selectedUid ?? ''}
+          deviceId=""
+          syncOnly
+          loadingProgress={`analyze.loading.${currentPhase}`}
+          syncProgress={currentPhase === 'syncing' ? syncProgress : null}
+        />
+      )}
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
         {onBack && (
           <button

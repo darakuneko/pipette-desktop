@@ -636,6 +636,13 @@
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "loading": {
+      "keyboards": "Loading keyboards…",
+      "settings": "Loading settings…",
+      "syncing": "Syncing analytics…",
+      "snapshot": "Loading keymap snapshot…",
+      "preparing": "Preparing charts…"
+    },
     "unit": {
       "keys": "keys",
       "activations": "activations"

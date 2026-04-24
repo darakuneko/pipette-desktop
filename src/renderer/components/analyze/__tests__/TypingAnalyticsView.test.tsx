@@ -80,6 +80,9 @@ Object.defineProperty(window, 'vialAPI', {
     // Analyze mount pulls analytics via this IPC. Resolving `false`
     // keeps the rate-limit ref unset so nothing leaks across tests.
     syncAnalyticsNow: () => Promise.resolve(false),
+    // The overlay subscribes to sync progress events. The default stub
+    // is a no-op subscriber returning a no-op unsubscribe function.
+    syncOnProgress: () => () => {},
   },
   writable: true,
 })
@@ -213,6 +216,102 @@ describe('TypingAnalyticsView', () => {
 
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
     expect(text('mock-wpm')).toMatch(/^uid-a:all:range=/)
+  })
+
+  it('shows the keyboards-loading overlay before listKeyboards resolves and hides it after', async () => {
+    let resolveKb: (v: TypingKeyboardSummary[]) => void = () => {}
+    mockListKeyboards.mockReturnValue(new Promise<TypingKeyboardSummary[]>((r) => { resolveKb = r }))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    expect(screen.getByText('analyze.loading.keyboards')).toBeInTheDocument()
+    resolveKb([])
+    await waitFor(() => expect(screen.queryByText('analyze.loading.keyboards')).toBeNull())
+    expect(screen.getByTestId('analyze-no-keyboards')).toBeInTheDocument()
+  })
+
+  it('flips to the syncing phase while syncAnalyticsNow is in flight', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    let resolveSync: (v: boolean) => void = () => {}
+    const syncSpy = vi
+      .spyOn(window.vialAPI, 'syncAnalyticsNow')
+      .mockImplementation(() => new Promise<boolean>((r) => { resolveSync = r }))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByText('analyze.loading.syncing')).toBeInTheDocument())
+    // Keyboard name is rendered twice — once in the sidebar button and
+    // once in the overlay — so the overlay occurrence is the second
+    // match.
+    expect(screen.getAllByText(SAMPLE[0].productName).length).toBeGreaterThanOrEqual(2)
+    resolveSync(true)
+    await waitFor(() => expect(screen.queryByText('analyze.loading.syncing')).toBeNull())
+    syncSpy.mockRestore()
+  })
+
+  it('keeps a persisted hash scope when typingAnalyticsListRemoteHashes rejects', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          deviceScope: { kind: 'hash', machineHash: 'survivinghash' },
+        },
+      },
+    })
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockRejectedValue(new Error('drive down'))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
+    // The hash must not be demoted to 'own' by a transient failure —
+    // the charts stay on the persisted selection.
+    await waitFor(() => {
+      expect(text('mock-wpm')).toMatch(/^uid-a:hash:survivinghash:range=/)
+    })
+    hashSpy.mockRestore()
+    getSpy.mockRestore()
+  })
+
+  it('releases the overlay when typingAnalyticsListRemoteHashes rejects', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const hashSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .mockRejectedValue(new Error('drive down'))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
+    // A stalled `preparing` phase would leave this text in the DOM; the
+    // error branch must let the overlay disappear instead.
+    await waitFor(() => expect(screen.queryByText('analyze.loading.preparing')).toBeNull())
+    hashSpy.mockRestore()
+  })
+
+  it('ignores sync progress events for keyboards other than the selected one', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    let registered: ((p: { syncUnit: string; current?: number; total?: number }) => void) | null = null
+    const subSpy = vi
+      .spyOn(window.vialAPI, 'syncOnProgress')
+      .mockImplementation((cb) => {
+        registered = cb as typeof registered
+        return () => { registered = null }
+      })
+    const syncSpy = vi
+      .spyOn(window.vialAPI, 'syncAnalyticsNow')
+      .mockImplementation(() => new Promise<boolean>(() => {}))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(registered).not.toBeNull())
+    // Wrong uid: filter must drop it.
+    registered!({ syncUnit: 'keyboards/uid-b/devices/m1/days/2026-04-24', current: 1, total: 5 })
+    // Right uid: progress reaches the overlay (rendered current/total numbers).
+    registered!({ syncUnit: 'keyboards/uid-a/devices/m1/days/2026-04-24', current: 3, total: 5 })
+    await waitFor(() => expect(screen.getByText('3 / 5')).toBeInTheDocument())
+    syncSpy.mockRestore()
+    subSpy.mockRestore()
   })
 
   it('renders an option per remote hash in the Device select', async () => {

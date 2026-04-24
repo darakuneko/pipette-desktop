@@ -635,6 +635,13 @@
     "noData": "選択した期間にデータがありません。",
     "selectKeyboard": "一覧からキーボードを選択してください。",
     "tablistLabel": "分析種別",
+    "loading": {
+      "keyboards": "キーボード一覧読み込み中…",
+      "settings": "設定読み込み中…",
+      "syncing": "クラウド同期中…",
+      "snapshot": "キーマップ読み込み中…",
+      "preparing": "チャート準備中…"
+    },
     "unit": {
       "keys": "回",
       "activations": "回"
