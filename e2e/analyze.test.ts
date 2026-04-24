@@ -111,16 +111,6 @@ test.describe('WPM tab', () => {
     await expect(page.locator('[data-testid="analyze-wpm-time-of-day"]')).toBeVisible({ timeout: 10_000 })
   })
 
-  test('error-proxy toggle is visible only in time-series view', async () => {
-    await switchTab('wpm')
-    // Reset to time-series — the prior test may have left us in time-of-day mode.
-    const viewMode = page.locator('[data-testid="analyze-filter-wpm-view-mode"]')
-    await viewMode.selectOption('timeSeries')
-    await expect(page.locator('[data-testid="analyze-filter-wpm-error-proxy"]')).toBeVisible({ timeout: 5_000 })
-    await viewMode.selectOption('timeOfDay')
-    await expect(page.locator('[data-testid="analyze-wpm-time-of-day"]')).toBeVisible({ timeout: 10_000 })
-    await expect(page.locator('[data-testid="analyze-filter-wpm-error-proxy"]')).toBeHidden()
-  })
 })
 
 test.describe('Interval tab', () => {

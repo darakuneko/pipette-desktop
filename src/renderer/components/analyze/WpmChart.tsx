@@ -24,7 +24,7 @@ import type {
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
 import { formatDateTime } from '../editors/store-modal-shared'
-import type { DeviceScope, GranularityChoice, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
+import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
 import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
@@ -50,10 +50,6 @@ interface Props {
    * toward peak / lowest / weighted-median WPM. Does not gate the
    * chart itself — every bucket is still plotted. */
   minActiveMs: number
-  /** Whether to overlay the Bksp% (error-proxy) line in timeSeries
-   * mode. Ignored in `timeOfDay` because the hour-bar shape doesn't
-   * align with the per-bucket Bksp series. */
-  errorProxy: WpmErrorProxy
 }
 
 const ERROR_PROXY_COLOR = '#ef4444'
@@ -67,7 +63,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
 
 type WpmLineKey = 'wpm' | 'bksPercent'
 
-export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs, errorProxy }: Props) {
+export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
@@ -101,10 +97,10 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     return () => { cancelled = true }
   }, [uid, deviceScope, range])
 
-  // Bks-minute fetch is scoped to the error-proxy overlay: it only
-  // runs in timeSeries mode with the toggle on, so users paying no
-  // attention to Bksp% don't pay its bandwidth.
-  const errorProxyActive = viewMode === 'timeSeries' && errorProxy === 'on'
+  // The Bksp% overlay is always available in timeSeries mode; users
+  // who don't want it click the legend to hide the line instead of
+  // toggling a separate filter.
+  const errorProxyActive = viewMode === 'timeSeries'
   useEffect(() => {
     if (!errorProxyActive) {
       setBksRows([])

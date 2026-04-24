@@ -10,7 +10,7 @@ import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmErrorProxy, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import { ActivityChart } from './ActivityChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -40,7 +40,6 @@ const DEVICE_SCOPES: DeviceScope[] = ['own', 'all']
 const INTERVAL_UNITS: IntervalUnit[] = ['sec', 'ms']
 const INTERVAL_VIEW_MODES: IntervalViewMode[] = ['timeSeries', 'distribution']
 const WPM_VIEW_MODES: WpmViewMode[] = ['timeSeries', 'timeOfDay']
-const WPM_ERROR_PROXY_MODES: WpmErrorProxy[] = ['on', 'off']
 const ACTIVITY_METRICS: ActivityMetric[] = ['keystrokes', 'wpm', 'sessions']
 const LAYER_VIEW_MODES: LayerViewMode[] = ['keystrokes', 'activations']
 const DAY_MS = 86_400_000
@@ -126,7 +125,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [intervalViewMode, setIntervalViewMode] = useState<IntervalViewMode>('timeSeries')
   const [wpmViewMode, setWpmViewMode] = useState<WpmViewMode>('timeSeries')
   const [wpmMinActiveMs, setWpmMinActiveMs] = useState<number>(DEFAULT_WPM_MIN_ACTIVE_MS)
-  const [wpmErrorProxy, setWpmErrorProxy] = useState<WpmErrorProxy>('on')
   const [activityMetric, setActivityMetric] = useState<ActivityMetric>('keystrokes')
   const [granularity, setGranularity] = useState<GranularityChoice>('auto')
   const [layerViewMode, setLayerViewMode] = useState<LayerViewMode>('keystrokes')
@@ -367,23 +365,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                       ))}
                     </select>
                   </label>
-                  {wpmViewMode === 'timeSeries' && (
-                    <label className={FILTER_LABEL}>
-                      {t('analyze.filters.wpmErrorProxy')}
-                      <select
-                        className={FILTER_SELECT}
-                        value={wpmErrorProxy}
-                        onChange={(e) => setWpmErrorProxy(e.target.value as WpmErrorProxy)}
-                        data-testid="analyze-filter-wpm-error-proxy"
-                      >
-                        {WPM_ERROR_PROXY_MODES.map((key) => (
-                          <option key={key} value={key}>
-                            {t(`analyze.filters.wpmErrorProxyOption.${key}`)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
                 </>
               )}
               {analysisTab === 'activity' && (
@@ -533,7 +514,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   granularity={granularity}
                   viewMode={wpmViewMode}
                   minActiveMs={wpmMinActiveMs}
-                  errorProxy={wpmErrorProxy}
                 />
               ) : analysisTab === 'interval' ? (
                 <IntervalChart uid={selected.uid} range={range} deviceScope={deviceScope} unit={intervalUnit} granularity={granularity} viewMode={intervalViewMode} />

@@ -980,11 +980,6 @@
         "min2": "2 min",
         "min5": "5 min"
       },
-      "wpmErrorProxy": "Error proxy",
-      "wpmErrorProxyOption": {
-        "on": "On",
-        "off": "Off"
-      },
       "activityMetric": "Metric",
       "activityMetricOption": {
         "keystrokes": "Keystrokes",

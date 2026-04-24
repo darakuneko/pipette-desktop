@@ -155,7 +155,7 @@ The WPM tab charts Words Per Minute — keystrokes per minute divided by 5 — e
 
 **View Mode**
 
-- **Time series** — WPM over the selected range as a line chart. When **Error proxy** is On, a red dashed line plots **Bksp %** on a secondary right-hand axis (0–100 %), letting you see speed and error rate together
+- **Time series** — WPM over the selected range as a line chart. A red dashed **Bksp %** line is always overlaid on a secondary right-hand axis (0–100 %) so speed and error rate sit together; click the Bksp legend entry to hide it if you only want the WPM line
 
   ![Analyze — WPM Time Series](screenshots/analyze-wpm-time-series.png)
 
@@ -167,17 +167,13 @@ The WPM tab charts Words Per Minute — keystrokes per minute divided by 5 — e
 
 `30s`, `1 min`, `2 min`, `5 min`. Minutes with fewer keystrokes than the chosen WPM-worth-of-keys threshold are dropped from the chart so very light sessions don't skew the line.
 
-**Error proxy** (Time series only)
-
-`On` / `Off`. On mode adds the **Bksp %** companion line to the WPM line. Click a legend entry to hide or show either line.
-
 **Granularity** (Time series only)
 
 Bucket width of the time series (`Auto`, `1 min`, `5 min`, … `1 week`, `1 month`).
 
 **Summary cards**
 
-- **Time series** — Total keystrokes, Active typing time, Overall WPM, Peak WPM, Lowest WPM, Weighted median WPM, Peak K/min, Peak K/day, and (Error proxy On only) Total Bksp + Overall Bksp %
+- **Time series** — Total keystrokes, Active typing time, Overall WPM, Peak WPM, Lowest WPM, Weighted median WPM, Peak K/min, Peak K/day, Total Bksp, Overall Bksp %
 - **Time of day** — Total keystrokes, Active typing time, Overall WPM, Peak hour, Slowest hour, Active hours (N / 24)
 
 #### Interval

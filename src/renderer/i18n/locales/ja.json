@@ -979,11 +979,6 @@
         "min2": "2分",
         "min5": "5分"
       },
-      "wpmErrorProxy": "エラー推定",
-      "wpmErrorProxyOption": {
-        "on": "ON",
-        "off": "OFF"
-      },
       "activityMetric": "指標",
       "activityMetricOption": {
         "keystrokes": "打鍵数",
