@@ -220,23 +220,33 @@ export function ErgonomicsChart({
         title={t('analyze.ergonomics.fingerLoad')}
         data={fingerData}
         orientation="vertical"
-        height={220}
+        height={360}
         testId="analyze-ergonomics-finger"
       />
-      <Section
-        title={t('analyze.ergonomics.handBalance')}
-        data={handData}
-        orientation="horizontal"
-        height={140}
-        testId="analyze-ergonomics-hand"
-      />
-      <Section
-        title={t('analyze.ergonomics.rowUsage')}
-        data={rowData}
-        orientation="horizontal"
-        height={200}
-        testId="analyze-ergonomics-row"
-      />
+      {/* Hand Balance has just two bars, so it's pinned to a narrower
+        * column while Row Usage (6 categories) takes the rest of the
+        * width. `min-w-0` keeps the recharts measurement from forcing
+        * either child past its grid track. */}
+      <div className="grid grid-cols-[1fr_3fr] gap-4">
+        <div className="min-w-0">
+          <Section
+            title={t('analyze.ergonomics.handBalance')}
+            data={handData}
+            orientation="horizontal"
+            height={200}
+            testId="analyze-ergonomics-hand"
+          />
+        </div>
+        <div className="min-w-0">
+          <Section
+            title={t('analyze.ergonomics.rowUsage')}
+            data={rowData}
+            orientation="horizontal"
+            height={200}
+            testId="analyze-ergonomics-row"
+          />
+        </div>
+      </div>
     </div>
   )
 }
