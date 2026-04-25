@@ -202,11 +202,8 @@ describe('useAnalyzeFilters', () => {
         { kind: 'hash', machineHash: 'b' },
       ])
     })
-    // Cap at MAX_DEVICE_SCOPES = 2 — third entry is dropped.
-    expect(result.current.filters.deviceScopes).toEqual([
-      'own',
-      { kind: 'hash', machineHash: 'a' },
-    ])
+    // Cap at MAX_DEVICE_SCOPES = 1 — only the first entry survives.
+    expect(result.current.filters.deviceScopes).toEqual(['own'])
 
     act(() => { result.current.setDeviceScopes([]) })
     // Empty input falls back to ['own'] so the filter is never blank.

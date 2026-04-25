@@ -352,18 +352,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     setRange({ fromMs: bounds.lo, toMs: bounds.hi })
   }, [snapshotSummaries, nowMs])
 
-  // Heatmap / Activity only render the first scope. If the user
-  // arrives there from a multi-select tab (WPM / Interval / Layer /
-  // Ergonomics) with two scopes picked, narrow the array down to the
-  // primary so the dropdown's single-mode label and the chart agree
-  // — the truncation is sticky so switching back to WPM keeps the
-  // single pick instead of silently restoring the second device.
-  useEffect(() => {
-    if (analysisTab !== 'keyHeatmap' && analysisTab !== 'activity') return
-    if (deviceScopes.length <= 1) return
-    setDeviceScopes([deviceScopes[0]])
-  }, [analysisTab, deviceScopes, setDeviceScopes])
-
   // Uid-prefixed filter — the backend allows parallel per-uid
   // analytics syncs, so a plain analytics-prefix filter would display
   // progress for a keyboard the user is no longer looking at.
@@ -550,11 +538,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     value={deviceScopes}
                     remoteHashes={remoteHashes.list}
                     onChange={setDeviceScopes}
-                    // Heatmap / Activity only consume `deviceScopes[0]`,
-                    // so a multi-select dropdown there would let users
-                    // pick a second scope they'd never actually see —
-                    // force single-select on those tabs.
-                    mode={analysisTab === 'keyHeatmap' || analysisTab === 'activity' ? 'single' : 'multi'}
                     ariaLabel={t('analyze.filters.device')}
                   />
                 </label>

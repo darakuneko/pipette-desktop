@@ -23,10 +23,12 @@ import {
 const DEBOUNCE_MS = 300
 
 export interface AnalyzeFiltersState {
-  /** Multi-select Device filter, capped at `MAX_DEVICE_SCOPES` (2).
+  /** Single-select Device filter — held as an array so the persisted
+   * filter shape and `normalizeDeviceScopes` invariants stay stable.
    * Always pre-normalized: dedupe + `'all'` exclusivity + length cap
-   * are handled inside the setter so consumers can rely on the
-   * canonical shape without re-running the normalizer themselves. */
+   * (`MAX_DEVICE_SCOPES = 1`) are handled inside the setter so
+   * consumers can rely on the canonical shape without re-running the
+   * normalizer themselves. */
   deviceScopes: DeviceScope[]
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>

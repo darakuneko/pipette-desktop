@@ -68,10 +68,11 @@ export function scopeFromSelectValue(value: string): DeviceScope | null {
   return null
 }
 
-/** Hard cap on the multi-select Device filter. Two series fit cleanly
- * on every chart; bumping this would require revisiting `chartSeriesColor`
- * spacing and the `'primary only'` summary placement. */
-export const MAX_DEVICE_SCOPES = 2
+/** Cap on the Device filter. Held at 1 — Analyze charts each show a
+ * single device's data; the array shape is kept (rather than a single
+ * `DeviceScope`) to preserve the persisted filter format and the
+ * `normalizeDeviceScopes` dedup / `'all'`-exclusivity invariants. */
+export const MAX_DEVICE_SCOPES = 1
 
 /** First entry of a (post-normalization) device-scope tuple, used as
  * the "primary" device by single-series charts and primary-only
@@ -83,9 +84,9 @@ export function primaryDeviceScope(scopes: readonly DeviceScope[]): DeviceScope 
 }
 
 /** Shallow compare two scope tuples by select-value identity. Cheap
- * for the 1-2 entry tuples the multi-select Device filter produces;
- * lets the setter avoid re-rendering when a normalized array matches
- * the previous one (e.g. user re-clicking an already-selected option). */
+ * for the single-entry tuples the Device filter produces; lets the
+ * setter avoid re-rendering when a normalized array matches the
+ * previous one (e.g. user re-clicking an already-selected option). */
 export function deviceScopesEqual(
   a: readonly DeviceScope[],
   b: readonly DeviceScope[],
@@ -186,10 +187,12 @@ export interface LayerFilters {
  * it lives as renderer-local state (default 7 days) so the absolute
  * `fromMs` / `toMs` never get restored and make the view look stale.
  *
- * `deviceScopes` is a tuple-shaped multi-select capped at
- * `MAX_DEVICE_SCOPES` (2). The persisted shape always goes through
- * `normalizeDeviceScopes` so dedup, the `'all'` exclusivity rule, and
- * the cap can't drift between caller, persister, and reader. */
+ * `deviceScopes` is held as an array (capped at `MAX_DEVICE_SCOPES = 1`)
+ * rather than a single `DeviceScope` so the persisted filter shape and
+ * `normalizeDeviceScopes` invariants stay stable. The persisted shape
+ * always goes through `normalizeDeviceScopes` so dedup, the `'all'`
+ * exclusivity rule, and the cap can't drift between caller, persister,
+ * and reader. */
 export interface AnalyzeFilterSettings {
   deviceScopes?: DeviceScope[]
   heatmap?: HeatmapFilters

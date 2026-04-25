@@ -654,8 +654,6 @@
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",
-      "secondaryLegend": "Compare WPM",
-      "summaryPrimaryOnly": "Summary cards below reflect the primary series only.",
       "timeSeries": {
         "summary": {
           "label": "WPM summary",
@@ -672,8 +670,7 @@
       },
       "errorProxy": {
         "legend": "Bksp %",
-        "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests.",
-        "secondaryLegend": "Compare Bksp %"
+        "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests."
       },
       "timeOfDay": {
         "tooltipLabel": "Hour",
@@ -699,8 +696,6 @@
         "p75": "p75",
         "max": "Max"
       },
-      "secondaryLegend": "Compare median",
-      "summaryPrimaryOnly": "Summary cards below reflect the primary series only.",
       "description": {
         "min": "Min — Shortest keystroke interval recorded within any minute (fastest single moment).",
         "p25": "p25 — Lower quartile\nDaily average of each minute's p25; 1/4 of intervals are shorter.",
@@ -867,8 +862,6 @@
       "fingerLoad": "Finger Load",
       "handBalance": "Hand Balance",
       "rowUsage": "Row Usage",
-      "legend": "Primary",
-      "secondaryLegend": "Compare",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "noLayout": "Layout data not available for this snapshot.",
       "noData": "No keystrokes recorded in this range.",
@@ -903,9 +896,7 @@
       "layerLabel": "Layer {{layer}}",
       "noData": "No layer activity recorded in this range.",
       "noActivations": "No layer-op keys pressed in this range.",
-      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one.",
-      "legend": "Primary",
-      "secondaryLegend": "Compare"
+      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one."
     },
     "fingerAssignment": {
       "button": "Finger assignment",

@@ -96,12 +96,12 @@ describe('isValidAnalyzeFilterSettings', () => {
     ).toBe(true)
   })
 
-  it('accepts two-device combinations within MAX_DEVICE_SCOPES', () => {
+  it('rejects two-device combinations past MAX_DEVICE_SCOPES = 1', () => {
     expect(
       isValidAnalyzeFilterSettings({
         deviceScopes: ['own', { kind: 'hash', machineHash: 'abc' }],
       }),
-    ).toBe(true)
+    ).toBe(false)
     expect(
       isValidAnalyzeFilterSettings({
         deviceScopes: [
@@ -109,7 +109,7 @@ describe('isValidAnalyzeFilterSettings', () => {
           { kind: 'hash', machineHash: 'def' },
         ],
       }),
-    ).toBe(true)
+    ).toBe(false)
   })
 
   it('rejects unknown scope shapes inside the array', () => {
@@ -206,14 +206,14 @@ describe('normalizeDeviceScopes', () => {
   })
 
   it('caps the array at MAX_DEVICE_SCOPES dropping the tail', () => {
-    expect(MAX_DEVICE_SCOPES).toBe(2)
+    expect(MAX_DEVICE_SCOPES).toBe(1)
     expect(
       normalizeDeviceScopes([
         'own',
         { kind: 'hash', machineHash: 'a' },
         { kind: 'hash', machineHash: 'b' },
       ]),
-    ).toEqual(['own', { kind: 'hash', machineHash: 'a' }])
+    ).toEqual(['own'])
   })
 })
 
