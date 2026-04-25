@@ -902,7 +902,9 @@
       "layerLabel": "レイヤー {{layer}}",
       "noData": "この期間にレイヤー別の打鍵記録がありません。",
       "noActivations": "この期間にレイヤー操作キーの押下記録がありません。",
-      "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。"
+      "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。",
+      "legend": "主デバイス",
+      "secondaryLegend": "比較デバイス"
     },
     "fingerAssignment": {
       "button": "指割り当て",

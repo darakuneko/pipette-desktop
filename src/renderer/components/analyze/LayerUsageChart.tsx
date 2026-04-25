@@ -16,6 +16,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -35,6 +36,8 @@ import {
   type LayerBar,
 } from './analyze-layer-usage'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
+import { chartSeriesColor } from '../../utils/chart-palette'
 
 interface AxisTickProps {
   x?: number
@@ -87,9 +90,11 @@ interface Props {
   uid: string
   range: RangeMs
   /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
-   * Today only `deviceScopes[0]` is consumed; a follow-up commit adds
-   * the second-series overlay so two devices' layer-usage bars sit
-   * side-by-side. */
+   * The first scope drives the primary bars; a second scope adds a
+   * parallel set of bars sitting next to each layer so the two
+   * devices read as A / B. The same `viewMode` and `baseLayer` apply
+   * to both — a per-device viewMode would double the controls
+   * without changing what the user is actually comparing. */
   deviceScopes: readonly DeviceScope[]
   /** Optional snapshot. Keystrokes mode still works without one
    * (zero-fills against the max observed layer); activations mode
@@ -106,15 +111,24 @@ interface Props {
 
 export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, baseLayer }: Props) {
   const { t } = useTranslation()
+  const effectiveTheme = useEffectiveTheme()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
+  const [secondaryRows, setSecondaryRows] = useState<TypingLayerUsageRow[]>([])
   const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
+  const [secondaryCells, setSecondaryCells] = useState<TypingMatrixCellRow[]>([])
   const [layerNames, setLayerNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
-  // First scope is the primary device; the multi-device overlay
-  // lands in a follow-up commit.
   const deviceScope = primaryDeviceScope(deviceScopes)
+  const secondaryScope: DeviceScope | undefined = deviceScopes.length > 1 ? deviceScopes[1] : undefined
+  const hasSecondary = secondaryScope !== undefined
   const scopeKey = scopeToSelectValue(deviceScope)
+  const secondaryScopeKey = secondaryScope ? scopeToSelectValue(secondaryScope) : null
+  // Two-device pick adopts the cool→warm ramp so primary reads as A
+  // and secondary as B; single-device picks keep the brand accent so
+  // existing screenshots / muscle memory stay valid.
+  const primaryBarColor = hasSecondary ? chartSeriesColor(0, 2, effectiveTheme) : 'var(--color-accent)'
+  const secondaryBarColor = chartSeriesColor(1, 2, effectiveTheme)
 
   useEffect(() => {
     let cancelled = false
@@ -155,6 +169,50 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
       cancelled = true
     }
   }, [uid, range, scopeKey, viewMode])
+
+  // Secondary fetch mirrors the primary's mode-aware switch but skips
+  // the loading flag — the primary path already drives the loading
+  // state. Clearing the row / cell buffers up front keeps a stale
+  // dataset from outliving a scope change.
+  useEffect(() => {
+    setSecondaryRows([])
+    setSecondaryCells([])
+    if (!hasSecondary || !secondaryScope) return
+    let cancelled = false
+    const api = window.vialAPI
+    const run = async (): Promise<void> => {
+      try {
+        switch (viewMode) {
+          case 'activations': {
+            const result = isHashScope(secondaryScope)
+              ? await api.typingAnalyticsListMatrixCellsForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
+              : isOwnScope(secondaryScope)
+                ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
+                : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
+            if (!cancelled) setSecondaryCells(Array.isArray(result) ? result : [])
+            return
+          }
+          case 'keystrokes': {
+            const result = isHashScope(secondaryScope)
+              ? await api.typingAnalyticsListLayerUsageForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
+              : isOwnScope(secondaryScope)
+                ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
+                : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
+            if (!cancelled) setSecondaryRows(Array.isArray(result) ? result : [])
+            return
+          }
+        }
+      } catch {
+        if (cancelled) return
+        if (viewMode === 'activations') setSecondaryCells([])
+        else setSecondaryRows([])
+      }
+    }
+    void run()
+    return () => {
+      cancelled = true
+    }
+  }, [uid, range, secondaryScopeKey, viewMode, hasSecondary, secondaryScope])
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would
@@ -198,6 +256,32 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
       excludeLayer: effectiveExcludeLayer,
     })
   }, [viewMode, snapshot, cells, rows, layerNames, t, effectiveExcludeLayer])
+
+  // Secondary aggregation reuses the same snapshot for activations so
+  // both devices' layer-op resolutions land in the same key space.
+  // The result is a `layer -> value` lookup keyed off the primary's
+  // bar list below.
+  const secondaryByLayer = useMemo<Map<number, number>>(() => {
+    if (!hasSecondary) return new Map()
+    switch (viewMode) {
+      case 'keystrokes':
+        return aggregateLayerKeystrokes(secondaryRows)
+      case 'activations':
+        return snapshot !== null
+          ? aggregateLayerActivations(secondaryCells, snapshot, { excludeLayer: effectiveExcludeLayer })
+          : new Map()
+    }
+  }, [hasSecondary, viewMode, snapshot, secondaryCells, secondaryRows, effectiveExcludeLayer])
+
+  const barData = useMemo(
+    () => bars.map((bar) => ({
+      ...bar,
+      // `null` keeps recharts from drawing a zero-width bar on layers
+      // device B never touched, mirroring the WPM secondary line.
+      valueB: hasSecondary ? secondaryByLayer.get(bar.layer) ?? null : null,
+    })),
+    [bars, secondaryByLayer, hasSecondary],
+  )
 
   const title =
     viewMode === 'activations'
@@ -247,7 +331,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
       <div className="flex-1 min-h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
-            data={bars}
+            data={barData}
             layout="vertical"
             margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
           >
@@ -278,7 +362,21 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
                 )
               }}
             />
-            <Bar dataKey="value" fill="var(--color-accent)" isAnimationActive={false} />
+            {hasSecondary && <Legend wrapperStyle={{ fontSize: 12 }} />}
+            <Bar
+              dataKey="value"
+              name={t('analyze.layer.legend')}
+              fill={primaryBarColor}
+              isAnimationActive={false}
+            />
+            {hasSecondary && (
+              <Bar
+                dataKey="valueB"
+                name={t('analyze.layer.secondaryLegend')}
+                fill={secondaryBarColor}
+                isAnimationActive={false}
+              />
+            )}
           </BarChart>
         </ResponsiveContainer>
       </div>

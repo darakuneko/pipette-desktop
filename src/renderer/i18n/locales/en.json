@@ -903,7 +903,9 @@
       "layerLabel": "Layer {{layer}}",
       "noData": "No layer activity recorded in this range.",
       "noActivations": "No layer-op keys pressed in this range.",
-      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one."
+      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one.",
+      "legend": "Primary device",
+      "secondaryLegend": "Compare device"
     },
     "fingerAssignment": {
       "button": "Finger assignment",
