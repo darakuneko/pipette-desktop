@@ -213,7 +213,7 @@ describe('TypingAnalyticsView', () => {
     expect(text('mock-wpm')).toMatch(/^uid-a:own:range=/)
   })
 
-  it('propagates datetime-range and device changes down into the chart', async () => {
+  it('propagates time-of-day and device changes down into the chart', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
@@ -221,9 +221,19 @@ describe('TypingAnalyticsView', () => {
     fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
     await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
 
-    const expectedFrom = new Date('2026-04-19T00:00').getTime()
-    fireEvent.change(screen.getByTestId('analyze-filter-from'), { target: { value: '2026-04-19T00:00' } })
-    expect(text('mock-wpm')).toContain(`range=${expectedFrom}-`)
+    // Open the range popover, then change the from-time input.
+    // DayPicker drives the date portion; we cover the time-input wiring
+    // here with HH:mm changes, which fire onChange immediately.
+    fireEvent.click(screen.getByTestId('analyze-filter-range'))
+    const initialFromMs = Number.parseInt(text('mock-wpm').match(/range=(\d+)-/)?.[1] ?? '0', 10)
+    fireEvent.change(screen.getByTestId('analyze-filter-range-from'), { target: { value: '09:30' } })
+    await waitFor(() => {
+      const fromMs = Number.parseInt(text('mock-wpm').match(/range=(\d+)-/)?.[1] ?? '0', 10)
+      const d = new Date(fromMs)
+      expect(d.getHours()).toBe(9)
+      expect(d.getMinutes()).toBe(30)
+      expect(fromMs).not.toBe(initialFromMs)
+    })
 
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
     expect(text('mock-wpm')).toMatch(/^uid-a:all:range=/)

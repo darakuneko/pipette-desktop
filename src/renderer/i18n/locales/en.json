@@ -963,6 +963,7 @@
     "filters": {
       "from": "Start",
       "to": "End",
+      "period": "Period",
       "device": "Device",
       "deviceOption": {
         "own": "This device",

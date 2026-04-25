@@ -76,9 +76,8 @@ test.describe('Analyze keyboard list', () => {
     await expect(kb).toBeVisible()
   })
 
-  test('common filters (From / To / Device) are rendered', async () => {
-    await expect(page.locator('[data-testid="analyze-filter-from"]')).toBeVisible()
-    await expect(page.locator('[data-testid="analyze-filter-to"]')).toBeVisible()
+  test('common filters (Period / Device) are rendered', async () => {
+    await expect(page.locator('[data-testid="analyze-filter-range"]')).toBeVisible()
     await expect(page.locator('[data-testid="analyze-filter-device"]')).toBeVisible()
   })
 })

@@ -28,7 +28,7 @@ import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { DeviceMultiSelect } from './DeviceMultiSelect'
-import { RangeFromToInputs } from './RangeFromToInputs'
+import { RangeDayPicker } from './RangeDayPicker'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { ErgonomicsChart } from './ErgonomicsChart'
@@ -552,14 +552,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 selectedSavedAt={selectedSnapshotSavedAt}
                 onSelectSnapshot={handleSelectSnapshot}
               />
-              <RangeFromToInputs
+              <RangeDayPicker
                 range={range}
                 snapshotBoundaries={snapshotBoundaries}
                 nowMs={nowMs}
                 onChange={setRange}
-                fromLabelKey="analyze.filters.from"
-                toLabelKey="analyze.filters.to"
-                testIdPrefix="analyze-filter"
+                labelKey="analyze.filters.period"
+                testIdPrefix="analyze-filter-range"
               />
               {analysisTab === 'wpm' && (
                 <>

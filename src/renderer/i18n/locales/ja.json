@@ -962,6 +962,7 @@
     "filters": {
       "from": "開始",
       "to": "終了",
+      "period": "期間",
       "device": "デバイス",
       "deviceOption": {
         "own": "このデバイス",
