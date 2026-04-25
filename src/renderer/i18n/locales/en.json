@@ -869,6 +869,8 @@
       "fingerLoad": "Finger Load",
       "handBalance": "Hand Balance",
       "rowUsage": "Row Usage",
+      "legend": "Primary device",
+      "secondaryLegend": "Compare device",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "noLayout": "Layout data not available for this snapshot.",
       "noData": "No keystrokes recorded in this range.",

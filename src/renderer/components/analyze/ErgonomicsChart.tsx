@@ -27,6 +27,8 @@ import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/an
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
+import { chartSeriesColor } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -50,7 +52,7 @@ const ROW_ORDER: RowCategory[] = [
   'thumb',
 ]
 
-type BarDatum = { label: string; value: number }
+type BarDatum = { label: string; value: number; valueB?: number | null }
 
 interface SectionProps {
   title: string
@@ -58,6 +60,12 @@ interface SectionProps {
   orientation: 'horizontal' | 'vertical'
   height: number
   testId: string
+  /** When set, the section paints a parallel `valueB` bar in this
+   * colour next to the primary `value` bar. `null` skips the
+   * secondary bar entirely so single-device picks stay visually
+   * unchanged. */
+  secondaryColor: string | null
+  primaryColor: string
 }
 
 const Section = memo(function Section({
@@ -66,6 +74,8 @@ const Section = memo(function Section({
   orientation,
   height,
   testId,
+  secondaryColor,
+  primaryColor,
 }: SectionProps) {
   return (
     <div data-testid={testId}>
@@ -110,7 +120,10 @@ const Section = memo(function Section({
               cursor={{ fill: 'var(--color-surface-dim)' }}
               content={(props) => <KeystrokeCountTooltip {...props} />}
             />
-            <Bar dataKey="value" fill="var(--color-accent)" />
+            <Bar dataKey="value" fill={primaryColor} />
+            {secondaryColor !== null && (
+              <Bar dataKey="valueB" fill={secondaryColor} />
+            )}
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -142,13 +155,21 @@ export function ErgonomicsChart({
   fingerOverrides,
 }: Props) {
   const { t } = useTranslation()
+  const effectiveTheme = useEffectiveTheme()
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
+  const [secondaryLayerCells, setSecondaryLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
   const [loading, setLoading] = useState(true)
 
-  // First scope is the primary; the secondary-device overlay lands in
-  // a follow-up commit.
   const deviceScope = primaryDeviceScope(deviceScopes)
+  const secondaryScope: DeviceScope | undefined = deviceScopes.length > 1 ? deviceScopes[1] : undefined
+  const hasSecondary = secondaryScope !== undefined
   const scopeKey = scopeToSelectValue(deviceScope)
+  const secondaryScopeKey = secondaryScope ? scopeToSelectValue(secondaryScope) : null
+  // Two-device picks switch the primary off `--color-accent` and onto
+  // the cool end of the shared ramp; single-device picks keep the
+  // existing accent so the no-compare view stays unchanged.
+  const primaryColor = hasSecondary ? chartSeriesColor(0, 2, effectiveTheme) : 'var(--color-accent)'
+  const secondaryColor = chartSeriesColor(1, 2, effectiveTheme)
 
   useEffect(() => {
     let cancelled = false
@@ -186,9 +207,49 @@ export function ErgonomicsChart({
     }
   }, [uid, range, scopeKey, snapshot])
 
+  // Secondary fetch mirrors the primary's per-layer Promise.all but
+  // skips the `setLoading` flag — the primary path already drives the
+  // loading state for the chart shell. Clearing the buffer up front
+  // keeps a stale dataset from outliving a scope change.
+  useEffect(() => {
+    setSecondaryLayerCells({})
+    if (!hasSecondary || !secondaryScope) return
+    const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
+    if (layerCount === 0) return
+    let cancelled = false
+    const layerIdxs = Array.from({ length: layerCount }, (_, i) => i)
+    void Promise.all(
+      layerIdxs.map((l) =>
+        window.vialAPI
+          .typingAnalyticsGetMatrixHeatmapForRange(
+            uid,
+            l,
+            range.fromMs,
+            range.toMs,
+            secondaryScope,
+          )
+          .catch(() => ({} as TypingHeatmapByCell)),
+      ),
+    ).then((results) => {
+      if (cancelled) return
+      const next: Record<number, TypingHeatmapByCell> = {}
+      layerIdxs.forEach((l, i) => {
+        next[l] = results[i]
+      })
+      setSecondaryLayerCells(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [uid, range, secondaryScopeKey, snapshot, hasSecondary, secondaryScope])
+
   const mergedHeatmap = useMemo(
     () => mergeLayerHeatmaps(layerCells),
     [layerCells],
+  )
+  const mergedSecondaryHeatmap = useMemo(
+    () => (hasSecondary ? mergeLayerHeatmaps(secondaryLayerCells) : new Map<string, TypingHeatmapCell>()),
+    [secondaryLayerCells, hasSecondary],
   )
 
   const layout = snapshot.layout as KeyboardLayout | null
@@ -198,18 +259,37 @@ export function ErgonomicsChart({
     () => aggregateErgonomics(mergedHeatmap, keys, fingerOverrides),
     [mergedHeatmap, keys, fingerOverrides],
   )
+  // Secondary aggregation reuses the *primary's* finger overrides so
+  // the same finger labels apply on both bars — assigning a finger
+  // re-classifies device A and device B the same way.
+  const secondaryAggregation = useMemo(
+    () => (hasSecondary
+      ? aggregateErgonomics(mergedSecondaryHeatmap, keys, fingerOverrides)
+      : null),
+    [mergedSecondaryHeatmap, keys, fingerOverrides, hasSecondary],
+  )
 
   const fingerData: BarDatum[] = FINGER_LIST.map((f) => ({
     label: t(`analyze.ergonomics.finger.${f}`),
     value: aggregation.finger[f],
+    valueB: secondaryAggregation?.finger[f] ?? null,
   }))
   const handData: BarDatum[] = [
-    { label: t('analyze.ergonomics.hand.left'), value: aggregation.hand.left },
-    { label: t('analyze.ergonomics.hand.right'), value: aggregation.hand.right },
+    {
+      label: t('analyze.ergonomics.hand.left'),
+      value: aggregation.hand.left,
+      valueB: secondaryAggregation?.hand.left ?? null,
+    },
+    {
+      label: t('analyze.ergonomics.hand.right'),
+      value: aggregation.hand.right,
+      valueB: secondaryAggregation?.hand.right ?? null,
+    },
   ]
   const rowData: BarDatum[] = ROW_ORDER.map((r) => ({
     label: t(`analyze.ergonomics.rowCategory.${r}`),
     value: aggregation.row[r],
+    valueB: secondaryAggregation?.row[r] ?? null,
   }))
 
   if (loading) {
@@ -236,12 +316,37 @@ export function ErgonomicsChart({
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1" data-testid="analyze-ergonomics">
+      {hasSecondary && (
+        <div
+          className="flex items-center gap-4 text-[11px] text-content-muted"
+          data-testid="analyze-ergonomics-legend"
+        >
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="inline-block h-2.5 w-2.5 rounded"
+              style={{ backgroundColor: primaryColor }}
+            />
+            {t('analyze.ergonomics.legend')}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="inline-block h-2.5 w-2.5 rounded"
+              style={{ backgroundColor: secondaryColor }}
+            />
+            {t('analyze.ergonomics.secondaryLegend')}
+          </span>
+        </div>
+      )}
       <Section
         title={t('analyze.ergonomics.fingerLoad')}
         data={fingerData}
         orientation="vertical"
         height={220}
         testId="analyze-ergonomics-finger"
+        primaryColor={primaryColor}
+        secondaryColor={hasSecondary ? secondaryColor : null}
       />
       <Section
         title={t('analyze.ergonomics.handBalance')}
@@ -249,6 +354,8 @@ export function ErgonomicsChart({
         orientation="horizontal"
         height={140}
         testId="analyze-ergonomics-hand"
+        primaryColor={primaryColor}
+        secondaryColor={hasSecondary ? secondaryColor : null}
       />
       <Section
         title={t('analyze.ergonomics.rowUsage')}
@@ -256,6 +363,8 @@ export function ErgonomicsChart({
         orientation="horizontal"
         height={200}
         testId="analyze-ergonomics-row"
+        primaryColor={primaryColor}
+        secondaryColor={hasSecondary ? secondaryColor : null}
       />
     </div>
   )
