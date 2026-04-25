@@ -648,14 +648,13 @@
     },
     "snapshotTimeline": {
       "title": "キーマップ履歴",
-      "current": "現在のキーマップ",
-      "custom": "— カスタム範囲 —"
+      "current": "現在のキーマップ"
     },
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nアクティブ 1 分あたりの打鍵数を 5 で割った値 (英語 1 語 = 5 文字換算)",
       "secondaryLegend": "比較 WPM",
-      "summaryPrimaryOnly": "下のサマリカードは主デバイスのみの集計",
+      "summaryPrimaryOnly": "下のサマリカードは主系列のみの集計",
       "timeSeries": {
         "summary": {
           "label": "WPM サマリ",
@@ -700,7 +699,7 @@
         "max": "最大"
       },
       "secondaryLegend": "比較中央値",
-      "summaryPrimaryOnly": "下のサマリカードは主デバイスのみの集計",
+      "summaryPrimaryOnly": "下のサマリカードは主系列のみの集計",
       "description": {
         "min": "最小 — 1 分内で記録された最短の打鍵間隔 (最速の瞬間)",
         "p25": "p25 — 下側四分位\n各分の p25 の日次平均、1/4 のタイミングがこれより短い",
@@ -867,8 +866,8 @@
       "fingerLoad": "指別打鍵量",
       "handBalance": "左右バランス",
       "rowUsage": "段別打鍵量",
-      "legend": "主デバイス",
-      "secondaryLegend": "比較デバイス",
+      "legend": "プライマリ",
+      "secondaryLegend": "比較",
       "noSnapshot": "この期間のキーマップスナップショットがありません。レコーディングを開始して取得してください。",
       "noLayout": "このスナップショットにはレイアウト情報がありません。",
       "noData": "この期間の打鍵データがありません。",
@@ -904,8 +903,8 @@
       "noData": "この期間にレイヤー別の打鍵記録がありません。",
       "noActivations": "この期間にレイヤー操作キーの押下記録がありません。",
       "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。",
-      "legend": "主デバイス",
-      "secondaryLegend": "比較デバイス"
+      "legend": "プライマリ",
+      "secondaryLegend": "比較"
     },
     "fingerAssignment": {
       "button": "指割り当て",
@@ -970,8 +969,8 @@
       }
     },
     "filters": {
-      "from": "From",
-      "to": "To",
+      "from": "開始",
+      "to": "終了",
       "device": "デバイス",
       "deviceOption": {
         "own": "このデバイス",

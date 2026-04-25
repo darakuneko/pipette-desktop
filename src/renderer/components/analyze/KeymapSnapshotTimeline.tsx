@@ -1,37 +1,30 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Keymap snapshot select — lets the user jump the Analyze primary
-// range to a specific snapshot's active period. "Current keymap" is
-// the latest snapshot (from its `savedAt` to now); older options
-// cover `[savedAt, nextSavedAt)`. When the current range lies off
-// any snapshot boundary, a disabled "— Custom range —" option is
-// shown so the select faithfully reflects the active window.
+// Keymap snapshot select — owns the option list but no longer the
+// "which snapshot is current" decision. The parent passes
+// `selectedSavedAt` so the select reflects the explicit picker state
+// even when the user has narrowed the range inside the snapshot's
+// active window. Free-form ranges that escape a snapshot can no
+// longer happen because the parent clamps every edit through
+// `clampRangeToSnapshot`, so the previous "— Custom range —" option
+// is no longer reachable and was removed.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeymapSnapshotSummary } from '../../../shared/types/typing-analytics'
-import type { RangeMs } from './analyze-types'
+import { formatDateTime } from '../editors/store-modal-shared'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
-
-const CUSTOM_VALUE = 'custom'
 
 interface Props {
   summaries: TypingKeymapSnapshotSummary[]
-  range: RangeMs
-  nowMs: number
-  onRangeChange: (next: RangeMs) => void
+  /** Source of truth for which snapshot is currently selected.
+   * `null` means the parent has not picked one yet (e.g. summaries are
+   * still loading). The select falls back to the latest entry to keep
+   * the displayed value in sync with the available options. */
+  selectedSavedAt: number | null
+  onSelectSnapshot: (savedAt: number) => void
 }
 
-function formatLocalDateTime(ms: number): string {
-  const d = new Date(ms)
-  const y = d.getFullYear().toString().padStart(4, '0')
-  const mo = (d.getMonth() + 1).toString().padStart(2, '0')
-  const da = d.getDate().toString().padStart(2, '0')
-  const h = d.getHours().toString().padStart(2, '0')
-  const mi = d.getMinutes().toString().padStart(2, '0')
-  return `${y}-${mo}-${da} ${h}:${mi}`
-}
-
-export function KeymapSnapshotTimeline({ summaries, range, nowMs, onRangeChange }: Props) {
+export function KeymapSnapshotTimeline({ summaries, selectedSavedAt, onSelectSnapshot }: Props) {
   const { t } = useTranslation()
 
   const sorted = useMemo(
@@ -40,42 +33,32 @@ export function KeymapSnapshotTimeline({ summaries, range, nowMs, onRangeChange 
   )
   // Options below "Current keymap" are the older snapshots newest-first.
   // Memoised so the double-copy (slice + reverse) doesn't rerun on
-  // every range-dependent re-render.
+  // every snapshot-select rerender.
   const olderSnapshots = useMemo(() => sorted.slice(0, -1).reverse(), [sorted])
 
   if (sorted.length === 0) return null
 
   const latest = sorted[sorted.length - 1]
 
-  // Resolve which option is "current" by exact range match. A
-  // snapshot's active window is `[savedAt, nextSavedAt ?? nowMs)`;
-  // anything outside collapses to `_custom` so From/To edits don't
-  // silently pretend to match a snapshot.
-  const selectedValue = ((): string => {
-    for (let i = 0; i < sorted.length; i += 1) {
-      const s = sorted[i]
-      const next = sorted[i + 1]
-      const expectedTo = next?.savedAt ?? nowMs
-      if (range.fromMs === s.savedAt && range.toMs === expectedTo) return String(s.savedAt)
-    }
-    return CUSTOM_VALUE
-  })()
+  // Fall back to the latest snapshot when the parent prop is stale —
+  // the option set must always contain the rendered value otherwise
+  // the browser silently picks the first one and the select diverges
+  // from `selectedSavedAt` in the parent.
+  const selectedValue =
+    selectedSavedAt !== null && sorted.some((s) => s.savedAt === selectedSavedAt)
+      ? String(selectedSavedAt)
+      : String(latest.savedAt)
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = e.target.value
-    if (value === CUSTOM_VALUE) return
-    const savedAt = Number.parseInt(value, 10)
+    const savedAt = Number.parseInt(e.target.value, 10)
     if (!Number.isFinite(savedAt)) return
-    const idx = sorted.findIndex((s) => s.savedAt === savedAt)
-    if (idx < 0) return
-    const s = sorted[idx]
-    const next = sorted[idx + 1]
-    onRangeChange({ fromMs: s.savedAt, toMs: next?.savedAt ?? nowMs })
+    if (!sorted.some((s) => s.savedAt === savedAt)) return
+    onSelectSnapshot(savedAt)
   }
 
   return (
     <label className={FILTER_LABEL} data-testid="analyze-snapshot-timeline">
-      {t('analyze.snapshotTimeline.title')}
+      <span>{t('analyze.snapshotTimeline.title')}</span>
       <select
         className={FILTER_SELECT}
         value={selectedValue}
@@ -87,14 +70,9 @@ export function KeymapSnapshotTimeline({ summaries, range, nowMs, onRangeChange 
         </option>
         {olderSnapshots.map((s) => (
           <option key={s.savedAt} value={String(s.savedAt)}>
-            {formatLocalDateTime(s.savedAt)}
+            {formatDateTime(s.savedAt)}
           </option>
         ))}
-        {selectedValue === CUSTOM_VALUE && (
-          <option value={CUSTOM_VALUE} disabled>
-            {t('analyze.snapshotTimeline.custom')}
-          </option>
-        )}
       </select>
     </label>
   )

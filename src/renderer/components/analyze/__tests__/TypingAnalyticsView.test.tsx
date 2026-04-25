@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import type { TypingKeyboardSummary, TypingKeymapSnapshot } from '../../../../shared/types/typing-analytics'
+import type { TypingKeyboardSummary, TypingKeymapSnapshot, TypingKeymapSnapshotSummary } from '../../../../shared/types/typing-analytics'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -56,6 +56,7 @@ vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval')
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
+vi.mock('../LayerUsageChart', () => ({ LayerUsageChart: mockSummary('mock-layer') }))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 const mockGetSnapshot = vi.fn<() => Promise<TypingKeymapSnapshot | null>>()
@@ -464,4 +465,61 @@ describe('TypingAnalyticsView', () => {
     await waitFor(() => expect(syncSpy).toHaveBeenCalledWith('uid-b'))
     syncSpy.mockRestore()
   })
+
+  it('clamps the range to the snapshot active window when an older snapshot is picked', async () => {
+    // Range integrity check: selecting snapshot 1000 from
+    // [1000, 2000] should set toMs = 2000 (the next snapshot's
+    // savedAt). Backend's selector reads `[fromMs, toMs)` so picking
+    // savedAt = 1000 stays correct even though toMs touches 2000.
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const summaries: TypingKeymapSnapshotSummary[] = [
+      { uid: 'uid-a', machineHash: 'm1', productName: 'KB A', savedAt: 1000, layers: 1, matrix: { rows: 1, cols: 1 } },
+      { uid: 'uid-a', machineHash: 'm1', productName: 'KB A', savedAt: 2000, layers: 1, matrix: { rows: 1, cols: 1 } },
+    ]
+    const summariesSpy = vi.spyOn(window.vialAPI, 'typingAnalyticsListKeymapSnapshots').mockResolvedValue(summaries)
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(summariesSpy).toHaveBeenCalledWith('uid-a'))
+    fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
+    await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
+    fireEvent.change(screen.getByTestId('analyze-snapshot-timeline-select'), { target: { value: '1000' } })
+    await waitFor(() => {
+      expect(text('mock-wpm')).toContain('range=1000-2000')
+    })
+    summariesSpy.mockRestore()
+  })
+
+  it('clears the snapshot timeline state on keyboard switch', async () => {
+    // Stale-state guard: the previous keyboard's timeline must not
+    // briefly render under the new keyboard while its summaries are
+    // still in flight or after they resolve to an empty list.
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const summariesSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListKeymapSnapshots')
+      .mockImplementation(async (uid: string) => {
+        if (uid === 'uid-a') {
+          return [{ uid, machineHash: 'm1', productName: 'KB', savedAt: 1000, layers: 1, matrix: { rows: 1, cols: 1 } }] as TypingKeymapSnapshotSummary[]
+        }
+        return [] as TypingKeymapSnapshotSummary[]
+      })
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('analyze-snapshot-timeline-select')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-kb-uid-b'))
+    await waitFor(() => expect(screen.queryByTestId('analyze-snapshot-timeline-select')).toBeNull())
+    summariesSpy.mockRestore()
+  })
+
+  it('clears the snapshot timeline state when listKeymapSnapshots rejects', async () => {
+    mockListKeyboards.mockResolvedValue(SAMPLE)
+    const summariesSpy = vi
+      .spyOn(window.vialAPI, 'typingAnalyticsListKeymapSnapshots')
+      .mockRejectedValue(new Error('drive down'))
+    const { TypingAnalyticsView } = await importView()
+    render(<TypingAnalyticsView />)
+    await waitFor(() => expect(summariesSpy).toHaveBeenCalledWith('uid-a'))
+    expect(screen.queryByTestId('analyze-snapshot-timeline-select')).toBeNull()
+    summariesSpy.mockRestore()
+  })
+
 })

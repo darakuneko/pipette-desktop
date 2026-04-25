@@ -8,6 +8,7 @@
 
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
+import { existsSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { launchApp } from './helpers/electron'
 import {
@@ -27,6 +28,13 @@ let taBackup: TypingAnalyticsSeedBackup | null = null
 test.beforeAll(async () => {
   const launched = await launchApp({
     onMainReady: async ({ userDataPath }) => {
+      // Wipe any pipette_settings.json that a previous run may have
+      // persisted for the test keyboard — `useAnalyzeFilters` writes
+      // every filter tweak (WPM viewMode, Layer viewMode, etc.) into
+      // this file, so leftover state from a prior playwright run can
+      // still be active when the suite starts.
+      const settingsPath = join(userDataPath, 'sync', 'keyboards', DUMMY_TA_UID, 'pipette_settings.json')
+      if (existsSync(settingsPath)) unlinkSync(settingsPath)
       const kbBase = join(userDataPath, 'sync', 'keyboards')
       snapBackups = seedDummySnapshots(kbBase)
       taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
@@ -184,3 +192,4 @@ test.describe('Layer tab', () => {
     await expect(page.locator('[data-testid="analyze-filter-layer-base-layer"]')).toBeVisible({ timeout: 5_000 })
   })
 })
+

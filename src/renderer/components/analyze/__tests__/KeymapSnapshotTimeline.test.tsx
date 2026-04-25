@@ -12,7 +12,6 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'analyze.snapshotTimeline.title': 'Keymap snapshots',
         'analyze.snapshotTimeline.current': 'Current keymap',
-        'analyze.snapshotTimeline.custom': '— Custom range —',
       }
       return map[key] ?? key
     },
@@ -36,9 +35,8 @@ describe('KeymapSnapshotTimeline', () => {
     const { container } = render(
       <KeymapSnapshotTimeline
         summaries={[]}
-        range={{ fromMs: 0, toMs: 1000 }}
-        nowMs={1000}
-        onRangeChange={vi.fn()}
+        selectedSavedAt={null}
+        onSelectSnapshot={vi.fn()}
       />,
     )
     expect(container.firstChild).toBeNull()
@@ -49,9 +47,8 @@ describe('KeymapSnapshotTimeline', () => {
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 3000, toMs: 5000 }}
-        nowMs={5000}
-        onRangeChange={vi.fn()}
+        selectedSavedAt={3000}
+        onSelectSnapshot={vi.fn()}
       />,
     )
     const select = screen.getByTestId('analyze-snapshot-timeline-select') as HTMLSelectElement
@@ -63,78 +60,83 @@ describe('KeymapSnapshotTimeline', () => {
     expect(select.options[2].value).toBe('1000')
   })
 
-  it('selects the "current" option when range matches the latest snapshot period', () => {
+  it('drives the selected value from selectedSavedAt regardless of any narrowed range', () => {
     const sums = [makeSummary(1000), makeSummary(2000)]
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 2000, toMs: 5000 }}
-        nowMs={5000}
-        onRangeChange={vi.fn()}
+        selectedSavedAt={2000}
+        onSelectSnapshot={vi.fn()}
       />,
     )
     const select = screen.getByTestId('analyze-snapshot-timeline-select') as HTMLSelectElement
     expect(select.value).toBe('2000')
   })
 
-  it('selects an older snapshot when range matches its period', () => {
+  it('selects an older snapshot when selectedSavedAt points at it', () => {
     const sums = [makeSummary(1000), makeSummary(2000), makeSummary(3000)]
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 1000, toMs: 2000 }}
-        nowMs={5000}
-        onRangeChange={vi.fn()}
+        selectedSavedAt={1000}
+        onSelectSnapshot={vi.fn()}
       />,
     )
     const select = screen.getByTestId('analyze-snapshot-timeline-select') as HTMLSelectElement
     expect(select.value).toBe('1000')
   })
 
-  it('shows a disabled "— Custom range —" option when range is off-boundary', () => {
-    const sums = [makeSummary(1000), makeSummary(3000)]
+  it('falls back to the latest snapshot when selectedSavedAt is null', () => {
+    const sums = [makeSummary(1000), makeSummary(2000)]
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 1500, toMs: 2500 }}
-        nowMs={5000}
-        onRangeChange={vi.fn()}
+        selectedSavedAt={null}
+        onSelectSnapshot={vi.fn()}
       />,
     )
     const select = screen.getByTestId('analyze-snapshot-timeline-select') as HTMLSelectElement
-    expect(select.value).toBe('custom')
-    const customOption = Array.from(select.options).find((o) => o.value === 'custom')
-    expect(customOption?.disabled).toBe(true)
-    expect(customOption?.textContent).toBe('— Custom range —')
+    expect(select.value).toBe('2000')
   })
 
-  it('change to "current" sets range to [latest.savedAt, nowMs]', () => {
-    const onChange = vi.fn()
-    const sums = [makeSummary(1000), makeSummary(2000), makeSummary(3000)]
+  it('falls back to the latest snapshot when selectedSavedAt is stale (not in summaries)', () => {
+    const sums = [makeSummary(1000), makeSummary(2000)]
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 1000, toMs: 2000 }}
-        nowMs={5000}
-        onRangeChange={onChange}
+        selectedSavedAt={9999}
+        onSelectSnapshot={vi.fn()}
       />,
     )
-    fireEvent.change(screen.getByTestId('analyze-snapshot-timeline-select'), { target: { value: '3000' } })
-    expect(onChange).toHaveBeenCalledWith({ fromMs: 3000, toMs: 5000 })
+    const select = screen.getByTestId('analyze-snapshot-timeline-select') as HTMLSelectElement
+    expect(select.value).toBe('2000')
   })
 
-  it('change to a mid snapshot sets range to [savedAt, next.savedAt]', () => {
-    const onChange = vi.fn()
+  it('emits onSelectSnapshot with the savedAt of the picked option', () => {
+    const onSelect = vi.fn()
     const sums = [makeSummary(1000), makeSummary(2000), makeSummary(3000)]
     render(
       <KeymapSnapshotTimeline
         summaries={sums}
-        range={{ fromMs: 3000, toMs: 5000 }}
-        nowMs={5000}
-        onRangeChange={onChange}
+        selectedSavedAt={3000}
+        onSelectSnapshot={onSelect}
       />,
     )
     fireEvent.change(screen.getByTestId('analyze-snapshot-timeline-select'), { target: { value: '2000' } })
-    expect(onChange).toHaveBeenCalledWith({ fromMs: 2000, toMs: 3000 })
+    expect(onSelect).toHaveBeenCalledWith(2000)
+  })
+
+  it('ignores values that do not match any snapshot', () => {
+    const onSelect = vi.fn()
+    const sums = [makeSummary(1000), makeSummary(2000)]
+    render(
+      <KeymapSnapshotTimeline
+        summaries={sums}
+        selectedSavedAt={2000}
+        onSelectSnapshot={onSelect}
+      />,
+    )
+    fireEvent.change(screen.getByTestId('analyze-snapshot-timeline-select'), { target: { value: 'nope' } })
+    expect(onSelect).not.toHaveBeenCalled()
   })
 })

@@ -2,8 +2,14 @@
 // Shared Tailwind class strings for the Analyze filter row. Kept here
 // so the snapshot select and the From / To / Device controls stay
 // visually in sync when one of them is retouched.
+//
+// `FILTER_LABEL` uses `display: contents` so each label collapses out
+// of the layout and the children (text span + control) participate
+// directly as grid items. The shared parent grid keeps every label
+// column and every control column line-aligned across rows even as
+// per-tab filters wrap onto new rows.
 
-export const FILTER_LABEL = 'flex items-center gap-1.5 text-[12px] text-content-muted'
+export const FILTER_LABEL = 'contents text-[12px] text-content-muted'
 
 export const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'

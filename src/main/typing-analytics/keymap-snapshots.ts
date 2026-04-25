@@ -90,8 +90,11 @@ export async function saveKeymapSnapshotIfChanged(
   return { saved: true, savedAt: snapshot.savedAt }
 }
 
-/** Snapshot selection rule used by the Analyze key-heatmap tab:
- *   1. If one or more snapshots fall inside `[fromMs, toMs]`, take
+/** Snapshot selection rule used by the Analyze key-heatmap tab.
+ * `[fromMs, toMs)` is half-open to match `RangeMs` and the chart
+ * minute-bucket queries — a snapshot saved at exactly `toMs` belongs
+ * to the next window, not the current one.
+ *   1. If one or more snapshots fall inside `[fromMs, toMs)`, take
  *      the newest (max savedAt).
  *   2. Otherwise, take the most recent snapshot whose savedAt <=
  *      fromMs (the layout that was active when the window opened).
@@ -106,7 +109,7 @@ export async function getKeymapSnapshotForRange(
 ): Promise<TypingKeymapSnapshot | null> {
   const saveds = await listSavedAts(userDataDir, uid, machineHash)
   if (saveds.length === 0) return null
-  const inRange = saveds.filter((s) => s >= fromMs && s <= toMs)
+  const inRange = saveds.filter((s) => s >= fromMs && s < toMs)
   let pick: number | null = null
   if (inRange.length > 0) {
     pick = inRange[inRange.length - 1]

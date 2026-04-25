@@ -117,8 +117,9 @@ The Heatmap, Ergonomics, and Layer > Activations views need a keymap snapshot th
 
 The following filters are always available:
 
-- **From** / **To** — the time range to analyze (defaults to the last 24 hours)
-- **Device** — `This device` shows only data recorded on this machine; `All devices` also includes data synced from other machines. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
+- **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Layer activations) never mix two layouts in one view
+- **From** / **To** — the time range to analyze. Both inputs are clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
+- **Device** — `This device` shows only data recorded on this machine; `All devices` also includes data synced from other machines. Picking two devices paints them side-by-side as A / B series. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
 
 Individual tabs add their own filters above the chart (view mode, granularity, unit, etc.); those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
 

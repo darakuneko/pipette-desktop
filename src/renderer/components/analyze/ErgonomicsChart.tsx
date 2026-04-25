@@ -26,6 +26,7 @@ import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics
 import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
+import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { chartSeriesColor } from '../../utils/chart-palette'
@@ -173,75 +174,26 @@ export function ErgonomicsChart({
 
   useEffect(() => {
     let cancelled = false
-    const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
-    if (layerCount === 0) {
-      setLayerCells({})
-      setLoading(false)
-      return
-    }
     setLoading(true)
-    const layerIdxs = Array.from({ length: layerCount }, (_, i) => i)
-    void Promise.all(
-      layerIdxs.map((l) =>
-        window.vialAPI
-          .typingAnalyticsGetMatrixHeatmapForRange(
-            uid,
-            l,
-            range.fromMs,
-            range.toMs,
-            deviceScope,
-          )
-          .catch(() => ({} as TypingHeatmapByCell)),
-      ),
-    ).then((results) => {
-      if (cancelled) return
-      const next: Record<number, TypingHeatmapByCell> = {}
-      layerIdxs.forEach((l, i) => {
-        next[l] = results[i]
+    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope)
+      .then((next) => {
+        if (cancelled) return
+        setLayerCells(next)
+        setLoading(false)
       })
-      setLayerCells(next)
-      setLoading(false)
-    })
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
+    // `scopeKey` carries `deviceScope` identity.
   }, [uid, range, scopeKey, snapshot])
 
-  // Secondary fetch mirrors the primary's per-layer Promise.all but
-  // skips the `setLoading` flag — the primary path already drives the
-  // loading state for the chart shell. Clearing the buffer up front
-  // keeps a stale dataset from outliving a scope change.
+  // Secondary fetch — compare-device only.
   useEffect(() => {
     setSecondaryLayerCells({})
     if (!hasSecondary || !secondaryScope) return
-    const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
-    if (layerCount === 0) return
     let cancelled = false
-    const layerIdxs = Array.from({ length: layerCount }, (_, i) => i)
-    void Promise.all(
-      layerIdxs.map((l) =>
-        window.vialAPI
-          .typingAnalyticsGetMatrixHeatmapForRange(
-            uid,
-            l,
-            range.fromMs,
-            range.toMs,
-            secondaryScope,
-          )
-          .catch(() => ({} as TypingHeatmapByCell)),
-      ),
-    ).then((results) => {
-      if (cancelled) return
-      const next: Record<number, TypingHeatmapByCell> = {}
-      layerIdxs.forEach((l, i) => {
-        next[l] = results[i]
-      })
-      setSecondaryLayerCells(next)
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [uid, range, secondaryScopeKey, snapshot, hasSecondary, secondaryScope])
+    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, secondaryScope)
+      .then((next) => { if (!cancelled) setSecondaryLayerCells(next) })
+    return () => { cancelled = true }
+  }, [uid, range, secondaryScopeKey, snapshot, hasSecondary])
 
   const mergedHeatmap = useMemo(
     () => mergeLayerHeatmaps(layerCells),
@@ -261,7 +213,8 @@ export function ErgonomicsChart({
   )
   // Secondary aggregation reuses the *primary's* finger overrides so
   // the same finger labels apply on both bars — assigning a finger
-  // re-classifies device A and device B the same way.
+  // re-classifies the A and B series the same way regardless of the
+  // compare axis.
   const secondaryAggregation = useMemo(
     () => (hasSecondary
       ? aggregateErgonomics(mergedSecondaryHeatmap, keys, fingerOverrides)

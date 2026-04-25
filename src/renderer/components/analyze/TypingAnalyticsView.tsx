@@ -5,7 +5,7 @@
 // device-scope filters. The chart bodies are stubbed here and filled
 // in by C4–C6.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type {
@@ -28,6 +28,8 @@ import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { DeviceMultiSelect } from './DeviceMultiSelect'
+import { RangeFromToInputs } from './RangeFromToInputs'
+import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -90,23 +92,6 @@ const GRANULARITY_OPTIONS: Array<{ value: GranularityChoice; labelKey: string }>
   { value: DAY_MS * 30, labelKey: 'month1' },
 ]
 
-/** `YYYY-MM-DDTHH:mm` serialisation (local timezone) that HTML's
- * `<input type="datetime-local">` expects. */
-function toLocalInputValue(ms: number): string {
-  const d = new Date(ms)
-  const y = d.getFullYear().toString().padStart(4, '0')
-  const m = (d.getMonth() + 1).toString().padStart(2, '0')
-  const day = d.getDate().toString().padStart(2, '0')
-  const h = d.getHours().toString().padStart(2, '0')
-  const mi = d.getMinutes().toString().padStart(2, '0')
-  return `${y}-${m}-${day}T${h}:${mi}`
-}
-
-function fromLocalInputValue(value: string): number | null {
-  const ms = new Date(value).getTime()
-  return Number.isFinite(ms) ? ms : null
-}
-
 interface TypingAnalyticsViewProps {
   /** Pre-select this keyboard on mount if it exists in the current
    * analytics data. Used when entering the Analyze page from the
@@ -162,6 +147,14 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [snapshotLoading, setSnapshotLoading] = useState(false)
   const [snapshotSummaries, setSnapshotSummaries] = useState<TypingKeymapSnapshotSummary[]>([])
   const [summariesLoading, setSummariesLoading] = useState(false)
+  // The snapshot the timeline picker is currently pointing at. The
+  // primary range is clamped to this snapshot's `[savedAt, nextSavedAt)`
+  // window via `clampRangeToBoundaries` so charts that rely on the
+  // snapshot (Heatmap / Ergonomics / Layer activations) only ever
+  // aggregate keystrokes that match the displayed keymap. `null` means
+  // either no keyboard is selected or the keyboard has no recorded
+  // snapshots — in that case the range is free-form.
+  const [selectedSnapshotSavedAt, setSelectedSnapshotSavedAt] = useState<number | null>(null)
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingersLoading, setFingersLoading] = useState(false)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
@@ -230,7 +223,16 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // keyboard are not overridden.
   const autoSetRangeForUidRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!selectedUid) { setSnapshotSummaries([]); setSummariesLoading(false); return }
+    // Clear the previous keyboard's snapshot state up-front so the
+    // timeline / boundary hint / compare window don't briefly render
+    // stale data while the new fetch is in flight, and so a fetch
+    // error doesn't leave them pointing at the previous keyboard.
+    setSnapshotSummaries([])
+    setSelectedSnapshotSavedAt(null)
+    if (!selectedUid) {
+      setSummariesLoading(false)
+      return
+    }
     let cancelled = false
     setSummariesLoading(true)
     void window.vialAPI
@@ -241,10 +243,15 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         if (list.length > 0 && autoSetRangeForUidRef.current !== selectedUid) {
           const latest = list[list.length - 1]
           setRange({ fromMs: latest.savedAt, toMs: nowMs })
+          setSelectedSnapshotSavedAt(latest.savedAt)
           autoSetRangeForUidRef.current = selectedUid
         }
       })
-      .catch(() => { if (!cancelled) setSnapshotSummaries([]) })
+      .catch(() => {
+        if (cancelled) return
+        setSnapshotSummaries([])
+        setSelectedSnapshotSavedAt(null)
+      })
       .finally(() => { if (!cancelled) setSummariesLoading(false) })
     return () => { cancelled = true }
   }, [selectedUid, nowMs])
@@ -317,6 +324,33 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // / Ergonomics / Layer-activations consume the snapshot directly so
   // gating here keeps a multi-device pick from blanking those tabs.
   const effectiveSnapshot = deviceScopes.every(isHashScope) ? null : keymapSnapshot
+
+  // The active window of the currently-selected snapshot. `null` means
+  // "no clamp" — either no snapshot is picked yet or the keyboard has
+  // none on file. Used to gate the date-input min/max attributes and
+  // to feed `clampRangeToSnapshot` so charts never see a `range` that
+  // straddles a keymap edit.
+  const snapshotBoundaries = useMemo(
+    () => getSnapshotBoundaries(selectedSnapshotSavedAt, snapshotSummaries, nowMs),
+    [selectedSnapshotSavedAt, snapshotSummaries, nowMs],
+  )
+
+  // Re-clamp when a new snapshot lands mid-session and shrinks the
+  // current snapshot's `hi`. `clampRangeToBoundaries` returns the same
+  // reference on no-op so React's setState bails out on steady state.
+  useEffect(() => {
+    setRange((prev) => clampRangeToBoundaries(prev, snapshotBoundaries))
+  }, [snapshotBoundaries])
+
+  // Selecting a snapshot resets the range to the snapshot's active
+  // window; narrowing inside the window leaves `selectedSnapshotSavedAt`
+  // untouched so the picker keeps reflecting the user's choice.
+  const handleSelectSnapshot = useCallback((savedAt: number) => {
+    const bounds = getSnapshotBoundaries(savedAt, snapshotSummaries, nowMs)
+    if (bounds === null) return
+    setSelectedSnapshotSavedAt(savedAt)
+    setRange({ fromMs: bounds.lo, toMs: bounds.hi })
+  }, [snapshotSummaries, nowMs])
 
   // Heatmap / Activity only render the first scope. If the user
   // arrives there from a multi-select tab (WPM / Interval / Layer /
@@ -497,60 +531,21 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               ))}
             </div>
             <div
-              className={`flex flex-wrap items-center gap-3 border-b border-edge pb-3 ${
+              className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
                 !filtersReady || syncingAnalytics ? 'pointer-events-none opacity-60' : ''
               }`}
+              // 8 columns: 4 label / control pairs per row. `display: contents`
+              // on each `<label>` (FILTER_LABEL) lets its label-text and control
+              // participate in this grid directly so labels and controls line
+              // up vertically across rows even when tab-specific filters wrap
+              // below.
+              style={{ gridTemplateColumns: 'repeat(8, max-content)' }}
               data-testid="analyze-filters"
               aria-busy={!filtersReady || syncingAnalytics}
             >
-              <KeymapSnapshotTimeline
-                summaries={snapshotSummaries}
-                range={range}
-                nowMs={nowMs}
-                onRangeChange={(next) => setRange((prev) => {
-                  const fromMs = Math.min(next.fromMs, next.toMs)
-                  const toMs = Math.min(next.toMs, nowMs)
-                  // Re-selecting the active option must not invalidate
-                  // the range-dependent effects (snapshot fetch, chart
-                  // rerenders). Return the previous reference when the
-                  // clamp lands on the same window.
-                  if (prev.fromMs === fromMs && prev.toMs === toMs) return prev
-                  return { fromMs, toMs }
-                })}
-              />
-              <label className={FILTER_LABEL}>
-                {t('analyze.filters.from')}
-                <input
-                  type="datetime-local"
-                  className={FILTER_SELECT}
-                  value={toLocalInputValue(range.fromMs)}
-                  max={toLocalInputValue(Math.min(range.toMs, nowMs))}
-                  onChange={(e) => {
-                    const ms = fromLocalInputValue(e.target.value)
-                    if (ms === null) return
-                    setRange((prev) => ({ fromMs: Math.min(ms, prev.toMs), toMs: prev.toMs }))
-                  }}
-                  data-testid="analyze-filter-from"
-                />
-              </label>
-              <label className={FILTER_LABEL}>
-                {t('analyze.filters.to')}
-                <input
-                  type="datetime-local"
-                  className={FILTER_SELECT}
-                  value={toLocalInputValue(range.toMs)}
-                  max={toLocalInputValue(nowMs)}
-                  onChange={(e) => {
-                    const ms = fromLocalInputValue(e.target.value)
-                    if (ms === null) return
-                    setRange((prev) => ({ fromMs: prev.fromMs, toMs: Math.min(Math.max(ms, prev.fromMs), nowMs) }))
-                  }}
-                  data-testid="analyze-filter-to"
-                />
-              </label>
-              {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') && (
+              {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') ? (
                 <label className={FILTER_LABEL}>
-                  {t('analyze.filters.device')}
+                  <span>{t('analyze.filters.device')}</span>
                   <DeviceMultiSelect
                     value={deviceScopes}
                     remoteHashes={remoteHashes.list}
@@ -563,11 +558,30 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     ariaLabel={t('analyze.filters.device')}
                   />
                 </label>
+              ) : (
+                <>
+                  <span />
+                  <span />
+                </>
               )}
+              <KeymapSnapshotTimeline
+                summaries={snapshotSummaries}
+                selectedSavedAt={selectedSnapshotSavedAt}
+                onSelectSnapshot={handleSelectSnapshot}
+              />
+              <RangeFromToInputs
+                range={range}
+                snapshotBoundaries={snapshotBoundaries}
+                nowMs={nowMs}
+                onChange={setRange}
+                fromLabelKey="analyze.filters.from"
+                toLabelKey="analyze.filters.to"
+                testIdPrefix="analyze-filter"
+              />
               {analysisTab === 'wpm' && (
                 <>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.wpmViewMode')}
+                    <span>{t('analyze.filters.wpmViewMode')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={wpmFilter.viewMode}
@@ -582,7 +596,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     </select>
                   </label>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.wpmMinSample')}
+                    <span>{t('analyze.filters.wpmMinSample')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={String(wpmFilter.minActiveMs)}
@@ -601,7 +615,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               {analysisTab === 'activity' && (
                 <>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.activityMetric')}
+                    <span>{t('analyze.filters.activityMetric')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={activityFilter.metric}
@@ -617,7 +631,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </label>
                   {activityFilter.metric === 'wpm' && (
                     <label className={FILTER_LABEL}>
-                      {t('analyze.filters.wpmMinSample')}
+                      <span>{t('analyze.filters.wpmMinSample')}</span>
                       <select
                         className={FILTER_SELECT}
                         value={String(wpmFilter.minActiveMs)}
@@ -637,7 +651,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               {analysisTab === 'interval' && (
                 <>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.intervalViewMode')}
+                    <span>{t('analyze.filters.intervalViewMode')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={intervalFilter.viewMode}
@@ -652,7 +666,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     </select>
                   </label>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.unit')}
+                    <span>{t('analyze.filters.unit')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={intervalFilter.unit}
@@ -670,7 +684,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               )}
               {((analysisTab === 'wpm' && wpmFilter.viewMode === 'timeSeries') || (analysisTab === 'interval' && intervalFilter.viewMode === 'timeSeries')) && (
                 <label className={FILTER_LABEL}>
-                  {t('analyze.filters.granularity')}
+                  <span>{t('analyze.filters.granularity')}</span>
                   <select
                     className={FILTER_SELECT}
                     value={typeof wpmFilter.granularity === 'number' ? String(wpmFilter.granularity) : 'auto'}
@@ -691,7 +705,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               {analysisTab === 'ergonomics' && (
                 <button
                   type="button"
-                  className="ml-auto rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
+                  className="justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
+                  style={{ gridColumn: 'span 2' }}
                   onClick={() => setFingerModalOpen(true)}
                   disabled={effectiveSnapshot === null}
                   data-testid="analyze-finger-assignment-open"
@@ -702,7 +717,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               {analysisTab === 'layer' && (
                 <>
                   <label className={FILTER_LABEL}>
-                    {t('analyze.filters.layerViewMode')}
+                    <span>{t('analyze.filters.layerViewMode')}</span>
                     <select
                       className={FILTER_SELECT}
                       value={layerFilter.viewMode}
@@ -718,7 +733,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </label>
                   {layerFilter.viewMode === 'activations' && effectiveSnapshot !== null && effectiveSnapshot.layers > 1 && (
                     <label className={FILTER_LABEL}>
-                      {t('analyze.filters.layerBaseLayer')}
+                      <span>{t('analyze.filters.layerBaseLayer')}</span>
                       <select
                         className={FILTER_SELECT}
                         value={layerFilter.baseLayer}

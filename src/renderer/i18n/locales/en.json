@@ -649,14 +649,13 @@
     },
     "snapshotTimeline": {
       "title": "Keymap snapshots",
-      "current": "Current keymap",
-      "custom": "— Custom range —"
+      "current": "Current keymap"
     },
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",
       "secondaryLegend": "Compare WPM",
-      "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
+      "summaryPrimaryOnly": "Summary cards below reflect the primary series only.",
       "timeSeries": {
         "summary": {
           "label": "WPM summary",
@@ -701,7 +700,7 @@
         "max": "Max"
       },
       "secondaryLegend": "Compare median",
-      "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
+      "summaryPrimaryOnly": "Summary cards below reflect the primary series only.",
       "description": {
         "min": "Min — Shortest keystroke interval recorded within any minute (fastest single moment).",
         "p25": "p25 — Lower quartile\nDaily average of each minute's p25; 1/4 of intervals are shorter.",
@@ -868,8 +867,8 @@
       "fingerLoad": "Finger Load",
       "handBalance": "Hand Balance",
       "rowUsage": "Row Usage",
-      "legend": "Primary device",
-      "secondaryLegend": "Compare device",
+      "legend": "Primary",
+      "secondaryLegend": "Compare",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "noLayout": "Layout data not available for this snapshot.",
       "noData": "No keystrokes recorded in this range.",
@@ -905,8 +904,8 @@
       "noData": "No layer activity recorded in this range.",
       "noActivations": "No layer-op keys pressed in this range.",
       "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one.",
-      "legend": "Primary device",
-      "secondaryLegend": "Compare device"
+      "legend": "Primary",
+      "secondaryLegend": "Compare"
     },
     "fingerAssignment": {
       "button": "Finger assignment",
@@ -971,8 +970,8 @@
       }
     },
     "filters": {
-      "from": "From",
-      "to": "To",
+      "from": "Start",
+      "to": "End",
       "device": "Device",
       "deviceOption": {
         "own": "This device",

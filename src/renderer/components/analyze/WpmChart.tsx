@@ -27,6 +27,7 @@ import { formatDateTime } from '../editors/store-modal-shared'
 import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
+import { listBksMinuteForScope, listMinuteStatsForScope } from './analyze-fetch'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
 import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
 import {
@@ -119,48 +120,28 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const load = async () => {
-      try {
-        const data = isHashScope(deviceScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(deviceScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
-        if (!cancelled) setRows(data)
-      } catch {
-        if (!cancelled) setRows([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
+    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setRows(data) })
+      .catch(() => { if (!cancelled) setRows([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
+    // `scopeKey` is the canonical identity for `deviceScope`; the
+    // object is rebuilt every render so adding it to deps would
+    // refetch on every parent rerender.
   }, [uid, scopeKey, range])
 
-  // Secondary minute-stats fetch — same scope-branching the primary
-  // path uses, gated by `secondaryScopeKey` so a no-op render
-  // (deviceScopes unchanged) doesn't refetch. We clear the rows up
-  // front so a stale dataset can't linger when the user removes the
-  // secondary entry.
+  // Secondary minute-stats — same scope-branching as primary, just
+  // against the second device when present. Clears up front so a
+  // stale dataset can't linger when the user removes the entry.
   useEffect(() => {
     setSecondaryRows([])
     if (!secondaryScope) return
     let cancelled = false
-    const load = async () => {
-      try {
-        const data = isHashScope(secondaryScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(secondaryScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
-        if (!cancelled) setSecondaryRows(data)
-      } catch {
-        if (!cancelled) setSecondaryRows([])
-      }
-    }
-    void load()
+    listMinuteStatsForScope(uid, secondaryScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setSecondaryRows(data) })
+      .catch(() => { if (!cancelled) setSecondaryRows([]) })
     return () => { cancelled = true }
-  }, [uid, secondaryScopeKey, range, secondaryScope])
+  }, [uid, secondaryScopeKey, range])
 
   // The Bksp% overlay is always available in timeSeries mode; users
   // who don't want it click the legend to hide the line instead of
@@ -172,44 +153,22 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
       return
     }
     let cancelled = false
-    const load = async () => {
-      try {
-        const data = isHashScope(deviceScope)
-          ? await window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(deviceScope)
-            ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
-        if (!cancelled) setBksRows(data)
-      } catch {
-        if (!cancelled) setBksRows([])
-      }
-    }
-    void load()
+    listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setBksRows(data) })
+      .catch(() => { if (!cancelled) setBksRows([]) })
     return () => { cancelled = true }
   }, [uid, scopeKey, range, errorProxyActive])
 
-  // Secondary Bksp% rides alongside the primary in `timeSeries` mode
-  // so users can compare error rates across devices. Cleared up front
-  // so a stale dataset can't outlive a scope change.
+  // Secondary Bksp% — same shape, against the second device.
   useEffect(() => {
     setSecondaryBksRows([])
     if (!errorProxyActive || !secondaryScope) return
     let cancelled = false
-    const load = async () => {
-      try {
-        const data = isHashScope(secondaryScope)
-          ? await window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(secondaryScope)
-            ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
-        if (!cancelled) setSecondaryBksRows(data)
-      } catch {
-        if (!cancelled) setSecondaryBksRows([])
-      }
-    }
-    void load()
+    listBksMinuteForScope(uid, secondaryScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setSecondaryBksRows(data) })
+      .catch(() => { if (!cancelled) setSecondaryBksRows([]) })
     return () => { cancelled = true }
-  }, [uid, secondaryScopeKey, range, errorProxyActive, secondaryScope])
+  }, [uid, secondaryScopeKey, range, errorProxyActive])
 
   // Peak / lowest WPM come from a narrow aggregation IPC rather than
   // the timeseries rows so they reflect the entire range (including

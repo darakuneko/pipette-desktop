@@ -19,6 +19,7 @@ import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/ty
 import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
+import { listMinuteStatsForScope } from './analyze-fetch'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
 import { formatDateTime } from '../editors/store-modal-shared'
 import {
@@ -121,22 +122,13 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const load = async () => {
-      try {
-        const data = isHashScope(effectiveDeviceScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(effectiveDeviceScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
-        if (!cancelled) setRows(data)
-      } catch {
-        if (!cancelled) setRows([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void load()
+    listMinuteStatsForScope(uid, effectiveDeviceScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setRows(data) })
+      .catch(() => { if (!cancelled) setRows([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
+    // `scopeKey` encodes `effectiveDeviceScope` identity; including the
+    // object would refetch every parent rerender.
   }, [uid, scopeKey, range])
 
   // Secondary minute-stats only flows through `timeSeries` mode (see
@@ -146,21 +138,11 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
     setSecondaryRows([])
     if (!hasSecondary || !secondaryScope) return
     let cancelled = false
-    const load = async () => {
-      try {
-        const data = isHashScope(secondaryScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
-          : isOwnScope(secondaryScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
-        if (!cancelled) setSecondaryRows(data)
-      } catch {
-        if (!cancelled) setSecondaryRows([])
-      }
-    }
-    void load()
+    listMinuteStatsForScope(uid, secondaryScope, range.fromMs, range.toMs)
+      .then((data) => { if (!cancelled) setSecondaryRows(data) })
+      .catch(() => { if (!cancelled) setSecondaryRows([]) })
     return () => { cancelled = true }
-  }, [uid, secondaryScopeKey, range, hasSecondary, secondaryScope])
+  }, [uid, secondaryScopeKey, range, hasSecondary])
 
   // Longest session comes from a narrow aggregation IPC rather than
   // the minute-stats rows so it surfaces the run that straddles bucket

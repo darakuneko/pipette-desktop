@@ -27,8 +27,9 @@ import type {
   TypingLayerUsageRow,
   TypingMatrixCellRow,
 } from '../../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, LayerViewMode, RangeMs } from './analyze-types'
+import { listLayerUsageForScope, listMatrixCellsForScope } from './analyze-fetch'
 import {
   aggregateLayerActivations,
   aggregateLayerKeystrokes,
@@ -133,41 +134,24 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const api = window.vialAPI
-    const run = async (): Promise<void> => {
-      try {
-        switch (viewMode) {
-          case 'activations': {
-            const result = isHashScope(deviceScope)
-              ? await api.typingAnalyticsListMatrixCellsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
-              : isOwnScope(deviceScope)
-                ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
-                : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
-            if (!cancelled) setCells(Array.isArray(result) ? result : [])
-            return
-          }
-          case 'keystrokes': {
-            const result = isHashScope(deviceScope)
-              ? await api.typingAnalyticsListLayerUsageForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
-              : isOwnScope(deviceScope)
-                ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
-                : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
-            if (!cancelled) setRows(Array.isArray(result) ? result : [])
-            return
-          }
-        }
-      } catch {
+    const promise = viewMode === 'activations'
+      ? listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs)
+      : listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs)
+    void promise
+      .then((result) => {
+        if (cancelled) return
+        if (viewMode === 'activations') setCells(Array.isArray(result) ? (result as TypingMatrixCellRow[]) : [])
+        else setRows(Array.isArray(result) ? (result as TypingLayerUsageRow[]) : [])
+      })
+      .catch(() => {
         if (cancelled) return
         if (viewMode === 'activations') setCells([])
         else setRows([])
-      } finally {
-        if (!cancelled) setLoading(false)
-      }
-    }
-    void run()
-    return () => {
-      cancelled = true
-    }
+      })
+      .finally(() => { if (!cancelled) setLoading(false) })
+    return () => { cancelled = true }
+    // `scopeKey` carries `deviceScope` identity — adding the object
+    // would refetch on every parent rerender.
   }, [uid, range, scopeKey, viewMode])
 
   // Secondary fetch mirrors the primary's mode-aware switch but skips
@@ -179,40 +163,22 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
     setSecondaryCells([])
     if (!hasSecondary || !secondaryScope) return
     let cancelled = false
-    const api = window.vialAPI
-    const run = async (): Promise<void> => {
-      try {
-        switch (viewMode) {
-          case 'activations': {
-            const result = isHashScope(secondaryScope)
-              ? await api.typingAnalyticsListMatrixCellsForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
-              : isOwnScope(secondaryScope)
-                ? await api.typingAnalyticsListMatrixCellsLocal(uid, range.fromMs, range.toMs)
-                : await api.typingAnalyticsListMatrixCells(uid, range.fromMs, range.toMs)
-            if (!cancelled) setSecondaryCells(Array.isArray(result) ? result : [])
-            return
-          }
-          case 'keystrokes': {
-            const result = isHashScope(secondaryScope)
-              ? await api.typingAnalyticsListLayerUsageForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
-              : isOwnScope(secondaryScope)
-                ? await api.typingAnalyticsListLayerUsageLocal(uid, range.fromMs, range.toMs)
-                : await api.typingAnalyticsListLayerUsage(uid, range.fromMs, range.toMs)
-            if (!cancelled) setSecondaryRows(Array.isArray(result) ? result : [])
-            return
-          }
-        }
-      } catch {
+    const promise = viewMode === 'activations'
+      ? listMatrixCellsForScope(uid, secondaryScope, range.fromMs, range.toMs)
+      : listLayerUsageForScope(uid, secondaryScope, range.fromMs, range.toMs)
+    void promise
+      .then((result) => {
+        if (cancelled) return
+        if (viewMode === 'activations') setSecondaryCells(Array.isArray(result) ? (result as TypingMatrixCellRow[]) : [])
+        else setSecondaryRows(Array.isArray(result) ? (result as TypingLayerUsageRow[]) : [])
+      })
+      .catch(() => {
         if (cancelled) return
         if (viewMode === 'activations') setSecondaryCells([])
         else setSecondaryRows([])
-      }
-    }
-    void run()
-    return () => {
-      cancelled = true
-    }
-  }, [uid, range, secondaryScopeKey, viewMode, hasSecondary, secondaryScope])
+      })
+    return () => { cancelled = true }
+  }, [uid, range, secondaryScopeKey, viewMode, hasSecondary])
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would
