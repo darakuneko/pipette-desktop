@@ -17,7 +17,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
-  DEVICE_SCOPES,
   MAX_DEVICE_SCOPES,
   isAllScope,
   isOwnScope,
@@ -141,13 +140,12 @@ export function DeviceMultiSelect({
           role="listbox"
           data-testid={`${testId}-menu`}
         >
-          {DEVICE_SCOPES.map((staticKey) =>
-            renderRow(
-              staticKey,
-              t(`analyze.filters.deviceOption.${staticKey}`),
-              staticKey,
-            ),
-          )}
+          {/* Order: own → remote hashes → all. The exclusive `'all'`
+           * aggregate sits at the bottom because it acts as a "switch
+           * away from the per-device picks" — keeping the per-device
+           * options grouped together up top reads better than burying
+           * the hashes between them. */}
+          {renderRow('own', t('analyze.filters.deviceOption.own'), 'own')}
           {remoteHashes.map((hash) =>
             renderRow(
               { kind: 'hash', machineHash: hash },
@@ -155,6 +153,7 @@ export function DeviceMultiSelect({
               `hash:${hash}`,
             ),
           )}
+          {renderRow('all', t('analyze.filters.deviceOption.all'), 'all')}
         </div>
       )}
     </div>
