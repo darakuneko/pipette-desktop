@@ -21,6 +21,7 @@ import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, 
 import type { PipetteSettings } from './pipette-settings'
 import type {
   TypingActivityCell,
+  TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
   TypingDailySummary,
   TypingHeatmapByCell,
@@ -153,7 +154,7 @@ export interface VialAPI {
   typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
   typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
   typingAnalyticsListItemsLocal(uid: string): Promise<TypingDailySummary[]>
-  typingAnalyticsListRemoteHashes(uid: string): Promise<string[]>
+  typingAnalyticsListDeviceInfos(uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null>
   typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
   typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>

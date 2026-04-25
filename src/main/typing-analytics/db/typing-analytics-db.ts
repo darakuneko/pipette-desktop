@@ -1092,11 +1092,16 @@ export class TypingAnalyticsDB {
     `)
 
     // Remote devices (machine_hash != @ownHash) that currently hold at
-    // least one live minute-stats row for this keyboard. Powers the
-    // Sync > Typing > Device tree: each returned hash gets its own
-    // subnode. Sorted for deterministic UI ordering.
+    // least one live minute-stats row for this keyboard. The OS info
+    // travels alongside the hash so the Analyze > Device filter can
+    // render a "{platform} - {release} ({hash})" label without an
+    // extra round-trip per entry. DISTINCT machine_hash guarantees
+    // one row per device even if a single hash appears with several
+    // (kb_uid, kb_vendor_id, ...) tuples on the same machine.
     this.selectRemoteHashesForUidStmt = this.db.prepare(`
-      SELECT DISTINCT s.machine_hash AS machineHash
+      SELECT DISTINCT s.machine_hash AS machineHash,
+                      s.os_platform AS osPlatform,
+                      s.os_release AS osRelease
         FROM typing_scopes s
        WHERE s.keyboard_uid = @uid
          AND s.machine_hash != @ownHash
@@ -1629,12 +1634,18 @@ export class TypingAnalyticsDB {
     }
   }
 
-  /** machine_hash values for remote devices (non-@ownHash) that hold
+  /** Per-remote device info (machine_hash + OS) for devices that hold
    * at least one live minute-stats row for this keyboard. Used by the
-   * Sync > Typing tree to decide how many device subnodes to render. */
-  listRemoteHashesForUid(uid: string, ownHash: string): string[] {
-    const rows = this.selectRemoteHashesForUidStmt.all({ uid, ownHash }) as Array<{ machineHash: string }>
-    return rows.map((r) => r.machineHash)
+   * Analyze > Device filter to label entries with their OS. */
+  listRemoteDeviceInfosForUid(
+    uid: string,
+    ownHash: string,
+  ): Array<{ machineHash: string; osPlatform: string; osRelease: string }> {
+    return this.selectRemoteHashesForUidStmt.all({ uid, ownHash }) as Array<{
+      machineHash: string
+      osPlatform: string
+      osRelease: string
+    }>
   }
 
   /** Tombstone every live row for a uid whose timestamp falls inside

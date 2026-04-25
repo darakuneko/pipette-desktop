@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type {
+  TypingAnalyticsDeviceInfo,
   TypingKeyboardSummary,
   TypingKeymapSnapshot,
   TypingKeymapSnapshotSummary,
@@ -163,12 +164,16 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // resolves; `error` lets the loading-phase overlay release after a
   // transient IPC failure instead of stalling on "preparing" forever.
   // The two are distinct because the fallback must not fire on error.
-  const [remoteHashes, setRemoteHashes] = useState<{
-    list: string[]
+  // `own` carries this machine's OS info so the Device filter can
+  // label the local entry without a separate IPC.
+  const [deviceInfos, setDeviceInfos] = useState<{
+    own: TypingAnalyticsDeviceInfo | null
+    remotes: readonly TypingAnalyticsDeviceInfo[]
     loaded: boolean
     error: boolean
   }>({
-    list: [],
+    own: null,
+    remotes: [],
     loaded: false,
     error: false,
   })
@@ -281,24 +286,33 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     return () => { cancelled = true }
   }, [selectedUid])
 
-  // Remote machine hashes (excluding own) power the Device select's
-  // per-hash options. Mark `loaded` after the fetch resolves so the
-  // fallback below doesn't race the first paint and wipe a valid
-  // persisted hash selection.
+  // Per-keyboard device infos (own + remotes) power the Device
+  // select's labelled options. Mark `loaded` after the fetch resolves
+  // so the fallback below doesn't race the first paint and wipe a
+  // valid persisted hash selection.
   useEffect(() => {
     if (!selectedUid) {
-      setRemoteHashes({ list: [], loaded: false, error: false })
+      setDeviceInfos({ own: null, remotes: [], loaded: false, error: false })
       return
     }
     let cancelled = false
-    setRemoteHashes({ list: [], loaded: false, error: false })
+    setDeviceInfos({ own: null, remotes: [], loaded: false, error: false })
     void window.vialAPI
-      .typingAnalyticsListRemoteHashes(selectedUid)
-      .then((list) => { if (!cancelled) setRemoteHashes({ list, loaded: true, error: false }) })
+      .typingAnalyticsListDeviceInfos(selectedUid)
+      .then((bundle) => {
+        if (cancelled) return
+        if (bundle === null) {
+          setDeviceInfos({ own: null, remotes: [], loaded: true, error: false })
+          return
+        }
+        setDeviceInfos({ own: bundle.own, remotes: bundle.remotes, loaded: true, error: false })
+      })
       // `loaded: false` on error keeps the "missing from list" fallback
       // from wiping a valid persisted hash selection; `error: true`
       // lets the overlay release instead of stalling on preparing.
-      .catch(() => { if (!cancelled) setRemoteHashes({ list: [], loaded: false, error: true }) })
+      .catch(() => {
+        if (!cancelled) setDeviceInfos({ own: null, remotes: [], loaded: false, error: true })
+      })
     return () => { cancelled = true }
   }, [selectedUid])
 
@@ -308,14 +322,15 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   // re-normalizes, so falling back to `['own']` happens automatically
   // when every entry was stale.
   useEffect(() => {
-    if (!remoteHashes.loaded) return
+    if (!deviceInfos.loaded) return
+    const remoteHashSet = new Set(deviceInfos.remotes.map((d) => d.machineHash))
     const filtered = deviceScopes.filter((scope) => {
       if (!isHashScope(scope)) return true
-      return remoteHashes.list.includes(scope.machineHash)
+      return remoteHashSet.has(scope.machineHash)
     })
     if (filtered.length === deviceScopes.length) return
     setDeviceScopes(filtered)
-  }, [remoteHashes, deviceScopes, setDeviceScopes])
+  }, [deviceInfos, deviceScopes, setDeviceScopes])
 
   // Snapshots are only ever saved for the own machine hash (see
   // service-side comment). Suppress only when every selected scope is
@@ -372,7 +387,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     snapshotLoading,
     summariesLoading,
     fingersLoading,
-    remoteHashesLoading: !!selectedUid && !remoteHashes.loaded && !remoteHashes.error,
+    remoteHashesLoading: !!selectedUid && !deviceInfos.loaded && !deviceInfos.error,
   })
 
   // Auto-close the finger-assignment modal if the user flips to a
@@ -542,7 +557,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   <span>{t('analyze.filters.device')}</span>
                   <DeviceMultiSelect
                     value={deviceScopes}
-                    remoteHashes={remoteHashes.list}
+                    ownDevice={deviceInfos.own}
+                    remoteDevices={deviceInfos.remotes}
                     onChange={setDeviceScopes}
                     ariaLabel={t('analyze.filters.device')}
                   />

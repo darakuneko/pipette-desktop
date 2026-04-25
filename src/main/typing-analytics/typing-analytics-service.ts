@@ -5,9 +5,12 @@
 
 import { app } from 'electron'
 import { unlink } from 'node:fs/promises'
+import { platform, release } from 'node:os'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
 import type {
+  TypingAnalyticsDeviceInfo,
+  TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
   TypingAnalyticsFingerprint,
   TypingAnalyticsKeyboard,
@@ -225,10 +228,10 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
-    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES,
-    async (_event, uid: unknown): Promise<string[]> => {
-      if (typeof uid !== 'string' || uid.length === 0) return []
-      return listTypingRemoteHashesForUid(uid)
+    IpcChannels.TYPING_ANALYTICS_LIST_DEVICE_INFOS,
+    async (_event, uid: unknown): Promise<TypingAnalyticsDeviceInfoBundle | null> => {
+      if (typeof uid !== 'string' || uid.length === 0) return null
+      return listTypingDeviceInfosForUid(uid)
     },
   )
 
@@ -780,12 +783,21 @@ export function listTypingDailySummariesForHash(
   return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash)
 }
 
-/** Remote `machineHash` values with live data for this keyboard —
- * used to populate the Sync > Typing > Device subnodes. Own hash is
- * resolved here so callers don't need to fetch it separately. */
-export async function listTypingRemoteHashesForUid(uid: string): Promise<string[]> {
+/** Per-keyboard device infos for the Analyze > Device filter: own
+ * machine + every remote machine that has live data. The own entry
+ * is built from the local OS module so the filter can label it even
+ * before the first event has been persisted to typing_scopes. */
+export async function listTypingDeviceInfosForUid(
+  uid: string,
+): Promise<TypingAnalyticsDeviceInfoBundle> {
   const ownHash = await getMachineHash()
-  return getTypingAnalyticsDB().listRemoteHashesForUid(uid, ownHash)
+  const remotes = getTypingAnalyticsDB().listRemoteDeviceInfosForUid(uid, ownHash)
+  const own: TypingAnalyticsDeviceInfo = {
+    machineHash: ownHash,
+    osPlatform: platform(),
+    osRelease: release(),
+  }
+  return { own, remotes }
 }
 
 /** Heatmap intensity for the typing-view overlay: summed matrix counts

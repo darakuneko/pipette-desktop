@@ -24,6 +24,25 @@ export interface TypingAnalyticsFingerprint {
   }
 }
 
+/** Compact per-device record used to label scopes in the Analyze
+ * Device filter. Carries the bits needed to render a human-readable
+ * "{platform} - {release} ({hash})" entry without leaking the full
+ * fingerprint structure to the renderer. */
+export interface TypingAnalyticsDeviceInfo {
+  machineHash: string
+  osPlatform: string
+  osRelease: string
+}
+
+/** Bundle returned by `typingAnalyticsListDeviceInfos`. `own` is built
+ * from the local OS module + machineHash so the Device filter can
+ * label the local entry even before the first event has been
+ * persisted to typing_scopes. */
+export interface TypingAnalyticsDeviceInfoBundle {
+  own: TypingAnalyticsDeviceInfo
+  remotes: readonly TypingAnalyticsDeviceInfo[]
+}
+
 /** Keyboard identification carried on each event so the main process can
  * resolve the scope without tracking the active device separately. */
 export interface TypingAnalyticsKeyboard {

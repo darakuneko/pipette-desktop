@@ -76,7 +76,10 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListKeyboards: () => Promise.resolve([] as TypingKeyboardSummary[]),
     typingAnalyticsGetKeymapSnapshotForRange: () => Promise.resolve(null as TypingKeymapSnapshot | null),
     typingAnalyticsListKeymapSnapshots: () => Promise.resolve([]),
-    typingAnalyticsListRemoteHashes: () => Promise.resolve([] as string[]),
+    typingAnalyticsListDeviceInfos: () => Promise.resolve({
+      own: { machineHash: 'ownhash00000000', osPlatform: 'linux', osRelease: '6.8' },
+      remotes: [],
+    }),
     // Ergonomics/Heatmap charts call into the matrix-heatmap endpoint
     // when rendered for real (not all tests mock them out), so stub it
     // with an empty payload to avoid `undefined is not a function`.
@@ -268,7 +271,7 @@ describe('TypingAnalyticsView', () => {
     syncSpy.mockRestore()
   })
 
-  it('keeps a persisted hash scope when typingAnalyticsListRemoteHashes rejects', async () => {
+  it('keeps a persisted hash scope when typingAnalyticsListDeviceInfos rejects', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const getSpy = vi.spyOn(window.vialAPI, 'pipetteSettingsGet').mockResolvedValue({
       _rev: 1,
@@ -282,7 +285,7 @@ describe('TypingAnalyticsView', () => {
       },
     })
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
       .mockRejectedValue(new Error('drive down'))
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
@@ -297,10 +300,10 @@ describe('TypingAnalyticsView', () => {
     getSpy.mockRestore()
   })
 
-  it('releases the overlay when typingAnalyticsListRemoteHashes rejects', async () => {
+  it('releases the overlay when typingAnalyticsListDeviceInfos rejects', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
       .mockRejectedValue(new Error('drive down'))
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
@@ -338,8 +341,14 @@ describe('TypingAnalyticsView', () => {
   it('renders an option per remote hash in the Device dropdown', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
-      .mockResolvedValue(['hashone12345678901234', 'hashtwo12345678901234'])
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
+      .mockResolvedValue({
+        own: { machineHash: 'ownhash00000000', osPlatform: 'linux', osRelease: '6.8' },
+        remotes: [
+          { machineHash: 'hashone12345678901234', osPlatform: 'darwin', osRelease: '23.6' },
+          { machineHash: 'hashtwo12345678901234', osPlatform: 'win32', osRelease: '10.0' },
+        ],
+      })
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
@@ -361,8 +370,13 @@ describe('TypingAnalyticsView', () => {
   it('propagates hash scope selection into chart props', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
-      .mockResolvedValue(['hashone12345678901234'])
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
+      .mockResolvedValue({
+        own: { machineHash: 'ownhash00000000', osPlatform: 'linux', osRelease: '6.8' },
+        remotes: [
+          { machineHash: 'hashone12345678901234', osPlatform: 'darwin', osRelease: '23.6' },
+        ],
+      })
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
@@ -387,8 +401,13 @@ describe('TypingAnalyticsView', () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
-      .mockResolvedValue(['remote12345678901234'])
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
+      .mockResolvedValue({
+        own: { machineHash: 'ownhash00000000', osPlatform: 'linux', osRelease: '6.8' },
+        remotes: [
+          { machineHash: 'remote12345678901234', osPlatform: 'darwin', osRelease: '23.6' },
+        ],
+      })
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
@@ -420,8 +439,13 @@ describe('TypingAnalyticsView', () => {
       },
     })
     const hashSpy = vi
-      .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
-      .mockResolvedValue(['otherhash456'])
+      .spyOn(window.vialAPI, 'typingAnalyticsListDeviceInfos')
+      .mockResolvedValue({
+        own: { machineHash: 'ownhash00000000', osPlatform: 'linux', osRelease: '6.8' },
+        remotes: [
+          { machineHash: 'otherhash456', osPlatform: 'darwin', osRelease: '23.6' },
+        ],
+      })
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))

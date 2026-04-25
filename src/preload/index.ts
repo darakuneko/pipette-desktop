@@ -17,6 +17,7 @@ import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, 
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type {
   TypingActivityCell,
+  TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
   TypingDailySummary,
   TypingHeatmapByCell,
@@ -228,8 +229,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
   typingAnalyticsListItemsLocal: (uid: string): Promise<TypingDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid),
-  typingAnalyticsListRemoteHashes: (uid: string): Promise<string[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_HASHES, uid),
+  typingAnalyticsListDeviceInfos: (uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_DEVICE_INFOS, uid),
   typingAnalyticsListItemsForHash: (uid: string, machineHash: string): Promise<TypingDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash),
   typingAnalyticsListIntervalItems: (uid: string): Promise<TypingIntervalDailySummary[]> =>
