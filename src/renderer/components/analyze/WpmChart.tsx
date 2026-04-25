@@ -299,10 +299,9 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
             bucketStartMs: b.bucketStartMs,
             wpm: Math.round(computeWpm(b.keystrokes, b.activeMs) * 10) / 10,
             // `null` keeps recharts from drawing a point on either
-            // series; the Bksp lines use `connectNulls` to bridge
-            // gaps. Secondary WPM line keeps gaps visible (no
-            // `connectNulls`) so the user can tell when device B was
-            // idle while device A was typing.
+            // series; both WPM lines and both Bksp lines turn on
+            // `connectNulls` so sparse-history scopes still read as a
+            // continuous trend line instead of a scatter of dots.
             wpmB: wpmB === undefined ? null : wpmB,
             bksPercent: bks === undefined || bks === null
               ? null
@@ -563,7 +562,12 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
-                connectNulls={false}
+                // Bridge gaps the same way the primary series does —
+                // sparse-data scopes (a remote device with shorter
+                // typing history, a freshly seeded fake) would
+                // otherwise reduce the comparison line to a handful
+                // of unconnected dots.
+                connectNulls
                 isAnimationActive={false}
                 hide={hidden.wpmB}
               />
