@@ -673,7 +673,9 @@
       },
       "errorProxy": {
         "legend": "Bksp %",
-        "description": "Bksp % — 取得した打鍵のうち Backspace の割合\nキー入力ストリームから集計、タイピングテスト以外の通常打鍵も含む"
+        "description": "Bksp % — 取得した打鍵のうち Backspace の割合\nキー入力ストリームから集計、タイピングテスト以外の通常打鍵も含む",
+        "secondaryLegend": "比較 Bksp %",
+        "secondaryDescription": "デバイスフィルタで選んだ 2 台目の Bksp %。比較 WPM と同色なので、色がデバイスを表します。"
       },
       "timeOfDay": {
         "tooltipLabel": "時間帯",

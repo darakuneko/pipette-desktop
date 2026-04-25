@@ -68,7 +68,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
   return `${formatHourLabel(hour)} (${formatWpm(wpm)} WPM)`
 }
 
-type WpmLineKey = 'wpm' | 'wpmB' | 'bksPercent'
+type WpmLineKey = 'wpm' | 'wpmB' | 'bksPercent' | 'bksPercentB'
 
 export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minActiveMs }: Props) {
   const { t } = useTranslation()
@@ -76,20 +76,26 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [secondaryRows, setSecondaryRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
+  const [secondaryBksRows, setSecondaryBksRows] = useState<TypingBksMinuteRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
   const [loading, setLoading] = useState(true)
   // Legend toggle state — same pattern the Interval chart uses so the
   // user can dim a line by clicking its legend entry.
-  const [hidden, setHidden] = useState<Record<WpmLineKey, boolean>>({ wpm: false, wpmB: false, bksPercent: false })
+  const [hidden, setHidden] = useState<Record<WpmLineKey, boolean>>({
+    wpm: false, wpmB: false, bksPercent: false, bksPercentB: false,
+  })
   const toggleSeries = (key: string): void => {
-    if (key === 'wpm' || key === 'wpmB' || key === 'bksPercent') {
+    if (key === 'wpm' || key === 'wpmB' || key === 'bksPercent' || key === 'bksPercentB') {
       setHidden((prev) => ({ ...prev, [key]: !prev[key] }))
     }
   }
 
   // First scope drives the chart series, the peak / Bksp summary, and
   // the colour of the cool end of the ramp; the second scope rides
-  // alongside as the warm end when present.
+  // alongside as the warm end when present. WPM lines are solid and
+  // Bksp% lines are dashed in the *same per-device colour* so the user
+  // can read a colour as a device identity instead of remembering
+  // "blue means WPM and red means Bksp".
   const deviceScope = primaryDeviceScope(deviceScopes)
   const secondaryScope: DeviceScope | undefined = deviceScopes.length > 1 ? deviceScopes[1] : undefined
   const hasSecondary = secondaryScope !== undefined
@@ -99,6 +105,11 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
   // accent so the existing single-series view doesn't suddenly recolour.
   const primarySeriesColor = hasSecondary ? chartSeriesColor(0, 2, effectiveTheme) : 'var(--color-accent)'
   const secondarySeriesColor = chartSeriesColor(1, 2, effectiveTheme)
+  // Bksp% inherits each device's series colour during a comparison so
+  // colour reads as device identity. Single-device mode keeps the
+  // legacy red dashed line so the screenshot record stays valid.
+  const primaryBksColor = hasSecondary ? primarySeriesColor : ERROR_PROXY_COLOR
+  const secondaryBksColor = secondarySeriesColor
   // Encode each scope into a stable primitive so effect dependencies
   // don't retrigger on every render when the parent rebuilds the
   // discriminated union object.
@@ -177,6 +188,29 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
     return () => { cancelled = true }
   }, [uid, scopeKey, range, errorProxyActive])
 
+  // Secondary Bksp% rides alongside the primary in `timeSeries` mode
+  // so users can compare error rates across devices. Cleared up front
+  // so a stale dataset can't outlive a scope change.
+  useEffect(() => {
+    setSecondaryBksRows([])
+    if (!errorProxyActive || !secondaryScope) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = isHashScope(secondaryScope)
+          ? await window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(secondaryScope)
+            ? await window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListBksMinute(uid, range.fromMs, range.toMs)
+        if (!cancelled) setSecondaryBksRows(data)
+      } catch {
+        if (!cancelled) setSecondaryBksRows([])
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [uid, secondaryScopeKey, range, errorProxyActive, secondaryScope])
+
   // Peak / lowest WPM come from a narrow aggregation IPC rather than
   // the timeseries rows so they reflect the entire range (including
   // minutes the bucket granularity may collapse away). The summary
@@ -239,28 +273,46 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
     for (const b of bksRate.buckets) map.set(b.bucketStartMs, b.bksPercent)
     return map
   }, [bksRate])
+  // Secondary Bksp% bucketing reuses the same range / bucketMs so the
+  // two dashed lines line up on identical x-axis ticks.
+  const secondaryBksByBucket = useMemo(() => {
+    const map = new Map<number, number | null>()
+    if (!errorProxyActive || !hasSecondary) return map
+    const rate = buildBksRateBuckets({
+      bksRows: secondaryBksRows,
+      minuteRows: secondaryRows,
+      range,
+      bucketMs,
+    })
+    for (const b of rate.buckets) map.set(b.bucketStartMs, b.bksPercent)
+    return map
+  }, [errorProxyActive, hasSecondary, secondaryBksRows, secondaryRows, range, bucketMs])
 
   const chartData = useMemo(
     () => buckets === null
       ? []
       : buckets.map((b) => {
           const bks = bksByBucket.get(b.bucketStartMs)
+          const bksB = secondaryBksByBucket.get(b.bucketStartMs)
           const wpmB = secondaryWpmByBucket.get(b.bucketStartMs)
           return {
             bucketStartMs: b.bucketStartMs,
             wpm: Math.round(computeWpm(b.keystrokes, b.activeMs) * 10) / 10,
             // `null` keeps recharts from drawing a point on either
-            // series; the Bksp line uses `connectNulls` to bridge
-            // gaps. Secondary line keeps gaps visible (no
+            // series; the Bksp lines use `connectNulls` to bridge
+            // gaps. Secondary WPM line keeps gaps visible (no
             // `connectNulls`) so the user can tell when device B was
             // idle while device A was typing.
             wpmB: wpmB === undefined ? null : wpmB,
             bksPercent: bks === undefined || bks === null
               ? null
               : Math.round(bks * 10) / 10,
+            bksPercentB: bksB === undefined || bksB === null
+              ? null
+              : Math.round(bksB * 10) / 10,
           }
         }),
-    [buckets, bksByBucket, secondaryWpmByBucket],
+    [buckets, bksByBucket, secondaryBksByBucket, secondaryWpmByBucket],
   )
 
   const timeSeriesSummary = useMemo<WpmTimeSeriesSummary | null>(
@@ -454,6 +506,11 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
                   const n = typeof value === 'number' ? value : Number(value)
                   return [`${n.toFixed(1)}%`, t('analyze.wpm.errorProxy.legend')]
                 }
+                if (item?.dataKey === 'bksPercentB') {
+                  if (value === null || value === undefined) return ['—', t('analyze.wpm.errorProxy.secondaryLegend')]
+                  const n = typeof value === 'number' ? value : Number(value)
+                  return [`${n.toFixed(1)}%`, t('analyze.wpm.errorProxy.secondaryLegend')]
+                }
                 if (item?.dataKey === 'wpmB') {
                   if (value === null || value === undefined) return ['—', t('analyze.wpm.secondaryLegend')]
                   return [value as string | number, t('analyze.wpm.secondaryLegend')]
@@ -466,18 +523,15 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
               onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
               formatter={(value, entry) => {
                 const key = String(entry.dataKey ?? '') as WpmLineKey
+                const description = key === 'bksPercent'
+                  ? t('analyze.wpm.errorProxy.description')
+                  : key === 'bksPercentB'
+                    ? t('analyze.wpm.errorProxy.secondaryDescription')
+                    : key === 'wpmB'
+                      ? t('analyze.wpm.secondaryDescription')
+                      : t('analyze.wpm.description')
                 return (
-                  <UITooltip
-                    content={
-                      key === 'bksPercent'
-                        ? t('analyze.wpm.errorProxy.description')
-                        : key === 'wpmB'
-                          ? t('analyze.wpm.secondaryDescription')
-                          : t('analyze.wpm.description')
-                    }
-                    wrapperAs="span"
-                    bubbleAs="span"
-                  >
+                  <UITooltip content={description} wrapperAs="span" bubbleAs="span">
                     <span
                       style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
                     >
@@ -507,7 +561,6 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
                 name={t('analyze.wpm.secondaryLegend')}
                 stroke={secondarySeriesColor}
                 strokeWidth={2}
-                strokeDasharray="5 3"
                 dot={{ r: 3 }}
                 activeDot={{ r: 5 }}
                 connectNulls={false}
@@ -521,7 +574,7 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
                 type="monotone"
                 dataKey="bksPercent"
                 name={t('analyze.wpm.errorProxy.legend')}
-                stroke={ERROR_PROXY_COLOR}
+                stroke={primaryBksColor}
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 dot={false}
@@ -529,6 +582,22 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
                 activeDot={{ r: 4 }}
                 isAnimationActive={false}
                 hide={hidden.bksPercent}
+              />
+            )}
+            {errorProxyActive && hasSecondary && (
+              <Line
+                yAxisId="bks"
+                type="monotone"
+                dataKey="bksPercentB"
+                name={t('analyze.wpm.errorProxy.secondaryLegend')}
+                stroke={secondaryBksColor}
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                dot={false}
+                connectNulls
+                activeDot={{ r: 4 }}
+                isAnimationActive={false}
+                hide={hidden.bksPercentB}
               />
             )}
           </LineChart>

@@ -674,7 +674,9 @@
       },
       "errorProxy": {
         "legend": "Bksp %",
-        "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests."
+        "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests.",
+        "secondaryLegend": "Compare Bksp %",
+        "secondaryDescription": "Bksp % from the second device picked in the Device filter — same colour as the secondary WPM line so a colour reads as a device identity."
       },
       "timeOfDay": {
         "tooltipLabel": "Hour",
