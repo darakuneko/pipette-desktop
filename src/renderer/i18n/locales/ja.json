@@ -86,7 +86,6 @@
       "redo": "やり直し",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-
       "copySelected": "選択キーを貼り付け ({{count}})",
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
@@ -149,7 +148,7 @@
       "deleteKeycode": "キーコード削除",
       "editAction": "アクション編集",
       "asciiOnly": "ASCII文字（英数字・記号）のみ対応しています",
-      "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください。",
+      "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください",
       "unlockWarning": "パスワードや機密情報をマクロに保存しないでください。再生・共有される可能性があります。",
       "invalidMacroEntry": "インデックス{{index}}のマクロが無効です"
     },
@@ -165,7 +164,7 @@
       "saturation": "彩度",
       "value": "明度",
       "hex": "HEX",
-      "noLighting": "このキーボードはライティング制御をサポートしていません。",
+      "noLighting": "このキーボードはライティング制御をサポートしていません",
       "colorPicker": {
         "label": "カラーピッカー",
         "palette": "パレット",
@@ -334,7 +333,7 @@
   "error": {
     "loadFailed": "レイアウトファイルの読み込みに失敗しました",
     "saveFailed": "レイアウトファイルの保存に失敗しました",
-    "exampleUid": "固有のUIDを設定してください。",
+    "exampleUid": "固有のUIDを設定してください",
     "dummyMode": "ダミーモード",
     "pipetteFileMode": "ファイルモード",
     "unsavedChanges": "未保存の変更があります",
@@ -367,7 +366,7 @@
     "combo": "Combo",
     "keyOverride": "Key Override",
     "altRepeatKey": "Alt Repeat Key",
-    "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません。",
+    "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません",
     "macroMoreActions": "残り {{count}} 行",
     "user": "User",
     "midi": "MIDI",
@@ -435,8 +434,8 @@
   },
   "unlock": {
     "title": "キーボードのロック解除",
-    "instructions": "ハイライトされたキーを押し続けてロックを解除してください。",
-    "hint": "キャンセルするにはキーボードを抜き差ししてください。",
+    "instructions": "ハイライトされたキーを押し続けてロックを解除してください",
+    "hint": "キャンセルするにはキーボードを抜き差ししてください",
     "progress": "進捗: {{current}} / {{total}}",
     "cancel": "キャンセル"
   },
@@ -512,7 +511,7 @@
     "connected": "接続済み",
     "signOut": "接続解除",
     "confirmDisconnect": "接続解除しますか？",
-    "disconnectHubWarning": "Pipette Hub も切断されます。",
+    "disconnectHubWarning": "Pipette Hub も切断されます",
     "signIn": "接続",
     "authenticating": "認証を待機中...",
     "authFailed": "認証に失敗しました。もう一度お試しください。",
@@ -523,10 +522,10 @@
     "passwordTooWeak": "パスワードが弱すぎます",
     "passwordSetFailed": "パスワードの設定に失敗しました",
     "changePassword": "パスワード変更",
-    "changePasswordInfo": "すべての同期データが新しいパスワードで再暗号化されます。",
+    "changePasswordInfo": "すべての同期データが新しいパスワードで再暗号化されます",
     "changingPassword": "パスワードを変更中...",
     "settingPassword": "パスワードを設定中...",
-    "samePassword": "現在と同じパスワードには変更できません。",
+    "samePassword": "現在と同じパスワードには変更できません",
     "changePasswordUndecryptable": "復号できないファイルがあります。先に復号できないファイルをスキャンして削除してください。",
     "autoSync": "自動同期",
     "enable": "有効",
@@ -553,20 +552,20 @@
     "statusError": "エラー",
     "noSyncYet": "未同期",
     "readiness": {
-      "unauthenticated": "Google にサインインして同期を開始してください。",
-      "noPasswordFile": "同期パスワードを設定してください。",
-      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)。",
-      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません。",
-      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています。"
+      "unauthenticated": "Google にサインインして同期を開始してください",
+      "noPasswordFile": "同期パスワードを設定してください",
+      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)",
+      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません",
+      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています"
     },
     "changePasswordError": {
-      "unauthenticated": "パスワードを変更する前に Google にサインインしてください。",
+      "unauthenticated": "パスワードを変更する前に Google にサインインしてください",
       "noPasswordFile": "保存済みパスワードがありません。先にパスワードを設定してください。",
-      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)。",
-      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません。",
-      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました。"
+      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)",
+      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません",
+      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました"
     },
-    "changePasswordInProgress": "同期実行中のためパスワードを変更できません。",
+    "changePasswordInProgress": "同期実行中のためパスワードを変更できません",
     "troubleshooting": "トラブルシューティング",
     "localData": "ローカルデータ",
     "import": "インポート",
@@ -578,7 +577,7 @@
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
     "undecryptable": "復号できないファイル",
     "scanRemote": "スキャン",
-    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします。",
+    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします",
     "scanUndecryptable": "スキャン",
     "scanning": "スキャン中...",
     "downloading": "ダウンロード中...",
@@ -614,7 +613,7 @@
     "basicViewTypeJis": "JIS",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
-    "autoLockDescription": "無操作時に自動ロック。",
+    "autoLockDescription": "無操作時に自動ロック",
     "autoLockMinutes": "{{minutes}}分",
     "maxKeymapHistory": "キーマップ履歴の上限",
     "language": "言語",
@@ -628,12 +627,12 @@
     }
   },
   "analyze": {
-    "placeholder": "分析チャートを準備中です。",
+    "placeholder": "分析チャートを準備中です",
     "back": "戻る",
     "keyboardList": "キーボード",
-    "noKeyboards": "まだ打鍵データがありません。",
-    "noData": "選択した期間にデータがありません。",
-    "selectKeyboard": "一覧からキーボードを選択してください。",
+    "noKeyboards": "まだ打鍵データがありません",
+    "noData": "選択した期間にデータがありません",
+    "selectKeyboard": "一覧からキーボードを選択してください",
     "tablistLabel": "分析種別",
     "loading": {
       "keyboards": "キーボード一覧読み込み中…",
@@ -833,7 +832,7 @@
       "layerOption": "レイヤー {{i}}",
       "layerOptionMulti": "レイヤー {{layers}}",
       "bondToggle": "レイヤー {{i}} を別グループと結合",
-      "noLayout": "このスナップショットにレイアウトデータがありません。",
+      "noLayout": "このスナップショットにレイアウトデータがありません",
       "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
       "ranking": {
         "frequentUsedN": "上位",
@@ -854,7 +853,7 @@
           "modifier": "修飾",
           "layerOp": "レイヤー操作"
         },
-        "emptyFrequentUsed": "この期間に押下されたキーがありません。"
+        "emptyFrequentUsed": "この期間に押下されたキーがありません"
       }
     },
     "ergonomics": {
@@ -862,8 +861,8 @@
       "handBalance": "左右バランス",
       "rowUsage": "段別打鍵量",
       "noSnapshot": "この期間のキーマップスナップショットがありません。レコーディングを開始して取得してください。",
-      "noLayout": "このスナップショットにはレイアウト情報がありません。",
-      "noData": "この期間の打鍵データがありません。",
+      "noLayout": "このスナップショットにはレイアウト情報がありません",
+      "noData": "この期間の打鍵データがありません",
       "finger": {
         "left-pinky": "左小指",
         "left-ring": "左薬指",
@@ -893,18 +892,18 @@
       "title": "レイヤー別打鍵数",
       "activationsTitle": "レイヤー起動回数",
       "layerLabel": "レイヤー {{layer}}",
-      "noData": "この期間にレイヤー別の打鍵記録がありません。",
-      "noActivations": "この期間にレイヤー操作キーの押下記録がありません。",
+      "noData": "この期間にレイヤー別の打鍵記録がありません",
+      "noActivations": "この期間にレイヤー操作キーの押下記録がありません",
       "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。"
     },
     "fingerAssignment": {
       "button": "指割り当て",
       "title": "指割り当て設定",
-      "subtitle": "キーをクリックして推定値を上書きできます。",
+      "subtitle": "キーをクリックして推定値を上書きできます",
       "save": "保存",
       "reset": "推定に戻す",
       "resetAll": "全てリセット",
-      "noSnapshot": "この期間のキーマップスナップショットがありません。",
+      "noSnapshot": "この期間のキーマップスナップショットがありません",
       "popoverLabel": "指の選択",
       "leftHand": "左手",
       "rightHand": "右手",
@@ -925,7 +924,7 @@
       "peakKeystrokesPerMin": "1 分最大打鍵",
       "peakKeystrokesPerDay": "1 日最大打鍵",
       "longestSession": "最長セッション (分)",
-      "longestSessionDesc": "5 分以上の無入力で区切られた、最長の連続タイピング",
+      "longestSessionDesc": "5 分以上の無入力で区切られた最長の連続タイピング",
       "unit": {
         "kpm": "回/分",
         "kpd": "回/日",
@@ -1053,7 +1052,7 @@
     "deleteKeyboardConfirm": "このキーボードの全データを削除しますか？",
     "importExportDesc": "ローカルにある全てのデータをインポート/エクスポート（キーボード、お気に入り、設定）",
     "deleteAll": "全てのデータを削除",
-    "deleteAllConfirm": "同期データを含む全てのデータが削除されます。",
+    "deleteAllConfirm": "同期データを含む全てのデータが削除されます",
     "syncNoOrphans": "同期データは全てローカルにあります",
     "resetAppSettings": "アプリケーション設定をリセット",
     "typing": {
@@ -1075,8 +1074,8 @@
       "importStatus": {
         "importing": "取り込み中…",
         "exporting": "書き出し中…",
-        "imported": "{{count}} 日分を取り込みました。",
-        "exported": "{{count}} 日分を書き出しました。",
+        "imported": "{{count}} 日分を取り込みました",
+        "exported": "{{count}} 日分を書き出しました",
         "reason": {
           "invalid-filename": "ファイル名が export 規則に一致しません",
           "live-day-locked": "このファイルは現在記録中のためロックされています — {{unlock}} に解除",
@@ -1127,7 +1126,7 @@
     "hub": "Hub",
     "hubPosts": "Hub 投稿",
     "noPosts": "投稿はまだありません",
-    "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください。",
+    "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください",
     "renameFailed": "名前変更に失敗しました",
     "deleteFailed": "削除に失敗しました",
     "hubSynced": "同期しました",
