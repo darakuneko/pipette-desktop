@@ -59,8 +59,9 @@ function parseHslLightness(fill: string): number | null {
  *
  * - Known fills come from `FILL_INVERT_TABLE` (light/dark pre-judged).
  * - HSL fills (heatmap ramp) use lightness thresholds chosen so the
- *   wide-hue palette in `heatmap-color.ts` gets a readable label across
- *   its whole range without false-flipping neutral zones.
+ *   wide-hue palette in `renderer/utils/chart-palette.ts` gets a
+ *   readable label across its whole range without false-flipping
+ *   neutral zones.
  * - Anything else falls through to `false` — the rule is "don't touch
  *   colours we haven't vetted".
  */

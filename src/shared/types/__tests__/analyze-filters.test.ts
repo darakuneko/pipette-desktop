@@ -6,10 +6,12 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  MAX_DEVICE_SCOPES,
   isAllScope,
   isHashScope,
   isOwnScope,
   isValidAnalyzeFilterSettings,
+  normalizeDeviceScopes,
   parseDeviceScope,
   scopeFromSelectValue,
   scopeToSelectValue,
@@ -93,5 +95,53 @@ describe('isValidAnalyzeFilterSettings', () => {
   it('rejects unknown deviceScope shapes', () => {
     expect(isValidAnalyzeFilterSettings({ deviceScope: 'bogus' })).toBe(false)
     expect(isValidAnalyzeFilterSettings({ deviceScope: { kind: 'hash', machineHash: '' } })).toBe(false)
+  })
+})
+
+describe('normalizeDeviceScopes', () => {
+  it("falls back to ['own'] for null / undefined / empty inputs", () => {
+    expect(normalizeDeviceScopes(null)).toEqual(['own'])
+    expect(normalizeDeviceScopes(undefined)).toEqual(['own'])
+    expect(normalizeDeviceScopes([])).toEqual(['own'])
+  })
+
+  it('passes a clean single-scope array through untouched', () => {
+    expect(normalizeDeviceScopes(['own'])).toEqual(['own'])
+    expect(normalizeDeviceScopes(['all'])).toEqual(['all'])
+    expect(normalizeDeviceScopes([{ kind: 'hash', machineHash: 'abc' }])).toEqual([
+      { kind: 'hash', machineHash: 'abc' },
+    ])
+  })
+
+  it("collapses to ['all'] when 'all' rides alongside other scopes", () => {
+    // 'all' is meant as an exclusive aggregate — anything else picked
+    // alongside it would mean "all + a strict subset of all", which is
+    // confusing in both UI and chart terms.
+    expect(normalizeDeviceScopes(['own', 'all'])).toEqual(['all'])
+    expect(normalizeDeviceScopes(['all', 'own'])).toEqual(['all'])
+    expect(
+      normalizeDeviceScopes(['all', { kind: 'hash', machineHash: 'abc' }]),
+    ).toEqual(['all'])
+  })
+
+  it('dedupes by select-value identity', () => {
+    expect(normalizeDeviceScopes(['own', 'own'])).toEqual(['own'])
+    expect(
+      normalizeDeviceScopes([
+        { kind: 'hash', machineHash: 'abc' },
+        { kind: 'hash', machineHash: 'abc' },
+      ]),
+    ).toEqual([{ kind: 'hash', machineHash: 'abc' }])
+  })
+
+  it('caps the array at MAX_DEVICE_SCOPES dropping the tail', () => {
+    expect(MAX_DEVICE_SCOPES).toBe(2)
+    expect(
+      normalizeDeviceScopes([
+        'own',
+        { kind: 'hash', machineHash: 'a' },
+        { kind: 'hash', machineHash: 'b' },
+      ]),
+    ).toEqual(['own', { kind: 'hash', machineHash: 'a' }])
   })
 })

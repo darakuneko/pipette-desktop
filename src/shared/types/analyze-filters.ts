@@ -68,6 +68,32 @@ export function scopeFromSelectValue(value: string): DeviceScope | null {
   return null
 }
 
+/** Hard cap on the multi-select Device filter. Two series fit cleanly
+ * on every chart; bumping this would require revisiting `chartSeriesColor`
+ * spacing and the `'primary only'` summary placement. */
+export const MAX_DEVICE_SCOPES = 2
+
+/** Coerce raw scope arrays into the canonical shape the Analyze panel
+ * relies on: at least one entry, deduped by select-value, `'all'` is
+ * exclusive (drops siblings when picked), and the result never exceeds
+ * `MAX_DEVICE_SCOPES`. UI / setter / validator all funnel through here
+ * so the three layers can't drift apart. */
+export function normalizeDeviceScopes(input: readonly DeviceScope[] | null | undefined): DeviceScope[] {
+  if (!Array.isArray(input) || input.length === 0) {
+    return ['own']
+  }
+  const seen = new Set<string>()
+  const unique: DeviceScope[] = []
+  for (const scope of input) {
+    const key = scopeToSelectValue(scope)
+    if (seen.has(key)) continue
+    seen.add(key)
+    unique.push(scope)
+  }
+  if (unique.some(isAllScope)) return ['all']
+  return unique.slice(0, MAX_DEVICE_SCOPES)
+}
+
 export const HEATMAP_NORMALIZATIONS = ['absolute', 'perHour', 'shareOfTotal'] as const
 export type HeatmapNormalization = typeof HEATMAP_NORMALIZATIONS[number]
 

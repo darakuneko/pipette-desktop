@@ -6,7 +6,7 @@ import { repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from './constants'
-import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-color'
+import { innerHeatmapFillForCell, outerHeatmapFillForCell } from './heatmap-fill'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 
