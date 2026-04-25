@@ -10,7 +10,7 @@
 //   layer-op keycodes to their target layer. Requires a snapshot;
 //   falls back to the "snapshot needed" state without one.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   Bar,
@@ -36,6 +36,7 @@ import {
   type LayerBar,
 } from './analyze-layer-usage'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
+import { FILTER_SELECT } from './analyze-filter-styles'
 
 interface AxisTickProps {
   x?: number
@@ -101,9 +102,14 @@ interface Props {
    * base=0) doesn't masquerade as a transition. Keystrokes mode
    * ignores this field and shows every layer. */
   baseLayer: number
+  /** When provided alongside `viewMode === 'activations'`, the chart
+   * title row renders an inline base-layer select so the control
+   * lives next to the section it controls instead of in the global
+   * filter bar. Omit on the keystrokes instance. */
+  onBaseLayerChange?: (baseLayer: number) => void
 }
 
-export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, baseLayer }: Props) {
+export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, baseLayer, onBaseLayerChange }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
   const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
@@ -184,47 +190,93 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
       ? t('analyze.layer.activationsTitle')
       : t('analyze.layer.title')
 
+  // Title row stays rendered for every state so the section heading
+  // (and the inline base-layer select for the activations chart) is
+  // always visible — the empty-state notice now nests under the title
+  // instead of replacing the section outright.
+  const inlineBaseLayerSelect =
+    viewMode === 'activations' &&
+    snapshot !== null &&
+    snapshot.layers > 1 &&
+    onBaseLayerChange !== undefined ? (
+      <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-normal text-content-muted">
+        <span>{t('analyze.filters.layerBaseLayer')}</span>
+        <select
+          className={FILTER_SELECT}
+          value={baseLayer}
+          onChange={(e) => onBaseLayerChange(Number(e.target.value))}
+          data-testid="analyze-filter-layer-base-layer"
+        >
+          {Array.from({ length: snapshot.layers }, (_, i) => (
+            <option key={i} value={i}>
+              {t('analyze.layer.layerLabel', { layer: i })}
+            </option>
+          ))}
+        </select>
+      </span>
+    ) : null
+  const titleRow = (
+    <h4 className="mb-1 flex items-center text-[13px] font-semibold text-content-secondary">
+      <span>{title}</span>
+      {inlineBaseLayerSelect}
+    </h4>
+  )
+  const sectionWrap = (body: ReactNode) => (
+    <div className="flex flex-col gap-2" data-testid="analyze-layer">
+      {titleRow}
+      {body}
+    </div>
+  )
+
   if (viewMode === 'activations' && snapshot === null) {
-    return (
+    return sectionWrap(
       <div
         className="py-4 text-center text-[13px] text-content-muted"
         data-testid="analyze-layer-no-snapshot"
       >
         {t('analyze.layer.requiresSnapshot')}
-      </div>
+      </div>,
     )
   }
   if (loading) {
-    return (
+    return sectionWrap(
       <div
         className="py-4 text-center text-[13px] text-content-muted"
         data-testid="analyze-layer-loading"
       >
         {t('common.loading')}
-      </div>
+      </div>,
     )
   }
   const totalValue = bars.reduce((acc, b) => acc + b.value, 0)
   if (bars.length === 0 || totalValue === 0) {
-    return (
+    return sectionWrap(
       <div
         className="py-4 text-center text-[13px] text-content-muted"
         data-testid="analyze-layer-empty"
       >
         {t(viewMode === 'activations' ? 'analyze.layer.noActivations' : 'analyze.layer.noData')}
-      </div>
+      </div>,
     )
   }
 
+  // Fixed per-bar height so the ResponsiveContainer parent has a
+  // stable size. With `flex-1 + min-h + overflow-y-auto` the chart
+  // wrapper would oscillate: the recharts measurement could trigger
+  // the outer scrollbar to appear, the scrollbar would shrink the
+  // wrapper width, the chart would re-measure, the scrollbar would
+  // disappear, and the cycle repeated.
+  const BAR_ROW_HEIGHT_PX = 44
+  const CHART_VPADDING_PX = 32
+  const chartHeightPx = Math.max(220, bars.length * BAR_ROW_HEIGHT_PX + CHART_VPADDING_PX)
+
   return (
     <div
-      className="flex h-full flex-col gap-2 overflow-y-auto pr-1"
+      className="flex flex-col gap-2"
       data-testid="analyze-layer"
     >
-      <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">
-        {title}
-      </h4>
-      <div className="flex-1 min-h-[220px]">
+      {titleRow}
+      <div style={{ height: chartHeightPx }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={bars}

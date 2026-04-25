@@ -19,11 +19,10 @@ import {
   ACTIVITY_METRICS,
   INTERVAL_UNITS,
   INTERVAL_VIEW_MODES,
-  LAYER_VIEW_MODES,
   WPM_VIEW_MODES,
   isHashScope,
 } from '../../../shared/types/analyze-filters'
-import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import type { SyncProgress } from '../../../shared/types/sync'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
@@ -718,42 +717,9 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   {t('analyze.fingerAssignment.button')}
                 </button>
               )}
-              {analysisTab === 'layer' && (
-                <>
-                  <label className={FILTER_LABEL}>
-                    <span>{t('analyze.filters.layerViewMode')}</span>
-                    <select
-                      className={FILTER_SELECT}
-                      value={layerFilter.viewMode}
-                      onChange={(e) => setLayer({ viewMode: e.target.value as LayerViewMode })}
-                      data-testid="analyze-filter-layer-view-mode"
-                    >
-                      {LAYER_VIEW_MODES.map((key) => (
-                        <option key={key} value={key}>
-                          {t(`analyze.filters.layerViewModeOption.${key}`)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {layerFilter.viewMode === 'activations' && effectiveSnapshot !== null && effectiveSnapshot.layers > 1 && (
-                    <label className={FILTER_LABEL}>
-                      <span>{t('analyze.filters.layerBaseLayer')}</span>
-                      <select
-                        className={FILTER_SELECT}
-                        value={layerFilter.baseLayer}
-                        onChange={(e) => setLayer({ baseLayer: Number(e.target.value) })}
-                        data-testid="analyze-filter-layer-base-layer"
-                      >
-                        {Array.from({ length: effectiveSnapshot.layers }, (_, i) => (
-                          <option key={i} value={i}>
-                            {t('analyze.layer.layerLabel', { layer: i })}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  )}
-                </>
-              )}
+              {/* Layer tab: filters live inside the chart sections —
+                * the base-layer select rides next to the activations
+                * heading instead of in this global filter row. */}
             </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
@@ -812,14 +778,35 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </div>
                 )
               ) : analysisTab === 'layer' ? (
-                <LayerUsageChart
-                  uid={selected.uid}
-                  range={range}
-                  deviceScopes={deviceScopes}
-                  snapshot={effectiveSnapshot}
-                  viewMode={layerFilter.viewMode}
-                  baseLayer={layerFilter.baseLayer}
-                />
+                // Two columns side-by-side, each scrolling independently.
+                // Layers can run up to ~32, so a single shared scroll
+                // would force the user to scroll past one chart to read
+                // the other. `min-h-0` lets the inner overflow take
+                // effect; `min-w-0` keeps the recharts measurement from
+                // pushing either column wider than its grid track.
+                <div className="grid h-full min-h-0 grid-cols-2 gap-4">
+                  <div className="min-w-0 overflow-y-auto pr-1">
+                    <LayerUsageChart
+                      uid={selected.uid}
+                      range={range}
+                      deviceScopes={deviceScopes}
+                      snapshot={effectiveSnapshot}
+                      viewMode="keystrokes"
+                      baseLayer={layerFilter.baseLayer}
+                    />
+                  </div>
+                  <div className="min-w-0 overflow-y-auto pr-1">
+                    <LayerUsageChart
+                      uid={selected.uid}
+                      range={range}
+                      deviceScopes={deviceScopes}
+                      snapshot={effectiveSnapshot}
+                      viewMode="activations"
+                      baseLayer={layerFilter.baseLayer}
+                      onBaseLayerChange={(baseLayer) => setLayer({ baseLayer })}
+                    />
+                  </div>
+                </div>
               ) : null}
             </div>
           </>
