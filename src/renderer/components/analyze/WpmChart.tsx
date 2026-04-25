@@ -24,7 +24,7 @@ import type {
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
 import { formatDateTime } from '../editors/store-modal-shared'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, RangeMs, WpmViewMode } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
@@ -44,7 +44,11 @@ import { Tooltip as UITooltip } from '../ui/Tooltip'
 interface Props {
   uid: string
   range: RangeMs
-  deviceScope: DeviceScope
+  /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
+   * Today only `deviceScopes[0]` is consumed for the chart and the
+   * peak / Bksp summary; a follow-up commit adds the second-series
+   * overlay and the "primary only" hint above the summary cards. */
+  deviceScopes: readonly DeviceScope[]
   granularity: GranularityChoice
   viewMode: WpmViewMode
   /** Minimum `activeMs` (ms) a bucket / hour must clear to count
@@ -64,7 +68,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
 
 type WpmLineKey = 'wpm' | 'bksPercent'
 
-export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minActiveMs }: Props) {
+export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
@@ -79,6 +83,10 @@ export function WpmChart({ uid, range, deviceScope, granularity, viewMode, minAc
     }
   }
 
+  // First scope drives the chart series and the peak / Bksp summary
+  // (the "primary" device); a follow-up commit adds the second-series
+  // overlay using `chartSeriesColor` and the "primary only" hint.
+  const deviceScope = primaryDeviceScope(deviceScopes)
   // Encode the scope into a stable primitive so effect dependencies
   // don't retrigger on every render when the parent rebuilds the
   // discriminated union object.

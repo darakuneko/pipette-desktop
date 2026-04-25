@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
@@ -35,7 +35,10 @@ import { Tooltip as UITooltip } from '../ui/Tooltip'
 interface Props {
   uid: string
   range: RangeMs
-  deviceScope: DeviceScope
+  /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
+   * Today only `deviceScopes[0]` is consumed; a follow-up commit adds
+   * the second-series overlay for `timeSeries` mode. */
+  deviceScopes: readonly DeviceScope[]
   unit: IntervalUnit
   granularity: GranularityChoice
   viewMode: IntervalViewMode
@@ -77,7 +80,7 @@ function formatShare(v: number): string {
   return `${formatSharePercent(v)}%`
 }
 
-export function IntervalChart({ uid, range, deviceScope, unit, granularity, viewMode }: Props) {
+export function IntervalChart({ uid, range, deviceScopes, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
@@ -85,6 +88,10 @@ export function IntervalChart({ uid, range, deviceScope, unit, granularity, view
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     min: false, p25: false, p50: false, p75: false, max: false,
   })
+
+  // First scope is the primary series; the second-series overlay
+  // lands in a follow-up commit.
+  const deviceScope = primaryDeviceScope(deviceScopes)
 
   // Distribution mode needs per-scope raw quartiles — the cross-scope
   // `all` query already aggregates MIN / AVG / MAX over contributing

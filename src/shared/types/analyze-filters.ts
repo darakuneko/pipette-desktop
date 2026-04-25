@@ -73,6 +73,31 @@ export function scopeFromSelectValue(value: string): DeviceScope | null {
  * spacing and the `'primary only'` summary placement. */
 export const MAX_DEVICE_SCOPES = 2
 
+/** First entry of a (post-normalization) device-scope tuple, used as
+ * the "primary" device by single-series charts and primary-only
+ * summary cards. Falls back to `'own'` for the empty-array edge case
+ * — the normalizer keeps that from happening in practice, but the
+ * default keeps callers honest if they ever skip it. */
+export function primaryDeviceScope(scopes: readonly DeviceScope[]): DeviceScope {
+  return scopes[0] ?? 'own'
+}
+
+/** Shallow compare two scope tuples by select-value identity. Cheap
+ * for the 1-2 entry tuples the multi-select Device filter produces;
+ * lets the setter avoid re-rendering when a normalized array matches
+ * the previous one (e.g. user re-clicking an already-selected option). */
+export function deviceScopesEqual(
+  a: readonly DeviceScope[],
+  b: readonly DeviceScope[],
+): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i += 1) {
+    if (scopeToSelectValue(a[i]) !== scopeToSelectValue(b[i])) return false
+  }
+  return true
+}
+
 /** Coerce raw scope arrays into the canonical shape the Analyze panel
  * relies on: at least one entry, deduped by select-value, `'all'` is
  * exclusive (drops siblings when picked), and the result never exceeds
@@ -159,9 +184,14 @@ export interface LayerFilters {
 
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
  * it lives as renderer-local state (default 7 days) so the absolute
- * `fromMs` / `toMs` never get restored and make the view look stale. */
+ * `fromMs` / `toMs` never get restored and make the view look stale.
+ *
+ * `deviceScopes` is a tuple-shaped multi-select capped at
+ * `MAX_DEVICE_SCOPES` (2). The persisted shape always goes through
+ * `normalizeDeviceScopes` so dedup, the `'all'` exclusivity rule, and
+ * the cap can't drift between caller, persister, and reader. */
 export interface AnalyzeFilterSettings {
-  deviceScope?: DeviceScope
+  deviceScopes?: DeviceScope[]
   heatmap?: HeatmapFilters
   wpm?: WpmFilters
   interval?: IntervalFilters
@@ -247,11 +277,39 @@ function isValidLayerFilters(value: unknown): boolean {
   return true
 }
 
+/** Validates the persisted multi-select shape. Anything that survives
+ * here is already in the form `normalizeDeviceScopes` would produce —
+ * reject malformed data outright instead of silently reshaping it so
+ * a downstream consumer can't accidentally rely on the old single-
+ * scope shape. */
+function isValidDeviceScopesArray(value: unknown): boolean {
+  if (!Array.isArray(value)) return false
+  if (value.length === 0 || value.length > MAX_DEVICE_SCOPES) return false
+  const parsed: DeviceScope[] = []
+  for (const entry of value) {
+    const scope = parseDeviceScope(entry)
+    if (scope === null) return false
+    parsed.push(scope)
+  }
+  // `'all'` is exclusive — combined with anything else it would mean
+  // "all-devices aggregate plus a strict subset of all-devices", which
+  // makes no sense in either UI or chart terms.
+  if (parsed.some(isAllScope) && parsed.length !== 1) return false
+  // Dedup check by select-value identity matches the normalizer's rule.
+  const seen = new Set<string>()
+  for (const scope of parsed) {
+    const key = scopeToSelectValue(scope)
+    if (seen.has(key)) return false
+    seen.add(key)
+  }
+  return true
+}
+
 export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
-  if (o.deviceScope !== undefined && parseDeviceScope(o.deviceScope) === null) return false
+  if (o.deviceScopes !== undefined && !isValidDeviceScopesArray(o.deviceScopes)) return false
   if (!isValidHeatmapFilters(o.heatmap)) return false
   if (!isValidWpmFilters(o.wpm)) return false
   if (!isValidIntervalFilters(o.interval)) return false

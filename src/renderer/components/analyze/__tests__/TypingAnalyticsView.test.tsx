@@ -21,7 +21,11 @@ type MockScope = 'own' | 'all' | { kind: 'hash'; machineHash: string }
 
 interface MockChartProps {
   uid: string
-  deviceScope: MockScope
+  // Multi charts pass `deviceScopes`; single-scope charts (Heatmap /
+  // Activity) keep `deviceScope` — the mock derives a primary scope
+  // from whichever shape lands so the same template covers both.
+  deviceScope?: MockScope
+  deviceScopes?: readonly MockScope[]
   range: { fromMs: number; toMs: number }
   unit?: string
   granularity?: 'auto' | number
@@ -33,10 +37,16 @@ function scopeText(scope: MockScope): string {
   return typeof scope === 'string' ? scope : `hash:${scope.machineHash}`
 }
 
+function primaryScope(props: MockChartProps): MockScope {
+  if (props.deviceScope !== undefined) return props.deviceScope
+  if (props.deviceScopes && props.deviceScopes.length > 0) return props.deviceScopes[0]
+  return 'own'
+}
+
 function mockSummary(testId: string) {
   return (props: MockChartProps) => (
     <div data-testid={testId}>
-      {`${props.uid}:${scopeText(props.deviceScope)}:range=${props.range.fromMs}-${props.range.toMs}${props.unit ? `:${props.unit}` : ''}`}
+      {`${props.uid}:${scopeText(primaryScope(props))}:range=${props.range.fromMs}-${props.range.toMs}${props.unit ? `:${props.unit}` : ''}`}
     </div>
   )
 }
@@ -214,7 +224,8 @@ describe('TypingAnalyticsView', () => {
     fireEvent.change(screen.getByTestId('analyze-filter-from'), { target: { value: '2026-04-19T00:00' } })
     expect(text('mock-wpm')).toContain(`range=${expectedFrom}-`)
 
-    fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
+    fireEvent.click(screen.getByTestId('analyze-filter-device'))
+    fireEvent.click(screen.getByTestId('analyze-filter-device-option-all'))
     expect(text('mock-wpm')).toMatch(/^uid-a:all:range=/)
   })
 
@@ -256,7 +267,7 @@ describe('TypingAnalyticsView', () => {
       layerNames: [],
       analyze: {
         filters: {
-          deviceScope: { kind: 'hash', machineHash: 'survivinghash' },
+          deviceScopes: [{ kind: 'hash', machineHash: 'survivinghash' }],
         },
       },
     })
@@ -314,7 +325,7 @@ describe('TypingAnalyticsView', () => {
     subSpy.mockRestore()
   })
 
-  it('renders an option per remote hash in the Device select', async () => {
+  it('renders an option per remote hash in the Device dropdown', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const hashSpy = vi
       .spyOn(window.vialAPI, 'typingAnalyticsListRemoteHashes')
@@ -323,14 +334,17 @@ describe('TypingAnalyticsView', () => {
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
     fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
-    const select = (await screen.findByTestId('analyze-filter-device')) as HTMLSelectElement
-    const values = Array.from(select.options).map((o) => o.value)
-    expect(values).toEqual([
-      'own',
-      'all',
-      'hash:hashone12345678901234',
-      'hash:hashtwo12345678901234',
-    ])
+    fireEvent.click(await screen.findByTestId('analyze-filter-device'))
+    // Each option renders as `analyze-filter-device-option-${key}` —
+    // a missing entry would throw inside the assertion below.
+    expect(screen.getByTestId('analyze-filter-device-option-own')).toBeInTheDocument()
+    expect(screen.getByTestId('analyze-filter-device-option-all')).toBeInTheDocument()
+    expect(
+      screen.getByTestId('analyze-filter-device-option-hash:hashone12345678901234'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTestId('analyze-filter-device-option-hash:hashtwo12345678901234'),
+    ).toBeInTheDocument()
     hashSpy.mockRestore()
   })
 
@@ -343,16 +357,26 @@ describe('TypingAnalyticsView', () => {
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(hashSpy).toHaveBeenCalledWith('uid-a'))
     fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
-    fireEvent.change(screen.getByTestId('analyze-filter-device'), {
-      target: { value: 'hash:hashone12345678901234' },
+    fireEvent.click(screen.getByTestId('analyze-filter-device'))
+    // Toggling the hash adds it alongside the default `'own'` (since
+    // it isn't `'all'`), so the primary scope flips to the hash entry
+    // — the mock chart text reflects `deviceScopes[0]`.
+    fireEvent.click(
+      screen.getByTestId('analyze-filter-device-option-hash:hashone12345678901234'),
+    )
+    await waitFor(() => {
+      expect(text('mock-wpm')).toMatch(/^uid-a:own:range=/)
     })
+    // Removing `'own'` leaves only the hash, which then becomes the
+    // primary scope reflected in the mock chart.
+    fireEvent.click(screen.getByTestId('analyze-filter-device-option-own'))
     await waitFor(() => {
       expect(text('mock-wpm')).toMatch(/^uid-a:hash:hashone12345678901234:range=/)
     })
     hashSpy.mockRestore()
   })
 
-  it('auto-closes the finger-assignment modal when the scope flips to a hash', async () => {
+  it('auto-closes the finger-assignment modal when every selected scope is a remote hash', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const hashSpy = vi
@@ -366,11 +390,13 @@ describe('TypingAnalyticsView', () => {
     const openButton = await screen.findByTestId('analyze-finger-assignment-open')
     fireEvent.click(openButton)
     await waitFor(() => expect(screen.getByTestId('finger-assignment-modal')).toBeInTheDocument())
-    // Switch to a remote hash — modal should auto-close because the
-    // effective snapshot drops to null.
-    fireEvent.change(screen.getByTestId('analyze-filter-device'), {
-      target: { value: 'hash:remote12345678901234' },
-    })
+    // Add the remote hash, then deselect `'own'` so every entry is a
+    // hash — `effectiveSnapshot` drops to null and the modal closes.
+    fireEvent.click(screen.getByTestId('analyze-filter-device'))
+    fireEvent.click(
+      screen.getByTestId('analyze-filter-device-option-hash:remote12345678901234'),
+    )
+    fireEvent.click(screen.getByTestId('analyze-filter-device-option-own'))
     await waitFor(() => expect(screen.queryByTestId('finger-assignment-modal')).toBeNull())
     hashSpy.mockRestore()
   })
@@ -384,7 +410,7 @@ describe('TypingAnalyticsView', () => {
       layerNames: [],
       analyze: {
         filters: {
-          deviceScope: { kind: 'hash', machineHash: 'stalehash123' },
+          deviceScopes: [{ kind: 'hash', machineHash: 'stalehash123' }],
         },
       },
     })
@@ -421,7 +447,8 @@ describe('TypingAnalyticsView', () => {
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
-    fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
+    fireEvent.click(screen.getByTestId('analyze-filter-device'))
+    fireEvent.click(screen.getByTestId('analyze-filter-device-option-all'))
     await waitFor(() => expect(text('mock-keyheatmap')).toMatch(/^uid-a:all:range=/))
     fireEvent.click(screen.getByTestId('analyze-tab-ergonomics'))
     await waitFor(() => expect(screen.getByTestId('mock-ergonomics')).toBeInTheDocument())

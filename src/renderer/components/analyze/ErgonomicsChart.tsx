@@ -23,7 +23,7 @@ import type {
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
 import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics'
-import { scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { aggregateErgonomics } from './analyze-ergonomics'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
@@ -31,7 +31,11 @@ import { KeystrokeCountTooltip } from './analyze-tooltip'
 interface Props {
   uid: string
   range: RangeMs
-  deviceScope: DeviceScope
+  /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
+   * Today only `deviceScopes[0]` is consumed; a follow-up commit
+   * paints the second-device bars adjacent to the primary so the
+   * finger / hand / row sections compare two scopes at a glance. */
+  deviceScopes: readonly DeviceScope[]
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
 }
@@ -133,7 +137,7 @@ function mergeLayerHeatmaps(
 export function ErgonomicsChart({
   uid,
   range,
-  deviceScope,
+  deviceScopes,
   snapshot,
   fingerOverrides,
 }: Props) {
@@ -141,6 +145,9 @@ export function ErgonomicsChart({
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
   const [loading, setLoading] = useState(true)
 
+  // First scope is the primary; the secondary-device overlay lands in
+  // a follow-up commit.
+  const deviceScope = primaryDeviceScope(deviceScopes)
   const scopeKey = scopeToSelectValue(deviceScope)
 
   useEffect(() => {

@@ -16,20 +16,18 @@ import type {
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import {
   ACTIVITY_METRICS,
-  DEVICE_SCOPES,
   INTERVAL_UNITS,
   INTERVAL_VIEW_MODES,
   LAYER_VIEW_MODES,
   WPM_VIEW_MODES,
   isHashScope,
-  scopeFromSelectValue,
-  scopeToSelectValue,
 } from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, LayerViewMode, RangeMs, WpmViewMode } from './analyze-types'
 import type { SyncProgress } from '../../../shared/types/sync'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
+import { DeviceMultiSelect } from './DeviceMultiSelect'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
@@ -145,7 +143,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   }))
   const {
     filters: {
-      deviceScope,
+      deviceScopes,
       heatmap: heatmapFilter,
       wpm: wpmFilter,
       interval: intervalFilter,
@@ -153,7 +151,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       layer: layerFilter,
     },
     ready: filtersReady,
-    setDeviceScope,
+    setDeviceScopes,
     setHeatmap,
     setWpm,
     setInterval: setIntervalFilter,
@@ -297,26 +295,28 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     return () => { cancelled = true }
   }, [selectedUid])
 
-  // Fallback: if the persisted scope points at a machine hash that no
-  // longer exists in the remote list, drop back to `'own'`. Only runs
-  // after the list has resolved so a slow fetch can't strip a valid
-  // selection on first mount.
+  // Fallback: when persisted hashes no longer exist in the remote
+  // list, drop them. Runs after the list resolves so a slow fetch
+  // can't strip a valid selection on first mount. The hook's setter
+  // re-normalizes, so falling back to `['own']` happens automatically
+  // when every entry was stale.
   useEffect(() => {
     if (!remoteHashes.loaded) return
-    if (!isHashScope(deviceScope)) return
-    if (!remoteHashes.list.includes(deviceScope.machineHash)) {
-      setDeviceScope('own')
-    }
-  }, [remoteHashes, deviceScope, setDeviceScope])
+    const filtered = deviceScopes.filter((scope) => {
+      if (!isHashScope(scope)) return true
+      return remoteHashes.list.includes(scope.machineHash)
+    })
+    if (filtered.length === deviceScopes.length) return
+    setDeviceScopes(filtered)
+  }, [remoteHashes, deviceScopes, setDeviceScopes])
 
   // Snapshots are only ever saved for the own machine hash (see
-  // service-side comment). Suppress only when the user picks a
-  // specific remote hash — `'all'` aggregates the own device in too,
-  // so the local keymap is the best-available layout reference.
-  // Gating on `isOwnScope` instead would blank the `'all'` Heatmap /
-  // Ergonomics / Layer-activations tabs even though the underlying
-  // aggregate query returns data.
-  const effectiveSnapshot = isHashScope(deviceScope) ? null : keymapSnapshot
+  // service-side comment). Suppress only when every selected scope is
+  // a remote hash — when even one entry is `'own'` or `'all'` the
+  // local keymap is still the best-available layout reference. Heatmap
+  // / Ergonomics / Layer-activations consume the snapshot directly so
+  // gating here keeps a multi-device pick from blanking those tabs.
+  const effectiveSnapshot = deviceScopes.every(isHashScope) ? null : keymapSnapshot
 
   // Uid-prefixed filter — the backend allows parallel per-uid
   // analytics syncs, so a plain analytics-prefix filter would display
@@ -539,30 +539,12 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') && (
                 <label className={FILTER_LABEL}>
                   {t('analyze.filters.device')}
-                  <select
-                    className={FILTER_SELECT}
-                    value={scopeToSelectValue(deviceScope)}
-                    onChange={(e) => {
-                      const next = scopeFromSelectValue(e.target.value)
-                      if (next !== null) setDeviceScope(next)
-                    }}
-                    data-testid="analyze-filter-device"
-                  >
-                    {DEVICE_SCOPES.map((key) => (
-                      <option key={key} value={key}>
-                        {t(`analyze.filters.deviceOption.${key}`)}
-                      </option>
-                    ))}
-                    {remoteHashes.list.map((hash) => (
-                      <option
-                        key={hash}
-                        value={scopeToSelectValue({ kind: 'hash', machineHash: hash })}
-                        title={hash}
-                      >
-                        {t('analyze.filters.deviceOption.hashShort', { hash: hash.slice(0, 8) })}
-                      </option>
-                    ))}
-                  </select>
+                  <DeviceMultiSelect
+                    value={deviceScopes}
+                    remoteHashes={remoteHashes.list}
+                    onChange={setDeviceScopes}
+                    ariaLabel={t('analyze.filters.device')}
+                  />
                 </label>
               )}
               {analysisTab === 'wpm' && (
@@ -742,7 +724,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 <WpmChart
                   uid={selected.uid}
                   range={range}
-                  deviceScope={deviceScope}
+                  deviceScopes={deviceScopes}
                   granularity={wpmFilter.granularity}
                   viewMode={wpmFilter.viewMode}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -751,7 +733,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 <IntervalChart
                   uid={selected.uid}
                   range={range}
-                  deviceScope={deviceScope}
+                  deviceScopes={deviceScopes}
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}
@@ -760,7 +742,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 <ActivityChart
                   uid={selected.uid}
                   range={range}
-                  deviceScope={deviceScope}
+                  deviceScope={deviceScopes[0]}
                   metric={activityFilter.metric}
                   minActiveMs={wpmFilter.minActiveMs}
                 />
@@ -769,7 +751,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   <KeyHeatmapChart
                     uid={selected.uid}
                     range={range}
-                    deviceScope={deviceScope}
+                    deviceScope={deviceScopes[0]}
                     snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
@@ -781,7 +763,13 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 )
               ) : analysisTab === 'ergonomics' ? (
                 effectiveSnapshot !== null ? (
-                  <ErgonomicsChart uid={selected.uid} range={range} deviceScope={deviceScope} snapshot={effectiveSnapshot} fingerOverrides={fingerAssignments} />
+                  <ErgonomicsChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                    snapshot={effectiveSnapshot}
+                    fingerOverrides={fingerAssignments}
+                  />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-no-snapshot">
                     {t('analyze.ergonomics.noSnapshot')}
@@ -791,7 +779,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 <LayerUsageChart
                   uid={selected.uid}
                   range={range}
-                  deviceScope={deviceScope}
+                  deviceScopes={deviceScopes}
                   snapshot={effectiveSnapshot}
                   viewMode={layerFilter.viewMode}
                   baseLayer={layerFilter.baseLayer}

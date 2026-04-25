@@ -58,7 +58,7 @@ describe('useAnalyzeFilters', () => {
       layerNames: [],
       analyze: {
         filters: {
-          deviceScope: 'all',
+          deviceScopes: ['all'],
           wpm: { viewMode: 'timeOfDay' },
           layer: { baseLayer: 2 },
         },
@@ -67,7 +67,7 @@ describe('useAnalyzeFilters', () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
 
     await waitFor(() => expect(result.current.ready).toBe(true))
-    expect(result.current.filters.deviceScope).toBe('all')
+    expect(result.current.filters.deviceScopes).toEqual(['all'])
     expect(result.current.filters.wpm.viewMode).toBe('timeOfDay')
     expect(result.current.filters.layer.baseLayer).toBe(2)
     // Un-specified slots keep their defaults rather than crashing
@@ -82,7 +82,7 @@ describe('useAnalyzeFilters', () => {
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => {
-      result.current.setDeviceScope('all')
+      result.current.setDeviceScopes(['all'])
       result.current.setWpm({ viewMode: 'timeOfDay' })
       result.current.setLayer({ baseLayer: 3 })
     })
@@ -99,7 +99,7 @@ describe('useAnalyzeFilters', () => {
     expect(setSpy).toHaveBeenCalledTimes(1)
     const [uid, prefs] = setSpy.mock.calls[0]
     expect(uid).toBe('uid-a')
-    expect(prefs.analyze?.filters?.deviceScope).toBe('all')
+    expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
     expect(prefs.analyze?.filters?.wpm?.viewMode).toBe('timeOfDay')
     expect(prefs.analyze?.filters?.layer?.baseLayer).toBe(3)
   })
@@ -113,7 +113,7 @@ describe('useAnalyzeFilters', () => {
     setSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
-    act(() => { result.current.setDeviceScope('all') })
+    act(() => { result.current.setDeviceScopes(['all']) })
     // Still inside the debounce window.
     rerender({ uid: 'uid-b' })
     await flushMicrotasks()
@@ -121,7 +121,7 @@ describe('useAnalyzeFilters', () => {
 
     expect(setSpy).toHaveBeenCalledTimes(1)
     expect(setSpy.mock.calls[0][0]).toBe('uid-a')
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScope).toBe('all')
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual(['all'])
   })
 
   it('flushes pending writes on unmount', async () => {
@@ -141,7 +141,7 @@ describe('useAnalyzeFilters', () => {
 
   it('ignores setter calls when uid is null', async () => {
     const { result } = renderHook(() => useAnalyzeFilters(null))
-    act(() => { result.current.setDeviceScope('all') })
+    act(() => { result.current.setDeviceScopes(['all']) })
     act(() => { vi.advanceTimersByTime(1000) })
     await flushMicrotasks()
     expect(setSpy).not.toHaveBeenCalled()
@@ -155,26 +155,62 @@ describe('useAnalyzeFilters', () => {
       layerNames: [],
       analyze: {
         filters: {
-          deviceScope: { kind: 'hash', machineHash: 'abcd1234' },
+          deviceScopes: [{ kind: 'hash', machineHash: 'abcd1234' }],
         },
       },
     })
     const { result } = renderHook(() => useAnalyzeFilters('uid-h'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    expect(result.current.filters.deviceScope).toEqual({ kind: 'hash', machineHash: 'abcd1234' })
+    expect(result.current.filters.deviceScopes).toEqual([
+      { kind: 'hash', machineHash: 'abcd1234' },
+    ])
 
     setSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
-    act(() => { result.current.setDeviceScope({ kind: 'hash', machineHash: 'ffff0000' }) })
+    act(() => {
+      result.current.setDeviceScopes([{ kind: 'hash', machineHash: 'ffff0000' }])
+    })
     act(() => { vi.advanceTimersByTime(300) })
     await flushMicrotasks()
     await flushMicrotasks()
 
     expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScope).toEqual({
-      kind: 'hash',
-      machineHash: 'ffff0000',
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual([
+      { kind: 'hash', machineHash: 'ffff0000' },
+    ])
+  })
+
+  it('normalizes setter input by collapsing all+hash to all and capping at MAX_DEVICE_SCOPES', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-norm'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    setSpy.mockClear()
+
+    act(() => {
+      result.current.setDeviceScopes([
+        'own',
+        'all',
+        { kind: 'hash', machineHash: 'abc' },
+      ])
     })
+    // 'all' is exclusive, so the normalizer collapses the array to ['all'].
+    expect(result.current.filters.deviceScopes).toEqual(['all'])
+
+    act(() => {
+      result.current.setDeviceScopes([
+        'own',
+        { kind: 'hash', machineHash: 'a' },
+        { kind: 'hash', machineHash: 'b' },
+      ])
+    })
+    // Cap at MAX_DEVICE_SCOPES = 2 — third entry is dropped.
+    expect(result.current.filters.deviceScopes).toEqual([
+      'own',
+      { kind: 'hash', machineHash: 'a' },
+    ])
+
+    act(() => { result.current.setDeviceScopes([]) })
+    // Empty input falls back to ['own'] so the filter is never blank.
+    expect(result.current.filters.deviceScopes).toEqual(['own'])
   })
 
   it('bootstraps a minimal PipetteSettings when pipetteSettingsGet returns null', async () => {
@@ -183,7 +219,7 @@ describe('useAnalyzeFilters', () => {
     await waitFor(() => expect(result.current.ready).toBe(true))
     setSpy.mockClear()
 
-    act(() => { result.current.setDeviceScope('all') })
+    act(() => { result.current.setDeviceScopes(['all']) })
     act(() => { vi.advanceTimersByTime(300) })
     await flushMicrotasks()
     await flushMicrotasks()
@@ -195,6 +231,6 @@ describe('useAnalyzeFilters', () => {
     expect(prefs._rev).toBe(1)
     expect(prefs.keyboardLayout).toBe('qwerty')
     expect(prefs.autoAdvance).toBe(true)
-    expect(prefs.analyze?.filters?.deviceScope).toBe('all')
+    expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
   })
 })

@@ -26,7 +26,7 @@ import type {
   TypingLayerUsageRow,
   TypingMatrixCellRow,
 } from '../../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, LayerViewMode, RangeMs } from './analyze-types'
 import {
   aggregateLayerActivations,
@@ -86,7 +86,11 @@ function MultiLineYAxisTick({ x, y, payload }: AxisTickProps): JSX.Element {
 interface Props {
   uid: string
   range: RangeMs
-  deviceScope: DeviceScope
+  /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
+   * Today only `deviceScopes[0]` is consumed; a follow-up commit adds
+   * the second-series overlay so two devices' layer-usage bars sit
+   * side-by-side. */
+  deviceScopes: readonly DeviceScope[]
   /** Optional snapshot. Keystrokes mode still works without one
    * (zero-fills against the max observed layer); activations mode
    * needs it to resolve layer-op keycodes. */
@@ -100,13 +104,16 @@ interface Props {
   baseLayer: number
 }
 
-export function LayerUsageChart({ uid, range, deviceScope, snapshot, viewMode, baseLayer }: Props) {
+export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, baseLayer }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
   const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
   const [layerNames, setLayerNames] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 
+  // First scope is the primary device; the multi-device overlay
+  // lands in a follow-up commit.
+  const deviceScope = primaryDeviceScope(deviceScopes)
   const scopeKey = scopeToSelectValue(deviceScope)
 
   useEffect(() => {

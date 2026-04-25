@@ -7,12 +7,14 @@
 import { describe, it, expect } from 'vitest'
 import {
   MAX_DEVICE_SCOPES,
+  deviceScopesEqual,
   isAllScope,
   isHashScope,
   isOwnScope,
   isValidAnalyzeFilterSettings,
   normalizeDeviceScopes,
   parseDeviceScope,
+  primaryDeviceScope,
   scopeFromSelectValue,
   scopeToSelectValue,
 } from '../analyze-filters'
@@ -81,20 +83,89 @@ describe('isValidAnalyzeFilterSettings', () => {
     expect(isValidAnalyzeFilterSettings(null)).toBe(true)
   })
 
-  it('accepts legacy static deviceScope values', () => {
-    expect(isValidAnalyzeFilterSettings({ deviceScope: 'own' })).toBe(true)
-    expect(isValidAnalyzeFilterSettings({ deviceScope: 'all' })).toBe(true)
+  it('accepts a single static-scope array', () => {
+    expect(isValidAnalyzeFilterSettings({ deviceScopes: ['own'] })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ deviceScopes: ['all'] })).toBe(true)
   })
 
-  it('accepts hash deviceScope', () => {
+  it('accepts a single hash-scope array', () => {
     expect(
-      isValidAnalyzeFilterSettings({ deviceScope: { kind: 'hash', machineHash: 'abc' } }),
+      isValidAnalyzeFilterSettings({
+        deviceScopes: [{ kind: 'hash', machineHash: 'abc' }],
+      }),
     ).toBe(true)
   })
 
-  it('rejects unknown deviceScope shapes', () => {
-    expect(isValidAnalyzeFilterSettings({ deviceScope: 'bogus' })).toBe(false)
-    expect(isValidAnalyzeFilterSettings({ deviceScope: { kind: 'hash', machineHash: '' } })).toBe(false)
+  it('accepts two-device combinations within MAX_DEVICE_SCOPES', () => {
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: ['own', { kind: 'hash', machineHash: 'abc' }],
+      }),
+    ).toBe(true)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: [
+          { kind: 'hash', machineHash: 'abc' },
+          { kind: 'hash', machineHash: 'def' },
+        ],
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects unknown scope shapes inside the array', () => {
+    expect(isValidAnalyzeFilterSettings({ deviceScopes: ['bogus'] })).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: [{ kind: 'hash', machineHash: '' }],
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects empty arrays and arrays past MAX_DEVICE_SCOPES', () => {
+    expect(isValidAnalyzeFilterSettings({ deviceScopes: [] })).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: [
+          'own',
+          { kind: 'hash', machineHash: 'a' },
+          { kind: 'hash', machineHash: 'b' },
+        ],
+      }),
+    ).toBe(false)
+  })
+
+  it("rejects 'all' combined with any other scope", () => {
+    expect(
+      isValidAnalyzeFilterSettings({ deviceScopes: ['all', 'own'] }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: ['all', { kind: 'hash', machineHash: 'abc' }],
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects duplicate scopes in the array', () => {
+    expect(
+      isValidAnalyzeFilterSettings({ deviceScopes: ['own', 'own'] }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: [
+          { kind: 'hash', machineHash: 'abc' },
+          { kind: 'hash', machineHash: 'abc' },
+        ],
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects non-array deviceScopes (legacy single-scope shape)', () => {
+    expect(isValidAnalyzeFilterSettings({ deviceScopes: 'own' })).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        deviceScopes: { kind: 'hash', machineHash: 'abc' },
+      }),
+    ).toBe(false)
   })
 })
 
@@ -143,5 +214,59 @@ describe('normalizeDeviceScopes', () => {
         { kind: 'hash', machineHash: 'b' },
       ]),
     ).toEqual(['own', { kind: 'hash', machineHash: 'a' }])
+  })
+})
+
+describe('primaryDeviceScope', () => {
+  it('returns the first entry of a non-empty tuple', () => {
+    expect(primaryDeviceScope(['own'])).toBe('own')
+    expect(primaryDeviceScope(['all', 'own'])).toBe('all')
+    expect(primaryDeviceScope([{ kind: 'hash', machineHash: 'abc' }])).toEqual({
+      kind: 'hash',
+      machineHash: 'abc',
+    })
+  })
+
+  it("falls back to 'own' on empty input", () => {
+    expect(primaryDeviceScope([])).toBe('own')
+  })
+})
+
+describe('deviceScopesEqual', () => {
+  it('treats reference-equal arrays as equal without scanning', () => {
+    const a: ReturnType<typeof normalizeDeviceScopes> = ['own']
+    expect(deviceScopesEqual(a, a)).toBe(true)
+  })
+
+  it('compares contents by select-value identity', () => {
+    expect(deviceScopesEqual(['own'], ['own'])).toBe(true)
+    expect(deviceScopesEqual(['own'], ['all'])).toBe(false)
+    expect(
+      deviceScopesEqual(
+        [{ kind: 'hash', machineHash: 'abc' }],
+        [{ kind: 'hash', machineHash: 'abc' }],
+      ),
+    ).toBe(true)
+    expect(
+      deviceScopesEqual(
+        [{ kind: 'hash', machineHash: 'abc' }],
+        [{ kind: 'hash', machineHash: 'def' }],
+      ),
+    ).toBe(false)
+  })
+
+  it('rejects arrays of different lengths even when prefixes match', () => {
+    expect(
+      deviceScopesEqual(['own'], ['own', { kind: 'hash', machineHash: 'a' }]),
+    ).toBe(false)
+  })
+
+  it('treats order as significant (primary slot drives series colour)', () => {
+    expect(
+      deviceScopesEqual(
+        ['own', { kind: 'hash', machineHash: 'a' }],
+        [{ kind: 'hash', machineHash: 'a' }, 'own'],
+      ),
+    ).toBe(false)
   })
 })

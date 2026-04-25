@@ -8,20 +8,26 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PipetteSettings } from '../../shared/types/pipette-settings'
 import { DEFAULT_PIPETTE_SETTINGS } from '../../shared/types/pipette-settings'
-import type {
-  ActivityFilters,
-  AnalyzeFilterSettings,
-  DeviceScope,
-  HeatmapFilters,
-  IntervalFilters,
-  LayerFilters,
-  WpmFilters,
+import {
+  deviceScopesEqual,
+  normalizeDeviceScopes,
+  type ActivityFilters,
+  type AnalyzeFilterSettings,
+  type DeviceScope,
+  type HeatmapFilters,
+  type IntervalFilters,
+  type LayerFilters,
+  type WpmFilters,
 } from '../../shared/types/analyze-filters'
 
 const DEBOUNCE_MS = 300
 
 export interface AnalyzeFiltersState {
-  deviceScope: DeviceScope
+  /** Multi-select Device filter, capped at `MAX_DEVICE_SCOPES` (2).
+   * Always pre-normalized: dedupe + `'all'` exclusivity + length cap
+   * are handled inside the setter so consumers can rely on the
+   * canonical shape without re-running the normalizer themselves. */
+  deviceScopes: DeviceScope[]
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>
   interval: Required<IntervalFilters>
@@ -30,7 +36,7 @@ export interface AnalyzeFiltersState {
 }
 
 export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
-  deviceScope: 'own',
+  deviceScopes: ['own'],
   heatmap: {
     selectedLayers: [0],
     groups: [[0]],
@@ -59,8 +65,12 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
 
 function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFiltersState {
   if (!saved) return DEFAULT_ANALYZE_FILTERS
+  // Re-run the normalizer on every load — settings written by an older
+  // build (or hand-edited) might still have stale `'all'` + sibling
+  // combinations or stray duplicates. Funnel everything through the
+  // single canonical shape so chart consumers never see invalid input.
   return {
-    deviceScope: saved.deviceScope ?? DEFAULT_ANALYZE_FILTERS.deviceScope,
+    deviceScopes: normalizeDeviceScopes(saved.deviceScopes),
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
@@ -71,7 +81,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
 
 function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
   return {
-    deviceScope: state.deviceScope,
+    deviceScopes: state.deviceScopes,
     heatmap: state.heatmap,
     wpm: state.wpm,
     interval: state.interval,
@@ -83,7 +93,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
 export interface UseAnalyzeFiltersReturn {
   filters: AnalyzeFiltersState
   ready: boolean
-  setDeviceScope: (v: DeviceScope) => void
+  setDeviceScopes: (v: readonly DeviceScope[]) => void
   setHeatmap: (patch: Partial<HeatmapFilters>) => void
   setWpm: (patch: Partial<WpmFilters>) => void
   setInterval: (patch: Partial<IntervalFilters>) => void
@@ -185,13 +195,31 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
   const update = useCallback((updater: (prev: AnalyzeFiltersState) => AnalyzeFiltersState) => {
     setFilters((prev) => {
       const next = updater(prev)
+      // No-op identity short-circuit: a setter that returns `prev`
+      // means "nothing changed" — skip both the re-render and the
+      // debounce timer so re-clicking an already-set option doesn't
+      // burn an IPC write on the 300 ms tick.
+      if (next === prev) return prev
       scheduleSave(next)
       return next
     })
   }, [scheduleSave])
 
-  const setDeviceScope = useCallback((v: DeviceScope) => {
-    update((prev) => ({ ...prev, deviceScope: v }))
+  const setDeviceScopes = useCallback((v: readonly DeviceScope[]) => {
+    // Normalize at the setter so UI events that produce a stale tuple
+    // (e.g. clicking a third checkbox before the disabled state lands)
+    // can't smuggle a malformed array into state or persistence. UI
+    // disables the entry path and validator rejects on read-back; this
+    // is the third leg of the three-layer enforcement.
+    const next = normalizeDeviceScopes(v)
+    update((prev) => {
+      // Skip the state update when the normalized result is identical
+      // to the previous tuple — a re-click of an already-selected
+      // option would otherwise schedule a no-op write through the
+      // 300 ms debounce and re-render every chart.
+      if (deviceScopesEqual(prev.deviceScopes, next)) return prev
+      return { ...prev, deviceScopes: next }
+    })
   }, [update])
 
   const setHeatmap = useCallback((patch: Partial<HeatmapFilters>) => {
@@ -217,7 +245,7 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
   return {
     filters,
     ready,
-    setDeviceScope,
+    setDeviceScopes,
     setHeatmap,
     setWpm,
     setInterval,
