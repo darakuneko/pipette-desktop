@@ -29,6 +29,13 @@ interface Props {
   value: readonly DeviceScope[]
   remoteHashes: readonly string[]
   onChange: (next: DeviceScope[]) => void
+  /** `'multi'` (default): up to `MAX_DEVICE_SCOPES` selections with
+   * checkboxes and the existing `'all'`-exclusive rule. `'single'`:
+   * radio-like behaviour where the dropdown stays at exactly one
+   * pick — clicking any row replaces the current selection so the
+   * caller can never receive an array longer than 1. Used by the
+   * Heatmap / Activity tabs which only consume a single scope. */
+  mode?: 'multi' | 'single'
   ariaLabel?: string
   testId?: string
 }
@@ -43,6 +50,7 @@ export function DeviceMultiSelect({
   value,
   remoteHashes,
   onChange,
+  mode = 'multi',
   ariaLabel,
   testId = 'analyze-filter-device',
 }: Props) {
@@ -75,6 +83,15 @@ export function DeviceMultiSelect({
 
   const toggle = (scope: DeviceScope): void => {
     const key = scopeToSelectValue(scope)
+    if (mode === 'single') {
+      // Radio-style: clicking the already-selected row is a no-op
+      // (deselection would leave the filter empty and the parent
+      // would normalize it back to `['own']`, which feels unprovoked).
+      // Any other click replaces the current pick outright.
+      if (valueKeys.has(key)) return
+      onChange([scope])
+      return
+    }
     if (valueKeys.has(key)) {
       onChange(value.filter((s) => scopeToSelectValue(s) !== key))
       return
@@ -92,7 +109,9 @@ export function DeviceMultiSelect({
 
   // Cap reached for non-'all' picks: the only allowed clicks are
   // already-selected entries (deselection) or 'all' (which replaces).
-  const atCap = value.length >= MAX_DEVICE_SCOPES && !value.some(isAllScope)
+  // Single mode never caps because a click always replaces the
+  // current pick instead of accumulating.
+  const atCap = mode === 'multi' && value.length >= MAX_DEVICE_SCOPES && !value.some(isAllScope)
 
   const renderRow = (scope: DeviceScope, label: string, optionKey: string) => {
     const key = scopeToSelectValue(scope)
