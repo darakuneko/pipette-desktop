@@ -259,10 +259,10 @@ describe('TypingAnalyticsView', () => {
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByText('analyze.loading.syncing')).toBeInTheDocument())
-    // Keyboard name is rendered twice — once in the sidebar button and
-    // once in the overlay — so the overlay occurrence is the second
-    // match.
-    expect(screen.getAllByText(SAMPLE[0].productName).length).toBeGreaterThanOrEqual(2)
+    // Device name is intentionally suppressed in the overlay (the
+    // sidebar already surfaces it), so only the sidebar button
+    // renders the product name.
+    expect(screen.getAllByText(SAMPLE[0].productName).length).toBe(1)
     resolveSync(true)
     await waitFor(() => expect(screen.queryByText('analyze.loading.syncing')).toBeNull())
     syncSpy.mockRestore()

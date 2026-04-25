@@ -441,21 +441,9 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   return (
     <div
-      className="relative flex h-full min-h-[70vh] gap-4"
+      className="flex h-full min-h-[70vh] gap-4"
       data-testid="analyze-view"
     >
-      {currentPhase !== null && (
-        <ConnectingOverlay
-          // Analytics syncs per keyboard, so the name doubles as
-          // "which device is this overlay for" when the user mentally
-          // context-switches between keyboards in the sidebar.
-          deviceName={selected?.productName ?? selectedUid ?? ''}
-          deviceId=""
-          syncOnly
-          loadingProgress={`analyze.loading.${currentPhase}`}
-          syncProgress={currentPhase === 'syncing' ? syncProgress : null}
-        />
-      )}
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
         {onBack && (
           <button
@@ -485,8 +473,9 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               <button
                 key={kb.uid}
                 type="button"
-                className={`${SIDE_BTN_BASE} ${kb.uid === selectedUid ? SIDE_BTN_ACTIVE : SIDE_BTN_IDLE}`}
+                className={`${SIDE_BTN_BASE} ${kb.uid === selectedUid ? SIDE_BTN_ACTIVE : SIDE_BTN_IDLE} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-transparent disabled:hover:bg-transparent`}
                 onClick={() => setSelectedUid(kb.uid)}
+                disabled={currentPhase !== null}
                 data-testid={`analyze-kb-${kb.uid}`}
               >
                 <span className="block font-medium">{kb.productName || kb.uid}</span>
@@ -495,7 +484,21 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
           </div>
         )}
       </aside>
-      <section className="flex flex-1 min-h-0 min-w-0 flex-col gap-3">
+      <section className="relative flex flex-1 min-h-0 min-w-0 flex-col gap-3">
+        {currentPhase !== null && (
+          // Device name is intentionally omitted — the sidebar already
+          // surfaces which keyboard is selected, so the overlay would
+          // just duplicate it. The overlay covers only the right pane;
+          // the Back button stays clickable while keyboard-list
+          // buttons are disabled until the load completes.
+          <ConnectingOverlay
+            deviceName=""
+            deviceId=""
+            syncOnly
+            loadingProgress={`analyze.loading.${currentPhase}`}
+            syncProgress={currentPhase === 'syncing' ? syncProgress : null}
+          />
+        )}
         {selected ? (
           <>
             <div
