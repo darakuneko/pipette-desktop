@@ -38,31 +38,40 @@ describe('shouldInvertText — registered fills', () => {
 })
 
 describe('shouldInvertText — heatmap HSL fills', () => {
-  it('keeps the default label on the cool end of the light ramp', () => {
-    // Light ramp starts at L=72% (blue/cyan) — comfortably lit, dark
-    // label reads fine.
+  it('keeps the default dark label on the cool / mid hues of the light ramp', () => {
+    // Light theme uses `--key-label` (#1f2937 dark text) on most
+    // steps of the wide-hue palette so the heatmap reads with black
+    // labels — the only exception is the saturated red tail (see
+    // below).
     expect(shouldInvertText('hsl(209, 60%, 70.9%)', 'light')).toBe(false)
     expect(shouldInvertText('hsl(165, 60%, 66.5%)', 'light')).toBe(false)
+    expect(shouldInvertText('hsl(60, 60%, 60%)', 'light')).toBe(false)
   })
 
-  it('inverts the warm end of the light ramp where the dark label fades', () => {
-    // Light ramp ends at L=50% (red) — dark label fights the fill so
-    // swap to the inverse label.
+  it('flips to the white inverse label on the red tail of the light ramp', () => {
+    // Hues within ±30° of pure red trip the white-on-red exception so
+    // the saturated end has the higher contrast it needs.
     expect(shouldInvertText('hsl(0, 60%, 50%)', 'light')).toBe(true)
     expect(shouldInvertText('hsl(22, 60%, 52.2%)', 'light')).toBe(true)
+    expect(shouldInvertText('hsl(345, 60%, 50%)', 'light')).toBe(true)
   })
 
-  it('keeps the default label on the cool end of the dark ramp', () => {
-    // Dark ramp starts at L=32% (deep blue) — light label reads fine.
-    expect(shouldInvertText('hsl(209, 65%, 32.8%)', 'dark')).toBe(false)
-    expect(shouldInvertText('hsl(165, 65%, 36%)', 'dark')).toBe(false)
+  it('flips to the near-black inverse label on the cool / mid hues of the dark ramp', () => {
+    // Dark theme uses `--content-inverse` (#0f1117 near-black) by
+    // default on the palette so the label reads as black across the
+    // ramp, mirroring the light theme's default.
+    expect(shouldInvertText('hsl(209, 65%, 65%)', 'dark')).toBe(true)
+    expect(shouldInvertText('hsl(165, 65%, 60%)', 'dark')).toBe(true)
+    expect(shouldInvertText('hsl(60, 65%, 55%)', 'dark')).toBe(true)
   })
 
-  it('inverts the warm end of the dark ramp where light label fades', () => {
-    // Dark ramp ends at L=48% — light label loses contrast on the red
-    // so flip to the inverse.
-    expect(shouldInvertText('hsl(0, 65%, 48%)', 'dark')).toBe(true)
-    expect(shouldInvertText('hsl(22, 65%, 46.4%)', 'dark')).toBe(true)
+  it('keeps the default light label on the red tail of the dark ramp', () => {
+    // The same red exception holds in dark theme: the default light
+    // `--key-label` reads better on saturated red than the near-black
+    // inverse would.
+    expect(shouldInvertText('hsl(0, 65%, 50%)', 'dark')).toBe(false)
+    expect(shouldInvertText('hsl(22, 65%, 52.2%)', 'dark')).toBe(false)
+    expect(shouldInvertText('hsl(345, 65%, 50%)', 'dark')).toBe(false)
   })
 })
 

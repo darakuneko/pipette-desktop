@@ -7,7 +7,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import { FINGER_COLORS } from './finger-colors'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
+import { fingerColor } from './finger-colors'
 
 interface Props {
   anchorRect: DOMRect
@@ -45,6 +46,7 @@ export function FingerSelectPopover({
   onClose,
 }: Props) {
   const { t } = useTranslation()
+  const theme = useEffectiveTheme()
   const popoverRef = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
 
@@ -98,7 +100,7 @@ export function FingerSelectPopover({
         <span className="flex items-center gap-2">
           <span
             className="inline-block h-3 w-3 rounded-full border border-edge"
-            style={{ backgroundColor: FINGER_COLORS[finger] }}
+            style={{ backgroundColor: fingerColor(finger, theme) }}
             aria-hidden="true"
           />
           <span>{t(`analyze.ergonomics.finger.${finger}`)}</span>

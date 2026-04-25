@@ -43,13 +43,25 @@ const FILL_INVERT_TABLE: Record<string, Record<EffectiveTheme, boolean>> = {
   '#ccffcc': { light: false, dark: true },
 }
 
-/** Parse the lightness component out of an `hsl(h, s%, l%)` string.
- * Returns `null` for anything that isn't an HSL triple we recognise. */
-function parseHslLightness(fill: string): number | null {
-  const match = /^hsl\(\s*-?[\d.]+\s*,\s*[\d.]+%\s*,\s*([\d.]+)%\s*\)$/i.exec(fill)
+/** Parse the hue + lightness components out of an `hsl(h, s%, l%)`
+ * string. Returns `null` for anything that isn't an HSL triple we
+ * recognise. Saturation isn't needed for the inversion decision. */
+function parseHslHueLightness(fill: string): { h: number; l: number } | null {
+  const match = /^hsl\(\s*(-?[\d.]+)\s*,\s*[\d.]+%\s*,\s*([\d.]+)%\s*\)$/i.exec(fill)
   if (!match) return null
-  const l = Number.parseFloat(match[1])
-  return Number.isFinite(l) ? l : null
+  const h = Number.parseFloat(match[1])
+  const l = Number.parseFloat(match[2])
+  if (!Number.isFinite(h) || !Number.isFinite(l)) return null
+  return { h, l }
+}
+
+/** Hue range that counts as "red" for the special-case white label.
+ * The wide-hue palette runs hue 220° (cool blue) → 0° (red); anything
+ * inside ±30° of 0/360 reads as red so the warm tail gets the white
+ * text the user expects from a heatmap. */
+function isRedHue(hue: number): boolean {
+  const normalised = ((hue % 360) + 360) % 360
+  return normalised <= 30 || normalised >= 330
 }
 
 /**
@@ -74,12 +86,16 @@ export function shouldInvertText(
   const known = FILL_INVERT_TABLE[fill]
   if (known) return known[theme]
 
-  const lightness = parseHslLightness(fill)
-  if (lightness !== null) {
-    // Heatmap wide-hue ramp runs L=72→50% (light) and L=32→48% (dark).
-    // Pick thresholds that keep the "neutral" end using the default
-    // label while flipping the saturated warm end.
-    return theme === 'light' ? lightness < 60 : lightness > 42
+  const hsl = parseHslHueLightness(fill)
+  if (hsl !== null) {
+    // Wide-hue palette fills (heatmap intensity, finger assignment)
+    // default to a near-black label in both themes — the saturated
+    // red tail is the only spot where a white label reads better, so
+    // it's the only hue that flips to the lighter side. The XOR
+    // captures both cases: light theme inverts (→ white) on red,
+    // dark theme inverts everywhere except red (where the default
+    // light label still reads on the red fill).
+    return (theme === 'dark') !== isRedHue(hsl.h)
   }
 
   return false

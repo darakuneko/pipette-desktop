@@ -21,13 +21,12 @@ describe('paletteColorFromIntensity', () => {
 
   it('ends at the warm (red) end at intensity 1', () => {
     expect(paletteColorFromIntensity(1, 'light')).toBe('hsl(0, 60%, 50%)')
-    expect(paletteColorFromIntensity(1, 'dark')).toBe('hsl(0, 65%, 48%)')
+    expect(paletteColorFromIntensity(1, 'dark')).toBe('hsl(0, 65%, 50%)')
   })
 
   it('rides a lighter lightness in light theme than in dark', () => {
-    // Light theme stays at or above 50% lightness so the ramp reads on
-    // the #ffffff key bg; dark theme stays at or below ~48% so labels
-    // keep contrast against dark fills.
+    // Light theme keeps the ramp lighter than dark theme — both ramps
+    // were tuned to keep a near-black label legible across every step.
     const light = paletteColorFromIntensity(0.5, 'light') ?? ''
     const dark = paletteColorFromIntensity(0.5, 'dark') ?? ''
     const lightL = Number.parseFloat(light.split(',')[2])
@@ -51,13 +50,13 @@ describe('chartSeriesColor', () => {
   it('places series 0 at the cool (blue) end and series N-1 at the warm (red) end', () => {
     expect(chartSeriesColor(0, 2, 'light')).toBe('hsl(220, 60%, 72%)')
     expect(chartSeriesColor(1, 2, 'light')).toBe('hsl(0, 60%, 50%)')
-    expect(chartSeriesColor(0, 2, 'dark')).toBe('hsl(220, 65%, 32%)')
-    expect(chartSeriesColor(1, 2, 'dark')).toBe('hsl(0, 65%, 48%)')
+    expect(chartSeriesColor(0, 2, 'dark')).toBe('hsl(220, 65%, 65%)')
+    expect(chartSeriesColor(1, 2, 'dark')).toBe('hsl(0, 65%, 50%)')
   })
 
   it('returns the cool end alone when total === 1', () => {
     expect(chartSeriesColor(0, 1, 'light')).toBe('hsl(220, 60%, 72%)')
-    expect(chartSeriesColor(0, 1, 'dark')).toBe('hsl(220, 65%, 32%)')
+    expect(chartSeriesColor(0, 1, 'dark')).toBe('hsl(220, 65%, 65%)')
   })
 
   it('clamps out-of-range index to the last series', () => {
@@ -69,12 +68,12 @@ describe('chartSeriesColor', () => {
     // The fallback flows through `hslFromRampT(0, theme)` so a future
     // palette retune carries to garbage-input callers automatically.
     expect(chartSeriesColor(0, 0, 'light')).toBe('hsl(220, 60%, 72%)')
-    expect(chartSeriesColor(0, 0, 'dark')).toBe('hsl(220, 65%, 32%)')
+    expect(chartSeriesColor(0, 0, 'dark')).toBe('hsl(220, 65%, 65%)')
     expect(chartSeriesColor(0, -1, 'light')).toBe('hsl(220, 60%, 72%)')
     expect(chartSeriesColor(Number.NaN, 1, 'light')).toBe('hsl(220, 60%, 72%)')
     // `total = NaN` must not slip past the guard and produce
     // `hsl(NaN, ...)`, which would render as a broken CSS string.
     expect(chartSeriesColor(0, Number.NaN, 'light')).toBe('hsl(220, 60%, 72%)')
-    expect(chartSeriesColor(0, Number.POSITIVE_INFINITY, 'dark')).toBe('hsl(220, 65%, 32%)')
+    expect(chartSeriesColor(0, Number.POSITIVE_INFINITY, 'dark')).toBe('hsl(220, 65%, 65%)')
   })
 })

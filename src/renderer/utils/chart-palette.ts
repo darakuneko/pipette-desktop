@@ -31,10 +31,12 @@ const SAT_DARK = 65
 const L_LIGHT_START = 72
 const L_LIGHT_RANGE = 22
 
-// Dark theme: 32% → 48% — starts deep against the `#262b3a` key
-// background, stays under 50% so light labels keep enough contrast.
-const L_DARK_START = 32
-const L_DARK_RANGE = 16
+// Dark theme: 65% → 50% — kept light enough that a near-black label
+// (`--content-inverse` = #0f1117) reads on top of every step of the
+// ramp. Drops from cool-blue 65% to warm-red 50% so the warmer end
+// is still visibly more saturated than the cooler end.
+const L_DARK_START = 65
+const L_DARK_RANGE = 15
 
 /** Builds the HSL string from a ramp position `t` ∈ [0,1] and theme.
  * Shared by both the intensity → fill path (with sqrt curve and
@@ -44,10 +46,14 @@ const L_DARK_RANGE = 16
 function hslFromRampT(t: number, theme: EffectiveTheme): string {
   const hue = Math.round(HUE_START - HUE_RANGE * t)
   const saturation = theme === 'light' ? SAT_LIGHT : SAT_DARK
+  // Both themes decrease lightness from cool to warm so the saturated
+  // end always reads as the "hotter" colour. Dark mode just starts /
+  // ends at a higher lightness band so a near-black label remains
+  // legible across the whole ramp.
   const lightness =
     theme === 'light'
       ? L_LIGHT_START - L_LIGHT_RANGE * t
-      : L_DARK_START + L_DARK_RANGE * t
+      : L_DARK_START - L_DARK_RANGE * t
   // Round to one decimal so the string stays stable across renders
   // (avoids churn in React's diff of the `fill` attribute).
   const l = Math.round(lightness * 10) / 10

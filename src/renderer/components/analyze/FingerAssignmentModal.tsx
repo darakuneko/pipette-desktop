@@ -15,8 +15,9 @@ import {
 } from '../../../shared/kle/kle-ergonomics'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { FingerSelectPopover } from './FingerSelectPopover'
-import { FINGER_COLORS } from './finger-colors'
+import { fingerColor } from './finger-colors'
 
 interface Props {
   isOpen: boolean
@@ -40,6 +41,7 @@ export function FingerAssignmentModal({
   onSave,
 }: Props) {
   const { t } = useTranslation()
+  const theme = useEffectiveTheme()
   const [selected, setSelected] = useState<{ key: KleKey; anchorRect: DOMRect } | null>(null)
   // Hover rect is captured by KeyboardWidget's onKeyHover (the only
   // click-local DOMRect source it exposes) and reused on click.
@@ -107,10 +109,10 @@ export function FingerAssignmentModal({
     for (const k of keys) {
       const finger = resolveFinger(k)
       if (!finger) continue
-      m.set(cellKey(k.row, k.col), FINGER_COLORS[finger])
+      m.set(cellKey(k.row, k.col), fingerColor(finger, theme))
     }
     return m
-  }, [keys, resolveFinger])
+  }, [keys, resolveFinger, theme])
 
   const emptyKeycodes = useMemo(() => new Map<string, string>(), [])
 
