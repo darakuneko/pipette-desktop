@@ -700,6 +700,9 @@
         "p75": "p75",
         "max": "Max"
       },
+      "secondaryLegend": "Compare median",
+      "secondaryDescription": "Median (p50) interval from the second device picked in the Device filter. Min / p25 / p75 / max stay primary-only to keep the chart readable.",
+      "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
       "description": {
         "min": "Min — Shortest keystroke interval recorded within any minute (fastest single moment).",
         "p25": "p25 — Lower quartile\nDaily average of each minute's p25; 1/4 of intervals are shorter.",

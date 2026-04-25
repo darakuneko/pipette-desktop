@@ -31,13 +31,19 @@ import {
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
+import { chartSeriesColor } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
   range: RangeMs
   /** Multi-select Device filter (capped at MAX_DEVICE_SCOPES = 2).
-   * Today only `deviceScopes[0]` is consumed; a follow-up commit adds
-   * the second-series overlay for `timeSeries` mode. */
+   * The first scope drives the full quartile band; in `timeSeries`
+   * mode the second scope adds a single `p50` overlay so the user can
+   * compare median rhythms without ten lines fighting for space.
+   * `distribution` mode forces `'own'` on its own (the cross-scope
+   * aggregate query already pre-merges its quartiles), so the
+   * secondary scope is suppressed there. */
   deviceScopes: readonly DeviceScope[]
   unit: IntervalUnit
   granularity: GranularityChoice
@@ -46,6 +52,7 @@ interface Props {
 
 const SERIES_KEYS = ['min', 'p25', 'p50', 'p75', 'max'] as const
 type SeriesKey = (typeof SERIES_KEYS)[number]
+type LegendKey = SeriesKey | 'p50B'
 
 // Five clearly distinct hues so the min/max whiskers don't fight the
 // central tendency lines visually. All series are drawn solid — the
@@ -82,16 +89,17 @@ function formatShare(v: number): string {
 
 export function IntervalChart({ uid, range, deviceScopes, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
+  const effectiveTheme = useEffectiveTheme()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
+  const [secondaryRows, setSecondaryRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
   const [loading, setLoading] = useState(true)
-  const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
-    min: false, p25: false, p50: false, p75: false, max: false,
+  const [hidden, setHidden] = useState<Record<LegendKey, boolean>>({
+    min: false, p25: false, p50: false, p75: false, max: false, p50B: false,
   })
 
-  // First scope is the primary series; the second-series overlay
-  // lands in a follow-up commit.
   const deviceScope = primaryDeviceScope(deviceScopes)
+  const secondaryScope: DeviceScope | undefined = deviceScopes.length > 1 ? deviceScopes[1] : undefined
 
   // Distribution mode needs per-scope raw quartiles — the cross-scope
   // `all` query already aggregates MIN / AVG / MAX over contributing
@@ -99,9 +107,16 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
   // per minute" would muddy the histogram. Force `own` for distribution
   // regardless of the outer scope (including per-hash selections) and
   // hide the device filter at the parent when the user picks
-  // Distribution.
+  // Distribution. Secondary is suppressed in distribution for the same
+  // reason: the histogram only makes sense for a single device.
   const effectiveDeviceScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
   const scopeKey = scopeToSelectValue(effectiveDeviceScope)
+  const hasSecondary = viewMode === 'timeSeries' && secondaryScope !== undefined
+  const secondaryScopeKey = hasSecondary && secondaryScope ? scopeToSelectValue(secondaryScope) : null
+  // Two-device pick adopts the shared cool→warm ramp so primary p50 reads
+  // as A and secondary p50 reads as B; single-device picks keep the
+  // existing per-quartile palette so nothing recolours unexpectedly.
+  const secondaryP50Color = chartSeriesColor(1, 2, effectiveTheme)
 
   useEffect(() => {
     let cancelled = false
@@ -123,6 +138,29 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
     void load()
     return () => { cancelled = true }
   }, [uid, scopeKey, range])
+
+  // Secondary minute-stats only flows through `timeSeries` mode (see
+  // distribution comment above). Clearing the rows up front so a stale
+  // dataset can't outlast a scope change.
+  useEffect(() => {
+    setSecondaryRows([])
+    if (!hasSecondary || !secondaryScope) return
+    let cancelled = false
+    const load = async () => {
+      try {
+        const data = isHashScope(secondaryScope)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, secondaryScope.machineHash, range.fromMs, range.toMs)
+          : isOwnScope(secondaryScope)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
+        if (!cancelled) setSecondaryRows(data)
+      } catch {
+        if (!cancelled) setSecondaryRows([])
+      }
+    }
+    void load()
+    return () => { cancelled = true }
+  }, [uid, secondaryScopeKey, range, hasSecondary, secondaryScope])
 
   // Longest session comes from a narrow aggregation IPC rather than
   // the minute-stats rows so it surfaces the run that straddles bucket
@@ -154,6 +192,17 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),
     [range, granularity],
   )
+  // Secondary p50 only — surfacing all five quartiles for both devices
+  // would put ten lines on a single log axis. p50 (the central tendency)
+  // is what most users look at when comparing rhythm across devices.
+  const secondaryP50ByBucket = useMemo(() => {
+    const map = new Map<number, number | null>()
+    if (!hasSecondary) return map
+    for (const b of bucketMinuteStats(secondaryRows, range, bucketMs)) {
+      map.set(b.bucketStartMs, clampForLog(b.intervalP50Ms))
+    }
+    return map
+  }, [secondaryRows, range, bucketMs, hasSecondary])
   const chartData = useMemo(() => {
     if (viewMode !== 'timeSeries') return []
     return bucketMinuteStats(rows, range, bucketMs).map((b) => ({
@@ -163,8 +212,9 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
       p50: clampForLog(b.intervalP50Ms),
       p75: clampForLog(b.intervalP75Ms),
       max: clampForLog(b.intervalMaxMs),
+      p50B: secondaryP50ByBucket.get(b.bucketStartMs) ?? null,
     }))
-  }, [rows, range, bucketMs, viewMode])
+  }, [rows, range, bucketMs, viewMode, secondaryP50ByBucket])
 
   const histogram = useMemo(
     () => (viewMode === 'distribution' ? buildIntervalHistogram(rows, range) : null),
@@ -198,8 +248,8 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
   )
 
   const toggleSeries = (key: string): void => {
-    if ((SERIES_KEYS as readonly string[]).includes(key)) {
-      setHidden((prev) => ({ ...prev, [key as SeriesKey]: !prev[key as SeriesKey] }))
+    if (key === 'p50B' || (SERIES_KEYS as readonly string[]).includes(key)) {
+      setHidden((prev) => ({ ...prev, [key as LegendKey]: !prev[key as LegendKey] }))
     }
   }
 
@@ -308,18 +358,24 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
             labelStyle={{ color: 'var(--color-content-secondary)' }}
             itemStyle={{ color: 'var(--color-content)' }}
             labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
-            formatter={(value) => {
+            formatter={(value, _name, item) => {
               const n = typeof value === 'number' ? value : Number(value)
               if (!Number.isFinite(n)) return String(value)
-              return unit === 'sec' ? `${(n / 1000).toFixed(3)} s` : `${n} ms`
+              const formatted = unit === 'sec' ? `${(n / 1000).toFixed(3)} s` : `${n} ms`
+              if (item?.dataKey === 'p50B') {
+                return [formatted, t('analyze.interval.secondaryLegend')]
+              }
+              return formatted
             }}
           />
           <Legend
             wrapperStyle={{ fontSize: 12, cursor: 'pointer' }}
             onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
             formatter={(value, entry) => {
-              const key = String(entry.dataKey ?? '') as SeriesKey
-              const description = t(`analyze.interval.description.${key}`, { defaultValue: '' })
+              const key = String(entry.dataKey ?? '') as LegendKey
+              const description = key === 'p50B'
+                ? t('analyze.interval.secondaryDescription')
+                : t(`analyze.interval.description.${key}`, { defaultValue: '' })
               return (
                 <UITooltip
                   content={description}
@@ -350,14 +406,37 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
               connectNulls
             />
           ))}
+          {hasSecondary && (
+            <Line
+              type="monotone"
+              dataKey="p50B"
+              stroke={secondaryP50Color}
+              strokeWidth={2}
+              strokeDasharray="5 3"
+              dot={{ r: 2 }}
+              name={t('analyze.interval.secondaryLegend')}
+              hide={hidden.p50B}
+              connectNulls={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
       </div>
       {timeSeriesItems !== null && (
-        <AnalyzeStatGrid
-          items={timeSeriesItems}
-          ariaLabelKey="analyze.interval.timeSeries.summary.label"
-        />
+        <>
+          {hasSecondary && (
+            <p
+              className="text-[11px] text-content-muted"
+              data-testid="analyze-interval-summary-primary-note"
+            >
+              {t('analyze.interval.summaryPrimaryOnly')}
+            </p>
+          )}
+          <AnalyzeStatGrid
+            items={timeSeriesItems}
+            ariaLabelKey="analyze.interval.timeSeries.summary.label"
+          />
+        </>
       )}
     </div>
   )
