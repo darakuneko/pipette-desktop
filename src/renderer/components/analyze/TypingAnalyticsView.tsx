@@ -542,46 +542,63 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
                 !filtersReady || syncingAnalytics ? 'pointer-events-none opacity-60' : ''
               }`}
-              // 8 columns: 4 label / control pairs per row. `display: contents`
-              // on each `<label>` (FILTER_LABEL) lets its label-text and control
-              // participate in this grid directly so labels and controls line
-              // up vertically across rows even when tab-specific filters wrap
-              // below.
+              // 6 outer columns shared via `grid-cols-subgrid` on
+              // each row so the label / control widths line up
+              // vertically across rows even when the per-tab filters
+              // change. `display: contents` on each FILTER_LABEL
+              // flattens its text + control into the subgrid.
               style={{ gridTemplateColumns: 'repeat(8, max-content)' }}
               data-testid="analyze-filters"
               aria-busy={!filtersReady || syncingAnalytics}
             >
-              {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') ? (
-                <label className={FILTER_LABEL}>
-                  <span>{t('analyze.filters.device')}</span>
-                  <DeviceMultiSelect
-                    value={deviceScopes}
-                    ownDevice={deviceInfos.own}
-                    remoteDevices={deviceInfos.remotes}
-                    onChange={setDeviceScopes}
-                    ariaLabel={t('analyze.filters.device')}
-                  />
-                </label>
-              ) : (
-                <>
-                  <span />
-                  <span />
-                </>
-              )}
-              <KeymapSnapshotTimeline
-                summaries={snapshotSummaries}
-                selectedSavedAt={selectedSnapshotSavedAt}
-                onSelectSnapshot={handleSelectSnapshot}
-              />
-              <RangeDayPicker
-                range={range}
-                snapshotBoundaries={snapshotBoundaries}
-                nowMs={nowMs}
-                onChange={setRange}
-                labelKey="analyze.filters.period"
-                testIdPrefix="analyze-filter-range"
-              />
-              {analysisTab === 'wpm' && (
+              {/* Row 1: always-present filters — Device / Keymap
+               * snapshots / Period. */}
+              <div className="col-span-8 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
+                {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') ? (
+                  <label className={FILTER_LABEL}>
+                    <span>{t('analyze.filters.device')}</span>
+                    <DeviceMultiSelect
+                      value={deviceScopes}
+                      ownDevice={deviceInfos.own}
+                      remoteDevices={deviceInfos.remotes}
+                      onChange={setDeviceScopes}
+                      ariaLabel={t('analyze.filters.device')}
+                    />
+                  </label>
+                ) : (
+                  <>
+                    <span />
+                    <span />
+                  </>
+                )}
+                <KeymapSnapshotTimeline
+                  summaries={snapshotSummaries}
+                  selectedSavedAt={selectedSnapshotSavedAt}
+                  onSelectSnapshot={handleSelectSnapshot}
+                />
+                <RangeDayPicker
+                  range={range}
+                  snapshotBoundaries={snapshotBoundaries}
+                  nowMs={nowMs}
+                  onChange={setRange}
+                  labelKey="analyze.filters.period"
+                  testIdPrefix="analyze-filter-range"
+                />
+                {analysisTab === 'ergonomics' && (
+                  <button
+                    type="button"
+                    className="justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
+                    onClick={() => setFingerModalOpen(true)}
+                    disabled={effectiveSnapshot === null}
+                    data-testid="analyze-finger-assignment-open"
+                  >
+                    {t('analyze.fingerAssignment.button')}
+                  </button>
+                )}
+              </div>
+              {/* Row 2: per-tab View / metric / granularity. */}
+              <div className="col-span-8 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
+                {analysisTab === 'wpm' && (
                 <>
                   <label className={FILTER_LABEL}>
                     <span>{t('analyze.filters.wpmViewMode')}</span>
@@ -705,21 +722,10 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   </select>
                 </label>
               )}
-              {analysisTab === 'ergonomics' && (
-                <button
-                  type="button"
-                  className="justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
-                  style={{ gridColumn: 'span 2' }}
-                  onClick={() => setFingerModalOpen(true)}
-                  disabled={effectiveSnapshot === null}
-                  data-testid="analyze-finger-assignment-open"
-                >
-                  {t('analyze.fingerAssignment.button')}
-                </button>
-              )}
-              {/* Layer tab: filters live inside the chart sections —
-                * the base-layer select rides next to the activations
-                * heading instead of in this global filter row. */}
+                {/* Layer tab: filters live inside the chart sections —
+                  * the base-layer select rides next to the activations
+                  * heading instead of in this global filter row. */}
+              </div>
             </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
