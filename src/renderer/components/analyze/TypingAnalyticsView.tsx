@@ -445,31 +445,23 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       data-testid="analyze-view"
     >
       <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
-        {onBack && (
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 self-start rounded-md border border-edge px-2 py-1 text-[12px] text-content-secondary transition-colors hover:text-content"
-            onClick={onBack}
-            data-testid="analyze-back"
-          >
-            <ArrowLeft size={12} aria-hidden="true" />
-            {t('analyze.back')}
-          </button>
-        )}
         <h3 className="px-1 text-[11px] font-semibold uppercase tracking-widest text-content-muted">
           {t('analyze.keyboardList')}
         </h3>
-        {loading ? (
-          <div className="px-1 py-2 text-[13px] text-content-muted">
-            {t('common.loading')}
-          </div>
-        ) : keyboards.length === 0 ? (
-          <div className="px-1 py-2 text-[13px] text-content-muted" data-testid="analyze-no-keyboards">
-            {t('analyze.noKeyboards')}
-          </div>
-        ) : (
-          <div className="flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto">
-            {keyboards.map((kb) => (
+        {/* List body fills the remaining space and scrolls; the Back
+         * button sits in a fixed footer below so it's always reachable
+         * even when the list is taller than the sidebar. */}
+        <div className="flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto">
+          {loading ? (
+            <div className="px-1 py-2 text-[13px] text-content-muted">
+              {t('common.loading')}
+            </div>
+          ) : keyboards.length === 0 ? (
+            <div className="px-1 py-2 text-[13px] text-content-muted" data-testid="analyze-no-keyboards">
+              {t('analyze.noKeyboards')}
+            </div>
+          ) : (
+            keyboards.map((kb) => (
               <button
                 key={kb.uid}
                 type="button"
@@ -480,8 +472,19 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
               >
                 <span className="block font-medium">{kb.productName || kb.uid}</span>
               </button>
-            ))}
-          </div>
+            ))
+          )}
+        </div>
+        {onBack && (
+          <button
+            type="button"
+            className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border border-edge px-2 py-1 text-[12px] text-content-secondary transition-colors hover:text-content"
+            onClick={onBack}
+            data-testid="analyze-back"
+          >
+            <ArrowLeft size={12} aria-hidden="true" />
+            {t('analyze.back')}
+          </button>
         )}
       </aside>
       <section className="relative flex flex-1 min-h-0 min-w-0 flex-col gap-3">
