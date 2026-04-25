@@ -655,6 +655,9 @@
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",
+      "secondaryLegend": "Compare WPM",
+      "secondaryDescription": "WPM from the second device picked in the Device filter, drawn alongside the primary series.",
+      "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
       "timeSeries": {
         "summary": {
           "label": "WPM summary",

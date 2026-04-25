@@ -654,6 +654,9 @@
     "wpm": {
       "legend": "WPM",
       "description": "WPM — Words per minute\nアクティブ 1 分あたりの打鍵数を 5 で割った値 (英語 1 語 = 5 文字換算)",
+      "secondaryLegend": "比較 WPM",
+      "secondaryDescription": "デバイスフィルタで選んだ 2 台目の WPM を、主系列と並べて表示します。",
+      "summaryPrimaryOnly": "下のサマリカードは主デバイスのみの集計です。",
       "timeSeries": {
         "summary": {
           "label": "WPM サマリ",
