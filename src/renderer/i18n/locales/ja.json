@@ -655,7 +655,6 @@
       "legend": "WPM",
       "description": "WPM — Words per minute\nアクティブ 1 分あたりの打鍵数を 5 で割った値 (英語 1 語 = 5 文字換算)",
       "secondaryLegend": "比較 WPM",
-      "secondaryDescription": "比較 WPM — デバイスフィルタで選んだ 2 台目の WPM\n主系列と並べて描画",
       "summaryPrimaryOnly": "下のサマリカードは主デバイスのみの集計",
       "timeSeries": {
         "summary": {
@@ -674,8 +673,7 @@
       "errorProxy": {
         "legend": "Bksp %",
         "description": "Bksp % — 取得した打鍵のうち Backspace の割合\nキー入力ストリームから集計、タイピングテスト以外の通常打鍵も含む",
-        "secondaryLegend": "比較 Bksp %",
-        "secondaryDescription": "比較 Bksp % — デバイスフィルタで選んだ 2 台目の Bksp %\n比較 WPM と同色なので色がデバイス識別子になる"
+        "secondaryLegend": "比較 Bksp %"
       },
       "timeOfDay": {
         "tooltipLabel": "時間帯",
@@ -702,7 +700,6 @@
         "max": "最大"
       },
       "secondaryLegend": "比較中央値",
-      "secondaryDescription": "比較中央値 — デバイスフィルタで選んだ 2 台目の p50\nmin / p25 / p75 / max は読みやすさのため主デバイスのみ表示",
       "summaryPrimaryOnly": "下のサマリカードは主デバイスのみの集計",
       "description": {
         "min": "最小 — 1 分内で記録された最短の打鍵間隔 (最速の瞬間)",

@@ -656,7 +656,6 @@
       "legend": "WPM",
       "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",
       "secondaryLegend": "Compare WPM",
-      "secondaryDescription": "WPM from the second device picked in the Device filter, drawn alongside the primary series.",
       "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
       "timeSeries": {
         "summary": {
@@ -675,8 +674,7 @@
       "errorProxy": {
         "legend": "Bksp %",
         "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests.",
-        "secondaryLegend": "Compare Bksp %",
-        "secondaryDescription": "Bksp % from the second device picked in the Device filter — same colour as the secondary WPM line so a colour reads as a device identity."
+        "secondaryLegend": "Compare Bksp %"
       },
       "timeOfDay": {
         "tooltipLabel": "Hour",
@@ -703,7 +701,6 @@
         "max": "Max"
       },
       "secondaryLegend": "Compare median",
-      "secondaryDescription": "Median (p50) interval from the second device picked in the Device filter. Min / p25 / p75 / max stay primary-only to keep the chart readable.",
       "summaryPrimaryOnly": "Summary cards below reflect the primary device only.",
       "description": {
         "min": "Min — Shortest keystroke interval recorded within any minute (fastest single moment).",

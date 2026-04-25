@@ -522,15 +522,22 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
               onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
               formatter={(value, entry) => {
                 const key = String(entry.dataKey ?? '') as WpmLineKey
+                // Description tooltips ride only the primary series —
+                // the compare line shares the same metric definition,
+                // so a duplicate tooltip on `wpmB` / `bksPercentB`
+                // would just repeat the explanation.
                 const description = key === 'bksPercent'
                   ? t('analyze.wpm.errorProxy.description')
-                  : key === 'bksPercentB'
-                    ? t('analyze.wpm.errorProxy.secondaryDescription')
-                    : key === 'wpmB'
-                      ? t('analyze.wpm.secondaryDescription')
-                      : t('analyze.wpm.description')
+                  : key === 'wpm'
+                    ? t('analyze.wpm.description')
+                    : ''
                 return (
-                  <UITooltip content={description} wrapperAs="span" bubbleAs="span">
+                  <UITooltip
+                    content={description}
+                    disabled={!description}
+                    wrapperAs="span"
+                    bubbleAs="span"
+                  >
                     <span
                       style={{ color: hidden[key] ? 'var(--color-content-muted)' : 'var(--color-content)' }}
                     >

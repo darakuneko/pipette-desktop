@@ -373,8 +373,12 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
             onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
             formatter={(value, entry) => {
               const key = String(entry.dataKey ?? '') as LegendKey
+              // Description tooltips ride only the primary quartile
+              // entries — the compare median shares the same metric
+              // definition as the primary p50, so a duplicate tooltip
+              // would just repeat the explanation.
               const description = key === 'p50B'
-                ? t('analyze.interval.secondaryDescription')
+                ? ''
                 : t(`analyze.interval.description.${key}`, { defaultValue: '' })
               return (
                 <UITooltip
