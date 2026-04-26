@@ -628,8 +628,6 @@
   },
   "analyze": {
     "placeholder": "分析チャートを準備中です",
-    "back": "戻る",
-    "keyboardList": "キーボード",
     "noKeyboards": "まだ打鍵データがありません",
     "noData": "選択した期間にデータがありません",
     "selectKeyboard": "一覧からキーボードを選択してください",
@@ -1006,6 +1004,7 @@
       }
     },
     "filters": {
+      "keyboard": "キーボード",
       "from": "開始",
       "to": "終了",
       "period": "期間",

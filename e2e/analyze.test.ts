@@ -53,9 +53,9 @@ test.beforeAll(async () => {
   const analyzePage = page.locator('[data-testid="analyze-page"]')
   await expect(analyzePage).toBeVisible({ timeout: 10_000 })
 
-  const kb = page.locator(`[data-testid="analyze-kb-${DUMMY_TA_UID}"]`)
-  await expect(kb).toBeVisible({ timeout: 15_000 })
-  await kb.click()
+  const kbSelect = page.locator('[data-testid="analyze-filter-keyboard"]')
+  await expect(kbSelect).toBeVisible({ timeout: 15_000 })
+  await kbSelect.selectOption(DUMMY_TA_UID)
 })
 
 test.afterAll(async () => {
@@ -71,9 +71,9 @@ async function switchTab(tabKey: string): Promise<void> {
 }
 
 test.describe('Analyze keyboard list', () => {
-  test('sidebar lists the seeded keyboard', async () => {
-    const kb = page.locator(`[data-testid="analyze-kb-${DUMMY_TA_UID}"]`)
-    await expect(kb).toBeVisible()
+  test('the keyboard select lists the seeded keyboard', async () => {
+    const option = page.locator(`[data-testid="analyze-kb-${DUMMY_TA_UID}"]`)
+    await expect(option).toBeAttached()
   })
 
   test('common filters (Period / Device) are rendered', async () => {

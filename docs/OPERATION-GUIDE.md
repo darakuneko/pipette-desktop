@@ -94,9 +94,9 @@ There are two entry points:
 - **Analyze tab** on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged
 - **View Analytics** button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back
 
-**Keyboard list (sidebar)**
+**Keyboard selector**
 
-The left sidebar lists every keyboard that has recorded typing data. Pick one to populate the charts; keyboards with no data never appear.
+The Keyboards select at the top of the filter row lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).
 
 **Analysis tabs**
 

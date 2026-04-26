@@ -45,13 +45,6 @@ import { LayerUsageChart } from './LayerUsageChart'
 import { WpmChart } from './WpmChart'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
-const SIDE_BTN_BASE =
-  'block w-full rounded-md border px-3 py-2 text-left text-[13px] transition-colors'
-const SIDE_BTN_IDLE =
-  'border-transparent bg-transparent text-content-secondary hover:border-edge hover:bg-surface-dim'
-const SIDE_BTN_ACTIVE =
-  'border-accent bg-accent/10 text-content'
-
 const TAB_BTN_BASE =
   'rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
@@ -103,10 +96,9 @@ interface TypingAnalyticsViewProps {
    * typing view — the user has already committed to one keyboard and
    * shouldn't have to re-pick it. */
   initialUid?: string
-  /** When provided, the sidebar renders a Back button above the
-   * keyboard list that invokes this handler. Omit to hide the button
-   * (e.g. when the Analyze view is embedded somewhere without a
-   * meaningful "back" destination). */
+  /** When provided, the page footer renders a Back button that invokes
+   * this handler. Omit to hide the button (e.g. when the Analyze view
+   * is embedded somewhere without a meaningful "back" destination). */
   onBack?: () => void
 }
 
@@ -527,59 +519,16 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   return (
     <div
-      className="flex h-full min-h-[70vh] gap-4"
+      className="flex h-full min-h-[70vh] flex-col gap-3"
       data-testid="analyze-view"
     >
-      <aside className="flex w-60 shrink-0 flex-col gap-2 border-r border-edge pr-4 min-h-0">
-        <h3 className="px-1 text-[11px] font-semibold uppercase tracking-widest text-content-muted">
-          {t('analyze.keyboardList')}
-        </h3>
-        {/* List body fills the remaining space and scrolls; the Back
-         * button sits in a fixed footer below so it's always reachable
-         * even when the list is taller than the sidebar. */}
-        <div className="flex flex-1 min-h-0 flex-col gap-1 overflow-y-auto">
-          {loading ? (
-            <div className="px-1 py-2 text-[13px] text-content-muted">
-              {t('common.loading')}
-            </div>
-          ) : keyboards.length === 0 ? (
-            <div className="px-1 py-2 text-[13px] text-content-muted" data-testid="analyze-no-keyboards">
-              {t('analyze.noKeyboards')}
-            </div>
-          ) : (
-            keyboards.map((kb) => (
-              <button
-                key={kb.uid}
-                type="button"
-                className={`${SIDE_BTN_BASE} ${kb.uid === selectedUid ? SIDE_BTN_ACTIVE : SIDE_BTN_IDLE} disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-transparent disabled:hover:bg-transparent`}
-                onClick={() => setSelectedUid(kb.uid)}
-                disabled={currentPhase !== null}
-                data-testid={`analyze-kb-${kb.uid}`}
-              >
-                <span className="block font-medium">{kb.productName || kb.uid}</span>
-              </button>
-            ))
-          )}
-        </div>
-        {onBack && (
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 self-start rounded-md border border-edge px-2 py-1 text-[12px] text-content-secondary transition-colors hover:text-content"
-            onClick={onBack}
-            data-testid="analyze-back"
-          >
-            <ArrowLeft size={12} aria-hidden="true" />
-            {t('analyze.back')}
-          </button>
-        )}
-      </aside>
       <section className="relative flex flex-1 min-h-0 min-w-0 flex-col gap-3">
         {currentPhase !== null && (
-          // Device name is intentionally omitted — the sidebar already
-          // surfaces which keyboard is selected, so the overlay would
-          // just duplicate it. The overlay covers only the right pane;
-          // the Back button stays clickable while keyboard-list
-          // buttons are disabled until the load completes.
+          // Device name is intentionally omitted — the Keyboards select
+          // already surfaces which keyboard is selected, so the overlay
+          // would just duplicate it. The overlay covers only the chart
+          // section; the footer's Back button stays clickable while the
+          // load completes.
           <ConnectingOverlay
             deviceName=""
             deviceId=""
@@ -588,55 +537,56 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
             syncProgress={currentPhase === 'syncing' ? syncProgress : null}
           />
         )}
-        {selected ? (
-          <>
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-dim p-1">
-              <div
-                className="flex gap-1"
-                data-testid="analyze-tabs"
-                role="tablist"
-                aria-label={t('analyze.tablistLabel')}
+        {/* Filter row — always visible. Keyboard select is the first
+         * column so the user can pick a keyboard from inside the filter
+         * group; the rest of the filters render once a keyboard is
+         * selected. */}
+        <div
+          className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
+            selected !== null && (!filtersReady || syncingAnalytics) ? 'pointer-events-none opacity-60' : ''
+          }`}
+          // 10 outer columns shared via `grid-cols-subgrid` on each row
+          // so the label / control widths line up vertically across rows
+          // even when the per-tab filters change. `display: contents`
+          // on each FILTER_LABEL flattens its text + control into the
+          // subgrid.
+          style={{ gridTemplateColumns: 'repeat(10, max-content)' }}
+          data-testid="analyze-filters"
+          aria-busy={selected !== null && (!filtersReady || syncingAnalytics)}
+        >
+          {/* Row 1: Keyboard select (always) + Device / Keymap / Period
+           * (only after a keyboard is picked). */}
+          <div className="col-span-10 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
+            <label className={FILTER_LABEL}>
+              <span>{t('analyze.filters.keyboard')}</span>
+              <select
+                className={FILTER_SELECT}
+                value={selectedUid ?? ''}
+                onChange={(e) => setSelectedUid(e.target.value || null)}
+                disabled={loading || currentPhase !== null || keyboards.length === 0}
+                aria-label={t('analyze.filters.keyboard')}
+                data-testid="analyze-filter-keyboard"
               >
-                {ANALYSIS_TABS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={analysisTab === key}
-                    className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
-                    onClick={() => setAnalysisTab(key)}
-                    data-testid={`analyze-tab-${key}`}
-                  >
-                    {t(`analyze.analysisTab.${key}`)}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
-                onClick={() => setExportModalOpen(true)}
-                disabled={exportCtx === null}
-                data-testid="analyze-export-open"
-              >
-                {t('analyze.export.csv')}
-              </button>
-            </div>
-            <div
-              className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
-                !filtersReady || syncingAnalytics ? 'pointer-events-none opacity-60' : ''
-              }`}
-              // 6 outer columns shared via `grid-cols-subgrid` on
-              // each row so the label / control widths line up
-              // vertically across rows even when the per-tab filters
-              // change. `display: contents` on each FILTER_LABEL
-              // flattens its text + control into the subgrid.
-              style={{ gridTemplateColumns: 'repeat(8, max-content)' }}
-              data-testid="analyze-filters"
-              aria-busy={!filtersReady || syncingAnalytics}
-            >
-              {/* Row 1: always-present filters — Device / Keymap
-               * snapshots / Period. */}
-              <div className="col-span-8 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
+                {loading ? (
+                  <option value="">{t('common.loading')}</option>
+                ) : keyboards.length === 0 ? (
+                  <option value="" data-testid="analyze-no-keyboards">{t('analyze.noKeyboards')}</option>
+                ) : (
+                  <>
+                    {selectedUid === null && (
+                      <option value="">{t('analyze.selectKeyboard')}</option>
+                    )}
+                    {keyboards.map((kb) => (
+                      <option key={kb.uid} value={kb.uid} data-testid={`analyze-kb-${kb.uid}`}>
+                        {kb.productName || kb.uid}
+                      </option>
+                    ))}
+                  </>
+                )}
+              </select>
+            </label>
+            {selected && (
+              <>
                 {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') ? (
                   <label className={FILTER_LABEL}>
                     <span>{t('analyze.filters.device')}</span>
@@ -678,9 +628,11 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.fingerAssignment.button')}
                   </button>
                 )}
-              </div>
-              {/* Row 2: per-tab View / metric / granularity. */}
-              <div className="col-span-8 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
+              </>
+            )}
+          </div>
+          {selected && (
+            <div className="col-span-10 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
                 {analysisTab === 'wpm' && (
                 <>
                   <label className={FILTER_LABEL}>
@@ -808,7 +760,42 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                 {/* Layer tab: filters live inside the chart sections —
                   * the base-layer select rides next to the activations
                   * heading instead of in this global filter row. */}
+            </div>
+          )}
+        </div>
+
+        {selected ? (
+          <>
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-dim p-1">
+              <div
+                className="flex gap-1"
+                data-testid="analyze-tabs"
+                role="tablist"
+                aria-label={t('analyze.tablistLabel')}
+              >
+                {ANALYSIS_TABS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={analysisTab === key}
+                    className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
+                    onClick={() => setAnalysisTab(key)}
+                    data-testid={`analyze-tab-${key}`}
+                  >
+                    {t(`analyze.analysisTab.${key}`)}
+                  </button>
+                ))}
               </div>
+              <button
+                type="button"
+                className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
+                onClick={() => setExportModalOpen(true)}
+                disabled={exportCtx === null}
+                data-testid="analyze-export-open"
+              >
+                {t('analyze.export.csv')}
+              </button>
             </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid="analyze-chart">
               {analysisTab === 'wpm' ? (
@@ -921,6 +908,19 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
           </div>
         )}
       </section>
+      {onBack && (
+        <footer className="flex shrink-0 items-center border-t border-edge pt-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-edge px-2 py-1 text-[12px] text-content-secondary transition-colors hover:text-content"
+            onClick={onBack}
+            data-testid="analyze-back"
+          >
+            <ArrowLeft size={12} aria-hidden="true" />
+            {t('common.back')}
+          </button>
+        </footer>
+      )}
       <FingerAssignmentModal
         isOpen={fingerModalOpen}
         onClose={() => setFingerModalOpen(false)}

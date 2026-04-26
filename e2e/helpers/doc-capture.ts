@@ -415,9 +415,12 @@ async function captureAnalyzePage(page: Page): Promise<void> {
   }
 
   // Analyze only lists keyboards with recorded data — skip cleanly if none.
-  const firstKb = page.locator('[data-testid^="analyze-kb-"]').first()
-  if (await isAvailable(firstKb)) {
-    await firstKb.click()
+  const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
+  const firstKbValue = (await isAvailable(firstKbOption))
+    ? await firstKbOption.getAttribute('value')
+    : null
+  if (firstKbValue) {
+    await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
     await page.waitForTimeout(500)
   } else {
     console.log('  [warn] no keyboards listed — capturing overview only')
