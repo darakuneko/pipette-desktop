@@ -234,26 +234,108 @@ interface RankingTableProps {
   result: TypingBigramAggregateResult
 }
 
+type RankingSortKey = 'pair' | 'count' | 'avgIki' | 'p95'
+type SortDir = 'asc' | 'desc'
+
+function defaultSort(view: 'top' | 'slow'): { key: RankingSortKey; dir: SortDir } {
+  return view === 'slow' ? { key: 'avgIki', dir: 'desc' } : { key: 'count', dir: 'desc' }
+}
+
+function compareNumeric(a: number | null, b: number | null, dir: SortDir): number {
+  // Null sentinels always sort to the end so a missing avg / p95 doesn't
+  // surface above a populated entry on either direction.
+  if (a === null && b === null) return 0
+  if (a === null) return 1
+  if (b === null) return -1
+  return dir === 'asc' ? a - b : b - a
+}
+
 function BigramRankingTable({ result }: RankingTableProps): JSX.Element {
   const { t } = useTranslation()
   const isSlow = result.view === 'slow'
+  const [sort, setSort] = useState(() => defaultSort(result.view))
+  // Reset the sort when the user toggles between Top and Slow so the
+  // default for each view (count desc / avg desc) takes effect again.
+  const [trackedView, setTrackedView] = useState<'top' | 'slow'>(result.view)
+  if (result.view !== trackedView) {
+    setTrackedView(result.view)
+    setSort(defaultSort(result.view))
+  }
   const maxCount = result.entries.reduce((acc, e) => Math.max(acc, e.count), 1)
+
+  const sortedEntries = useMemo(() => {
+    const arr = [...result.entries]
+    arr.sort((a, b) => {
+      switch (sort.key) {
+        case 'pair':
+          return sort.dir === 'asc'
+            ? a.bigramId.localeCompare(b.bigramId)
+            : b.bigramId.localeCompare(a.bigramId)
+        case 'count':
+          return sort.dir === 'asc' ? a.count - b.count : b.count - a.count
+        case 'avgIki':
+          return compareNumeric(a.avgIki, b.avgIki, sort.dir)
+        case 'p95': {
+          const ap = 'p95' in a ? a.p95 : null
+          const bp = 'p95' in b ? b.p95 : null
+          return compareNumeric(ap, bp, sort.dir)
+        }
+      }
+    })
+    return arr
+  }, [result.entries, sort])
+
+  function onHeaderClick(key: RankingSortKey): void {
+    setSort((prev) => {
+      if (prev.key !== key) return { key, dir: key === 'pair' ? 'asc' : 'desc' }
+      return { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+    })
+  }
+
+  function indicator(key: RankingSortKey): string {
+    if (sort.key !== key) return ''
+    return sort.dir === 'asc' ? ' ▲' : ' ▼'
+  }
 
   return (
     <table className="w-full text-[13px]">
       <thead className="text-content-muted">
         <tr>
-          <th className="px-2 py-1 text-left font-medium">{t('analyze.bigrams.column.pair')}</th>
-          <th className="px-2 py-1 text-right font-medium">{t('analyze.bigrams.column.count')}</th>
-          <th className="px-2 py-1 text-right font-medium">{t('analyze.bigrams.column.avgIki')}</th>
+          <SortHeader
+            align="left"
+            active={sort.key === 'pair'}
+            onClick={() => onHeaderClick('pair')}
+            indicator={indicator('pair')}
+            label={t('analyze.bigrams.column.pair')}
+          />
+          <SortHeader
+            align="right"
+            active={sort.key === 'count'}
+            onClick={() => onHeaderClick('count')}
+            indicator={indicator('count')}
+            label={t('analyze.bigrams.column.count')}
+          />
+          <SortHeader
+            align="right"
+            active={sort.key === 'avgIki'}
+            onClick={() => onHeaderClick('avgIki')}
+            indicator={indicator('avgIki')}
+            label={t('analyze.bigrams.column.avgIki')}
+          />
           {isSlow && (
-            <th className="px-2 py-1 text-right font-medium">{t('analyze.bigrams.column.p95')}</th>
+            <SortHeader
+              align="right"
+              active={sort.key === 'p95'}
+              onClick={() => onHeaderClick('p95')}
+              indicator={indicator('p95')}
+              label={t('analyze.bigrams.column.p95')}
+            />
           )}
           <th className="px-2 py-1 text-left font-medium">{t('analyze.bigrams.column.bar')}</th>
         </tr>
       </thead>
       <tbody>
-        {result.entries.map((entry) => (
+        {sortedEntries.map((entry) => (
           <tr key={entry.bigramId} className="border-t border-surface-dim">
             <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.bigramId)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
@@ -277,6 +359,31 @@ function BigramRankingTable({ result }: RankingTableProps): JSX.Element {
         ))}
       </tbody>
     </table>
+  )
+}
+
+interface SortHeaderProps {
+  label: string
+  indicator: string
+  align: 'left' | 'right'
+  active: boolean
+  onClick: () => void
+}
+
+function SortHeader({ label, indicator, align, active, onClick }: SortHeaderProps): JSX.Element {
+  return (
+    <th
+      className={`select-none px-2 py-1 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
+    >
+      <button
+        type="button"
+        onClick={onClick}
+        className={`cursor-pointer ${active ? 'text-content' : 'text-content-muted hover:text-content'}`}
+      >
+        {label}
+        {indicator}
+      </button>
+    </th>
   )
 }
 
