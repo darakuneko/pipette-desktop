@@ -1095,22 +1095,34 @@ export class TypingAnalyticsDB {
     // least one live minute-stats row for this keyboard. The OS info
     // travels alongside the hash so the Analyze > Device filter can
     // render a "{platform} - {release} ({hash})" label without an
-    // extra round-trip per entry. DISTINCT machine_hash guarantees
-    // one row per device even if a single hash appears with several
-    // (kb_uid, kb_vendor_id, ...) tuples on the same machine.
+    // extra round-trip per entry. `canonicalScopeKey` includes os.release
+    // in the scope id, so an OS upgrade splits a single physical machine
+    // into multiple scope rows. We pick the most recently updated scope
+    // per machine_hash so the dropdown shows exactly one entry per device
+    // with the latest release label. Ties on updated_at fall back to scope
+    // id ascending so the result is deterministic.
     this.selectRemoteHashesForUidStmt = this.db.prepare(`
-      SELECT DISTINCT s.machine_hash AS machineHash,
-                      s.os_platform AS osPlatform,
-                      s.os_release AS osRelease
-        FROM typing_scopes s
-       WHERE s.keyboard_uid = @uid
-         AND s.machine_hash != @ownHash
-         AND s.is_deleted = 0
-         AND EXISTS (
-           SELECT 1 FROM typing_minute_stats t
-            WHERE t.scope_id = s.id AND t.is_deleted = 0
-         )
-       ORDER BY s.machine_hash
+      WITH ranked AS (
+        SELECT s.machine_hash AS machineHash,
+               s.os_platform AS osPlatform,
+               s.os_release AS osRelease,
+               ROW_NUMBER() OVER (
+                 PARTITION BY s.machine_hash
+                 ORDER BY s.updated_at DESC, s.id ASC
+               ) AS rn
+          FROM typing_scopes s
+         WHERE s.keyboard_uid = @uid
+           AND s.machine_hash != @ownHash
+           AND s.is_deleted = 0
+           AND EXISTS (
+             SELECT 1 FROM typing_minute_stats t
+              WHERE t.scope_id = s.id AND t.is_deleted = 0
+           )
+      )
+      SELECT machineHash, osPlatform, osRelease
+        FROM ranked
+       WHERE rn = 1
+       ORDER BY machineHash
     `)
 
     // Row-listing queries scoped to a single scope_id — used by the

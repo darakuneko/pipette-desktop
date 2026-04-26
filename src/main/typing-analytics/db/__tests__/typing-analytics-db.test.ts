@@ -709,4 +709,40 @@ describe('TypingAnalyticsDB', () => {
       expect(rows).toEqual([{ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 }])
     })
   })
+
+  describe('listRemoteDeviceInfosForUid (Analyze > Device dropdown)', () => {
+    const baseStats = { keystrokes: 1, activeMs: 1, intervalAvgMs: 1, intervalMinMs: 1, intervalP25Ms: 1, intervalP50Ms: 1, intervalP75Ms: 1, intervalMaxMs: 1 }
+
+    it('collapses multiple os_release scopes for the same machine_hash to a single row with the newest release', () => {
+      // Same physical remote machine seen across an OS upgrade — canonicalScopeKey
+      // bakes os.release into the scope id so the DB ends up with two rows for
+      // one device. The dropdown must still show one entry per machine_hash.
+      db.upsertScope(sampleScope({ id: 'scope-remote-old', machineHash: 'remote-machine', osRelease: '6.8.0', updatedAt: 1_000 }))
+      db.upsertScope(sampleScope({ id: 'scope-remote-new', machineHash: 'remote-machine', osRelease: '6.10.0', updatedAt: 2_000 }))
+      db.writeMinute({ scopeId: 'scope-remote-old', minuteTs: 60_000, ...baseStats }, [], [], 1_000)
+      db.writeMinute({ scopeId: 'scope-remote-new', minuteTs: 60_000, ...baseStats }, [], [], 2_000)
+
+      const rows = db.listRemoteDeviceInfosForUid('0xAABB', MACHINE_HASH)
+      expect(rows).toEqual([{ machineHash: 'remote-machine', osPlatform: 'linux', osRelease: '6.10.0' }])
+    })
+
+    it('excludes the local machine_hash', () => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH }))
+      db.writeMinute({ scopeId: 'scope-local', minuteTs: 60_000, ...baseStats }, [], [], 1_000)
+      db.upsertScope(sampleScope({ id: 'scope-remote', machineHash: 'remote-machine' }))
+      db.writeMinute({ scopeId: 'scope-remote', minuteTs: 60_000, ...baseStats }, [], [], 1_000)
+
+      const rows = db.listRemoteDeviceInfosForUid('0xAABB', MACHINE_HASH)
+      expect(rows.map((r) => r.machineHash)).toEqual(['remote-machine'])
+    })
+
+    it('omits remote machines that have no live minute_stats rows', () => {
+      db.upsertScope(sampleScope({ id: 'scope-remote-empty', machineHash: 'remote-empty' }))
+      db.upsertScope(sampleScope({ id: 'scope-remote-data', machineHash: 'remote-data' }))
+      db.writeMinute({ scopeId: 'scope-remote-data', minuteTs: 60_000, ...baseStats }, [], [], 1_000)
+
+      const rows = db.listRemoteDeviceInfosForUid('0xAABB', MACHINE_HASH)
+      expect(rows.map((r) => r.machineHash)).toEqual(['remote-data'])
+    })
+  })
 })
