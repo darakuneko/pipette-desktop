@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BigramsChart } from '../BigramsChart'
 import type { TypingBigramAggregateResult } from '../../../../shared/types/typing-analytics'
@@ -26,180 +26,102 @@ const range = { fromMs: 0, toMs: 60_000 }
 
 const noop = (): void => {}
 
+function renderChart(overrides: Partial<Parameters<typeof BigramsChart>[0]> = {}): void {
+  render(
+    <BigramsChart
+      uid="0xAABB"
+      range={range}
+      deviceScopes={['own']}
+      minSample={5}
+      listLimit={10}
+      onMinSampleChange={noop}
+      onListLimitChange={noop}
+      snapshot={null}
+      {...overrides}
+    />,
+  )
+}
+
 describe('BigramsChart', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
   it('renders the empty state when the IPC returns no entries', async () => {
     fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="top"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
+    renderChart()
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-empty')).toBeTruthy()
     })
   })
 
-  it('renders top entries with decoded labels', async () => {
+  it('fires a single fetch with view=top and a high limit so all sub-views can render', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    renderChart()
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+    const call = fetchSpy.mock.calls[0]
+    expect(call?.[3]).toBe('top')
+    const options = call?.[5] as { limit?: number } | undefined
+    expect(options?.limit).toBeGreaterThan(100)
+  })
+
+  it('renders all four quadrants when entries are present', async () => {
     fetchSpy.mockResolvedValue({
       view: 'top',
       entries: [
-        { bigramId: '4_11', count: 3, hist: [1, 2, 0, 0, 0, 0, 0, 0], avgIki: 60 },
+        { bigramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100 },
       ],
     })
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="top"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('analyze-bigrams-content').textContent).toContain('A → H')
-    })
-    // Top view does not show the p95 column.
-    expect(screen.queryByText('analyze.bigrams.column.p95')).toBeNull()
-  })
-
-  it('shows the p95 column and the minSample input when view is slow', async () => {
-    fetchSpy.mockResolvedValue({
-      view: 'slow',
-      entries: [
-        {
-          bigramId: '4_11',
-          count: 5,
-          hist: [0, 0, 0, 0, 0, 0, 0, 5],
-          avgIki: 1500,
-          p95: 1900,
-        },
-      ],
-    })
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="slow"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
+    renderChart()
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
     })
-    expect(screen.getByText('analyze.bigrams.column.p95')).toBeTruthy()
-    expect(screen.getByTestId('analyze-bigrams-min-sample-input')).toBeTruthy()
+    expect(screen.getByText('analyze.bigrams.quadrant.top')).toBeTruthy()
+    expect(screen.getByText('analyze.bigrams.quadrant.slow')).toBeTruthy()
+    expect(screen.getByText('analyze.bigrams.quadrant.fingerIki')).toBeTruthy()
+    expect(screen.getByText('analyze.bigrams.quadrant.heatmap')).toBeTruthy()
   })
 
-  it('passes minSample to the IPC only when view is slow', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="top"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
+  it('clamps the listLimit input to the bounded range', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { bigramId: '4_11', count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30 },
+      ],
+    })
+    const onListLimitChange = vi.fn()
+    renderChart({ onListLimitChange })
     await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalled()
+      expect(screen.getByTestId('analyze-bigrams-list-limit-input')).toBeTruthy()
     })
-    const lastCall = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
-    // (uid, fromMs, toMs, view, scope, options) — top view leaves
-    // minSampleCount undefined so the handler can apply its default.
-    const options = lastCall?.[5] as { minSampleCount?: number; limit?: number } | undefined
-    expect(options?.minSampleCount).toBeUndefined()
-    expect(options?.limit).toBe(30)
+    fireEvent.change(screen.getByTestId('analyze-bigrams-list-limit-input'), {
+      target: { value: '99999' },
+    })
+    expect(onListLimitChange).toHaveBeenLastCalledWith(100)
+    fireEvent.change(screen.getByTestId('analyze-bigrams-list-limit-input'), {
+      target: { value: '0' },
+    })
+    expect(onListLimitChange).toHaveBeenLastCalledWith(1)
   })
 
-  it('passes minSample to the IPC when view is slow', async () => {
-    fetchSpy.mockResolvedValue({ view: 'slow', entries: [] })
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="slow"
-        minSample={20}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
-    await waitFor(() => {
-      expect(fetchSpy).toHaveBeenCalled()
+  it('clamps the minSample input to the bounded range', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { bigramId: '4_11', count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30 },
+      ],
     })
-    const lastCall = fetchSpy.mock.calls[fetchSpy.mock.calls.length - 1]
-    const options = lastCall?.[5] as { minSampleCount?: number; limit?: number } | undefined
-    expect(options?.minSampleCount).toBe(20)
-  })
-
-  it('calls onViewChange when the select changes', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
-    const onViewChange = vi.fn()
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="top"
-        minSample={5}
-        onViewChange={onViewChange}
-        onMinSampleChange={noop}
-      />,
-    )
-    await waitFor(() => {
-      expect(screen.getByTestId('analyze-bigrams-view-select')).toBeTruthy()
-    })
-    fireEvent.change(screen.getByTestId('analyze-bigrams-view-select'), {
-      target: { value: 'slow' },
-    })
-    expect(onViewChange).toHaveBeenCalledWith('slow')
-  })
-
-  it('clamps minSample input to the bounded range', async () => {
-    fetchSpy.mockResolvedValue({ view: 'slow', entries: [] })
     const onMinSampleChange = vi.fn()
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="slow"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={onMinSampleChange}
-      />,
-    )
+    renderChart({ onMinSampleChange })
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-min-sample-input')).toBeTruthy()
     })
-    // Above bound → clamp to 1000.
     fireEvent.change(screen.getByTestId('analyze-bigrams-min-sample-input'), {
       target: { value: '99999' },
     })
     expect(onMinSampleChange).toHaveBeenLastCalledWith(1000)
-    // Below bound → clamp to 1.
     fireEvent.change(screen.getByTestId('analyze-bigrams-min-sample-input'), {
       target: { value: '0' },
     })
@@ -209,17 +131,7 @@ describe('BigramsChart', () => {
   it('renders the error state when the IPC rejects', async () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     fetchSpy.mockRejectedValue(new Error('boom'))
-    render(
-      <BigramsChart
-        uid="0xAABB"
-        range={range}
-        deviceScopes={['own']}
-        view="top"
-        minSample={5}
-        onViewChange={noop}
-        onMinSampleChange={noop}
-      />,
-    )
+    renderChart()
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-error')).toBeTruthy()
     })

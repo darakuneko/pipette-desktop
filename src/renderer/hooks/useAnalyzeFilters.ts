@@ -66,8 +66,8 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     baseLayer: 0,
   },
   bigrams: {
-    view: 'top',
     minSample: 5,
+    listLimit: 10,
   },
 }
 

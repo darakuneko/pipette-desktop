@@ -871,10 +871,10 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  view={bigramsFilter.view}
                   minSample={bigramsFilter.minSample}
-                  onViewChange={(view) => setBigrams({ view })}
+                  listLimit={bigramsFilter.listLimit}
                   onMinSampleChange={(minSample) => setBigrams({ minSample })}
+                  onListLimitChange={(listLimit) => setBigrams({ listLimit })}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />

@@ -855,12 +855,12 @@
       "loading": "バイグラムデータを読み込み中…",
       "empty": "この期間のバイグラムデータはまだありません。打鍵を記録してから再度開いてください",
       "error": "バイグラムデータの取得に失敗しました。再試行するかログを確認してください",
-      "viewLabel": "表示",
       "minSample": "最小サンプル数",
-      "view": {
+      "listLimit": "表示件数",
+      "quadrant": {
         "top": "頻出ペア",
         "slow": "遅いペア",
-        "fingerIki": "指間隔",
+        "fingerIki": "指間隔ヒートマップ",
         "heatmap": "ペアヒートマップ"
       },
       "column": {
@@ -871,11 +871,7 @@
         "bar": ""
       },
       "fingerIki": {
-        "hint": "指ペアごとの平均間隔 (ms)。対角線の枠付きセルは同指連打 (SFB)",
         "noSnapshot": "指ヒートマップには keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください"
-      },
-      "heatmap": {
-        "hint": "頻出キーペアごとの平均間隔 (ms)。空セルはこの期間に該当ペアの記録がない"
       }
     },
     "keyHeatmap": {

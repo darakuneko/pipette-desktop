@@ -144,6 +144,9 @@ export type ActivityMetric = typeof ACTIVITY_METRICS[number]
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
+// Bigrams tab now renders all four sub-views in a 2x2 grid; the user
+// no longer picks one. The constant + type are retained for back-compat
+// in tests / docs but are not consumed by the live filter shape.
 export const BIGRAM_VIEWS = ['top', 'slow', 'fingerIki', 'heatmap'] as const
 export type BigramView = typeof BIGRAM_VIEWS[number]
 
@@ -187,9 +190,11 @@ export interface LayerFilters {
 }
 
 export interface BigramFilters {
-  view?: BigramView
-  /** Min sample threshold for the Slow view. Top view ignores this. */
+  /** Min sample threshold for the Slow ranking. Top / heatmaps ignore. */
   minSample?: number
+  /** Row count for the Top + Slow ranking lists. Heatmaps render their
+   * own fixed-size grids. */
+  listLimit?: number
 }
 
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
@@ -294,8 +299,8 @@ function isValidBigramFilters(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
-  if (o.view !== undefined && !includesAs(BIGRAM_VIEWS, o.view)) return false
   if (o.minSample !== undefined && !isPositiveInt(o.minSample)) return false
+  if (o.listLimit !== undefined && !isPositiveInt(o.listLimit)) return false
   return true
 }
 

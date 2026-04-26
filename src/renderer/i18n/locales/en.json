@@ -857,12 +857,12 @@
       "loading": "Loading bigram data…",
       "empty": "No bigram data in this range yet. Record some typing and try again.",
       "error": "Failed to load bigram data. Try again or check the logs.",
-      "viewLabel": "View",
       "minSample": "Min samples",
-      "view": {
+      "listLimit": "List rows",
+      "quadrant": {
         "top": "Top pairs",
         "slow": "Slow pairs",
-        "fingerIki": "Finger IKI",
+        "fingerIki": "Finger IKI heatmap",
         "heatmap": "Pair heatmap"
       },
       "column": {
@@ -873,11 +873,7 @@
         "bar": ""
       },
       "fingerIki": {
-        "hint": "Average inter-key interval (ms) per finger pair. Diagonal cells outlined are same-finger bigrams (SFB).",
         "noSnapshot": "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one."
-      },
-      "heatmap": {
-        "hint": "Average inter-key interval (ms) for the most frequent key pairs. Empty cells have no recorded bigram in this range."
       }
     },
     "keyHeatmap": {

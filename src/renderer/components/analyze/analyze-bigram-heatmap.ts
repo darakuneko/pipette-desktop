@@ -78,6 +78,9 @@ export function aggregateKeyHeatmap(
  * the main-process aggregator (BIGRAM_BUCKET_CENTERS_MS) so renderer
  * callers don't have to import from main. */
 const BUCKET_CENTERS_MS: readonly number[] = [30, 80, 125, 175, 250, 400, 750, 1500]
+/** Exclusive upper bounds; the open final bucket synthesises a
+ * `2 * center - lower` upper to keep p95 interpolation in range. */
+const BUCKET_UPPER_BOUNDS_MS: readonly number[] = [60, 100, 150, 200, 300, 500, 1000, Number.POSITIVE_INFINITY]
 
 export function avgIkiFromHist(hist: readonly number[]): number | null {
   let sum = 0
@@ -89,4 +92,30 @@ export function avgIkiFromHist(hist: readonly number[]): number | null {
     count += c
   }
   return count > 0 ? sum / count : null
+}
+
+/** Linear-interp percentile estimate from a packed histogram. Mirrors
+ * the main-process aggregator so the Slow ranking renders the same
+ * p95 whether it came over the wire or was computed client-side. */
+export function percentileFromHist(hist: readonly number[], q: number): number | null {
+  let total = 0
+  for (let i = 0; i < HIST_BUCKETS; i += 1) total += hist[i] ?? 0
+  if (total === 0) return null
+  const target = q * total
+  let acc = 0
+  for (let i = 0; i < HIST_BUCKETS; i += 1) {
+    const c = hist[i] ?? 0
+    if (c <= 0) continue
+    if (acc + c >= target) {
+      const lower = i === 0 ? 0 : BUCKET_UPPER_BOUNDS_MS[i - 1]
+      const upper = Number.isFinite(BUCKET_UPPER_BOUNDS_MS[i])
+        ? BUCKET_UPPER_BOUNDS_MS[i]
+        : 2 * BUCKET_CENTERS_MS[i] - lower
+      const fraction = (target - acc) / c
+      return lower + fraction * (upper - lower)
+    }
+    acc += c
+  }
+  // Unreachable when total > 0; defensive return.
+  return null
 }
