@@ -586,8 +586,6 @@ function BarRow({ label, value, max, tooltip, color }: BarRowProps): JSX.Element
       <span className="whitespace-nowrap font-mono text-content-muted">{label}</span>
       <UITooltip
         content={tooltip}
-        side="bottom"
-        align="start"
         wrapperAs="span"
         wrapperClassName="block w-full"
       >
