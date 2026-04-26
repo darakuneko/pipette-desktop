@@ -857,8 +857,6 @@
       "loading": "Loading bigram data…",
       "empty": "No bigram data in this range yet. Record some typing and try again.",
       "error": "Failed to load bigram data. Try again or check the logs.",
-      "minSample": "Min samples",
-      "listLimit": "List rows",
       "quadrant": {
         "top": "Top pairs",
         "slow": "Slow pairs",
@@ -869,12 +867,12 @@
         "pair": "Pair",
         "count": "Count",
         "avgIki": "Avg IKI",
-        "p95": "p95 IKI",
-        "bar": ""
+        "p95": "p95 IKI"
       },
       "fingerIki": {
         "noSnapshot": "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one."
-      }
+      },
+      "cellTooltip": "{{count}} occurrences · avg {{avgIki}} ms"
     },
     "keyHeatmap": {
       "layer": "Layer",
@@ -945,18 +943,8 @@
       "noActivations": "No layer-op keys pressed in this range.",
       "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one."
     },
-    "fingerAssignment": {
-      "button": "Finger assignment",
-      "title": "Finger assignment",
-      "subtitle": "Click a key to override the estimated finger.",
-      "save": "Save",
-      "reset": "Reset to estimate",
-      "resetAll": "Reset all",
-      "noSnapshot": "No keymap snapshot available for this range.",
-      "popoverLabel": "Select finger",
-      "leftHand": "Left hand",
-      "rightHand": "Right hand",
-      "shortLabel": {
+    "finger": {
+      "short": {
         "left-pinky": "Lp",
         "left-ring": "Lr",
         "left-middle": "Lm",
@@ -968,6 +956,18 @@
         "right-ring": "Rr",
         "right-pinky": "Rp"
       }
+    },
+    "fingerAssignment": {
+      "button": "Finger assignment",
+      "title": "Finger assignment",
+      "subtitle": "Click a key to override the estimated finger.",
+      "save": "Save",
+      "reset": "Reset to estimate",
+      "resetAll": "Reset all",
+      "noSnapshot": "No keymap snapshot available for this range.",
+      "popoverLabel": "Select finger",
+      "leftHand": "Left hand",
+      "rightHand": "Right hand"
     },
     "peak": {
       "peakKeystrokesPerMin": "Peak K/min",

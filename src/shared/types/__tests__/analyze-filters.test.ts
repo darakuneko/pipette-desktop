@@ -171,59 +171,36 @@ describe('isValidAnalyzeFilterSettings', () => {
   it('accepts a valid bigrams slot', () => {
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { minSample: 5, listLimit: 10 },
+        bigrams: { topLimit: 10, slowLimit: 10 },
       }),
     ).toBe(true)
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { minSample: 100 },
+        bigrams: { topLimit: 50 },
       }),
     ).toBe(true)
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { listLimit: 50 },
+        bigrams: { slowLimit: 25 },
       }),
     ).toBe(true)
     expect(isValidAnalyzeFilterSettings({ bigrams: {} })).toBe(true)
   })
 
-  it('rejects bigram minSample that is not a positive integer', () => {
+  it('rejects bigram topLimit / slowLimit that are not positive integers', () => {
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { minSample: 0 },
+        bigrams: { topLimit: 0 },
       }),
     ).toBe(false)
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { minSample: -1 },
+        bigrams: { slowLimit: -5 },
       }),
     ).toBe(false)
     expect(
       isValidAnalyzeFilterSettings({
-        bigrams: { minSample: 1.5 },
-      }),
-    ).toBe(false)
-    expect(
-      isValidAnalyzeFilterSettings({
-        bigrams: { minSample: 'five' },
-      }),
-    ).toBe(false)
-  })
-
-  it('rejects bigram listLimit that is not a positive integer', () => {
-    expect(
-      isValidAnalyzeFilterSettings({
-        bigrams: { listLimit: 0 },
-      }),
-    ).toBe(false)
-    expect(
-      isValidAnalyzeFilterSettings({
-        bigrams: { listLimit: -5 },
-      }),
-    ).toBe(false)
-    expect(
-      isValidAnalyzeFilterSettings({
-        bigrams: { listLimit: 'ten' },
+        bigrams: { topLimit: 'ten' },
       }),
     ).toBe(false)
   })

@@ -52,7 +52,11 @@ export class Keycode {
 
 // --- Module state ---
 
-let protocol = 0
+// Default to vial protocol 6 — current firmware uses v6 and the
+// Analyze surfaces resolve recorded keycodes before
+// recreateKeyboardKeycodes has had a chance to set the device's
+// protocol. v5 is still used when the connected keyboard reports it.
+let protocol = 6
 export const maskedKeycodes = new Set<string>()
 export const recorderAliasToKeycode = new Map<string, Keycode>()
 export const qmkIdToKeycode = new Map<string, Keycode>()

@@ -91,7 +91,7 @@ export function FingerAssignmentModal({
       const finger = resolveFinger(k)
       if (!finger) continue
       const posKey = cellKey(k.row, k.col)
-      const short = t(`analyze.fingerAssignment.shortLabel.${finger}`)
+      const short = t(`analyze.finger.short.${finger}`)
       const isOverride = posKey in draft
       // Prefix "*" marks manually overridden keys so the user can tell
       // them apart from keys that still follow the geometry estimate.

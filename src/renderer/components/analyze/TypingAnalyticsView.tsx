@@ -871,10 +871,14 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  minSample={bigramsFilter.minSample}
-                  listLimit={bigramsFilter.listLimit}
-                  onMinSampleChange={(minSample) => setBigrams({ minSample })}
-                  onListLimitChange={(listLimit) => setBigrams({ listLimit })}
+                  topLimit={bigramsFilter.topLimit}
+                  slowLimit={bigramsFilter.slowLimit}
+                  fingerLimit={bigramsFilter.fingerLimit}
+                  keyLimit={bigramsFilter.keyLimit}
+                  onTopLimitChange={(topLimit) => setBigrams({ topLimit })}
+                  onSlowLimitChange={(slowLimit) => setBigrams({ slowLimit })}
+                  onFingerLimitChange={(fingerLimit) => setBigrams({ fingerLimit })}
+                  onKeyLimitChange={(keyLimit) => setBigrams({ keyLimit })}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />

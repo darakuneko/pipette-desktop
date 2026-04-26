@@ -19,3 +19,8 @@ export const FILTER_SELECT =
 // disabled affordances added on top.
 export const FILTER_BUTTON =
   `${FILTER_SELECT} transition-colors hover:bg-surface-dim disabled:cursor-not-allowed disabled:opacity-40`
+
+// Shared "list size" ladder used by every Analyze list-limit selector
+// (Heatmap frequent-N, Bigrams quadrant top/slow/finger/key) so they
+// stay in sync as one place.
+export const LIST_LIMIT_OPTIONS: readonly number[] = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]

@@ -855,8 +855,6 @@
       "loading": "バイグラムデータを読み込み中…",
       "empty": "この期間のバイグラムデータはまだありません。打鍵を記録してから再度開いてください",
       "error": "バイグラムデータの取得に失敗しました。再試行するかログを確認してください",
-      "minSample": "最小サンプル数",
-      "listLimit": "表示件数",
       "quadrant": {
         "top": "頻出ペア",
         "slow": "遅いペア",
@@ -867,12 +865,12 @@
         "pair": "ペア",
         "count": "回数",
         "avgIki": "平均間隔",
-        "p95": "p95 間隔",
-        "bar": ""
+        "p95": "p95 間隔"
       },
       "fingerIki": {
         "noSnapshot": "指ヒートマップには keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください"
-      }
+      },
+      "cellTooltip": "{{count}} 回 · 平均 {{avgIki}} ms"
     },
     "keyHeatmap": {
       "layer": "レイヤー",
@@ -943,18 +941,8 @@
       "noActivations": "この期間にレイヤー操作キーの押下記録がありません",
       "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。"
     },
-    "fingerAssignment": {
-      "button": "指割り当て",
-      "title": "指割り当て設定",
-      "subtitle": "キーをクリックして推定値を上書きできます",
-      "save": "保存",
-      "reset": "推定に戻す",
-      "resetAll": "全てリセット",
-      "noSnapshot": "この期間のキーマップスナップショットがありません",
-      "popoverLabel": "指の選択",
-      "leftHand": "左手",
-      "rightHand": "右手",
-      "shortLabel": {
+    "finger": {
+      "short": {
         "left-pinky": "左小",
         "left-ring": "左薬",
         "left-middle": "左中",
@@ -966,6 +954,18 @@
         "right-ring": "右薬",
         "right-pinky": "右小"
       }
+    },
+    "fingerAssignment": {
+      "button": "指割り当て",
+      "title": "指割り当て設定",
+      "subtitle": "キーをクリックして推定値を上書きできます",
+      "save": "保存",
+      "reset": "推定に戻す",
+      "resetAll": "全てリセット",
+      "noSnapshot": "この期間のキーマップスナップショットがありません",
+      "popoverLabel": "指の選択",
+      "leftHand": "左手",
+      "rightHand": "右手"
     },
     "peak": {
       "peakKeystrokesPerMin": "1 分最大打鍵",

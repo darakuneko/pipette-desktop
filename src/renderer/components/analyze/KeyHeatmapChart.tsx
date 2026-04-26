@@ -14,6 +14,7 @@ import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
 import { HEATMAP_NORMALIZATIONS, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
+import { LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
 import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
 import {
   AGGREGATE_MODES,
@@ -26,7 +27,6 @@ import {
 } from './key-heatmap-helpers'
 import type { AggregateMode, KeyGroupFilter, LayerKeycodes, RankingEntry } from './key-heatmap-helpers'
 
-const FREQUENT_USED_N_OPTIONS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
 const MAX_LAYERS = 4
 
 interface Props {
@@ -553,7 +553,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
             aria-label={t('analyze.keyHeatmap.ranking.frequentUsedN')}
             data-testid="analyze-keyheatmap-frequent-used-n"
           >
-            {FREQUENT_USED_N_OPTIONS.map((n) => (
+            {LIST_LIMIT_OPTIONS.map((n) => (
               <option key={n} value={n}>{n}</option>
             ))}
           </select>

@@ -190,11 +190,14 @@ export interface LayerFilters {
 }
 
 export interface BigramFilters {
-  /** Min sample threshold for the Slow ranking. Top / heatmaps ignore. */
-  minSample?: number
-  /** Row count for the Top + Slow ranking lists. Heatmaps render their
-   * own fixed-size grids. */
-  listLimit?: number
+  /** Row count for the Top ranking. */
+  topLimit?: number
+  /** Row count for the Slow ranking. */
+  slowLimit?: number
+  /** Bar count for the Finger pair bar chart. */
+  fingerLimit?: number
+  /** Bar count for the Key pair bar chart. */
+  keyLimit?: number
 }
 
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
@@ -299,8 +302,10 @@ function isValidBigramFilters(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
-  if (o.minSample !== undefined && !isPositiveInt(o.minSample)) return false
-  if (o.listLimit !== undefined && !isPositiveInt(o.listLimit)) return false
+  if (o.topLimit !== undefined && !isPositiveInt(o.topLimit)) return false
+  if (o.slowLimit !== undefined && !isPositiveInt(o.slowLimit)) return false
+  if (o.fingerLimit !== undefined && !isPositiveInt(o.fingerLimit)) return false
+  if (o.keyLimit !== undefined && !isPositiveInt(o.keyLimit)) return false
   return true
 }
 
