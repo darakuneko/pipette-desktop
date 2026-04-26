@@ -850,7 +850,26 @@
       "activity": "Activity",
       "keyHeatmap": "Heatmap",
       "ergonomics": "Ergonomics",
+      "bigrams": "Bigrams",
       "layer": "Layer"
+    },
+    "bigrams": {
+      "loading": "Loading bigram data…",
+      "empty": "No bigram data in this range yet. Record some typing and try again.",
+      "error": "Failed to load bigram data. Try again or check the logs.",
+      "viewLabel": "View",
+      "minSample": "Min samples",
+      "view": {
+        "top": "Top pairs",
+        "slow": "Slow pairs"
+      },
+      "column": {
+        "pair": "Pair",
+        "count": "Count",
+        "avgIki": "Avg IKI",
+        "p95": "p95 IKI",
+        "bar": ""
+      }
     },
     "keyHeatmap": {
       "layer": "Layer",

@@ -9,6 +9,7 @@ import type {
   TypingAnalyticsFingerprint,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
+import { SESSION_IDLE_GAP_MS } from './session-detector'
 
 export const MINUTE_MS = 60_000
 
@@ -40,6 +41,12 @@ export interface MinuteSnapshot {
   intervalMaxMs: number | null
   charCounts: Map<string, number>
   matrixCounts: Map<string, MatrixCellCounts>
+  /** Per-bigram raw inter-key intervals (ms) accumulated within this
+   * minute. Pair key format: `${prevKeycode}_${currKeycode}`. The emit
+   * layer bucketizes these into a fixed-size histogram before
+   * persisting; the snapshot exposes raw IKIs so consumers can choose
+   * their own bucketing if needed. */
+  bigrams: Map<string, number[]>
 }
 
 interface Entry {
@@ -49,6 +56,7 @@ interface Entry {
   charCounts: Map<string, number>
   matrixCounts: Map<string, MatrixCellCounts>
   intervals: number[]
+  bigrams: Map<string, number[]>
   keystrokes: number
   firstEventMs: number
   lastEventMs: number
@@ -86,11 +94,18 @@ function finalize(entry: Entry): MinuteSnapshot {
     intervalMaxMs: sorted.length ? sorted[sorted.length - 1] : null,
     charCounts: entry.charCounts,
     matrixCounts: entry.matrixCounts,
+    bigrams: entry.bigrams,
   }
 }
 
 export class MinuteBuffer {
   private readonly buffers = new Map<string, Entry>()
+  // Bigram tracking is matrix-only (char events have no keycode). Reset
+  // on minute close so cross-minute pairs are dropped per the design
+  // (see Plan-analyze-bigram.md — 0.3% loss accepted to keep the flush
+  // path simple).
+  private previousMatrixKeycode: number | null = null
+  private previousMatrixTimestamp: number | null = null
 
   addEvent(event: TypingAnalyticsEvent, fingerprint: TypingAnalyticsFingerprint): void {
     const scopeId = canonicalScopeKey(fingerprint)
@@ -105,6 +120,7 @@ export class MinuteBuffer {
         charCounts: new Map(),
         matrixCounts: new Map(),
         intervals: [],
+        bigrams: new Map(),
         keystrokes: 0,
         firstEventMs: event.ts,
         lastEventMs: event.ts,
@@ -141,6 +157,40 @@ export class MinuteBuffer {
         tapCount: (existing?.tapCount ?? 0) + tapDelta,
         holdCount: (existing?.holdCount ?? 0) + holdDelta,
       })
+
+      this.recordBigram(entry, event.keycode, event.ts)
+    }
+  }
+
+  private recordBigram(entry: Entry, currKeycode: number, ts: number): void {
+    if (
+      this.previousMatrixKeycode !== null &&
+      this.previousMatrixTimestamp !== null
+    ) {
+      const iki = ts - this.previousMatrixTimestamp
+      // Forward-time only (out-of-order matches the existing intervals
+      // policy of dropping rather than reconstructing) and within session
+      // gap (cross-session pairs are noise, not typing rhythm).
+      if (iki > 0 && iki <= SESSION_IDLE_GAP_MS) {
+        const pairKey = `${this.previousMatrixKeycode}_${currKeycode}`
+        let ikis = entry.bigrams.get(pairKey)
+        if (!ikis) {
+          ikis = []
+          entry.bigrams.set(pairKey, ikis)
+        }
+        ikis.push(iki)
+      }
+    }
+    // Strict forward only — matches the `iki > 0` filter above. Ties
+    // (same ts as prev) shouldn't have emitted a bigram and likewise
+    // shouldn't advance the chain, otherwise the next event would pair
+    // against the tied keycode rather than the older one we kept.
+    if (
+      this.previousMatrixTimestamp === null ||
+      ts > this.previousMatrixTimestamp
+    ) {
+      this.previousMatrixKeycode = currKeycode
+      this.previousMatrixTimestamp = ts
     }
   }
 
@@ -155,6 +205,7 @@ export class MinuteBuffer {
         this.buffers.delete(key)
       }
     }
+    if (closed.length > 0) this.resetBigramChain()
     return closed
   }
 
@@ -165,7 +216,13 @@ export class MinuteBuffer {
       all.push(finalize(entry))
     }
     this.buffers.clear()
+    this.resetBigramChain()
     return all
+  }
+
+  private resetBigramChain(): void {
+    this.previousMatrixKeycode = null
+    this.previousMatrixTimestamp = null
   }
 
   isEmpty(): boolean {

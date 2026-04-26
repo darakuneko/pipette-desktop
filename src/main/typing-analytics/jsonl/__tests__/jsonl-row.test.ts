@@ -2,6 +2,7 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  bigramMinuteRowId,
   charMinuteRowId,
   matrixMinuteRowId,
   minuteStatsRowId,
@@ -30,6 +31,10 @@ describe('composite id builders', () => {
   it('builds stats and session row ids', () => {
     expect(minuteStatsRowId('s', 60_000)).toBe('stats|s|60000')
     expect(sessionRowId('uuid-123')).toBe('session|uuid-123')
+  })
+
+  it('builds bigram-minute row ids without per-pair suffix (one row per minute)', () => {
+    expect(bigramMinuteRowId('s', 60_000)).toBe('bigram|s|60000')
   })
 })
 
@@ -105,11 +110,37 @@ describe('serializeRow / parseRow round-trip', () => {
         updated_at: 2_000,
         payload: { id: 'uuid-1', scopeId: 'scope-1', startMs: 1_000, endMs: 2_000 },
       },
+      {
+        id: bigramMinuteRowId('scope-1', 60_000),
+        kind: 'bigram-minute',
+        updated_at: 2_000,
+        payload: {
+          scopeId: 'scope-1',
+          minuteTs: 60_000,
+          bigrams: {
+            '4_11': { c: 10, h: [1, 0, 0, 2, 3, 1, 2, 1] },
+            '22_22': { c: 20, h: [2, 3, 5, 4, 3, 2, 1, 0] },
+          },
+        },
+      },
     ]
     for (const row of rows) {
       const line = serializeRow(row).trimEnd()
       expect(parseRow(line)).toEqual(row)
     }
+  })
+
+  it('round-trips a bigram-minute row with an empty pair set', () => {
+    // Empty bigrams shouldn't actually be emitted (the service skips
+    // size === 0), but the parser must accept it cleanly so a manual
+    // edit / migration tooling doesn't trip the validator.
+    const empty: JsonlRow = {
+      id: bigramMinuteRowId('scope-1', 60_000),
+      kind: 'bigram-minute',
+      updated_at: 1,
+      payload: { scopeId: 'scope-1', minuteTs: 60_000, bigrams: {} },
+    }
+    expect(parseRow(serializeRow(empty).trimEnd())).toEqual(empty)
   })
 
   it('preserves is_deleted when set', () => {
@@ -166,6 +197,47 @@ describe('parseRow rejections', () => {
         intervalP50Ms: null,
         intervalP75Ms: null,
         intervalMaxMs: null,
+      },
+    })
+    expect(parseRow(line)).toBeNull()
+  })
+
+  it('returns null for a bigram-minute row with a histogram of the wrong length', () => {
+    const line = JSON.stringify({
+      id: 'bigram|s|60000',
+      kind: 'bigram-minute',
+      updated_at: 1,
+      payload: {
+        scopeId: 's',
+        minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0] } }, // expected 8 buckets
+      },
+    })
+    expect(parseRow(line)).toBeNull()
+  })
+
+  it('returns null for a bigram-minute row with non-finite histogram values', () => {
+    const line = JSON.stringify({
+      id: 'bigram|s|60000',
+      kind: 'bigram-minute',
+      updated_at: 1,
+      payload: {
+        scopeId: 's',
+        minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, null] } },
+      },
+    })
+    expect(parseRow(line)).toBeNull()
+  })
+
+  it('returns null for a bigram-minute row missing scopeId', () => {
+    const line = JSON.stringify({
+      id: 'bigram|s|60000',
+      kind: 'bigram-minute',
+      updated_at: 1,
+      payload: {
+        minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
       },
     })
     expect(parseRow(line)).toBeNull()

@@ -179,4 +179,113 @@ describe('MinuteBuffer', () => {
     expect(snap.intervalP50Ms).toBeNull()
     expect(snap.intervalMaxMs).toBeNull()
   })
+
+  describe('bigram tracking', () => {
+    it('records pair IKIs across consecutive matrix events', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp) // KC_A
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_120), fp) // KC_H, IKI=120
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_300), fp) // KC_D, IKI=180
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([
+        ['4_11', [120]],
+        ['11_7', [180]],
+      ])
+    })
+
+    it('does not pair across char events but does not reset the chain either', () => {
+      // Bigram tracking is matrix-only; intervening char events are
+      // transparent so the next matrix pairs against the prior matrix.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(charEvent('a', 1_050), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_200), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['4_11', [200]]])
+    })
+
+    it('drops pairs whose IKI exceeds the session idle gap', () => {
+      // SESSION_IDLE_GAP_MS = 5 minutes. A 6-minute gap means the next
+      // event starts a fresh session and shouldn't pair with the prior.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + 6 * 60 * 1_000), fp)
+
+      const [snapA, snapB] = buffer.drainAll()
+      // Two minutes were buffered; check the merged result has no bigrams.
+      const allBigrams = new Map([...snapA.bigrams, ...snapB.bigrams])
+      expect(allBigrams.size).toBe(0)
+    })
+
+    it('drops the cross-minute pair after drainClosed resets the chain', () => {
+      // Production flow: the service calls drainClosed periodically;
+      // when it fires between two matrix events that straddle a minute
+      // boundary, the prior chain head is cleared and the new event has
+      // no peer to pair against.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 30_000), fp) // minute 0
+      const closed = buffer.drainClosed(60_000)
+      expect(closed).toHaveLength(1)
+      expect(closed[0].bigrams.size).toBe(0) // single event in minute 0, no pair to record yet
+
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 90_000), fp) // minute 1, but chain was just cleared
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 90_150), fp) // first valid pair within minute 1
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['11_7', [150]]])
+    })
+
+    it('attributes cross-minute pairs to the later minute when drainClosed has not run', () => {
+      // Without drainClosed firing between events, the chain persists
+      // across minutes, so the IKI-eligible pair lands in the snapshot
+      // belonging to the later event. This is acceptable per the design
+      // (cross-minute pairs are attributed to the new minute, ~0.3%
+      // misattribution at typical rates).
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 30_000), fp) // minute 0
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 90_000), fp) // minute 1, IKI=60000 → still <= SESSION_IDLE_GAP_MS
+
+      const snaps = buffer.drainAll()
+      const minute0 = snaps.find((s) => s.minuteTs === 0)
+      const minute1 = snaps.find((s) => s.minuteTs === 60_000)
+      expect(minute0?.bigrams.size).toBe(0)
+      expect([...(minute1?.bigrams.entries() ?? [])]).toEqual([['4_11', [60_000]]])
+    })
+
+    it('does not advance the chain on tied timestamps', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      // Tie ts — no bigram emitted (iki = 0) AND chain stays at keycode 4
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000), fp)
+      // Forward ts — should pair against the original 4 (chain didn't advance to 11)
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_150), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['4_7', [150]]])
+    })
+
+    it('clears the chain after drainAll so a fresh batch does not bridge', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.drainAll()
+      // After drainAll, the previous keycode chain should be cleared, so
+      // the next matrix event can't pair against a residual prior keycode.
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_500), fp)
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_650), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([['11_7', [150]]])
+    })
+  })
+
+  it('exposes an empty bigrams map when no matrix events arrived', () => {
+    // Sanity check: the Map exists on every snapshot (downstream emit
+    // layer relies on snapshot.bigrams.size, not optional access).
+    const fp = fingerprint()
+    buffer.addEvent(charEvent('a', 1_000), fp)
+    const [snap] = buffer.drainAll()
+    expect(snap.bigrams.size).toBe(0)
+  })
 })

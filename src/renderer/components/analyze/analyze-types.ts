@@ -18,7 +18,7 @@ export type {
   WpmViewMode,
 } from '../../../shared/types/analyze-filters'
 
-export type AnalysisTabKey = 'wpm' | 'interval' | 'activity' | 'keyHeatmap' | 'ergonomics' | 'layer'
+export type AnalysisTabKey = 'wpm' | 'interval' | 'activity' | 'keyHeatmap' | 'ergonomics' | 'bigrams' | 'layer'
 
 /** Inclusive-lower, exclusive-upper millisecond range used by every
  * Analyze chart. `toMs` is the wall-clock the page was opened at and

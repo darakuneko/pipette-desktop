@@ -56,6 +56,7 @@ vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval')
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
 vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
+vi.mock('../BigramsChart', () => ({ BigramsChart: mockSummary('mock-bigrams') }))
 vi.mock('../LayerUsageChart', () => ({ LayerUsageChart: mockSummary('mock-layer') }))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()

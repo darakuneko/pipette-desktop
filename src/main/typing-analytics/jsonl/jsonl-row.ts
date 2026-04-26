@@ -12,6 +12,7 @@ export type JsonlRowKind =
   | 'matrix-minute'
   | 'minute-stats'
   | 'session'
+  | 'bigram-minute'
 
 export interface JsonlScopePayload {
   id: string
@@ -64,6 +65,26 @@ export interface JsonlSessionPayload {
   endMs: number
 }
 
+/** Per-bigram aggregate within a single minute. `c` = count of pair
+ * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets, see
+ * Plan-analyze-bigram.md). */
+export interface JsonlBigramMinuteEntry {
+  c: number
+  h: number[]
+}
+
+export interface JsonlBigramMinutePayload {
+  scopeId: string
+  minuteTs: number
+  /** Pair key format: `${prevKeycode}_${currKeycode}` (numeric keycodes
+   * joined by underscore). One row per minute aggregates all bigrams. */
+  bigrams: Record<string, JsonlBigramMinuteEntry>
+}
+
+/** Number of buckets in the bigram IKI histogram. Kept as a constant so
+ * writer / reader / cache layers stay in sync if the bucketing changes. */
+export const BIGRAM_HIST_BUCKETS = 8
+
 interface JsonlRowBase {
   id: string
   updated_at: number
@@ -95,12 +116,18 @@ export interface JsonlSessionRow extends JsonlRowBase {
   payload: JsonlSessionPayload
 }
 
+export interface JsonlBigramMinuteRow extends JsonlRowBase {
+  kind: 'bigram-minute'
+  payload: JsonlBigramMinutePayload
+}
+
 export type JsonlRow =
   | JsonlScopeRow
   | JsonlCharMinuteRow
   | JsonlMatrixMinuteRow
   | JsonlMinuteStatsRow
   | JsonlSessionRow
+  | JsonlBigramMinuteRow
 
 const KNOWN_KINDS: ReadonlySet<string> = new Set<JsonlRowKind>([
   'scope',
@@ -108,6 +135,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<JsonlRowKind>([
   'matrix-minute',
   'minute-stats',
   'session',
+  'bigram-minute',
 ])
 
 function enc(value: string | number): string {
@@ -138,6 +166,10 @@ export function minuteStatsRowId(scopeId: string, minuteTs: number): string {
 
 export function sessionRowId(sessionId: string): string {
   return `session|${enc(sessionId)}`
+}
+
+export function bigramMinuteRowId(scopeId: string, minuteTs: number): string {
+  return `bigram|${enc(scopeId)}|${minuteTs}`
 }
 
 /** Serialize a single row as a newline-terminated JSON line. */
@@ -223,6 +255,30 @@ function isSessionPayload(p: Record<string, unknown>): boolean {
   )
 }
 
+function isBigramHist(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length !== BIGRAM_HIST_BUCKETS) return false
+  for (const n of value) {
+    if (typeof n !== 'number' || !Number.isFinite(n)) return false
+  }
+  return true
+}
+
+function isBigramMinuteEntry(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const o = value as Record<string, unknown>
+  return typeof o.c === 'number' && Number.isFinite(o.c) && isBigramHist(o.h)
+}
+
+function isBigramMinutePayload(p: Record<string, unknown>): boolean {
+  if (!hasStringField(p, 'scopeId') || !hasNumberField(p, 'minuteTs')) return false
+  const bigrams = p.bigrams
+  if (typeof bigrams !== 'object' || bigrams === null) return false
+  for (const value of Object.values(bigrams as Record<string, unknown>)) {
+    if (!isBigramMinuteEntry(value)) return false
+  }
+  return true
+}
+
 /** Parse one JSONL line into a typed row. Returns `null` for malformed
  * JSON, missing required fields, or unknown row kinds so readers can skip
  * bad lines without aborting the whole file. */
@@ -259,6 +315,9 @@ export function parseRow(line: string): JsonlRow | null {
       break
     case 'session':
       if (!isSessionPayload(payloadObj)) return null
+      break
+    case 'bigram-minute':
+      if (!isBigramMinutePayload(payloadObj)) return null
       break
   }
 

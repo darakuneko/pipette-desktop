@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { TypingAnalyticsDB } from '../../db/typing-analytics-db'
 import {
+  bigramMinuteRowId,
   charMinuteRowId,
   matrixMinuteRowId,
   minuteStatsRowId,
@@ -93,6 +94,18 @@ function sessionRow(updatedAt: number, sessionId = 'uuid-1'): JsonlRow {
   }
 }
 
+function bigramRow(
+  updatedAt: number,
+  bigrams: Record<string, { c: number; h: number[] }>,
+): JsonlRow {
+  return {
+    id: bigramMinuteRowId(SCOPE_ID, 60_000),
+    kind: 'bigram-minute',
+    updated_at: updatedAt,
+    payload: { scopeId: SCOPE_ID, minuteTs: 60_000, bigrams },
+  }
+}
+
 describe('applyRowsToCache', () => {
   let tmpDir: string
   let db: TypingAnalyticsDB
@@ -122,6 +135,7 @@ describe('applyRowsToCache', () => {
       matrixMinutes: 1,
       minuteStats: 1,
       sessions: 1,
+      bigramMinutes: 0,
     })
     const conn = db.getConnection()
     expect(conn.prepare('SELECT COUNT(*) AS n FROM typing_scopes').get()).toEqual({ n: 1 })
@@ -167,6 +181,49 @@ describe('applyRowsToCache', () => {
     expect(row.is_deleted).toBe(1)
   })
 
+  it('expands a bigram-minute row into per-pair rows in typing_bigram_minute', () => {
+    const rows: JsonlRow[] = [
+      scopeRow(1_000),
+      bigramRow(1_000, {
+        '4_11': { c: 3, h: [0, 1, 2, 0, 0, 0, 0, 0] },
+        '22_22': { c: 7, h: [0, 0, 0, 0, 7, 0, 0, 0] },
+      }),
+    ]
+    const result = applyRowsToCache(db, rows)
+    // applyRowsToCache counts JSONL rows applied; per-pair fan-out is internal.
+    expect(result.bigramMinutes).toBe(1)
+    const conn = db.getConnection()
+    const dbRows = conn
+      .prepare('SELECT bigram_id, count, hist FROM typing_bigram_minute ORDER BY bigram_id')
+      .all() as { bigram_id: string; count: number; hist: Uint8Array }[]
+    expect(dbRows).toHaveLength(2)
+    const readBucket = (hist: Uint8Array, idx: number): number =>
+      Buffer.from(hist.buffer, hist.byteOffset, hist.byteLength).readUInt32LE(idx * 4)
+    expect(dbRows[0].bigram_id).toBe('22_22')
+    expect(dbRows[0].count).toBe(7)
+    expect(dbRows[0].hist.byteLength).toBe(32) // 8 × u32 little-endian
+    expect(readBucket(dbRows[0].hist, 4)).toBe(7)
+    expect(dbRows[1].bigram_id).toBe('4_11')
+    expect(dbRows[1].count).toBe(3)
+    // bucket 1 = 1 occurrence, bucket 2 = 2 occurrences
+    expect(readBucket(dbRows[1].hist, 1)).toBe(1)
+    expect(readBucket(dbRows[1].hist, 2)).toBe(2)
+  })
+
+  it('LWW: a stale bigram-minute row does not override a newer aggregate', () => {
+    applyRowsToCache(db, [
+      scopeRow(1_000),
+      bigramRow(2_000, { '4_11': { c: 5, h: [0, 5, 0, 0, 0, 0, 0, 0] } }),
+    ])
+    // Stale row (older updated_at) — must not override.
+    applyRowsToCache(db, [
+      bigramRow(1_500, { '4_11': { c: 999, h: [9, 0, 0, 0, 0, 0, 0, 0] } }),
+    ])
+    const conn = db.getConnection()
+    const row = conn.prepare('SELECT count FROM typing_bigram_minute WHERE bigram_id = ?').get('4_11') as { count: number }
+    expect(row.count).toBe(5)
+  })
+
   it('returns zero counters when given an empty batch', () => {
     expect(applyRowsToCache(db, [])).toEqual({
       scopes: 0,
@@ -174,6 +231,7 @@ describe('applyRowsToCache', () => {
       matrixMinutes: 0,
       minuteStats: 0,
       sessions: 0,
+      bigramMinutes: 0,
     })
   })
 })

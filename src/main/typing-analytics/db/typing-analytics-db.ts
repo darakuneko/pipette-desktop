@@ -8,6 +8,11 @@ import { app } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { CREATE_SCHEMA_SQL, SCHEMA_VERSION } from './schema'
+import {
+  BIGRAM_HIST_BUCKETS,
+  type JsonlBigramMinuteEntry,
+  type JsonlBigramMinutePayload,
+} from '../jsonl/jsonl-row'
 
 export interface TypingScopeRow {
   id: string
@@ -67,6 +72,26 @@ export interface SessionRow {
   endMs: number
 }
 
+/** Per-pair bigram aggregate within a minute. Aliased from the JSONL
+ * row shape so the merge / parse layers share a single source of
+ * truth. `bigramId` follows the `${prevKeycode}_${currKeycode}` format;
+ * `h` is the decoded 8-bucket histogram that the merge layer encodes
+ * to a compact BLOB for storage. */
+export type BigramMinuteEntry = JsonlBigramMinuteEntry
+export type BigramMinuteRow = JsonlBigramMinutePayload
+
+/** Row shape returned by range queries against typing_bigram_minute.
+ * `hist` is decoded from the on-disk BLOB so callers don't depend on
+ * better-sqlite3's binary representation. One row per (scope, minute,
+ * bigram) — the aggregation layer (range / view IPC) sums these into
+ * pair-totals. */
+export interface BigramMinuteCellRow {
+  bigramId: string
+  minuteTs: number
+  count: number
+  hist: number[]
+}
+
 /** Row shapes carried across sync bundles. Live columns plus the
  * updated_at / is_deleted metadata the merge layer needs for LWW. */
 export interface CharMinuteExportRow extends CharMinuteRow {
@@ -85,6 +110,10 @@ export interface SessionExportRow extends SessionRow {
   updatedAt: number
   isDeleted: boolean
 }
+export interface BigramMinuteExportRow extends BigramMinuteRow {
+  updatedAt: number
+  isDeleted: boolean
+}
 
 export type {
   TypingKeyboardSummary,
@@ -100,6 +129,38 @@ export type {
   PeakRecords,
 } from '../../../shared/types/typing-analytics'
 
+/** Pack the 8-bucket bigram histogram into a 32-byte little-endian u32
+ * buffer for BLOB storage. Treats missing / non-finite entries as 0
+ * so a malformed JSONL row can't crash the merge. */
+function encodeHistBuffer(hist: readonly number[]): Buffer {
+  const buf = Buffer.alloc(BIGRAM_HIST_BUCKETS * 4)
+  for (let i = 0; i < BIGRAM_HIST_BUCKETS; i += 1) {
+    const value = hist[i]
+    buf.writeUInt32LE(Number.isFinite(value) && value >= 0 ? value : 0, i * 4)
+  }
+  return buf
+}
+
+/** Decode a stored bigram histogram BLOB into the 8-element count
+ * array. better-sqlite3 returns BLOBs as Uint8Array; the wrapper
+ * around DataView keeps the parser independent of Node Buffer typing
+ * so callers can pass either shape. */
+function decodeHistBuffer(buf: Uint8Array): number[] {
+  if (buf.byteLength !== BIGRAM_HIST_BUCKETS * 4) {
+    // Defensive: a row produced by a different schema version would
+    // never satisfy the merge BLOB length, but the cache rebuild path
+    // can in principle accept hand-crafted JSONL. Returning zeros
+    // avoids crashing read-paths on a broken row.
+    return new Array<number>(BIGRAM_HIST_BUCKETS).fill(0)
+  }
+  const view = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+  const out = new Array<number>(BIGRAM_HIST_BUCKETS)
+  for (let i = 0; i < BIGRAM_HIST_BUCKETS; i += 1) {
+    out[i] = view.getUint32(i * 4, true)
+  }
+  return out
+}
+
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
   private readonly upsertScopeStmt: Statement
@@ -112,6 +173,7 @@ export class TypingAnalyticsDB {
   private readonly mergeMatrixMinuteStmt: Statement
   private readonly mergeMinuteStatsStmt: Statement
   private readonly mergeSessionStmt: Statement
+  private readonly mergeBigramMinuteStmt: Statement
   private readonly selectScopesForUidStmt: Statement
   private readonly selectCharMinutesForUidStmt: Statement
   private readonly selectMatrixMinutesForUidStmt: Statement
@@ -134,6 +196,8 @@ export class TypingAnalyticsDB {
   private readonly selectMatrixCellsForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
+  private readonly selectBigramMinutesInRangeForUidStmt: Statement
+  private readonly selectBigramMinutesInRangeForUidAndHashStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
   private readonly selectSessionsInRangeForUidAndHashStmt: Statement
   private readonly selectBksMinuteInRangeForUidStmt: Statement
@@ -410,6 +474,21 @@ export class TypingAnalyticsDB {
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_sessions.updated_at
+    `)
+
+    this.mergeBigramMinuteStmt = this.db.prepare(`
+      INSERT INTO typing_bigram_minute (
+        scope_id, minute_ts, bigram_id, count, hist, updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @bigramId, @count, @hist, @updatedAt, @isDeleted
+      )
+      ON CONFLICT(scope_id, minute_ts, bigram_id) DO UPDATE SET
+        count = excluded.count,
+        hist = excluded.hist,
+        updated_at = excluded.updated_at,
+        is_deleted = excluded.is_deleted
+      WHERE excluded.updated_at > typing_bigram_minute.updated_at
     `)
 
     // Sync export selects. Live rows within the live window or tombstones
@@ -808,6 +887,43 @@ export class TypingAnalyticsDB {
          AND t.minute_ts < @untilMs
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
+    `)
+
+    // Bigram per-pair rows in range. The aggregation layer sums each
+    // pair's count + hist across rows; SQL keeps the per-minute / per-
+    // bigram granularity so the caller can also emit time-series data
+    // (e.g. peak detection) without re-querying. ORDER BY bigramId
+    // groups rows for the same pair together so the aggregator can
+    // accumulate without an intermediate Map sort.
+    this.selectBigramMinutesInRangeForUidStmt = this.db.prepare(`
+      SELECT t.bigram_id AS bigramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       ORDER BY t.bigram_id ASC, t.minute_ts ASC
+    `)
+
+    this.selectBigramMinutesInRangeForUidAndHashStmt = this.db.prepare(`
+      SELECT t.bigram_id AS bigramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist
+        FROM typing_bigram_minute t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
     // Sessions whose start falls inside [@sinceMs, @untilMs). We filter
@@ -1569,6 +1685,48 @@ export class TypingAnalyticsDB {
     return this.selectMinuteStatsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMinuteStatsRow[]
   }
 
+  /** Per-(scope, minute, bigram) rows in `[sinceMs, untilMs)` for the
+   * Analyze Bigrams view. Hist is decoded from the BLOB so the
+   * aggregation layer stays independent of the on-disk encoding. Rows
+   * are ordered by `bigramId, minuteTs` so a streaming aggregator can
+   * accumulate per-pair totals without sorting. */
+  listBigramMinutesInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+  ): BigramMinuteCellRow[] {
+    return this.toBigramMinuteCellRows(
+      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs }),
+    )
+  }
+
+  /** Same as {@link listBigramMinutesInRangeForUid} but restricted to
+   * a single machine_hash for the Analyze "This device" scope. */
+  listBigramMinutesInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): BigramMinuteCellRow[] {
+    return this.toBigramMinuteCellRows(
+      this.selectBigramMinutesInRangeForUidAndHashStmt.all({
+        uid,
+        machineHash,
+        sinceMs,
+        untilMs,
+      }),
+    )
+  }
+
+  private toBigramMinuteCellRows(raws: unknown): BigramMinuteCellRow[] {
+    return (raws as { bigramId: string; minuteTs: number; count: number; hist: Uint8Array }[]).map((r) => ({
+      bigramId: r.bigramId,
+      minuteTs: r.minuteTs,
+      count: r.count,
+      hist: decodeHistBuffer(r.hist),
+    }))
+  }
+
   /** Live sessions that intersect `[sinceMs, untilMs)` for a keyboard
    * uid. Powers the Analyze session-distribution histogram. */
   listSessionsInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingSessionRow[] {
@@ -1842,6 +2000,25 @@ export class TypingAnalyticsDB {
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
+  }
+
+  /** Apply a single JSONL bigram-minute row by expanding each pair into
+   * its own SQLite upsert. The caller is expected to wrap the batch in
+   * a transaction (see {@link applyRowsToCache}). */
+  mergeBigramMinute(row: BigramMinuteExportRow): void {
+    const isDeleted = row.isDeleted ? 1 : 0
+    for (const bigramId of Object.keys(row.bigrams)) {
+      const entry = row.bigrams[bigramId]
+      this.mergeBigramMinuteStmt.run({
+        scopeId: row.scopeId,
+        minuteTs: row.minuteTs,
+        bigramId,
+        count: entry.c,
+        hist: encodeHistBuffer(entry.h),
+        updatedAt: row.updatedAt,
+        isDeleted,
+      })
+    }
   }
 
   /** Apply additive migrations for older databases. Only forward

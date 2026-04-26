@@ -10,6 +10,7 @@ import {
   truncateCache,
 } from '../cache-rebuild'
 import { TypingAnalyticsDB } from '../db/typing-analytics-db'
+import { SCHEMA_VERSION } from '../db/schema'
 import {
   charMinuteRowId,
   minuteStatsRowId,
@@ -128,7 +129,7 @@ describe('truncateCache', () => {
     const conn = db.getConnection()
     expect((conn.prepare('SELECT COUNT(*) AS n FROM typing_scopes').get() as { n: number }).n).toBe(0)
     expect((conn.prepare('SELECT COUNT(*) AS n FROM typing_char_minute').get() as { n: number }).n).toBe(0)
-    expect(db.getMeta('schema_version')).toBe('2')
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
   })
 })
 

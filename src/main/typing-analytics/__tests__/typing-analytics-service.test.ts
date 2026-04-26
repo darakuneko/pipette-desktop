@@ -206,6 +206,43 @@ describe('typing-analytics-service', () => {
       expect(getMinuteBufferForTests().isEmpty()).toBe(true)
     })
 
+    it('emits bigram-minute rows when consecutive matrix events flush', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      // Three matrix events in the same minute → two bigrams (a→h, h→d).
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const rows = conn
+        .prepare('SELECT bigram_id, count FROM typing_bigram_minute ORDER BY bigram_id')
+        .all() as { bigram_id: string; count: number }[]
+      expect(rows).toEqual([
+        { bigram_id: '11_7', count: 1 },
+        { bigram_id: '4_11', count: 1 },
+      ])
+    })
+
+    it('does not emit a bigram-minute row when only char events flush', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      await handler(fakeEvent, { kind: 'char', key: 'a', ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'char', key: 'b', ts: ts + 100, keyboard: sampleKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const count = conn.prepare('SELECT COUNT(*) AS n FROM typing_bigram_minute').get() as { n: number }
+      expect(count.n).toBe(0)
+    })
+
     it('inserts a session row when the flush IPC closes the session', async () => {
       setupTypingAnalyticsIpc()
       const eventHandler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
@@ -459,6 +496,80 @@ describe('typing-analytics-service', () => {
           const heat = await getMatrixHeatmap(sampleKeyboard.uid, 0, Date.now() - 3600_000)
           expect(heat).toEqual({})
         })
+      })
+    })
+
+    describe('getBigramAggregateForRange', () => {
+      async function ingestThree(ts: number): Promise<void> {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+        // Three matrix events → two bigrams (4→11 and 11→7).
+        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
+        await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+        await flushTypingAnalyticsNowForTests()
+      }
+
+      it('returns top-ranked entries for view=top with all-scope', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+        expect(result.view).toBe('top')
+        expect(result.entries.map((e: { bigramId: string }) => e.bigramId).sort()).toEqual(['11_7', '4_11'])
+        expect(result.entries.every((e: { count: number }) => e.count === 1)).toBe(true)
+      })
+
+      it('returns slow entries with p95 for view=slow', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        // minSampleCount: 1 — both pairs are single-sample so they're kept.
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'slow', 'all', { minSampleCount: 1 })
+        expect(result.view).toBe('slow')
+        expect(result.entries).toHaveLength(2)
+        expect(typeof result.entries[0].p95).toBe('number')
+      })
+
+      it('drops entries below minSampleCount on view=slow', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        // Default minSample = 5 — none of the single-sample pairs qualify.
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'slow', 'all', undefined)
+        expect(result.view).toBe('slow')
+        expect(result.entries).toEqual([])
+      })
+
+      it('returns an empty top result for an unknown view', async () => {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, 0, 60_000, 'unknown', 'all', undefined)
+        expect(result).toEqual({ view: 'top', entries: [] })
+      })
+
+      it('returns an empty result when sinceMs >= untilMs', async () => {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, 60_000, 60_000, 'top', 'all', undefined)
+        expect(result).toEqual({ view: 'top', entries: [] })
+      })
+
+      it('returns an empty result when uid is invalid', async () => {
+        setupTypingAnalyticsIpc()
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, '', 0, 60_000, 'top', 'all', undefined)
+        expect(result).toEqual({ view: 'top', entries: [] })
+      })
+
+      it('honours scope=own by filtering to the local machine_hash', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'own', undefined)
+        expect(result.view).toBe('top')
+        // The own machineHash is the only one in test data — same as 'all'.
+        expect(result.entries).toHaveLength(2)
       })
     })
 

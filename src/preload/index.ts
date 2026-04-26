@@ -32,6 +32,9 @@ import type {
   TypingBksMinuteRow,
   TypingTombstoneResult,
   PeakRecords,
+  TypingBigramAggregateOptions,
+  TypingBigramAggregateResult,
+  TypingBigramAggregateView,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
@@ -293,6 +296,23 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS, uid),
   typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scope),
+  typingAnalyticsGetBigramAggregateForRange: (
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    view: TypingBigramAggregateView,
+    scope: DeviceScope,
+    options?: TypingBigramAggregateOptions,
+  ): Promise<TypingBigramAggregateResult> =>
+    ipcRenderer.invoke(
+      IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE,
+      uid,
+      sinceMs,
+      untilMs,
+      view,
+      scope,
+      options,
+    ),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),
   typingAnalyticsHasRemote: (): Promise<boolean> =>

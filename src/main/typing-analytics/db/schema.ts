@@ -2,7 +2,7 @@
 // SQLite schema for the typing analytics database. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
-export const SCHEMA_VERSION = 2
+export const SCHEMA_VERSION = 3
 
 /** User-data tables in the order a rebuild should truncate them. Listed
  * child-before-parent so any future FK_ON delete won't trip itself. */
@@ -10,6 +10,7 @@ export const DATA_TABLE_NAMES = [
   'typing_char_minute',
   'typing_matrix_minute',
   'typing_minute_stats',
+  'typing_bigram_minute',
   'typing_sessions',
   'typing_scopes',
 ] as const
@@ -85,6 +86,26 @@ CREATE TABLE IF NOT EXISTS typing_minute_stats (
   PRIMARY KEY (scope_id, minute_ts),
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
+
+CREATE TABLE IF NOT EXISTS typing_bigram_minute (
+  scope_id TEXT NOT NULL,
+  minute_ts INTEGER NOT NULL,
+  -- Pair key in the form "\${prevKeycode}_\${currKeycode}". Numeric keycodes
+  -- joined by underscore, kept as TEXT so the existing JSONL row format
+  -- maps 1:1 without a packing step.
+  bigram_id TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  -- 8-bucket IKI histogram packed as little-endian u32 (32 bytes). Buckets
+  -- are log-scale (see Plan-analyze-bigram.md); count is the sum across
+  -- buckets and is denormalized for fast top-N ranking.
+  hist BLOB NOT NULL,
+  updated_at INTEGER NOT NULL,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (scope_id, minute_ts, bigram_id),
+  FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
+);
+CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_minute
+  ON typing_bigram_minute(scope_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_sessions (
   id TEXT PRIMARY KEY,

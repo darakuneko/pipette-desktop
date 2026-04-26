@@ -167,6 +167,51 @@ describe('isValidAnalyzeFilterSettings', () => {
       }),
     ).toBe(false)
   })
+
+  it('accepts a valid bigrams slot', () => {
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { view: 'top', minSample: 5 },
+      }),
+    ).toBe(true)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { view: 'slow', minSample: 100 },
+      }),
+    ).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ bigrams: {} })).toBe(true)
+  })
+
+  it('rejects an unknown bigram view', () => {
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { view: 'mystery' },
+      }),
+    ).toBe(false)
+  })
+
+  it('rejects bigram minSample that is not a positive integer', () => {
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { minSample: 0 },
+      }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { minSample: -1 },
+      }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { minSample: 1.5 },
+      }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { minSample: 'five' },
+      }),
+    ).toBe(false)
+  })
 })
 
 describe('normalizeDeviceScopes', () => {

@@ -144,6 +144,9 @@ export type ActivityMetric = typeof ACTIVITY_METRICS[number]
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
+export const BIGRAM_VIEWS = ['top', 'slow'] as const
+export type BigramView = typeof BIGRAM_VIEWS[number]
+
 /** `'auto'` hands the bucket decision to `pickBucketMs`; a positive
  * integer overrides it (must be one of the allowed `GRANULARITIES`
  * entries but the store only validates shape — drift is rejected on
@@ -183,6 +186,12 @@ export interface LayerFilters {
   baseLayer?: number
 }
 
+export interface BigramFilters {
+  view?: BigramView
+  /** Min sample threshold for the Slow view. Top view ignores this. */
+  minSample?: number
+}
+
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
  * it lives as renderer-local state (default 7 days) so the absolute
  * `fromMs` / `toMs` never get restored and make the view look stale.
@@ -200,6 +209,7 @@ export interface AnalyzeFilterSettings {
   interval?: IntervalFilters
   activity?: ActivityFilters
   layer?: LayerFilters
+  bigrams?: BigramFilters
 }
 
 /** Shared primitive guards. Exported so the main-process store
@@ -280,6 +290,15 @@ function isValidLayerFilters(value: unknown): boolean {
   return true
 }
 
+function isValidBigramFilters(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  if (o.view !== undefined && !includesAs(BIGRAM_VIEWS, o.view)) return false
+  if (o.minSample !== undefined && !isPositiveInt(o.minSample)) return false
+  return true
+}
+
 /** Validates the persisted multi-select shape. Anything that survives
  * here is already in the form `normalizeDeviceScopes` would produce —
  * reject malformed data outright instead of silently reshaping it so
@@ -318,5 +337,6 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (!isValidIntervalFilters(o.interval)) return false
   if (!isValidActivityFilters(o.activity)) return false
   if (!isValidLayerFilters(o.layer)) return false
+  if (!isValidBigramFilters(o.bigrams)) return false
   return true
 }

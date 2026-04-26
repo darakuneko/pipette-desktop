@@ -8,6 +8,9 @@
 // file alone.
 
 import type {
+  TypingBigramAggregateOptions,
+  TypingBigramAggregateResult,
+  TypingBigramAggregateView,
   TypingBksMinuteRow,
   TypingHeatmapByCell,
   TypingKeymapSnapshot,
@@ -88,4 +91,18 @@ export async function fetchMatrixHeatmapAllLayers(
   const next: Record<number, TypingHeatmapByCell> = {}
   layerIdxs.forEach((l, i) => { next[l] = results[i] })
   return next
+}
+
+/** Bigram aggregate fetch. The IPC channel is single-variant — the
+ * main-side handler resolves `DeviceScope` to own / all / hash, so the
+ * renderer does not need the three-fold ternary other helpers carry. */
+export function fetchBigramAggregateForRange(
+  uid: string,
+  scope: DeviceScope,
+  fromMs: number,
+  toMs: number,
+  view: TypingBigramAggregateView,
+  options?: TypingBigramAggregateOptions,
+): Promise<TypingBigramAggregateResult> {
+  return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options)
 }

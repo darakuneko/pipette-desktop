@@ -13,6 +13,7 @@ import {
   normalizeDeviceScopes,
   type ActivityFilters,
   type AnalyzeFilterSettings,
+  type BigramFilters,
   type DeviceScope,
   type HeatmapFilters,
   type IntervalFilters,
@@ -35,6 +36,7 @@ export interface AnalyzeFiltersState {
   interval: Required<IntervalFilters>
   activity: Required<ActivityFilters>
   layer: Required<LayerFilters>
+  bigrams: Required<BigramFilters>
 }
 
 export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
@@ -63,6 +65,10 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     viewMode: 'keystrokes',
     baseLayer: 0,
   },
+  bigrams: {
+    view: 'top',
+    minSample: 5,
+  },
 }
 
 function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFiltersState {
@@ -78,6 +84,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
     activity: { ...DEFAULT_ANALYZE_FILTERS.activity, ...saved.activity },
     layer: { ...DEFAULT_ANALYZE_FILTERS.layer, ...saved.layer },
+    bigrams: { ...DEFAULT_ANALYZE_FILTERS.bigrams, ...saved.bigrams },
   }
 }
 
@@ -89,6 +96,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
     interval: state.interval,
     activity: state.activity,
     layer: state.layer,
+    bigrams: state.bigrams,
   }
 }
 
@@ -101,6 +109,7 @@ export interface UseAnalyzeFiltersReturn {
   setInterval: (patch: Partial<IntervalFilters>) => void
   setActivity: (patch: Partial<ActivityFilters>) => void
   setLayer: (patch: Partial<LayerFilters>) => void
+  setBigrams: (patch: Partial<BigramFilters>) => void
 }
 
 /** Drive the Analyze filter state for a single keyboard uid.
@@ -244,6 +253,10 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
     update((prev) => ({ ...prev, layer: { ...prev.layer, ...patch } }))
   }, [update])
 
+  const setBigrams = useCallback((patch: Partial<BigramFilters>) => {
+    update((prev) => ({ ...prev, bigrams: { ...prev.bigrams, ...patch } }))
+  }, [update])
+
   return {
     filters,
     ready,
@@ -253,5 +266,6 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
     setInterval,
     setActivity,
     setLayer,
+    setBigrams,
   }
 }

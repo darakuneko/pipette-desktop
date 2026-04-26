@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { TypingAnalyticsDB, type TypingScopeRow } from '../typing-analytics-db'
+import { SCHEMA_VERSION } from '../schema'
 
 const MACHINE_HASH = 'hash-abc'
 
@@ -39,7 +40,7 @@ describe('TypingAnalyticsDB', () => {
   })
 
   it('stores the schema version on first open', () => {
-    expect(db.getMeta('schema_version')).toBe('2')
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
   })
 
   it('upserts a scope row and keeps the newest updatedAt', () => {
@@ -270,6 +271,64 @@ describe('TypingAnalyticsDB', () => {
       })
       const row = db.getConnection().prepare('SELECT is_deleted FROM typing_scopes WHERE id = ?').get('scope-1') as { is_deleted: number }
       expect(row.is_deleted).toBe(1)
+    })
+
+    it('mergeBigramMinute fans a payload into per-pair rows with packed hist BLOB', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        bigrams: {
+          '4_11': { c: 3, h: [0, 1, 2, 0, 0, 0, 0, 0] },
+          '22_22': { c: 7, h: [0, 0, 0, 0, 7, 0, 0, 0] },
+        },
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      const conn = db.getConnection()
+      const rows = conn
+        .prepare('SELECT bigram_id, count, hist FROM typing_bigram_minute ORDER BY bigram_id')
+        .all() as { bigram_id: string; count: number; hist: Uint8Array }[]
+      expect(rows.map((r) => r.bigram_id)).toEqual(['22_22', '4_11'])
+      expect(rows[1].count).toBe(3)
+      // Hist BLOB is 8 × u32 LE = 32 bytes; bucket 2 should equal 2.
+      expect(rows[1].hist.byteLength).toBe(32)
+      const histBuf = Buffer.from(rows[1].hist.buffer, rows[1].hist.byteOffset, rows[1].hist.byteLength)
+      expect(histBuf.readUInt32LE(2 * 4)).toBe(2)
+    })
+
+    it('mergeBigramMinute follows LWW: stale updated_at does not overwrite', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        bigrams: { '4_11': { c: 5, h: [0, 5, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      // Older updated_at — must be ignored.
+      db.mergeBigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        bigrams: { '4_11': { c: 999, h: [9, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 2_500,
+        isDeleted: false,
+      })
+      const row = db.getConnection().prepare('SELECT count FROM typing_bigram_minute WHERE bigram_id = ?').get('4_11') as { count: number }
+      expect(row.count).toBe(5)
+    })
+
+    it('mergeBigramMinute is a no-op for an empty bigrams payload', () => {
+      // Empty bigrams should not insert any rows. The service skips
+      // emit when size === 0, but a reader / migration tool could still
+      // call merge with an empty set.
+      db.mergeBigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        bigrams: {},
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      const count = db.getConnection().prepare('SELECT COUNT(*) AS n FROM typing_bigram_minute').get() as { n: number }
+      expect(count.n).toBe(0)
     })
   })
 
@@ -707,6 +766,69 @@ describe('TypingAnalyticsDB', () => {
       writeMatrix('scope-other-machine', 60_000, 0, 0, 0, 4)
       const rows = db.listMatrixCellsForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
       expect(rows).toEqual([{ layer: 0, row: 0, col: 0, count: 3, tap: 0, hold: 0 }])
+    })
+  })
+
+  describe('listBigramMinutesInRangeForUid (Analyze > Bigrams)', () => {
+    function bigramRow(
+      scopeId: string,
+      minuteTs: number,
+      bigramId: string,
+      count: number,
+      h: number[],
+      updatedAt = 1_000,
+    ): void {
+      db.mergeBigramMinute({
+        scopeId,
+        minuteTs,
+        bigrams: { [bigramId]: { c: count, h } },
+        updatedAt,
+        isDeleted: false,
+      })
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('returns rows in range with hist decoded back to a number array', () => {
+      bigramRow('scope-local', 60_000, '4_11', 3, [0, 2, 1, 0, 0, 0, 0, 0])
+      const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([
+        { bigramId: '4_11', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0] },
+      ])
+    })
+
+    it('drops rows outside the window and respects tombstones', () => {
+      bigramRow('scope-local', 30_000, 'A', 1, [1, 0, 0, 0, 0, 0, 0, 0]) // before window
+      bigramRow('scope-local', 60_000, 'B', 2, [0, 2, 0, 0, 0, 0, 0, 0]) // in
+      // Tombstone B with newer updated_at; the read path must skip it.
+      db.mergeBigramMinute({
+        scopeId: 'scope-local',
+        minuteTs: 60_000,
+        bigrams: { B: { c: 0, h: [0, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 5_000,
+        isDeleted: true,
+      })
+      bigramRow('scope-local', 120_000, 'C', 4, [0, 0, 0, 4, 0, 0, 0, 0]) // in
+      const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 240_000)
+      expect(rows.map((r) => r.bigramId).sort()).toEqual(['C'])
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      bigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      bigramRow('scope-other-uid', 60_000, 'dropped', 99, [0, 0, 0, 99, 0, 0, 0, 0])
+      const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(rows.map((r) => r.bigramId)).toEqual(['kept'])
+    })
+
+    it('listBigramMinutesInRangeForUidAndHash restricts to one machine_hash', () => {
+      bigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      bigramRow('scope-other-machine', 60_000, 'remote', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      const rows = db.listBigramMinutesInRangeForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows.map((r) => r.bigramId)).toEqual(['kept'])
     })
   })
 

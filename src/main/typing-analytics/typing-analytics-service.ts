@@ -17,6 +17,9 @@ import type {
   TypingHeatmapByCell,
   TypingKeymapSnapshot,
   TypingKeymapSnapshotSummary,
+  TypingBigramAggregateOptions,
+  TypingBigramAggregateResult,
+  TypingBigramAggregateView,
 } from '../../shared/types/typing-analytics'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { isHashScope, isOwnScope, parseDeviceScope } from '../../shared/types/analyze-filters'
@@ -55,6 +58,7 @@ import {
 import { getMachineHash } from './machine-hash'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import {
+  bigramMinuteRowId,
   charMinuteRowId,
   matrixMinuteRowId,
   minuteStatsRowId,
@@ -63,6 +67,12 @@ import {
   type JsonlRow,
 } from './jsonl/jsonl-row'
 import { appendRowsToFile } from './jsonl/jsonl-writer'
+import { bucketizeIki } from './bigram-bucket'
+import {
+  aggregatePairTotals,
+  rankBigramsByCount,
+  rankBigramsBySlow,
+} from './bigram-aggregate'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
@@ -555,6 +565,51 @@ export function setupTypingAnalyticsIpc(): void {
         out[key] = { total: cell.total, tap: cell.tap, hold: cell.hold }
       }
       return out
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE,
+    async (
+      _event,
+      uid: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      view: unknown,
+      scope: unknown,
+      options: unknown,
+    ): Promise<TypingBigramAggregateResult> => {
+      // Reject unknown views up front so parsedView is the trusted union
+      // and downstream branches can return literal-typed empty results.
+      if (view !== 'top' && view !== 'slow') {
+        return { view: 'top', entries: [] }
+      }
+      const parsedView: TypingBigramAggregateView = view
+      if (typeof uid !== 'string' || uid.length === 0) return { view: parsedView, entries: [] }
+      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return { view: parsedView, entries: [] }
+      if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) {
+        return { view: parsedView, entries: [] }
+      }
+      const parsedScope = parseDeviceScope(scope)
+      if (parsedScope === null) return { view: parsedView, entries: [] }
+      const opts = parseBigramAggregateOptions(options)
+      const limit = opts.limit ?? 30
+      const minSample = opts.minSampleCount ?? 5
+
+      const db = getTypingAnalyticsDB()
+      const machineHash = isOwnScope(parsedScope)
+        ? await getMachineHash()
+        : isHashScope(parsedScope)
+          ? parsedScope.machineHash
+          : undefined
+      const rows = machineHash === undefined
+        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs)
+        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+      const totals = aggregatePairTotals(rows)
+      if (parsedView === 'slow') {
+        return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit) }
+      }
+      return { view: 'top', entries: rankBigramsByCount(totals, limit) }
     },
   )
 
@@ -1079,6 +1134,22 @@ function buildScopeRow(
   }
 }
 
+/** Coerce the IPC `options` payload to a typed shape, dropping
+ * non-finite or non-positive values. Returning an empty object lets
+ * the handler fall through to its defaults without per-field guards. */
+function parseBigramAggregateOptions(value: unknown): TypingBigramAggregateOptions {
+  if (typeof value !== 'object' || value === null) return {}
+  const o = value as Record<string, unknown>
+  const out: TypingBigramAggregateOptions = {}
+  if (typeof o.minSampleCount === 'number' && Number.isFinite(o.minSampleCount) && o.minSampleCount >= 0) {
+    out.minSampleCount = Math.floor(o.minSampleCount)
+  }
+  if (typeof o.limit === 'number' && Number.isFinite(o.limit) && o.limit > 0) {
+    out.limit = Math.floor(o.limit)
+  }
+  return out
+}
+
 function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRow[] {
   const rows: JsonlRow[] = [
     {
@@ -1122,6 +1193,22 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         count: cell.count,
         tapCount: cell.tapCount,
         holdCount: cell.holdCount,
+      },
+    })
+  }
+  if (snapshot.bigrams.size > 0) {
+    const bigrams: Record<string, { c: number; h: number[] }> = {}
+    for (const [pairKey, ikis] of snapshot.bigrams) {
+      bigrams[pairKey] = { c: ikis.length, h: bucketizeIki(ikis) }
+    }
+    rows.push({
+      id: bigramMinuteRowId(snapshot.scopeId, snapshot.minuteTs),
+      kind: 'bigram-minute',
+      updated_at: updatedAt,
+      payload: {
+        scopeId: snapshot.scopeId,
+        minuteTs: snapshot.minuteTs,
+        bigrams,
       },
     })
   }

@@ -32,6 +32,7 @@ import { DeviceMultiSelect } from './DeviceMultiSelect'
 import { RangeDayPicker } from './RangeDayPicker'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
+import { BigramsChart } from './BigramsChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportModal'
@@ -56,7 +57,7 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'layer']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layer']
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -138,6 +139,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       interval: intervalFilter,
       activity: activityFilter,
       layer: layerFilter,
+      bigrams: bigramsFilter,
     },
     ready: filtersReady,
     setDeviceScopes,
@@ -146,6 +148,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     setInterval: setIntervalFilter,
     setActivity,
     setLayer,
+    setBigrams,
   } = useAnalyzeFilters(selectedUid)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [snapshotLoading, setSnapshotLoading] = useState(false)
@@ -863,6 +866,16 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                     {t('analyze.ergonomics.noSnapshot')}
                   </div>
                 )
+              ) : analysisTab === 'bigrams' ? (
+                <BigramsChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScopes={deviceScopes}
+                  view={bigramsFilter.view}
+                  minSample={bigramsFilter.minSample}
+                  onViewChange={(view) => setBigrams({ view })}
+                  onMinSampleChange={(minSample) => setBigrams({ minSample })}
+                />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.
                 // Layers can run up to ~32, so a single shared scroll

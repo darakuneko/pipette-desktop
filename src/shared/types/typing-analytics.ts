@@ -274,6 +274,46 @@ export interface TypingTombstoneResult {
   sessions: number
 }
 
+/** Sub-view requested from the bigram aggregate IPC. `top` ranks by
+ * occurrence count; `slow` ranks by avg IKI with a min-sample filter
+ * to suppress single-event outliers. The remaining views (`fingerIki`,
+ * `heatmap`) are reserved for future expansion alongside their UI
+ * surfaces and are not yet implemented at the IPC layer. */
+export type TypingBigramAggregateView = 'top' | 'slow'
+
+export interface TypingBigramAggregateOptions {
+  /** Minimum pair count to be included. Used by `slow` to drop outliers
+   * caused by a single late press. Ignored by `top`. */
+  minSampleCount?: number
+  /** Maximum number of pairs returned. Defaults to 30 at the handler
+   * level if absent. */
+  limit?: number
+}
+
+/** Per-pair entry in a `top` view response. `avgIki` is null when the
+ * pair has no recorded IKI samples (count = 0 — usually filtered
+ * upstream but kept defensive). */
+export interface TypingBigramTopEntry {
+  bigramId: string
+  count: number
+  hist: number[]
+  avgIki: number | null
+}
+
+/** Per-pair entry in a `slow` view response. Adds `p95` so the UI can
+ * show "occasionally very slow" pairs distinctly from "consistently
+ * slow" pairs. */
+export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
+  p95: number | null
+}
+
+/** Discriminated result for the bigram aggregate IPC. The view tag
+ * matches the request so the renderer can narrow without inspecting
+ * fields. */
+export type TypingBigramAggregateResult =
+  | { view: 'top'; entries: TypingBigramTopEntry[] }
+  | { view: 'slow'; entries: TypingBigramSlowEntry[] }
+
 /** Build the canonical scope key from a fingerprint. Excludes productName
  * so that cross-OS descriptor variation doesn't fragment the same device. */
 export function canonicalScopeKey(fp: TypingAnalyticsFingerprint): string {
