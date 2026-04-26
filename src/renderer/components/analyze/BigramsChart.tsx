@@ -110,21 +110,29 @@ export function BigramsChart({
   }, [uid, range.fromMs, range.toMs, view, scopeKey, minSample])
 
   return (
-    <div className="space-y-3" data-testid="analyze-bigrams-content">
+    <div
+      className="flex h-full min-h-0 flex-col gap-3"
+      data-testid="analyze-bigrams-content"
+    >
       <BigramsFilters
         view={view}
         onViewChange={onViewChange}
         minSample={minSample}
         onMinSampleChange={onMinSampleChange}
       />
-      <BigramsBody
-        loading={loading}
-        error={error}
-        result={result}
-        view={view}
-        snapshot={snapshot}
-        fingerOverrides={fingerOverrides}
-      />
+      {/* Filters stay pinned; the body scrolls inside the remaining
+       * height so a long ranking / wide heatmap doesn't push the
+       * sidebar's back button off screen. */}
+      <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+        <BigramsBody
+          loading={loading}
+          error={error}
+          result={result}
+          view={view}
+          snapshot={snapshot}
+          fingerOverrides={fingerOverrides}
+        />
+      </div>
     </div>
   )
 }
