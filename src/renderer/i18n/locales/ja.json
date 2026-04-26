@@ -859,7 +859,9 @@
       "minSample": "最小サンプル数",
       "view": {
         "top": "頻出ペア",
-        "slow": "遅いペア"
+        "slow": "遅いペア",
+        "fingerIki": "指間隔",
+        "heatmap": "ペアヒートマップ"
       },
       "column": {
         "pair": "ペア",
@@ -867,6 +869,13 @@
         "avgIki": "平均間隔",
         "p95": "p95 間隔",
         "bar": ""
+      },
+      "fingerIki": {
+        "hint": "指ペアごとの平均間隔 (ms)。対角線の枠付きセルは同指連打 (SFB)",
+        "noSnapshot": "指ヒートマップには keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください"
+      },
+      "heatmap": {
+        "hint": "頻出キーペアごとの平均間隔 (ms)。空セルはこの期間に該当ペアの記録がない"
       }
     },
     "keyHeatmap": {

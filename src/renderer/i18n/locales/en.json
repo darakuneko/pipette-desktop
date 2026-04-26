@@ -861,7 +861,9 @@
       "minSample": "Min samples",
       "view": {
         "top": "Top pairs",
-        "slow": "Slow pairs"
+        "slow": "Slow pairs",
+        "fingerIki": "Finger IKI",
+        "heatmap": "Pair heatmap"
       },
       "column": {
         "pair": "Pair",
@@ -869,6 +871,13 @@
         "avgIki": "Avg IKI",
         "p95": "p95 IKI",
         "bar": ""
+      },
+      "fingerIki": {
+        "hint": "Average inter-key interval (ms) per finger pair. Diagonal cells outlined are same-finger bigrams (SFB).",
+        "noSnapshot": "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one."
+      },
+      "heatmap": {
+        "hint": "Average inter-key interval (ms) for the most frequent key pairs. Empty cells have no recorded bigram in this range."
       }
     },
     "keyHeatmap": {

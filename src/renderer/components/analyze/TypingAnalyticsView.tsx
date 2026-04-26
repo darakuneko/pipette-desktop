@@ -875,6 +875,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
                   minSample={bigramsFilter.minSample}
                   onViewChange={(view) => setBigrams({ view })}
                   onMinSampleChange={(minSample) => setBigrams({ minSample })}
+                  snapshot={effectiveSnapshot}
+                  fingerOverrides={fingerAssignments}
                 />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.

@@ -179,6 +179,16 @@ describe('isValidAnalyzeFilterSettings', () => {
         bigrams: { view: 'slow', minSample: 100 },
       }),
     ).toBe(true)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { view: 'fingerIki' },
+      }),
+    ).toBe(true)
+    expect(
+      isValidAnalyzeFilterSettings({
+        bigrams: { view: 'heatmap' },
+      }),
+    ).toBe(true)
     expect(isValidAnalyzeFilterSettings({ bigrams: {} })).toBe(true)
   })
 

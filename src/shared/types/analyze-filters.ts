@@ -144,7 +144,7 @@ export type ActivityMetric = typeof ACTIVITY_METRICS[number]
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
-export const BIGRAM_VIEWS = ['top', 'slow'] as const
+export const BIGRAM_VIEWS = ['top', 'slow', 'fingerIki', 'heatmap'] as const
 export type BigramView = typeof BIGRAM_VIEWS[number]
 
 /** `'auto'` hands the bucket decision to `pickBucketMs`; a positive
