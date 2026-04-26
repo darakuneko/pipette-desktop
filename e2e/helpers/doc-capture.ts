@@ -518,6 +518,22 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-tab-ergonomics not found')
   }
 
+  const bigramsTab = page.locator('[data-testid="analyze-tab-bigrams"]')
+  if (await isAvailable(bigramsTab)) {
+    await bigramsTab.click()
+    await page.waitForTimeout(800)
+    // Element screenshot of the 2x2 quadrant grid keeps the four sub-views
+    // legible — `fullPage` would dilute each quadrant against sidebar/filters.
+    const bigramsContent = page.locator('[data-testid="analyze-bigrams-content"]')
+    if (await isAvailable(bigramsContent)) {
+      await captureNamed(page, 'analyze-bigrams', { element: bigramsContent })
+    } else {
+      console.log('  [warn] analyze-bigrams-content not visible — capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-bigrams not found')
+  }
+
   const layerTab = page.locator('[data-testid="analyze-tab-layer"]')
   if (await isAvailable(layerTab)) {
     await layerTab.click()

@@ -77,6 +77,22 @@ const DUMMY_TA_LAYER_OPS: Record<string, string> = {
   '0,0,4': 'OSL(2)',
 }
 
+// Alpha row aligned with the matrix-minute seed (keycode = 4 + col on
+// layer 0 row 1, left half) plus right-hand alphas at cols 9-11 so the
+// Bigrams Finger IKI view shows both blue (left-start) and red
+// (right-start) bars instead of a single-hand silhouette.
+const DUMMY_TA_ALPHA_ROW: Record<string, string> = {
+  '0,1,0': 'KC_A',
+  '0,1,1': 'KC_B',
+  '0,1,2': 'KC_C',
+  '0,1,3': 'KC_D',
+  '0,1,4': 'KC_E',
+  '0,1,5': 'KC_F',
+  '0,1,9': 'KC_J',
+  '0,1,10': 'KC_K',
+  '0,1,11': 'KC_L',
+}
+
 export interface TypingAnalyticsSeedBackup {
   jsonlPath: string
   snapshotPath: string
@@ -112,7 +128,8 @@ function buildDummyKeymap(): string[][][] {
     for (let row = 0; row < DUMMY_TA_ROWS; row += 1) {
       const cols: string[] = []
       for (let col = 0; col < DUMMY_TA_COLS; col += 1) {
-        const override = DUMMY_TA_LAYER_OPS[`${layer},${row},${col}`]
+        const key = `${layer},${row},${col}`
+        const override = DUMMY_TA_LAYER_OPS[key] ?? DUMMY_TA_ALPHA_ROW[key]
         cols.push(override ?? 'KC_A')
       }
       layerRows.push(cols)
@@ -126,6 +143,54 @@ function buildDummyKeymap(): string[][][] {
 function dummyMinuteOffsets(): number[] {
   return [240, 180, 120, 60, 30, 15, 10, 5, 3, 1]
 }
+
+// Representative bigram pairs for the Bigrams tab. Histogram bucket
+// boundaries (ms): [60, 100, 150, 200, 300, 500, 1000, Inf]. Each entry
+// is replayed every minute so the Top quadrant shows count-leaders, the
+// Slow quadrant ranks high-IKI pairs, and Finger / Pair quadrants show
+// a varied avgIki distribution. Keycodes 4-9 are KC_A-KC_F; the alpha
+// row in the dummy keymap pins them to layer-0 row 1 columns 0-5 so
+// `buildKeycodeFingerMap` can resolve them to distinct fingers.
+const DUMMY_TA_BIGRAM_PER_MINUTE: ReadonlyArray<{
+  prev: number
+  curr: number
+  c: number
+  hist: readonly number[]
+}> = [
+  // Frequent fast pairs — drive the Top ranking.
+  { prev: 4, curr: 4, c: 10, hist: [3, 5, 2, 0, 0, 0, 0, 0] },
+  { prev: 4, curr: 5, c: 8, hist: [2, 4, 2, 0, 0, 0, 0, 0] },
+  { prev: 5, curr: 6, c: 6, hist: [1, 3, 2, 0, 0, 0, 0, 0] },
+  { prev: 6, curr: 7, c: 5, hist: [0, 1, 2, 2, 0, 0, 0, 0] },
+  { prev: 6, curr: 5, c: 5, hist: [1, 1, 1, 1, 1, 0, 0, 0] },
+  { prev: 7, curr: 8, c: 4, hist: [0, 0, 2, 2, 0, 0, 0, 0] },
+  { prev: 7, curr: 4, c: 4, hist: [1, 2, 1, 0, 0, 0, 0, 0] },
+  { prev: 8, curr: 9, c: 3, hist: [0, 0, 0, 1, 2, 0, 0, 0] },
+  { prev: 8, curr: 5, c: 3, hist: [0, 1, 1, 1, 0, 0, 0, 0] },
+  { prev: 4, curr: 6, c: 3, hist: [1, 2, 0, 0, 0, 0, 0, 0] },
+  // Mid-IKI pairs — fill the Pair heatmap mid-range.
+  { prev: 9, curr: 4, c: 2, hist: [0, 0, 0, 0, 0, 1, 1, 0] },
+  { prev: 9, curr: 6, c: 2, hist: [0, 0, 0, 0, 1, 1, 0, 0] },
+  { prev: 5, curr: 7, c: 2, hist: [0, 0, 1, 1, 0, 0, 0, 0] },
+  { prev: 6, curr: 8, c: 2, hist: [0, 0, 0, 0, 0, 1, 1, 0] },
+  { prev: 8, curr: 6, c: 2, hist: [0, 0, 0, 0, 1, 1, 0, 0] },
+  { prev: 9, curr: 7, c: 2, hist: [0, 0, 0, 0, 0, 1, 1, 0] },
+  // Rare slow pairs — anchor the Slow ranking head.
+  { prev: 4, curr: 9, c: 1, hist: [0, 0, 0, 0, 0, 0, 1, 0] },
+  { prev: 5, curr: 8, c: 1, hist: [0, 0, 0, 0, 0, 0, 0, 1] },
+  { prev: 7, curr: 9, c: 1, hist: [0, 0, 0, 1, 0, 0, 0, 0] },
+  { prev: 4, curr: 7, c: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0] },
+  { prev: 5, curr: 9, c: 1, hist: [0, 0, 0, 0, 0, 0, 0, 1] },
+  { prev: 9, curr: 5, c: 1, hist: [0, 0, 0, 0, 0, 0, 0, 1] },
+  // Right-hand-start pairs (KC_J=13, KC_K=14, KC_L=15) so the Finger
+  // IKI heatmap shows red bars alongside the blue ones.
+  { prev: 13, curr: 4, c: 6, hist: [1, 3, 2, 0, 0, 0, 0, 0] },
+  { prev: 14, curr: 5, c: 4, hist: [0, 1, 2, 1, 0, 0, 0, 0] },
+  { prev: 15, curr: 6, c: 3, hist: [0, 0, 1, 1, 1, 0, 0, 0] },
+  { prev: 13, curr: 14, c: 5, hist: [1, 2, 2, 0, 0, 0, 0, 0] },
+  { prev: 14, curr: 15, c: 4, hist: [0, 1, 2, 1, 0, 0, 0, 0] },
+  { prev: 15, curr: 13, c: 2, hist: [0, 0, 0, 0, 1, 1, 0, 0] },
+]
 
 function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
   const scopeRow = {
@@ -158,9 +223,25 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
 
   const matrixRows: unknown[] = []
   const statsRows: unknown[] = []
+  const bigramRows: unknown[] = []
   const minuteBase = Math.floor((nowMs - 60_000) / 60_000) * 60_000
   for (const offset of dummyMinuteOffsets()) {
     const minuteTs = minuteBase - offset * 60_000
+
+    const bigrams: Record<string, { c: number; h: readonly number[] }> = {}
+    for (const pair of DUMMY_TA_BIGRAM_PER_MINUTE) {
+      bigrams[`${pair.prev}_${pair.curr}`] = { c: pair.c, h: pair.hist }
+    }
+    bigramRows.push({
+      id: `bigram|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,
+      kind: 'bigram-minute',
+      updated_at: nowMs,
+      payload: {
+        scopeId: DUMMY_TA_SCOPE_ID,
+        minuteTs,
+        bigrams,
+      },
+    })
     // Layer 0 bulk typing — base layer covers most presses.
     for (let col = 0; col < 6; col += 1) {
       matrixRows.push({
@@ -257,7 +338,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
     })
   }
 
-  const allRows = [scopeRow, sessionRow, ...matrixRows, ...statsRows]
+  const allRows = [scopeRow, sessionRow, ...matrixRows, ...statsRows, ...bigramRows]
   return allRows.map((r) => JSON.stringify(r)).join('\n') + '\n'
 }
 

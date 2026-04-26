@@ -85,7 +85,7 @@ A **breadcrumb navigation** at the top of the content area shows the current pat
 
 ### 1.4 Analyze
 
-The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, and per-layer usage. Data is recorded while you are in Typing View (the compact window opened from the status bar) and the Record toggle in the typing-test pane is set to Start. Typing-test results are recorded in the same stream.
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data is recorded while you are in Typing View (the compact window opened from the status bar) and the Record toggle in the typing-test pane is set to Start. Typing-test results are recorded in the same stream.
 
 **Access**
 
@@ -100,7 +100,7 @@ The left sidebar lists every keyboard that has recorded typing data. Pick one to
 
 **Analysis tabs**
 
-Switch between six analyses with the tab bar above the chart:
+Switch between seven analyses with the tab bar above the chart:
 
 | Tab | What it shows |
 |-----|---------------|
@@ -109,15 +109,16 @@ Switch between six analyses with the tab bar above the chart:
 | **Interval** | Keystroke interval percentiles (min / p25 / median / p75 / max), as a time series or a distribution |
 | **Activity** | Hour × day-of-week grid colored by keystrokes, WPM, or sessions |
 | **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor. Requires a snapshot |
+| **Bigrams** | Frequent and slow key-pair timings, plus pair- and finger-level inter-key interval views |
 | **Layer** | Per-layer keystroke counts or layer-op activations |
 
-The Heatmap, Ergonomics, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
+The Heatmap, Ergonomics, Bigrams > Finger IKI, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
 
 **Common filters**
 
 The following filters are always available:
 
-- **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Layer activations) never mix two layouts in one view
+- **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Bigrams Finger IKI / Layer activations) never mix two layouts in one view
 - **From** / **To** — the time range to analyze. Both inputs are clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
 - **Device** — `This device` shows only data recorded on this machine; `All devices` also includes data synced from other machines. One scope at a time. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
 
@@ -266,7 +267,36 @@ Each key is auto-assigned to a finger based on the layout's KLE metadata (column
 - **No layout** — "Layout data not available for this snapshot."
 - **No activity** — "No keystrokes recorded in this range."
 
-#### Layer
+#### Bigrams
+
+The Bigrams tab analyzes consecutive key-press pairs (bigrams) and the inter-key interval (IKI) between them. Bigrams are aggregated per minute as the typing happens, so the tab works over any selected range without re-scanning raw events.
+
+**Quadrant layout**
+
+The view is a 2×2 grid; each quadrant has its own list-size selector (10 / 20 / 30 / … / 100). Default is 10 for the ranking lists and 20 for the bar charts.
+
+| Quadrant | What it shows |
+|----------|---------------|
+| **Top pairs** | Pair ranking by total occurrence count. Click the **Count** or **Avg IKI** column to flip the sort |
+| **Slow pairs** | Pair ranking by average IKI (slowest first). Click any of **Count**, **Avg IKI**, or **p95** to re-sort |
+| **Finger IKI heatmap** | Per-(from-finger → to-finger) average IKI bar chart. Bars are coloured blue for left-hand starts and red for right-hand starts |
+| **Pair heatmap** | Per-pair average IKI bar chart for individual key-pair labels (`A → B`, `LT1(KC_SPACE) → LShift`, etc.) |
+
+![Analyze — Bigrams](screenshots/analyze-bigrams.png)
+
+**Snapshot requirement**
+
+Only the **Finger IKI heatmap** quadrant needs a keymap snapshot — it has to map each numeric keycode in the bigram pairs to a finger, which depends on the snapshot's keymap and layout. The Top pairs, Slow pairs, and Pair heatmap quadrants all render directly from the recorded pair counts and work without a snapshot.
+
+**Common filters**
+
+- **Range** — same `From` / `To` pickers as the rest of Analyze. The view re-aggregates over the chosen window
+- **Device** — `This device` only or all synced devices, identical to the other tabs
+
+**Empty states**
+
+- **No bigram data** — "No bigram data in this range yet. Record some typing and try again." Shown when the range has no recorded pair activity
+- **No snapshot (Finger IKI quadrant only)** — "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one." The other three quadrants still render
 
 The Layer tab breaks usage down by keyboard layer.
 
