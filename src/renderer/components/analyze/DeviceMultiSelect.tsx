@@ -43,7 +43,7 @@ interface Props {
 const HASH_PREFIX = 'hash:'
 const HASH_DISPLAY_LEN = 8
 
-function formatDeviceLabel(info: TypingAnalyticsDeviceInfo): string {
+export function formatDeviceLabel(info: TypingAnalyticsDeviceInfo): string {
   const hash = info.machineHash.slice(0, HASH_DISPLAY_LEN)
   const platform = info.osPlatform || '?'
   const release = info.osRelease

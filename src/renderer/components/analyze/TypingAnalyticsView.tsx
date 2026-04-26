@@ -20,6 +20,7 @@ import {
   INTERVAL_UNITS,
   INTERVAL_VIEW_MODES,
   WPM_VIEW_MODES,
+  isAllScope,
   isHashScope,
 } from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
@@ -33,6 +34,9 @@ import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { ErgonomicsChart } from './ErgonomicsChart'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
+import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportModal'
+import { formatDeviceLabel } from './DeviceMultiSelect'
+import { formatDateTime } from '../editors/store-modal-shared'
 import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { KeymapSnapshotTimeline } from './KeymapSnapshotTimeline'
@@ -158,6 +162,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingersLoading, setFingersLoading] = useState(false)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
+  const [exportModalOpen, setExportModalOpen] = useState(false)
   // `loaded` gates the "persisted hash no longer exists" fallback so a
   // slow fetch doesn't clobber a valid selection before the list
   // resolves; `error` lets the loading-phase overlay release after a
@@ -453,6 +458,70 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
     : null
 
+  // Snapshot the filter state in the shape AnalyzeExportModal needs.
+  // The modal calls per-category builders directly with these values
+  // so the exported CSV reflects the same conditions the visible
+  // chart is using; keep the deps focused on filter primitives so the
+  // memo doesn't churn on unrelated rerenders.
+  const exportCtx = useMemo<AnalyzeExportContext | null>(() => {
+    if (!selected) return null
+    const scope = deviceScopes[0] ?? 'own'
+    const machineHashOrAll = isHashScope(scope)
+      ? scope.machineHash
+      : isAllScope(scope)
+        ? 'all'
+        : (deviceInfos.own?.machineHash ?? 'own')
+
+    // Reuse the same labels the filter row already shows so the modal
+    // reads as a context echo, not a separate source of truth.
+    const remoteHit = isHashScope(scope)
+      ? deviceInfos.remotes.find((r) => r.machineHash === scope.machineHash) ?? null
+      : null
+    const deviceLabel = isAllScope(scope)
+      ? t('analyze.filters.deviceOption.all')
+      : isHashScope(scope) && remoteHit !== null
+        ? formatDeviceLabel(remoteHit)
+        : deviceInfos.own !== null
+          ? formatDeviceLabel(deviceInfos.own)
+          : t('analyze.filters.deviceOption.own')
+    const keymapLabel = effectiveSnapshot === null
+      ? '—'
+      : selectedSnapshotSavedAt === null
+        ? t('analyze.snapshotTimeline.current')
+        : formatDateTime(selectedSnapshotSavedAt)
+    const rangeLabel = `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
+
+    return {
+      uid: selected.uid,
+      keyboardName: selected.productName,
+      machineHashOrAll,
+      range,
+      deviceScope: scope,
+      snapshot: effectiveSnapshot,
+      heatmap: heatmapFilter,
+      wpm: {
+        granularity: wpmFilter.granularity,
+        viewMode: wpmFilter.viewMode,
+        minActiveMs: wpmFilter.minActiveMs,
+      },
+      interval: {
+        viewMode: intervalFilter.viewMode,
+        granularity: wpmFilter.granularity,
+      },
+      activity: {
+        metric: activityFilter.metric,
+        minActiveMs: wpmFilter.minActiveMs,
+      },
+      layer: { baseLayer: layerFilter.baseLayer },
+      fingerOverrides: fingerAssignments,
+      conditions: { device: deviceLabel, keymap: keymapLabel, range: rangeLabel },
+    }
+  }, [
+    selected, deviceScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
+    fingerAssignments, t,
+  ])
+
   return (
     <div
       className="flex h-full min-h-[70vh] gap-4"
@@ -518,25 +587,36 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         )}
         {selected ? (
           <>
-            <div
-              className="flex gap-1 rounded-lg bg-surface-dim p-1"
-              data-testid="analyze-tabs"
-              role="tablist"
-              aria-label={t('analyze.tablistLabel')}
-            >
-              {ANALYSIS_TABS.map((key) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={analysisTab === key}
-                  className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
-                  onClick={() => setAnalysisTab(key)}
-                  data-testid={`analyze-tab-${key}`}
-                >
-                  {t(`analyze.analysisTab.${key}`)}
-                </button>
-              ))}
+            <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-dim p-1">
+              <div
+                className="flex gap-1"
+                data-testid="analyze-tabs"
+                role="tablist"
+                aria-label={t('analyze.tablistLabel')}
+              >
+                {ANALYSIS_TABS.map((key) => (
+                  <button
+                    key={key}
+                    type="button"
+                    role="tab"
+                    aria-selected={analysisTab === key}
+                    className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
+                    onClick={() => setAnalysisTab(key)}
+                    data-testid={`analyze-tab-${key}`}
+                  >
+                    {t(`analyze.analysisTab.${key}`)}
+                  </button>
+                ))}
+              </div>
+              <button
+                type="button"
+                className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
+                onClick={() => setExportModalOpen(true)}
+                disabled={exportCtx === null}
+                data-testid="analyze-export-open"
+              >
+                {t('analyze.export.csv')}
+              </button>
             </div>
             <div
               className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
@@ -828,6 +908,11 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         snapshot={effectiveSnapshot}
         assignments={fingerAssignments}
         onSave={handleFingerAssignmentsSave}
+      />
+      <AnalyzeExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        ctx={exportCtx}
       />
     </div>
   )

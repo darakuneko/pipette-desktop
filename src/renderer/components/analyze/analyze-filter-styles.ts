@@ -13,3 +13,9 @@ export const FILTER_LABEL = 'contents text-[12px] text-content-muted'
 
 export const FILTER_SELECT =
   'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
+
+// Buttons that sit alongside FILTER_SELECT (export CSV etc). Mirrors the
+// select frame so the row reads as a single visual group, with hover /
+// disabled affordances added on top.
+export const FILTER_BUTTON =
+  `${FILTER_SELECT} transition-colors hover:bg-surface-dim disabled:cursor-not-allowed disabled:opacity-40`

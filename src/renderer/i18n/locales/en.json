@@ -636,6 +636,29 @@
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "export": {
+      "csv": "Export",
+      "categoriesLabel": "Categories to export",
+      "confirm": ".csv",
+      "failed": "Export failed.",
+      "snapshotMissing": "Heatmap and Ergonomics need a keymap snapshot to export and are unavailable for this range.",
+      "conditionLabel": {
+        "device": "Device",
+        "keymap": "Keymap",
+        "range": "Period"
+      },
+      "fingerOverrides": "Finger override",
+      "fingerOverridesDefault": "Default",
+      "fingerOverridesCustomized": "Customized ({{count}})",
+      "category": {
+        "heatmap": "Heatmap",
+        "wpm": "WPM",
+        "interval": "Interval",
+        "activity": "Activity",
+        "ergonomics": "Ergonomics",
+        "layer": "Layer"
+      }
+    },
     "loading": {
       "keyboards": "Loading keyboards…",
       "settings": "Loading settings…",

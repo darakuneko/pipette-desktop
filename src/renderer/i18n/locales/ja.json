@@ -634,6 +634,29 @@
     "noData": "選択した期間にデータがありません",
     "selectKeyboard": "一覧からキーボードを選択してください",
     "tablistLabel": "分析種別",
+    "export": {
+      "csv": "エクスポート",
+      "categoriesLabel": "出力するカテゴリ",
+      "confirm": ".csv",
+      "failed": "出力に失敗しました",
+      "snapshotMissing": "ヒートマップとエルゴノミクスはキーマップスナップショットが必要なため、この期間では出力できません",
+      "conditionLabel": {
+        "device": "デバイス",
+        "keymap": "キーマップ",
+        "range": "期間"
+      },
+      "fingerOverrides": "指割り当て",
+      "fingerOverridesDefault": "デフォルト",
+      "fingerOverridesCustomized": "カスタム ({{count}})",
+      "category": {
+        "heatmap": "ヒートマップ",
+        "wpm": "WPM",
+        "interval": "間隔",
+        "activity": "活動量",
+        "ergonomics": "エルゴノミクス",
+        "layer": "レイヤー"
+      }
+    },
     "loading": {
       "keyboards": "キーボード一覧読み込み中…",
       "settings": "設定読み込み中…",

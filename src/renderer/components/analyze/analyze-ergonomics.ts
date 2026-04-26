@@ -14,6 +14,22 @@ import {
   type RowCategory,
 } from '../../../shared/kle/kle-ergonomics'
 
+// Re-export so callers (Ergonomics chart, CSV export builders, etc.)
+// reach the constant via this module without re-importing the deeper
+// kle-ergonomics path.
+export { FINGER_LIST }
+
+/** Display order for the row category bars / CSV — matches the
+ * physical board layout (function row first, thumb cluster last). */
+export const ROW_ORDER: readonly RowCategory[] = [
+  'function',
+  'number',
+  'top',
+  'home',
+  'bottom',
+  'thumb',
+]
+
 /** Keystroke counts bucketed by one ergonomic dimension. */
 export type FingerCounts = Record<FingerType, number>
 export type HandCounts = Record<HandType, number>

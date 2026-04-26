@@ -10,6 +10,7 @@ export const IpcChannels = {
   FILE_EXPORT_KEYMAP_C: 'file:export-keymap-c',
   FILE_EXPORT_PDF: 'file:export-pdf',
   FILE_EXPORT_CSV: 'file:export-csv',
+  FILE_EXPORT_CSV_BUNDLE: 'file:export-csv-bundle',
   FILE_EXPORT_JSON: 'file:export-json',
 
   // Logging (preload → main)

@@ -21,11 +21,10 @@ import type {
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
-import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
-import type { FingerType, RowCategory } from '../../../shared/kle/kle-ergonomics'
+import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
-import { aggregateErgonomics } from './analyze-ergonomics'
+import { aggregateErgonomics, FINGER_LIST, ROW_ORDER } from './analyze-ergonomics'
 import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
 
@@ -38,16 +37,6 @@ interface Props {
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
 }
-
-// Display rows top-to-bottom (function row first → thumb last)
-const ROW_ORDER: RowCategory[] = [
-  'function',
-  'number',
-  'top',
-  'home',
-  'bottom',
-  'thumb',
-]
 
 type BarDatum = { label: string; value: number }
 

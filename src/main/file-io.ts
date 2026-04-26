@@ -3,6 +3,7 @@
 
 import { dialog, BrowserWindow } from 'electron'
 import { readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { IpcChannels } from '../shared/ipc/channels'
 import { secureHandle } from './ipc-guard'
 
@@ -98,6 +99,51 @@ export function setupFileIO(): void {
         { name: 'All Files', extensions: ['*'] },
       ],
     })
+  })
+
+  // Multi-file CSV bundle export. The renderer pre-builds each file's
+  // content + filename and we prompt once for a target directory; the
+  // main process writes them all in parallel. Each `name` is sanitised
+  // and `.csv` is appended if missing so the renderer can pass either
+  // form. Returns a summary of which files made it to disk.
+  secureHandle(IpcChannels.FILE_EXPORT_CSV_BUNDLE, async (event, files: unknown) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return { success: false, error: 'No window' }
+    if (!Array.isArray(files) || files.length === 0) {
+      return { success: false, error: 'no files' }
+    }
+    const entries: { name: string; content: string }[] = []
+    for (const f of files) {
+      if (
+        typeof f !== 'object' || f === null ||
+        typeof (f as { name?: unknown }).name !== 'string' ||
+        typeof (f as { content?: unknown }).content !== 'string'
+      ) {
+        return { success: false, error: 'invalid file entry' }
+      }
+      entries.push(f as { name: string; content: string })
+    }
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Export CSV bundle',
+      properties: ['openDirectory', 'createDirectory'],
+    })
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, error: 'cancelled' }
+    }
+    const dirPath = result.filePaths[0]
+    const written: string[] = []
+    try {
+      await Promise.all(entries.map(async (entry) => {
+        const safe = sanitizeFilename(entry.name)
+        const fname = safe.toLowerCase().endsWith('.csv') ? safe : `${safe}.csv`
+        const full = join(dirPath, fname)
+        await writeFile(full, entry.content, 'utf-8')
+        written.push(full)
+      }))
+      return { success: true, dirPath, files: written }
+    } catch (err) {
+      return { success: false, error: String(err), files: written }
+    }
   })
 
   secureHandle(IpcChannels.FILE_EXPORT_JSON, async (event, content: string, defaultName?: string) => {
