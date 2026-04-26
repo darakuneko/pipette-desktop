@@ -170,6 +170,17 @@ function serializeInternal(
     if (kc !== undefined) {
       return getName(kc)
     }
+    // Outer wasn't populated by recreateKeyboardKeycodes (e.g. the
+    // Analyze view rendered before the keyboard's layer-count-driven
+    // LT/LM Keycode objects were built). The protocol mask layout is
+    // still known statically, so fall back to the template qmkId
+    // (`LT1(kc)` → `LT1(KC_SPACE)`) instead of the bare hex.
+    const protocolMap = protocol === 6 ? keycodesV6 : keycodesV5
+    const template = protocolMap.maskedTemplates.get(code & 0xff00)
+    if (template !== undefined) {
+      const innerName = inner !== undefined ? getName(inner) : toHex(code & 0x00ff)
+      return template.replace('kc', innerName)
+    }
   }
   return toHex(code)
 }
