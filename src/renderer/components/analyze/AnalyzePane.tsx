@@ -539,6 +539,23 @@ export function AnalyzePane({
     fingerAssignments, t,
   ])
 
+  // Ergonomics-only "open finger assignment" button. Rendered in two
+  // places (Row 1 in single-pane mode, Row 2 in split mode under the
+  // device value via `col-start-4`) so the long Tailwind class string
+  // stays in one place. The optional col-start lets the split-mode
+  // call site land the button under the device select.
+  const renderFingerAssignmentButton = (extraClassName = '') => (
+    <button
+      type="button"
+      className={`${extraClassName} justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary`}
+      onClick={() => setFingerModalOpen(true)}
+      disabled={effectiveSnapshot === null}
+      data-testid={tid("analyze-finger-assignment-open")}
+    >
+      {t('analyze.fingerAssignment.button')}
+    </button>
+  )
+
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
   // the JSX stays in one place.
@@ -638,7 +655,7 @@ export function AnalyzePane({
          * group; the rest of the filters render once a keyboard is
          * selected. */}
         <div
-          className={`grid items-center gap-x-3 gap-y-2 border-b border-edge pb-3 ${
+          className={`grid min-w-0 items-center gap-x-3 gap-y-2 overflow-x-auto border-b border-edge pb-3 ${
             selected !== null && (!filtersReady || syncingAnalytics) ? 'pointer-events-none opacity-60' : ''
           }`}
           // 10 outer columns shared via `grid-cols-subgrid` on each row
@@ -719,55 +736,37 @@ export function AnalyzePane({
                       labelKey="analyze.filters.period"
                       testIdPrefix={tid("analyze-filter-range")}
                     />
-                    {analysisTab === 'ergonomics' && (
-                      <button
-                        type="button"
-                        className="justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
-                        onClick={() => setFingerModalOpen(true)}
-                        disabled={effectiveSnapshot === null}
-                        data-testid={tid("analyze-finger-assignment-open")}
-                      >
-                        {t('analyze.fingerAssignment.button')}
-                      </button>
-                    )}
+                    {analysisTab === 'ergonomics' && renderFingerAssignmentButton()}
                   </>
                 )}
               </>
             )}
           </div>
-          {/* Split-view Row 2: Period stands alone (with the Ergo
-           * finger-assignment button when Ergonomics is the active
-           * tab, and the Activity Metric select when Activity is). The
-           * row uses flex instead of `grid-cols-subgrid` so the wider
-           * "Finger assignment" button can't push Row 1's `Device`
-           * column wider than its select needs. */}
-          {selected && splitMode && (
-            <div className="col-span-10 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <RangeDayPicker
-                range={range}
-                snapshotBoundaries={snapshotBoundaries}
-                nowMs={nowMs}
-                onChange={setRange}
-                labelKey="analyze.filters.period"
-                testIdPrefix={tid("analyze-filter-range")}
-              />
-              {analysisTab === 'ergonomics' && (
-                <button
-                  type="button"
-                  className="justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary"
-                  onClick={() => setFingerModalOpen(true)}
-                  disabled={effectiveSnapshot === null}
-                  data-testid={tid("analyze-finger-assignment-open")}
-                >
-                  {t('analyze.fingerAssignment.button')}
-                </button>
-              )}
-              {analysisTab === 'activity' && activityFilters}
-            </div>
-          )}
+          {/* Per-tab filter row: in single-pane mode this is just the
+           * tab-specific filters; in split mode the period picker and
+           * the Ergonomics finger-assignment button slide down here so
+           * Row 1 stays narrow enough for the two panes side-by-side.
+           * Subgrid alignment keeps every row's labels left and
+           * values right under the keyboard / device columns above. */}
           {selected && (
             <div className="col-span-10 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
-                {analysisTab === 'wpm' && (
+              {splitMode && (
+                <>
+                  <RangeDayPicker
+                    range={range}
+                    snapshotBoundaries={snapshotBoundaries}
+                    nowMs={nowMs}
+                    onChange={setRange}
+                    labelKey="analyze.filters.period"
+                    testIdPrefix={tid("analyze-filter-range")}
+                  />
+                  {/* col-start-4: align under the device select on Row 1
+                   * (col 1=keyboard label, col 2=keyboard select, col
+                   * 3=device label, col 4=device select). */}
+                  {analysisTab === 'ergonomics' && renderFingerAssignmentButton('col-start-4')}
+                </>
+              )}
+              {analysisTab === 'wpm' && (
                 <>
                   <label className={FILTER_LABEL}>
                     <span>{t('analyze.filters.wpmViewMode')}</span>
@@ -801,7 +800,7 @@ export function AnalyzePane({
                   </label>
                 </>
               )}
-              {analysisTab === 'activity' && !splitMode && activityFilters}
+              {analysisTab === 'activity' && activityFilters}
               {analysisTab === 'interval' && (
                 <>
                   <label className={FILTER_LABEL}>
@@ -864,9 +863,9 @@ export function AnalyzePane({
                   </select>
                 </label>
               )}
-                {/* Layer tab: filters live inside the chart sections —
-                  * the base-layer select rides next to the activations
-                  * heading instead of in this global filter row. */}
+              {/* Layer tab: filters live inside the chart sections —
+               * the base-layer select rides next to the activations
+               * heading instead of in this global filter row. */}
             </div>
           )}
         </div>

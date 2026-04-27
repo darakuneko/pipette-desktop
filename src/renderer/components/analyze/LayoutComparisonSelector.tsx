@@ -2,11 +2,11 @@
 //
 // Source / target layout dropdowns for the Layout Comparison.
 //
-// Sits inside the Analyze pane's filter row, which is a 10-column
-// subgrid where every other tab's filters lay out via FILTER_LABEL
-// (`display: contents`). Returning a fragment of FILTER_LABEL pairs
-// keeps the dropdowns from collapsing into one grid cell and lining
-// up correctly under the keyboard / device / range filters above.
+// Sits inside the Analyze pane's filter row alongside 期間 / per-tab
+// filters. Returning a fragment of FILTER_LABEL pairs (`display:
+// contents`) keeps the dropdowns on the same row as 期間 so the user
+// can see range + comparison choices together; the subgrid above
+// already aligns them under keyboard / device.
 
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
