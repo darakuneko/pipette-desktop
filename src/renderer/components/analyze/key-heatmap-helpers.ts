@@ -6,6 +6,7 @@ import type { TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } fro
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import { resolveSnapshotLabel, keycodeGroup } from '../../../shared/keycodes/keycodes'
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
+import { posKey } from '../../../shared/kle/pos-key'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 
 export { AGGREGATE_MODES, KEY_GROUPS } from '../../../shared/types/analyze-filters'
@@ -36,9 +37,9 @@ export function buildLayerKeycodes(snapshot: TypingKeymapSnapshot, layer: number
     if (!Array.isArray(rowArr)) continue
     for (let c = 0; c < snapshot.matrix.cols; c += 1) {
       const qmkId = rowArr[c] ?? ''
-      const posKey = `${r},${c}`
-      keycodes.set(posKey, qmkId)
-      labelOverrides.set(posKey, resolveSnapshotLabel(qmkId))
+      const pos = posKey(r, c)
+      keycodes.set(pos, qmkId)
+      labelOverrides.set(pos, resolveSnapshotLabel(qmkId))
     }
   }
   return { keycodes, labelOverrides }
@@ -59,7 +60,7 @@ export function layoutPositions(layout: KeyboardLayout): string[] {
   if (!Array.isArray(layout.keys)) return []
   return layout.keys
     .filter((k) => !k.decal && !k.ghost)
-    .map((k) => `${k.row},${k.col}`)
+    .map((k) => posKey(k.row, k.col))
 }
 
 export function sumAndNormalizeGroupCells(
@@ -72,19 +73,19 @@ export function sumAndNormalizeGroupCells(
   for (const layerId of group) {
     const cells = layerCells.get(layerId)
     if (!cells) continue
-    for (const [posKey, c] of Object.entries(cells)) {
-      const e = raw[posKey] ?? { total: 0, tap: 0, hold: 0 }
+    for (const [pos, c] of Object.entries(cells)) {
+      const e = raw[pos] ?? { total: 0, tap: 0, hold: 0 }
       e.total += c.total
       e.tap += c.tap
       e.hold += c.hold
-      raw[posKey] = e
+      raw[pos] = e
     }
   }
   const rawTotal = Object.values(raw).reduce((s, c) => s + c.total, 0)
   const scale = makeScale(rawTotal, range, normalization)
   const m = new Map<string, TypingHeatmapCell>()
-  for (const [posKey, cell] of Object.entries(raw)) {
-    m.set(posKey, { total: scale(cell.total), tap: scale(cell.tap), hold: scale(cell.hold) })
+  for (const [pos, cell] of Object.entries(raw)) {
+    m.set(pos, { total: scale(cell.total), tap: scale(cell.tap), hold: scale(cell.hold) })
   }
   return m
 }
@@ -96,8 +97,8 @@ export function filterCellsByGroup(
 ): Map<string, TypingHeatmapCell> {
   if (filter === 'all') return heatmapCells
   const m = new Map<string, TypingHeatmapCell>()
-  for (const [posKey, cell] of heatmapCells) {
-    const qmkId = keycodes.get(posKey) ?? ''
+  for (const [pos, cell] of heatmapCells) {
+    const qmkId = keycodes.get(pos) ?? ''
     const masked = resolveSnapshotLabel(qmkId).masked
     const outerMatch = keycodeGroup(qmkId) === filter
     let innerMatch = false
@@ -108,10 +109,10 @@ export function filterCellsByGroup(
     }
     if (!outerMatch && !innerMatch) continue
     if (!masked) {
-      m.set(posKey, cell)
+      m.set(pos, cell)
       continue
     }
-    m.set(posKey, {
+    m.set(pos, {
       total: outerMatch ? cell.total : 0,
       tap: innerMatch ? cell.tap : 0,
       hold: outerMatch ? cell.hold : 0,
@@ -129,13 +130,13 @@ export type RankingEntry = {
   cellsByLayer: Map<number, Set<string>>
 }
 
-function addCell(entry: RankingEntry, layer: number, posKey: string): void {
+function addCell(entry: RankingEntry, layer: number, pos: string): void {
   let set = entry.cellsByLayer.get(layer)
   if (!set) {
     set = new Set<string>()
     entry.cellsByLayer.set(layer, set)
   }
-  set.add(posKey)
+  set.add(pos)
 }
 
 export function buildGroupRankings(
@@ -160,12 +161,12 @@ export function buildGroupRankings(
   for (const layerId of group) {
     const cells = layerCells.get(layerId)
     if (!cells) continue
-    for (const [posKey, c] of Object.entries(cells)) {
-      const e = groupSum[posKey] ?? { total: 0, tap: 0, hold: 0 }
+    for (const [pos, c] of Object.entries(cells)) {
+      const e = groupSum[pos] ?? { total: 0, tap: 0, hold: 0 }
       e.total += c.total
       e.tap += c.tap
       e.hold += c.hold
-      groupSum[posKey] = e
+      groupSum[pos] = e
     }
   }
   const rawTotal = Object.values(groupSum).reduce((s, c) => s + c.total, 0)
@@ -175,10 +176,10 @@ export function buildGroupRankings(
   for (const layerId of group) {
     const keycodesForLayer = layerKeycodes.get(layerId)?.keycodes ?? new Map()
     const cells = layerCells.get(layerId) ?? {}
-    for (const posKey of positions) {
-      const qmkId = keycodesForLayer.get(posKey) ?? ''
+    for (const pos of positions) {
+      const qmkId = keycodesForLayer.get(pos) ?? ''
       const resolved = resolveSnapshotLabel(qmkId)
-      const rawCell = cells[posKey] ?? { total: 0, tap: 0, hold: 0 }
+      const rawCell = cells[pos] ?? { total: 0, tap: 0, hold: 0 }
       const total = scale(rawCell.total)
       const tap = scale(rawCell.tap)
       if (resolved.masked) {
@@ -186,7 +187,7 @@ export function buildGroupRankings(
           raw.push({
             baseLabel: compactLayerOp(resolved.outer),
             layer: layerId,
-            cell: posKey,
+            cell: pos,
             count: total - tap,
             group: keycodeGroup(qmkId),
           })
@@ -197,16 +198,16 @@ export function buildGroupRankings(
           raw.push({
             baseLabel: resolved.inner,
             layer: layerId,
-            cell: posKey,
+            cell: pos,
             count: tap,
             group: keycodeGroup(innerQmkId),
           })
         }
       } else {
         raw.push({
-          baseLabel: compactLayerOp(resolved.outer || qmkId || posKey),
+          baseLabel: compactLayerOp(resolved.outer || qmkId || pos),
           layer: layerId,
-          cell: posKey,
+          cell: pos,
           count: total,
           group: keycodeGroup(qmkId),
         })

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { posKey } from '../../../shared/kle/pos-key'
+
 export const POLL_INTERVAL = 20 // ms -- same as Python reference
 
 export function parseMatrixState(data: number[], rows: number, cols: number): Set<string> {
@@ -11,7 +13,7 @@ export function parseMatrixState(data: number[], rows: number, cols: number): Se
       const byteIndex = row * rowSize + (rowSize - 1 - Math.floor(col / 8))
       const bitIndex = col % 8
       if (byteIndex < data.length && (data[byteIndex] >> bitIndex) & 1) {
-        pressed.add(`${row},${col}`)
+        pressed.add(posKey(row, col))
       }
     }
   }

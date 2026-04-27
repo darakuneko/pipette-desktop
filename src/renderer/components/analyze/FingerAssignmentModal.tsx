@@ -13,6 +13,7 @@ import {
   buildErgonomicsContext,
   estimateErgonomicsWithContext,
 } from '../../../shared/kle/kle-ergonomics'
+import { posKey } from '../../../shared/kle/pos-key'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
@@ -28,10 +29,6 @@ interface Props {
 }
 
 type HoverPos = { key: KleKey; rect: DOMRect }
-
-function cellKey(row: number, col: number): string {
-  return `${row},${col}`
-}
 
 export function FingerAssignmentModal({
   isOpen,
@@ -76,8 +73,8 @@ export function FingerAssignmentModal({
 
   const resolveFinger = useCallback(
     (key: KleKey): FingerType | undefined => {
-      const posKey = cellKey(key.row, key.col)
-      const override = draft[posKey]
+      const pos = posKey(key.row, key.col)
+      const override = draft[pos]
       if (override) return override
       if (!ctx) return undefined
       return estimateErgonomicsWithContext(key, ctx).finger
@@ -90,12 +87,12 @@ export function FingerAssignmentModal({
     for (const k of keys) {
       const finger = resolveFinger(k)
       if (!finger) continue
-      const posKey = cellKey(k.row, k.col)
+      const pos = posKey(k.row, k.col)
       const short = t(`analyze.finger.short.${finger}`)
-      const isOverride = posKey in draft
+      const isOverride = pos in draft
       // Prefix "*" marks manually overridden keys so the user can tell
       // them apart from keys that still follow the geometry estimate.
-      m.set(posKey, {
+      m.set(pos, {
         outer: isOverride ? `*${short}` : short,
         inner: '',
         masked: false,
@@ -109,7 +106,7 @@ export function FingerAssignmentModal({
     for (const k of keys) {
       const finger = resolveFinger(k)
       if (!finger) continue
-      m.set(cellKey(k.row, k.col), fingerColor(finger, theme))
+      m.set(posKey(k.row, k.col), fingerColor(finger, theme))
     }
     return m
   }, [keys, resolveFinger, theme])
@@ -141,8 +138,8 @@ export function FingerAssignmentModal({
   const handleSelectFinger = useCallback(
     (finger: FingerType) => {
       if (!selected) return
-      const posKey = cellKey(selected.key.row, selected.key.col)
-      setDraft((prev) => ({ ...prev, [posKey]: finger }))
+      const pos = posKey(selected.key.row, selected.key.col)
+      setDraft((prev) => ({ ...prev, [pos]: finger }))
       setSelected(null)
     },
     [selected],
@@ -150,10 +147,10 @@ export function FingerAssignmentModal({
 
   const handleReset = useCallback(() => {
     if (!selected) return
-    const posKey = cellKey(selected.key.row, selected.key.col)
+    const pos = posKey(selected.key.row, selected.key.col)
     setDraft((prev) => {
-      if (!(posKey in prev)) return prev
-      const { [posKey]: _removed, ...rest } = prev
+      if (!(pos in prev)) return prev
+      const { [pos]: _removed, ...rest } = prev
       return rest
     })
     setSelected(null)
@@ -170,7 +167,7 @@ export function FingerAssignmentModal({
 
   if (!isOpen) return null
 
-  const selectedPosKey = selected ? cellKey(selected.key.row, selected.key.col) : null
+  const selectedPosKey = selected ? posKey(selected.key.row, selected.key.col) : null
   const selectedOverride = selectedPosKey ? draft[selectedPosKey] : undefined
   const selectedFinger = selected ? resolveFinger(selected.key) : undefined
 

@@ -31,6 +31,7 @@ import {
   type HandType,
   type RowCategory,
 } from '../../shared/kle/kle-ergonomics'
+import { posKey } from '../../shared/kle/pos-key'
 import type { KleKey } from '../../shared/kle/types'
 import {
   firstCodePoint,
@@ -91,10 +92,6 @@ const SKIP_NO_TARGET_POSITION = {
   skipped: true,
   skipReason: 'no_target_position',
 } as const
-
-function posKey(row: number, col: number): string {
-  return `${row},${col}`
-}
 
 export function buildLayoutResolver(input: LayoutResolverInput): LayoutResolver {
   const layer = input.layer ?? 0

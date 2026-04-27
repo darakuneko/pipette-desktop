@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import type { KleKey } from '../../../shared/kle/types'
+import { posKey } from '../../../shared/kle/pos-key'
 import { serialize, deserialize, isMask, isTapDanceKeycode, getTapDanceIndex, isMacroKeycode, getMacroIndex, isLMKeycode, resolve, extractBasicKey, buildModMaskKeycode } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { BulkKeyEntry } from '../../hooks/useKeyboard'
@@ -232,11 +233,11 @@ export function useKeymapSelectionHandlers({
   // --- Click handlers ---
   const handleKeyClick = useCallback(
     (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => {
-      const posKey = `${key.row},${key.col}`
+      const pos = posKey(key.row, key.col)
       if (pickerSelected.size > 0 && !event?.ctrlKey && !event?.shiftKey) { handlePickerPaste(key); return }
       if (event?.ctrlKey && !selectedKey) {
         clearPickerSelection()
-        setMultiSelectedKeys((prev) => { const next = new Set(prev); if (next.has(posKey)) next.delete(posKey); else next.add(posKey); return next })
+        setMultiSelectedKeys((prev) => { const next = new Set(prev); if (next.has(pos)) next.delete(pos); else next.add(pos); return next })
         setSelectionAnchor({ row: key.row, col: key.col }); setSelectionSourcePane('primary'); setSelectionMode('ctrl'); return
       }
       if (event?.shiftKey && !selectedKey && selectionAnchor) {

@@ -11,6 +11,7 @@ import {
   estimateErgonomicsWithContext,
   type FingerType,
 } from '../../../shared/kle/kle-ergonomics'
+import { posKey } from '../../../shared/kle/pos-key'
 import type { KleKey } from '../../../shared/kle/types'
 import type {
   TypingBigramTopEntry,
@@ -53,8 +54,8 @@ export function buildKeycodeFingerMap(
     }
     if (!Number.isFinite(code)) continue
     if (result.has(code)) continue
-    const posKey = `${key.row},${key.col}`
-    const override = fingerOverrides?.[posKey]
+    const pos = posKey(key.row, key.col)
+    const override = fingerOverrides?.[pos]
     const finger = override ?? estimateErgonomicsWithContext(key, ctx).finger
     if (finger) result.set(code, finger)
   }

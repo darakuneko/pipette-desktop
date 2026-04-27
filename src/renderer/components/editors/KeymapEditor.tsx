@@ -19,6 +19,7 @@ import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
+import { posKey } from '../../../shared/kle/pos-key'
 import { isVilFile, isVilFileV1, recordToMap, deriveLayerCount } from '../../../shared/vil-file'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { StoredKeyboardInfo } from '../../../shared/types/sync'
@@ -543,10 +544,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     for (const [key, code] of keymap) {
       const [l, r, c] = key.split(',')
       if (Number(l) === layer) {
-        const posKey = `${r},${c}`
+        const pos = posKey(Number(r), Number(c))
         const qmkId = serialize(code)
-        keycodes.set(posKey, remap(qmkId))
-        if (!isMask(qmkId) && checkRemapped(qmkId)) remapped.add(posKey)
+        keycodes.set(pos, remap(qmkId))
+        if (!isMask(qmkId) && checkRemapped(qmkId)) remapped.add(pos)
       }
     }
     return { keycodes, remapped }
@@ -671,7 +672,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     const keycodes = new Map<string, string>()
     for (const [key, code] of pickerFileData.keymap) {
       const [l, r, c] = key.split(',')
-      if (Number(l) === pickerLayer) keycodes.set(`${r},${c}`, remap(serialize(code)))
+      if (Number(l) === pickerLayer) keycodes.set(posKey(Number(r), Number(c)), remap(serialize(code)))
     }
     return keycodes
   }, [pickerFileData, pickerLayer, remapLabel, pickerKeycodes])
