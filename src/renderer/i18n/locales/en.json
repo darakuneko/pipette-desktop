@@ -1012,6 +1012,12 @@
       "loading": "Loading layout comparison…",
       "fetchError": "Failed to compute the layout comparison.",
       "skipWarning": "{{percent}}% of events couldn't map onto this layout. Treat the metrics below as approximate.",
+      "fingerDiffTitle": "Finger load delta vs {{target}}",
+      "subView": {
+        "label": "Sub-view",
+        "metric": "Metric table",
+        "fingerDiff": "Finger diff"
+      },
       "headers": {
         "metric": "Metric",
         "current": "Current"

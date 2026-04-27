@@ -18,10 +18,16 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import { KEYBOARD_LAYOUTS, LAYOUT_BY_ID, pickLayoutOptimizerInput } from '../../data/keyboard-layouts'
 import { fetchLayoutOptimizerForRange } from './analyze-fetch'
+import { FILTER_BUTTON } from './analyze-filter-styles'
 import { formatSharePercent } from './analyze-format'
+import { LayoutOptimizerFingerDiff } from './LayoutOptimizerFingerDiff'
 import { LayoutOptimizerMetricTable } from './LayoutOptimizerMetricTable'
 import { LayoutOptimizerSelector } from './LayoutOptimizerSelector'
 import type { RangeMs } from './analyze-types'
+
+type SubView = 'metric' | 'fingerDiff'
+
+const SUB_VIEWS: SubView[] = ['metric', 'fingerDiff']
 
 interface Props {
   uid: string
@@ -46,6 +52,7 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
   const { t } = useTranslation()
   const [sourceLayoutId, setSourceLayoutId] = useState<string>(DEFAULT_SOURCE_LAYOUT_ID)
   const [targetLayoutId, setTargetLayoutId] = useState<string | null>(null)
+  const [subView, setSubView] = useState<SubView>('metric')
   const [result, setResult] = useState<LayoutOptimizerResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -149,10 +156,43 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
               })}
             </div>
           )}
-          <LayoutOptimizerMetricTable
-            columnLabels={columnLabels}
-            targets={result.targets}
-          />
+          <div
+            role="tablist"
+            aria-label={t('analyze.layoutOptimizer.subView.label')}
+            className="flex flex-wrap items-center gap-1"
+            data-testid="analyze-layout-optimizer-sub-view"
+          >
+            {SUB_VIEWS.map((key) => {
+              const active = subView === key
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  className={`${FILTER_BUTTON} ${active ? 'bg-accent/10 text-accent' : ''}`}
+                  onClick={() => setSubView(key)}
+                  data-testid={`analyze-layout-optimizer-sub-view-${key}`}
+                >
+                  {t(`analyze.layoutOptimizer.subView.${key}`)}
+                </button>
+              )
+            })}
+          </div>
+          {subView === 'metric' ? (
+            <LayoutOptimizerMetricTable
+              columnLabels={columnLabels}
+              targets={result.targets}
+            />
+          ) : (
+            // Fetch site enforces `targets = [source, target]`, so
+            // [1] is always present once the result lands.
+            <LayoutOptimizerFingerDiff
+              current={result.targets[0]}
+              target={result.targets[1]}
+              targetLabel={columnLabels[1] ?? result.targets[1].layoutId}
+            />
+          )}
         </>
       )}
     </div>

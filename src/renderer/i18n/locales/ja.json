@@ -1010,6 +1010,12 @@
       "loading": "レイアウト比較を計算中…",
       "fetchError": "レイアウト比較の計算に失敗しました。",
       "skipWarning": "{{percent}}% のイベントがこのレイアウトに対応できませんでした。下の数値は参考値として扱ってください。",
+      "fingerDiffTitle": "{{target}} との指負担差分",
+      "subView": {
+        "label": "サブビュー",
+        "metric": "数値表",
+        "fingerDiff": "指の差分"
+      },
       "headers": {
         "metric": "指標",
         "current": "現在"
