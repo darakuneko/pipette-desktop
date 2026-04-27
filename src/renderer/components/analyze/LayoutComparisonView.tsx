@@ -142,7 +142,7 @@ export function LayoutComparisonView({
   }, [snapshot])
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-layout-comparison-view">
+    <div className="flex h-full min-h-0 min-w-0 flex-col gap-3 overflow-x-hidden" data-testid="analyze-layout-comparison-view">
       {snapshot === null ? (
         <Empty message={t('analyze.layoutComparison.noSnapshot')} testid="analyze-layout-comparison-no-snapshot" />
       ) : targetLayoutId === null ? (
@@ -185,8 +185,11 @@ export function LayoutComparisonView({
                     targetLabel={targetLabel}
                   />
                 </div>
-                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
-                  <div className="min-w-0 min-h-0 overflow-auto">
+                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_2fr]">
+                  {/* Finger diff: hide overflow on both axes — the
+                    * chart now flexes to fill this panel, so neither
+                    * direction should ever need a scrollbar. */}
+                  <div className="min-w-0 min-h-0 overflow-hidden">
                     <LayoutComparisonFingerDiff
                       current={result.targets[0]}
                       target={candidate}

@@ -77,11 +77,15 @@ export function LayoutComparisonFingerDiff({ current, target, targetLabel }: Pro
   }, [current, target, t])
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-1" data-testid="analyze-layout-comparison-finger-diff">
+    <div className="flex h-full w-full min-h-0 min-w-0 flex-col gap-1" data-testid="analyze-layout-comparison-finger-diff">
       <h4 className="text-[13px] font-semibold text-content-secondary">
         {t('analyze.layoutComparison.fingerDiffTitle', { target: targetLabel })}
       </h4>
-      <div style={{ height: 240 }}>
+      {/* flex-1 + min-h-0 lets the chart absorb whatever vertical
+       * space the parent panel leaves so the panel itself never
+       * needs a scrollbar — replaces a previously fixed 240px box
+       * that overflowed under tall split-view layouts. */}
+      <div className="flex-1 min-h-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
