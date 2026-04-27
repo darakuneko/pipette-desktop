@@ -847,6 +847,7 @@
       }
     },
     "analysisTab": {
+      "summary": "Summary",
       "wpm": "WPM",
       "interval": "Interval",
       "activity": "Activity",
@@ -854,6 +855,69 @@
       "ergonomics": "Ergonomics",
       "bigrams": "Bigrams",
       "layer": "Layer"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "Today",
+        "ariaLabel": "Today summary",
+        "keystrokesLabel": "Keystrokes",
+        "keystrokesDesc": "Total keystrokes recorded today (local time, all devices for this keyboard).",
+        "wpmLabel": "WPM",
+        "wpmDesc": "Today's overall words per minute — keystrokes ÷ 5, scaled by total active typing time.",
+        "activeDurationLabel": "Active typing",
+        "activeDurationDesc": "Total active typing time today; idle gaps are excluded."
+      },
+      "weeklyReport": {
+        "sectionTitle": "Last 7 days vs the 7 days before",
+        "ariaLabel": "Weekly report",
+        "activeMsContext": "Active typing: {{current}} vs {{previous}}",
+        "delta": "{{glyph}} {{sign}}{{pct}}%",
+        "deltaInsufficient": "{{glyph}} —",
+        "keystrokesLabel": "Keystrokes",
+        "keystrokesDesc": "Total keystrokes recorded over the last 7 days. Compared with days 8–14 ago.",
+        "wpmLabel": "WPM",
+        "wpmDesc": "Period-wide WPM — total keystrokes ÷ 5 ÷ total active typing time. Compared with the prior 7 days.",
+        "activeDaysLabel": "Active days",
+        "activeDaysUnit": "days",
+        "activeDaysDesc": "Days within the last 7 with at least one keystroke. Compared with the prior 7 days."
+      },
+      "profile": {
+        "sectionTitle": "Typing profile (last {{days}} days)",
+        "ariaLabel": "Typing profile",
+        "insufficient": "Not enough data",
+        "speedLabel": "Speed",
+        "speedDesc": "Window-wide WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50). Needs a few days of typing to settle.",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "Slow",
+          "medium": "Medium",
+          "fast": "Fast"
+        },
+        "handBalanceLabel": "Hand balance",
+        "handBalanceDesc": "Share of bigram keystrokes that landed on each hand. Within ±5% of 50/50 reads as balanced.",
+        "handBalanceContext": "L {{leftPct}}% / R {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "Left-biased",
+          "balanced": "Balanced",
+          "rightBias": "Right-biased"
+        },
+        "sfbLabel": "SFB rate",
+        "sfbDesc": "Share of bigrams typed with the same finger. Lower is easier on the hand. <4% Low, 4–8% Medium, ≥8% High.",
+        "sfbContext": "{{pct}}% same-finger",
+        "sfb": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "fatigueLabel": "Fatigue risk",
+        "fatigueDesc": "WPM gap between your peak hour and your slowest hour over the window. Wider gap = greater fatigue risk.",
+        "fatigueContext": "{{pct}}% drop peak→low",
+        "fatigue": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      }
     },
     "bigrams": {
       "loading": "Loading bigram data…",

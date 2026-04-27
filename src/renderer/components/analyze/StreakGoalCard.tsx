@@ -16,8 +16,6 @@ import type { GoalHistoryEntry, PipetteSettings } from '../../../shared/types/pi
 import { DEFAULT_GOAL_DAYS, DEFAULT_GOAL_KEYSTROKES, DEFAULT_PIPETTE_SETTINGS } from '../../../shared/types/pipette-settings'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
-import type { DeviceScope, RangeMs } from './analyze-types'
 import {
   byDate,
   calcGoalCycleProgress,
@@ -32,30 +30,19 @@ import { AnalyzeStatGrid } from './stat-card'
 
 interface Props {
   uid: string
-  deviceScope: DeviceScope
-  range: RangeMs
+  /** Cross-machine daily summary for this keyboard. SummaryView fetches
+   * once and shares the array with every Summary card so each one
+   * doesn't refetch on its own. */
+  daily: ReadonlyArray<TypingDailySummary>
+  /** Local YYYY-MM-DD pivot supplied by SummaryView; the parent's
+   * `useLocalToday` re-evaluates it across midnight. */
+  today: string
 }
 
-export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
+export function StreakGoalCard({ uid, daily, today }: Props) {
   const { t } = useTranslation()
-  const [daily, setDaily] = useState<TypingDailySummary[]>([])
   const [settings, setSettings] = useState<PipetteSettings | null>(null)
   const [historyOpen, setHistoryOpen] = useState(false)
-
-  const scopeKey = scopeToSelectValue(deviceScope)
-
-  useEffect(() => {
-    let cancelled = false
-    const dailyPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash)
-      : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsListItemsLocal(uid)
-        : window.vialAPI.typingAnalyticsListItems(uid)
-    void dailyPromise
-      .then((rows) => { if (!cancelled) setDaily(rows) })
-      .catch(() => { if (!cancelled) setDaily([]) })
-    return () => { cancelled = true }
-  }, [uid, scopeKey])
 
   useEffect(() => {
     let cancelled = false
@@ -75,15 +62,6 @@ export function StreakGoalCard({ uid, deviceScope, range: _range }: Props) {
   )
 
   const dailyMap = useMemo(() => byDate(daily), [daily])
-
-  const [today, setToday] = useState(() => toLocalDate(Date.now()))
-  useEffect(() => {
-    const id = window.setInterval(() => {
-      const next = toLocalDate(Date.now())
-      setToday((prev) => (prev === next ? prev : next))
-    }, 60_000)
-    return () => window.clearInterval(id)
-  }, [])
 
   const progress = useMemo(
     () => calcGoalCycleProgress(dailyMap, goalHistory, currentGoal, today),

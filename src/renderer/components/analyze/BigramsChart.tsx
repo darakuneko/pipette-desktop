@@ -8,7 +8,6 @@ import {
   type DeviceScope,
 } from '../../../shared/types/analyze-filters'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
-import type { KeyboardLayout } from '../../../shared/kle/types'
 import type {
   TypingBigramAggregateResult,
   TypingBigramTopEntry,
@@ -18,8 +17,8 @@ import { fetchBigramAggregateForRange } from './analyze-fetch'
 import { bigramPairLabel } from './analyze-bigram-format'
 import {
   aggregateFingerPairs,
-  buildKeycodeFingerMap,
 } from './analyze-bigram-finger'
+import { useKeycodeFingerMap } from './use-keycode-finger-map'
 import {
   avgIkiFromHist,
   percentileFromHist,
@@ -470,12 +469,9 @@ function BigramFingerBarChart({
   listLimit,
 }: FingerBarChartProps): JSX.Element {
   const { t } = useTranslation()
+  const fingerMap = useKeycodeFingerMap(snapshot, fingerOverrides)
   const rows = useMemo<FingerBarRow[]>(() => {
-    if (snapshot === null) return []
-    const layout = snapshot.layout as KeyboardLayout | null
-    const keys = layout?.keys ?? []
-    if (keys.length === 0) return []
-    const fingerMap = buildKeycodeFingerMap(snapshot, keys, fingerOverrides)
+    if (fingerMap.size === 0) return []
     const totals = aggregateFingerPairs(entries, fingerMap)
     const ranked: FingerBarRow[] = []
     for (const [pairKey, total] of totals) {
@@ -486,7 +482,7 @@ function BigramFingerBarChart({
     }
     ranked.sort((a, b) => b.avgIki - a.avgIki || a.pairKey.localeCompare(b.pairKey))
     return ranked.slice(0, Math.max(listLimit, 0))
-  }, [entries, snapshot, fingerOverrides, listLimit])
+  }, [entries, fingerMap, listLimit])
 
   if (snapshot === null) {
     return (

@@ -66,6 +66,15 @@ vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyhea
 vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
 vi.mock('../BigramsChart', () => ({ BigramsChart: mockSummary('mock-bigrams') }))
 vi.mock('../LayerUsageChart', () => ({ LayerUsageChart: mockSummary('mock-layer') }))
+// Summary tab is the default landing tab. Mock it shallow so the
+// streak/goal IPCs underneath don't matter for shell-level smoke tests.
+vi.mock('../SummaryView', () => ({
+  SummaryView: (props: { uid: string; deviceScope?: MockScope }) => (
+    <div data-testid="mock-summary">
+      {`${props.uid}:${scopeText(props.deviceScope ?? 'own')}`}
+    </div>
+  ),
+}))
 
 const mockListKeyboards = vi.fn<() => Promise<TypingKeyboardSummary[]>>()
 const mockGetSnapshot = vi.fn<() => Promise<TypingKeymapSnapshot | null>>()
@@ -95,6 +104,13 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsGetMatrixHeatmapForRange: () => Promise.resolve({}),
     typingAnalyticsGetPeakRecords: () => Promise.resolve(emptyPeakRecords),
     typingAnalyticsGetPeakRecordsLocal: () => Promise.resolve(emptyPeakRecords),
+    // Summary's StreakGoalCard pulls daily summaries via these IPCs.
+    // The mocked SummaryView short-circuits the call in this suite, but
+    // the stubs stay so any future spec that unmocks SummaryView (or
+    // mounts the real card) doesn't trip on `undefined is not a function`.
+    typingAnalyticsListItems: () => Promise.resolve([]),
+    typingAnalyticsListItemsLocal: () => Promise.resolve([]),
+    typingAnalyticsListItemsForHash: () => Promise.resolve([]),
     pipetteSettingsGet: () => Promise.resolve(null),
     // `useAnalyzeFilters` debounces filter writes through this setter.
     // Stubbing it with a no-op keeps the tests focused on prop
@@ -165,29 +181,33 @@ describe('TypingAnalyticsView', () => {
     expect(screen.queryByTestId('mock-wpm')).toBeNull()
   })
 
-  it('defaults to the Heatmap tab, showing the no-snapshot notice without one', async () => {
+  it('defaults to the Summary tab on mount', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
     await waitFor(() => expect(screen.getByTestId('analyze-kb-uid-a')).toBeInTheDocument())
-    await waitFor(() => expect(screen.getByTestId('analyze-keyheatmap-empty')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    expect(text('mock-summary')).toBe('uid-a:own')
     expect(screen.queryByTestId('mock-wpm')).toBeNull()
+    expect(screen.queryByTestId('analyze-keyheatmap-empty')).toBeNull()
   })
 
-  it('renders the mocked KeyHeatmapChart when a snapshot is available', async () => {
+  it('renders the mocked KeyHeatmapChart after switching to the Heatmap tab when a snapshot is available', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-keyHeatmap'))
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
     expect(text('mock-keyheatmap')).toMatch(/^uid-a:own:range=/)
   })
 
-  it('switches analysis tab from Heatmap to WPM / Interval / Activity', async () => {
+  it('switches analysis tab from Summary to WPM / Interval / Activity', async () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
-    await waitFor(() => expect(screen.getByTestId('analyze-keyheatmap-empty')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
 
     fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
     expect(text('mock-wpm')).toMatch(/^uid-a:own:range=\d+-\d+$/)
@@ -234,7 +254,7 @@ describe('TypingAnalyticsView', () => {
     mockListKeyboards.mockResolvedValue(SAMPLE)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
-    await waitFor(() => expect(screen.getByTestId('analyze-keyheatmap-empty')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('analyze-tab-wpm'))
     await waitFor(() => expect(screen.getByTestId('mock-wpm')).toBeInTheDocument())
 
@@ -424,8 +444,12 @@ describe('TypingAnalyticsView', () => {
       })
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
+    // Default Summary doesn't render the snapshot-aware charts, so move
+    // off Summary first to confirm the snapshot reaches Heatmap, then
+    // open the modal via the Ergonomics tab button.
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-keyHeatmap'))
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
-    // Open the modal under own scope via the Ergonomics tab button.
     fireEvent.click(screen.getByTestId('analyze-tab-ergonomics'))
     const openButton = await screen.findByTestId('analyze-finger-assignment-open')
     fireEvent.click(openButton)
@@ -489,6 +513,10 @@ describe('TypingAnalyticsView', () => {
     mockGetSnapshot.mockResolvedValue(SNAPSHOT)
     const { TypingAnalyticsView } = await importView()
     render(<TypingAnalyticsView />)
+    // Summary is the default tab; switch to Heatmap to exercise the
+    // snapshot gate this regression test was written for.
+    await waitFor(() => expect(screen.getByTestId('mock-summary')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('analyze-tab-keyHeatmap'))
     await waitFor(() => expect(screen.getByTestId('mock-keyheatmap')).toBeInTheDocument())
     fireEvent.change(screen.getByTestId('analyze-filter-device'), { target: { value: 'all' } })
     await waitFor(() => expect(text('mock-keyheatmap')).toMatch(/^uid-a:all:range=/))

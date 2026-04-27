@@ -82,6 +82,19 @@ export function byDate(daily: ReadonlyArray<TypingDailySummary>): Map<string, nu
   return map
 }
 
+/** Slice a daily-summary list to entries whose `date` falls inside
+ * `[fromDate, toDate]` inclusive (lexicographic comparison works since
+ * both ends use `YYYY-MM-DD`). The Summary cards (Today / WeeklyReport
+ * via `sumWindow` / TypingProfile) all need the same windowed view —
+ * this keeps the bounds check in one spot. */
+export function filterDailyWindow(
+  daily: ReadonlyArray<TypingDailySummary>,
+  fromDate: string,
+  toDate: string,
+): TypingDailySummary[] {
+  return daily.filter((d) => d.date >= fromDate && d.date <= toDate)
+}
+
 function hit(keystrokes: number | undefined, goalKeystrokes: number): boolean {
   return (keystrokes ?? 0) >= goalKeystrokes
 }

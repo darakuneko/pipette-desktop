@@ -845,6 +845,7 @@
       }
     },
     "analysisTab": {
+      "summary": "サマリー",
       "wpm": "WPM",
       "interval": "間隔",
       "activity": "活動量",
@@ -852,6 +853,69 @@
       "ergonomics": "エルゴノミクス",
       "bigrams": "バイグラム",
       "layer": "レイヤー"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "今日のサマリー",
+        "ariaLabel": "今日のサマリー",
+        "keystrokesLabel": "打鍵数",
+        "keystrokesDesc": "今日（端末ローカル時刻）のこのキーボードでの総打鍵数。すべてのデバイスを合算しています",
+        "wpmLabel": "WPM",
+        "wpmDesc": "今日の全体 WPM — 打鍵数 ÷ 5 を、有効打鍵時間で割った値",
+        "activeDurationLabel": "有効打鍵時間",
+        "activeDurationDesc": "今日の有効な打鍵時間の合計。アイドル時間は除外されます"
+      },
+      "weeklyReport": {
+        "sectionTitle": "直近 7 日 vs 前 7 日",
+        "ariaLabel": "週次レポート",
+        "activeMsContext": "有効打鍵時間：{{current}} vs {{previous}}",
+        "delta": "{{glyph}} {{sign}}{{pct}}%",
+        "deltaInsufficient": "{{glyph}} —",
+        "keystrokesLabel": "打鍵数",
+        "keystrokesDesc": "直近 7 日の総打鍵数。8〜14 日前の同期間と比較しています",
+        "wpmLabel": "WPM",
+        "wpmDesc": "期間全体の WPM — 総打鍵数 ÷ 5 ÷ 有効打鍵時間。前 7 日と比較しています",
+        "activeDaysLabel": "アクティブ日数",
+        "activeDaysUnit": "日",
+        "activeDaysDesc": "直近 7 日のうち打鍵があった日数。前 7 日と比較しています"
+      },
+      "profile": {
+        "sectionTitle": "タイピングプロファイル（直近 {{days}} 日）",
+        "ariaLabel": "タイピングプロファイル",
+        "insufficient": "データ不足",
+        "speedLabel": "スピード",
+        "speedDesc": "期間全体の WPM を Slow（30 未満）/ Medium（30–50）/ Fast（50 以上）に分類。安定するまで数日かかります",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "ゆっくり",
+          "medium": "標準",
+          "fast": "速い"
+        },
+        "handBalanceLabel": "左右バランス",
+        "handBalanceDesc": "バイグラムキーが左右どちらの手で打鍵されたかの比率。50/50 から ±5% 以内なら均衡と判定します",
+        "handBalanceContext": "左 {{leftPct}}% / 右 {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "左寄り",
+          "balanced": "均衡",
+          "rightBias": "右寄り"
+        },
+        "sfbLabel": "SFB 率",
+        "sfbDesc": "同じ指で連続して打鍵したバイグラムの割合。低いほど打鍵が滑らか。<4% 低 / 4–8% 中 / 8%以上 高",
+        "sfbContext": "同指 {{pct}}%",
+        "sfb": {
+          "low": "低い",
+          "medium": "中くらい",
+          "high": "高い"
+        },
+        "fatigueLabel": "疲労リスク",
+        "fatigueDesc": "ピーク時間帯と最低時間帯の WPM 差。差が大きいほど疲労リスクが高い傾向です",
+        "fatigueContext": "ピーク→最低 {{pct}}% 低下",
+        "fatigue": {
+          "low": "低",
+          "medium": "中",
+          "high": "高"
+        }
+      }
     },
     "bigrams": {
       "loading": "バイグラムデータを読み込み中…",

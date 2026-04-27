@@ -46,6 +46,7 @@ import { IntervalChart } from './IntervalChart'
 import { KeyHeatmapChart } from './KeyHeatmapChart'
 import { KeymapSnapshotTimeline } from './KeymapSnapshotTimeline'
 import { LayerUsageChart } from './LayerUsageChart'
+import { SummaryView } from './SummaryView'
 import { WpmChart } from './WpmChart'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
@@ -54,7 +55,7 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layer']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layer']
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -146,10 +147,11 @@ export function AnalyzePane({
     ? (id: string) => `${id}-b`
     : (id: string) => id
   const { t } = useTranslation()
-  // Default to Key heatmap — it's the most concrete overview when the
-  // snapshot is available. If the selected range has no snapshot, the
-  // visible-tabs effect below falls the user back to the next tab.
-  const [analysisTab, setAnalysisTab] = useState<AnalysisTabKey>('keyHeatmap')
+  // Default to Summary — the dashboard tab is the entry point so a
+  // returning user lands on the at-a-glance streak / goal cards before
+  // drilling into a specific chart. `lastActiveTab` is not persisted,
+  // so every Analyze open starts here.
+  const [analysisTab, setAnalysisTab] = useState<AnalysisTabKey>('summary')
   // Snapshot "now" at mount so the user's max boundary stays stable
   // while the page is open and we can reproducibly re-clip a stale
   // `to` when the user drags it above the wall clock we recorded.
@@ -854,7 +856,14 @@ export function AnalyzePane({
               </button>
             </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
-              {analysisTab === 'wpm' ? (
+              {analysisTab === 'summary' ? (
+                <SummaryView
+                  uid={selected.uid}
+                  deviceScope={deviceScopes[0]}
+                  snapshot={effectiveSnapshot}
+                  fingerOverrides={fingerAssignments}
+                />
+              ) : analysisTab === 'wpm' ? (
                 <WpmChart
                   uid={selected.uid}
                   range={range}
