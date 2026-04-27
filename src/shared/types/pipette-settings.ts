@@ -82,6 +82,12 @@ export interface AnalyzeSettings {
    * 7-day window reopens each session so users aren't greeted with a
    * stale absolute window. */
   filters?: AnalyzeFilterSettings
+  /** Same shape as `filters`, but bound to the secondary "compare"
+   * pane in the Analyze split-view. Lets the user keep an independent
+   * device scope / view mode / sub-tab limits in Pane B even when both
+   * panes have the same uid loaded. Optional so panes A and B start
+   * from defaults on first use. */
+  compareFilters?: AnalyzeFilterSettings
 }
 
 /** Fallback used when no per-keyboard goal has been saved yet. */

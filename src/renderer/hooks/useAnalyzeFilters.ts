@@ -125,7 +125,20 @@ export interface UseAnalyzeFiltersReturn {
  *   file) is treated as defaults — the first subsequent edit writes
  *   a fresh `PipetteSettings` with the minimum required fields.
  */
-export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
+export type AnalyzePaneKey = 'A' | 'B'
+
+/** Which `PipetteSettings.analyze.*` field a pane reads / writes. Pane
+ * A uses the historical `filters` slot; pane B carries an independent
+ * `compareFilters` so the two panes can diverge even when they share
+ * the same uid (e.g. range-comparison view). */
+function fieldForPane(paneKey: AnalyzePaneKey): 'filters' | 'compareFilters' {
+  return paneKey === 'B' ? 'compareFilters' : 'filters'
+}
+
+export function useAnalyzeFilters(
+  uid: string | null,
+  paneKey: AnalyzePaneKey = 'A',
+): UseAnalyzeFiltersReturn {
   const [filters, setFilters] = useState<AnalyzeFiltersState>(DEFAULT_ANALYZE_FILTERS)
   const [ready, setReady] = useState<boolean>(uid === null)
 
@@ -134,6 +147,7 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingUidRef = useRef<string | null>(null)
   const pendingFiltersRef = useRef<AnalyzeFiltersState | null>(null)
+  const field = fieldForPane(paneKey)
 
   const flushPending = useCallback(() => {
     const pendingUid = pendingUidRef.current
@@ -149,13 +163,13 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
       try {
         const prefs = await window.vialAPI.pipetteSettingsGet(pendingUid)
         const base: PipetteSettings = prefs ?? DEFAULT_PIPETTE_SETTINGS
-        const nextAnalyze = { ...base.analyze, filters: serializeFilters(pendingFilters) }
+        const nextAnalyze = { ...base.analyze, [field]: serializeFilters(pendingFilters) }
         await window.vialAPI.pipetteSettingsSet(pendingUid, { ...base, analyze: nextAnalyze })
       } catch {
         // best-effort save — a failed write just drops the change
       }
     })()
-  }, [])
+  }, [field])
 
   // Load on uid change (and flush the previous uid's pending write).
   useEffect(() => {
@@ -177,7 +191,7 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
       .pipetteSettingsGet(uid)
       .then((prefs) => {
         if (applySeqRef.current !== seq) return
-        setFilters(restoreFilters(prefs?.analyze?.filters))
+        setFilters(restoreFilters(prefs?.analyze?.[field]))
         setReady(true)
       })
       .catch(() => {
@@ -185,7 +199,7 @@ export function useAnalyzeFilters(uid: string | null): UseAnalyzeFiltersReturn {
         setFilters(DEFAULT_ANALYZE_FILTERS)
         setReady(true)
       })
-  }, [uid, flushPending])
+  }, [uid, flushPending, field])
 
   // Flush once more on unmount for the final in-flight edit.
   useEffect(() => {

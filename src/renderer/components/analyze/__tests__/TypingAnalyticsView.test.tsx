@@ -17,6 +17,14 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../../../hooks/useAppConfig', () => ({
+  useAppConfig: () => ({
+    config: { analyzeSplitView: undefined },
+    loading: false,
+    set: () => {},
+  }),
+}))
+
 type MockScope = 'own' | 'all' | { kind: 'hash'; machineHash: string }
 
 interface MockChartProps {
@@ -127,7 +135,12 @@ function text(testId: string): string {
 }
 
 describe('TypingAnalyticsView', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    // The pane's syncAnalyticsNow rate-limit map lives at module scope
+    // so split-view panes share it; clear between tests so each spec
+    // starts with a clean slate.
+    const { _resetAnalyticsSyncRateLimitForTests } = await import('../AnalyzePane')
+    _resetAnalyticsSyncRateLimitForTests()
     mockListKeyboards.mockReset()
     mockGetSnapshot.mockReset().mockResolvedValue(null)
     typingAnalyticsListKeyboardsSpy = vi

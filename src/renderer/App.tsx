@@ -826,7 +826,7 @@ export function App() {
         )}
       </div>
 
-      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && (
+      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && !analyticsPageOpen && (
         <StatusBar
           deviceName={device.connectedDevice.productName || 'Unknown'}
           loadedLabel={lifecycle.lastLoadedLabel}

@@ -634,6 +634,10 @@
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
     "tablistLabel": "Analysis type",
+    "splitView": {
+      "toggle": "Split View",
+      "narrowWindow": "Window too narrow for split view — resize wider to enable."
+    },
     "export": {
       "csv": "Export",
       "categoriesLabel": "Categories to export",

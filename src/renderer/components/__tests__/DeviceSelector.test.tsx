@@ -7,6 +7,10 @@ import { DeviceSelector } from '../DeviceSelector'
 import type { DeviceInfo } from '../../../shared/types/protocol'
 
 vi.mock('react-i18next', () => ({
+  // Stub the bootstrap export so module-graph imports of `i18n/index.ts`
+  // (pulled in by AnalyzePage → TypingAnalyticsView → useAppConfig) don't
+  // crash when this test loads only the DeviceSelector subtree.
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, params?: Record<string, string>) => {
       const map: Record<string, string> = {

@@ -632,6 +632,10 @@
     "noData": "選択した期間にデータがありません",
     "selectKeyboard": "一覧からキーボードを選択してください",
     "tablistLabel": "分析種別",
+    "splitView": {
+      "toggle": "分割表示",
+      "narrowWindow": "ウィンドウが狭すぎて分割表示できません — 幅を広げてください"
+    },
     "export": {
       "csv": "エクスポート",
       "categoriesLabel": "出力するカテゴリ",
