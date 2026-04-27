@@ -100,7 +100,7 @@ The Keyboards select at the top of the filter row lists every keyboard that has 
 
 **Analysis tabs**
 
-Switch between seven analyses with the tab bar above the chart:
+Switch between eight analyses with the tab bar above the chart:
 
 | Tab | What it shows |
 |-----|---------------|
@@ -110,9 +110,10 @@ Switch between seven analyses with the tab bar above the chart:
 | **Activity** | Hour × day-of-week grid colored by keystrokes, WPM, or sessions |
 | **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor. Requires a snapshot |
 | **Bigrams** | Frequent and slow key-pair timings, plus pair- and finger-level inter-key interval views |
+| **Layout Optimizer** | Simulate how your recorded typing would land on alternative layouts (Colemak / Dvorak / etc.). Requires a snapshot |
 | **Layer** | Per-layer keystroke counts or layer-op activations |
 
-The Heatmap, Ergonomics, Bigrams > Finger IKI, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
+The Heatmap, Ergonomics, Bigrams > Finger IKI, Layout Optimizer, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
 
 **Common filters**
 
@@ -297,6 +298,41 @@ Only the **Finger IKI heatmap** quadrant needs a keymap snapshot — it has to m
 
 - **No bigram data** — "No bigram data in this range yet. Record some typing and try again." Shown when the range has no recorded pair activity
 - **No snapshot (Finger IKI quadrant only)** — "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one." The other three quadrants still render
+
+#### Layout Optimizer
+
+The Layout Optimizer simulates how your recorded typing would land on a different keyboard layout — Colemak, Dvorak, Colemak DH, and 30+ others — without touching your firmware. Pick a candidate from the dropdown and the tab folds your matrix activity through that layout's character map to show how your finger / hand / row workload would shift.
+
+**Pickers**
+
+- **Current layout** — what character convention to interpret your recorded events with. Defaults to QWERTY; change it if your firmware fires keycodes for a different layout natively
+- **Compare to** — the candidate layout to simulate against. Picks are persisted per keyboard so the comparison reopens to the same target after a reload
+
+**Sub-views**
+
+Once a target is picked, three sub-views share the same fetch:
+
+| Sub-view | What it shows |
+|----------|---------------|
+| **Metric table** | Side-by-side share-of-events table with finger load (per finger), hand balance (left / right), row distribution, and home-row stay rate |
+| **Finger diff** | Per-finger signed delta bar chart. Red bars mark fingers that take more load on the candidate, green bars mark fingers that take less |
+| **Heatmap diff** | Per-physical-key delta painted over the keyboard. Red shades where the candidate sends more activity to that key, blue shades where it sends less |
+
+![Analyze — Layout Optimizer Metric](screenshots/analyze-layout-optimizer-metric.png)
+
+![Analyze — Layout Optimizer Finger Diff](screenshots/analyze-layout-optimizer-finger-diff.png)
+
+![Analyze — Layout Optimizer Heatmap Diff](screenshots/analyze-layout-optimizer-heatmap-diff.png)
+
+**Skip-rate warning**
+
+Some events can't be mapped onto a candidate — for example, when the source character has no equivalent on the target layout, or the firmware hasn't bound the candidate's keycode anywhere. When that share rises above 5% the view shows a warning so you know the metrics are approximate.
+
+**Empty states**
+
+- **No snapshot** — same empty state as the rest of the snapshot-bound tabs. Start a record session in the chosen range to capture one
+- **No target picked** — the empty hint stays until you pick a comparison layout from the dropdown
+- **Fetch error** — generic "failed to compute the layout comparison" message; reload or pick a smaller range and retry
 
 The Layer tab breaks usage down by keyboard layer.
 

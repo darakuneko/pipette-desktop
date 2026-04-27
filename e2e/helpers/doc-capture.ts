@@ -537,6 +537,41 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-tab-bigrams not found')
   }
 
+  const layoutOptimizerTab = page.locator('[data-testid="analyze-tab-layoutOptimizer"]')
+  if (await isAvailable(layoutOptimizerTab)) {
+    await layoutOptimizerTab.click()
+    await page.waitForTimeout(500)
+    // Pick Colemak so the diff sub-views actually have something to render.
+    const targetSelect = page.locator('[data-testid="analyze-layout-optimizer-target-select"]')
+    if (await isAvailable(targetSelect)) {
+      await targetSelect.selectOption('colemak')
+      await page.waitForTimeout(800)
+      await captureNamed(page, 'analyze-layout-optimizer-metric', { fullPage: true })
+
+      const fingerDiffBtn = page.locator('[data-testid="analyze-layout-optimizer-sub-view-fingerDiff"]')
+      if (await isAvailable(fingerDiffBtn)) {
+        await fingerDiffBtn.click()
+        await page.waitForTimeout(500)
+        await captureNamed(page, 'analyze-layout-optimizer-finger-diff', { fullPage: true })
+      } else {
+        console.log('  [warn] layout-optimizer fingerDiff button not visible — capture skipped')
+      }
+
+      const heatmapDiffBtn = page.locator('[data-testid="analyze-layout-optimizer-sub-view-heatmapDiff"]')
+      if (await isAvailable(heatmapDiffBtn)) {
+        await heatmapDiffBtn.click()
+        await page.waitForTimeout(500)
+        await captureNamed(page, 'analyze-layout-optimizer-heatmap-diff', { fullPage: true })
+      } else {
+        console.log('  [warn] layout-optimizer heatmapDiff button not visible — capture skipped')
+      }
+    } else {
+      console.log('  [warn] layout-optimizer target select not found — capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-layoutOptimizer not found')
+  }
+
   const layerTab = page.locator('[data-testid="analyze-tab-layer"]')
   if (await isAvailable(layerTab)) {
     await layerTab.click()
