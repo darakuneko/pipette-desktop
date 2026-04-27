@@ -864,11 +864,8 @@
         "sectionTitle": "Today",
         "ariaLabel": "Today summary",
         "keystrokesLabel": "Keystrokes",
-        "keystrokesDesc": "Total keystrokes recorded today (local time, all devices for this keyboard).",
         "wpmLabel": "WPM",
-        "wpmDesc": "Today's overall words per minute — keystrokes ÷ 5, scaled by total active typing time.",
-        "activeDurationLabel": "Active typing",
-        "activeDurationDesc": "Total active typing time today; idle gaps are excluded."
+        "activeDurationLabel": "Typing"
       },
       "weeklyReport": {
         "sectionTitle": "Last 7 days vs the 7 days before",

@@ -36,17 +36,18 @@ export function TodaySummaryCard({ daily, today }: Props) {
         labelKey: 'analyze.summary.today.keystrokesLabel',
         value: keystrokes > 0 ? keystrokes.toLocaleString() : EMPTY_STAT_VALUE,
         unit: t('analyze.unit.keys'),
-        descriptionKey: 'analyze.summary.today.keystrokesDesc',
       },
       {
         labelKey: 'analyze.summary.today.wpmLabel',
         value: wpm > 0 ? formatWpm(wpm) : EMPTY_STAT_VALUE,
-        descriptionKey: 'analyze.summary.today.wpmDesc',
+        // Reuse the WPM tab's canonical description so the formula
+        // explanation lives in one place; the today-specific blurb
+        // duplicated it without adding new context.
+        descriptionKey: 'analyze.wpm.description',
       },
       {
         labelKey: 'analyze.summary.today.activeDurationLabel',
         value: activeMs > 0 ? formatActiveDuration(activeMs) : EMPTY_STAT_VALUE,
-        descriptionKey: 'analyze.summary.today.activeDurationDesc',
       },
     ]
   }, [todaysEntry, t])
