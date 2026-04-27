@@ -9,10 +9,10 @@ import { platform, release } from 'node:os'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
 import type {
-  LayoutOptimizerInputLayout,
-  LayoutOptimizerMetric,
-  LayoutOptimizerOptions,
-  LayoutOptimizerResult,
+  LayoutComparisonInputLayout,
+  LayoutComparisonMetric,
+  LayoutComparisonOptions,
+  LayoutComparisonResult,
   TypingAnalyticsDeviceInfo,
   TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
@@ -78,7 +78,7 @@ import {
   rankBigramsByCount,
   rankBigramsBySlow,
 } from './bigram-aggregate'
-import { computeLayoutOptimizer } from './compute-layout-optimizer'
+import { computeLayoutComparison } from './compute-layout-comparison'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
@@ -620,7 +620,7 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
-    IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_OPTIMIZER_FOR_RANGE,
+    IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_COMPARISON_FOR_RANGE,
     async (
       _event,
       uid: unknown,
@@ -628,13 +628,13 @@ export function setupTypingAnalyticsIpc(): void {
       untilMs: unknown,
       scope: unknown,
       options: unknown,
-    ): Promise<LayoutOptimizerResult | null> => {
+    ): Promise<LayoutComparisonResult | null> => {
       if (typeof uid !== 'string' || uid.length === 0) return null
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
       if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return null
       const parsedScope = parseDeviceScope(scope)
       if (parsedScope === null) return null
-      const opts = parseLayoutOptimizerOptions(options)
+      const opts = parseLayoutComparisonOptions(options)
       if (!opts) return null
       // Snapshots are only stored for the own device, so we always
       // resolve the source layer + KleKey geometry against the local
@@ -657,7 +657,7 @@ export function setupTypingAnalyticsIpc(): void {
         untilMinuteMs,
         matrixHash,
       )
-      return computeLayoutOptimizer({
+      return computeLayoutComparison({
         matrixCounts,
         snapshot,
         kleKeys,
@@ -1205,14 +1205,14 @@ function parseBigramAggregateOptions(value: unknown): TypingBigramAggregateOptio
   return out
 }
 
-const LAYOUT_OPTIMIZER_METRICS = new Set<LayoutOptimizerMetric>([
+const LAYOUT_COMPARISON_METRICS = new Set<LayoutComparisonMetric>([
   'fingerLoad',
   'handBalance',
   'rowDist',
   'homeRow',
 ])
 
-function isLayoutInputLayout(value: unknown): value is LayoutOptimizerInputLayout {
+function isLayoutInputLayout(value: unknown): value is LayoutComparisonInputLayout {
   if (typeof value !== 'object' || value === null) return false
   const o = value as Record<string, unknown>
   if (typeof o.id !== 'string' || o.id.length === 0) return false
@@ -1220,16 +1220,16 @@ function isLayoutInputLayout(value: unknown): value is LayoutOptimizerInputLayou
   return true
 }
 
-function parseLayoutOptimizerOptions(value: unknown): LayoutOptimizerOptions | null {
+function parseLayoutComparisonOptions(value: unknown): LayoutComparisonOptions | null {
   if (typeof value !== 'object' || value === null) return null
   const o = value as Record<string, unknown>
   if (!isLayoutInputLayout(o.source)) return null
   if (!Array.isArray(o.targets) || !o.targets.every(isLayoutInputLayout)) return null
   if (!Array.isArray(o.metrics)) return null
-  const metrics: LayoutOptimizerMetric[] = []
+  const metrics: LayoutComparisonMetric[] = []
   for (const m of o.metrics) {
-    if (typeof m === 'string' && LAYOUT_OPTIMIZER_METRICS.has(m as LayoutOptimizerMetric)) {
-      metrics.push(m as LayoutOptimizerMetric)
+    if (typeof m === 'string' && LAYOUT_COMPARISON_METRICS.has(m as LayoutComparisonMetric)) {
+      metrics.push(m as LayoutComparisonMetric)
     }
   }
   return { source: o.source, targets: o.targets, metrics }

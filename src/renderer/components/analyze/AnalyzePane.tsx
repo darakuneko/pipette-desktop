@@ -38,7 +38,8 @@ import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { BigramsChart } from './BigramsChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
-import { LayoutOptimizerView } from './LayoutOptimizerView'
+import { LayoutComparisonSelector } from './LayoutComparisonSelector'
+import { LayoutComparisonView } from './LayoutComparisonView'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportModal'
 import { formatDeviceLabel } from './DeviceMultiSelect'
@@ -56,7 +57,7 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutOptimizer', 'layer']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer']
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -174,7 +175,7 @@ export function AnalyzePane({
       activity: activityFilter,
       layer: layerFilter,
       bigrams: bigramsFilter,
-      layoutOptimizer: layoutOptimizerFilter,
+      layoutComparison: layoutComparisonFilter,
     },
     ready: filtersReady,
     setDeviceScopes,
@@ -184,7 +185,7 @@ export function AnalyzePane({
     setActivity,
     setLayer,
     setBigrams,
-    setLayoutOptimizer,
+    setLayoutComparison,
   } = useAnalyzeFilters(selectedUid, paneKey)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [snapshotLoading, setSnapshotLoading] = useState(false)
@@ -595,6 +596,43 @@ export function AnalyzePane({
             syncProgress={currentPhase === 'syncing' ? syncProgress : null}
           />
         )}
+        {/* Tab list — pinned to the very top so the analysis the user
+         * cares about anchors the page; filters drop below the tabs.
+         * Renders only when a keyboard is selected so the empty
+         * "select a keyboard" state stays compact. */}
+        {selected && (
+          <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-dim p-1">
+            <div
+              className="flex gap-1"
+              data-testid={tid("analyze-tabs")}
+              role="tablist"
+              aria-label={t('analyze.tablistLabel')}
+            >
+              {ANALYSIS_TABS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={analysisTab === key}
+                  className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
+                  onClick={() => setAnalysisTab(key)}
+                  data-testid={tid(`analyze-tab-${key}`)}
+                >
+                  {t(`analyze.analysisTab.${key}`)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
+              onClick={() => setExportModalOpen(true)}
+              disabled={exportCtx === null}
+              data-testid={tid("analyze-export-open")}
+            >
+              {t('analyze.export.csv')}
+            </button>
+          </div>
+        )}
         {/* Filter row — always visible. Keyboard select is the first
          * column so the user can pick a keyboard from inside the filter
          * group; the rest of the filters render once a keyboard is
@@ -798,6 +836,14 @@ export function AnalyzePane({
                   </label>
                 </>
               )}
+              {analysisTab === 'layoutComparison' && (
+                <LayoutComparisonSelector
+                  sourceLayoutId={layoutComparisonFilter.sourceLayoutId}
+                  targetLayoutId={layoutComparisonFilter.targetLayoutId}
+                  onSourceChange={(sourceLayoutId) => setLayoutComparison({ sourceLayoutId })}
+                  onTargetChange={(targetLayoutId) => setLayoutComparison({ targetLayoutId })}
+                />
+              )}
               {((analysisTab === 'wpm' && wpmFilter.viewMode === 'timeSeries') || (analysisTab === 'interval' && intervalFilter.viewMode === 'timeSeries')) && (
                 <label className={FILTER_LABEL}>
                   <span>{t('analyze.filters.granularity')}</span>
@@ -827,37 +873,6 @@ export function AnalyzePane({
 
         {selected ? (
           <>
-            <div className="flex items-center justify-between gap-2 rounded-lg bg-surface-dim p-1">
-              <div
-                className="flex gap-1"
-                data-testid={tid("analyze-tabs")}
-                role="tablist"
-                aria-label={t('analyze.tablistLabel')}
-              >
-                {ANALYSIS_TABS.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    role="tab"
-                    aria-selected={analysisTab === key}
-                    className={`${TAB_BTN_BASE} ${analysisTab === key ? TAB_BTN_ACTIVE : TAB_BTN_IDLE}`}
-                    onClick={() => setAnalysisTab(key)}
-                    data-testid={tid(`analyze-tab-${key}`)}
-                  >
-                    {t(`analyze.analysisTab.${key}`)}
-                  </button>
-                ))}
-              </div>
-              <button
-                type="button"
-                className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
-                onClick={() => setExportModalOpen(true)}
-                disabled={exportCtx === null}
-                data-testid={tid("analyze-export-open")}
-              >
-                {t('analyze.export.csv')}
-              </button>
-            </div>
             <div className="flex-1 min-h-0 py-2 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
               {analysisTab === 'summary' ? (
                 <SummaryView
@@ -937,14 +952,13 @@ export function AnalyzePane({
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />
-              ) : analysisTab === 'layoutOptimizer' ? (
-                <LayoutOptimizerView
+              ) : analysisTab === 'layoutComparison' ? (
+                <LayoutComparisonView
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
                   snapshot={effectiveSnapshot}
-                  filter={layoutOptimizerFilter}
-                  onFilterChange={setLayoutOptimizer}
+                  filter={layoutComparisonFilter}
                 />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.

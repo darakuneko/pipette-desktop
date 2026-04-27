@@ -3,15 +3,15 @@
 import { describe, it, expect } from 'vitest'
 import type { KleKey } from '../../../shared/kle/types'
 import type {
-  LayoutOptimizerInputLayout,
+  LayoutComparisonInputLayout,
   TypingHeatmapCell,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import { computeLayoutOptimizer } from '../compute-layout-optimizer'
+import { computeLayoutComparison } from '../compute-layout-comparison'
 
-const QWERTY: LayoutOptimizerInputLayout = { id: 'qwerty', map: {} }
+const QWERTY: LayoutComparisonInputLayout = { id: 'qwerty', map: {} }
 
-const COLEMAK: LayoutOptimizerInputLayout = {
+const COLEMAK: LayoutComparisonInputLayout = {
   id: 'colemak',
   map: {
     KC_E: 'F',
@@ -82,9 +82,9 @@ const FOUR_ROW_KEYS: KleKey[] = (() => {
   return keys
 })()
 
-describe('computeLayoutOptimizer', () => {
+describe('computeLayoutComparison', () => {
   it('returns empty targets when targets list is empty', () => {
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,0', 1]]),
       snapshot: makeSnapshot([['KC_A']]),
       kleKeys: [],
@@ -100,7 +100,7 @@ describe('computeLayoutOptimizer', () => {
     // Snapshot only has KC_S; QWERTY says KC_S → "s"; Colemak puts
     // "s" on KC_D, which is absent from this snapshot. Every event
     // skips with reason no_target_position.
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,0', 4]]),
       snapshot: makeSnapshot([['KC_S']]),
       kleKeys: [],
@@ -118,7 +118,7 @@ describe('computeLayoutOptimizer', () => {
   it('preserves total and skipped event counts together', () => {
     // Two cells: KC_A (resolves on Colemak — same position) and
     // KC_S (skips because Colemak target needs KC_D which is absent).
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([
         ['0,0', 3],
         ['0,1', 7],
@@ -141,7 +141,7 @@ describe('computeLayoutOptimizer', () => {
   })
 
   it('omits metric fields when not requested', () => {
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,0', 1]]),
       snapshot: makeSnapshot([['KC_A']]),
       kleKeys: FOUR_ROW_KEYS,
@@ -171,7 +171,7 @@ describe('computeLayoutOptimizer', () => {
       ['KC_Z', 'KC_X', 'KC_C', 'KC_V'],
       ['KC_NO', 'KC_NO', 'KC_SPACE', 'KC_NO'],
     ])
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,3', 10]]),
       snapshot,
       kleKeys: FOUR_ROW_KEYS,
@@ -203,7 +203,7 @@ describe('computeLayoutOptimizer', () => {
 
   it('runs each target independently', () => {
     const snapshot = makeSnapshot([['KC_A', 'KC_S']])
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([
         ['0,0', 1],
         ['0,1', 1],
@@ -229,7 +229,7 @@ describe('computeLayoutOptimizer', () => {
     // (Colemak labels "r" → KC_S → snapshot S = (0, 1)). The current
     // baseline (source = target) keeps the event on its source pos.
     const snapshot = makeSnapshot([['KC_R', 'KC_S']])
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,0', 4]]),
       snapshot,
       kleKeys: [],
@@ -242,7 +242,7 @@ describe('computeLayoutOptimizer', () => {
   })
 
   it('omits cellCounts when no events resolved', () => {
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([['0,0', 1]]),
       snapshot: makeSnapshot([['KC_NO']]),
       kleKeys: [],
@@ -254,7 +254,7 @@ describe('computeLayoutOptimizer', () => {
   })
 
   it('skips zero-count cells without affecting metrics', () => {
-    const result = computeLayoutOptimizer({
+    const result = computeLayoutComparison({
       matrixCounts: counts([
         ['0,0', 0],
         ['0,1', 5],

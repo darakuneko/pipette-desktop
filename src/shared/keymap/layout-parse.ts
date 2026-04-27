@@ -2,7 +2,7 @@
 //
 // Parse `keyboard-layouts.ts` display strings (e.g. "?\n6", "Ç    ~",
 // "\\\n/    |") and build forward / reverse maps used by Layout
-// Optimizer (Plan-analyze-layout-optimizer).
+// Optimizer (Plan-analyze-layout-comparison).
 //
 // Format:
 //   - First line (before "\n"): shift label (optional).
@@ -17,7 +17,7 @@
 // overrides on top.
 //
 // shift / altgr resolution is parsed but not used by reverse maps in
-// Phase 1 — Layout Optimizer compares base char distributions only.
+// Phase 1 — Layout Comparison compares base char distributions only.
 
 import { qmkIdToKeycode } from '../keycodes/keycodes'
 

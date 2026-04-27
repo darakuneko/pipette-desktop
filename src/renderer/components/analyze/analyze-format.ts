@@ -44,7 +44,7 @@ export function formatSharePercent(fraction: number): string {
 
 /** Same `(v * 100).toFixed(1)%` shape as `formatSharePercent` but
  * tolerant of `undefined` and prints the `%` glyph itself, so a
- * single helper covers Layout Optimizer cells and skip-rate banner
+ * single helper covers Layout Comparison cells and skip-rate banner
  * without forcing each call site to repeat the wrap. Renders `'—'`
  * when the value is missing or non-finite. */
 export function formatPercentLabel(value: number | undefined): string {

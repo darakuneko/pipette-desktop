@@ -854,7 +854,7 @@
       "keyHeatmap": "Heatmap",
       "ergonomics": "Ergonomics",
       "bigrams": "Bigrams",
-      "layoutOptimizer": "Layout Optimizer",
+      "layoutComparison": "Layout Comparison",
       "layer": "Layer"
     },
     "summary": {
@@ -1002,7 +1002,7 @@
         "thumb": "Thumb"
       }
     },
-    "layoutOptimizer": {
+    "layoutComparison": {
       "sourceLabel": "Current layout",
       "targetLabel": "Compare to",
       "noTargetOption": "—",

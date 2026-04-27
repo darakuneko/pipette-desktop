@@ -2,7 +2,7 @@
 //
 // Canonical "row,col" string used as the Map / Record key for
 // per-position lookups across the Analyze stack (heatmaps, ergonomics
-// estimates, finger overrides, layout-optimizer resolver, multi-key
+// estimates, finger overrides, layout-comparison resolver, multi-key
 // selection). One helper so the format stays in lockstep with the
 // strings already shipping inside persisted overrides
 // (PipetteSettings.analyze.fingerAssignments) and IPC payloads.

@@ -537,43 +537,43 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-tab-bigrams not found')
   }
 
-  const layoutOptimizerTab = page.locator('[data-testid="analyze-tab-layoutOptimizer"]')
-  if (await isAvailable(layoutOptimizerTab)) {
-    await layoutOptimizerTab.click()
+  const layoutComparisonTab = page.locator('[data-testid="analyze-tab-layoutComparison"]')
+  if (await isAvailable(layoutComparisonTab)) {
+    await layoutComparisonTab.click()
     await page.waitForTimeout(500)
     // Pick Colemak so each diff panel actually has something to render.
     // All three panels render simultaneously, so we capture each one
     // via its data-testid root rather than flipping a sub-view toggle.
-    const targetSelect = page.locator('[data-testid="analyze-layout-optimizer-target-select"]')
+    const targetSelect = page.locator('[data-testid="analyze-layout-comparison-target-select"]')
     if (await isAvailable(targetSelect)) {
       await targetSelect.selectOption('colemak')
       await page.waitForTimeout(800)
 
-      const heatmapPanel = page.locator('[data-testid="analyze-layout-optimizer-heatmap-diff"]')
+      const heatmapPanel = page.locator('[data-testid="analyze-layout-comparison-heatmap-diff"]')
       if (await isAvailable(heatmapPanel)) {
-        await captureNamed(page, 'analyze-layout-optimizer-heatmap-diff', { element: heatmapPanel })
+        await captureNamed(page, 'analyze-layout-comparison-heatmap-diff', { element: heatmapPanel })
       } else {
-        console.log('  [warn] layout-optimizer heatmap panel not visible — capture skipped')
+        console.log('  [warn] layout-comparison heatmap panel not visible — capture skipped')
       }
 
-      const fingerPanel = page.locator('[data-testid="analyze-layout-optimizer-finger-diff"]')
+      const fingerPanel = page.locator('[data-testid="analyze-layout-comparison-finger-diff"]')
       if (await isAvailable(fingerPanel)) {
-        await captureNamed(page, 'analyze-layout-optimizer-finger-diff', { element: fingerPanel })
+        await captureNamed(page, 'analyze-layout-comparison-finger-diff', { element: fingerPanel })
       } else {
-        console.log('  [warn] layout-optimizer finger panel not visible — capture skipped')
+        console.log('  [warn] layout-comparison finger panel not visible — capture skipped')
       }
 
-      const metricPanel = page.locator('[data-testid="analyze-layout-optimizer-metric-table"]')
+      const metricPanel = page.locator('[data-testid="analyze-layout-comparison-metric-table"]')
       if (await isAvailable(metricPanel)) {
-        await captureNamed(page, 'analyze-layout-optimizer-metric', { element: metricPanel })
+        await captureNamed(page, 'analyze-layout-comparison-metric', { element: metricPanel })
       } else {
-        console.log('  [warn] layout-optimizer metric panel not visible — capture skipped')
+        console.log('  [warn] layout-comparison metric panel not visible — capture skipped')
       }
     } else {
-      console.log('  [warn] layout-optimizer target select not found — capture skipped')
+      console.log('  [warn] layout-comparison target select not found — capture skipped')
     }
   } else {
-    console.log('  [skip] analyze-tab-layoutOptimizer not found')
+    console.log('  [skip] analyze-tab-layoutComparison not found')
   }
 
   const layerTab = page.locator('[data-testid="analyze-tab-layer"]')

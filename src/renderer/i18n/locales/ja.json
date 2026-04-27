@@ -852,7 +852,7 @@
       "keyHeatmap": "ヒートマップ",
       "ergonomics": "エルゴノミクス",
       "bigrams": "バイグラム",
-      "layoutOptimizer": "Layout Optimizer",
+      "layoutComparison": "レイアウト比較",
       "layer": "レイヤー"
     },
     "summary": {
@@ -1000,7 +1000,7 @@
         "thumb": "親指段"
       }
     },
-    "layoutOptimizer": {
+    "layoutComparison": {
       "sourceLabel": "現在のレイアウト",
       "targetLabel": "比較するレイアウト",
       "noTargetOption": "—",

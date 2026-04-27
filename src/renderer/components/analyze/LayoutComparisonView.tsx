@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Layout Optimizer Phase 1 orchestrator. Owns source / target
+// Layout Comparison Phase 1 orchestrator. Owns source / target
 // selection state, fires the IPC fetch, and renders all three Phase 1
 // panels at once (Heatmap Diff on top, then Finger Diff + Metric
 // Table side-by-side) so the user can scan position / finger / number
@@ -12,21 +12,20 @@ import {
   primaryDeviceScope,
   scopeToSelectValue,
   type DeviceScope,
-  type LayoutOptimizerFilters,
+  type LayoutComparisonFilters,
 } from '../../../shared/types/analyze-filters'
 import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type {
-  LayoutOptimizerMetric,
-  LayoutOptimizerResult,
+  LayoutComparisonMetric,
+  LayoutComparisonResult,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import { LAYOUT_BY_ID, pickLayoutOptimizerInput } from '../../data/keyboard-layouts'
-import { fetchLayoutOptimizerForRange } from './analyze-fetch'
+import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
+import { fetchLayoutComparisonForRange } from './analyze-fetch'
 import { formatSharePercent } from './analyze-format'
-import { LayoutOptimizerFingerDiff } from './LayoutOptimizerFingerDiff'
-import { LayoutOptimizerHeatmapDiff } from './LayoutOptimizerHeatmapDiff'
-import { LayoutOptimizerMetricTable } from './LayoutOptimizerMetricTable'
-import { LayoutOptimizerSelector } from './LayoutOptimizerSelector'
+import { LayoutComparisonFingerDiff } from './LayoutComparisonFingerDiff'
+import { LayoutComparisonHeatmapDiff } from './LayoutComparisonHeatmapDiff'
+import { LayoutComparisonMetricTable } from './LayoutComparisonMetricTable'
 import type { RangeMs } from './analyze-types'
 
 const EMPTY_KLE_KEYS: readonly KleKey[] = []
@@ -36,32 +35,32 @@ interface Props {
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
   snapshot: TypingKeymapSnapshot | null
-  /** Persisted source / target. Owned by `useAnalyzeFilters` so the
-   * user's selection survives a reload. */
-  filter: Required<LayoutOptimizerFilters>
-  onFilterChange: (patch: Partial<LayoutOptimizerFilters>) => void
+  /** Persisted source / target read from `useAnalyzeFilters`. The
+   * AnalyzePane filter row owns the picker UI; this view stays
+   * read-only on the filter so the IPC fetch stays the side-effect
+   * source of truth. */
+  filter: Required<LayoutComparisonFilters>
 }
 
 const SKIP_RATE_WARNING_THRESHOLD = 0.05
-const PHASE_1_METRICS: LayoutOptimizerMetric[] = [
+const PHASE_1_METRICS: LayoutComparisonMetric[] = [
   'fingerLoad',
   'handBalance',
   'rowDist',
   'homeRow',
 ]
 
-export function LayoutOptimizerView({
+export function LayoutComparisonView({
   uid,
   range,
   deviceScopes,
   snapshot,
   filter,
-  onFilterChange,
 }: Props): JSX.Element {
   const { t } = useTranslation()
   const sourceLayoutId = filter.sourceLayoutId
   const targetLayoutId = filter.targetLayoutId
-  const [result, setResult] = useState<LayoutOptimizerResult | null>(null)
+  const [result, setResult] = useState<LayoutComparisonResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
 
@@ -80,8 +79,8 @@ export function LayoutOptimizerView({
       setError(false)
       return
     }
-    const source = pickLayoutOptimizerInput(sourceLayoutId)
-    const target = targetLayoutId !== null ? pickLayoutOptimizerInput(targetLayoutId) : null
+    const source = pickLayoutComparisonInput(sourceLayoutId)
+    const target = targetLayoutId !== null ? pickLayoutComparisonInput(targetLayoutId) : null
     if (!source || !target) {
       setResult(null)
       return
@@ -93,7 +92,7 @@ export function LayoutOptimizerView({
     // render a "Current" baseline column without re-doing the math
     // renderer-side. The compute step short-circuits identical
     // source/target into the no-op resolver branch.
-    fetchLayoutOptimizerForRange(uid, scope, range.fromMs, range.toMs, {
+    fetchLayoutComparisonForRange(uid, scope, range.fromMs, range.toMs, {
       source,
       targets: [source, target],
       metrics: PHASE_1_METRICS,
@@ -105,7 +104,7 @@ export function LayoutOptimizerView({
       })
       .catch((err: unknown) => {
         if (cancelled) return
-        console.error('LayoutOptimizerView: fetchLayoutOptimizerForRange failed', err)
+        console.error('LayoutComparisonView: fetchLayoutComparisonForRange failed', err)
         setError(true)
         setLoading(false)
       })
@@ -118,7 +117,7 @@ export function LayoutOptimizerView({
     if (!result) return []
     return result.targets.map((target, idx) => {
       if (idx === 0) {
-        return t('analyze.layoutOptimizer.headers.current')
+        return t('analyze.layoutComparison.headers.current')
       }
       return LAYOUT_BY_ID.get(target.layoutId)?.name ?? target.layoutId
     })
@@ -143,32 +142,26 @@ export function LayoutOptimizerView({
   }, [snapshot])
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-layout-optimizer-view">
-      <LayoutOptimizerSelector
-        sourceLayoutId={sourceLayoutId}
-        targetLayoutId={targetLayoutId}
-        onSourceChange={(sourceLayoutId) => onFilterChange({ sourceLayoutId })}
-        onTargetChange={(targetLayoutId) => onFilterChange({ targetLayoutId })}
-      />
+    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-layout-comparison-view">
       {snapshot === null ? (
-        <Empty message={t('analyze.layoutOptimizer.noSnapshot')} testid="analyze-layout-optimizer-no-snapshot" />
+        <Empty message={t('analyze.layoutComparison.noSnapshot')} testid="analyze-layout-comparison-no-snapshot" />
       ) : targetLayoutId === null ? (
-        <Empty message={t('analyze.layoutOptimizer.noTarget')} testid="analyze-layout-optimizer-no-target" />
+        <Empty message={t('analyze.layoutComparison.noTarget')} testid="analyze-layout-comparison-no-target" />
       ) : loading ? (
-        <Empty message={t('analyze.layoutOptimizer.loading')} testid="analyze-layout-optimizer-loading" />
+        <Empty message={t('analyze.layoutComparison.loading')} testid="analyze-layout-comparison-loading" />
       ) : error ? (
-        <Empty message={t('analyze.layoutOptimizer.fetchError')} testid="analyze-layout-optimizer-error" />
+        <Empty message={t('analyze.layoutComparison.fetchError')} testid="analyze-layout-comparison-error" />
       ) : !result ? (
-        <Empty message={t('analyze.layoutOptimizer.noData')} testid="analyze-layout-optimizer-no-data" />
+        <Empty message={t('analyze.layoutComparison.noData')} testid="analyze-layout-comparison-no-data" />
       ) : (
         <>
           {skipPercent !== null && skipPercent > SKIP_RATE_WARNING_THRESHOLD && (
             <div
               className="rounded border border-amber-400/60 bg-amber-50/40 px-3 py-2 text-[12px] text-amber-900 dark:bg-amber-900/20 dark:text-amber-200"
               role="status"
-              data-testid="analyze-layout-optimizer-skip-warning"
+              data-testid="analyze-layout-comparison-skip-warning"
             >
-              {t('analyze.layoutOptimizer.skipWarning', {
+              {t('analyze.layoutComparison.skipWarning', {
                 percent: formatSharePercent(skipPercent),
               })}
             </div>
@@ -185,7 +178,7 @@ export function LayoutOptimizerView({
                   * tall on full keyboards) and the bottom grid lets
                   * finger / metric scroll inside their own halves. */}
                 <div className="min-h-0 overflow-auto">
-                  <LayoutOptimizerHeatmapDiff
+                  <LayoutComparisonHeatmapDiff
                     current={result.targets[0]}
                     target={candidate}
                     kleKeys={kleKeys}
@@ -194,14 +187,14 @@ export function LayoutOptimizerView({
                 </div>
                 <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
                   <div className="min-w-0 min-h-0 overflow-auto">
-                    <LayoutOptimizerFingerDiff
+                    <LayoutComparisonFingerDiff
                       current={result.targets[0]}
                       target={candidate}
                       targetLabel={targetLabel}
                     />
                   </div>
                   <div className="min-w-0 min-h-0 overflow-auto">
-                    <LayoutOptimizerMetricTable
+                    <LayoutComparisonMetricTable
                       columnLabels={columnLabels}
                       targets={result.targets}
                     />

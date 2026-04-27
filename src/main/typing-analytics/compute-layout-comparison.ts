@@ -1,45 +1,45 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Layout Optimizer Phase 1 metric aggregation. Pure compute layer
+// Layout Comparison Phase 1 metric aggregation. Pure compute layer
 // that takes pre-fetched matrix counts + a snapshot + KleKey geometry
 // and folds them into per-target finger / hand / row distributions.
 //
 // The IPC handler in `typing-analytics-service.ts` is responsible for
 // resolving the machine hash, pulling the matrix counts and the
 // snapshot, parsing `snapshot.layout` into KleKeys, and calling
-// `computeLayoutOptimizer` with the assembled inputs. Keeping the
+// `computeLayoutComparison` with the assembled inputs. Keeping the
 // compute step pure lets tests exercise the metric math without
 // faking IPC, DB, or filesystem.
 //
-// See Plan-analyze-layout-optimizer §「metric 計算式」.
+// See Plan-analyze-layout-comparison §「metric 計算式」.
 
 import type { ErgonomicsMeta, FingerType, RowCategory } from '../../shared/kle/kle-ergonomics'
 import { posKey } from '../../shared/kle/pos-key'
 import type { KleKey } from '../../shared/kle/types'
 import type {
-  LayoutOptimizerFingerKey,
-  LayoutOptimizerInputLayout,
-  LayoutOptimizerMetric,
-  LayoutOptimizerResult,
-  LayoutOptimizerRowKey,
-  LayoutOptimizerTargetResult,
+  LayoutComparisonFingerKey,
+  LayoutComparisonInputLayout,
+  LayoutComparisonMetric,
+  LayoutComparisonResult,
+  LayoutComparisonRowKey,
+  LayoutComparisonTargetResult,
   TypingHeatmapCell,
   TypingKeymapSnapshot,
 } from '../../shared/types/typing-analytics'
 import { buildLayoutResolver, type ResolveResult } from './layout-resolver'
 
-export interface ComputeLayoutOptimizerInput {
+export interface ComputeLayoutComparisonInput {
   /** posKey → matrix count for the recorded range and scope. The
    * loader is allowed to pass either the full Map<…, full cell> or a
    * Map keyed by total-only — only `cell.total` is consumed here. */
   matrixCounts: Map<string, Pick<TypingHeatmapCell, 'total'>>
   snapshot: TypingKeymapSnapshot
   kleKeys: KleKey[]
-  source: LayoutOptimizerInputLayout
-  targets: LayoutOptimizerInputLayout[]
+  source: LayoutComparisonInputLayout
+  targets: LayoutComparisonInputLayout[]
   /** Subset of metrics to compute. Empty array yields just the
    * total / skipped event counts. */
-  metrics: LayoutOptimizerMetric[]
+  metrics: LayoutComparisonMetric[]
   /** Layer to read from `snapshot.keymap`. Phase 1 reads layer 0. */
   layer?: number
 }
@@ -102,19 +102,19 @@ function ratio(numer: number, denom: number): number {
 function finalizeTarget(
   layoutId: string,
   acc: TargetAccumulator,
-  metrics: ReadonlySet<LayoutOptimizerMetric>,
-): LayoutOptimizerTargetResult {
+  metrics: ReadonlySet<LayoutComparisonMetric>,
+): LayoutComparisonTargetResult {
   const totalRaw = acc.totalEvents + acc.skippedEvents
-  const out: LayoutOptimizerTargetResult = {
+  const out: LayoutComparisonTargetResult = {
     layoutId,
     totalEvents: acc.totalEvents,
     skippedEvents: acc.skippedEvents,
     skipRate: ratio(acc.skippedEvents, totalRaw),
   }
   if (metrics.has('fingerLoad')) {
-    const fingerLoad: Partial<Record<LayoutOptimizerFingerKey, number>> = {}
+    const fingerLoad: Partial<Record<LayoutComparisonFingerKey, number>> = {}
     for (const [finger, count] of acc.fingerCounts) {
-      fingerLoad[finger as LayoutOptimizerFingerKey] = ratio(count, acc.totalEvents)
+      fingerLoad[finger as LayoutComparisonFingerKey] = ratio(count, acc.totalEvents)
     }
     out.fingerLoad = fingerLoad
     out.unmappedFinger = ratio(acc.unmappedFinger, acc.totalEvents)
@@ -127,9 +127,9 @@ function finalizeTarget(
     }
   }
   if (metrics.has('rowDist')) {
-    const rowDist: Partial<Record<LayoutOptimizerRowKey, number>> = {}
+    const rowDist: Partial<Record<LayoutComparisonRowKey, number>> = {}
     for (const [row, count] of acc.rowCounts) {
-      rowDist[row as LayoutOptimizerRowKey] = ratio(count, acc.totalEvents)
+      rowDist[row as LayoutComparisonRowKey] = ratio(count, acc.totalEvents)
     }
     out.rowDist = rowDist
   }
@@ -144,10 +144,10 @@ function finalizeTarget(
   return out
 }
 
-export function computeLayoutOptimizer(input: ComputeLayoutOptimizerInput): LayoutOptimizerResult {
+export function computeLayoutComparison(input: ComputeLayoutComparisonInput): LayoutComparisonResult {
   const layer = input.layer ?? 0
   const metrics = new Set(input.metrics)
-  const targets: LayoutOptimizerTargetResult[] = []
+  const targets: LayoutComparisonTargetResult[] = []
   for (const target of input.targets) {
     const resolver = buildLayoutResolver({
       snapshot: input.snapshot,

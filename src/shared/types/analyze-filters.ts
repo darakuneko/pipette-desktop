@@ -200,7 +200,7 @@ export interface BigramFilters {
   keyLimit?: number
 }
 
-export interface LayoutOptimizerFilters {
+export interface LayoutComparisonFilters {
   /** Layout id (matches `KEYBOARD_LAYOUTS`) chosen as the source. */
   sourceLayoutId?: string
   /** Layout id chosen as the comparison target. `null` means "no
@@ -226,7 +226,7 @@ export interface AnalyzeFilterSettings {
   activity?: ActivityFilters
   layer?: LayerFilters
   bigrams?: BigramFilters
-  layoutOptimizer?: LayoutOptimizerFilters
+  layoutComparison?: LayoutComparisonFilters
 }
 
 /** Shared primitive guards. Exported so the main-process store
@@ -318,7 +318,7 @@ function isValidBigramFilters(value: unknown): boolean {
   return true
 }
 
-function isValidLayoutOptimizerFilters(value: unknown): boolean {
+function isValidLayoutComparisonFilters(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
@@ -366,6 +366,6 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (!isValidActivityFilters(o.activity)) return false
   if (!isValidLayerFilters(o.layer)) return false
   if (!isValidBigramFilters(o.bigrams)) return false
-  if (!isValidLayoutOptimizerFilters(o.layoutOptimizer)) return false
+  if (!isValidLayoutComparisonFilters(o.layoutComparison)) return false
   return true
 }

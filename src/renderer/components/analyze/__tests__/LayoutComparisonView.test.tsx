@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
-import { LayoutOptimizerView } from '../LayoutOptimizerView'
+import { render, screen, waitFor } from '@testing-library/react'
+import { LayoutComparisonView } from '../LayoutComparisonView'
 import type {
-  LayoutOptimizerResult,
+  LayoutComparisonResult,
   TypingKeymapSnapshot,
 } from '../../../../shared/types/typing-analytics'
-import type { LayoutOptimizerFilters } from '../../../../shared/types/analyze-filters'
+import type { LayoutComparisonFilters } from '../../../../shared/types/analyze-filters'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -23,16 +23,16 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const fetchSpy = vi.fn<(...args: unknown[]) => Promise<LayoutOptimizerResult | null>>()
+const fetchSpy = vi.fn<(...args: unknown[]) => Promise<LayoutComparisonResult | null>>()
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
-    typingAnalyticsGetLayoutOptimizerForRange: (...args: unknown[]) => fetchSpy(...args),
+    typingAnalyticsGetLayoutComparisonForRange: (...args: unknown[]) => fetchSpy(...args),
   },
   writable: true,
 })
 
-const DEFAULT_FILTER: Required<LayoutOptimizerFilters> = {
+const DEFAULT_FILTER: Required<LayoutComparisonFilters> = {
   sourceLayoutId: 'qwerty',
   targetLayoutId: null,
 }
@@ -53,24 +53,22 @@ function makeSnapshot(): TypingKeymapSnapshot {
 }
 
 function renderView(overrides: {
-  filter?: Partial<Required<LayoutOptimizerFilters>>
+  filter?: Partial<Required<LayoutComparisonFilters>>
   snapshot?: TypingKeymapSnapshot | null
-  onFilterChange?: (patch: Partial<LayoutOptimizerFilters>) => void
 } = {}): void {
-  const { filter, snapshot = makeSnapshot(), onFilterChange } = overrides
+  const { filter, snapshot = makeSnapshot() } = overrides
   render(
-    <LayoutOptimizerView
+    <LayoutComparisonView
       uid="0xAABB"
       range={range}
       deviceScopes={['own']}
       snapshot={snapshot}
       filter={{ ...DEFAULT_FILTER, ...filter }}
-      onFilterChange={onFilterChange ?? (() => {})}
     />,
   )
 }
 
-function makeResult(overrides: Partial<LayoutOptimizerResult> = {}): LayoutOptimizerResult {
+function makeResult(overrides: Partial<LayoutComparisonResult> = {}): LayoutComparisonResult {
   return {
     sourceLayoutId: 'qwerty',
     targets: [
@@ -99,20 +97,20 @@ function makeResult(overrides: Partial<LayoutOptimizerResult> = {}): LayoutOptim
   }
 }
 
-describe('LayoutOptimizerView', () => {
+describe('LayoutComparisonView', () => {
   beforeEach(() => {
     fetchSpy.mockReset()
   })
 
   it('shows the no-snapshot empty state when snapshot is null', () => {
     renderView({ snapshot: null })
-    expect(screen.getByTestId('analyze-layout-optimizer-no-snapshot')).toBeTruthy()
+    expect(screen.getByTestId('analyze-layout-comparison-no-snapshot')).toBeTruthy()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
   it('shows the no-target empty state until a target is picked', () => {
     renderView()
-    expect(screen.getByTestId('analyze-layout-optimizer-no-target')).toBeTruthy()
+    expect(screen.getByTestId('analyze-layout-comparison-no-target')).toBeTruthy()
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
@@ -120,19 +118,9 @@ describe('LayoutOptimizerView', () => {
     fetchSpy.mockResolvedValue(makeResult())
     renderView({ filter: { targetLayoutId: 'colemak' } })
     await waitFor(() => {
-      expect(screen.getByTestId('analyze-layout-optimizer-metric-table')).toBeTruthy()
+      expect(screen.getByTestId('analyze-layout-comparison-metric-table')).toBeTruthy()
     })
     expect(fetchSpy).toHaveBeenCalledTimes(1)
-  })
-
-  it('routes target dropdown changes through onFilterChange', () => {
-    const onFilterChange = vi.fn()
-    renderView({ onFilterChange })
-    const targetSelect = screen.getByTestId('analyze-layout-optimizer-target-select') as HTMLSelectElement
-    act(() => {
-      fireEvent.change(targetSelect, { target: { value: 'colemak' } })
-    })
-    expect(onFilterChange).toHaveBeenCalledWith({ targetLayoutId: 'colemak' })
   })
 
   it('shows the skip warning banner when any target exceeds 5%', async () => {
@@ -146,7 +134,7 @@ describe('LayoutOptimizerView', () => {
     )
     renderView({ filter: { targetLayoutId: 'colemak' } })
     await waitFor(() => {
-      expect(screen.getByTestId('analyze-layout-optimizer-skip-warning')).toBeTruthy()
+      expect(screen.getByTestId('analyze-layout-comparison-skip-warning')).toBeTruthy()
     })
   })
 
@@ -154,9 +142,9 @@ describe('LayoutOptimizerView', () => {
     fetchSpy.mockResolvedValue(makeResult())
     renderView({ filter: { targetLayoutId: 'colemak' } })
     await waitFor(() => {
-      expect(screen.getByTestId('analyze-layout-optimizer-heatmap-diff')).toBeTruthy()
+      expect(screen.getByTestId('analyze-layout-comparison-heatmap-diff')).toBeTruthy()
     })
-    expect(screen.getByTestId('analyze-layout-optimizer-finger-diff')).toBeTruthy()
-    expect(screen.getByTestId('analyze-layout-optimizer-metric-table')).toBeTruthy()
+    expect(screen.getByTestId('analyze-layout-comparison-finger-diff')).toBeTruthy()
+    expect(screen.getByTestId('analyze-layout-comparison-metric-table')).toBeTruthy()
   })
 })

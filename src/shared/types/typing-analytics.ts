@@ -316,9 +316,9 @@ export type TypingBigramAggregateResult =
   | { view: 'top'; entries: TypingBigramTopEntry[] }
   | { view: 'slow'; entries: TypingBigramSlowEntry[] }
 
-/** Phase 1 metrics for the Layout Optimizer. Bigram-derived ones
+/** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
  * (travel distance / SFB) are added in Phase 2. */
-export type LayoutOptimizerMetric =
+export type LayoutComparisonMetric =
   | 'fingerLoad'
   | 'handBalance'
   | 'rowDist'
@@ -328,27 +328,27 @@ export type LayoutOptimizerMetric =
 // category in `shared/kle/kle-ergonomics.ts` automatically widens the
 // optimizer result shape — re-exporting prevents drift between the
 // two modules.
-export type LayoutOptimizerFingerKey = FingerType
-export type LayoutOptimizerRowKey = RowCategory
+export type LayoutComparisonFingerKey = FingerType
+export type LayoutComparisonRowKey = RowCategory
 
 /** A target / source layout shape sent over IPC. The renderer holds
  * `KEYBOARD_LAYOUTS` and forwards just the `id` and `map` slice the
  * resolver needs, so the main process stays data-agnostic. */
-export interface LayoutOptimizerInputLayout {
+export interface LayoutComparisonInputLayout {
   id: string
   map: Record<string, string>
 }
 
-export interface LayoutOptimizerOptions {
-  source: LayoutOptimizerInputLayout
+export interface LayoutComparisonOptions {
+  source: LayoutComparisonInputLayout
   /** 1〜3 layouts in Phase 1; UI guard but main accepts any length. */
-  targets: LayoutOptimizerInputLayout[]
+  targets: LayoutComparisonInputLayout[]
   /** Subset of metrics to compute. Empty array yields just the
    * total / skipped event counts. */
-  metrics: LayoutOptimizerMetric[]
+  metrics: LayoutComparisonMetric[]
 }
 
-export interface LayoutOptimizerTargetResult {
+export interface LayoutComparisonTargetResult {
   layoutId: string
   /** Events whose source-layout char resolved AND landed on a target
    * physical position. */
@@ -360,13 +360,13 @@ export interface LayoutOptimizerTargetResult {
   skipRate: number
   /** Each finger's share of `totalEvents`. Sum ≤ 1 (entries with no
    * geometry-derived finger fall through `unmappedFinger`). */
-  fingerLoad?: Partial<Record<LayoutOptimizerFingerKey, number>>
+  fingerLoad?: Partial<Record<LayoutComparisonFingerKey, number>>
   unmappedFinger?: number
   /** Left/right share of `totalEvents`. */
   handBalance?: { left: number; right: number }
   /** number / top / home / bottom / thumb / function share of
    * `totalEvents`. */
-  rowDist?: Partial<Record<LayoutOptimizerRowKey, number>>
+  rowDist?: Partial<Record<LayoutComparisonRowKey, number>>
   /** Share of `totalEvents` whose target row is the home row. */
   homeRowStay?: number
   /** posKey → events whose source-pos resolved to this target physical
@@ -376,9 +376,9 @@ export interface LayoutOptimizerTargetResult {
   cellCounts?: Record<string, number>
 }
 
-export interface LayoutOptimizerResult {
+export interface LayoutComparisonResult {
   sourceLayoutId: string
-  targets: LayoutOptimizerTargetResult[]
+  targets: LayoutComparisonTargetResult[]
 }
 
 /** Build the canonical scope key from a fingerprint. Excludes productName

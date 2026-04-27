@@ -12,12 +12,12 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { posKey } from '../../../shared/kle/pos-key'
 import type { KleKey } from '../../../shared/kle/types'
-import type { LayoutOptimizerTargetResult } from '../../../shared/types/typing-analytics'
+import type { LayoutComparisonTargetResult } from '../../../shared/types/typing-analytics'
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 
 interface Props {
-  current: LayoutOptimizerTargetResult
-  target: LayoutOptimizerTargetResult
+  current: LayoutComparisonTargetResult
+  target: LayoutComparisonTargetResult
   kleKeys: readonly KleKey[]
   /** Display name for the candidate target column. */
   targetLabel: string
@@ -45,8 +45,8 @@ const LEGEND_ALPHA = MIN_ALPHA + ALPHA_RANGE
  * intensity scale possible).
  */
 function buildDiffShares(
-  current: LayoutOptimizerTargetResult,
-  target: LayoutOptimizerTargetResult,
+  current: LayoutComparisonTargetResult,
+  target: LayoutComparisonTargetResult,
 ): { diffs: Map<string, number>; maxAbs: number } | null {
   if (current.totalEvents <= 0 && target.totalEvents <= 0) return null
   const positions = new Set<string>()
@@ -79,7 +79,7 @@ function colorFor(diff: number, maxAbs: number): string | null {
   return `rgba(${rgb}, ${alpha})`
 }
 
-export function LayoutOptimizerHeatmapDiff({
+export function LayoutComparisonHeatmapDiff({
   current,
   target,
   kleKeys,
@@ -103,13 +103,13 @@ export function LayoutOptimizerHeatmapDiff({
   const emptyKeycodes = useMemo(() => new Map<string, string>(), [])
 
   return (
-    <div className="flex w-full flex-col gap-1" data-testid="analyze-layout-optimizer-heatmap-diff">
+    <div className="flex w-full flex-col gap-1" data-testid="analyze-layout-comparison-heatmap-diff">
       <h4 className="text-[13px] font-semibold text-content-secondary">
-        {t('analyze.layoutOptimizer.heatmapDiffTitle', { target: targetLabel })}
+        {t('analyze.layoutComparison.heatmapDiffTitle', { target: targetLabel })}
       </h4>
       <div className="flex items-center gap-3 text-[11px] text-content-muted" aria-hidden="true">
-        <Swatch color={`rgba(${DECREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutOptimizer.heatmapDiffLegend.decrease')} />
-        <Swatch color={`rgba(${INCREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutOptimizer.heatmapDiffLegend.increase')} />
+        <Swatch color={`rgba(${DECREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutComparison.heatmapDiffLegend.decrease')} />
+        <Swatch color={`rgba(${INCREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutComparison.heatmapDiffLegend.increase')} />
       </div>
       <div className="flex min-h-0 justify-center overflow-auto">
         <KeyboardWidget

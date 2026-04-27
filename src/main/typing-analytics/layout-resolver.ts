@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Char-resolution pipeline for Layout Optimizer (Phase 1).
+// Char-resolution pipeline for Layout Comparison (Phase 1).
 //
 // Given a typing-analytics snapshot (qmkId-per-position) plus the
 // user's source layout and a target layout, translate each matrix
@@ -15,9 +15,9 @@
 // (LSFT(...), LT(...)) collapse to their inner basic keycode via
 // findInnerKeycode.
 //
-// See Plan-analyze-layout-optimizer §「char 解決パイプライン」.
+// See Plan-analyze-layout-comparison §「char 解決パイプライン」.
 //
-// Note on Layout Optimizer semantics: "target physical position" is
+// Note on Layout Comparison semantics: "target physical position" is
 // answered against the same snapshot the source resolves on. The
 // snapshot represents what the user's firmware actually does today;
 // we are asking "if you wanted to type this same character on layout
