@@ -77,7 +77,7 @@ export function LayoutOptimizerFingerDiff({ current, target, targetLabel }: Prop
   }, [current, target, t])
 
   return (
-    <div className="flex flex-col gap-1" data-testid="analyze-layout-optimizer-finger-diff">
+    <div className="flex w-full min-w-0 flex-col gap-1" data-testid="analyze-layout-optimizer-finger-diff">
       <h4 className="text-[13px] font-semibold text-content-secondary">
         {t('analyze.layoutOptimizer.fingerDiffTitle', { target: targetLabel })}
       </h4>

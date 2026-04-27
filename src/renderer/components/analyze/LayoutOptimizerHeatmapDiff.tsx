@@ -98,8 +98,12 @@ export function LayoutOptimizerHeatmapDiff({
     return out
   }, [current, target, kleKeys])
 
+  // KeyboardWidget requires a `keycodes` Map; the diff view doesn't
+  // care about labels, so we hand it a stable empty Map.
+  const emptyKeycodes = useMemo(() => new Map<string, string>(), [])
+
   return (
-    <div className="flex flex-col gap-1" data-testid="analyze-layout-optimizer-heatmap-diff">
+    <div className="flex w-full flex-col gap-1" data-testid="analyze-layout-optimizer-heatmap-diff">
       <h4 className="text-[13px] font-semibold text-content-secondary">
         {t('analyze.layoutOptimizer.heatmapDiffTitle', { target: targetLabel })}
       </h4>
@@ -108,7 +112,12 @@ export function LayoutOptimizerHeatmapDiff({
         <Swatch color={`rgba(${INCREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutOptimizer.heatmapDiffLegend.increase')} />
       </div>
       <div className="min-h-0 overflow-auto">
-        <KeyboardWidget keys={kleKeys} keyColors={keyColors ?? undefined} readOnly />
+        <KeyboardWidget
+          keys={[...kleKeys]}
+          keycodes={emptyKeycodes}
+          keyColors={keyColors ?? undefined}
+          readOnly
+        />
       </div>
     </div>
   )
