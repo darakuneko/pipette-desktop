@@ -866,18 +866,16 @@
         "activeDurationLabel": "打鍵時間"
       },
       "weeklyReport": {
-        "sectionTitle": "直近 7 日 vs 前 7 日",
+        "sectionTitle": "直近 7 日",
         "ariaLabel": "週次レポート",
-        "activeMsContext": "有効打鍵時間：{{current}} vs {{previous}}",
-        "delta": "{{glyph}} {{sign}}{{pct}}%",
-        "deltaInsufficient": "{{glyph}} —",
+        "delta": "{{glyph}} {{sign}}{{pct}}%（前 7 日比）",
+        "deltaInsufficient": "{{glyph}} —（前 7 日比）",
         "keystrokesLabel": "打鍵数",
-        "keystrokesDesc": "直近 7 日の総打鍵数。8〜14 日前の同期間と比較しています",
         "wpmLabel": "WPM",
-        "wpmDesc": "期間全体の WPM — 総打鍵数 ÷ 5 ÷ 有効打鍵時間。前 7 日と比較しています",
+        "activeDurationLabel": "打鍵時間",
+        "activeDurationContext": "{{previous}}（前 7 日）",
         "activeDaysLabel": "アクティブ日数",
-        "activeDaysUnit": "日",
-        "activeDaysDesc": "直近 7 日のうち打鍵があった日数。前 7 日と比較しています"
+        "activeDaysUnit": "日"
       },
       "profile": {
         "sectionTitle": "タイピングプロファイル（直近 {{days}} 日）",

@@ -868,18 +868,16 @@
         "activeDurationLabel": "Typing"
       },
       "weeklyReport": {
-        "sectionTitle": "Last 7 days vs the 7 days before",
+        "sectionTitle": "Last 7 days",
         "ariaLabel": "Weekly report",
-        "activeMsContext": "Active typing: {{current}} vs {{previous}}",
-        "delta": "{{glyph}} {{sign}}{{pct}}%",
-        "deltaInsufficient": "{{glyph}} —",
+        "delta": "{{glyph}} {{sign}}{{pct}}% (vs prior 7 days)",
+        "deltaInsufficient": "{{glyph}} — (vs prior 7 days)",
         "keystrokesLabel": "Keystrokes",
-        "keystrokesDesc": "Total keystrokes recorded over the last 7 days. Compared with days 8–14 ago.",
         "wpmLabel": "WPM",
-        "wpmDesc": "Period-wide WPM — total keystrokes ÷ 5 ÷ total active typing time. Compared with the prior 7 days.",
+        "activeDurationLabel": "Typing",
+        "activeDurationContext": "{{previous}} (prior 7 days)",
         "activeDaysLabel": "Active days",
-        "activeDaysUnit": "days",
-        "activeDaysDesc": "Days within the last 7 with at least one keystroke. Compared with the prior 7 days."
+        "activeDaysUnit": "days"
       },
       "profile": {
         "sectionTitle": "Typing profile (last {{days}} days)",

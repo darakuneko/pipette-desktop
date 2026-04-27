@@ -33,43 +33,44 @@ export function WeeklyReportCard({ daily, today }: Props) {
   const report = useMemo(() => computeWeeklyReport(daily, today), [daily, today])
 
   const items: AnalyzeSummaryItem[] = useMemo(() => {
+    // Order: Keystrokes → WPM → Typing → Active days. WPM is the only
+    // card that keeps a tooltip, reusing the WPM tab's canonical
+    // formula description; the other three are self-explanatory once
+    // their delta context lands underneath the value.
     return [
       {
         labelKey: 'analyze.summary.weeklyReport.keystrokesLabel',
         value: report.current.keystrokes.toLocaleString(),
         unit: t('analyze.unit.keys'),
         context: deltaContext(report.keystrokesDelta, t),
-        descriptionKey: 'analyze.summary.weeklyReport.keystrokesDesc',
       },
       {
         labelKey: 'analyze.summary.weeklyReport.wpmLabel',
         value: report.currentWpm > 0 ? formatWpm(report.currentWpm) : '—',
         context: deltaContext(report.wpmDelta, t),
-        descriptionKey: 'analyze.summary.weeklyReport.wpmDesc',
+        descriptionKey: 'analyze.wpm.description',
+      },
+      {
+        labelKey: 'analyze.summary.weeklyReport.activeDurationLabel',
+        value: report.current.activeMs > 0 ? formatActiveDuration(report.current.activeMs) : '—',
+        context: t('analyze.summary.weeklyReport.activeDurationContext', {
+          previous: formatActiveDuration(report.previous.activeMs),
+        }),
       },
       {
         labelKey: 'analyze.summary.weeklyReport.activeDaysLabel',
         value: String(report.current.activeDays),
         unit: t('analyze.summary.weeklyReport.activeDaysUnit'),
         context: deltaContext(report.activeDaysDelta, t),
-        descriptionKey: 'analyze.summary.weeklyReport.activeDaysDesc',
       },
     ]
   }, [report, t])
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-weekly-report-section">
-      <div className="flex items-baseline gap-3">
-        <h3 className="text-[13px] font-semibold text-content">
-          {t('analyze.summary.weeklyReport.sectionTitle')}
-        </h3>
-        <span className="text-[11px] text-content-muted">
-          {t('analyze.summary.weeklyReport.activeMsContext', {
-            current: formatActiveDuration(report.current.activeMs),
-            previous: formatActiveDuration(report.previous.activeMs),
-          })}
-        </span>
-      </div>
+      <h3 className="text-[13px] font-semibold text-content">
+        {t('analyze.summary.weeklyReport.sectionTitle')}
+      </h3>
       <AnalyzeStatGrid
         items={items}
         ariaLabelKey="analyze.summary.weeklyReport.ariaLabel"
