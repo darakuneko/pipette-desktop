@@ -18,6 +18,7 @@ import {
   type HeatmapFilters,
   type IntervalFilters,
   type LayerFilters,
+  type LayoutOptimizerFilters,
   type WpmFilters,
 } from '../../shared/types/analyze-filters'
 
@@ -37,6 +38,7 @@ export interface AnalyzeFiltersState {
   activity: Required<ActivityFilters>
   layer: Required<LayerFilters>
   bigrams: Required<BigramFilters>
+  layoutOptimizer: Required<LayoutOptimizerFilters>
 }
 
 export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
@@ -71,6 +73,11 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     fingerLimit: 20,
     keyLimit: 20,
   },
+  layoutOptimizer: {
+    sourceLayoutId: 'qwerty',
+    targetLayoutId: null,
+    subView: 'metric',
+  },
 }
 
 function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFiltersState {
@@ -87,6 +94,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
     activity: { ...DEFAULT_ANALYZE_FILTERS.activity, ...saved.activity },
     layer: { ...DEFAULT_ANALYZE_FILTERS.layer, ...saved.layer },
     bigrams: { ...DEFAULT_ANALYZE_FILTERS.bigrams, ...saved.bigrams },
+    layoutOptimizer: { ...DEFAULT_ANALYZE_FILTERS.layoutOptimizer, ...saved.layoutOptimizer },
   }
 }
 
@@ -99,6 +107,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
     activity: state.activity,
     layer: state.layer,
     bigrams: state.bigrams,
+    layoutOptimizer: state.layoutOptimizer,
   }
 }
 
@@ -112,6 +121,7 @@ export interface UseAnalyzeFiltersReturn {
   setActivity: (patch: Partial<ActivityFilters>) => void
   setLayer: (patch: Partial<LayerFilters>) => void
   setBigrams: (patch: Partial<BigramFilters>) => void
+  setLayoutOptimizer: (patch: Partial<LayoutOptimizerFilters>) => void
 }
 
 /** Drive the Analyze filter state for a single keyboard uid.
@@ -273,6 +283,10 @@ export function useAnalyzeFilters(
     update((prev) => ({ ...prev, bigrams: { ...prev.bigrams, ...patch } }))
   }, [update])
 
+  const setLayoutOptimizer = useCallback((patch: Partial<LayoutOptimizerFilters>) => {
+    update((prev) => ({ ...prev, layoutOptimizer: { ...prev.layoutOptimizer, ...patch } }))
+  }, [update])
+
   return {
     filters,
     ready,
@@ -283,5 +297,6 @@ export function useAnalyzeFilters(
     setActivity,
     setLayer,
     setBigrams,
+    setLayoutOptimizer,
   }
 }

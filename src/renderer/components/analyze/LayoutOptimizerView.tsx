@@ -10,6 +10,8 @@ import {
   primaryDeviceScope,
   scopeToSelectValue,
   type DeviceScope,
+  type LayoutOptimizerFilters,
+  LAYOUT_OPTIMIZER_SUB_VIEWS,
 } from '../../../shared/types/analyze-filters'
 import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type {
@@ -17,7 +19,7 @@ import type {
   LayoutOptimizerResult,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import { KEYBOARD_LAYOUTS, LAYOUT_BY_ID, pickLayoutOptimizerInput } from '../../data/keyboard-layouts'
+import { LAYOUT_BY_ID, pickLayoutOptimizerInput } from '../../data/keyboard-layouts'
 import { fetchLayoutOptimizerForRange } from './analyze-fetch'
 import { FILTER_BUTTON } from './analyze-filter-styles'
 import { formatSharePercent } from './analyze-format'
@@ -27,10 +29,6 @@ import { LayoutOptimizerMetricTable } from './LayoutOptimizerMetricTable'
 import { LayoutOptimizerSelector } from './LayoutOptimizerSelector'
 import type { RangeMs } from './analyze-types'
 
-type SubView = 'metric' | 'fingerDiff' | 'heatmapDiff'
-
-const SUB_VIEWS: SubView[] = ['metric', 'fingerDiff', 'heatmapDiff']
-
 const EMPTY_KLE_KEYS: readonly KleKey[] = []
 
 interface Props {
@@ -38,12 +36,12 @@ interface Props {
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
   snapshot: TypingKeymapSnapshot | null
+  /** Persisted source / target / subView. Owned by `useAnalyzeFilters`
+   * so the user's selection survives a reload. */
+  filter: Required<LayoutOptimizerFilters>
+  onFilterChange: (patch: Partial<LayoutOptimizerFilters>) => void
 }
 
-// First entry in `keyboard-layouts.ts` is QWERTY by convention. Read
-// it dynamically so a future rename of that data file doesn't drop
-// the dropdown onto a now-invalid id.
-const DEFAULT_SOURCE_LAYOUT_ID = KEYBOARD_LAYOUTS[0]?.id ?? 'qwerty'
 const SKIP_RATE_WARNING_THRESHOLD = 0.05
 const PHASE_1_METRICS: LayoutOptimizerMetric[] = [
   'fingerLoad',
@@ -52,11 +50,18 @@ const PHASE_1_METRICS: LayoutOptimizerMetric[] = [
   'homeRow',
 ]
 
-export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Props): JSX.Element {
+export function LayoutOptimizerView({
+  uid,
+  range,
+  deviceScopes,
+  snapshot,
+  filter,
+  onFilterChange,
+}: Props): JSX.Element {
   const { t } = useTranslation()
-  const [sourceLayoutId, setSourceLayoutId] = useState<string>(DEFAULT_SOURCE_LAYOUT_ID)
-  const [targetLayoutId, setTargetLayoutId] = useState<string | null>(null)
-  const [subView, setSubView] = useState<SubView>('metric')
+  const sourceLayoutId = filter.sourceLayoutId
+  const targetLayoutId = filter.targetLayoutId
+  const subView = filter.subView
   const [result, setResult] = useState<LayoutOptimizerResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -143,8 +148,8 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
       <LayoutOptimizerSelector
         sourceLayoutId={sourceLayoutId}
         targetLayoutId={targetLayoutId}
-        onSourceChange={setSourceLayoutId}
-        onTargetChange={setTargetLayoutId}
+        onSourceChange={(sourceLayoutId) => onFilterChange({ sourceLayoutId })}
+        onTargetChange={(targetLayoutId) => onFilterChange({ targetLayoutId })}
       />
       {snapshot === null ? (
         <Empty message={t('analyze.layoutOptimizer.noSnapshot')} testid="analyze-layout-optimizer-no-snapshot" />
@@ -175,7 +180,7 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
             className="flex flex-wrap items-center gap-1"
             data-testid="analyze-layout-optimizer-sub-view"
           >
-            {SUB_VIEWS.map((key) => {
+            {LAYOUT_OPTIMIZER_SUB_VIEWS.map((key) => {
               const active = subView === key
               return (
                 <button
@@ -184,7 +189,7 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
                   role="tab"
                   aria-selected={active}
                   className={`${FILTER_BUTTON} ${active ? 'bg-accent/10 text-accent' : ''}`}
-                  onClick={() => setSubView(key)}
+                  onClick={() => onFilterChange({ subView: key })}
                   data-testid={`analyze-layout-optimizer-sub-view-${key}`}
                 >
                   {t(`analyze.layoutOptimizer.subView.${key}`)}

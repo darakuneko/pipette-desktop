@@ -200,6 +200,18 @@ export interface BigramFilters {
   keyLimit?: number
 }
 
+export const LAYOUT_OPTIMIZER_SUB_VIEWS = ['metric', 'fingerDiff', 'heatmapDiff'] as const
+export type LayoutOptimizerSubView = typeof LAYOUT_OPTIMIZER_SUB_VIEWS[number]
+
+export interface LayoutOptimizerFilters {
+  /** Layout id (matches `KEYBOARD_LAYOUTS`) chosen as the source. */
+  sourceLayoutId?: string
+  /** Layout id chosen as the comparison target. `null` means "no
+   * target picked" so the empty state can survive a reload. */
+  targetLayoutId?: string | null
+  subView?: LayoutOptimizerSubView
+}
+
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
  * it lives as renderer-local state (default 7 days) so the absolute
  * `fromMs` / `toMs` never get restored and make the view look stale.
@@ -218,6 +230,7 @@ export interface AnalyzeFilterSettings {
   activity?: ActivityFilters
   layer?: LayerFilters
   bigrams?: BigramFilters
+  layoutOptimizer?: LayoutOptimizerFilters
 }
 
 /** Shared primitive guards. Exported so the main-process store
@@ -309,6 +322,16 @@ function isValidBigramFilters(value: unknown): boolean {
   return true
 }
 
+function isValidLayoutOptimizerFilters(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  if (o.sourceLayoutId !== undefined && typeof o.sourceLayoutId !== 'string') return false
+  if (o.targetLayoutId !== undefined && o.targetLayoutId !== null && typeof o.targetLayoutId !== 'string') return false
+  if (o.subView !== undefined && !includesAs(LAYOUT_OPTIMIZER_SUB_VIEWS, o.subView)) return false
+  return true
+}
+
 /** Validates the persisted multi-select shape. Anything that survives
  * here is already in the form `normalizeDeviceScopes` would produce —
  * reject malformed data outright instead of silently reshaping it so
@@ -348,5 +371,6 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (!isValidActivityFilters(o.activity)) return false
   if (!isValidLayerFilters(o.layer)) return false
   if (!isValidBigramFilters(o.bigrams)) return false
+  if (!isValidLayoutOptimizerFilters(o.layoutOptimizer)) return false
   return true
 }

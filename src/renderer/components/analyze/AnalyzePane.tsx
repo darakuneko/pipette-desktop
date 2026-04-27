@@ -174,6 +174,7 @@ export function AnalyzePane({
       activity: activityFilter,
       layer: layerFilter,
       bigrams: bigramsFilter,
+      layoutOptimizer: layoutOptimizerFilter,
     },
     ready: filtersReady,
     setDeviceScopes,
@@ -183,6 +184,7 @@ export function AnalyzePane({
     setActivity,
     setLayer,
     setBigrams,
+    setLayoutOptimizer,
   } = useAnalyzeFilters(selectedUid, paneKey)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
   const [snapshotLoading, setSnapshotLoading] = useState(false)
@@ -941,6 +943,8 @@ export function AnalyzePane({
                   range={range}
                   deviceScopes={deviceScopes}
                   snapshot={effectiveSnapshot}
+                  filter={layoutOptimizerFilter}
+                  onFilterChange={setLayoutOptimizer}
                 />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.
