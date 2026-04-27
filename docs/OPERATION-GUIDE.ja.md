@@ -308,21 +308,21 @@ Layout Optimizer は、記録した打鍵ログを別レイアウト（Colemak /
 - **Current layout** — 記録イベントを解釈する文字規約。デフォルトは QWERTY。ファームウェアが既に別レイアウトのキーコードを直接出している場合はそれを選ぶ
 - **Compare to** — シミュレートする比較先レイアウト。選択はキーボードごとに永続化されるので再起動後も同じ比較に戻る
 
-**サブビュー**
+**パネル**
 
-target を選ぶと 1 度の取得結果から 3 つのサブビューが切り替わる:
+target を選ぶと 3 つのパネルを 1 画面で同時表示する。サブビュー切替はなく、空間（位置）・指別・数値の 3 視点を一度に並べて読める:
 
-| サブビュー | 内容 |
+| パネル | 内容 |
 |------|------|
-| **数値表** | 各レイアウトを横並びにした share-of-events 表。指の負担（指別）、左右バランス、行分布、ホーム行率 |
-| **指の差分** | 指別の符号付き差分バーチャート。赤バーは比較先で負担が増える指、緑バーは減る指 |
-| **位置の差分** | 物理キー単位の差分をキーボードに塗布。赤系は比較先でアクティビティが増える物理位置、青系は減る位置 |
+| **位置の差分**（上段、フル幅） | 物理キー単位の差分をキーボードに塗布。赤系は比較先でアクティビティが増える物理位置、青系は減る位置 |
+| **指の差分**（下段左） | 指別の符号付き差分バーチャート。赤バーは比較先で負担が増える指、緑バーは減る指 |
+| **数値表**（下段右） | 各レイアウトを横並びにした share-of-events 表。指の負担（指別）、左右バランス、行分布、ホーム行率 |
 
-![分析 — Layout Optimizer 数値表](screenshots/analyze-layout-optimizer-metric.png)
+![分析 — Layout Optimizer 位置差分](screenshots/analyze-layout-optimizer-heatmap-diff.png)
 
 ![分析 — Layout Optimizer 指差分](screenshots/analyze-layout-optimizer-finger-diff.png)
 
-![分析 — Layout Optimizer 位置差分](screenshots/analyze-layout-optimizer-heatmap-diff.png)
+![分析 — Layout Optimizer 数値表](screenshots/analyze-layout-optimizer-metric.png)
 
 **Skip-rate 警告**
 

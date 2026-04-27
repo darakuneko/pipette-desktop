@@ -35,7 +35,6 @@ Object.defineProperty(window, 'vialAPI', {
 const DEFAULT_FILTER: Required<LayoutOptimizerFilters> = {
   sourceLayoutId: 'qwerty',
   targetLayoutId: null,
-  subView: 'metric',
 }
 
 const range = { fromMs: 0, toMs: 60_000 }
@@ -151,26 +150,13 @@ describe('LayoutOptimizerView', () => {
     })
   })
 
-  it('switches to the finger-diff sub-view via onFilterChange', async () => {
+  it('renders all three panels (heatmap / finger / metric) at once', async () => {
     fetchSpy.mockResolvedValue(makeResult())
-    const onFilterChange = vi.fn()
-    renderView({ filter: { targetLayoutId: 'colemak' }, onFilterChange })
-    await waitFor(() => {
-      expect(screen.getByTestId('analyze-layout-optimizer-sub-view-fingerDiff')).toBeTruthy()
-    })
-    act(() => {
-      fireEvent.click(screen.getByTestId('analyze-layout-optimizer-sub-view-fingerDiff'))
-    })
-    expect(onFilterChange).toHaveBeenCalledWith({ subView: 'fingerDiff' })
-  })
-
-  it('renders the heatmap-diff sub-view when the filter selects it', async () => {
-    fetchSpy.mockResolvedValue(makeResult())
-    renderView({
-      filter: { targetLayoutId: 'colemak', subView: 'heatmapDiff' },
-    })
+    renderView({ filter: { targetLayoutId: 'colemak' } })
     await waitFor(() => {
       expect(screen.getByTestId('analyze-layout-optimizer-heatmap-diff')).toBeTruthy()
     })
+    expect(screen.getByTestId('analyze-layout-optimizer-finger-diff')).toBeTruthy()
+    expect(screen.getByTestId('analyze-layout-optimizer-metric-table')).toBeTruthy()
   })
 })

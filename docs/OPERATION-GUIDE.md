@@ -308,21 +308,21 @@ The Layout Optimizer simulates how your recorded typing would land on a differen
 - **Current layout** — what character convention to interpret your recorded events with. Defaults to QWERTY; change it if your firmware fires keycodes for a different layout natively
 - **Compare to** — the candidate layout to simulate against. Picks are persisted per keyboard so the comparison reopens to the same target after a reload
 
-**Sub-views**
+**Panels**
 
-Once a target is picked, three sub-views share the same fetch:
+Once a target is picked, all three panels render at once so you can read the spatial, per-finger, and tabular views together without flipping a sub-view:
 
-| Sub-view | What it shows |
-|----------|---------------|
-| **Metric table** | Side-by-side share-of-events table with finger load (per finger), hand balance (left / right), row distribution, and home-row stay rate |
-| **Finger diff** | Per-finger signed delta bar chart. Red bars mark fingers that take more load on the candidate, green bars mark fingers that take less |
-| **Heatmap diff** | Per-physical-key delta painted over the keyboard. Red shades where the candidate sends more activity to that key, blue shades where it sends less |
+| Panel | What it shows |
+|-------|---------------|
+| **Heatmap diff** (top, full width) | Per-physical-key delta painted over the keyboard. Red shades where the candidate sends more activity to that key, blue shades where it sends less |
+| **Finger diff** (bottom-left) | Per-finger signed delta bar chart. Red bars mark fingers that take more load on the candidate, green bars mark fingers that take less |
+| **Metric table** (bottom-right) | Side-by-side share-of-events table with finger load (per finger), hand balance (left / right), row distribution, and home-row stay rate |
 
-![Analyze — Layout Optimizer Metric](screenshots/analyze-layout-optimizer-metric.png)
+![Analyze — Layout Optimizer Heatmap Diff](screenshots/analyze-layout-optimizer-heatmap-diff.png)
 
 ![Analyze — Layout Optimizer Finger Diff](screenshots/analyze-layout-optimizer-finger-diff.png)
 
-![Analyze — Layout Optimizer Heatmap Diff](screenshots/analyze-layout-optimizer-heatmap-diff.png)
+![Analyze — Layout Optimizer Metric](screenshots/analyze-layout-optimizer-metric.png)
 
 **Skip-rate warning**
 

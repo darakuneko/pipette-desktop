@@ -200,16 +200,12 @@ export interface BigramFilters {
   keyLimit?: number
 }
 
-export const LAYOUT_OPTIMIZER_SUB_VIEWS = ['metric', 'fingerDiff', 'heatmapDiff'] as const
-export type LayoutOptimizerSubView = typeof LAYOUT_OPTIMIZER_SUB_VIEWS[number]
-
 export interface LayoutOptimizerFilters {
   /** Layout id (matches `KEYBOARD_LAYOUTS`) chosen as the source. */
   sourceLayoutId?: string
   /** Layout id chosen as the comparison target. `null` means "no
    * target picked" so the empty state can survive a reload. */
   targetLayoutId?: string | null
-  subView?: LayoutOptimizerSubView
 }
 
 /** Per-keyboard Analyze filter state. `range` is intentionally absent —
@@ -328,7 +324,6 @@ function isValidLayoutOptimizerFilters(value: unknown): boolean {
   const o = value as Record<string, unknown>
   if (o.sourceLayoutId !== undefined && typeof o.sourceLayoutId !== 'string') return false
   if (o.targetLayoutId !== undefined && o.targetLayoutId !== null && typeof o.targetLayoutId !== 'string') return false
-  if (o.subView !== undefined && !includesAs(LAYOUT_OPTIMIZER_SUB_VIEWS, o.subView)) return false
   return true
 }
 

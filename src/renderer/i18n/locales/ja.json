@@ -1016,12 +1016,6 @@
         "decrease": "比較先で減少",
         "increase": "比較先で増加"
       },
-      "subView": {
-        "label": "サブビュー",
-        "metric": "数値表",
-        "fingerDiff": "指の差分",
-        "heatmapDiff": "位置の差分"
-      },
       "headers": {
         "metric": "指標",
         "current": "現在"

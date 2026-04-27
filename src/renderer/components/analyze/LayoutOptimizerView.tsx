@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Layout Optimizer Phase 1 orchestrator. Owns source / target
-// selection state, fires the IPC fetch, and renders the side-by-side
-// metric table once a result lands.
+// selection state, fires the IPC fetch, and renders all three Phase 1
+// panels at once (Heatmap Diff on top, then Finger Diff + Metric
+// Table side-by-side) so the user can scan position / finger / number
+// shifts together without flipping a sub-view.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -11,7 +13,6 @@ import {
   scopeToSelectValue,
   type DeviceScope,
   type LayoutOptimizerFilters,
-  LAYOUT_OPTIMIZER_SUB_VIEWS,
 } from '../../../shared/types/analyze-filters'
 import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type {
@@ -21,7 +22,6 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import { LAYOUT_BY_ID, pickLayoutOptimizerInput } from '../../data/keyboard-layouts'
 import { fetchLayoutOptimizerForRange } from './analyze-fetch'
-import { FILTER_BUTTON } from './analyze-filter-styles'
 import { formatSharePercent } from './analyze-format'
 import { LayoutOptimizerFingerDiff } from './LayoutOptimizerFingerDiff'
 import { LayoutOptimizerHeatmapDiff } from './LayoutOptimizerHeatmapDiff'
@@ -36,8 +36,8 @@ interface Props {
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
   snapshot: TypingKeymapSnapshot | null
-  /** Persisted source / target / subView. Owned by `useAnalyzeFilters`
-   * so the user's selection survives a reload. */
+  /** Persisted source / target. Owned by `useAnalyzeFilters` so the
+   * user's selection survives a reload. */
   filter: Required<LayoutOptimizerFilters>
   onFilterChange: (patch: Partial<LayoutOptimizerFilters>) => void
 }
@@ -61,7 +61,6 @@ export function LayoutOptimizerView({
   const { t } = useTranslation()
   const sourceLayoutId = filter.sourceLayoutId
   const targetLayoutId = filter.targetLayoutId
-  const subView = filter.subView
   const [result, setResult] = useState<LayoutOptimizerResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
@@ -134,9 +133,9 @@ export function LayoutOptimizerView({
     return max
   }, [result])
 
-  // The Heatmap Diff sub-view paints onto a KeyboardWidget, so it
-  // needs the snapshot's KLE geometry. snapshot.layout is `unknown`
-  // by type — every Analyze chart casts it the same way.
+  // The Heatmap Diff panel paints onto a KeyboardWidget, so it needs
+  // the snapshot's KLE geometry. snapshot.layout is `unknown` by type
+  // — every Analyze chart casts it the same way.
   const kleKeys = useMemo<readonly KleKey[]>(() => {
     const layout = snapshot?.layout as KeyboardLayout | null
     if (!layout || !Array.isArray(layout.keys)) return EMPTY_KLE_KEYS
@@ -144,7 +143,7 @@ export function LayoutOptimizerView({
   }, [snapshot])
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto" data-testid="analyze-layout-optimizer-view">
+    <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-layout-optimizer-view">
       <LayoutOptimizerSelector
         sourceLayoutId={sourceLayoutId}
         targetLayoutId={targetLayoutId}
@@ -174,50 +173,43 @@ export function LayoutOptimizerView({
               })}
             </div>
           )}
-          <div
-            role="tablist"
-            aria-label={t('analyze.layoutOptimizer.subView.label')}
-            className="flex flex-wrap items-center gap-1"
-            data-testid="analyze-layout-optimizer-sub-view"
-          >
-            {LAYOUT_OPTIMIZER_SUB_VIEWS.map((key) => {
-              const active = subView === key
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={`${FILTER_BUTTON} ${active ? 'bg-accent/10 text-accent' : ''}`}
-                  onClick={() => onFilterChange({ subView: key })}
-                  data-testid={`analyze-layout-optimizer-sub-view-${key}`}
-                >
-                  {t(`analyze.layoutOptimizer.subView.${key}`)}
-                </button>
-              )
-            })}
-          </div>
-          {subView === 'metric' ? (
-            <LayoutOptimizerMetricTable
-              columnLabels={columnLabels}
-              targets={result.targets}
-            />
-          ) : subView === 'fingerDiff' ? (
+          {(() => {
             // Fetch site enforces `targets = [source, target]`, so
             // [1] is always present once the result lands.
-            <LayoutOptimizerFingerDiff
-              current={result.targets[0]}
-              target={result.targets[1]}
-              targetLabel={columnLabels[1] ?? result.targets[1].layoutId}
-            />
-          ) : (
-            <LayoutOptimizerHeatmapDiff
-              current={result.targets[0]}
-              target={result.targets[1]}
-              kleKeys={kleKeys}
-              targetLabel={columnLabels[1] ?? result.targets[1].layoutId}
-            />
-          )}
+            const candidate = result.targets[1]
+            const targetLabel = columnLabels[1] ?? candidate.layoutId
+            return (
+              <>
+                {/* Each panel scrolls independently — heatmap on top
+                  * gets its own overflow box (KeyboardWidget can run
+                  * tall on full keyboards) and the bottom grid lets
+                  * finger / metric scroll inside their own halves. */}
+                <div className="min-h-0 overflow-auto">
+                  <LayoutOptimizerHeatmapDiff
+                    current={result.targets[0]}
+                    target={candidate}
+                    kleKeys={kleKeys}
+                    targetLabel={targetLabel}
+                  />
+                </div>
+                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
+                  <div className="min-w-0 min-h-0 overflow-auto">
+                    <LayoutOptimizerFingerDiff
+                      current={result.targets[0]}
+                      target={candidate}
+                      targetLabel={targetLabel}
+                    />
+                  </div>
+                  <div className="min-w-0 min-h-0 overflow-auto">
+                    <LayoutOptimizerMetricTable
+                      columnLabels={columnLabels}
+                      targets={result.targets}
+                    />
+                  </div>
+                </div>
+              </>
+            )
+          })()}
         </>
       )}
     </div>

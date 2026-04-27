@@ -111,7 +111,7 @@ export function LayoutOptimizerHeatmapDiff({
         <Swatch color={`rgba(${DECREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutOptimizer.heatmapDiffLegend.decrease')} />
         <Swatch color={`rgba(${INCREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutOptimizer.heatmapDiffLegend.increase')} />
       </div>
-      <div className="min-h-0 overflow-auto">
+      <div className="flex min-h-0 justify-center overflow-auto">
         <KeyboardWidget
           keys={[...kleKeys]}
           keycodes={emptyKeycodes}

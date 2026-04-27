@@ -541,29 +541,33 @@ async function captureAnalyzePage(page: Page): Promise<void> {
   if (await isAvailable(layoutOptimizerTab)) {
     await layoutOptimizerTab.click()
     await page.waitForTimeout(500)
-    // Pick Colemak so the diff sub-views actually have something to render.
+    // Pick Colemak so each diff panel actually has something to render.
+    // All three panels render simultaneously, so we capture each one
+    // via its data-testid root rather than flipping a sub-view toggle.
     const targetSelect = page.locator('[data-testid="analyze-layout-optimizer-target-select"]')
     if (await isAvailable(targetSelect)) {
       await targetSelect.selectOption('colemak')
       await page.waitForTimeout(800)
-      await captureNamed(page, 'analyze-layout-optimizer-metric', { fullPage: true })
 
-      const fingerDiffBtn = page.locator('[data-testid="analyze-layout-optimizer-sub-view-fingerDiff"]')
-      if (await isAvailable(fingerDiffBtn)) {
-        await fingerDiffBtn.click()
-        await page.waitForTimeout(500)
-        await captureNamed(page, 'analyze-layout-optimizer-finger-diff', { fullPage: true })
+      const heatmapPanel = page.locator('[data-testid="analyze-layout-optimizer-heatmap-diff"]')
+      if (await isAvailable(heatmapPanel)) {
+        await captureNamed(page, 'analyze-layout-optimizer-heatmap-diff', { element: heatmapPanel })
       } else {
-        console.log('  [warn] layout-optimizer fingerDiff button not visible — capture skipped')
+        console.log('  [warn] layout-optimizer heatmap panel not visible — capture skipped')
       }
 
-      const heatmapDiffBtn = page.locator('[data-testid="analyze-layout-optimizer-sub-view-heatmapDiff"]')
-      if (await isAvailable(heatmapDiffBtn)) {
-        await heatmapDiffBtn.click()
-        await page.waitForTimeout(500)
-        await captureNamed(page, 'analyze-layout-optimizer-heatmap-diff', { fullPage: true })
+      const fingerPanel = page.locator('[data-testid="analyze-layout-optimizer-finger-diff"]')
+      if (await isAvailable(fingerPanel)) {
+        await captureNamed(page, 'analyze-layout-optimizer-finger-diff', { element: fingerPanel })
       } else {
-        console.log('  [warn] layout-optimizer heatmapDiff button not visible — capture skipped')
+        console.log('  [warn] layout-optimizer finger panel not visible — capture skipped')
+      }
+
+      const metricPanel = page.locator('[data-testid="analyze-layout-optimizer-metric-table"]')
+      if (await isAvailable(metricPanel)) {
+        await captureNamed(page, 'analyze-layout-optimizer-metric', { element: metricPanel })
+      } else {
+        console.log('  [warn] layout-optimizer metric panel not visible — capture skipped')
       }
     } else {
       console.log('  [warn] layout-optimizer target select not found — capture skipped')

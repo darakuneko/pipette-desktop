@@ -76,7 +76,6 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   layoutOptimizer: {
     sourceLayoutId: 'qwerty',
     targetLayoutId: null,
-    subView: 'metric',
   },
 }
 
