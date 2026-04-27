@@ -111,7 +111,7 @@ export function getReverseMap(layout: LayoutShape): Map<string, string> {
   return rev
 }
 
-function firstCodePoint(s: string): string | undefined {
+export function firstCodePoint(s: string): string | undefined {
   for (const ch of s) return ch
   return undefined
 }
