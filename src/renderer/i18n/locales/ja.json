@@ -641,7 +641,7 @@
       "categoriesLabel": "出力するカテゴリ",
       "confirm": ".csv",
       "failed": "出力に失敗しました",
-      "snapshotMissing": "ヒートマップとエルゴノミクスはキーマップスナップショットが必要なため、この期間では出力できません",
+      "snapshotMissing": "ヒートマップ・エルゴノミクス・レイアウト比較はキーマップスナップショットが必要なため、この期間では出力できません",
       "conditionLabel": {
         "device": "デバイス",
         "keymap": "キーマップ",
@@ -656,6 +656,8 @@
         "interval": "間隔",
         "activity": "活動量",
         "ergonomics": "エルゴノミクス",
+        "bigrams": "バイグラム",
+        "layoutComparison": "レイアウト比較",
         "layer": "レイヤー"
       }
     },

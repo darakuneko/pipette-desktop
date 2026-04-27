@@ -530,13 +530,14 @@ export function AnalyzePane({
         minActiveMs: wpmFilter.minActiveMs,
       },
       layer: { baseLayer: layerFilter.baseLayer },
+      layoutComparison: layoutComparisonFilter,
       fingerOverrides: fingerAssignments,
       conditions: { device: deviceLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
     selected, deviceScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
     heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
-    fingerAssignments, t,
+    layoutComparisonFilter, fingerAssignments, t,
   ])
 
   // Ergonomics-only "open finger assignment" button. Rendered in two

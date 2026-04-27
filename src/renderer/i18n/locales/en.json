@@ -643,7 +643,7 @@
       "categoriesLabel": "Categories to export",
       "confirm": ".csv",
       "failed": "Export failed.",
-      "snapshotMissing": "Heatmap and Ergonomics need a keymap snapshot to export and are unavailable for this range.",
+      "snapshotMissing": "Heatmap, Ergonomics, and Layout Comparison need a keymap snapshot to export and are unavailable for this range.",
       "conditionLabel": {
         "device": "Device",
         "keymap": "Keymap",
@@ -658,6 +658,8 @@
         "interval": "Interval",
         "activity": "Activity",
         "ergonomics": "Ergonomics",
+        "bigrams": "Bigrams",
+        "layoutComparison": "Layout Comparison",
         "layer": "Layer"
       }
     },

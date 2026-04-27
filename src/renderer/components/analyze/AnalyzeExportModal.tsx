@@ -14,16 +14,19 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
-import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
+import type { HeatmapFilters, LayoutComparisonFilters } from '../../../shared/types/analyze-filters'
+import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { FILTER_BUTTON } from './analyze-filter-styles'
 import {
   buildActivityCsv,
+  buildBigramsCsv,
   buildErgonomicsCsv,
   buildHeatmapCsv,
   buildIntervalCsv,
   buildLayerCsv,
+  buildLayoutComparisonCsv,
   buildWpmCsv,
   type CsvBundleEntry,
 } from './analyze-csv-builders'
@@ -52,6 +55,10 @@ export interface AnalyzeExportContext {
   interval: { viewMode: IntervalViewMode; granularity: GranularityChoice }
   activity: { metric: ActivityMetric; minActiveMs: number }
   layer: { baseLayer: number }
+  // `Required<>` only strips the `?`, so `targetLayoutId` is still
+  // `string | null`. The runtime guard in pickBuilders (and
+  // isCategoryAvailable) narrows it before passing to the builder.
+  layoutComparison: Required<LayoutComparisonFilters>
   fingerOverrides: Record<string, FingerType>
   /** Pre-formatted human-readable filter snapshot for the modal's
    * per-category context line. Computed in the parent so the modal
@@ -69,15 +76,25 @@ interface Props {
   ctx: AnalyzeExportContext | null
 }
 
-type Category = 'heatmap' | 'wpm' | 'interval' | 'activity' | 'ergonomics' | 'layer'
+type Category = 'heatmap' | 'wpm' | 'interval' | 'activity' | 'ergonomics' | 'bigrams' | 'layoutComparison' | 'layer'
 
-const CATEGORIES: readonly Category[] = ['heatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'layer']
+const CATEGORIES: readonly Category[] = [
+  'heatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer',
+]
 
-// Heatmap and Ergonomics need a keymap snapshot; the others read raw
-// minute / session data and are always available once the keyboard
-// has any analytics rows.
+// Heatmap, Ergonomics, and Layout Comparison need a keymap snapshot
+// (the comparison aligns target positions against the recorded
+// keymap); the rest read raw minute / session / bigram counters and
+// are always available once the keyboard has any analytics rows.
 const REQUIRES_SNAPSHOT: Record<Category, boolean> = {
-  heatmap: true, wpm: false, interval: false, activity: false, ergonomics: true, layer: false,
+  heatmap: true,
+  wpm: false,
+  interval: false,
+  activity: false,
+  ergonomics: true,
+  bigrams: false,
+  layoutComparison: true,
+  layer: false,
 }
 
 const allOn = (): Record<Category, boolean> =>
@@ -169,6 +186,23 @@ function specificsFor(c: Category, ctx: AnalyzeExportContext, t: TFunction): str
         : t('analyze.export.fingerOverridesDefault')
       return [`${t('analyze.export.fingerOverrides')}: ${value}`]
     }
+    case 'bigrams':
+      // Skip per-category specifics — the export pulls every pair
+      // (subject to the builder's safety cap) regardless of the
+      // chart's per-quadrant limits, so echoing those numbers would
+      // misrepresent the CSV slice.
+      return []
+    case 'layoutComparison': {
+      const sourceLabel = LAYOUT_BY_ID.get(ctx.layoutComparison.sourceLayoutId)?.name ?? ctx.layoutComparison.sourceLayoutId
+      const targetId = ctx.layoutComparison.targetLayoutId
+      const targetLabel = targetId === null
+        ? t('analyze.layoutComparison.noTargetOption')
+        : LAYOUT_BY_ID.get(targetId)?.name ?? targetId
+      return [
+        `${t('analyze.layoutComparison.sourceLabel')}: ${sourceLabel}`,
+        `${t('analyze.layoutComparison.targetLabel')}: ${targetLabel}`,
+      ]
+    }
   }
 }
 
@@ -218,6 +252,19 @@ function pickBuilders(
       snapshot: ctx.snapshot, baseLayer: ctx.layer.baseLayer, t,
     }))
   }
+  if (selected.bigrams) {
+    out.push(buildBigramsCsv({
+      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+    }))
+  }
+  if (selected.layoutComparison && ctx.snapshot !== null && ctx.layoutComparison.targetLayoutId !== null) {
+    out.push(buildLayoutComparisonCsv({
+      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      sourceLayoutId: ctx.layoutComparison.sourceLayoutId,
+      targetLayoutId: ctx.layoutComparison.targetLayoutId,
+      t,
+    }))
+  }
   return out
 }
 
@@ -242,6 +289,9 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
   const isCategoryAvailable = (c: Category): boolean => {
     if (!ctx) return false
     if (REQUIRES_SNAPSHOT[c] && snapshotMissing) return false
+    // Layout Comparison also needs an explicit target — without one
+    // there is no "candidate vs current" diff to write to CSV.
+    if (c === 'layoutComparison' && ctx.layoutComparison.targetLayoutId === null) return false
     return true
   }
 

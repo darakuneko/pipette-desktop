@@ -16,12 +16,12 @@ import {
 } from '../../../shared/types/analyze-filters'
 import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type {
-  LayoutComparisonMetric,
   LayoutComparisonResult,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
 import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
 import { fetchLayoutComparisonForRange } from './analyze-fetch'
+import { LAYOUT_COMPARISON_PHASE_1_METRICS } from './layout-comparison-metrics'
 import { formatSharePercent } from './analyze-format'
 import { LayoutComparisonFingerDiff } from './LayoutComparisonFingerDiff'
 import { LayoutComparisonHeatmapDiff } from './LayoutComparisonHeatmapDiff'
@@ -43,12 +43,6 @@ interface Props {
 }
 
 const SKIP_RATE_WARNING_THRESHOLD = 0.05
-const PHASE_1_METRICS: LayoutComparisonMetric[] = [
-  'fingerLoad',
-  'handBalance',
-  'rowDist',
-  'homeRow',
-]
 
 export function LayoutComparisonView({
   uid,
@@ -95,7 +89,7 @@ export function LayoutComparisonView({
     fetchLayoutComparisonForRange(uid, scope, range.fromMs, range.toMs, {
       source,
       targets: [source, target],
-      metrics: PHASE_1_METRICS,
+      metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
     })
       .then((next) => {
         if (cancelled) return

@@ -22,7 +22,10 @@ import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
 import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
 import { buildCsv } from '../../../shared/csv-export'
+import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
 import {
+  fetchBigramAggregateForRange,
+  fetchLayoutComparisonForRange,
   fetchMatrixHeatmapAllLayers,
   listBksMinuteForScope,
   listLayerUsageForScope,
@@ -41,6 +44,7 @@ import {
   buildLayerBarsFromCounts,
 } from './analyze-layer-usage'
 import { aggregateErgonomics, FINGER_LIST, ROW_ORDER } from './analyze-ergonomics'
+import { LAYOUT_COMPARISON_PHASE_1_METRICS } from './layout-comparison-metrics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import {
   buildGroupRankings,
@@ -77,6 +81,8 @@ const SLUG = {
   activitySessions: 'analyze-activity-sessions',
   layer: 'analyze-layer',
   ergonomics: 'analyze-ergonomics',
+  bigrams: 'analyze-bigrams',
+  layoutComparison: 'analyze-layout-comparison',
 } as const
 
 interface ScopeArgs {
@@ -339,4 +345,85 @@ export async function buildErgonomicsCsv(args: ScopeArgs & {
     slug: SLUG.ergonomics,
     content: buildCsv(['metric', 'id', 'label', 'value'], rows),
   }
+}
+
+// --- Bigrams (top-N pairs) ---------------------------------------
+
+// The live BigramsChart fetches the same `top` view with this limit
+// to derive Top / Slow / Finger / Heatmap quadrants from a single
+// IPC call; matching the cap keeps the export aligned with what the
+// user sees on screen instead of cutting off at the 30-row default.
+const BIGRAMS_EXPORT_LIMIT = 5000
+
+export async function buildBigramsCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
+  const { uid, range, deviceScope } = args
+  const result = await fetchBigramAggregateForRange(
+    uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT },
+  ).catch(() => ({ view: 'top' as const, entries: [] }))
+  const entries = result.view === 'top' ? result.entries : []
+  const rows = entries.map((e) => [
+    e.bigramId,
+    e.count,
+    e.avgIki === null ? '' : Math.round(e.avgIki),
+  ])
+  return {
+    slug: SLUG.bigrams,
+    content: buildCsv(['bigram_id', 'count', 'avg_iki_ms'], rows),
+  }
+}
+
+// --- Layout Comparison (per-target × metric breakdown) -----------
+
+export async function buildLayoutComparisonCsv(args: ScopeArgs & {
+  sourceLayoutId: string
+  targetLayoutId: string
+  t: TFunction
+}): Promise<CsvBundleEntry> {
+  const { uid, range, deviceScope, sourceLayoutId, targetLayoutId, t } = args
+  const header = ['layout_id', 'layout_label', 'metric', 'key', 'label', 'value']
+  const source = pickLayoutComparisonInput(sourceLayoutId)
+  const target = pickLayoutComparisonInput(targetLayoutId)
+  if (!source || !target) {
+    return { slug: SLUG.layoutComparison, content: buildCsv(header, []) }
+  }
+  const result = await fetchLayoutComparisonForRange(uid, deviceScope, range.fromMs, range.toMs, {
+    source, targets: [source, target], metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
+  }).catch(() => null)
+
+  const rows: unknown[][] = []
+  for (const targetResult of result?.targets ?? []) {
+    const layoutLabel = LAYOUT_BY_ID.get(targetResult.layoutId)?.name ?? targetResult.layoutId
+    const push = (metric: string, key: string, label: string, value: unknown): void => {
+      rows.push([targetResult.layoutId, layoutLabel, metric, key, label, value])
+    }
+    push('totals', 'totalEvents', '', targetResult.totalEvents)
+    push('totals', 'skippedEvents', '', targetResult.skippedEvents)
+    push('totals', 'skipRate', '', targetResult.skipRate)
+    // FINGER_LIST / ROW_ORDER iteration (instead of Object.entries)
+    // keeps the CSV column ordering stable across runs and matches
+    // `buildErgonomicsCsv`, so spreadsheet diffs stay meaningful.
+    if (targetResult.fingerLoad) {
+      for (const finger of FINGER_LIST) {
+        const value = targetResult.fingerLoad[finger]
+        if (value === undefined) continue
+        push('fingerLoad', finger, t(`analyze.ergonomics.finger.${finger}`), value)
+      }
+    }
+    if (targetResult.handBalance) {
+      push('handBalance', 'left', t('analyze.ergonomics.hand.left'), targetResult.handBalance.left)
+      push('handBalance', 'right', t('analyze.ergonomics.hand.right'), targetResult.handBalance.right)
+    }
+    if (targetResult.rowDist) {
+      for (const row of ROW_ORDER) {
+        const value = targetResult.rowDist[row]
+        if (value === undefined) continue
+        push('rowDist', row, t(`analyze.ergonomics.rowCategory.${row}`), value)
+      }
+    }
+    if (typeof targetResult.homeRowStay === 'number') {
+      push('homeRowStay', 'share', '', targetResult.homeRowStay)
+    }
+  }
+
+  return { slug: SLUG.layoutComparison, content: buildCsv(header, rows) }
 }
