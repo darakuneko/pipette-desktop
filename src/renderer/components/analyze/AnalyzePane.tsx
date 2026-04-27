@@ -38,6 +38,7 @@ import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
 import { BigramsChart } from './BigramsChart'
 import { ErgonomicsChart } from './ErgonomicsChart'
+import { LayoutOptimizerView } from './LayoutOptimizerView'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportModal'
 import { formatDeviceLabel } from './DeviceMultiSelect'
@@ -55,7 +56,7 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layer']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutOptimizer', 'layer']
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -933,6 +934,13 @@ export function AnalyzePane({
                   onKeyLimitChange={(keyLimit) => setBigrams({ keyLimit })}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
+                />
+              ) : analysisTab === 'layoutOptimizer' ? (
+                <LayoutOptimizerView
+                  uid={selected.uid}
+                  range={range}
+                  deviceScopes={deviceScopes}
+                  snapshot={effectiveSnapshot}
                 />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.

@@ -8,6 +8,8 @@
 // file alone.
 
 import type {
+  LayoutOptimizerOptions,
+  LayoutOptimizerResult,
   TypingBigramAggregateOptions,
   TypingBigramAggregateResult,
   TypingBigramAggregateView,
@@ -105,4 +107,18 @@ export function fetchBigramAggregateForRange(
   options?: TypingBigramAggregateOptions,
 ): Promise<TypingBigramAggregateResult> {
   return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options)
+}
+
+/** Layout Optimizer metrics fetch. Single channel; the main-side
+ * handler resolves the scope to own / all / hash and pairs the
+ * matrix counts with the recorded snapshot. Returns null when the
+ * input is malformed or no snapshot is available for the range. */
+export function fetchLayoutOptimizerForRange(
+  uid: string,
+  scope: DeviceScope,
+  fromMs: number,
+  toMs: number,
+  options: LayoutOptimizerOptions,
+): Promise<LayoutOptimizerResult | null> {
+  return window.vialAPI.typingAnalyticsGetLayoutOptimizerForRange(uid, fromMs, toMs, scope, options)
 }

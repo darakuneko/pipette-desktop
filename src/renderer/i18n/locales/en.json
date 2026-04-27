@@ -854,6 +854,7 @@
       "keyHeatmap": "Heatmap",
       "ergonomics": "Ergonomics",
       "bigrams": "Bigrams",
+      "layoutOptimizer": "Layout Optimizer",
       "layer": "Layer"
     },
     "summary": {
@@ -999,6 +1000,27 @@
         "home": "Home",
         "bottom": "Bottom",
         "thumb": "Thumb"
+      }
+    },
+    "layoutOptimizer": {
+      "sourceLabel": "Current layout",
+      "targetLabel": "Compare to",
+      "noTargetOption": "—",
+      "noTarget": "Pick a layout to compare against your typing.",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "noData": "No matrix activity recorded in this range.",
+      "loading": "Loading layout comparison…",
+      "fetchError": "Failed to compute the layout comparison.",
+      "skipWarning": "{{percent}}% of events couldn't map onto this layout. Treat the metrics below as approximate.",
+      "headers": {
+        "metric": "Metric",
+        "current": "Current"
+      },
+      "metrics": {
+        "fingerLoad": "Finger load",
+        "handBalance": "Hand balance",
+        "rowDist": "Row distribution",
+        "homeRow": "Home-row stay"
       }
     },
     "layer": {

@@ -852,6 +852,7 @@
       "keyHeatmap": "ヒートマップ",
       "ergonomics": "エルゴノミクス",
       "bigrams": "バイグラム",
+      "layoutOptimizer": "Layout Optimizer",
       "layer": "レイヤー"
     },
     "summary": {
@@ -997,6 +998,27 @@
         "home": "ホーム行",
         "bottom": "下段",
         "thumb": "親指段"
+      }
+    },
+    "layoutOptimizer": {
+      "sourceLabel": "現在のレイアウト",
+      "targetLabel": "比較するレイアウト",
+      "noTargetOption": "—",
+      "noTarget": "比較するレイアウトを選んでください。",
+      "noSnapshot": "この期間のキーマップスナップショットがありません。レコードを開始すると保存されます。",
+      "noData": "この期間に打鍵データが記録されていません。",
+      "loading": "レイアウト比較を計算中…",
+      "fetchError": "レイアウト比較の計算に失敗しました。",
+      "skipWarning": "{{percent}}% のイベントがこのレイアウトに対応できませんでした。下の数値は参考値として扱ってください。",
+      "headers": {
+        "metric": "指標",
+        "current": "現在"
+      },
+      "metrics": {
+        "fingerLoad": "指の負担",
+        "handBalance": "左右バランス",
+        "rowDist": "行分布",
+        "homeRow": "ホーム行率"
       }
     },
     "layer": {

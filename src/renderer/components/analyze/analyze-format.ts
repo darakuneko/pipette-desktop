@@ -42,6 +42,16 @@ export function formatSharePercent(fraction: number): string {
   return (fraction * 100).toFixed(1)
 }
 
+/** Same `(v * 100).toFixed(1)%` shape as `formatSharePercent` but
+ * tolerant of `undefined` and prints the `%` glyph itself, so a
+ * single helper covers Layout Optimizer cells and skip-rate banner
+ * without forcing each call site to repeat the wrap. Renders `'—'`
+ * when the value is missing or non-finite. */
+export function formatPercentLabel(value: number | undefined): string {
+  if (value === undefined || !Number.isFinite(value)) return '—'
+  return `${(value * 100).toFixed(1)}%`
+}
+
 export interface WeightedSample {
   value: number
   weight: number
