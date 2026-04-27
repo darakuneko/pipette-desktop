@@ -25,8 +25,7 @@
 
 import { findInnerKeycode } from '../../shared/keycodes/keycodes'
 import {
-  buildErgonomicsContext,
-  estimateErgonomicsWithContext,
+  buildErgonomicsByPos,
   type FingerType,
   type HandType,
   type RowCategory,
@@ -116,16 +115,7 @@ export function buildLayoutResolver(input: LayoutResolverInput): LayoutResolver 
   }
 
   // Build pos → ergonomics meta once across the full KleKey set.
-  const ergonomicsByPos = new Map<
-    string,
-    { finger?: FingerType; hand?: HandType; row?: RowCategory }
-  >()
-  const ergonomicsCtx = buildErgonomicsContext(input.kleKeys)
-  if (ergonomicsCtx) {
-    for (const k of input.kleKeys) {
-      ergonomicsByPos.set(posKey(k.row, k.col), estimateErgonomicsWithContext(k, ergonomicsCtx))
-    }
-  }
+  const ergonomicsByPos = buildErgonomicsByPos(input.kleKeys)
 
   // Pre-compute the full ResolveResult per source position. The
   // event-time resolve() then degenerates to a single Map.get().

@@ -7,8 +7,7 @@
 
 import { deserialize } from '../../../shared/keycodes/keycodes'
 import {
-  buildErgonomicsContext,
-  estimateErgonomicsWithContext,
+  buildErgonomicsByPos,
   type FingerType,
 } from '../../../shared/kle/kle-ergonomics'
 import { posKey } from '../../../shared/kle/pos-key'
@@ -39,8 +38,7 @@ export function buildKeycodeFingerMap(
   if (snapshot.keymap.length === 0) return result
   const layer0 = snapshot.keymap[0]
   if (!layer0) return result
-  const ctx = buildErgonomicsContext([...keys])
-  if (!ctx) return result
+  const ergonomicsByPos = buildErgonomicsByPos([...keys])
   for (const key of keys) {
     const row = layer0[key.row]
     if (!row) continue
@@ -56,7 +54,7 @@ export function buildKeycodeFingerMap(
     if (result.has(code)) continue
     const pos = posKey(key.row, key.col)
     const override = fingerOverrides?.[pos]
-    const finger = override ?? estimateErgonomicsWithContext(key, ctx).finger
+    const finger = override ?? ergonomicsByPos.get(pos)?.finger
     if (finger) result.set(code, finger)
   }
   return result

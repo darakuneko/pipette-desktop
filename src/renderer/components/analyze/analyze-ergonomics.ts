@@ -7,13 +7,11 @@ import type { KleKey } from '../../../shared/kle/types'
 import {
   FINGER_LIST,
   HAND_OF_FINGER,
-  buildErgonomicsContext,
-  estimateErgonomicsWithContext,
+  buildErgonomicsByPos,
   type FingerType,
   type HandType,
   type RowCategory,
 } from '../../../shared/kle/kle-ergonomics'
-import { posKey } from '../../../shared/kle/pos-key'
 
 // Re-export so callers (Ergonomics chart, CSV export builders, etc.)
 // reach the constant via this module without re-importing the deeper
@@ -92,18 +90,13 @@ export function aggregateErgonomics(
     total: 0,
     unmappedFinger: 0,
   }
-  const ctx = buildErgonomicsContext(allKeys)
-  if (!ctx) return result
-
-  const keyByPos = new Map<string, KleKey>()
-  for (const k of allKeys) keyByPos.set(posKey(k.row, k.col), k)
+  const ergonomicsByPos = buildErgonomicsByPos(allKeys)
 
   for (const [pos, cell] of heatmap) {
     const count = cell.total
     if (!(count > 0)) continue
-    const key = keyByPos.get(pos)
-    if (!key) continue
-    const estimate = estimateErgonomicsWithContext(key, ctx)
+    const estimate = ergonomicsByPos.get(pos)
+    if (!estimate) continue
     const override = fingerOverrides?.[pos]
     const finger = override ?? estimate.finger
     const hand = override ? HAND_OF_FINGER[override] : estimate.hand

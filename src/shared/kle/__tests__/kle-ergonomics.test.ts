@@ -6,6 +6,7 @@ import type { KleKey } from '../types'
 import {
   FINGER_LIST,
   HAND_OF_FINGER,
+  buildErgonomicsByPos,
   buildErgonomicsContext,
   clusterRowsByY,
   detectSplitGap,
@@ -15,6 +16,7 @@ import {
   estimateHandFromX,
   estimateRowCategoryFromClusters,
 } from '../kle-ergonomics'
+import { posKey } from '../pos-key'
 
 function keyAt(keys: KleKey[], row: number, col: number): KleKey {
   const k = keys.find((x) => x.row === row && x.col === col)
@@ -284,5 +286,23 @@ describe('Split layout integration', () => {
     expect(leftThumb.row).toBe('thumb')
     expect(rightThumb.finger).toBe('right-thumb')
     expect(rightThumb.row).toBe('thumb')
+  })
+})
+
+describe('buildErgonomicsByPos', () => {
+  it('returns one ErgonomicsMeta per key, keyed by posKey', () => {
+    const keys = buildAnsi60()
+    const map = buildErgonomicsByPos(keys)
+    expect(map.size).toBe(keys.length)
+    for (const k of keys) {
+      const meta = map.get(posKey(k.row, k.col))
+      expect(meta).toBeDefined()
+      // The pre-computed estimate must match the on-the-fly call.
+      expect(meta).toEqual(estimateErgonomics(k, keys))
+    }
+  })
+
+  it('returns an empty map when geometry context cannot be built', () => {
+    expect(buildErgonomicsByPos([]).size).toBe(0)
   })
 })

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Ergonomics metadata estimation from KLE geometry.
 
+import { posKey } from './pos-key'
 import type { KleKey } from './types'
 
 // -------- Types --------
@@ -328,4 +329,22 @@ export function estimateErgonomics(
   const ctx = buildErgonomicsContext(allKeys)
   if (!ctx) return {}
   return estimateErgonomicsWithContext(key, ctx)
+}
+
+/**
+ * Pre-compute ergonomics meta for every key, keyed by `posKey(row, col)`.
+ * Returns an empty Map when geometry context can't be built (e.g.
+ * empty key set). Callers can then fold per-event lookups to a single
+ * Map.get() without repeating estimateErgonomicsWithContext.
+ */
+export function buildErgonomicsByPos(
+  keys: KleKey[],
+): Map<string, ErgonomicsMeta> {
+  const out = new Map<string, ErgonomicsMeta>()
+  const ctx = buildErgonomicsContext(keys)
+  if (!ctx) return out
+  for (const k of keys) {
+    out.set(posKey(k.row, k.col), estimateErgonomicsWithContext(k, ctx))
+  }
+  return out
 }
