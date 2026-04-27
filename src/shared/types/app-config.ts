@@ -24,16 +24,6 @@ export const TYPING_HEATMAP_WINDOW_OPTIONS = [
 ] as const
 export type TypingHeatmapWindowMin = typeof TYPING_HEATMAP_WINDOW_OPTIONS[number]
 
-/** Analyze split-view UI state. Stored on AppConfig (per-machine,
- * sync-excluded) because the toggle is a viewing preference for the
- * user's current workstation, not data the keyboards themselves carry.
- * `paneBUid` remembers the last keyboard the user picked for the
- * compare pane so reopening Analyze restores the prior comparison. */
-export interface AnalyzeSplitViewSettings {
-  enabled: boolean
-  paneBUid?: string
-}
-
 export interface AppConfig {
   autoSync: boolean
   windowState?: WindowState
@@ -55,10 +45,6 @@ export interface AppConfig {
    * disclosure. Gates the REC-tab "Start" button so the modal can
    * surface what the recorder collects vs what it does not. */
   typingRecordingConsentAccepted: boolean
-  /** Analyze split-view UI state. Optional so existing on-disk configs
-   * keep validating without a migration; renderer treats `undefined`
-   * the same as `{ enabled: false }`. */
-  analyzeSplitView?: AnalyzeSplitViewSettings
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -78,7 +64,6 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'maxKeymapHistory',
   'typingHeatmapWindowMin',
   'typingRecordingConsentAccepted',
-  'analyzeSplitView',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {

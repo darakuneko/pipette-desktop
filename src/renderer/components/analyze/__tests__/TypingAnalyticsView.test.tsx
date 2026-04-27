@@ -17,14 +17,6 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('../../../hooks/useAppConfig', () => ({
-  useAppConfig: () => ({
-    config: { analyzeSplitView: undefined },
-    loading: false,
-    set: () => {},
-  }),
-}))
-
 type MockScope = 'own' | 'all' | { kind: 'hash'; machineHash: string }
 
 interface MockChartProps {

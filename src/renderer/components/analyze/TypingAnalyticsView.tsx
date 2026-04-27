@@ -3,14 +3,14 @@
 // and the page chrome (back / split-view toggle footer) so multiple
 // `AnalyzePane`s can share a single keyboards list while keeping fully
 // independent uid / filter / tab state. Split View renders a second
-// pane behind a per-machine AppConfig toggle so the user can compare
-// keyboards / ranges / sub-tabs side-by-side
-// (Plan-P2-analyze-split-view).
+// pane so the user can compare keyboards / ranges / sub-tabs
+// side-by-side. The toggle is intentionally session-only — re-opening
+// the Analyze page resets to the single-pane view so the user starts
+// from a known state.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
-import { useAppConfig } from '../../hooks/useAppConfig'
 import { AnalyzePane } from './AnalyzePane'
 
 // Below this viewport width the two panes can't fit side-by-side
@@ -38,15 +38,12 @@ interface TypingAnalyticsViewProps {
 
 export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewProps = {}) {
   const { t } = useTranslation()
-  const { config, set: setAppConfigKey } = useAppConfig()
-  const splitView = config.analyzeSplitView
-  const splitEnabled = splitView?.enabled ?? false
-  const persistedPaneBUid = splitView?.paneBUid
+  const [splitEnabled, setSplitEnabled] = useState(false)
 
   const [keyboards, setKeyboards] = useState<TypingKeyboardSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedUidA, setSelectedUidA] = useState<string | null>(initialUid ?? null)
-  const [selectedUidB, setSelectedUidB] = useState<string | null>(persistedPaneBUid ?? null)
+  const [selectedUidB, setSelectedUidB] = useState<string | null>(null)
   const [isWideViewport, setIsWideViewport] = useState<boolean>(
     () => typeof window === 'undefined' || window.innerWidth >= SPLIT_MIN_WIDTH_PX,
   )
@@ -60,13 +57,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   const splitVisible = splitEnabled && isWideViewport
 
-  // Capture the persisted Pane B uid once at mount via ref so a later
-  // user-driven Pane B switch (which writes back to AppConfig) doesn't
-  // change the `refresh` identity and re-fire the keyboards list IPC.
-  // The handleSelectUidB path keeps `selectedUidB` and storage in sync
-  // without any list re-fetch.
-  const persistedPaneBUidAtMountRef = useRef<string | undefined>(persistedPaneBUid)
-
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
@@ -77,10 +67,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         if (initialUid && list.some((kb) => kb.uid === initialUid)) return initialUid
         return list[0]?.uid ?? null
       })
-      const persistedB = persistedPaneBUidAtMountRef.current
       setSelectedUidB((prev) => {
         if (prev && list.some((kb) => kb.uid === prev)) return prev
-        if (persistedB && list.some((kb) => kb.uid === persistedB)) return persistedB
         return null
       })
     } catch {
@@ -96,31 +84,20 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
     void refresh()
   }, [refresh])
 
-  // First-time toggle on with no persisted Pane B uid: seed it from
-  // Pane A so the compare view starts on the same keyboard the user
-  // is currently looking at.
+  // First-time toggle on with no Pane B uid yet: seed it from Pane A
+  // so the compare view starts on the same keyboard the user is
+  // currently looking at.
   const handleToggleSplit = useCallback(() => {
-    const next = !splitEnabled
-    const shouldSeedFromPaneA = next
-      && persistedPaneBUid === undefined
-      && selectedUidB === null
-      && selectedUidA !== null
-    if (shouldSeedFromPaneA) {
-      setSelectedUidB(selectedUidA)
-    }
-    const seededPaneBUid = shouldSeedFromPaneA
-      ? selectedUidA ?? undefined
-      : (selectedUidB ?? undefined)
-    setAppConfigKey('analyzeSplitView', { enabled: next, paneBUid: seededPaneBUid })
-  }, [splitEnabled, persistedPaneBUid, selectedUidA, selectedUidB, setAppConfigKey])
-
-  const handleSelectUidB = useCallback((uid: string | null) => {
-    setSelectedUidB(uid)
-    setAppConfigKey('analyzeSplitView', {
-      enabled: splitEnabled,
-      paneBUid: uid ?? undefined,
+    setSplitEnabled((prev) => {
+      const next = !prev
+      if (next && selectedUidB === null && selectedUidA !== null) {
+        setSelectedUidB(selectedUidA)
+      }
+      return next
     })
-  }, [splitEnabled, setAppConfigKey])
+  }, [selectedUidA, selectedUidB])
+
+  const handleSelectUidB = setSelectedUidB
 
   return (
     <div
