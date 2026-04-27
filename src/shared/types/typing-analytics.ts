@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Typing analytics shared types — see .claude/plans/typing-analytics.md.
 
+import type { FingerType, RowCategory } from '../kle/kle-ergonomics'
+
 export const TYPING_ANALYTICS_REV = 1
 export const TYPING_ANALYTICS_VERSION = 1
 
@@ -313,6 +315,66 @@ export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
 export type TypingBigramAggregateResult =
   | { view: 'top'; entries: TypingBigramTopEntry[] }
   | { view: 'slow'; entries: TypingBigramSlowEntry[] }
+
+/** Phase 1 metrics for the Layout Optimizer. Bigram-derived ones
+ * (travel distance / SFB) are added in Phase 2. */
+export type LayoutOptimizerMetric =
+  | 'fingerLoad'
+  | 'handBalance'
+  | 'rowDist'
+  | 'homeRow'
+
+// Aliased to the geometry-side unions so adding a new finger or row
+// category in `shared/kle/kle-ergonomics.ts` automatically widens the
+// optimizer result shape — re-exporting prevents drift between the
+// two modules.
+export type LayoutOptimizerFingerKey = FingerType
+export type LayoutOptimizerRowKey = RowCategory
+
+/** A target / source layout shape sent over IPC. The renderer holds
+ * `KEYBOARD_LAYOUTS` and forwards just the `id` and `map` slice the
+ * resolver needs, so the main process stays data-agnostic. */
+export interface LayoutOptimizerInputLayout {
+  id: string
+  map: Record<string, string>
+}
+
+export interface LayoutOptimizerOptions {
+  source: LayoutOptimizerInputLayout
+  /** 1〜3 layouts in Phase 1; UI guard but main accepts any length. */
+  targets: LayoutOptimizerInputLayout[]
+  /** Subset of metrics to compute. Empty array yields just the
+   * total / skipped event counts. */
+  metrics: LayoutOptimizerMetric[]
+}
+
+export interface LayoutOptimizerTargetResult {
+  layoutId: string
+  /** Events whose source-layout char resolved AND landed on a target
+   * physical position. */
+  totalEvents: number
+  /** Events the resolver could not place (no source char, no target
+   * char, or no target position on this snapshot). */
+  skippedEvents: number
+  /** skippedEvents / (totalEvents + skippedEvents); 0 when both are 0. */
+  skipRate: number
+  /** Each finger's share of `totalEvents`. Sum ≤ 1 (entries with no
+   * geometry-derived finger fall through `unmappedFinger`). */
+  fingerLoad?: Partial<Record<LayoutOptimizerFingerKey, number>>
+  unmappedFinger?: number
+  /** Left/right share of `totalEvents`. */
+  handBalance?: { left: number; right: number }
+  /** number / top / home / bottom / thumb / function share of
+   * `totalEvents`. */
+  rowDist?: Partial<Record<LayoutOptimizerRowKey, number>>
+  /** Share of `totalEvents` whose target row is the home row. */
+  homeRowStay?: number
+}
+
+export interface LayoutOptimizerResult {
+  sourceLayoutId: string
+  targets: LayoutOptimizerTargetResult[]
+}
 
 /** Build the canonical scope key from a fingerprint. Excludes productName
  * so that cross-OS descriptor variation doesn't fragment the same device. */

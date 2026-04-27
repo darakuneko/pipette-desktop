@@ -16,6 +16,8 @@ import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
 import type { PipetteSettings } from '../shared/types/pipette-settings'
 import type {
+  LayoutOptimizerOptions,
+  LayoutOptimizerResult,
   TypingActivityCell,
   TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
@@ -310,6 +312,21 @@ const vialAPI = {
       sinceMs,
       untilMs,
       view,
+      scope,
+      options,
+    ),
+  typingAnalyticsGetLayoutOptimizerForRange: (
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: DeviceScope,
+    options: LayoutOptimizerOptions,
+  ): Promise<LayoutOptimizerResult | null> =>
+    ipcRenderer.invoke(
+      IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_OPTIMIZER_FOR_RANGE,
+      uid,
+      sinceMs,
+      untilMs,
       scope,
       options,
     ),

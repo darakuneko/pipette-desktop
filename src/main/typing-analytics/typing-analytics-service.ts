@@ -9,6 +9,10 @@ import { platform, release } from 'node:os'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { secureHandle } from '../ipc-guard'
 import type {
+  LayoutOptimizerInputLayout,
+  LayoutOptimizerMetric,
+  LayoutOptimizerOptions,
+  LayoutOptimizerResult,
   TypingAnalyticsDeviceInfo,
   TypingAnalyticsDeviceInfoBundle,
   TypingAnalyticsEvent,
@@ -21,6 +25,7 @@ import type {
   TypingBigramAggregateResult,
   TypingBigramAggregateView,
 } from '../../shared/types/typing-analytics'
+import type { KleKey } from '../../shared/kle/types'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { isHashScope, isOwnScope, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
@@ -73,6 +78,7 @@ import {
   rankBigramsByCount,
   rankBigramsBySlow,
 } from './bigram-aggregate'
+import { computeLayoutOptimizer } from './compute-layout-optimizer'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
@@ -614,6 +620,55 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_OPTIMIZER_FOR_RANGE,
+    async (
+      _event,
+      uid: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      scope: unknown,
+      options: unknown,
+    ): Promise<LayoutOptimizerResult | null> => {
+      if (typeof uid !== 'string' || uid.length === 0) return null
+      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
+      if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return null
+      const parsedScope = parseDeviceScope(scope)
+      if (parsedScope === null) return null
+      const opts = parseLayoutOptimizerOptions(options)
+      if (!opts) return null
+      // Snapshots are only stored for the own device, so we always
+      // resolve the source layer + KleKey geometry against the local
+      // machine hash regardless of which scope the metric counts use.
+      const ownHash = await getMachineHash()
+      const snapshot = await getKeymapSnapshotForRange(app.getPath('userData'), uid, ownHash, sinceMs, untilMs)
+      if (!snapshot) return null
+      const kleKeys = extractKleKeysFromSnapshot(snapshot)
+      const matrixHash = isOwnScope(parsedScope)
+        ? ownHash
+        : isHashScope(parsedScope)
+          ? parsedScope.machineHash
+          : undefined
+      const sinceMinuteMs = Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS
+      const untilMinuteMs = Math.ceil(untilMs / MINUTE_MS) * MINUTE_MS
+      const matrixCounts = getTypingAnalyticsDB().aggregateMatrixCountsForUidInRange(
+        uid,
+        0,
+        sinceMinuteMs,
+        untilMinuteMs,
+        matrixHash,
+      )
+      return computeLayoutOptimizer({
+        matrixCounts,
+        snapshot,
+        kleKeys,
+        source: opts.source,
+        targets: opts.targets,
+        metrics: opts.metrics,
+      })
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE,
     async (_event, uid: unknown, fromMs: unknown, toMs: unknown): Promise<TypingKeymapSnapshot | null> => {
       if (typeof uid !== 'string' || uid.length === 0) return null
@@ -1148,6 +1203,45 @@ function parseBigramAggregateOptions(value: unknown): TypingBigramAggregateOptio
     out.limit = Math.floor(o.limit)
   }
   return out
+}
+
+const LAYOUT_OPTIMIZER_METRICS = new Set<LayoutOptimizerMetric>([
+  'fingerLoad',
+  'handBalance',
+  'rowDist',
+  'homeRow',
+])
+
+function isLayoutInputLayout(value: unknown): value is LayoutOptimizerInputLayout {
+  if (typeof value !== 'object' || value === null) return false
+  const o = value as Record<string, unknown>
+  if (typeof o.id !== 'string' || o.id.length === 0) return false
+  if (typeof o.map !== 'object' || o.map === null) return false
+  return true
+}
+
+function parseLayoutOptimizerOptions(value: unknown): LayoutOptimizerOptions | null {
+  if (typeof value !== 'object' || value === null) return null
+  const o = value as Record<string, unknown>
+  if (!isLayoutInputLayout(o.source)) return null
+  if (!Array.isArray(o.targets) || !o.targets.every(isLayoutInputLayout)) return null
+  if (!Array.isArray(o.metrics)) return null
+  const metrics: LayoutOptimizerMetric[] = []
+  for (const m of o.metrics) {
+    if (typeof m === 'string' && LAYOUT_OPTIMIZER_METRICS.has(m as LayoutOptimizerMetric)) {
+      metrics.push(m as LayoutOptimizerMetric)
+    }
+  }
+  return { source: o.source, targets: o.targets, metrics }
+}
+
+/** snapshot.layout is wire-shaped (`{ keys: KleKey[] }` from the
+ * renderer). Pull the keys array out defensively in case a future
+ * snapshot format change leaves it absent. */
+function extractKleKeysFromSnapshot(snapshot: TypingKeymapSnapshot): KleKey[] {
+  const layout = snapshot.layout as { keys?: unknown } | null
+  if (!layout || !Array.isArray(layout.keys)) return []
+  return layout.keys as KleKey[]
 }
 
 function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRow[] {

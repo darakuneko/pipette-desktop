@@ -110,6 +110,7 @@ export const IpcChannels = {
   TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS: 'typing-analytics:list-keymap-snapshots',
   TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE: 'typing-analytics:get-matrix-heatmap-for-range',
   TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE: 'typing-analytics:get-bigram-aggregate-for-range',
+  TYPING_ANALYTICS_GET_LAYOUT_OPTIMIZER_FOR_RANGE: 'typing-analytics:get-layout-optimizer-for-range',
   TYPING_ANALYTICS_LIST_DEVICE_INFOS: 'typing-analytics:list-device-infos',
   TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
   // Per-hash variants used by the Analyze Device select when scoping
