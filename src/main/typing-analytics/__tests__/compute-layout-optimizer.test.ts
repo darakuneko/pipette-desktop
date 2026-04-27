@@ -224,6 +224,35 @@ describe('computeLayoutOptimizer', () => {
     expect(result.targets[1].skippedEvents).toBe(1)
   })
 
+  it('emits per-target cellCounts keyed by the target physical position', () => {
+    // QWERTY R press resolves to the QWERTY S position on Colemak
+    // (Colemak labels "r" → KC_S → snapshot S = (0, 1)). The current
+    // baseline (source = target) keeps the event on its source pos.
+    const snapshot = makeSnapshot([['KC_R', 'KC_S']])
+    const result = computeLayoutOptimizer({
+      matrixCounts: counts([['0,0', 4]]),
+      snapshot,
+      kleKeys: [],
+      source: QWERTY,
+      targets: [QWERTY, COLEMAK],
+      metrics: [],
+    })
+    expect(result.targets[0].cellCounts).toEqual({ '0,0': 4 })
+    expect(result.targets[1].cellCounts).toEqual({ '0,1': 4 })
+  })
+
+  it('omits cellCounts when no events resolved', () => {
+    const result = computeLayoutOptimizer({
+      matrixCounts: counts([['0,0', 1]]),
+      snapshot: makeSnapshot([['KC_NO']]),
+      kleKeys: [],
+      source: QWERTY,
+      targets: [COLEMAK],
+      metrics: [],
+    })
+    expect(result.targets[0].cellCounts).toBeUndefined()
+  })
+
   it('skips zero-count cells without affecting metrics', () => {
     const result = computeLayoutOptimizer({
       matrixCounts: counts([

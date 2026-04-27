@@ -1011,10 +1011,16 @@
       "fetchError": "レイアウト比較の計算に失敗しました。",
       "skipWarning": "{{percent}}% のイベントがこのレイアウトに対応できませんでした。下の数値は参考値として扱ってください。",
       "fingerDiffTitle": "{{target}} との指負担差分",
+      "heatmapDiffTitle": "{{target}} との位置別負担差分",
+      "heatmapDiffLegend": {
+        "decrease": "比較先で減少",
+        "increase": "比較先で増加"
+      },
       "subView": {
         "label": "サブビュー",
         "metric": "数値表",
-        "fingerDiff": "指の差分"
+        "fingerDiff": "指の差分",
+        "heatmapDiff": "位置の差分"
       },
       "headers": {
         "metric": "指標",

@@ -11,6 +11,7 @@ import {
   scopeToSelectValue,
   type DeviceScope,
 } from '../../../shared/types/analyze-filters'
+import type { KeyboardLayout, KleKey } from '../../../shared/kle/types'
 import type {
   LayoutOptimizerMetric,
   LayoutOptimizerResult,
@@ -21,13 +22,16 @@ import { fetchLayoutOptimizerForRange } from './analyze-fetch'
 import { FILTER_BUTTON } from './analyze-filter-styles'
 import { formatSharePercent } from './analyze-format'
 import { LayoutOptimizerFingerDiff } from './LayoutOptimizerFingerDiff'
+import { LayoutOptimizerHeatmapDiff } from './LayoutOptimizerHeatmapDiff'
 import { LayoutOptimizerMetricTable } from './LayoutOptimizerMetricTable'
 import { LayoutOptimizerSelector } from './LayoutOptimizerSelector'
 import type { RangeMs } from './analyze-types'
 
-type SubView = 'metric' | 'fingerDiff'
+type SubView = 'metric' | 'fingerDiff' | 'heatmapDiff'
 
-const SUB_VIEWS: SubView[] = ['metric', 'fingerDiff']
+const SUB_VIEWS: SubView[] = ['metric', 'fingerDiff', 'heatmapDiff']
+
+const EMPTY_KLE_KEYS: readonly KleKey[] = []
 
 interface Props {
   uid: string
@@ -125,6 +129,15 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
     return max
   }, [result])
 
+  // The Heatmap Diff sub-view paints onto a KeyboardWidget, so it
+  // needs the snapshot's KLE geometry. snapshot.layout is `unknown`
+  // by type — every Analyze chart casts it the same way.
+  const kleKeys = useMemo<readonly KleKey[]>(() => {
+    const layout = snapshot?.layout as KeyboardLayout | null
+    if (!layout || !Array.isArray(layout.keys)) return EMPTY_KLE_KEYS
+    return layout.keys
+  }, [snapshot])
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto" data-testid="analyze-layout-optimizer-view">
       <LayoutOptimizerSelector
@@ -184,12 +197,19 @@ export function LayoutOptimizerView({ uid, range, deviceScopes, snapshot }: Prop
               columnLabels={columnLabels}
               targets={result.targets}
             />
-          ) : (
+          ) : subView === 'fingerDiff' ? (
             // Fetch site enforces `targets = [source, target]`, so
             // [1] is always present once the result lands.
             <LayoutOptimizerFingerDiff
               current={result.targets[0]}
               target={result.targets[1]}
+              targetLabel={columnLabels[1] ?? result.targets[1].layoutId}
+            />
+          ) : (
+            <LayoutOptimizerHeatmapDiff
+              current={result.targets[0]}
+              target={result.targets[1]}
+              kleKeys={kleKeys}
               targetLabel={columnLabels[1] ?? result.targets[1].layoutId}
             />
           )}

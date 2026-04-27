@@ -1013,10 +1013,16 @@
       "fetchError": "Failed to compute the layout comparison.",
       "skipWarning": "{{percent}}% of events couldn't map onto this layout. Treat the metrics below as approximate.",
       "fingerDiffTitle": "Finger load delta vs {{target}}",
+      "heatmapDiffTitle": "Per-key load delta vs {{target}}",
+      "heatmapDiffLegend": {
+        "decrease": "Less on candidate",
+        "increase": "More on candidate"
+      },
       "subView": {
         "label": "Sub-view",
         "metric": "Metric table",
-        "fingerDiff": "Finger diff"
+        "fingerDiff": "Finger diff",
+        "heatmapDiff": "Heatmap diff"
       },
       "headers": {
         "metric": "Metric",

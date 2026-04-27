@@ -14,6 +14,7 @@
 // See Plan-analyze-layout-optimizer §「metric 計算式」.
 
 import type { ErgonomicsMeta, FingerType, RowCategory } from '../../shared/kle/kle-ergonomics'
+import { posKey } from '../../shared/kle/pos-key'
 import type { KleKey } from '../../shared/kle/types'
 import type {
   LayoutOptimizerFingerKey,
@@ -51,6 +52,7 @@ interface TargetAccumulator {
   handCounts: { left: number; right: number }
   rowCounts: Map<RowCategory, number>
   homeEvents: number
+  cellCounts: Map<string, number>
 }
 
 function newAccumulator(): TargetAccumulator {
@@ -62,6 +64,7 @@ function newAccumulator(): TargetAccumulator {
     handCounts: { left: 0, right: 0 },
     rowCounts: new Map(),
     homeEvents: 0,
+    cellCounts: new Map(),
   }
 }
 
@@ -76,6 +79,8 @@ function record(acc: TargetAccumulator, count: number, result: ResolveResult): v
     hand: result.hand,
     row: result.rowCategory,
   }
+  const targetPos = posKey(result.targetRow, result.targetCol)
+  acc.cellCounts.set(targetPos, (acc.cellCounts.get(targetPos) ?? 0) + count)
   if (meta.finger) {
     acc.fingerCounts.set(meta.finger, (acc.fingerCounts.get(meta.finger) ?? 0) + count)
   } else {
@@ -130,6 +135,11 @@ function finalizeTarget(
   }
   if (metrics.has('homeRow')) {
     out.homeRowStay = ratio(acc.homeEvents, acc.totalEvents)
+  }
+  if (acc.cellCounts.size > 0) {
+    const cellCounts: Record<string, number> = {}
+    for (const [pos, count] of acc.cellCounts) cellCounts[pos] = count
+    out.cellCounts = cellCounts
   }
   return out
 }

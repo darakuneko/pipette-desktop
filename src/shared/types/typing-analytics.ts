@@ -369,6 +369,11 @@ export interface LayoutOptimizerTargetResult {
   rowDist?: Partial<Record<LayoutOptimizerRowKey, number>>
   /** Share of `totalEvents` whose target row is the home row. */
   homeRowStay?: number
+  /** posKey → events whose source-pos resolved to this target physical
+   * position. Always populated (independent of `metrics`) because the
+   * Heatmap Diff sub-view consumes it without paying a separate IPC
+   * round-trip; the renderer derives the diff from the entries. */
+  cellCounts?: Record<string, number>
 }
 
 export interface LayoutOptimizerResult {
