@@ -19,6 +19,11 @@ import { AnalyzePane } from './AnalyzePane'
 // stays so resizing wider restores split immediately).
 const SPLIT_MIN_WIDTH_PX = 1280
 
+// Keep both footer buttons identical in size — they only differ in
+// color/state classes.
+const FOOTER_BUTTON_BASE =
+  'inline-flex items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-xs leading-none transition-colors'
+
 interface TypingAnalyticsViewProps {
   /** Pre-select this keyboard on mount if it exists in the current
    * analytics data. Used when entering the Analyze page from the
@@ -146,7 +151,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         <button
           type="button"
           role="switch"
-          className={`whitespace-nowrap rounded border px-2 py-1 text-xs transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+          className={`${FOOTER_BUTTON_BASE} disabled:cursor-not-allowed disabled:opacity-50 ${
             splitVisible
               ? 'border-accent bg-accent/10 text-accent'
               : 'border-edge text-content-secondary hover:text-content'
@@ -162,7 +167,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         {onBack && (
           <button
             type="button"
-            className="flex items-center justify-center gap-1 rounded border border-edge px-2.5 py-1 text-xs leading-none text-red-500 transition-colors hover:text-red-600"
+            className={`${FOOTER_BUTTON_BASE} border-edge text-red-500 hover:text-red-600`}
             onClick={onBack}
             data-testid="analyze-back"
           >
