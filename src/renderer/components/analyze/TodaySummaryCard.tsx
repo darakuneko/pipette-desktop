@@ -60,6 +60,7 @@ export function TodaySummaryCard({ daily, today }: Props) {
         items={items}
         ariaLabelKey="analyze.summary.today.ariaLabel"
         testId="analyze-today-summary"
+        tooltipSide="bottom"
       />
     </section>
   )

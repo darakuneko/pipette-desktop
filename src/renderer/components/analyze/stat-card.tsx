@@ -7,7 +7,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
-import { Tooltip as UITooltip, type TooltipAlign } from '../ui/Tooltip'
+import { Tooltip as UITooltip, type TooltipAlign, type TooltipSide } from '../ui/Tooltip'
 
 const GRID_COLS = 4
 
@@ -24,6 +24,10 @@ interface Props {
    * `center`; callers may set `end` for the right-most card in a row so
    * the bubble cannot overflow the viewport on the right. */
   tooltipAlign?: TooltipAlign
+  /** Side the tooltip bubble pops from. Defaults to `top`; callers can
+   * pass `bottom` for cards that sit at the very top of the viewport
+   * (e.g. Today's Summary) so the bubble doesn't get clipped above. */
+  tooltipSide?: TooltipSide
   /** Optional affordance rendered in the card's top-right corner —
    * used e.g. by the Daily Goal card to expose an inline edit button.
    * Kept generic so future cards can drop in their own trigger
@@ -32,7 +36,7 @@ interface Props {
   action?: ReactNode
 }
 
-export function StatCard({ label, value, unit, context, testid, description, tooltipAlign = 'center', action }: Props) {
+export function StatCard({ label, value, unit, context, testid, description, tooltipAlign = 'center', tooltipSide = 'top', action }: Props) {
   const body = (
     <div
       className="flex h-full flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2"
@@ -53,6 +57,7 @@ export function StatCard({ label, value, unit, context, testid, description, too
   const content = description ? (
     <UITooltip
       content={description}
+      side={tooltipSide}
       align={tooltipAlign}
       wrapperClassName="block h-full w-full"
       className="max-w-xs"
@@ -77,6 +82,11 @@ interface GridProps {
   items: ReadonlyArray<AnalyzeSummaryItem>
   ariaLabelKey: string
   testId?: string
+  /** Side the per-card tooltip bubble pops from. Forwarded uniformly to
+   * every card in the grid so the caller doesn't have to override per
+   * cell. Defaults to `top`; pass `bottom` for grids at the top of the
+   * viewport where an upward bubble would clip. */
+  tooltipSide?: TooltipSide
 }
 
 /** Grid renderer for {@link AnalyzeSummaryItem}s that honours `unit`
@@ -84,7 +94,7 @@ interface GridProps {
  * callers can swap between the two without rewriting their item
  * generator. The grid is always 4 columns (Electron main window enforces
  * `minWidth: 1320` so the Tailwind `sm` breakpoint is always met). */
-export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
+export function AnalyzeStatGrid({ items, ariaLabelKey, testId, tooltipSide }: GridProps) {
   const { t } = useTranslation()
   return (
     <div
@@ -107,6 +117,7 @@ export function AnalyzeStatGrid({ items, ariaLabelKey, testId }: GridProps) {
             context={item.context}
             description={item.descriptionKey ? t(item.descriptionKey) : undefined}
             tooltipAlign={tooltipAlign}
+            tooltipSide={tooltipSide}
             action={item.action}
           />
         )
