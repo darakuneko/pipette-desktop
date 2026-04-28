@@ -1,15 +1,38 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Shared tooltip renderer for Analyze bar charts. Formats a single
-// numeric payload with an i18n-keyed suffix (default
-// `analyze.unit.keys`) so Ergonomics, Layer, and any future bar-chart
-// tab present counts identically (same styling, configurable unit).
-// Accepts recharts' standard `active / label / payload` shape via a
-// render-prop call site:
-//
-//   <Tooltip content={(p) => <KeystrokeCountTooltip {...p} />} />
-//   <Tooltip content={(p) => <KeystrokeCountTooltip {...p} unitKey="analyze.unit.activations" />} />
+// Shared tooltip primitives for Analyze charts. Default recharts
+// `<Tooltip contentStyle=…>` paths are out of scope — those keep
+// recharts' built-in item/swatch rendering, which the shell can't
+// replicate.
 
+import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+
+const SHELL_STYLE = {
+  backgroundColor: 'var(--color-surface)',
+  border: '1px solid var(--color-edge)',
+  color: 'var(--color-content)',
+  fontSize: 12,
+  padding: '4px 8px',
+  borderRadius: 4,
+} as const
+
+const HEADER_STYLE = { color: 'var(--color-content-secondary)' } as const
+
+interface TooltipShellProps {
+  /** Optional first line in `var(--color-content-secondary)`. Skip for
+   * single-line tooltips that don't need a separate header row. */
+  header?: ReactNode
+  children: ReactNode
+}
+
+export function TooltipShell({ header, children }: TooltipShellProps): JSX.Element {
+  return (
+    <div style={SHELL_STYLE}>
+      {header ? <div style={HEADER_STYLE}>{header}</div> : null}
+      {children}
+    </div>
+  )
+}
 
 interface Props {
   active?: boolean
@@ -26,17 +49,8 @@ export function KeystrokeCountTooltip({ active, label, payload, unitKey = 'analy
   const formatted = typeof value === 'number' ? value.toLocaleString() : String(value ?? '')
   const displayLabel = typeof label === 'string' || typeof label === 'number' ? label : ''
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-edge)',
-        color: 'var(--color-content)',
-        fontSize: 12,
-        padding: '4px 8px',
-        borderRadius: 4,
-      }}
-    >
+    <TooltipShell>
       {displayLabel}: {formatted} {t(unitKey)}
-    </div>
+    </TooltipShell>
   )
 }

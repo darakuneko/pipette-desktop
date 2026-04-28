@@ -36,6 +36,7 @@ import {
 } from './analyze-bigram-heatmap'
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
 import type { RangeMs } from './analyze-types'
+import { TooltipShell } from './analyze-tooltip'
 
 interface BigramsChartProps {
   uid: string
@@ -698,23 +699,13 @@ function BigramCellTooltip({ active, label, payload }: BigramCellTooltipProps): 
   if (!datum) return null
   const displayLabel = typeof label === 'string' || typeof label === 'number' ? label : datum.label
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-edge)',
-        color: 'var(--color-content)',
-        fontSize: 12,
-        padding: '4px 8px',
-        borderRadius: 4,
-      }}
-    >
-      <div style={{ color: 'var(--color-content-secondary)' }}>{displayLabel}</div>
+    <TooltipShell header={displayLabel}>
       <div>
         {t('analyze.bigrams.cellTooltip', {
           count: datum.count,
           avgIki: Math.round(datum.value),
         })}
       </div>
-    </div>
+    </TooltipShell>
   )
 }
