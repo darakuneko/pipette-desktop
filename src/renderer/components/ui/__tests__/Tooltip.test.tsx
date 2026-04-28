@@ -2,11 +2,11 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { Tooltip } from '../Tooltip'
 
 describe('Tooltip', () => {
-  it('renders tooltip bubble with role="tooltip" and auto-generated id', () => {
+  it('renders tooltip bubble (portaled to body) with role="tooltip" and auto-generated id', () => {
     render(
       <Tooltip content="Hello">
         <button type="button">Trigger</button>
@@ -16,6 +16,9 @@ describe('Tooltip', () => {
     expect(bubble).toBeDefined()
     expect(bubble.id).toMatch(/.+/)
     expect(bubble.textContent).toBe('Hello')
+    // Portal target is document.body so the bubble escapes ancestor
+    // overflow-clip / overflow-auto containers.
+    expect(bubble.parentElement).toBe(document.body)
   })
 
   it('connects aria-describedby from trigger to tooltip id', () => {
@@ -65,78 +68,60 @@ describe('Tooltip', () => {
     expect(trigger.getAttribute('aria-describedby')).toBe('existing-id')
   })
 
-  it('applies openDelay as transitionDelay inline style', () => {
-    render(
+  it('applies openDelay as transitionDelay only while opening (closed = 0ms)', () => {
+    const { container } = render(
       <Tooltip content="Help" openDelay={500}>
         <button type="button">Trigger</button>
       </Tooltip>,
     )
     const bubble = screen.getByRole('tooltip')
+    // Closed: instant fade-out (no delay).
+    expect(bubble.style.transitionDelay).toBe('0ms')
+    fireEvent.mouseEnter(container.firstElementChild!)
     expect(bubble.style.transitionDelay).toBe('500ms')
-  })
-
-  it('supports openDelay={0} for instant show', () => {
-    render(
-      <Tooltip content="Help" openDelay={0}>
-        <button type="button">Trigger</button>
-      </Tooltip>,
-    )
-    const bubble = screen.getByRole('tooltip')
+    fireEvent.mouseLeave(container.firstElementChild!)
     expect(bubble.style.transitionDelay).toBe('0ms')
   })
 
-  it('applies offset as --tt-offset CSS variable', () => {
-    render(
-      <Tooltip content="Help" offset={12}>
+  it('clamps negative openDelay to 0 while open', () => {
+    const { container } = render(
+      <Tooltip content="Help" openDelay={-500}>
         <button type="button">Trigger</button>
       </Tooltip>,
     )
     const bubble = screen.getByRole('tooltip')
-    expect(bubble.style.getPropertyValue('--tt-offset')).toBe('12px')
-  })
-
-  it('clamps negative offset and openDelay to 0', () => {
-    render(
-      <Tooltip content="Help" offset={-10} openDelay={-500}>
-        <button type="button">Trigger</button>
-      </Tooltip>,
-    )
-    const bubble = screen.getByRole('tooltip')
-    expect(bubble.style.getPropertyValue('--tt-offset')).toBe('0px')
+    fireEvent.mouseEnter(container.firstElementChild!)
     expect(bubble.style.transitionDelay).toBe('0ms')
   })
 
-  it('uses default side="top" and align="center" when not specified', () => {
-    render(
+  it('starts with the bubble hidden (opacity-0) and reveals on hover', () => {
+    const { container } = render(
       <Tooltip content="Help">
         <button type="button">Trigger</button>
       </Tooltip>,
     )
     const bubble = screen.getByRole('tooltip')
-    expect(bubble.className).toContain('bottom-full')
-    expect(bubble.className).toContain('left-1/2')
+    expect(bubble.className).toContain('opacity-0')
+    expect(bubble.className).not.toContain('opacity-100')
+    const wrapper = container.firstElementChild!
+    fireEvent.mouseEnter(wrapper)
+    expect(bubble.className).toContain('opacity-100')
+    fireEvent.mouseLeave(wrapper)
+    expect(bubble.className).toContain('opacity-0')
   })
 
-  it('applies side="right" align="center" position classes', () => {
-    render(
-      <Tooltip content="Help" side="right">
+  it('opens on focus and closes on blur', () => {
+    const { container } = render(
+      <Tooltip content="Help">
         <button type="button">Trigger</button>
       </Tooltip>,
     )
     const bubble = screen.getByRole('tooltip')
-    expect(bubble.className).toContain('left-full')
-    expect(bubble.className).toContain('top-1/2')
-  })
-
-  it('applies side="bottom" align="end" position classes', () => {
-    render(
-      <Tooltip content="Help" side="bottom" align="end">
-        <button type="button">Trigger</button>
-      </Tooltip>,
-    )
-    const bubble = screen.getByRole('tooltip')
-    expect(bubble.className).toContain('top-full')
-    expect(bubble.className).toContain('right-0')
+    const wrapper = container.firstElementChild!
+    fireEvent.focus(wrapper)
+    expect(bubble.className).toContain('opacity-100')
+    fireEvent.blur(wrapper)
+    expect(bubble.className).toContain('opacity-0')
   })
 
   it('merges additional className into bubble', () => {
@@ -156,19 +141,7 @@ describe('Tooltip', () => {
       </Tooltip>,
     )
     const wrapper = container.firstElementChild
-    expect(wrapper?.className).toContain('group/tt')
     expect(wrapper?.className).toContain('custom-wrapper')
-  })
-
-  it('includes hover and focus-within variant classes on bubble', () => {
-    render(
-      <Tooltip content="Help">
-        <button type="button">Trigger</button>
-      </Tooltip>,
-    )
-    const bubble = screen.getByRole('tooltip')
-    expect(bubble.className).toContain('group-hover/tt:opacity-100')
-    expect(bubble.className).toContain('group-focus-within/tt:opacity-100')
   })
 
   it('renders wrapper as a span when wrapperAs="span"', () => {
@@ -179,7 +152,6 @@ describe('Tooltip', () => {
     )
     const wrapper = container.firstElementChild
     expect(wrapper?.tagName).toBe('SPAN')
-    expect(wrapper?.className).toContain('group/tt')
   })
 
   it('renders bubble as a span when bubbleAs="span"', () => {
@@ -206,7 +178,6 @@ describe('Tooltip', () => {
     expect(wrapper?.getAttribute('role')).toBe('cell')
     expect(wrapper?.getAttribute('aria-label')).toBe('cell-label')
     expect(wrapper?.className).toContain('extra-class')
-    expect(wrapper?.className).toContain('group/tt')
   })
 
   it('puts aria-describedby on the wrapper when describedByOn="wrapper"', () => {
