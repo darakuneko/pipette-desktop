@@ -60,7 +60,7 @@ function WpmByAppTooltip({ active, payload }: WpmByAppTooltipProps): JSX.Element
   )
 }
 
-const MIN_BAR_LIMIT = 12
+const MAX_BAR_COUNT = 12
 
 export function WpmByAppChart({ uid, range, deviceScopes }: Props) {
   const { t } = useTranslation()
@@ -102,7 +102,7 @@ export function WpmByAppChart({ uid, range, deviceScopes }: Props) {
       // there and a row of zero-length bars is just visual noise.
       .filter((d) => d.wpm > 0)
       .sort((a, b) => b.wpm - a.wpm)
-      .slice(0, MIN_BAR_LIMIT)
+      .slice(0, MAX_BAR_COUNT)
   }, [rows])
 
   if (loading) {
