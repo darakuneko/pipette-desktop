@@ -112,11 +112,11 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
       return
     }
     let cancelled = false
-    listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs)
+    listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs, appScope)
       .then((data) => { if (!cancelled) setBksRows(data) })
       .catch(() => { if (!cancelled) setBksRows([]) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range, errorProxyActive])
+  }, [uid, scopeKey, range, errorProxyActive, appScope])
 
   // Peak / lowest WPM come from a narrow aggregation IPC rather than
   // the timeseries rows so they reflect the entire range (including

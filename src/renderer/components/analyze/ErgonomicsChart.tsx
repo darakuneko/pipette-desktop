@@ -40,6 +40,8 @@ interface Props {
   /** Device filter (capped at MAX_DEVICE_SCOPES = 1). The single scope
    * drives the finger / hand / row aggregations. */
   deviceScopes: readonly DeviceScope[]
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
   /** Sub-view selector: `'snapshot'` keeps the four-pane summary,
@@ -262,6 +264,7 @@ export function ErgonomicsChart({
   uid,
   range,
   deviceScopes,
+  appScope,
   snapshot,
   fingerOverrides,
   viewMode = 'snapshot',
@@ -274,6 +277,7 @@ export function ErgonomicsChart({
         uid={uid}
         range={range}
         deviceScopes={deviceScopes}
+        appScope={appScope}
         snapshot={snapshot}
         period={period}
         minSampleKeystrokes={learningMinSampleKeystrokes}
@@ -285,6 +289,7 @@ export function ErgonomicsChart({
       uid={uid}
       range={range}
       deviceScopes={deviceScopes}
+      appScope={appScope}
       snapshot={snapshot}
       fingerOverrides={fingerOverrides}
     />
@@ -295,6 +300,7 @@ interface SnapshotViewProps {
   uid: string
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
+  appScope: string | null
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
 }
@@ -303,6 +309,7 @@ function ErgonomicsSnapshotView({
   uid,
   range,
   deviceScopes,
+  appScope,
   snapshot,
   fingerOverrides,
 }: SnapshotViewProps) {
@@ -316,7 +323,7 @@ function ErgonomicsSnapshotView({
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope)
+    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScope)
       .then((next) => {
         if (cancelled) return
         setLayerCells(next)
@@ -324,7 +331,7 @@ function ErgonomicsSnapshotView({
       })
     return () => { cancelled = true }
     // `scopeKey` carries `deviceScope` identity.
-  }, [uid, range, scopeKey, snapshot])
+  }, [uid, range, scopeKey, snapshot, appScope])
 
   const mergedHeatmap = useMemo(
     () => mergeLayerHeatmaps(layerCells),

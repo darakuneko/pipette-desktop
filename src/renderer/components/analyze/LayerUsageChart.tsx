@@ -91,6 +91,8 @@ interface Props {
   /** Device filter (capped at MAX_DEVICE_SCOPES = 1). The single scope
    * drives the layer bars. */
   deviceScopes: readonly DeviceScope[]
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   /** Optional snapshot. Keystrokes mode still works without one
    * (zero-fills against the max observed layer); activations mode
    * needs it to resolve layer-op keycodes. */
@@ -109,7 +111,7 @@ interface Props {
   onBaseLayerChange?: (baseLayer: number) => void
 }
 
-export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, baseLayer, onBaseLayerChange }: Props) {
+export function LayerUsageChart({ uid, range, deviceScopes, appScope, snapshot, viewMode, baseLayer, onBaseLayerChange }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
   const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
@@ -123,8 +125,8 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
     let cancelled = false
     setLoading(true)
     const promise = viewMode === 'activations'
-      ? listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs)
-      : listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs)
+      ? listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope)
+      : listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs, appScope)
     void promise
       .then((result) => {
         if (cancelled) return
@@ -140,7 +142,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, snapshot, viewMode, 
     return () => { cancelled = true }
     // `scopeKey` carries `deviceScope` identity — adding the object
     // would refetch on every parent rerender.
-  }, [uid, range, scopeKey, viewMode])
+  }, [uid, range, scopeKey, viewMode, appScope])
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would

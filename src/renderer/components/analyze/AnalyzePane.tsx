@@ -1062,6 +1062,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScope={deviceScopes[0]}
+                    appScope={appScope}
                     metric={activityFilter.metric}
                     view={activityFilter.view}
                     minActiveMs={wpmFilter.minActiveMs}
@@ -1100,6 +1101,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScopes={deviceScopes}
+                    appScope={appScope}
                     snapshot={effectiveSnapshot}
                     fingerOverrides={fingerAssignments}
                     viewMode={ergonomicsFilter.viewMode}
@@ -1150,6 +1152,7 @@ export function AnalyzePane({
                       uid={selected.uid}
                       range={range}
                       deviceScopes={deviceScopes}
+                      appScope={appScope}
                       snapshot={effectiveSnapshot}
                       viewMode="keystrokes"
                       baseLayer={layerFilter.baseLayer}
@@ -1160,6 +1163,7 @@ export function AnalyzePane({
                       uid={selected.uid}
                       range={range}
                       deviceScopes={deviceScopes}
+                      appScope={appScope}
                       snapshot={effectiveSnapshot}
                       viewMode="activations"
                       baseLayer={layerFilter.baseLayer}

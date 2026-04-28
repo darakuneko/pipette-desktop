@@ -44,6 +44,8 @@ interface Props {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   metric: ActivityMetric
   /** Chart geometry — `grid` keeps the existing 24×7 grid / sessions
    * histogram, `calendar` swaps to the year heatmap. */
@@ -95,7 +97,7 @@ export function ActivityChart(props: Props) {
   return <ActivityGridChart {...props} />
 }
 
-function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Props) {
+function ActivityGridChart({ uid, range, deviceScope, appScope, metric, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -107,10 +109,10 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
     const load = async () => {
       try {
         const data = isHashScope(deviceScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScope)
           : isOwnScope(deviceScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs, appScope)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs, appScope)
         if (!cancelled) setRows(data)
       } catch {
         if (!cancelled) setRows([])
@@ -120,7 +122,7 @@ function ActivityGridChart({ uid, range, deviceScope, metric, minActiveMs }: Pro
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, scopeKey, range])
+  }, [uid, scopeKey, range, appScope])
 
   const grid = useMemo(
     () => buildActivityGrid({ rows, range, minActiveMs }),

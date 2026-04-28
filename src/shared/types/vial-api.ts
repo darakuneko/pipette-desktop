@@ -182,27 +182,27 @@ export interface VialAPI {
   typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsForHash(uid: string, machineHash: string): Promise<TypingIntervalDailySummary[]>
-  typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
-  typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
-  typingAnalyticsListActivityGridForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingActivityCell[]>
-  typingAnalyticsListLayerUsage(uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]>
-  typingAnalyticsListLayerUsageLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]>
-  typingAnalyticsListLayerUsageForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingLayerUsageRow[]>
-  typingAnalyticsListMatrixCells(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
-  typingAnalyticsListMatrixCellsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
-  typingAnalyticsListMatrixCellsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
-  typingAnalyticsListMatrixCellsByDay(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
-  typingAnalyticsListMatrixCellsByDayLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
-  typingAnalyticsListMatrixCellsByDayForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGridForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingActivityCell[]>
+  typingAnalyticsListLayerUsage(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListLayerUsageLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListLayerUsageForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListMatrixCells(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsByDay(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMatrixCellDailyRow[]>
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListSessions(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsListSessionsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsListSessionsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
-  typingAnalyticsListBksMinute(uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]>
-  typingAnalyticsListBksMinuteLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]>
-  typingAnalyticsListBksMinuteForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsListBksMinute(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsListBksMinuteLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsListBksMinuteForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
   typingAnalyticsGetPeakRecords(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
   typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
   typingAnalyticsGetPeakRecordsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<PeakRecords>

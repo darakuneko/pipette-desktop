@@ -837,6 +837,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY dow, hour
     `)
 
@@ -852,6 +853,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY dow, hour
     `)
 
@@ -870,6 +872,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -885,6 +888,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -910,6 +914,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -928,6 +933,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -954,6 +960,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -974,6 +981,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -1203,6 +1211,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1225,6 +1234,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1833,8 +1843,13 @@ export class TypingAnalyticsDB {
    * `[sinceMs, untilMs)`. Pass `Number.MAX_SAFE_INTEGER` for untilMs to
    * include "now and onwards". Buckets with zero keystrokes are
    * omitted from the result — callers zero-fill when rendering. */
-  listActivityGridForUid(uid: string, sinceMs: number, untilMs: number): TypingActivityCell[] {
-    return this.selectActivityGridForUidStmt.all({ uid, sinceMs, untilMs }) as TypingActivityCell[]
+  listActivityGridForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): TypingActivityCell[] {
+    return this.selectActivityGridForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingActivityCell[]
   }
 
   /** Same as {@link listActivityGridForUid} but restricted to a single
@@ -1845,16 +1860,22 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingActivityCell[] {
-    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingActivityCell[]
+    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingActivityCell[]
   }
 
   /** Per-layer keystroke totals for the Analyze > Layer tab. Layers
    * with zero keystrokes in the window are omitted; callers zero-fill
    * against the current snapshot's layer count. Rows ordered by layer
    * index ASC. */
-  listLayerUsageForUid(uid: string, sinceMs: number, untilMs: number): TypingLayerUsageRow[] {
-    return this.selectLayerUsageForUidStmt.all({ uid, sinceMs, untilMs }) as TypingLayerUsageRow[]
+  listLayerUsageForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): TypingLayerUsageRow[] {
+    return this.selectLayerUsageForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingLayerUsageRow[]
   }
 
   /** Same as {@link listLayerUsageForUid} but restricted to one
@@ -1864,16 +1885,22 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingLayerUsageRow[] {
-    return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingLayerUsageRow[]
+    return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingLayerUsageRow[]
   }
 
   /** Per-(layer, row, col) press totals for the Analyze > Layer
    * activations mode. The renderer pairs each row with the keymap
    * snapshot to recover the QMK id and dispatch layer-op counts to
    * their target layer. */
-  listMatrixCellsForUid(uid: string, sinceMs: number, untilMs: number): TypingMatrixCellRow[] {
-    return this.selectMatrixCellsForUidStmt.all({ uid, sinceMs, untilMs }) as TypingMatrixCellRow[]
+  listMatrixCellsForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): TypingMatrixCellRow[] {
+    return this.selectMatrixCellsForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingMatrixCellRow[]
   }
 
   /** Same as {@link listMatrixCellsForUid} but restricted to one
@@ -1883,8 +1910,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingMatrixCellRow[] {
-    return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMatrixCellRow[]
+    return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingMatrixCellRow[]
   }
 
   /** Per-(localDay, layer, row, col) press totals for the Analyze
@@ -1896,8 +1924,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingMatrixCellDailyRow[] {
-    const rows = this.selectMatrixCellsByDayForUidStmt.all({ uid, sinceMs, untilMs }) as MatrixCellsByDayDbRow[]
+    const rows = this.selectMatrixCellsByDayForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as MatrixCellsByDayDbRow[]
     return rows.map(matrixCellsByDayDbRowToDailyRow)
   }
 
@@ -1908,8 +1937,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingMatrixCellDailyRow[] {
-    const rows = this.selectMatrixCellsByDayForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as MatrixCellsByDayDbRow[]
+    const rows = this.selectMatrixCellsByDayForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as MatrixCellsByDayDbRow[]
     return rows.map(matrixCellsByDayDbRowToDailyRow)
   }
 
@@ -2066,8 +2096,13 @@ export class TypingAnalyticsDB {
   /** Per-minute Backspace-share aggregate for `[sinceMs, untilMs)`.
    * Only minutes that received typing-test input contribute; general
    * matrix-path typing does not feed `typing_char_minute`. */
-  listBksMinuteInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingBksMinuteRow[] {
-    return this.selectBksMinuteInRangeForUidStmt.all({ uid, sinceMs, untilMs }) as TypingBksMinuteRow[]
+  listBksMinuteInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): TypingBksMinuteRow[] {
+    return this.selectBksMinuteInRangeForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingBksMinuteRow[]
   }
 
   /** Same as {@link listBksMinuteInRangeForUid} but restricted to a
@@ -2077,8 +2112,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingBksMinuteRow[] {
-    return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingBksMinuteRow[]
+    return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingBksMinuteRow[]
   }
 
   /** Peak records for the Analyze summary cards across every scope of
