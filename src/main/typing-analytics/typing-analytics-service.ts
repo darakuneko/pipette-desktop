@@ -621,7 +621,15 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE,
-    async (_event, uid: unknown, layer: unknown, sinceMs: unknown, untilMs: unknown, scope: unknown): Promise<TypingHeatmapByCell> => {
+    async (
+      _event,
+      uid: unknown,
+      layer: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      scope: unknown,
+      appScope: unknown,
+    ): Promise<TypingHeatmapByCell> => {
       if (typeof uid !== 'string' || uid.length === 0) return {}
       if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return {}
@@ -639,7 +647,8 @@ export function setupTypingAnalyticsIpc(): void {
         : isHashScope(parsedScope)
           ? parsedScope.machineHash
           : undefined
-      const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash)
+      const app = parseAppScopeArg(appScope)
+      const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash, app)
       const out: TypingHeatmapByCell = {}
       for (const [key, cell] of totals) {
         out[key] = { total: cell.total, tap: cell.tap, hold: cell.hold }
@@ -714,6 +723,7 @@ export function setupTypingAnalyticsIpc(): void {
       view: unknown,
       scope: unknown,
       options: unknown,
+      appScope: unknown,
     ): Promise<TypingBigramAggregateResult> => {
       // Reject unknown views up front so parsedView is the trusted union
       // and downstream branches can return literal-typed empty results.
@@ -731,6 +741,7 @@ export function setupTypingAnalyticsIpc(): void {
       const opts = parseBigramAggregateOptions(options)
       const limit = opts.limit ?? 30
       const minSample = opts.minSampleCount ?? 5
+      const app = parseAppScopeArg(appScope)
 
       const db = getTypingAnalyticsDB()
       const machineHash = isOwnScope(parsedScope)
@@ -739,8 +750,8 @@ export function setupTypingAnalyticsIpc(): void {
           ? parsedScope.machineHash
           : undefined
       const rows = machineHash === undefined
-        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs)
-        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs, app)
+        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, app)
       const totals = aggregatePairTotals(rows)
       if (parsedView === 'slow') {
         return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit) }

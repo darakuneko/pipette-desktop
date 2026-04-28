@@ -209,8 +209,8 @@ export interface VialAPI {
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
   typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
   typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>
-  typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope): Promise<TypingHeatmapByCell>
-  typingAnalyticsGetBigramAggregateForRange(uid: string, sinceMs: number, untilMs: number, view: TypingBigramAggregateView, scope: DeviceScope, options?: TypingBigramAggregateOptions): Promise<TypingBigramAggregateResult>
+  typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScope?: string | null): Promise<TypingHeatmapByCell>
+  typingAnalyticsGetBigramAggregateForRange(uid: string, sinceMs: number, untilMs: number, view: TypingBigramAggregateView, scope: DeviceScope, options?: TypingBigramAggregateOptions, appScope?: string | null): Promise<TypingBigramAggregateResult>
   typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
   typingAnalyticsHasRemote(): Promise<boolean>
   typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>

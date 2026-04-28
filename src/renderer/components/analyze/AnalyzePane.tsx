@@ -1084,6 +1084,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScope={deviceScopes[0]}
+                    appScope={appScope}
                     snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
@@ -1115,6 +1116,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
+                  appScope={appScope}
                   topLimit={bigramsFilter.topLimit}
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}

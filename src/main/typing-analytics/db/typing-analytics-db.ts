@@ -690,6 +690,7 @@ export class TypingAnalyticsDB {
     // Aggregates across every machine_hash (the Analyze tab can scope
     // device-wise at the renderer, but the SQL stays device-agnostic
     // so `deviceScope: 'all'` works without a second statement).
+    // App filter: @appName IS NULL is the no-filter sentinel.
     this.selectMatrixHeatmapInRangeStmt = this.db.prepare(`
       SELECT m.row AS row, m.col AS col,
              SUM(m.count) AS total,
@@ -703,6 +704,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.row, m.col
     `)
 
@@ -720,6 +722,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
+         AND (@appName IS NULL OR m.app_name = @appName)
        GROUP BY m.row, m.col
     `)
 
@@ -1113,6 +1116,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1129,6 +1133,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1758,13 +1763,14 @@ export class TypingAnalyticsDB {
     sinceMs: number,
     untilMs: number,
     machineHash?: string,
+    appScope: string | null = null,
   ): Map<string, { total: number; tap: number; hold: number }> {
     const stmt = machineHash !== undefined
       ? this.selectMatrixHeatmapInRangeForHashStmt
       : this.selectMatrixHeatmapInRangeStmt
     const params = machineHash !== undefined
-      ? { uid, machineHash, layer, sinceMs, untilMs }
-      : { uid, layer, sinceMs, untilMs }
+      ? { uid, machineHash, layer, sinceMs, untilMs, appName: appScope }
+      : { uid, layer, sinceMs, untilMs, appName: appScope }
     const rows = stmt.all(params) as Array<{
       row: number
       col: number
@@ -2004,9 +2010,10 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): BigramMinuteCellRow[] {
     return this.toBigramMinuteCellRows(
-      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs }),
+      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }),
     )
   }
 
@@ -2017,6 +2024,7 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): BigramMinuteCellRow[] {
     return this.toBigramMinuteCellRows(
       this.selectBigramMinutesInRangeForUidAndHashStmt.all({
@@ -2024,6 +2032,7 @@ export class TypingAnalyticsDB {
         machineHash,
         sinceMs,
         untilMs,
+        appName: appScope,
       }),
     )
   }

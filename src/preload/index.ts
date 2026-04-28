@@ -333,8 +333,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, fromMs, toMs),
   typingAnalyticsListKeymapSnapshots: (uid: string): Promise<TypingKeymapSnapshotSummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS, uid),
-  typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope): Promise<TypingHeatmapByCell> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scope),
+  typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScope: string | null = null): Promise<TypingHeatmapByCell> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scope, appScope),
   typingAnalyticsGetBigramAggregateForRange: (
     uid: string,
     sinceMs: number,
@@ -342,6 +342,7 @@ const vialAPI = {
     view: TypingBigramAggregateView,
     scope: DeviceScope,
     options?: TypingBigramAggregateOptions,
+    appScope: string | null = null,
   ): Promise<TypingBigramAggregateResult> =>
     ipcRenderer.invoke(
       IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE,
@@ -351,6 +352,7 @@ const vialAPI = {
       view,
       scope,
       options,
+      appScope,
     ),
   typingAnalyticsGetLayoutComparisonForRange: (
     uid: string,

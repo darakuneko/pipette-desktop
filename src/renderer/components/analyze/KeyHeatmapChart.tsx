@@ -33,6 +33,8 @@ interface Props {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   snapshot: TypingKeymapSnapshot
   /** Persisted filter state for this tab — `selectedLayers` / `groups`
    * / ranking controls / normalization. Lifted to `TypingAnalyticsView`
@@ -261,7 +263,7 @@ function groupOf(groups: number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
 }
 
-export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, onHeatmapChange }: Props) {
+export function KeyHeatmapChart({ uid, range, deviceScope, appScope, snapshot, heatmap, onHeatmapChange }: Props) {
   const { t } = useTranslation()
   const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
@@ -276,7 +278,10 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
 
   useEffect(() => {
     setLayerCells(new Map())
-  }, [uid, range, scopeKey])
+    // appScope change invalidates every cached layer the same way a
+    // device-scope change does — different filters mean different
+    // aggregates per cell.
+  }, [uid, range, scopeKey, appScope])
 
   const selectedLayersKey = selectedLayers.join(',')
   useEffect(() => {
@@ -289,7 +294,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
     setLoading(true)
     void Promise.all(layersToFetch.map((layer) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope)
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScope)
         .catch(() => ({} as TypingHeatmapByCell)),
     )).then((results) => {
       if (cancelled) return
@@ -301,7 +306,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, snapshot, heatmap, on
       setLoading(false)
     })
     return () => { cancelled = true }
-  }, [uid, range, scopeKey, selectedLayersKey])
+  }, [uid, range, scopeKey, selectedLayersKey, appScope])
 
   const layout = snapshot.layout as KeyboardLayout | null
 

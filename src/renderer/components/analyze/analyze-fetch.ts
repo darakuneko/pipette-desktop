@@ -97,6 +97,7 @@ export async function fetchMatrixHeatmapAllLayers(
   fromMs: number,
   toMs: number,
   scope: DeviceScope,
+  appScope: string | null = null,
 ): Promise<Record<number, TypingHeatmapByCell>> {
   const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
   if (layerCount === 0) return {}
@@ -104,7 +105,7 @@ export async function fetchMatrixHeatmapAllLayers(
   const results = await Promise.all(
     layerIdxs.map((l) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, l, fromMs, toMs, scope)
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, l, fromMs, toMs, scope, appScope)
         .catch(() => ({} as TypingHeatmapByCell)),
     ),
   )
@@ -123,8 +124,9 @@ export function fetchBigramAggregateForRange(
   toMs: number,
   view: TypingBigramAggregateView,
   options?: TypingBigramAggregateOptions,
+  appScope: string | null = null,
 ): Promise<TypingBigramAggregateResult> {
-  return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options)
+  return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options, appScope)
 }
 
 /** Layout Comparison metrics fetch. Single channel; the main-side
