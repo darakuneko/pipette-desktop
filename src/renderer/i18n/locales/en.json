@@ -907,7 +907,8 @@
       "ergonomics": "Ergonomics",
       "bigrams": "Bigrams",
       "layoutComparison": "Layout Comparison",
-      "layer": "Layer"
+      "layer": "Layer",
+      "byApp": "By App"
     },
     "summary": {
       "today": {

@@ -79,7 +79,7 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer']
+const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer', 'byApp']
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
@@ -807,19 +807,26 @@ export function AnalyzePane({
                     </label>
                     {/* App filter sits next to the Device picker so the
                         user reads the scope in the same row: keyboard,
-                        device, app, period. The dropdown self-empties
-                        to "All apps" when no minutes are tagged. */}
-                    <label className={FILTER_LABEL}>
-                      <span>{t('analyze.filters.app')}</span>
-                      <AppSelect
-                        uid={selected.uid}
-                        range={range}
-                        deviceScopes={deviceScopes}
-                        value={appScope}
-                        onChange={setAppScope}
-                        ariaLabel={t('analyze.filters.app')}
-                      />
-                    </label>
+                        device, app, period. Hidden on the By App tab —
+                        those charts compare across apps so any single-
+                        app filter would collapse the result to one
+                        slice / bar. The empty span keeps the grid
+                        column count stable across tabs. */}
+                    {analysisTab === 'byApp' ? (
+                      <span />
+                    ) : (
+                      <label className={FILTER_LABEL}>
+                        <span>{t('analyze.filters.app')}</span>
+                        <AppSelect
+                          uid={selected.uid}
+                          range={range}
+                          deviceScopes={deviceScopes}
+                          value={appScope}
+                          onChange={setAppScope}
+                          ariaLabel={t('analyze.filters.app')}
+                        />
+                      </label>
+                    )}
                   </>
                 ) : (
                   <>
@@ -1028,27 +1035,15 @@ export function AnalyzePane({
                   fingerOverrides={fingerAssignments}
                 />
               ) : analysisTab === 'wpm' ? (
-                <div className="flex flex-col gap-6">
-                  <WpmChart
-                    uid={selected.uid}
-                    range={range}
-                    deviceScopes={deviceScopes}
-                    appScope={appScope}
-                    granularity={wpmFilter.granularity}
-                    viewMode={wpmFilter.viewMode}
-                    minActiveMs={wpmFilter.minActiveMs}
-                  />
-                  {/* WPM by App lives under the regular WPM chart so
-                      the user reads aggregate first and per-app
-                      breakdown second. The chart self-empties when
-                      Monitor App is off, so it doesn't render noise
-                      for users who haven't opted in. */}
-                  <WpmByAppChart
-                    uid={selected.uid}
-                    range={range}
-                    deviceScopes={deviceScopes}
-                  />
-                </div>
+                <WpmChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScopes={deviceScopes}
+                  appScope={appScope}
+                  granularity={wpmFilter.granularity}
+                  viewMode={wpmFilter.viewMode}
+                  minActiveMs={wpmFilter.minActiveMs}
+                />
               ) : analysisTab === 'interval' ? (
                 <IntervalChart
                   uid={selected.uid}
@@ -1060,28 +1055,18 @@ export function AnalyzePane({
                   viewMode={intervalFilter.viewMode}
                 />
               ) : analysisTab === 'activity' ? (
-                <div className="flex flex-col gap-6">
-                  <ActivityChart
-                    uid={selected.uid}
-                    range={range}
-                    deviceScope={deviceScopes[0]}
-                    appScope={appScope}
-                    metric={activityFilter.metric}
-                    view={activityFilter.view}
-                    minActiveMs={wpmFilter.minActiveMs}
-                    calendarFilter={activityFilter.calendar}
-                    nowMs={nowMs}
-                    onShiftCalendarMonth={(delta) => setActivity({ calendar: { endMonthIso: shiftLocalMonth(activityFilter.calendar.endMonthIso, delta) } })}
-                  />
-                  {/* App Usage Distribution sits under the activity
-                      heatmap. Hides itself when Monitor App is off
-                      and there are no app-tagged minutes. */}
-                  <AppUsageChart
-                    uid={selected.uid}
-                    range={range}
-                    deviceScopes={deviceScopes}
-                  />
-                </div>
+                <ActivityChart
+                  uid={selected.uid}
+                  range={range}
+                  deviceScope={deviceScopes[0]}
+                  appScope={appScope}
+                  metric={activityFilter.metric}
+                  view={activityFilter.view}
+                  minActiveMs={wpmFilter.minActiveMs}
+                  calendarFilter={activityFilter.calendar}
+                  nowMs={nowMs}
+                  onShiftCalendarMonth={(delta) => setActivity({ calendar: { endMonthIso: shiftLocalMonth(activityFilter.calendar.endMonthIso, delta) } })}
+                />
               ) : analysisTab === 'keyHeatmap' ? (
                 effectiveSnapshot !== null ? (
                   <KeyHeatmapChart
@@ -1174,6 +1159,25 @@ export function AnalyzePane({
                       onBaseLayerChange={(baseLayer) => setLayer({ baseLayer })}
                     />
                   </div>
+                </div>
+              ) : analysisTab === 'byApp' ? (
+                // Dedicated tab that groups every per-app cross-section
+                // chart. Both views aggregate _across_ apps regardless
+                // of the App filter at the top of the panel — picking a
+                // single app would collapse them to one slice / bar,
+                // which is the opposite of what these views are meant
+                // to show.
+                <div className="flex flex-col gap-6">
+                  <AppUsageChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                  />
+                  <WpmByAppChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                  />
                 </div>
               ) : null}
             </div>
