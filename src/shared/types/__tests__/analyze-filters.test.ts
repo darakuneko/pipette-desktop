@@ -307,3 +307,63 @@ describe('deviceScopesEqual', () => {
     ).toBe(false)
   })
 })
+
+describe('isValidAnalyzeFilterSettings (activity view / display / calendar)', () => {
+  // The calendar validator is exercised through the umbrella
+  // `isValidAnalyzeFilterSettings` because it is private to the module.
+  // Each case wraps a calendar payload in `{ activity: { calendar } }`
+  // so we cover both the calendar guard and the activity guard's
+  // delegation to it.
+  it('accepts a fully populated activity payload', () => {
+    expect(isValidAnalyzeFilterSettings({
+      activity: {
+        metric: 'wpm',
+        view: 'calendar',
+        calendar: {
+          normalization: 'shareOfTotal',
+          monthsToShow: 6,
+          endMonthIso: '2026-04',
+        },
+      },
+    })).toBe(true)
+  })
+
+  it('accepts a partial calendar payload (missing fields are optional)', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: {} } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { monthsToShow: 3 } } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { endMonthIso: '2025-01' } } })).toBe(true)
+  })
+
+  it('rejects unknown normalization values', () => {
+    expect(isValidAnalyzeFilterSettings({
+      activity: { calendar: { normalization: 'nonsense' } },
+    })).toBe(false)
+  })
+
+  it('rejects unknown view values', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { view: 'nonsense' } })).toBe(false)
+  })
+
+  it('accepts the canonical view values', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { view: 'grid' } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ activity: { view: 'calendar' } })).toBe(true)
+  })
+
+  it('rejects monthsToShow values outside the canonical ladder', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { monthsToShow: 4 } } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { monthsToShow: 0 } } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { monthsToShow: '6' } } })).toBe(false)
+  })
+
+  it('rejects malformed endMonthIso strings', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { endMonthIso: '2026-1' } } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { endMonthIso: '2026/04' } } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { endMonthIso: '2026-13' } } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { calendar: { endMonthIso: 202604 } } })).toBe(false)
+  })
+
+  it('rejects an unknown activity metric (calendar is no longer a metric)', () => {
+    expect(isValidAnalyzeFilterSettings({ activity: { metric: 'calendar' } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ activity: { metric: 'nonsense' } })).toBe(false)
+  })
+})

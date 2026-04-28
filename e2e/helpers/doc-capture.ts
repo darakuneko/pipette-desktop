@@ -476,7 +476,10 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-tab-interval not found')
   }
 
-  // Activity: one representative capture (keystrokes metric) keeps the guide compact.
+  // Activity: representative captures for the keystrokes grid and the
+  // year-spanning calendar. Both run from the same metric select; the
+  // calendar capture comes second so the metric ends in calendar mode
+  // ready for the operation guide screenshot.
   const activityTab = page.locator('[data-testid="analyze-tab-activity"]')
   if (await isAvailable(activityTab)) {
     await activityTab.click()
@@ -487,6 +490,17 @@ async function captureAnalyzePage(page: Page): Promise<void> {
       await page.waitForTimeout(500)
     }
     await captureNamed(page, 'analyze-activity-keystrokes', { fullPage: true })
+
+    // Calendar view — switch via the View select. The chart always
+    // renders the selected year (current year by default), which
+    // gives the guide a representative full-year shape without
+    // touching the year picker.
+    const activityView = page.locator('[data-testid="analyze-filter-activity-view"]')
+    if (await isAvailable(activityView)) {
+      await activityView.selectOption('calendar')
+      await page.waitForTimeout(800)
+      await captureNamed(page, 'analyze-activity-calendar', { fullPage: true })
+    }
   } else {
     console.log('  [skip] analyze-tab-activity not found')
   }
@@ -1338,7 +1352,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-ergonomics, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(page)
     if (!connected) {

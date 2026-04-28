@@ -846,6 +846,37 @@
         "4": "Thu",
         "5": "Fri",
         "6": "Sat"
+      },
+      "calendar": {
+        "gridLabel": "Year activity calendar",
+        "monthShortYear": "{{year}} {{monthShort}}",
+        "monthShort": {
+          "1": "Jan",
+          "2": "Feb",
+          "3": "Mar",
+          "4": "Apr",
+          "5": "May",
+          "6": "Jun",
+          "7": "Jul",
+          "8": "Aug",
+          "9": "Sep",
+          "10": "Oct",
+          "11": "Nov",
+          "12": "Dec"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys) ({{activeDuration}})",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM ({{activeDuration}})",
+        "cellTooltipSessions": "{{date}} — {{count}} sessions started",
+        "cellTooltipEmpty": "{{date}} — no activity",
+        "summary": {
+          "label": "Calendar summary",
+          "total": "Total keystrokes",
+          "avgWpm": "Average WPM",
+          "activeDays": "Active days",
+          "activeDaysValue": "{{active}} / {{total}} ({{share}}%)",
+          "peak": "Peak day",
+          "avg": "Average per active day"
+        }
       }
     },
     "analysisTab": {
@@ -1137,6 +1168,25 @@
         "wpm": "WPM",
         "sessions": "Sessions"
       },
+      "activityView": "View",
+      "activityViewOption": {
+        "grid": "Hour",
+        "calendar": "Day"
+      },
+      "calendarNormalization": "Normalize",
+      "calendarNormalizationOption": {
+        "absolute": "Absolute",
+        "shareOfWeekly": "Share of week",
+        "shareOfTotal": "Share of total"
+      },
+      "calendarRange": "Range",
+      "calendarRangeOption": {
+        "3": "3 months",
+        "6": "6 months",
+        "12": "12 months"
+      },
+      "calendarRangePrev": "Previous month",
+      "calendarRangeNext": "Next month",
       "layerViewMode": "View",
       "layerViewModeOption": {
         "keystrokes": "Keystrokes",

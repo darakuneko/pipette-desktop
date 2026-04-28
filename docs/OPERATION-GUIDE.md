@@ -107,7 +107,7 @@ Switch between eight analyses with the tab bar above the chart:
 | **Heatmap** | Press count per physical key, overlaid on the keymap (per layer). Requires a keymap snapshot in range |
 | **WPM** | Words-per-minute over time, or by hour of day |
 | **Interval** | Keystroke interval percentiles (min / p25 / median / p75 / max), as a time series or a distribution |
-| **Activity** | Hour × day-of-week grid colored by keystrokes, WPM, or sessions |
+| **Activity** | Hour × day-of-week grid or year calendar heatmap, colored by keystrokes / WPM / sessions |
 | **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor. Requires a snapshot |
 | **Bigrams** | Frequent and slow key-pair timings, plus pair- and finger-level inter-key interval views |
 | **Layout Comparison** | Simulate how your recorded typing would land on alternative layouts (Colemak / Dvorak / etc.). Requires a snapshot |
@@ -208,18 +208,32 @@ Same options as WPM.
 
 #### Activity
 
-The Activity tab groups typing by day-of-week × hour so you can see when you actually type.
+The Activity tab groups typing by day-of-week × hour so you can see when you actually type. The filter row offers two orthogonal pickers: **View** (chart geometry) and **Metric** (what each cell measures).
+
+**View**
+
+- **Grid** — the historical 24 × 7 hour-of-day × day-of-week grid (or sessions histogram when Metric = Sessions). Driven by the top-level Period picker
+- **Calendar** — GitHub-style year heatmap. Adds a **Year** selector to pick which calendar year to render; the current year stops at today so future days stay blank
 
 **Metric**
 
-- **Keystrokes** — a 24 × 7 grid colored by keystroke count. Empty cells are dim, the busiest cell is fully saturated. Hovering a non-empty cell shows both the raw count and its share of the range total (e.g. `Mon 09:00 — 1,234 keys (5.2% of total)`); empty cells stay at `0 keys`
+- **Keystrokes** — keystroke count. Empty cells are dim, the busiest cell is fully saturated. In Grid view a non-empty cell tooltip shows both the raw count and its share of the range total (e.g. `Mon 09:00 — 1,234 keys (5.2% of total)`)
 
   ![Analyze — Activity Keystrokes](screenshots/analyze-activity-keystrokes.png)
 
-- **WPM** — same grid, colored by average WPM per cell. Cells that don't meet **Min sample** are desaturated instead of pinning the color scale
-- **Sessions** — histogram of session lengths in seven bins (`<5 min`, `5-15 min`, `15-30 min`, `30-60 min`, `1-2 h`, `2-4 h`, `>4 h`). A session is continuous typing separated by 5+ minutes of idle
+- **WPM** — average WPM per cell. In Grid view, cells that don't meet **Min sample** are desaturated instead of pinning the color scale
+- **Sessions** — In Grid view this swaps to a histogram of session lengths in seven bins (`<5 min`, `5-15 min`, `15-30 min`, `30-60 min`, `1-2 h`, `2-4 h`, `>4 h`); in Calendar view each cell counts the **sessions whose start fell on that date** (not sessions active on that date)
 
-**Min sample** (Metric = WPM only)
+**Calendar-only controls** (View = Calendar)
+
+- **Normalize** — `Absolute` colors by the peak day in the grid, `Share of week` divides each cell by the column's weekly total, `Share of total` divides by the grand total of the rendered range
+- **Year** — list of years sourced from the keymap snapshot timeline plus the current year
+
+  ![Analyze — Activity Calendar](screenshots/analyze-activity-calendar.png)
+
+Clicking a populated cell jumps the rest of the Analyze pane to that single day. The snapshot picker auto-selects the snapshot that contains the date so dependent tabs (Heatmap, Ergonomics, Layer activations) stay aligned with the keymap that was active.
+
+**Min sample** (View = Grid, Metric = WPM)
 
 Same options as the WPM tab.
 

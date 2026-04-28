@@ -141,6 +141,28 @@ export type IntervalViewMode = typeof INTERVAL_VIEW_MODES[number]
 export const ACTIVITY_METRICS = ['keystrokes', 'wpm', 'sessions'] as const
 export type ActivityMetric = typeof ACTIVITY_METRICS[number]
 
+/** Activity tab's *view* axis — chart geometry. `grid` keeps the
+ * historical 24×7 hour grid (or sessions histogram when metric ===
+ * 'sessions'); `calendar` renders a year heatmap with the user-picked
+ * year. */
+export const ACTIVITY_VIEWS = ['grid', 'calendar'] as const
+export type ActivityView = typeof ACTIVITY_VIEWS[number]
+
+/** `'shareOfWeekly'` divides each cell by the sum of the column it sits
+ * in (highlights the dominant day of each week). `'shareOfTotal'` divides
+ * by the grand total of the visible window (i.e. the user-picked
+ * `monthsToShow` slice). Calendar carries its own normalization
+ * vocabulary because the surface and bucket meanings differ from the
+ * heatmap tab's `normalization` slot. */
+export const ACTIVITY_CALENDAR_NORMALIZATIONS = ['absolute', 'shareOfWeekly', 'shareOfTotal'] as const
+export type ActivityCalendarNormalization = typeof ACTIVITY_CALENDAR_NORMALIZATIONS[number]
+
+/** Calendar visible-range size, in months. The user picks the size and
+ * scrolls month-by-month with prev/next; the visible window always ends
+ * at `endMonthIso` and spans `monthsToShow` calendar months back. */
+export const ACTIVITY_CALENDAR_MONTHS_TO_SHOW = [3, 6, 12] as const
+export type ActivityCalendarMonthsToShow = typeof ACTIVITY_CALENDAR_MONTHS_TO_SHOW[number]
+
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
@@ -182,6 +204,24 @@ export interface IntervalFilters {
 
 export interface ActivityFilters {
   metric?: ActivityMetric
+  /** Chart geometry — `grid` (default) keeps the historical 24×7 hour
+   * grid / sessions histogram, `calendar` swaps to a year heatmap. */
+  view?: ActivityView
+  /** Subview state for the Activity calendar (consumed when
+   * `view === 'calendar'`). Persisting independently means the user
+   * can leave calendar view and return without losing the year /
+   * normalization picks they had set up. */
+  calendar?: ActivityCalendarFilters
+}
+
+export interface ActivityCalendarFilters {
+  normalization?: ActivityCalendarNormalization
+  /** Number of calendar months in the visible window (range size). */
+  monthsToShow?: ActivityCalendarMonthsToShow
+  /** Last (inclusive) month of the visible window — local calendar.
+   * Format: `YYYY-MM`. Acts as the cursor the prev/next buttons move;
+   * the window spans `[endMonth - monthsToShow + 1, endMonth]`. */
+  endMonthIso?: string
 }
 
 export interface LayerFilters {
@@ -290,11 +330,26 @@ function isValidIntervalFilters(value: unknown): boolean {
   return true
 }
 
+function isValidActivityCalendarFilters(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  if (o.normalization !== undefined && !includesAs(ACTIVITY_CALENDAR_NORMALIZATIONS, o.normalization)) return false
+  if (o.monthsToShow !== undefined && !(ACTIVITY_CALENDAR_MONTHS_TO_SHOW as readonly number[]).includes(o.monthsToShow as number)) return false
+  // `YYYY-MM`. Strict shape so future date arithmetic can't blow up on
+  // a stray free-form string. Year/month plausibility is left to the
+  // UI clamp (no future months) — the validator just gates the parse.
+  if (o.endMonthIso !== undefined && (typeof o.endMonthIso !== 'string' || !/^\d{4}-(0[1-9]|1[0-2])$/.test(o.endMonthIso))) return false
+  return true
+}
+
 function isValidActivityFilters(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
   if (o.metric !== undefined && !includesAs(ACTIVITY_METRICS, o.metric)) return false
+  if (o.view !== undefined && !includesAs(ACTIVITY_VIEWS, o.view)) return false
+  if (!isValidActivityCalendarFilters(o.calendar)) return false
   return true
 }
 

@@ -27,7 +27,7 @@ interface Props {
 }
 
 export function SummaryView({ uid, deviceScope, snapshot, fingerOverrides }: Props) {
-  const daily = useDailySummary(uid, deviceScope)
+  const { daily } = useDailySummary(uid, deviceScope)
   const today = useLocalToday()
   return (
     <div className="flex h-full w-full flex-col gap-3">

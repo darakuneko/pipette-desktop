@@ -8,7 +8,10 @@
 // existing renderer imports keep working.
 
 export type {
+  ActivityCalendarMonthsToShow,
+  ActivityCalendarNormalization,
   ActivityMetric,
+  ActivityView,
   DeviceScope,
   GranularityChoice,
   HeatmapNormalization,

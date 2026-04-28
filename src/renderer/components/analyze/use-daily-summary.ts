@@ -11,16 +11,27 @@ import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/typ
 import { toLocalDate } from './analyze-streak-goal'
 import type { DeviceScope } from './analyze-types'
 
+export interface DailySummaryState {
+  daily: TypingDailySummary[]
+  /** `true` between scope/uid swap and the IPC resolving. The Calendar
+   * tab keys its loading overlay off this; legacy callers can ignore it
+   * — the `daily` array still defaults to `[]` so existing code paths
+   * that only render with data keep working unchanged. */
+  loading: boolean
+}
+
 /** Fetches the cross-machine daily summary for `uid` honouring
  * `deviceScope` (own / all / hash). Returns the latest payload, or `[]`
  * before the IPC resolves and on error. Re-fires whenever `uid` or the
  * scope changes; cancels in-flight responses on unmount or scope swap. */
-export function useDailySummary(uid: string, deviceScope: DeviceScope): TypingDailySummary[] {
+export function useDailySummary(uid: string, deviceScope: DeviceScope): DailySummaryState {
   const [daily, setDaily] = useState<TypingDailySummary[]>([])
+  const [loading, setLoading] = useState(true)
   const scopeKey = scopeToSelectValue(deviceScope)
 
   useEffect(() => {
     let cancelled = false
+    setLoading(true)
     const dailyPromise = isHashScope(deviceScope)
       ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash)
       : isOwnScope(deviceScope)
@@ -29,10 +40,11 @@ export function useDailySummary(uid: string, deviceScope: DeviceScope): TypingDa
     void dailyPromise
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
+      .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [uid, scopeKey])
 
-  return daily
+  return { daily, loading }
 }
 
 /** Tracks the user's local YYYY-MM-DD day. Re-evaluates every minute

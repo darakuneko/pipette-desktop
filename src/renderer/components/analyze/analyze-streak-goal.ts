@@ -19,6 +19,10 @@ import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 
+/** `YYYY-MM` (zero-padded). Mirrors `DATE_RE` for the YYYY-MM-DD case
+ * — used by the calendar's monthly window cursor. */
+export const MONTH_RE = /^(\d{4})-(0[1-9]|1[0-2])$/
+
 export interface GoalPair {
   days: number
   keystrokes: number
@@ -50,25 +54,45 @@ export function toLocalDate(ms: number): string {
 }
 
 export function shiftLocalDate(date: string, deltaDays: number): string {
-  const m = DATE_RE.exec(date)
-  if (!m) return date
-  const y = Number(m[1])
-  const mo = Number(m[2])
-  const d = Number(m[3])
-  const shifted = new Date(y, mo - 1, d + deltaDays)
+  const d = parseLocalDate(date)
+  if (!d) return date
+  const shifted = new Date(d.getFullYear(), d.getMonth(), d.getDate() + deltaDays)
   return toLocalDate(shifted.getTime())
 }
 
+/** Local-wall-clock `YYYY-MM` for `ms`. Companion to `toLocalDate`. */
+export function toLocalMonth(ms: number): string {
+  const d = new Date(ms)
+  const y = d.getFullYear().toString().padStart(4, '0')
+  const m = (d.getMonth() + 1).toString().padStart(2, '0')
+  return `${y}-${m}`
+}
+
+/** Shift a `YYYY-MM` cursor by `deltaMonths`. Returns the input on
+ * malformed strings so a one-off bad write can't crash the caller. */
+export function shiftLocalMonth(month: string, deltaMonths: number): string {
+  const m = MONTH_RE.exec(month)
+  if (!m) return month
+  const year = Number(m[1])
+  const monthIdx = Number(m[2]) - 1
+  const shifted = new Date(year, monthIdx + deltaMonths, 1)
+  return toLocalMonth(shifted.getTime())
+}
+
+/** Parse `YYYY-MM-DD` into a local-midnight `Date`. Returns `null` for
+ * malformed input so callers can short-circuit on bad data without a
+ * try/catch. */
+export function parseLocalDate(iso: string): Date | null {
+  const m = DATE_RE.exec(iso)
+  if (!m) return null
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+}
+
 export function daysBetween(a: string, b: string): number {
-  const parse = (s: string): number | null => {
-    const m = DATE_RE.exec(s)
-    if (!m) return null
-    return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime()
-  }
-  const msA = parse(a)
-  const msB = parse(b)
-  if (msA === null || msB === null) return 0
-  const diff = Math.abs(msA - msB)
+  const dA = parseLocalDate(a)
+  const dB = parseLocalDate(b)
+  if (dA === null || dB === null) return 0
+  const diff = Math.abs(dA.getTime() - dB.getTime())
   return Math.round(diff / 86_400_000) + 1
 }
 

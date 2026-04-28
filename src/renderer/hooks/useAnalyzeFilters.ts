@@ -11,6 +11,7 @@ import { DEFAULT_PIPETTE_SETTINGS } from '../../shared/types/pipette-settings'
 import {
   deviceScopesEqual,
   normalizeDeviceScopes,
+  type ActivityCalendarFilters,
   type ActivityFilters,
   type AnalyzeFilterSettings,
   type BigramFilters,
@@ -21,6 +22,7 @@ import {
   type LayoutComparisonFilters,
   type WpmFilters,
 } from '../../shared/types/analyze-filters'
+import { toLocalMonth } from '../components/analyze/analyze-streak-goal'
 
 const DEBOUNCE_MS = 300
 
@@ -35,7 +37,11 @@ export interface AnalyzeFiltersState {
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>
   interval: Required<IntervalFilters>
-  activity: Required<ActivityFilters>
+  // Activity carries a nested `calendar` object — `Required<ActivityFilters>`
+  // alone would only force the outer fields, leaving every calendar field
+  // optional. Make the calendar shape explicitly required so consumers
+  // can read `state.activity.calendar.valueMetric` without a guard.
+  activity: Required<Omit<ActivityFilters, 'calendar'>> & { calendar: Required<ActivityCalendarFilters> }
   layer: Required<LayerFilters>
   bigrams: Required<BigramFilters>
   layoutComparison: Required<LayoutComparisonFilters>
@@ -62,6 +68,16 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   },
   activity: {
     metric: 'keystrokes',
+    view: 'grid',
+    // `endMonthIso` snapshots the current local wall-clock month at
+    // module load. A static default would freeze the calendar's window
+    // at "the month this build shipped"; restoreFilters re-applies this
+    // default on every load so the seed stays current across launches.
+    calendar: {
+      normalization: 'absolute',
+      monthsToShow: 6,
+      endMonthIso: toLocalMonth(Date.now()),
+    },
   },
   layer: {
     viewMode: 'keystrokes',
@@ -90,7 +106,21 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
-    activity: { ...DEFAULT_ANALYZE_FILTERS.activity, ...saved.activity },
+    // Activity is the only filter shape with a nested object (`calendar`),
+    // so the shallow `{ ...DEFAULT, ...saved }` would drop calendar defaults
+    // whenever the user only persisted a subset of the calendar fields.
+    // Pick known calendar fields explicitly (instead of spreading) so any
+    // legacy keys from older builds (e.g. `selectedYear`) get dropped at
+    // load time and don't leak into subsequent writes.
+    activity: {
+      ...DEFAULT_ANALYZE_FILTERS.activity,
+      ...saved.activity,
+      calendar: {
+        normalization: saved.activity?.calendar?.normalization ?? DEFAULT_ANALYZE_FILTERS.activity.calendar.normalization,
+        monthsToShow: saved.activity?.calendar?.monthsToShow ?? DEFAULT_ANALYZE_FILTERS.activity.calendar.monthsToShow,
+        endMonthIso: saved.activity?.calendar?.endMonthIso ?? DEFAULT_ANALYZE_FILTERS.activity.calendar.endMonthIso,
+      },
+    },
     layer: { ...DEFAULT_ANALYZE_FILTERS.layer, ...saved.layer },
     bigrams: { ...DEFAULT_ANALYZE_FILTERS.bigrams, ...saved.bigrams },
     layoutComparison: { ...DEFAULT_ANALYZE_FILTERS.layoutComparison, ...saved.layoutComparison },
@@ -271,7 +301,15 @@ export function useAnalyzeFilters(
   }, [update])
 
   const setActivity = useCallback((patch: Partial<ActivityFilters>) => {
-    update((prev) => ({ ...prev, activity: { ...prev.activity, ...patch } }))
+    update((prev) => {
+      // Deep-merge `calendar` so a partial calendar patch ({ valueMetric })
+      // doesn't wipe the other calendar fields. The other ActivityFilters
+      // fields stay shallow because they're flat primitives.
+      const calendar = patch.calendar !== undefined
+        ? { ...prev.activity.calendar, ...patch.calendar }
+        : prev.activity.calendar
+      return { ...prev, activity: { ...prev.activity, ...patch, calendar } }
+    })
   }, [update])
 
   const setLayer = useCallback((patch: Partial<LayerFilters>) => {

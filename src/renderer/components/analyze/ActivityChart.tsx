@@ -36,23 +36,53 @@ import { AnalyzeStatGrid } from './stat-card'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { formatWpm } from './analyze-wpm'
 import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
-import type { ActivityMetric, DeviceScope, RangeMs } from './analyze-types'
+import type { ActivityCalendarFilters } from '../../../shared/types/analyze-filters'
+import type { ActivityMetric, ActivityView, DeviceScope, RangeMs } from './analyze-types'
+import { ActivityCalendarChart } from './ActivityCalendarChart'
 
 interface Props {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
   metric: ActivityMetric
+  /** Chart geometry — `grid` keeps the existing 24×7 grid / sessions
+   * histogram, `calendar` swaps to the year heatmap. */
+  view: ActivityView
   /** Minimum `activeMs` per cell to count toward WPM peak / lowest
    * selection. Shared with the WPM tab's Min-sample filter. Has no
    * effect in `keystrokes` or `sessions` modes. */
   minActiveMs: number
+  /** Persisted calendar subview state. Only consumed when
+   * `view === 'calendar'`; the grid view ignores it. Required shape
+   * (every field set) so the chart can read defaults the hook has
+   * already applied. */
+  calendarFilter: Required<ActivityCalendarFilters>
+  /** Wall-clock used to clamp the year display to "no future"
+   * (current year stops at today). Snapshot at parent mount so the
+   * calendar render is stable while the page is open. */
+  nowMs: number
+  /** Calendar visible-window cursor shift. Calendar view only — the
+   * grid/sessions branches never call it. The chart hosts the prev/next
+   * buttons inside its own surface so the filter row stays compact. */
+  onShiftCalendarMonth: (deltaMonths: number) => void
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i)
 const DOWS = [0, 1, 2, 3, 4, 5, 6] as const
 
 export function ActivityChart(props: Props) {
+  if (props.view === 'calendar') {
+    return (
+      <ActivityCalendarChart
+        uid={props.uid}
+        deviceScope={props.deviceScope}
+        metric={props.metric}
+        calendarFilter={props.calendarFilter}
+        nowMs={props.nowMs}
+        onShiftEndMonth={props.onShiftCalendarMonth}
+      />
+    )
+  }
   if (props.metric === 'sessions') {
     return (
       <SessionDistributionChart

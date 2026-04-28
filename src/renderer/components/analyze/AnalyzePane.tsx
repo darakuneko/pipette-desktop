@@ -20,14 +20,28 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import {
+  ACTIVITY_CALENDAR_MONTHS_TO_SHOW,
+  ACTIVITY_CALENDAR_NORMALIZATIONS,
   ACTIVITY_METRICS,
+  ACTIVITY_VIEWS,
   INTERVAL_UNITS,
   INTERVAL_VIEW_MODES,
   WPM_VIEW_MODES,
   isAllScope,
   isHashScope,
 } from '../../../shared/types/analyze-filters'
-import type { ActivityMetric, AnalysisTabKey, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs, WpmViewMode } from './analyze-types'
+import type {
+  ActivityCalendarMonthsToShow,
+  ActivityCalendarNormalization,
+  ActivityMetric,
+  ActivityView,
+  AnalysisTabKey,
+  GranularityChoice,
+  IntervalUnit,
+  IntervalViewMode,
+  RangeMs,
+  WpmViewMode,
+} from './analyze-types'
 import type { SyncProgress } from '../../../shared/types/sync'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
@@ -51,6 +65,7 @@ import { LayerUsageChart } from './LayerUsageChart'
 import { SummaryView } from './SummaryView'
 import { WpmChart } from './WpmChart'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
+import { shiftLocalMonth } from './analyze-streak-goal'
 
 const TAB_BTN_BASE =
   'rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
@@ -374,9 +389,14 @@ export function AnalyzePane({
   // Re-clamp when a new snapshot lands mid-session and shrinks the
   // current snapshot's `hi`. `clampRangeToBoundaries` returns the same
   // reference on no-op so React's setState bails out on steady state.
+  // Activity > Calendar view is excluded from clamp because it owns
+  // its own visible-window cursor (`endMonthIso` + `monthsToShow`) and
+  // should not be folded back into the snapshot's `[savedAt,
+  // nextSavedAt)` slice.
   useEffect(() => {
+    if (analysisTab === 'activity' && activityFilter.view === 'calendar') return
     setRange((prev) => clampRangeToBoundaries(prev, snapshotBoundaries))
-  }, [snapshotBoundaries])
+  }, [snapshotBoundaries, analysisTab, activityFilter.view])
 
   // Selecting a snapshot resets the range to the snapshot's active
   // window; narrowing inside the window leaves `selectedSnapshotSavedAt`
@@ -559,9 +579,45 @@ export function AnalyzePane({
 
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
-  // the JSX stays in one place.
+  // the JSX stays in one place. Order: View → Range size + cursor
+  // (calendar only) → Metric → view-specific extras (calendar
+  // normalize, or grid WPM min-sample).
   const activityFilters = (
     <>
+      <label className={FILTER_LABEL}>
+        <span>{t('analyze.filters.activityView')}</span>
+        <select
+          className={FILTER_SELECT}
+          value={activityFilter.view}
+          onChange={(e) => setActivity({ view: e.target.value as ActivityView })}
+          data-testid={tid("analyze-filter-activity-view")}
+        >
+          {ACTIVITY_VIEWS.map((key) => (
+            <option key={key} value={key}>
+              {t(`analyze.filters.activityViewOption.${key}`)}
+            </option>
+          ))}
+        </select>
+      </label>
+      {activityFilter.view === 'calendar' && (
+        <>
+          <label className={FILTER_LABEL}>
+            <span>{t('analyze.filters.calendarRange')}</span>
+            <select
+              className={FILTER_SELECT}
+              value={String(activityFilter.calendar.monthsToShow)}
+              onChange={(e) => setActivity({ calendar: { monthsToShow: Number.parseInt(e.target.value, 10) as ActivityCalendarMonthsToShow } })}
+              data-testid={tid("analyze-filter-calendar-range")}
+            >
+              {ACTIVITY_CALENDAR_MONTHS_TO_SHOW.map((n) => (
+                <option key={n} value={String(n)}>
+                  {t(`analyze.filters.calendarRangeOption.${n}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        </>
+      )}
       <label className={FILTER_LABEL}>
         <span>{t('analyze.filters.activityMetric')}</span>
         <select
@@ -577,7 +633,7 @@ export function AnalyzePane({
           ))}
         </select>
       </label>
-      {activityFilter.metric === 'wpm' && (
+      {activityFilter.view === 'grid' && activityFilter.metric === 'wpm' && (
         <label className={FILTER_LABEL}>
           <span>{t('analyze.filters.wpmMinSample')}</span>
           <select
@@ -589,6 +645,23 @@ export function AnalyzePane({
             {WPM_MIN_SAMPLE_OPTIONS.map((opt) => (
               <option key={opt.labelKey} value={String(opt.value)}>
                 {t(`analyze.filters.wpmMinSampleOption.${opt.labelKey}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {activityFilter.view === 'calendar' && (
+        <label className={FILTER_LABEL}>
+          <span>{t('analyze.filters.calendarNormalization')}</span>
+          <select
+            className={FILTER_SELECT}
+            value={activityFilter.calendar.normalization}
+            onChange={(e) => setActivity({ calendar: { normalization: e.target.value as ActivityCalendarNormalization } })}
+            data-testid={tid("analyze-filter-calendar-normalization")}
+          >
+            {ACTIVITY_CALENDAR_NORMALIZATIONS.map((key) => (
+              <option key={key} value={key}>
+                {t(`analyze.filters.calendarNormalizationOption.${key}`)}
               </option>
             ))}
           </select>
@@ -873,7 +946,7 @@ export function AnalyzePane({
 
         {selected ? (
           <>
-            <div className="flex-1 min-h-0 py-2 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
+            <div className="flex-1 min-h-0 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
               {analysisTab === 'summary' ? (
                 <SummaryView
                   uid={selected.uid}
@@ -905,7 +978,11 @@ export function AnalyzePane({
                   range={range}
                   deviceScope={deviceScopes[0]}
                   metric={activityFilter.metric}
+                  view={activityFilter.view}
                   minActiveMs={wpmFilter.minActiveMs}
+                  calendarFilter={activityFilter.calendar}
+                  nowMs={nowMs}
+                  onShiftCalendarMonth={(delta) => setActivity({ calendar: { endMonthIso: shiftLocalMonth(activityFilter.calendar.endMonthIso, delta) } })}
                 />
               ) : analysisTab === 'keyHeatmap' ? (
                 effectiveSnapshot !== null ? (
