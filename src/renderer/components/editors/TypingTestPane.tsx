@@ -7,7 +7,6 @@ import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
-import { useCurrentAppName } from '../../typing-test/useCurrentAppName'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
@@ -131,13 +130,6 @@ export function TypingTestPane({
     windowMs: (heatmapWindowMin ?? 5) * 60 * 1_000,
   })
   const heatmapActive = heatmapMaxTotal > 0
-  // Slow-poll the active app name only while the user is looking at
-  // the Monitor App tab and recording is on. Outside this narrow
-  // window the hook unmounts its interval entirely.
-  const liveAppName = useCurrentAppName({
-    enabled:
-      !!viewOnly && menuTab === 'monitorApp' && !!recordEnabled && !!monitorAppEnabled,
-  })
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [showConsentModal, setShowConsentModal] = useState(false)
 
@@ -477,16 +469,6 @@ export function TypingTestPane({
               >
                 {t('editor.typingTest.tab.rec')}
               </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={menuTab === 'monitorApp'}
-                data-testid="menu-tab-monitor-app"
-                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'monitorApp' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                onClick={() => onMenuTabChange?.('monitorApp')}
-              >
-                {t('editor.typingTest.tab.monitorApp')}
-              </button>
             </div>
 
             {/* Each tab body is wrapped in its own flex column so we can
@@ -556,6 +538,32 @@ export function TypingTestPane({
                     {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}
                   </button>
                 )}
+                {/* Monitor App lives directly under the Start/Stop
+                    button so the recording-related toggles read top
+                    to bottom. The label is fixed; the on/off state
+                    only changes the border / background colour. The
+                    button is greyed out while REC is off so app-name
+                    capture has exactly one entry point. */}
+                {onMonitorAppEnabledChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={monitorAppEnabled ?? false}
+                    aria-disabled={!recordEnabled}
+                    data-testid="monitor-app-toggle"
+                    className={
+                      !recordEnabled
+                        ? 'whitespace-nowrap rounded border border-edge px-2 py-1 text-content-muted opacity-60 cursor-not-allowed'
+                        : `whitespace-nowrap rounded border px-2 py-1 transition-colors ${monitorAppEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`
+                    }
+                    onClick={() => {
+                      if (!recordEnabled) return
+                      onMonitorAppEnabledChange(!monitorAppEnabled)
+                    }}
+                  >
+                    {t('editor.typingTest.monitorApp.label')}
+                  </button>
+                )}
                 {onViewAnalytics && (
                   <button
                     type="button"
@@ -584,49 +592,6 @@ export function TypingTestPane({
                         <option key={m} value={m}>{t('editor.typingTest.heatmapWindowOption', { minutes: m })}</option>
                       ))}
                     </select>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {menuTab === 'monitorApp' && (
-              <div className="flex min-h-[100px] flex-col gap-1.5">
-                {onMonitorAppEnabledChange && (
-                  <button
-                    type="button"
-                    role="menuitemcheckbox"
-                    aria-checked={monitorAppEnabled ?? false}
-                    aria-disabled={!recordEnabled}
-                    data-testid="monitor-app-toggle"
-                    title={!recordEnabled ? t('editor.typingTest.monitorApp.recOff') : undefined}
-                    className={
-                      !recordEnabled
-                        ? 'whitespace-nowrap rounded border border-edge px-2 py-1 text-content-muted opacity-60 cursor-not-allowed'
-                        : `whitespace-nowrap rounded border px-2 py-1 transition-colors ${monitorAppEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`
-                    }
-                    onClick={() => {
-                      // Inert while REC is off so there's exactly one
-                      // entry point that starts data collection (REC).
-                      if (!recordEnabled) return
-                      onMonitorAppEnabledChange(!monitorAppEnabled)
-                    }}
-                  >
-                    {monitorAppEnabled
-                      ? t('editor.typingTest.monitorApp.enabled')
-                      : t('editor.typingTest.monitorApp.disabled')}
-                  </button>
-                )}
-                {/* Live preview only matters once we're actually
-                    capturing. While REC is off the toggle itself is
-                    disabled so the preview slot would just be noise. */}
-                {recordEnabled && monitorAppEnabled && (
-                  <div
-                    data-testid="monitor-app-current"
-                    className="rounded border border-edge bg-surface-alt px-2 py-1 text-content-secondary"
-                  >
-                    {liveAppName
-                      ? t('editor.typingTest.monitorApp.currentApp', { app: liveAppName })
-                      : t('editor.typingTest.monitorApp.noApp')}
                   </div>
                 )}
               </div>

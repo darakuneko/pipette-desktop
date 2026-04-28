@@ -274,17 +274,10 @@
       "viewAnalytics": "View Analytics",
       "tab": {
         "window": "Window",
-        "rec": "REC",
-        "monitorApp": "Monitor App"
+        "rec": "REC"
       },
       "monitorApp": {
-        "enabled": "Tracking app",
-        "disabled": "Track app",
-        "currentApp": "Current: {{app}}",
-        "noApp": "No app detected",
-        "recOff": "Start REC first to enable",
-        "linuxNote": "On Wayland / GNOME, install the FocusedWindow GNOME Shell extension to enable detection.",
-        "macosPermission": "macOS requires Accessibility permission for app detection."
+        "label": "Monitor App"
       },
       "heatmap": {
         "legend": "Heatmap: last 1 hour"

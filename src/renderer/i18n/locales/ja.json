@@ -272,17 +272,10 @@
       "viewAnalytics": "分析ビュー",
       "tab": {
         "window": "ウィンドウ",
-        "rec": "REC",
-        "monitorApp": "Monitor App"
+        "rec": "REC"
       },
       "monitorApp": {
-        "enabled": "アプリ取得中",
-        "disabled": "アプリ取得",
-        "currentApp": "現在: {{app}}",
-        "noApp": "アプリ未検出",
-        "recOff": "先に REC を開始してください",
-        "linuxNote": "Wayland / GNOME 環境では FocusedWindow GNOME Shell 拡張のインストールが必要です。",
-        "macosPermission": "macOS ではアプリ検出にアクセシビリティ権限が必要です。"
+        "label": "Monitor App"
       },
       "heatmap": {
         "legend": "ヒートマップ: 直近 1 時間"

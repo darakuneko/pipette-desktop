@@ -135,11 +135,6 @@ export const IpcChannels = {
   TYPING_ANALYTICS_DELETE_REMOTE_DAY: 'typing-analytics:delete-remote-day',
   TYPING_ANALYTICS_EXPORT: 'typing-analytics:export',
   TYPING_ANALYTICS_IMPORT: 'typing-analytics:import',
-  /** Read the currently focused application's name. Backed by
-   * app-monitor.getCurrentAppName, which honours the
-   * typingMonitorAppEnabled AppConfig flag (returns null when off).
-   * Used by the Monitor App tab live preview; not on a hot path. */
-  TYPING_ANALYTICS_GET_CURRENT_APP_NAME: 'typing-analytics:get-current-app-name',
   /** Distinct app_name list (with keystroke totals) for the analyze
    * range. Drives the App selector dropdown — values become the
    * `appScope` arg of every per-app-aware range query. */

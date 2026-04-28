@@ -199,15 +199,6 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
-    IpcChannels.TYPING_ANALYTICS_GET_CURRENT_APP_NAME,
-    // Pure passthrough — getCurrentAppName already enforces the
-    // Monitor App config gate and returns null on any failure, so
-    // there's no extra validation to do here. The Monitor App tab
-    // calls this on a slow poll for the live preview.
-    async (): Promise<string | null> => getCurrentAppName(),
-  )
-
-  secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_KEYBOARDS,
     async (): Promise<TypingKeyboardSummary[]> => listTypingKeyboards(),
   )

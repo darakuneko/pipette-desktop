@@ -152,7 +152,6 @@ export interface VialAPI {
   // Typing Analytics
   typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>
   typingAnalyticsFlush(uid: string): Promise<void>
-  typingAnalyticsGetCurrentAppName(): Promise<string | null>
   typingAnalyticsListAppsForRange(
     uid: string,
     sinceMs: number,

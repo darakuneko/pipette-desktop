@@ -223,15 +223,6 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_EVENT, event),
   typingAnalyticsFlush: (uid: string): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_FLUSH, uid),
-  /** Resolve the active application's name. Returns null when Monitor
-   * App is disabled in AppConfig, when the OS lookup fails, or on
-   * Linux/Wayland setups without the FocusedWindow GNOME extension.
-   * The Monitor App settings tab uses this to feedback what is
-   * currently being captured; the analytics aggregator gets the same
-   * value via main-process internals (no IPC round-trip on the hot
-   * path). */
-  typingAnalyticsGetCurrentAppName: (): Promise<string | null> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_CURRENT_APP_NAME),
   typingAnalyticsListAppsForRange: (
     uid: string,
     sinceMs: number,
