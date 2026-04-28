@@ -95,8 +95,10 @@ async function gdbusFallback(): Promise<string | null> {
  * - the underlying call threw or returned no usable name
  * - Linux/Wayland fallback also failed
  *
- * Side-effect: emits a single console warning the first time the native
- * lib raises so logs don't get spammed each flush.
+ * Side-effect: emits a single console warning when the native lib
+ * fails on a platform where it shouldn't (macOS / Windows). On Linux
+ * the native impl falls through to gdbus by design — Wayland sandboxes
+ * window focus, so the throw is the expected branch and we stay quiet.
  */
 export async function getCurrentAppName(): Promise<string | null> {
   const config = loadAppConfig()
@@ -109,7 +111,7 @@ export async function getCurrentAppName(): Promise<string | null> {
   try {
     info = lib.getActiveWindow()
   } catch (err) {
-    warnOnce('getActiveWindow threw', err)
+    if (process.platform !== 'linux') warnOnce('getActiveWindow threw', err)
     return await gdbusFallback()
   }
 
