@@ -13,6 +13,8 @@ export type {
   ActivityMetric,
   ActivityView,
   DeviceScope,
+  ErgonomicsLearningPeriod,
+  ErgonomicsViewMode,
   GranularityChoice,
   HeatmapNormalization,
   IntervalUnit,

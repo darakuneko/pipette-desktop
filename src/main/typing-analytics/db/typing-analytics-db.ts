@@ -122,6 +122,7 @@ export type {
   TypingActivityCell,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -161,6 +162,40 @@ function decodeHistBuffer(buf: Uint8Array): number[] {
   return out
 }
 
+/** Raw row shape returned by the matrix-cells-by-day SQL. The
+ * `date` column carries a `YYYY-MM-DD` string from
+ * `strftime('localtime')` which we convert to a local-midnight epoch
+ * ms before returning {@link TypingMatrixCellDailyRow}. */
+interface MatrixCellsByDayDbRow {
+  date: string
+  layer: number
+  row: number
+  col: number
+  count: number
+  tap: number
+  hold: number
+}
+
+function localDateStringToMs(dateStr: string): number {
+  // `dateStr` is `YYYY-MM-DD` from SQLite's strftime('localtime'); the
+  // 3-arg Date constructor parses it as local midnight, which is what
+  // the renderer expects for week / month bucketing.
+  const [yy, mm, dd] = dateStr.split('-').map((s) => Number.parseInt(s, 10))
+  return new Date(yy, mm - 1, dd).getTime()
+}
+
+function matrixCellsByDayDbRowToDailyRow(r: MatrixCellsByDayDbRow): TypingMatrixCellDailyRow {
+  return {
+    dayMs: localDateStringToMs(r.date),
+    layer: r.layer,
+    row: r.row,
+    col: r.col,
+    count: r.count,
+    tap: r.tap,
+    hold: r.hold,
+  }
+}
+
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
   private readonly upsertScopeStmt: Statement
@@ -194,6 +229,8 @@ export class TypingAnalyticsDB {
   private readonly selectLayerUsageForUidAndHashStmt: Statement
   private readonly selectMatrixCellsForUidStmt: Statement
   private readonly selectMatrixCellsForUidAndHashStmt: Statement
+  private readonly selectMatrixCellsByDayForUidStmt: Statement
+  private readonly selectMatrixCellsByDayForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
   private readonly selectBigramMinutesInRangeForUidStmt: Statement
@@ -841,6 +878,53 @@ export class TypingAnalyticsDB {
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
        GROUP BY m.layer, m.row, m.col
+    `)
+
+    // Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
+    // Learning Curve. strftime with 'localtime' so the day boundary
+    // matches the daily summary / activity-grid queries above; the
+    // renderer buckets the resulting rows by week / month before
+    // folding them into ergonomic sub-scores. tap_count / hold_count
+    // travel alongside count so future sub-views (e.g. tap-only
+    // finger load) can subtract the hold portion without re-running
+    // the SQL.
+    this.selectMatrixCellsByDayForUidStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', m.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY date, m.layer, m.row, m.col
+       ORDER BY date ASC
+    `)
+
+    this.selectMatrixCellsByDayForUidAndHashStmt = this.db.prepare(`
+      SELECT strftime('%Y-%m-%d', m.minute_ts / 1000, 'unixepoch', 'localtime') AS date,
+             m.layer AS layer,
+             m.row AS row,
+             m.col AS col,
+             SUM(m.count) AS count,
+             SUM(m.tap_count) AS tap,
+             SUM(m.hold_count) AS hold
+        FROM typing_matrix_minute m
+        JOIN typing_scopes s ON s.id = m.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND m.is_deleted = 0
+         AND m.minute_ts >= @sinceMs
+         AND m.minute_ts < @untilMs
+       GROUP BY date, m.layer, m.row, m.col
+       ORDER BY date ASC
     `)
 
     // Minute-raw rows for the Analyze WPM / Interval charts. The client
@@ -1664,6 +1748,32 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingMatrixCellRow[] {
     return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMatrixCellRow[]
+  }
+
+  /** Per-(localDay, layer, row, col) press totals for the Analyze
+   * Ergonomic Learning Curve. The SQL groups by a `localtime` date
+   * string so day boundaries match the user's wall clock; we map that
+   * string to a local-midnight epoch here so callers can do numeric
+   * bucketing without parsing dates again. */
+  listMatrixCellsByDayForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingMatrixCellDailyRow[] {
+    const rows = this.selectMatrixCellsByDayForUidStmt.all({ uid, sinceMs, untilMs }) as MatrixCellsByDayDbRow[]
+    return rows.map(matrixCellsByDayDbRowToDailyRow)
+  }
+
+  /** Same as {@link listMatrixCellsByDayForUid} but restricted to one
+   * machine_hash. */
+  listMatrixCellsByDayForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+  ): TypingMatrixCellDailyRow[] {
+    const rows = this.selectMatrixCellsByDayForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as MatrixCellsByDayDbRow[]
+    return rows.map(matrixCellsByDayDbRowToDailyRow)
   }
 
   /** Minute-raw stats for the Analyze WPM / Interval charts over the

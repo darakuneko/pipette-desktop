@@ -16,6 +16,7 @@ import {
   type AnalyzeFilterSettings,
   type BigramFilters,
   type DeviceScope,
+  type ErgonomicsFilters,
   type HeatmapFilters,
   type IntervalFilters,
   type LayerFilters,
@@ -23,6 +24,7 @@ import {
   type WpmFilters,
 } from '../../shared/types/analyze-filters'
 import { toLocalMonth } from '../components/analyze/analyze-streak-goal'
+import { DEFAULT_LEARNING_MIN_SAMPLE } from '../components/analyze/analyze-ergonomics-curve'
 
 const DEBOUNCE_MS = 300
 
@@ -43,6 +45,7 @@ export interface AnalyzeFiltersState {
   // can read `state.activity.calendar.valueMetric` without a guard.
   activity: Required<Omit<ActivityFilters, 'calendar'>> & { calendar: Required<ActivityCalendarFilters> }
   layer: Required<LayerFilters>
+  ergonomics: Required<ErgonomicsFilters>
   bigrams: Required<BigramFilters>
   layoutComparison: Required<LayoutComparisonFilters>
 }
@@ -83,6 +86,11 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     viewMode: 'keystrokes',
     baseLayer: 0,
   },
+  ergonomics: {
+    viewMode: 'snapshot',
+    period: 'week',
+    minSampleKeystrokes: DEFAULT_LEARNING_MIN_SAMPLE,
+  },
   bigrams: {
     topLimit: 10,
     slowLimit: 10,
@@ -122,6 +130,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
       },
     },
     layer: { ...DEFAULT_ANALYZE_FILTERS.layer, ...saved.layer },
+    ergonomics: { ...DEFAULT_ANALYZE_FILTERS.ergonomics, ...saved.ergonomics },
     bigrams: { ...DEFAULT_ANALYZE_FILTERS.bigrams, ...saved.bigrams },
     layoutComparison: { ...DEFAULT_ANALYZE_FILTERS.layoutComparison, ...saved.layoutComparison },
   }
@@ -135,6 +144,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
     interval: state.interval,
     activity: state.activity,
     layer: state.layer,
+    ergonomics: state.ergonomics,
     bigrams: state.bigrams,
     layoutComparison: state.layoutComparison,
   }
@@ -149,6 +159,7 @@ export interface UseAnalyzeFiltersReturn {
   setInterval: (patch: Partial<IntervalFilters>) => void
   setActivity: (patch: Partial<ActivityFilters>) => void
   setLayer: (patch: Partial<LayerFilters>) => void
+  setErgonomics: (patch: Partial<ErgonomicsFilters>) => void
   setBigrams: (patch: Partial<BigramFilters>) => void
   setLayoutComparison: (patch: Partial<LayoutComparisonFilters>) => void
 }
@@ -316,6 +327,10 @@ export function useAnalyzeFilters(
     update((prev) => ({ ...prev, layer: { ...prev.layer, ...patch } }))
   }, [update])
 
+  const setErgonomics = useCallback((patch: Partial<ErgonomicsFilters>) => {
+    update((prev) => ({ ...prev, ergonomics: { ...prev.ergonomics, ...patch } }))
+  }, [update])
+
   const setBigrams = useCallback((patch: Partial<BigramFilters>) => {
     update((prev) => ({ ...prev, bigrams: { ...prev.bigrams, ...patch } }))
   }, [update])
@@ -333,6 +348,7 @@ export function useAnalyzeFilters(
     setInterval,
     setActivity,
     setLayer,
+    setErgonomics,
     setBigrams,
     setLayoutComparison,
   }

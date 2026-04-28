@@ -31,6 +31,7 @@ import type {
   TypingKeymapSnapshotSummary,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -171,6 +172,9 @@ export interface VialAPI {
   typingAnalyticsListMatrixCells(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
   typingAnalyticsListMatrixCellsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
   typingAnalyticsListMatrixCellsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsByDay(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
   typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListMinuteStatsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>

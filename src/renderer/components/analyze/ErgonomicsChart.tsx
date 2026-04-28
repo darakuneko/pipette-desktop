@@ -23,10 +23,16 @@ import type {
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
-import type { DeviceScope, RangeMs } from './analyze-types'
+import type {
+  DeviceScope,
+  ErgonomicsLearningPeriod,
+  ErgonomicsViewMode,
+  RangeMs,
+} from './analyze-types'
 import { aggregateErgonomics, ROW_ORDER } from './analyze-ergonomics'
 import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
+import { ErgonomicsLearningCurveChart } from './ErgonomicsLearningCurveChart'
 
 interface Props {
   uid: string
@@ -36,6 +42,14 @@ interface Props {
   deviceScopes: readonly DeviceScope[]
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
+  /** Sub-view selector: `'snapshot'` keeps the four-pane summary,
+   * `'learning'` swaps in the trend chart. */
+  viewMode?: ErgonomicsViewMode
+  /** Bucket width for the Learning Curve. Ignored when
+   * `viewMode === 'snapshot'`. */
+  period?: ErgonomicsLearningPeriod
+  /** Threshold for marking a Learning Curve bucket as qualified. */
+  learningMinSampleKeystrokes?: number
 }
 
 type BarDatum = { label: string; value: number }
@@ -241,13 +255,57 @@ function mergeLayerHeatmaps(
   return merged
 }
 
+/** Dispatcher — routes to the right sub-view. The two views run
+ * disjoint hook trees so we keep each as its own component to avoid
+ * hook-order pitfalls when the user toggles modes. */
 export function ErgonomicsChart({
   uid,
   range,
   deviceScopes,
   snapshot,
   fingerOverrides,
+  viewMode = 'snapshot',
+  period = 'week',
+  learningMinSampleKeystrokes,
 }: Props) {
+  if (viewMode === 'learning') {
+    return (
+      <ErgonomicsLearningCurveChart
+        uid={uid}
+        range={range}
+        deviceScopes={deviceScopes}
+        snapshot={snapshot}
+        period={period}
+        minSampleKeystrokes={learningMinSampleKeystrokes}
+      />
+    )
+  }
+  return (
+    <ErgonomicsSnapshotView
+      uid={uid}
+      range={range}
+      deviceScopes={deviceScopes}
+      snapshot={snapshot}
+      fingerOverrides={fingerOverrides}
+    />
+  )
+}
+
+interface SnapshotViewProps {
+  uid: string
+  range: RangeMs
+  deviceScopes: readonly DeviceScope[]
+  snapshot: TypingKeymapSnapshot
+  fingerOverrides?: Record<string, FingerType>
+}
+
+function ErgonomicsSnapshotView({
+  uid,
+  range,
+  deviceScopes,
+  snapshot,
+  fingerOverrides,
+}: SnapshotViewProps) {
   const { t } = useTranslation()
   const [layerCells, setLayerCells] = useState<Record<number, TypingHeatmapByCell>>({})
   const [loading, setLoading] = useState(true)

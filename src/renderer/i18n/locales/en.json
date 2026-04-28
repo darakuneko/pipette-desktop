@@ -1045,6 +1045,26 @@
         "home": "Home",
         "bottom": "Bottom",
         "thumb": "Thumb"
+      },
+      "learning": {
+        "noData": "Not enough matrix activity in this range. Type more or widen the period filter.",
+        "belowMinSample": "below min sample",
+        "totalKeystrokes": "{{count}} keystrokes",
+        "relativeTrendNote": "Scores are a relative trend, not a calibrated absolute. Watch the line move over time rather than reading the percentage as a grade.",
+        "score": {
+          "overall": "Overall",
+          "fingerLoad": "Finger load",
+          "handBalance": "Hand balance",
+          "homeRowStay": "Home row stay"
+        },
+        "summary": {
+          "latestOverall": "Latest score",
+          "delta_one": "vs last bucket",
+          "delta_other": "vs prior {{count}} buckets",
+          "baselineMean": "Baseline {{value}}",
+          "bucketCount": "Buckets",
+          "qualifiedCount": "Qualified"
+        }
       }
     },
     "layoutComparison": {
@@ -1178,6 +1198,16 @@
         "min1": "1 min",
         "min2": "2 min",
         "min5": "5 min"
+      },
+      "ergonomicsViewMode": "View",
+      "ergonomicsViewModeOption": {
+        "snapshot": "Snapshot",
+        "learning": "Learning curve"
+      },
+      "ergonomicsPeriod": "Period",
+      "ergonomicsPeriodOption": {
+        "week": "Weekly",
+        "month": "Monthly"
       },
       "activityMetric": "Metric",
       "activityMetricOption": {

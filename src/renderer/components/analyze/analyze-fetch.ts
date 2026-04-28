@@ -18,6 +18,7 @@ import type {
   TypingKeymapSnapshot,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
 } from '../../../shared/types/typing-analytics'
 import type { DeviceScope } from '../../../shared/types/analyze-filters'
@@ -54,6 +55,22 @@ export function listMatrixCellsForScope(
   if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsForHash(uid, scope.machineHash, fromMs, toMs)
   if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsLocal(uid, fromMs, toMs)
   return window.vialAPI.typingAnalyticsListMatrixCells(uid, fromMs, toMs)
+}
+
+/** Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
+ * Learning Curve. Routed through the same scope discriminator as the
+ * range-aggregated `listMatrixCellsForScope`; the renderer buckets
+ * the resulting rows by week / month and folds each bucket into
+ * ergonomic sub-scores. */
+export function listMatrixCellsByDayForScope(
+  uid: string,
+  scope: DeviceScope,
+  fromMs: number,
+  toMs: number,
+): Promise<TypingMatrixCellDailyRow[]> {
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayForHash(uid, scope.machineHash, fromMs, toMs)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayLocal(uid, fromMs, toMs)
+  return window.vialAPI.typingAnalyticsListMatrixCellsByDay(uid, fromMs, toMs)
 }
 
 export function listLayerUsageForScope(

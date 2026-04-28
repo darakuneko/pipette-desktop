@@ -29,6 +29,7 @@ import type {
   TypingKeymapSnapshotSummary,
   TypingLayerUsageRow,
   TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
   TypingMinuteStatsRow,
   TypingSessionRow,
   TypingBksMinuteRow,
@@ -266,6 +267,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsListMatrixCellsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH, uid, machineHash, sinceMs, untilMs),
+  typingAnalyticsListMatrixCellsByDay: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY, uid, sinceMs, untilMs),
+  typingAnalyticsListMatrixCellsByDayLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL, uid, sinceMs, untilMs),
+  typingAnalyticsListMatrixCellsByDayForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH, uid, machineHash, sinceMs, untilMs),
   typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs),
   typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>

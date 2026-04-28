@@ -51,17 +51,17 @@ export interface ErgonomicsAggregation {
   unmappedFinger: number
 }
 
-function zeroFingerCounts(): FingerCounts {
+export function zeroFingerCounts(): FingerCounts {
   const o = {} as FingerCounts
   for (const f of FINGER_LIST) o[f] = 0
   return o
 }
 
-function zeroHandCounts(): HandCounts {
+export function zeroHandCounts(): HandCounts {
   return { left: 0, right: 0 }
 }
 
-function zeroRowCounts(): RowCategoryCounts {
+export function zeroRowCounts(): RowCategoryCounts {
   return {
     number: 0,
     top: 0,

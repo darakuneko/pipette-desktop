@@ -50,6 +50,7 @@ import {
   type TypingKeyboardSummary,
   type TypingLayerUsageRow,
   type TypingMatrixCellRow,
+  type TypingMatrixCellDailyRow,
   type TypingMinuteStatsRow,
   type TypingSessionRow,
   type TypingBksMinuteRow,
@@ -303,6 +304,17 @@ export function setupTypingAnalyticsIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH,
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMatrixCellsByDayInRangeForHash(uid, machineHash, since, until)
+    },
+  )
+
+  secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH,
     async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
@@ -432,6 +444,27 @@ export function setupTypingAnalyticsIpc(): void {
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
       return listTypingMatrixCellsInRangeForHash(uid, ownHash, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      return listTypingMatrixCellsByDayInRange(uid, since, until)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL,
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
+      const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
+      const ownHash = await getMachineHash()
+      return listTypingMatrixCellsByDayInRangeForHash(uid, ownHash, since, until)
     },
   )
 
@@ -808,6 +841,27 @@ export function listTypingMatrixCellsInRangeForHash(
   untilMs: number,
 ): TypingMatrixCellRow[] {
   return getTypingAnalyticsDB().listMatrixCellsForUidAndHash(uid, machineHash, sinceMs, untilMs)
+}
+
+/** Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
+ * Learning Curve. The renderer buckets these by week / month before
+ * folding them into ergonomic sub-scores; we keep `dayMs` numeric so
+ * the bucketing stays purely arithmetic on the renderer side. */
+export function listTypingMatrixCellsByDayInRange(
+  uid: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMatrixCellDailyRow[] {
+  return getTypingAnalyticsDB().listMatrixCellsByDayForUid(uid, sinceMs, untilMs)
+}
+
+export function listTypingMatrixCellsByDayInRangeForHash(
+  uid: string,
+  machineHash: string,
+  sinceMs: number,
+  untilMs: number,
+): TypingMatrixCellDailyRow[] {
+  return getTypingAnalyticsDB().listMatrixCellsByDayForUidAndHash(uid, machineHash, sinceMs, untilMs)
 }
 
 /** Minute-raw stats for the Analyze WPM / Interval charts over the

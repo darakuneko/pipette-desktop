@@ -226,6 +226,23 @@ export interface TypingMatrixCellRow {
   hold: number
 }
 
+/** Per-(localDay, layer, row, col) press totals for the Analyze
+ * Ergonomic Learning Curve view. The renderer buckets these by week
+ * / month and folds each bucket into ergonomic sub-scores (finger
+ * load deviation / hand balance / home row stay). `dayMs` is the
+ * local-midnight epoch in milliseconds; SQL groups by
+ * `strftime('%Y-%m-%d', …, 'localtime')` so day boundaries align with
+ * the user's wall clock and match the existing daily summary IPCs. */
+export interface TypingMatrixCellDailyRow {
+  dayMs: number
+  layer: number
+  row: number
+  col: number
+  count: number
+  tap: number
+  hold: number
+}
+
 /** Per-minute Backspace count aggregate used by the Analyze
  * error-proxy overlay. Sourced from `typing_matrix_minute` so every
  * path (matrix HID reads, typing-test, Vial input) contributes — not

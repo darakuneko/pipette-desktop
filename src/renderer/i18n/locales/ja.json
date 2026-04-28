@@ -1043,6 +1043,26 @@
         "home": "ホーム行",
         "bottom": "下段",
         "thumb": "親指段"
+      },
+      "learning": {
+        "noData": "この期間にはマトリクスの活動が十分にありません。打鍵を増やすか、期間を広げてください。",
+        "belowMinSample": "下限未満",
+        "totalKeystrokes": "{{count}} 打鍵",
+        "relativeTrendNote": "スコアは絶対評価ではなく相対トレンド指標です。数値そのものではなく、線が時間とともにどう動くかに注目してください。",
+        "score": {
+          "overall": "総合",
+          "fingerLoad": "指の偏り",
+          "handBalance": "左右バランス",
+          "homeRowStay": "ホーム行率"
+        },
+        "summary": {
+          "latestOverall": "最新スコア",
+          "delta_one": "前 1 区間との差",
+          "delta_other": "過去 {{count}} 区間との差",
+          "baselineMean": "基準 {{value}}",
+          "bucketCount": "区間数",
+          "qualifiedCount": "有効区間"
+        }
       }
     },
     "layoutComparison": {
@@ -1176,6 +1196,16 @@
         "min1": "1分",
         "min2": "2分",
         "min5": "5分"
+      },
+      "ergonomicsViewMode": "ビュー",
+      "ergonomicsViewModeOption": {
+        "snapshot": "スナップショット",
+        "learning": "学習曲線"
+      },
+      "ergonomicsPeriod": "区間",
+      "ergonomicsPeriodOption": {
+        "week": "週",
+        "month": "月"
       },
       "activityMetric": "指標",
       "activityMetricOption": {

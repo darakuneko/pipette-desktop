@@ -24,6 +24,8 @@ import {
   ACTIVITY_CALENDAR_NORMALIZATIONS,
   ACTIVITY_METRICS,
   ACTIVITY_VIEWS,
+  ERGONOMICS_LEARNING_PERIODS,
+  ERGONOMICS_VIEW_MODES,
   INTERVAL_UNITS,
   INTERVAL_VIEW_MODES,
   WPM_VIEW_MODES,
@@ -36,6 +38,8 @@ import type {
   ActivityMetric,
   ActivityView,
   AnalysisTabKey,
+  ErgonomicsLearningPeriod,
+  ErgonomicsViewMode,
   GranularityChoice,
   IntervalUnit,
   IntervalViewMode,
@@ -195,6 +199,7 @@ export function AnalyzePane({
       interval: intervalFilter,
       activity: activityFilter,
       layer: layerFilter,
+      ergonomics: ergonomicsFilter,
       bigrams: bigramsFilter,
       layoutComparison: layoutComparisonFilter,
     },
@@ -205,6 +210,7 @@ export function AnalyzePane({
     setInterval: setIntervalFilter,
     setActivity,
     setLayer,
+    setErgonomics,
     setBigrams,
     setLayoutComparison,
   } = useAnalyzeFilters(selectedUid, paneKey)
@@ -915,6 +921,42 @@ export function AnalyzePane({
                   </label>
                 </>
               )}
+              {analysisTab === 'ergonomics' && (
+                <>
+                  <label className={FILTER_LABEL}>
+                    <span>{t('analyze.filters.ergonomicsViewMode')}</span>
+                    <select
+                      className={FILTER_SELECT}
+                      value={ergonomicsFilter.viewMode}
+                      onChange={(e) => setErgonomics({ viewMode: e.target.value as ErgonomicsViewMode })}
+                      data-testid={tid("analyze-filter-ergonomics-view-mode")}
+                    >
+                      {ERGONOMICS_VIEW_MODES.map((key) => (
+                        <option key={key} value={key}>
+                          {t(`analyze.filters.ergonomicsViewModeOption.${key}`)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {ergonomicsFilter.viewMode === 'learning' && (
+                    <label className={FILTER_LABEL}>
+                      <span>{t('analyze.filters.ergonomicsPeriod')}</span>
+                      <select
+                        className={FILTER_SELECT}
+                        value={ergonomicsFilter.period}
+                        onChange={(e) => setErgonomics({ period: e.target.value as ErgonomicsLearningPeriod })}
+                        data-testid={tid("analyze-filter-ergonomics-period")}
+                      >
+                        {ERGONOMICS_LEARNING_PERIODS.map((key) => (
+                          <option key={key} value={key}>
+                            {t(`analyze.filters.ergonomicsPeriodOption.${key}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  )}
+                </>
+              )}
               {analysisTab === 'layoutComparison' && (
                 <LayoutComparisonSelector
                   sourceLayoutId={layoutComparisonFilter.sourceLayoutId}
@@ -1013,6 +1055,9 @@ export function AnalyzePane({
                     deviceScopes={deviceScopes}
                     snapshot={effectiveSnapshot}
                     fingerOverrides={fingerAssignments}
+                    viewMode={ergonomicsFilter.viewMode}
+                    period={ergonomicsFilter.period}
+                    learningMinSampleKeystrokes={ergonomicsFilter.minSampleKeystrokes}
                   />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid={tid("analyze-ergonomics-no-snapshot")}>

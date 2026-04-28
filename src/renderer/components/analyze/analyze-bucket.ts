@@ -13,11 +13,13 @@ import type { RangeMs } from './analyze-types'
 
 const MINUTE_MS = 60_000
 const HOUR_MS = 3_600_000
-const DAY_MS = 86_400_000
-const WEEK_MS = DAY_MS * 7
+export const DAY_MS = 86_400_000
+export const WEEK_MS = DAY_MS * 7
 // Month approximated at 30 days — exact calendar months are snapped in
-// `snapBucketStartLocal` so this value only drives the chooser.
-const MONTH_MS = DAY_MS * 30
+// `snapBucketStartLocal` so this value only drives the chooser /
+// period-width sentinels. Importers passing it to `snapBucketStartLocal`
+// get calendar 1st-of-month snapping regardless of the 30-day duration.
+export const MONTH_MS = DAY_MS * 30
 
 /** Ordered list of bucket widths (ms) we accept. The chooser picks
  * the entry closest to `range_span / target_points`. The values cover

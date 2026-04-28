@@ -276,11 +276,26 @@ Each key is auto-assigned to a finger based on the layout's KLE metadata (column
 - **Save** persists the overrides; **Reset all** clears every override (disabled when there are none). **Reset to estimate** in the per-key popover clears just that key
 - Overrides apply immediately once you close the modal — Finger Load, Hand Balance, and Row Usage all recompute
 
+**Learning curve**
+
+Set the **View** filter to **Learning curve** to swap the four-pane snapshot for a weekly / monthly trend chart. The view buckets per-day matrix counts into the chosen **Period** (week / month) and folds each bucket into three sub-scores plus a composite score:
+
+- **Finger load** — how evenly the 10 fingers share the load (1 = perfectly even, 0 = one-finger lock-in)
+- **Hand balance** — how close the left / right split is to 50 / 50
+- **Home row stay** — fraction of keystrokes on the home row
+
+The bold line is the composite **Overall** score (weighted mean of the three sub-scores); the dashed lines are the individual sub-scores. The summary cards at the top show the latest bucket's overall score, the delta against the prior buckets, and the qualified bucket count (a bucket is qualified once its keystroke total clears the min-sample threshold; below-threshold buckets stay visible but are flagged in the tooltip).
+
+![Analyze — Ergonomic Learning Curve](screenshots/analyze-ergonomics-learning.png)
+
+> The composite score is a **relative trend indicator**, not a calibrated absolute metric. The weights are heuristic and finger-stddev is sensitive to layout choices. Read the curve as "is my distribution improving over time?" rather than as a numeric grade.
+
 **Empty states**
 
 - **No snapshot** — same message as Heatmap
 - **No layout** — "Layout data not available for this snapshot."
 - **No activity** — "No keystrokes recorded in this range."
+- **No data** (Learning curve only) — "Not enough matrix activity in this range. Type more or widen the period filter."
 
 #### Bigrams
 

@@ -511,6 +511,20 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     await page.waitForTimeout(800)
     await captureNamed(page, 'analyze-ergonomics', { fullPage: true })
 
+    // Learning curve sub-view: switch the View filter to 'learning'
+    // and capture the trend chart, then restore the snapshot view so
+    // the rest of the run keeps the historical layout.
+    const viewModeSelect = page.locator('[data-testid="analyze-filter-ergonomics-view-mode"]')
+    if (await isAvailable(viewModeSelect)) {
+      await viewModeSelect.selectOption('learning')
+      await page.waitForTimeout(800)
+      await captureNamed(page, 'analyze-ergonomics-learning', { fullPage: true })
+      await viewModeSelect.selectOption('snapshot')
+      await page.waitForTimeout(400)
+    } else {
+      console.log('  [skip] analyze-filter-ergonomics-view-mode not found — learning capture skipped')
+    }
+
     // Open button is disabled when no snapshot is available — gate on isEnabled.
     const fingerBtn = page.locator('[data-testid="analyze-finger-assignment-open"]')
     if ((await isAvailable(fingerBtn)) && (await fingerBtn.isEnabled())) {
@@ -1352,7 +1366,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(page)
     if (!connected) {

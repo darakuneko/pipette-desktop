@@ -166,6 +166,19 @@ export type ActivityCalendarMonthsToShow = typeof ACTIVITY_CALENDAR_MONTHS_TO_SH
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
 export type LayerViewMode = typeof LAYER_VIEW_MODES[number]
 
+/** Ergonomics tab now hosts two views: the historical 4-pane snapshot
+ * (hand balance / finger load / row usage / row load) and the new
+ * Learning Curve trend chart. The mode toggles them via the filter
+ * row select; the snapshot view ignores `period`. */
+export const ERGONOMICS_VIEW_MODES = ['snapshot', 'learning'] as const
+export type ErgonomicsViewMode = typeof ERGONOMICS_VIEW_MODES[number]
+
+/** Bucket width for the Learning Curve. `week` snaps to local Monday;
+ * `month` snaps to the local 1st-of-month. Both alignments come from
+ * `analyze-bucket.snapBucketStartLocal`. */
+export const ERGONOMICS_LEARNING_PERIODS = ['week', 'month'] as const
+export type ErgonomicsLearningPeriod = typeof ERGONOMICS_LEARNING_PERIODS[number]
+
 // Bigrams tab now renders all four sub-views in a 2x2 grid; the user
 // no longer picks one. The constant + type are retained for back-compat
 // in tests / docs but are not consumed by the live filter shape.
@@ -229,6 +242,19 @@ export interface LayerFilters {
   baseLayer?: number
 }
 
+export interface ErgonomicsFilters {
+  /** `'snapshot'` (default) keeps the four-pane summary; `'learning'`
+   * swaps the body for the Learning Curve trend chart. */
+  viewMode?: ErgonomicsViewMode
+  /** Bucket width used by the Learning Curve. Ignored when
+   * `viewMode === 'snapshot'`. */
+  period?: ErgonomicsLearningPeriod
+  /** Minimum keystrokes for a Learning Curve bucket to count toward
+   * the trend summary; below-threshold buckets stay visible but get
+   * dimmed in the chart. `0` disables the threshold. */
+  minSampleKeystrokes?: number
+}
+
 export interface BigramFilters {
   /** Row count for the Top ranking. */
   topLimit?: number
@@ -270,6 +296,7 @@ export interface AnalyzeFilterSettings {
   interval?: IntervalFilters
   activity?: ActivityFilters
   layer?: LayerFilters
+  ergonomics?: ErgonomicsFilters
   bigrams?: BigramFilters
   layoutComparison?: LayoutComparisonFilters
 }
@@ -367,6 +394,16 @@ function isValidLayerFilters(value: unknown): boolean {
   return true
 }
 
+function isValidErgonomicsFilters(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const o = value as Record<string, unknown>
+  if (o.viewMode !== undefined && !includesAs(ERGONOMICS_VIEW_MODES, o.viewMode)) return false
+  if (o.period !== undefined && !includesAs(ERGONOMICS_LEARNING_PERIODS, o.period)) return false
+  if (o.minSampleKeystrokes !== undefined && !isNonNegativeInt(o.minSampleKeystrokes)) return false
+  return true
+}
+
 function isValidBigramFilters(value: unknown): boolean {
   if (value == null) return true
   if (typeof value !== 'object' || Array.isArray(value)) return false
@@ -425,6 +462,7 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (!isValidIntervalFilters(o.interval)) return false
   if (!isValidActivityFilters(o.activity)) return false
   if (!isValidLayerFilters(o.layer)) return false
+  if (!isValidErgonomicsFilters(o.ergonomics)) return false
   if (!isValidBigramFilters(o.bigrams)) return false
   if (!isValidLayoutComparisonFilters(o.layoutComparison)) return false
   return true
