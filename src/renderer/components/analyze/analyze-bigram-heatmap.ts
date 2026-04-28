@@ -94,6 +94,20 @@ export function avgIkiFromHist(hist: readonly number[]): number | null {
   return count > 0 ? sum / count : null
 }
 
+/** Returns the avg IKI when the pair both has data and meets the
+ * minimum threshold, otherwise null. `minMs <= 0` disables the
+ * threshold check. Centralises the "skip if too fast" predicate
+ * shared by the Bigrams Slow ranking and Finger pair bar chart. */
+export function avgIkiAtOrAboveThreshold(
+  hist: readonly number[],
+  minMs: number,
+): number | null {
+  const avg = avgIkiFromHist(hist)
+  if (avg === null) return null
+  if (minMs > 0 && avg < minMs) return null
+  return avg
+}
+
 /** Linear-interp percentile estimate from a packed histogram. Mirrors
  * the main-process aggregator so the Slow ranking renders the same
  * p95 whether it came over the wire or was computed client-side. */

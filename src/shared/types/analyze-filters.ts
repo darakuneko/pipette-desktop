@@ -236,6 +236,13 @@ export interface BigramFilters {
   slowLimit?: number
   /** Bar count for the Finger pair bar chart. */
   fingerLimit?: number
+  /** Minimum avgIki (ms) shared between the Finger pair chart and the
+   * Slow ranking. Pairs with `avgIki < threshold` are hidden. `0`
+   * disables the filter. The avgIki used for comparison is the bucket-
+   * center weighted average from `avgIkiFromHist` — values are an
+   * approximation, not exact ms (see Task-P3-bigrams-pair-interval-
+   * threshold.md for rationale). */
+  pairIntervalThresholdMs?: number
 }
 
 export interface LayoutComparisonFilters {
@@ -367,6 +374,7 @@ function isValidBigramFilters(value: unknown): boolean {
   if (o.topLimit !== undefined && !isPositiveInt(o.topLimit)) return false
   if (o.slowLimit !== undefined && !isPositiveInt(o.slowLimit)) return false
   if (o.fingerLimit !== undefined && !isPositiveInt(o.fingerLimit)) return false
+  if (o.pairIntervalThresholdMs !== undefined && !isNonNegativeInt(o.pairIntervalThresholdMs)) return false
   return true
 }
 

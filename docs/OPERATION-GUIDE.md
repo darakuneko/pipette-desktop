@@ -307,11 +307,13 @@ Only the **Finger IKI heatmap** quadrant needs a keymap snapshot — it has to m
 
 - **Range** — same `From` / `To` pickers as the rest of Analyze. The view re-aggregates over the chosen window
 - **Device** — `This device` only or all synced devices, identical to the other tabs
+- **Avg interval (ms or slower)** — minimum-IKI threshold rendered inline in both the Finger IKI and Slow pairs quadrant headers. Pairs whose average IKI is below the threshold are hidden in both quadrants at once (the input is shared, so editing it in one quadrant updates the other). `0` disables the filter; the value is persisted per keyboard via `PipetteSettings`. The IKI used for comparison is approximate (histogram bucket-center weighted average), so the cut-off is best treated as a coarse "ignore pairs faster than ~N ms" filter
 
 **Empty states**
 
 - **No bigram data** — "No bigram data in this range yet. Record some typing and try again." Shown when the range has no recorded pair activity
 - **No snapshot (Finger IKI quadrant only)** — "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one." The other three quadrants still render
+- **Threshold filtered everything out** — when **Avg interval** is set high enough that no pair survives, the Finger IKI and Slow pairs quadrants both fall back to "No bigram data in this range yet." Lower the threshold to bring rows back
 
 #### Layout Comparison
 

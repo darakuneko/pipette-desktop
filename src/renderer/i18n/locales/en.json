@@ -971,6 +971,11 @@
           "asc": "Fastest first"
         }
       },
+      "pairIntervalThreshold": {
+        "label": "Avg interval",
+        "suffix": "ms or slower",
+        "ariaLabel": "Minimum avg interval (ms)"
+      },
       "cellTooltip": "{{count}} occurrences · avg {{avgIki}} ms"
     },
     "keyHeatmap": {

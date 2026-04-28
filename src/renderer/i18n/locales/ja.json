@@ -969,6 +969,11 @@
           "asc": "早い順"
         }
       },
+      "pairIntervalThreshold": {
+        "label": "平均間隔",
+        "suffix": "ms 以上",
+        "ariaLabel": "平均間隔の最小値 (ms)"
+      },
       "cellTooltip": "{{count}} 回 · 平均 {{avgIki}} ms"
     },
     "keyHeatmap": {

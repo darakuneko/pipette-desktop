@@ -204,6 +204,27 @@ describe('isValidAnalyzeFilterSettings', () => {
       }),
     ).toBe(false)
   })
+
+  it('accepts pairIntervalThresholdMs as a non-negative integer (0 disables)', () => {
+    expect(
+      isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: 0 } }),
+    ).toBe(true)
+    expect(
+      isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: 200 } }),
+    ).toBe(true)
+  })
+
+  it('rejects pairIntervalThresholdMs that is not a non-negative integer', () => {
+    expect(
+      isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: -1 } }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: 1.5 } }),
+    ).toBe(false)
+    expect(
+      isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: '200' } }),
+    ).toBe(false)
+  })
 })
 
 describe('normalizeDeviceScopes', () => {

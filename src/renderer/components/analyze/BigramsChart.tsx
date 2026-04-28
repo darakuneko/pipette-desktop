@@ -31,7 +31,7 @@ import {
 } from './analyze-bigram-finger'
 import { useKeycodeFingerMap } from './use-keycode-finger-map'
 import {
-  avgIkiFromHist,
+  avgIkiAtOrAboveThreshold,
   percentileFromHist,
 } from './analyze-bigram-heatmap'
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
@@ -44,9 +44,16 @@ interface BigramsChartProps {
   topLimit: number
   slowLimit: number
   fingerLimit: number
+  /** Shared minimum-avgIki filter applied to fingerIki and slow
+   * quadrants. `0` disables the filter. The user-facing name is
+   * `pairIntervalThresholdMs` (matches `BigramFilters` + i18n); inner
+   * components rename this to `minAvgIkiMs` to make the avgIki bucket
+   * approximation explicit at the predicate site. */
+  pairIntervalThresholdMs: number
   onTopLimitChange: (next: number) => void
   onSlowLimitChange: (next: number) => void
   onFingerLimitChange: (next: number) => void
+  onPairIntervalThresholdChange: (next: number) => void
   snapshot: TypingKeymapSnapshot | null
   fingerOverrides?: Record<string, FingerType>
 }
@@ -64,9 +71,11 @@ export function BigramsChart({
   topLimit,
   slowLimit,
   fingerLimit,
+  pairIntervalThresholdMs,
   onTopLimitChange,
   onSlowLimitChange,
   onFingerLimitChange,
+  onPairIntervalThresholdChange,
   snapshot,
   fingerOverrides,
 }: BigramsChartProps): JSX.Element {
@@ -152,6 +161,11 @@ export function BigramsChart({
         title={t('analyze.bigrams.quadrant.fingerIki')}
         controls={
           <>
+            <PairIntervalThresholdInput
+              value={pairIntervalThresholdMs}
+              onChange={onPairIntervalThresholdChange}
+              testId="analyze-bigrams-finger-threshold-input"
+            />
             <select
               value={fingerSort}
               onChange={(e) => setFingerSort(e.target.value as FingerSort)}
@@ -176,19 +190,31 @@ export function BigramsChart({
           fingerOverrides={fingerOverrides}
           listLimit={fingerLimit}
           sort={fingerSort}
+          minAvgIkiMs={pairIntervalThresholdMs}
         />
       </Quadrant>
       <Quadrant
         title={t('analyze.bigrams.quadrant.slow')}
         controls={
-          <LimitSelect
-            value={slowLimit}
-            onChange={onSlowLimitChange}
-            testId="analyze-bigrams-slow-limit-select"
-          />
+          <>
+            <PairIntervalThresholdInput
+              value={pairIntervalThresholdMs}
+              onChange={onPairIntervalThresholdChange}
+              testId="analyze-bigrams-slow-threshold-input"
+            />
+            <LimitSelect
+              value={slowLimit}
+              onChange={onSlowLimitChange}
+              testId="analyze-bigrams-slow-limit-select"
+            />
+          </>
         }
       >
-        <SlowRanking entries={entries} listLimit={slowLimit} />
+        <SlowRanking
+          entries={entries}
+          listLimit={slowLimit}
+          minAvgIkiMs={pairIntervalThresholdMs}
+        />
       </Quadrant>
     </div>
   )
@@ -235,6 +261,62 @@ function LimitSelect({ value, onChange, testId }: LimitSelectProps): JSX.Element
         </option>
       ))}
     </select>
+  )
+}
+
+interface PairIntervalThresholdInputProps {
+  value: number
+  onChange: (next: number) => void
+  testId: string
+}
+
+/** Compact `[label] [N] [suffix]` control rendered in both fingerIki
+ * and slow quadrant headers. The local draft state lets the user blank
+ * the field mid-edit without leaking '' upstream — the parent is only
+ * notified on blur / Enter, and an empty draft commits as `0`. */
+function PairIntervalThresholdInput({
+  value,
+  onChange,
+  testId,
+}: PairIntervalThresholdInputProps): JSX.Element {
+  const { t } = useTranslation()
+  const [draft, setDraft] = useState<string>(String(value))
+
+  // Sync the draft when the sibling quadrant's input commits a change.
+  useEffect(() => {
+    setDraft(String(value))
+  }, [value])
+
+  const commit = (raw: string): void => {
+    const trimmed = raw.trim()
+    const parsed = trimmed === '' ? 0 : Math.max(0, Math.floor(Number(trimmed)))
+    const next = Number.isFinite(parsed) ? parsed : 0
+    setDraft(String(next))
+    if (next !== value) onChange(next)
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 text-[12px] text-content-muted">
+      <span>{t('analyze.bigrams.pairIntervalThreshold.label')}</span>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        step={1}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.currentTarget.blur()
+          }
+        }}
+        aria-label={t('analyze.bigrams.pairIntervalThreshold.ariaLabel')}
+        data-testid={testId}
+        className="w-14 rounded border border-edge bg-surface px-1 py-0.5 text-right tabular-nums text-content"
+      />
+      <span>{t('analyze.bigrams.pairIntervalThreshold.suffix')}</span>
+    </span>
   )
 }
 
@@ -333,16 +415,19 @@ interface SlowEntry {
 interface SlowRankingProps {
   entries: readonly TypingBigramTopEntry[]
   listLimit: number
+  /** Shared threshold from `pairIntervalThresholdMs` — see
+   * `avgIkiAtOrAboveThreshold` for the bucket-center caveat. */
+  minAvgIkiMs: number
 }
 
-function SlowRanking({ entries, listLimit }: SlowRankingProps): JSX.Element {
+function SlowRanking({ entries, listLimit, minAvgIkiMs }: SlowRankingProps): JSX.Element {
   const { t } = useTranslation()
   const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'p95'>>({ key: 'avgIki', dir: 'desc' })
 
   const slowEntries = useMemo<SlowEntry[]>(() => {
     const eligible: SlowEntry[] = []
     for (const entry of entries) {
-      const avg = avgIkiFromHist(entry.hist)
+      const avg = avgIkiAtOrAboveThreshold(entry.hist, minAvgIkiMs)
       if (avg === null) continue
       eligible.push({
         bigramId: entry.bigramId,
@@ -363,13 +448,13 @@ function SlowRanking({ entries, listLimit }: SlowRankingProps): JSX.Element {
       }
     })
     return eligible.slice(0, Math.max(listLimit, 0))
-  }, [entries, listLimit, sort])
+  }, [entries, listLimit, minAvgIkiMs, sort])
 
   if (slowEntries.length === 0) {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
   return (
-    <table className="w-full text-[12px]">
+    <table className="w-full text-[12px]" data-testid="analyze-bigrams-slow-ranking">
       <thead className="text-content-muted">
         <tr>
           <th className="px-1 py-1 text-right font-medium">#</th>
@@ -466,6 +551,9 @@ interface FingerBarChartProps {
   fingerOverrides?: Record<string, FingerType>
   listLimit: number
   sort: FingerSort
+  /** Shared threshold from `pairIntervalThresholdMs` — see
+   * `avgIkiAtOrAboveThreshold` for the bucket-center caveat. */
+  minAvgIkiMs: number
 }
 
 function BigramFingerBarChart({
@@ -474,6 +562,7 @@ function BigramFingerBarChart({
   fingerOverrides,
   listLimit,
   sort,
+  minAvgIkiMs,
 }: FingerBarChartProps): JSX.Element {
   const { t } = useTranslation()
   const fingerMap = useKeycodeFingerMap(snapshot, fingerOverrides)
@@ -482,7 +571,7 @@ function BigramFingerBarChart({
     const totals = aggregateFingerPairs(entries, fingerMap)
     const ranked: BarDatum[] = []
     for (const [pairKey, total] of totals) {
-      const avg = avgIkiFromHist(total.hist)
+      const avg = avgIkiAtOrAboveThreshold(total.hist, minAvgIkiMs)
       if (avg === null) continue
       const [fromFinger, toFinger] = pairKey.split('_') as [FingerType, FingerType]
       const fromLabel = t(`analyze.finger.short.${fromFinger}`)
@@ -498,7 +587,7 @@ function BigramFingerBarChart({
     const dir = sort === 'desc' ? 1 : -1
     ranked.sort((a, b) => dir * (b.value - a.value) || a.id.localeCompare(b.id))
     return ranked.slice(0, Math.max(listLimit, 0))
-  }, [entries, fingerMap, listLimit, sort, t])
+  }, [entries, fingerMap, listLimit, minAvgIkiMs, sort, t])
 
   if (snapshot === null) {
     return (

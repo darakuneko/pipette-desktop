@@ -230,4 +230,42 @@ describe('useAnalyzeFilters', () => {
     expect(prefs.autoAdvance).toBe(true)
     expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
   })
+
+  it('persists pairIntervalThresholdMs through setBigrams', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    setSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+
+    act(() => { result.current.setBigrams({ pairIntervalThresholdMs: 200 }) })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(setSpy).toHaveBeenCalledTimes(1)
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.bigrams?.pairIntervalThresholdMs).toBe(200)
+    // Sibling defaults must survive the partial patch — otherwise the
+    // first user that flips the threshold loses topLimit/slowLimit.
+    expect(result.current.filters.bigrams.topLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.topLimit)
+    expect(result.current.filters.bigrams.fingerLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.fingerLimit)
+  })
+
+  it('restores a persisted pairIntervalThresholdMs on mount', async () => {
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          bigrams: { pairIntervalThresholdMs: 175 },
+        },
+      },
+    })
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.bigrams.pairIntervalThresholdMs).toBe(175)
+    // Defaults still apply to fields the persisted shape didn't include.
+    expect(result.current.filters.bigrams.topLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.topLimit)
+  })
 })

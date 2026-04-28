@@ -1021,9 +1021,11 @@ export function AnalyzePane({
                   topLimit={bigramsFilter.topLimit}
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}
+                  pairIntervalThresholdMs={bigramsFilter.pairIntervalThresholdMs}
                   onTopLimitChange={(topLimit) => setBigrams({ topLimit })}
                   onSlowLimitChange={(slowLimit) => setBigrams({ slowLimit })}
                   onFingerLimitChange={(fingerLimit) => setBigrams({ fingerLimit })}
+                  onPairIntervalThresholdChange={(pairIntervalThresholdMs) => setBigrams({ pairIntervalThresholdMs })}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />
