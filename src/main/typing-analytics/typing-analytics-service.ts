@@ -367,12 +367,12 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       if (typeof machineHash !== 'string' || machineHash.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return getTypingPeakRecordsInRangeForHash(uid, machineHash, since, until)
+      return getTypingPeakRecordsInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
     },
   )
 
@@ -565,22 +565,22 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return getTypingPeakRecordsInRange(uid, since, until)
+      return getTypingPeakRecordsInRange(uid, since, until, parseAppScopeArg(appScope))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return getTypingPeakRecordsInRangeForHash(uid, ownHash, since, until)
+      return getTypingPeakRecordsInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
     },
   )
 
@@ -760,6 +760,7 @@ export function setupTypingAnalyticsIpc(): void {
       untilMs: unknown,
       scope: unknown,
       options: unknown,
+      appScope: unknown,
     ): Promise<LayoutComparisonResult | null> => {
       if (typeof uid !== 'string' || uid.length === 0) return null
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
@@ -768,6 +769,7 @@ export function setupTypingAnalyticsIpc(): void {
       if (parsedScope === null) return null
       const opts = parseLayoutComparisonOptions(options)
       if (!opts) return null
+      const appName = parseAppScopeArg(appScope)
       // Snapshots are only stored for the own device, so we always
       // resolve the source layer + KleKey geometry against the local
       // machine hash regardless of which scope the metric counts use.
@@ -788,6 +790,7 @@ export function setupTypingAnalyticsIpc(): void {
         sinceMinuteMs,
         untilMinuteMs,
         matrixHash,
+        appName,
       )
       return computeLayoutComparison({
         matrixCounts,
@@ -1041,8 +1044,9 @@ export function getTypingPeakRecordsInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
+  appScope: string | null = null,
 ): PeakRecords {
-  return getTypingAnalyticsDB().getPeakRecordsInRangeForUid(uid, sinceMs, untilMs)
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUid(uid, sinceMs, untilMs, appScope)
 }
 
 export function getTypingPeakRecordsInRangeForHash(
@@ -1050,8 +1054,9 @@ export function getTypingPeakRecordsInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
+  appScope: string | null = null,
 ): PeakRecords {
-  return getTypingAnalyticsDB().getPeakRecordsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When

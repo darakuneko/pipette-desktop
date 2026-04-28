@@ -312,12 +312,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL, uid, sinceMs, untilMs, appScope),
   typingAnalyticsListBksMinuteForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<TypingBksMinuteRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScope),
-  typingAnalyticsGetPeakRecords: (uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS, uid, sinceMs, untilMs),
-  typingAnalyticsGetPeakRecordsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL, uid, sinceMs, untilMs),
-  typingAnalyticsGetPeakRecordsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH, uid, machineHash, sinceMs, untilMs),
+  typingAnalyticsGetPeakRecords: (uid: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS, uid, sinceMs, untilMs, appScope),
+  typingAnalyticsGetPeakRecordsLocal: (uid: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL, uid, sinceMs, untilMs, appScope),
+  typingAnalyticsGetPeakRecordsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScope),
   typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
   typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
@@ -351,6 +351,7 @@ const vialAPI = {
     untilMs: number,
     scope: DeviceScope,
     options: LayoutComparisonOptions,
+    appScope: string | null = null,
   ): Promise<LayoutComparisonResult | null> =>
     ipcRenderer.invoke(
       IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_COMPARISON_FOR_RANGE,
@@ -359,6 +360,7 @@ const vialAPI = {
       untilMs,
       scope,
       options,
+      appScope,
     ),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),

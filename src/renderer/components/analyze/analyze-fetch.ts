@@ -143,6 +143,7 @@ export function fetchLayoutComparisonForRange(
   fromMs: number,
   toMs: number,
   options: LayoutComparisonOptions,
+  appScope: string | null = null,
 ): Promise<LayoutComparisonResult | null> {
-  return window.vialAPI.typingAnalyticsGetLayoutComparisonForRange(uid, fromMs, toMs, scope, options)
+  return window.vialAPI.typingAnalyticsGetLayoutComparisonForRange(uid, fromMs, toMs, scope, options, appScope)
 }

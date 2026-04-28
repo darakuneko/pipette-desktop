@@ -544,6 +544,7 @@ export function AnalyzePane({
         ? t('analyze.snapshotTimeline.current')
         : formatDateTime(selectedSnapshotSavedAt)
     const rangeLabel = `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
+    const appLabel = appScope ?? t('analyze.filters.appOption.none')
 
     return {
       uid: selected.uid,
@@ -551,6 +552,7 @@ export function AnalyzePane({
       machineHashOrAll,
       range,
       deviceScope: scope,
+      appScope,
       snapshot: effectiveSnapshot,
       heatmap: heatmapFilter,
       wpm: {
@@ -569,10 +571,10 @@ export function AnalyzePane({
       layer: { baseLayer: layerFilter.baseLayer },
       layoutComparison: layoutComparisonFilter,
       fingerOverrides: fingerAssignments,
-      conditions: { device: deviceLabel, keymap: keymapLabel, range: rangeLabel },
+      conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
-    selected, deviceScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    selected, deviceScopes, appScope, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
     heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
     layoutComparisonFilter, fingerAssignments, t,
   ])
@@ -1136,6 +1138,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
+                  appScope={appScope}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
                   onSkipPercentChange={onSkipPercentChange}

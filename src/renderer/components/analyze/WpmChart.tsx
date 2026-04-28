@@ -129,15 +129,15 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
     }
     let cancelled = false
     const peakPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScope)
       : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs)
-        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScope)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScope)
     void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range])
+  }, [uid, scopeKey, range, appScope])
 
   const bucketMs = useMemo(
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),

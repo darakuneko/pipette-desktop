@@ -49,6 +49,10 @@ export interface AnalyzeExportContext {
   machineHashOrAll: string
   range: RangeMs
   deviceScope: DeviceScope
+  /** App filter forwarded to every builder so the CSV mirrors what
+   * the on-screen chart shows for the current selection. `null` =
+   * "All apps" — same row set as the pre-Monitor-App export. */
+  appScope: string | null
   snapshot: TypingKeymapSnapshot | null
   heatmap: Required<HeatmapFilters>
   wpm: { granularity: GranularityChoice; viewMode: WpmViewMode; minActiveMs: number }
@@ -67,6 +71,11 @@ export interface AnalyzeExportContext {
     device: string
     keymap: string
     range: string
+    /** Pre-formatted "App: VSCode" / "App: All apps" line shown next
+     * to device / keymap / range in every category's specifics
+     * footer so the user can tell at a glance which app filter the
+     * export is anchored to. */
+    app: string
   }
 }
 
@@ -216,50 +225,54 @@ function pickBuilders(
   t: TFunction,
 ): Array<Promise<CsvBundleEntry>> {
   const out: Array<Promise<CsvBundleEntry>> = []
+  // Bundle the scope axes once so every builder gets the same
+  // (uid, range, deviceScope, appScope) tuple without each call site
+  // repeating the per-axis fan-out.
+  const scope = {
+    uid: ctx.uid,
+    range: ctx.range,
+    deviceScope: ctx.deviceScope,
+    appScope: ctx.appScope,
+  }
   if (selected.heatmap && ctx.snapshot !== null) {
-    out.push(buildHeatmapCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
-      snapshot: ctx.snapshot, heatmap: ctx.heatmap, t,
-    }))
+    out.push(buildHeatmapCsv({ ...scope, snapshot: ctx.snapshot, heatmap: ctx.heatmap, t }))
   }
   if (selected.wpm) {
     out.push(buildWpmCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       granularity: ctx.wpm.granularity, viewMode: ctx.wpm.viewMode, minActiveMs: ctx.wpm.minActiveMs,
     }))
   }
   if (selected.interval) {
     out.push(buildIntervalCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       granularity: ctx.interval.granularity, viewMode: ctx.interval.viewMode,
     }))
   }
   if (selected.activity) {
     out.push(buildActivityCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       metric: ctx.activity.metric, minActiveMs: ctx.activity.minActiveMs,
     }))
   }
   if (selected.ergonomics && ctx.snapshot !== null) {
     out.push(buildErgonomicsCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       snapshot: ctx.snapshot, fingerOverrides: ctx.fingerOverrides, t,
     }))
   }
   if (selected.layer) {
     out.push(buildLayerCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       snapshot: ctx.snapshot, baseLayer: ctx.layer.baseLayer, t,
     }))
   }
   if (selected.bigrams) {
-    out.push(buildBigramsCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
-    }))
+    out.push(buildBigramsCsv(scope))
   }
   if (selected.layoutComparison && ctx.snapshot !== null && ctx.layoutComparison.targetLayoutId !== null) {
     out.push(buildLayoutComparisonCsv({
-      uid: ctx.uid, range: ctx.range, deviceScope: ctx.deviceScope,
+      ...scope,
       sourceLayoutId: ctx.layoutComparison.sourceLayoutId,
       targetLayoutId: ctx.layoutComparison.targetLayoutId,
       t,
@@ -349,6 +362,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
               data-testid="analyze-export-common"
             >
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.device')}: </span>{ctx.conditions.device}</div>
+              <div><span className="text-content-muted">{t('analyze.export.conditionLabel.app')}: </span>{ctx.conditions.app}</div>
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.keymap')}: </span>{ctx.conditions.keymap}</div>
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.range')}: </span>{ctx.conditions.range}</div>
             </div>

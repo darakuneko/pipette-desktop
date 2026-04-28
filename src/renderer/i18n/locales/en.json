@@ -664,6 +664,7 @@
       "snapshotMissing": "Heatmap, Ergonomics, and Layout Comparison need a keymap snapshot to export and are unavailable for this range.",
       "conditionLabel": {
         "device": "Device",
+        "app": "App",
         "keymap": "Keymap",
         "range": "Period"
       },

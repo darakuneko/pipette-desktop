@@ -34,6 +34,8 @@ interface Props {
   uid: string
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   snapshot: TypingKeymapSnapshot | null
   /** Persisted source / target read from `useAnalyzeFilters`. The
    * AnalyzePane filter row owns the picker UI; this view stays
@@ -52,6 +54,7 @@ export function LayoutComparisonView({
   uid,
   range,
   deviceScopes,
+  appScope,
   snapshot,
   filter,
   onSkipPercentChange,
@@ -95,7 +98,7 @@ export function LayoutComparisonView({
       source,
       targets: [source, target],
       metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
-    })
+    }, appScope)
       .then((next) => {
         if (cancelled) return
         setResult(next)
@@ -110,7 +113,7 @@ export function LayoutComparisonView({
     return () => {
       cancelled = true
     }
-  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch])
+  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch, appScope])
 
   const columnLabels = useMemo(() => {
     if (!result) return []

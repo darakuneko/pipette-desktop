@@ -128,15 +128,15 @@ export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granul
     }
     let cancelled = false
     const peakPromise = isHashScope(effectiveDeviceScope)
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs, appScope)
       : isOwnScope(effectiveDeviceScope)
-        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs)
-        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScope)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScope)
     void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range])
+  }, [uid, scopeKey, range, appScope])
 
   // Log-axis can't plot 0 ms, but min often legitimately rounds to 0
   // on fast adjacent keystrokes. Clamp the axis floor at 1 ms so the

@@ -202,9 +202,9 @@ export interface VialAPI {
   typingAnalyticsListBksMinute(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
   typingAnalyticsListBksMinuteLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
   typingAnalyticsListBksMinuteForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingBksMinuteRow[]>
-  typingAnalyticsGetPeakRecords(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
-  typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
-  typingAnalyticsGetPeakRecordsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecords(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecordsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<PeakRecords>
   typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
   typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
   typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>

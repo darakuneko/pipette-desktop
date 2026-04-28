@@ -1271,6 +1271,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
+             AND (@appName IS NULL OR t.app_name = @appName)
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1293,6 +1294,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
+             AND (@appName IS NULL OR t.app_name = @appName)
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1316,6 +1318,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
+             AND (@appName IS NULL OR t.app_name = @appName)
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1339,6 +1342,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
+             AND (@appName IS NULL OR t.app_name = @appName)
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1356,6 +1360,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1372,6 +1377,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1388,6 +1394,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
@@ -1405,6 +1412,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
@@ -2136,13 +2144,26 @@ export class TypingAnalyticsDB {
   /** Peak records for the Analyze summary cards across every scope of
    * this keyboard in the range. Any metric with no qualifying rows
    * comes back as null so the UI can render an empty placeholder. */
-  getPeakRecordsInRangeForUid(uid: string, sinceMs: number, untilMs: number): PeakRecords {
-    const params = { uid, sinceMs, untilMs }
+  getPeakRecordsInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): PeakRecords {
+    // typing_sessions has no app_name column — sessions span multiple
+    // minutes and the app focus can change during one. We deliberately
+    // ignore appScope for the session record so it stays a measure of
+    // raw uninterrupted typing rather than vanishing when the user
+    // crosses an app boundary mid-burst. The four minute-stats records
+    // do honour the filter so the WPM / keystroke-per-minute peaks
+    // match the rest of the per-app aggregates.
+    const sessParams = { uid, sinceMs, untilMs }
+    const params = { ...sessParams, appName: appScope }
     const wpm = this.selectPeakWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const low = this.selectLowestWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const kpd = this.selectPeakKpdInRangeForUidStmt.get(params) as { day: string; value: number } | undefined
-    const sess = this.selectLongestSessionInRangeForUidStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
+    const sess = this.selectLongestSessionInRangeForUidStmt.get(sessParams) as { durationMs: number; startedAtMs: number } | undefined
     return {
       peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
       lowestWpm: low ? { value: low.value, atMs: low.atMs } : null,
@@ -2159,13 +2180,15 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): PeakRecords {
-    const params = { uid, machineHash, sinceMs, untilMs }
+    const sessParams = { uid, machineHash, sinceMs, untilMs }
+    const params = { ...sessParams, appName: appScope }
     const wpm = this.selectPeakWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const low = this.selectLowestWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const kpd = this.selectPeakKpdInRangeForUidAndHashStmt.get(params) as { day: string; value: number } | undefined
-    const sess = this.selectLongestSessionInRangeForUidAndHashStmt.get(params) as { durationMs: number; startedAtMs: number } | undefined
+    const sess = this.selectLongestSessionInRangeForUidAndHashStmt.get(sessParams) as { durationMs: number; startedAtMs: number } | undefined
     return {
       peakWpm: wpm ? { value: wpm.value, atMs: wpm.atMs } : null,
       lowestWpm: low ? { value: low.value, atMs: low.atMs } : null,
