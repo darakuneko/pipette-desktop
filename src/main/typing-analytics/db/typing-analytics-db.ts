@@ -7,7 +7,7 @@ import type { Database as DatabaseType, Statement } from 'better-sqlite3'
 import { app } from 'electron'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { CREATE_SCHEMA_SQL, SCHEMA_VERSION } from './schema'
+import { CREATE_META_SQL, CREATE_SCHEMA_SQL, SCHEMA_VERSION } from './schema'
 import {
   BIGRAM_HIST_BUCKETS,
   type JsonlBigramMinuteEntry,
@@ -292,7 +292,16 @@ export class TypingAnalyticsDB {
   constructor(dbPath: string) {
     mkdirSync(dirname(dbPath), { recursive: true })
     this.db = new Database(dbPath)
-    this.db.exec(CREATE_SCHEMA_SQL)
+    // Two-phase init so migrateSchema can run BEFORE the
+    // version-aware indices in CREATE_SCHEMA_SQL try to reference
+    // newly-added columns:
+    //   1. CREATE_META_SQL  → meta table only (lets us read schema_version
+    //      against an existing DB without touching anything else)
+    //   2. migrateSchema    → ALTER TABLE for column additions
+    //   3. CREATE_SCHEMA_SQL → remaining tables (no-op on upgrade) and
+    //      every index, including ones referencing the columns we just
+    //      ALTERed in.
+    this.db.exec(CREATE_META_SQL)
 
     this.getMetaStmt = this.db.prepare('SELECT value FROM typing_analytics_meta WHERE key = ?')
     this.setMetaStmt = this.db.prepare(`
@@ -301,10 +310,11 @@ export class TypingAnalyticsDB {
     `)
 
     const stored = this.getMeta('schema_version')
-    if (stored == null) {
-      this.setMeta('schema_version', String(SCHEMA_VERSION))
-    } else if (Number(stored) !== SCHEMA_VERSION) {
+    if (stored != null && Number(stored) !== SCHEMA_VERSION) {
       this.migrateSchema(Number(stored))
+    }
+    this.db.exec(CREATE_SCHEMA_SQL)
+    if (stored == null || Number(stored) !== SCHEMA_VERSION) {
       this.setMeta('schema_version', String(SCHEMA_VERSION))
     }
 
@@ -2404,25 +2414,17 @@ export class TypingAnalyticsDB {
     }
     // v3 -> v4: Add app_name to the four minute rollups so app-filtered
     // analytics can restrict to single-app minutes. NULL means
-    // mixed/unknown/disabled — existing rows are populated as NULL.
-    // Indices match those defined in schema.ts; created here with the
-    // same names so a fresh install hits the CREATE INDEX IF NOT EXISTS
-    // path and an upgrade hits this branch — both end with the same
-    // indices.
+    // mixed/unknown/disabled — existing rows stay at NULL. The matching
+    // CREATE INDEX statements live in CREATE_SCHEMA_SQL and are
+    // deliberately deferred until the constructor's second-phase
+    // exec, which runs after this migrate so the indices see the
+    // freshly-ALTERed columns on upgrade.
     if (fromVersion < 4) {
       this.db.exec(`
         ALTER TABLE typing_char_minute ADD COLUMN app_name TEXT;
         ALTER TABLE typing_matrix_minute ADD COLUMN app_name TEXT;
         ALTER TABLE typing_minute_stats ADD COLUMN app_name TEXT;
         ALTER TABLE typing_bigram_minute ADD COLUMN app_name TEXT;
-        CREATE INDEX IF NOT EXISTS idx_char_minute_scope_app_ts
-          ON typing_char_minute(scope_id, app_name, minute_ts);
-        CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_app_ts
-          ON typing_matrix_minute(scope_id, app_name, minute_ts);
-        CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_app_ts
-          ON typing_minute_stats(scope_id, app_name, minute_ts);
-        CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_app_ts
-          ON typing_bigram_minute(scope_id, app_name, minute_ts);
       `)
     }
   }

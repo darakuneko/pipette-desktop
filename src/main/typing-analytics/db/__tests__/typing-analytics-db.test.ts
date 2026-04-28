@@ -4,6 +4,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { join } from 'node:path'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
+import Database from 'better-sqlite3'
 import { TypingAnalyticsDB, type TypingScopeRow } from '../typing-analytics-db'
 import { SCHEMA_VERSION } from '../schema'
 
@@ -41,6 +42,96 @@ describe('TypingAnalyticsDB', () => {
 
   it('stores the schema version on first open', () => {
     expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
+  })
+
+  it('upgrades a v3 DB without app_name to the current schema', () => {
+    // Reproducer for the runtime crash where re-opening an existing DB
+    // hit `no such column: app_name` because CREATE INDEX in
+    // CREATE_SCHEMA_SQL referenced a column that ALTER TABLE only
+    // added later in the migrate step. Two-phase init now runs the
+    // migration before any column-aware indices are created.
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+    tmpDir = mkdtempSync(join(tmpdir(), 'pipette-typing-analytics-db-upgrade-'))
+    const dbPath = join(tmpDir, 'typing-analytics.db')
+
+    const v3 = new Database(dbPath)
+    v3.exec(`
+      CREATE TABLE typing_analytics_meta (
+        key TEXT PRIMARY KEY, value TEXT NOT NULL
+      );
+      CREATE TABLE typing_scopes (
+        id TEXT PRIMARY KEY,
+        machine_hash TEXT NOT NULL, os_platform TEXT NOT NULL,
+        os_release TEXT NOT NULL, os_arch TEXT NOT NULL,
+        keyboard_uid TEXT NOT NULL,
+        keyboard_vendor_id INTEGER NOT NULL,
+        keyboard_product_id INTEGER NOT NULL,
+        keyboard_product_name TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE typing_char_minute (
+        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+        char TEXT NOT NULL, count INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (scope_id, minute_ts, char)
+      );
+      CREATE TABLE typing_matrix_minute (
+        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+        row INTEGER NOT NULL, col INTEGER NOT NULL,
+        layer INTEGER NOT NULL, keycode INTEGER NOT NULL,
+        count INTEGER NOT NULL,
+        tap_count INTEGER NOT NULL DEFAULT 0,
+        hold_count INTEGER NOT NULL DEFAULT 0,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (scope_id, minute_ts, row, col, layer)
+      );
+      CREATE TABLE typing_minute_stats (
+        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+        keystrokes INTEGER NOT NULL, active_ms INTEGER NOT NULL,
+        interval_avg_ms INTEGER, interval_min_ms INTEGER,
+        interval_p25_ms INTEGER, interval_p50_ms INTEGER,
+        interval_p75_ms INTEGER, interval_max_ms INTEGER,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (scope_id, minute_ts)
+      );
+      CREATE TABLE typing_bigram_minute (
+        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+        bigram_id TEXT NOT NULL, count INTEGER NOT NULL,
+        hist BLOB NOT NULL,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (scope_id, minute_ts, bigram_id)
+      );
+      CREATE TABLE typing_sessions (
+        id TEXT PRIMARY KEY, scope_id TEXT NOT NULL,
+        start_ms INTEGER NOT NULL, end_ms INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      );
+      INSERT INTO typing_analytics_meta (key, value) VALUES ('schema_version', '3');
+    `)
+    v3.close()
+
+    // Re-open with the current TypingAnalyticsDB — must not throw and
+    // must end up at SCHEMA_VERSION with the new app_name column on
+    // every minute table.
+    db = new TypingAnalyticsDB(dbPath)
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
+    const conn = db.getConnection()
+    for (const table of [
+      'typing_char_minute',
+      'typing_matrix_minute',
+      'typing_minute_stats',
+      'typing_bigram_minute',
+    ]) {
+      const cols = conn.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]
+      expect(cols.some((c) => c.name === 'app_name')).toBe(true)
+    }
   })
 
   it('upserts a scope row and keeps the newest updatedAt', () => {

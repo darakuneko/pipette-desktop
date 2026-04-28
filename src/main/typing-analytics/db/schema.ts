@@ -15,10 +15,20 @@ export const DATA_TABLE_NAMES = [
   'typing_scopes',
 ] as const
 
-export const CREATE_SCHEMA_SQL = `
+/** Just the meta table (and PRAGMAs). Run BEFORE any version-aware
+ * migrations so the constructor can read schema_version against an
+ * existing DB without depending on the wider schema state. */
+export const CREATE_META_SQL = `
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
 
+CREATE TABLE IF NOT EXISTS typing_analytics_meta (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+`
+
+export const CREATE_SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS typing_scopes (
   id TEXT PRIMARY KEY,
   machine_hash TEXT NOT NULL,
@@ -136,9 +146,4 @@ CREATE TABLE IF NOT EXISTS typing_sessions (
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_scope_start ON typing_sessions(scope_id, start_ms);
-
-CREATE TABLE IF NOT EXISTS typing_analytics_meta (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
 `
