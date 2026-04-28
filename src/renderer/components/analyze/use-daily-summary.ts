@@ -21,10 +21,15 @@ export interface DailySummaryState {
 }
 
 /** Fetches the cross-machine daily summary for `uid` honouring
- * `deviceScope` (own / all / hash). Returns the latest payload, or `[]`
- * before the IPC resolves and on error. Re-fires whenever `uid` or the
- * scope changes; cancels in-flight responses on unmount or scope swap. */
-export function useDailySummary(uid: string, deviceScope: DeviceScope): DailySummaryState {
+ * `deviceScope` (own / all / hash) and the optional `appScope` filter.
+ * Returns the latest payload, or `[]` before the IPC resolves and on
+ * error. Re-fires whenever `uid` / the scope / the app filter changes;
+ * cancels in-flight responses on unmount or any of the swaps. */
+export function useDailySummary(
+  uid: string,
+  deviceScope: DeviceScope,
+  appScope: string | null = null,
+): DailySummaryState {
   const [daily, setDaily] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
   const scopeKey = scopeToSelectValue(deviceScope)
@@ -33,16 +38,16 @@ export function useDailySummary(uid: string, deviceScope: DeviceScope): DailySum
     let cancelled = false
     setLoading(true)
     const dailyPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash)
+      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash, appScope)
       : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsListItemsLocal(uid)
-        : window.vialAPI.typingAnalyticsListItems(uid)
+        ? window.vialAPI.typingAnalyticsListItemsLocal(uid, appScope)
+        : window.vialAPI.typingAnalyticsListItems(uid, appScope)
     void dailyPromise
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [uid, scopeKey])
+  }, [uid, scopeKey, appScope])
 
   return { daily, loading }
 }

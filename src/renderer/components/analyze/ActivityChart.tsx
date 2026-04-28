@@ -78,6 +78,7 @@ export function ActivityChart(props: Props) {
       <ActivityCalendarChart
         uid={props.uid}
         deviceScope={props.deviceScope}
+        appScope={props.appScope}
         metric={props.metric}
         calendarFilter={props.calendarFilter}
         nowMs={props.nowMs}

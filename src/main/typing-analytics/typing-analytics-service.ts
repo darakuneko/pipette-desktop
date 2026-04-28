@@ -205,9 +205,9 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS,
-    async (_event, uid: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
-      return listTypingDailySummaries(uid)
+      return listTypingDailySummaries(uid, parseAppScopeArg(appScope))
     },
   )
 
@@ -247,10 +247,10 @@ export function setupTypingAnalyticsIpc(): void {
   // wired into sync-service so they share the same credential check.
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL,
-    async (_event, uid: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const ownHash = await getMachineHash()
-      return listTypingDailySummariesForHash(uid, ownHash)
+      return listTypingDailySummariesForHash(uid, ownHash, parseAppScopeArg(appScope))
     },
   )
 
@@ -264,10 +264,10 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, machineHash: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
-      return listTypingDailySummariesForHash(uid, machineHash)
+      return listTypingDailySummariesForHash(uid, machineHash, parseAppScopeArg(appScope))
     },
   )
 
@@ -863,8 +863,11 @@ export function listTypingKeyboards(): TypingKeyboardSummary[] {
 }
 
 /** Day-level summaries for one keyboard uid, newest first. */
-export function listTypingDailySummaries(uid: string): TypingDailySummary[] {
-  return getTypingAnalyticsDB().listDailySummariesForUid(uid)
+export function listTypingDailySummaries(
+  uid: string,
+  appScope: string | null = null,
+): TypingDailySummary[] {
+  return getTypingAnalyticsDB().listDailySummariesForUid(uid, appScope)
 }
 
 /** Pure-cache lookup for the Analyze > Interval chart. Returns every
@@ -1057,8 +1060,9 @@ export function getTypingPeakRecordsInRangeForHash(
 export function listTypingDailySummariesForHash(
   uid: string,
   machineHash: string,
+  appScope: string | null = null,
 ): TypingDailySummary[] {
-  return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash)
+  return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash, appScope)
 }
 
 /** Per-keyboard device infos for the Analyze > Device filter: own

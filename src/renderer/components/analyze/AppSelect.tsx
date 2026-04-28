@@ -77,6 +77,9 @@ export function AppSelect({
     onChange(next)
   }
 
+  // Order matches DeviceMultiSelect: per-item entries first, the
+  // "all-X aggregate" sits at the bottom because picking it is a
+  // switch-away from the per-item picks above.
   return (
     <select
       className={FILTER_SELECT}
@@ -85,14 +88,14 @@ export function AppSelect({
       aria-label={ariaLabel}
       data-testid={testId}
     >
-      <option value={NONE_VALUE} data-testid={`${testId}-option-none`}>
-        {t('analyze.filters.appOption.none')}
-      </option>
       {options.map((o) => (
         <option key={o.name} value={o.name} data-testid={`${testId}-option-${o.name}`}>
           {o.name}
         </option>
       ))}
+      <option value={NONE_VALUE} data-testid={`${testId}-option-none`}>
+        {t('analyze.filters.appOption.none')}
+      </option>
     </select>
   )
 }

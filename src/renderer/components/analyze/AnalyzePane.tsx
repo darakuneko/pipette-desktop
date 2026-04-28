@@ -1021,6 +1021,7 @@ export function AnalyzePane({
                 <SummaryView
                   uid={selected.uid}
                   deviceScope={deviceScopes[0]}
+                  appScope={appScope}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />

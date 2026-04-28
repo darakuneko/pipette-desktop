@@ -60,6 +60,8 @@ const CELL_HEIGHT_PX = 80
 interface Props {
   uid: string
   deviceScope: DeviceScope
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   /** Outer Activity metric — drives both the cell value and (when
    * `'sessions'`) the dedicated sessions IPC fetch. */
   metric: ActivityMetric
@@ -79,6 +81,7 @@ interface Props {
 export function ActivityCalendarChart({
   uid,
   deviceScope,
+  appScope,
   metric,
   calendarFilter,
   nowMs,
@@ -98,7 +101,7 @@ export function ActivityCalendarChart({
     [monthsToShow, endMonthIso, nowMs],
   )
 
-  const { daily, loading: dailyLoading } = useDailySummary(uid, deviceScope)
+  const { daily, loading: dailyLoading } = useDailySummary(uid, deviceScope, appScope)
   const [sessions, setSessions] = useState<TypingSessionRow[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
 

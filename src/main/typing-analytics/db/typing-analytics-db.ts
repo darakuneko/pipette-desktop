@@ -772,6 +772,7 @@ export class TypingAnalyticsDB {
        WHERE s.keyboard_uid = @uid
          AND s.is_deleted = 0
          AND t.is_deleted = 0
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -789,6 +790,7 @@ export class TypingAnalyticsDB {
          AND s.machine_hash = @machineHash
          AND s.is_deleted = 0
          AND t.is_deleted = 0
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -1816,8 +1818,11 @@ export class TypingAnalyticsDB {
 
   /** Daily summaries for a keyboard uid, grouped by local calendar day
    * and ordered newest first. Live rows only. */
-  listDailySummariesForUid(uid: string): TypingDailySummary[] {
-    return this.selectDailySummariesForUidStmt.all({ uid }) as TypingDailySummary[]
+  listDailySummariesForUid(
+    uid: string,
+    appScope: string | null = null,
+  ): TypingDailySummary[] {
+    return this.selectDailySummariesForUidStmt.all({ uid, appName: appScope }) as TypingDailySummary[]
   }
 
   /** Daily summaries for a keyboard uid restricted to a single
@@ -1828,8 +1833,9 @@ export class TypingAnalyticsDB {
   listDailySummariesForUidAndHash(
     uid: string,
     machineHash: string,
+    appScope: string | null = null,
   ): TypingDailySummary[] {
-    return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash }) as TypingDailySummary[]
+    return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash, appName: appScope }) as TypingDailySummary[]
   }
 
   /** Daily interval summaries (min/p25/p50/p75/max) for a keyboard uid,

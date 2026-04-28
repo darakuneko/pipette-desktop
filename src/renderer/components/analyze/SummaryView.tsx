@@ -18,6 +18,10 @@ import type { DeviceScope } from './analyze-types'
 interface Props {
   uid: string
   deviceScope: DeviceScope
+  /** App filter — see WpmChart.Props.appScope. Forwarded to the
+   * daily-summary fetch and to TypingProfileCard so every per-app
+   * subview re-aggregates from the same single-app minute set. */
+  appScope: string | null
   /** Snapshot the parent already resolved for the current scope —
    * Profile uses it to map bigram keycodes to fingers / hands. */
   snapshot: TypingKeymapSnapshot | null
@@ -26,8 +30,8 @@ interface Props {
   fingerOverrides: Record<string, FingerType>
 }
 
-export function SummaryView({ uid, deviceScope, snapshot, fingerOverrides }: Props) {
-  const { daily } = useDailySummary(uid, deviceScope)
+export function SummaryView({ uid, deviceScope, appScope, snapshot, fingerOverrides }: Props) {
+  const { daily } = useDailySummary(uid, deviceScope, appScope)
   const today = useLocalToday()
   return (
     <div className="flex h-full w-full flex-col gap-3">
@@ -36,12 +40,21 @@ export function SummaryView({ uid, deviceScope, snapshot, fingerOverrides }: Pro
       <TypingProfileCard
         uid={uid}
         deviceScope={deviceScope}
+        appScope={appScope}
         daily={daily}
         today={today}
         snapshot={snapshot}
         fingerOverrides={fingerOverrides}
       />
-      <StreakGoalCard uid={uid} daily={daily} today={today} />
+      {/* The streak counter is a long-running motivator and reads as
+          a single timeline of "kept typing every day". Filtering it
+          per-app would make it reset whenever the user spent a day
+          in a different app, which is the opposite of what the card
+          is meant to convey, so we only render it when no app filter
+          is active. */}
+      {appScope === null && (
+        <StreakGoalCard uid={uid} daily={daily} today={today} />
+      )}
     </div>
   )
 }

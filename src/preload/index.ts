@@ -246,8 +246,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE, uid, sinceMs, untilMs, scope),
   typingAnalyticsListKeyboards: (): Promise<TypingKeyboardSummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYBOARDS),
-  typingAnalyticsListItems: (uid: string): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS, uid),
+  typingAnalyticsListItems: (uid: string, appScope: string | null = null): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS, uid, appScope),
   typingAnalyticsDeleteItems: (uid: string, dates: string[]): Promise<TypingTombstoneResult> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, uid, dates),
   typingAnalyticsDeleteAll: (uid: string): Promise<TypingTombstoneResult> =>
@@ -258,12 +258,12 @@ const vialAPI = {
     sinceMs: number,
   ): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
-  typingAnalyticsListItemsLocal: (uid: string): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid),
+  typingAnalyticsListItemsLocal: (uid: string, appScope: string | null = null): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid, appScope),
   typingAnalyticsListDeviceInfos: (uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_DEVICE_INFOS, uid),
-  typingAnalyticsListItemsForHash: (uid: string, machineHash: string): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash),
+  typingAnalyticsListItemsForHash: (uid: string, machineHash: string, appScope: string | null = null): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash, appScope),
   typingAnalyticsListIntervalItems: (uid: string): Promise<TypingIntervalDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS, uid),
   typingAnalyticsListIntervalItemsLocal: (uid: string): Promise<TypingIntervalDailySummary[]> =>

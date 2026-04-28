@@ -171,13 +171,13 @@ export interface VialAPI {
     scope: unknown,
   ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
   typingAnalyticsListKeyboards(): Promise<TypingKeyboardSummary[]>
-  typingAnalyticsListItems(uid: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListItems(uid: string, appScope?: string | null): Promise<TypingDailySummary[]>
   typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
   typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
   typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
-  typingAnalyticsListItemsLocal(uid: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListItemsLocal(uid: string, appScope?: string | null): Promise<TypingDailySummary[]>
   typingAnalyticsListDeviceInfos(uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null>
-  typingAnalyticsListItemsForHash(uid: string, machineHash: string): Promise<TypingDailySummary[]>
+  typingAnalyticsListItemsForHash(uid: string, machineHash: string, appScope?: string | null): Promise<TypingDailySummary[]>
   typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
   typingAnalyticsListIntervalItemsForHash(uid: string, machineHash: string): Promise<TypingIntervalDailySummary[]>
