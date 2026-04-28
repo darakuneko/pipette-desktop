@@ -303,12 +303,12 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsListMatrixCellsByDayForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH, uid, machineHash, sinceMs, untilMs),
-  typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs),
-  typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs),
-  typingAnalyticsListMinuteStatsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH, uid, machineHash, sinceMs, untilMs),
+  typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs, appScope),
+  typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs, appScope),
+  typingAnalyticsListMinuteStatsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope: string | null = null): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScope),
   typingAnalyticsListSessions: (uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS, uid, sinceMs, untilMs),
   typingAnalyticsListSessionsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>

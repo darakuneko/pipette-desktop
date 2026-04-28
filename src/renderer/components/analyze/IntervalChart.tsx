@@ -42,6 +42,8 @@ interface Props {
    * pre-aggregates quartiles, so redistributing those meta-aggregates
    * as "four samples per minute" would muddy the histogram). */
   deviceScopes: readonly DeviceScope[]
+  /** App filter — see WpmChart.Props.appScope. */
+  appScope: string | null
   unit: IntervalUnit
   granularity: GranularityChoice
   viewMode: IntervalViewMode
@@ -83,7 +85,7 @@ function formatShare(v: number): string {
   return `${formatSharePercent(v)}%`
 }
 
-export function IntervalChart({ uid, range, deviceScopes, unit, granularity, viewMode }: Props) {
+export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
@@ -107,14 +109,14 @@ export function IntervalChart({ uid, range, deviceScopes, unit, granularity, vie
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    listMinuteStatsForScope(uid, effectiveDeviceScope, range.fromMs, range.toMs)
+    listMinuteStatsForScope(uid, effectiveDeviceScope, range.fromMs, range.toMs, appScope)
       .then((data) => { if (!cancelled) setRows(data) })
       .catch(() => { if (!cancelled) setRows([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // `scopeKey` encodes `effectiveDeviceScope` identity; including the
     // object would refetch every parent rerender.
-  }, [uid, scopeKey, range])
+  }, [uid, scopeKey, range, appScope])
 
   // Longest session comes from a narrow aggregation IPC rather than
   // the minute-stats rows so it surfaces the run that straddles bucket

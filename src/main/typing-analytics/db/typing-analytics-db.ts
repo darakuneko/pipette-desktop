@@ -980,6 +980,11 @@ export class TypingAnalyticsDB {
     // only groups by minute_ts (a scope can legitimately write to the
     // same minute_ts bucket more than once when a machine_hash change
     // lands; SUM / MIN / AVG / MAX merges those scopes into one row).
+    // App filter: @appName IS NULL means "no filter" so the same
+    // statement serves both filtered and unfiltered queries. Mixed /
+    // unknown minutes (app_name IS NULL on the row) only show up when
+    // no filter is set, matching the semantic the analytics service
+    // uses on the write side.
     this.selectMinuteStatsInRangeForUidStmt = this.db.prepare(`
       SELECT t.minute_ts AS minuteMs,
              SUM(t.keystrokes) AS keystrokes,
@@ -996,6 +1001,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1017,6 +1023,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
+         AND (@appName IS NULL OR t.app_name = @appName)
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1903,9 +1910,20 @@ export class TypingAnalyticsDB {
   /** Minute-raw stats for the Analyze WPM / Interval charts over the
    * `[sinceMs, untilMs)` window. Callers bucket these on the renderer
    * side so the SQL layer is independent of the user-picked bucket
-   * width. Rows ordered by minute_ts ASC. */
-  listMinuteStatsInRangeForUid(uid: string, sinceMs: number, untilMs: number): TypingMinuteStatsRow[] {
-    return this.selectMinuteStatsInRangeForUidStmt.all({ uid, sinceMs, untilMs }) as TypingMinuteStatsRow[]
+   * width. Rows ordered by minute_ts ASC. `appScope === null` (or
+   * omitted) keeps the result identical to the pre-filter behaviour. */
+  listMinuteStatsInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScope: string | null = null,
+  ): TypingMinuteStatsRow[] {
+    return this.selectMinuteStatsInRangeForUidStmt.all({
+      uid,
+      sinceMs,
+      untilMs,
+      appName: appScope,
+    }) as TypingMinuteStatsRow[]
   }
 
   /** Same as {@link listMinuteStatsInRangeForUid} but restricted to a
@@ -1915,8 +1933,15 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
+    appScope: string | null = null,
   ): TypingMinuteStatsRow[] {
-    return this.selectMinuteStatsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMinuteStatsRow[]
+    return this.selectMinuteStatsInRangeForUidAndHashStmt.all({
+      uid,
+      machineHash,
+      sinceMs,
+      untilMs,
+      appName: appScope,
+    }) as TypingMinuteStatsRow[]
   }
 
   /** Distinct application names with keystroke totals over the range.

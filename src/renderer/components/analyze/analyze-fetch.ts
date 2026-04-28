@@ -29,10 +29,11 @@ export function listMinuteStatsForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
+  appScope: string | null = null,
 ): Promise<TypingMinuteStatsRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs)
-  return window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScope)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScope)
+  return window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScope)
 }
 
 export function listBksMinuteForScope(

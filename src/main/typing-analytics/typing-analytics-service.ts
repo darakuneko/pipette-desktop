@@ -95,6 +95,15 @@ import {
 
 const FLUSH_DEBOUNCE_MS = 1_000
 
+/** Coerce an IPC `appScope` argument to `string | null`. Empty
+ * strings collapse to null so the analyze panel's "All apps" choice
+ * round-trips identically whether the renderer sends `null` or `''`. */
+function parseAppScopeArg(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
 let initialization: Promise<void> | null = null
 let ipcRegistered = false
 
@@ -326,12 +335,20 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+    async (
+      _event,
+      uid: unknown,
+      machineHash: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      appScope: unknown,
+    ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMinuteStatsInRangeForHash(uid, machineHash, since, until)
+      const app = parseAppScopeArg(appScope)
+      return listTypingMinuteStatsInRangeForHash(uid, machineHash, since, until, app)
     },
   )
 
@@ -480,22 +497,36 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+    async (
+      _event,
+      uid: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      appScope: unknown,
+    ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMinuteStatsInRange(uid, since, until)
+      const app = parseAppScopeArg(appScope)
+      return listTypingMinuteStatsInRange(uid, since, until, app)
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown): Promise<TypingMinuteStatsRow[]> => {
+    async (
+      _event,
+      uid: unknown,
+      sinceMs: unknown,
+      untilMs: unknown,
+      appScope: unknown,
+    ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until)
+      const app = parseAppScopeArg(appScope)
+      return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until, app)
     },
   )
 
@@ -931,13 +962,17 @@ export function listTypingMatrixCellsByDayInRangeForHash(
 }
 
 /** Minute-raw stats for the Analyze WPM / Interval charts over the
- * `[sinceMs, untilMs)` window. Callers bucket these on the renderer. */
+ * `[sinceMs, untilMs)` window. Callers bucket these on the renderer.
+ * `appScope === null` (or omitted) keeps the pre-filter behaviour;
+ * a non-null name restricts the query to single-app minutes that
+ * matched it. */
 export function listTypingMinuteStatsInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
+  appScope: string | null = null,
 ): TypingMinuteStatsRow[] {
-  return getTypingAnalyticsDB().listMinuteStatsInRangeForUid(uid, sinceMs, untilMs)
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUid(uid, sinceMs, untilMs, appScope)
 }
 
 export function listTypingMinuteStatsInRangeForHash(
@@ -945,8 +980,9 @@ export function listTypingMinuteStatsInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
+  appScope: string | null = null,
 ): TypingMinuteStatsRow[] {
-  return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs)
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
 }
 
 /** Live sessions that intersect `[sinceMs, untilMs)`. Powers the

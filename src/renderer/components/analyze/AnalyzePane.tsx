@@ -1030,6 +1030,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScopes={deviceScopes}
+                    appScope={appScope}
                     granularity={wpmFilter.granularity}
                     viewMode={wpmFilter.viewMode}
                     minActiveMs={wpmFilter.minActiveMs}
@@ -1050,6 +1051,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
+                  appScope={appScope}
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}

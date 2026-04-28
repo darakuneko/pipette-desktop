@@ -194,9 +194,9 @@ export interface VialAPI {
   typingAnalyticsListMatrixCellsByDay(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
   typingAnalyticsListMatrixCellsByDayLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
   typingAnalyticsListMatrixCellsByDayForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMatrixCellDailyRow[]>
-  typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
-  typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
-  typingAnalyticsListMinuteStatsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStatsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScope?: string | null): Promise<TypingMinuteStatsRow[]>
   typingAnalyticsListSessions(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsListSessionsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
   typingAnalyticsListSessionsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>

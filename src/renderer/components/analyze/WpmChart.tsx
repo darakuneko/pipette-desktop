@@ -47,6 +47,9 @@ interface Props {
   range: RangeMs
   /** Single-entry Device filter (own / all / one remote hash). */
   deviceScopes: readonly DeviceScope[]
+  /** Restrict the data to single-app minutes that match this name.
+   * `null` = no app filter (all minutes including mixed/unknown). */
+  appScope: string | null
   granularity: GranularityChoice
   viewMode: WpmViewMode
   /** Minimum `activeMs` (ms) a bucket / hour must clear to count
@@ -65,7 +68,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
 
 type WpmLineKey = 'wpm' | 'bksPercent'
 
-export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minActiveMs }: Props) {
+export function WpmChart({ uid, range, deviceScopes, appScope, granularity, viewMode, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
@@ -91,13 +94,13 @@ export function WpmChart({ uid, range, deviceScopes, granularity, viewMode, minA
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs)
+    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope)
       .then((data) => { if (!cancelled) setRows(data) })
       .catch(() => { if (!cancelled) setRows([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // `scopeKey` is the canonical identity for `deviceScope`.
-  }, [uid, scopeKey, range])
+  }, [uid, scopeKey, range, appScope])
 
   // The Bksp% overlay is always available in timeSeries mode; users
   // who don't want it click the legend to hide the line instead of
