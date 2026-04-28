@@ -641,13 +641,14 @@
       "empty": "アプリ データがありません — Monitor App を有効化して REC を開始してください",
       "unknown": "不明 / 混在",
       "other": "その他",
-      "tooltipKeystrokes": "{{count}} 打鍵"
+      "tooltipShare": "{{count}} 打鍵 ({{share}})"
     },
     "wpmByApp": {
       "title": "アプリ別 WPM",
       "loading": "アプリ別 WPM を読み込み中…",
       "empty": "アプリ タグ付きの 1 分集約がまだありません — Monitor App を有効化して REC を開始してください",
-      "tooltipWpm": "{{wpm}} WPM ({{keystrokes}} 打鍵)"
+      "tooltipWpm": "{{wpm}} WPM",
+      "tooltipKeystrokes": "{{count}} 打鍵"
     },
     "tablistLabel": "分析種別",
     "splitView": {

@@ -15,6 +15,7 @@ import {
 import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { chartSeriesColor } from '../../utils/chart-palette'
+import { formatSharePercent } from './analyze-format'
 
 interface Props {
   uid: string
@@ -37,6 +38,39 @@ interface PieDatum {
   name: string
   value: number
   isUnknown: boolean
+}
+
+interface AppUsageTooltipProps {
+  active?: boolean
+  payload?: ReadonlyArray<{ payload?: PieDatum }>
+  total: number
+}
+
+function AppUsageTooltip({ active, payload, total }: AppUsageTooltipProps): JSX.Element | null {
+  const { t } = useTranslation()
+  if (!active || !payload?.length) return null
+  const datum = payload[0]?.payload
+  if (!datum || total <= 0) return null
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-edge)',
+        color: 'var(--color-content)',
+        fontSize: 12,
+        padding: '4px 8px',
+        borderRadius: 4,
+      }}
+    >
+      <div style={{ color: 'var(--color-content-secondary)' }}>{datum.name}</div>
+      <div>
+        {t('analyze.appUsage.tooltipShare', {
+          count: datum.value.toLocaleString(),
+          share: `${formatSharePercent(datum.value / total)}%`,
+        })}
+      </div>
+    </div>
+  )
 }
 
 function rollupForChart(rows: AppRow[], unknownLabel: string, otherLabel: string): PieDatum[] {
@@ -111,6 +145,8 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
     [rows, t],
   )
 
+  const total = data.reduce((acc, d) => acc + d.value, 0)
+
   // Color palette: known apps cycle through the shared chart palette;
   // the Unknown slice uses a flat neutral grey so the eye treats it
   // as the "missing data" bucket rather than a real app, while still
@@ -149,16 +185,7 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
                 <Cell key={d.name} fill={colorFor(d, i)} />
               ))}
             </Pie>
-            <Tooltip
-              // Recharts default tooltip drops the second tuple element
-              // when it's empty, hiding the slice name. Pass the
-              // datum's name through so the user sees "VSCode: 1234
-              // keystrokes" instead of just the count.
-              formatter={(value: number, name: string) => [
-                t('analyze.appUsage.tooltipKeystrokes', { count: value }),
-                name,
-              ]}
-            />
+            <Tooltip content={(props) => <AppUsageTooltip {...props} total={total} />} />
             <Legend />
           </PieChart>
         </ResponsiveContainer>

@@ -32,6 +32,34 @@ interface BarDatum {
   keystrokes: number
 }
 
+interface WpmByAppTooltipProps {
+  active?: boolean
+  payload?: ReadonlyArray<{ payload?: BarDatum }>
+}
+
+function WpmByAppTooltip({ active, payload }: WpmByAppTooltipProps): JSX.Element | null {
+  const { t } = useTranslation()
+  if (!active || !payload?.length) return null
+  const datum = payload[0]?.payload
+  if (!datum) return null
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-edge)',
+        color: 'var(--color-content)',
+        fontSize: 12,
+        padding: '4px 8px',
+        borderRadius: 4,
+      }}
+    >
+      <div style={{ color: 'var(--color-content-secondary)' }}>{datum.name}</div>
+      <div>{t('analyze.wpmByApp.tooltipWpm', { wpm: formatWpm(datum.wpm) })}</div>
+      <div>{t('analyze.wpmByApp.tooltipKeystrokes', { count: datum.keystrokes.toLocaleString() })}</div>
+    </div>
+  )
+}
+
 const MIN_BAR_LIMIT = 12
 
 export function WpmByAppChart({ uid, range, deviceScopes }: Props) {
@@ -104,16 +132,8 @@ export function WpmByAppChart({ uid, range, deviceScopes }: Props) {
             <XAxis type="number" domain={[0, 'auto']} tickFormatter={(n: number) => formatWpm(n)} />
             <YAxis type="category" dataKey="name" width={80} interval={0} />
             <Tooltip
-              formatter={(value: number, _name, item) => {
-                const datum = item.payload as BarDatum
-                return [
-                  t('analyze.wpmByApp.tooltipWpm', {
-                    wpm: formatWpm(value),
-                    keystrokes: datum.keystrokes,
-                  }),
-                  '',
-                ]
-              }}
+              cursor={{ fill: 'var(--color-surface-dim)' }}
+              content={(props) => <WpmByAppTooltip {...props} />}
             />
             <Bar dataKey="wpm" fill="var(--color-accent)" />
           </BarChart>

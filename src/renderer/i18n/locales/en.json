@@ -643,13 +643,14 @@
       "empty": "No app data — turn on Monitor App and start REC to populate this chart.",
       "unknown": "Unknown / Mixed",
       "other": "Other",
-      "tooltipKeystrokes": "{{count}} keystrokes"
+      "tooltipShare": "{{count}} keystrokes ({{share}})"
     },
     "wpmByApp": {
       "title": "WPM by App",
       "loading": "Loading WPM by app…",
       "empty": "No app-tagged minutes yet — turn on Monitor App and start REC to populate this chart.",
-      "tooltipWpm": "{{wpm}} WPM ({{keystrokes}} keystrokes)"
+      "tooltipWpm": "{{wpm}} WPM",
+      "tooltipKeystrokes": "{{count}} keystrokes"
     },
     "tablistLabel": "Analysis type",
     "splitView": {
