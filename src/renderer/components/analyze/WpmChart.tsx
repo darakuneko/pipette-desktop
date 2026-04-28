@@ -30,6 +30,7 @@ import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { listBksMinuteForScope, listMinuteStatsForScope } from './analyze-fetch'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
 import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
+import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
 import {
   buildHourOfDayWpm,
   buildWpmTimeSeriesSummaryFromBuckets,
@@ -243,9 +244,7 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
                 allowDecimals
               />
               <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
-                labelStyle={{ color: 'var(--color-content-secondary)' }}
-                itemStyle={{ color: 'var(--color-content)' }}
+                {...ANALYZE_TOOLTIP_DEFAULTS}
                 formatter={(_value, _name, item) => {
                   const wpm = Number(item?.payload?.wpm ?? 0)
                   const ks = Number(item?.payload?.keystrokes ?? 0)
@@ -313,9 +312,7 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
               />
             )}
             <Tooltip
-              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
-              labelStyle={{ color: 'var(--color-content-secondary)' }}
-              itemStyle={{ color: 'var(--color-content)' }}
+              {...ANALYZE_TOOLTIP_DEFAULTS}
               labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
               formatter={(value, _name, item) => {
                 if (item?.dataKey === 'bksPercent') {

@@ -25,6 +25,7 @@ import {
   type ActivityCell,
 } from './analyze-activity'
 import { formatActiveDuration, formatSharePercent } from './analyze-format'
+import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
 import {
   toKeystrokesItems,
   toSessionsItems,
@@ -343,9 +344,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
               allowDecimals={false}
             />
             <Tooltip
-              contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
-              labelStyle={{ color: 'var(--color-content-secondary)' }}
-              itemStyle={{ color: 'var(--color-content)' }}
+              {...ANALYZE_TOOLTIP_DEFAULTS}
               formatter={(_, __, entry) => {
                 const c = Number(entry?.payload?.count ?? 0)
                 const s = Number(entry?.payload?.share ?? 0)

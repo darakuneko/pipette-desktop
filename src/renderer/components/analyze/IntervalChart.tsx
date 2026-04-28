@@ -21,6 +21,7 @@ import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, Ra
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { listMinuteStatsForScope } from './analyze-fetch'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
+import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
 import { formatDateTime } from '../editors/store-modal-shared'
 import {
   buildIntervalHistogram,
@@ -231,9 +232,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granul
                 tickFormatter={(v: number) => Math.round(v).toLocaleString()}
               />
               <Tooltip
-                contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
-                labelStyle={{ color: 'var(--color-content-secondary)' }}
-                itemStyle={{ color: 'var(--color-content)' }}
+                {...ANALYZE_TOOLTIP_DEFAULTS}
                 formatter={(_, __, entry) => {
                   const w = Number(entry?.payload?.weight ?? 0)
                   const s = Number(entry?.payload?.share ?? 0)
@@ -298,9 +297,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granul
             }}
           />
           <Tooltip
-            contentStyle={{ background: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 }}
-            labelStyle={{ color: 'var(--color-content-secondary)' }}
-            itemStyle={{ color: 'var(--color-content)' }}
+            {...ANALYZE_TOOLTIP_DEFAULTS}
             labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
             formatter={(value) => {
               const n = typeof value === 'number' ? value : Number(value)

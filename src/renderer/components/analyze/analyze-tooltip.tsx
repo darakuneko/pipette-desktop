@@ -18,6 +18,15 @@ const SHELL_STYLE = {
 
 const HEADER_STYLE = { color: 'var(--color-content-secondary)' } as const
 
+/** Use this when a chart wants recharts' built-in item/swatch
+ * rendering; reach for `TooltipShell` instead when supplying a custom
+ * `content` renderer. */
+export const ANALYZE_TOOLTIP_DEFAULTS = {
+  contentStyle: { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 },
+  labelStyle: { color: 'var(--color-content-secondary)' },
+  itemStyle: { color: 'var(--color-content)' },
+} as const
+
 interface TooltipShellProps {
   /** Optional first line in `var(--color-content-secondary)`. Skip for
    * single-line tooltips that don't need a separate header row. */
