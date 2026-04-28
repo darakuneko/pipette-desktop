@@ -236,8 +236,6 @@ export interface BigramFilters {
   slowLimit?: number
   /** Bar count for the Finger pair bar chart. */
   fingerLimit?: number
-  /** Bar count for the Key pair bar chart. */
-  keyLimit?: number
 }
 
 export interface LayoutComparisonFilters {
@@ -369,7 +367,6 @@ function isValidBigramFilters(value: unknown): boolean {
   if (o.topLimit !== undefined && !isPositiveInt(o.topLimit)) return false
   if (o.slowLimit !== undefined && !isPositiveInt(o.slowLimit)) return false
   if (o.fingerLimit !== undefined && !isPositiveInt(o.fingerLimit)) return false
-  if (o.keyLimit !== undefined && !isPositiveInt(o.keyLimit)) return false
   return true
 }
 

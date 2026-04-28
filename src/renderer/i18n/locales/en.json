@@ -954,9 +954,8 @@
       "error": "Failed to load bigram data. Try again or check the logs.",
       "quadrant": {
         "top": "Top pairs",
-        "slow": "Slow pairs",
-        "fingerIki": "Finger IKI heatmap",
-        "heatmap": "Pair heatmap"
+        "slow": "Pair interval",
+        "fingerIki": "Finger IKI"
       },
       "column": {
         "pair": "Pair",
@@ -965,7 +964,12 @@
         "p95": "p95 IKI"
       },
       "fingerIki": {
-        "noSnapshot": "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one."
+        "noSnapshot": "Finger interval needs a keymap snapshot. Start a record session or pick a range with one.",
+        "sortLabel": "Sort",
+        "sort": {
+          "desc": "Slowest first",
+          "asc": "Fastest first"
+        }
       },
       "cellTooltip": "{{count}} occurrences · avg {{avgIki}} ms"
     },
@@ -1001,7 +1005,8 @@
     "ergonomics": {
       "fingerLoad": "Finger Load",
       "handBalance": "Hand Balance",
-      "rowUsage": "Row Usage",
+      "rowUsage": "Row Balance",
+      "rowLoad": "Row Load",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
       "noLayout": "Layout data not available for this snapshot.",
       "noData": "No keystrokes recorded in this range.",
@@ -1016,6 +1021,13 @@
         "right-middle": "R Middle",
         "right-ring": "R Ring",
         "right-pinky": "R Pinky"
+      },
+      "fingerKind": {
+        "thumb": "Thumb",
+        "index": "Index",
+        "middle": "Middle",
+        "ring": "Ring",
+        "pinky": "Pinky"
       },
       "hand": {
         "left": "Left",

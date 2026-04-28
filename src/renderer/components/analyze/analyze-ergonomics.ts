@@ -38,6 +38,11 @@ export interface ErgonomicsAggregation {
   finger: FingerCounts
   hand: HandCounts
   row: RowCategoryCounts
+  /** Per-hand split of `row` so the Row pyramid can plot left vs.
+   * right keystroke counts per row category without re-walking the
+   * heatmap. `row[r]` equals `rowByHand.left[r] + rowByHand.right[r]`
+   * plus any unmapped-hand keystrokes. */
+  rowByHand: Record<HandType, RowCategoryCounts>
   /** Sum across every counted cell. Useful for `shareOfTotal` later. */
   total: number
   /** Counts whose key fell outside the finger mapping (non-thumb and not
@@ -87,6 +92,7 @@ export function aggregateErgonomics(
     finger: zeroFingerCounts(),
     hand: zeroHandCounts(),
     row: zeroRowCounts(),
+    rowByHand: { left: zeroRowCounts(), right: zeroRowCounts() },
     total: 0,
     unmappedFinger: 0,
   }
@@ -107,7 +113,10 @@ export function aggregateErgonomics(
       result.unmappedFinger += count
     }
     if (hand) result.hand[hand] += count
-    if (estimate.row) result.row[estimate.row] += count
+    if (estimate.row) {
+      result.row[estimate.row] += count
+      if (hand) result.rowByHand[hand][estimate.row] += count
+    }
   }
   return result
 }

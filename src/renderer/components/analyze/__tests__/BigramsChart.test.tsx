@@ -34,11 +34,9 @@ function renderChart(overrides: Partial<Parameters<typeof BigramsChart>[0]> = {}
       topLimit={10}
       slowLimit={10}
       fingerLimit={10}
-      keyLimit={10}
       onTopLimitChange={noop}
       onSlowLimitChange={noop}
       onFingerLimitChange={noop}
-      onKeyLimitChange={noop}
       snapshot={null}
       {...overrides}
     />,
@@ -70,7 +68,7 @@ describe('BigramsChart', () => {
     expect(options?.limit).toBeGreaterThan(100)
   })
 
-  it('renders all four quadrants with their own limit selects', async () => {
+  it('renders all three quadrants with their own limit selects', async () => {
     fetchSpy.mockResolvedValue({
       view: 'top',
       entries: [
@@ -84,7 +82,7 @@ describe('BigramsChart', () => {
     expect(screen.getByText('analyze.bigrams.quadrant.top')).toBeTruthy()
     expect(screen.getByText('analyze.bigrams.quadrant.slow')).toBeTruthy()
     expect(screen.getByText('analyze.bigrams.quadrant.fingerIki')).toBeTruthy()
-    expect(screen.getByText('analyze.bigrams.quadrant.heatmap')).toBeTruthy()
+    expect(screen.queryByText('analyze.bigrams.quadrant.heatmap')).toBeNull()
     expect(screen.getByTestId('analyze-bigrams-top-limit-select')).toBeTruthy()
     expect(screen.getByTestId('analyze-bigrams-slow-limit-select')).toBeTruthy()
   })

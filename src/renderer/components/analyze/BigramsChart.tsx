@@ -44,18 +44,18 @@ interface BigramsChartProps {
   topLimit: number
   slowLimit: number
   fingerLimit: number
-  keyLimit: number
   onTopLimitChange: (next: number) => void
   onSlowLimitChange: (next: number) => void
   onFingerLimitChange: (next: number) => void
-  onKeyLimitChange: (next: number) => void
   snapshot: TypingKeymapSnapshot | null
   fingerOverrides?: Record<string, FingerType>
 }
 
-// Pull a high limit so the renderer can derive Top / Slow / Finger /
-// Heatmap sub-views from a single fetch instead of 4 round-trips.
+// Pull a high limit so the renderer can derive Top / Slow / Finger
+// sub-views from a single fetch instead of 3 round-trips.
 const ALL_PAIRS_LIMIT = 5000
+
+type FingerSort = 'desc' | 'asc'
 
 export function BigramsChart({
   uid,
@@ -64,11 +64,9 @@ export function BigramsChart({
   topLimit,
   slowLimit,
   fingerLimit,
-  keyLimit,
   onTopLimitChange,
   onSlowLimitChange,
   onFingerLimitChange,
-  onKeyLimitChange,
   snapshot,
   fingerOverrides,
 }: BigramsChartProps): JSX.Element {
@@ -76,6 +74,10 @@ export function BigramsChart({
   const [result, setResult] = useState<TypingBigramAggregateResult>({ view: 'top', entries: [] })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  // Finger interval sort direction. Local UI state only — defaults to
+  // `desc` (slowest first) so the bar chart leads with the most stressed
+  // pairs, matching the historical ordering.
+  const [fingerSort, setFingerSort] = useState<FingerSort>('desc')
 
   const scope = primaryDeviceScope(deviceScopes)
   const scopeKey = scopeToSelectValue(scope)
@@ -147,6 +149,36 @@ export function BigramsChart({
         <TopRanking entries={entries} listLimit={topLimit} />
       </Quadrant>
       <Quadrant
+        title={t('analyze.bigrams.quadrant.fingerIki')}
+        controls={
+          <>
+            <select
+              value={fingerSort}
+              onChange={(e) => setFingerSort(e.target.value as FingerSort)}
+              className={FILTER_SELECT}
+              data-testid="analyze-bigrams-finger-sort-select"
+              aria-label={t('analyze.bigrams.fingerIki.sortLabel')}
+            >
+              <option value="desc">{t('analyze.bigrams.fingerIki.sort.desc')}</option>
+              <option value="asc">{t('analyze.bigrams.fingerIki.sort.asc')}</option>
+            </select>
+            <LimitSelect
+              value={fingerLimit}
+              onChange={onFingerLimitChange}
+              testId="analyze-bigrams-finger-limit-select"
+            />
+          </>
+        }
+      >
+        <BigramFingerBarChart
+          entries={entries}
+          snapshot={snapshot}
+          fingerOverrides={fingerOverrides}
+          listLimit={fingerLimit}
+          sort={fingerSort}
+        />
+      </Quadrant>
+      <Quadrant
         title={t('analyze.bigrams.quadrant.slow')}
         controls={
           <LimitSelect
@@ -157,35 +189,6 @@ export function BigramsChart({
         }
       >
         <SlowRanking entries={entries} listLimit={slowLimit} />
-      </Quadrant>
-      <Quadrant
-        title={t('analyze.bigrams.quadrant.fingerIki')}
-        controls={
-          <LimitSelect
-            value={fingerLimit}
-            onChange={onFingerLimitChange}
-            testId="analyze-bigrams-finger-limit-select"
-          />
-        }
-      >
-        <BigramFingerBarChart
-          entries={entries}
-          snapshot={snapshot}
-          fingerOverrides={fingerOverrides}
-          listLimit={fingerLimit}
-        />
-      </Quadrant>
-      <Quadrant
-        title={t('analyze.bigrams.quadrant.heatmap')}
-        controls={
-          <LimitSelect
-            value={keyLimit}
-            onChange={onKeyLimitChange}
-            testId="analyze-bigrams-key-limit-select"
-          />
-        }
-      >
-        <BigramKeyBarChart entries={entries} listLimit={keyLimit} />
       </Quadrant>
     </div>
   )
@@ -462,6 +465,7 @@ interface FingerBarChartProps {
   snapshot: TypingKeymapSnapshot | null
   fingerOverrides?: Record<string, FingerType>
   listLimit: number
+  sort: FingerSort
 }
 
 function BigramFingerBarChart({
@@ -469,6 +473,7 @@ function BigramFingerBarChart({
   snapshot,
   fingerOverrides,
   listLimit,
+  sort,
 }: FingerBarChartProps): JSX.Element {
   const { t } = useTranslation()
   const fingerMap = useKeycodeFingerMap(snapshot, fingerOverrides)
@@ -490,9 +495,10 @@ function BigramFingerBarChart({
         color: fromFinger.startsWith('left-') ? BAR_LEFT : BAR_RIGHT,
       })
     }
-    ranked.sort((a, b) => b.value - a.value || a.id.localeCompare(b.id))
+    const dir = sort === 'desc' ? 1 : -1
+    ranked.sort((a, b) => dir * (b.value - a.value) || a.id.localeCompare(b.id))
     return ranked.slice(0, Math.max(listLimit, 0))
-  }, [entries, fingerMap, listLimit, t])
+  }, [entries, fingerMap, listLimit, sort, t])
 
   if (snapshot === null) {
     return (
@@ -506,40 +512,7 @@ function BigramFingerBarChart({
   }
   return (
     <div data-testid="analyze-bigrams-finger-bars">
-      <BigramBarChart data={data} yAxisWidth={70} unit="ms" />
-    </div>
-  )
-}
-
-interface KeyBarChartProps {
-  entries: readonly TypingBigramTopEntry[]
-  listLimit: number
-}
-
-function BigramKeyBarChart({ entries, listLimit }: KeyBarChartProps): JSX.Element {
-  const { t } = useTranslation()
-  const data = useMemo<BarDatum[]>(() => {
-    const ranked: BarDatum[] = []
-    for (const entry of entries) {
-      if (entry.avgIki === null) continue
-      ranked.push({
-        id: entry.bigramId,
-        label: bigramPairLabel(entry.bigramId),
-        value: entry.avgIki,
-        count: entry.count,
-        color: BAR_LEFT,
-      })
-    }
-    ranked.sort((a, b) => b.value - a.value || a.id.localeCompare(b.id))
-    return ranked.slice(0, Math.max(listLimit, 0))
-  }, [entries, listLimit])
-
-  if (data.length === 0) {
-    return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
-  }
-  return (
-    <div data-testid="analyze-bigrams-key-bars">
-      <BigramBarChart data={data} yAxisWidth={56} unit="ms" />
+      <BigramBarChart data={data} yAxisWidth={100} unit="ms" />
     </div>
   )
 }

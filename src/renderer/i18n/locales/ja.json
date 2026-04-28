@@ -952,9 +952,8 @@
       "error": "バイグラムデータの取得に失敗しました。再試行するかログを確認してください",
       "quadrant": {
         "top": "頻出ペア",
-        "slow": "遅いペア",
-        "fingerIki": "指間隔ヒートマップ",
-        "heatmap": "ペアヒートマップ"
+        "slow": "ペア間隔",
+        "fingerIki": "指間隔"
       },
       "column": {
         "pair": "ペア",
@@ -963,7 +962,12 @@
         "p95": "p95 間隔"
       },
       "fingerIki": {
-        "noSnapshot": "指ヒートマップには keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください"
+        "noSnapshot": "指間隔には keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください",
+        "sortLabel": "並び順",
+        "sort": {
+          "desc": "遅い順",
+          "asc": "早い順"
+        }
       },
       "cellTooltip": "{{count}} 回 · 平均 {{avgIki}} ms"
     },
@@ -999,7 +1003,8 @@
     "ergonomics": {
       "fingerLoad": "指別打鍵量",
       "handBalance": "左右バランス",
-      "rowUsage": "段別打鍵量",
+      "rowUsage": "段別バランス",
+      "rowLoad": "段別打鍵量",
       "noSnapshot": "この期間のキーマップスナップショットがありません。レコーディングを開始して取得してください。",
       "noLayout": "このスナップショットにはレイアウト情報がありません",
       "noData": "この期間の打鍵データがありません",
@@ -1014,6 +1019,13 @@
         "right-middle": "右中指",
         "right-ring": "右薬指",
         "right-pinky": "右小指"
+      },
+      "fingerKind": {
+        "thumb": "親指",
+        "index": "人差し指",
+        "middle": "中指",
+        "ring": "薬指",
+        "pinky": "小指"
       },
       "hand": {
         "left": "左手",

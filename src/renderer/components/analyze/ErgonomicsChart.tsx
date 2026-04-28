@@ -24,7 +24,7 @@ import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
 import { primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
-import { aggregateErgonomics, FINGER_LIST, ROW_ORDER } from './analyze-ergonomics'
+import { aggregateErgonomics, ROW_ORDER } from './analyze-ergonomics'
 import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
 
@@ -39,6 +39,25 @@ interface Props {
 }
 
 type BarDatum = { label: string; value: number }
+
+/** Position-only finger kinds for the pyramid view (drops the L/R
+ * prefix). Order is symmetric so the pyramid's vertical axis reads
+ * outer → inner. */
+type FingerKind = 'thumb' | 'index' | 'middle' | 'ring' | 'pinky'
+const FINGER_KINDS: readonly FingerKind[] = ['thumb', 'index', 'middle', 'ring', 'pinky']
+
+const PYRAMID_LEFT_COLOR = '#3b82f6'
+const PYRAMID_RIGHT_COLOR = '#ef4444'
+
+interface PyramidDatum {
+  /** Localised category label (drives YAxis ticks). */
+  category: string
+  /** Left-hand keystrokes, encoded as a NEGATIVE number so recharts'
+   * `stackOffset="sign"` paints the bar to the left of zero. */
+  left: number
+  /** Right-hand keystrokes (positive). */
+  right: number
+}
 
 interface SectionProps {
   title: string
@@ -106,6 +125,106 @@ const Section = memo(function Section({
   )
 })
 
+interface HandPyramidChartProps {
+  title: string
+  data: PyramidDatum[]
+  height: number
+  yAxisWidth: number
+  testId: string
+}
+
+/** Population-pyramid bar chart for left vs. right keystrokes against
+ * an arbitrary category axis (finger kind, row category, …). The X
+ * axis is centered at zero with left-hand bars painted negative so the
+ * two hands diverge from the spine. Symmetric `domain` (`[-max, max]`)
+ * keeps an extreme dominant hand from squeezing the other side flat. */
+const HandPyramidChart = memo(function HandPyramidChart({
+  title,
+  data,
+  height,
+  yAxisWidth,
+  testId,
+}: HandPyramidChartProps) {
+  const maxAbs = Math.max(
+    ...data.map((d) => Math.max(Math.abs(d.left), d.right)),
+    1,
+  )
+  return (
+    <div data-testid={testId}>
+      <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">{title}</h4>
+      <div style={{ height }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            data={data}
+            layout="vertical"
+            stackOffset="sign"
+            margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" horizontal={false} />
+            <XAxis
+              type="number"
+              domain={[-maxAbs, maxAbs]}
+              tickFormatter={(v) => Math.abs(Number(v)).toLocaleString()}
+              stroke="var(--color-content-muted)"
+              fontSize={11}
+            />
+            <YAxis
+              type="category"
+              dataKey="category"
+              stroke="var(--color-content-muted)"
+              fontSize={11}
+              width={yAxisWidth}
+            />
+            <Tooltip
+              cursor={{ fill: 'var(--color-surface-dim)' }}
+              content={(p) => <HandPyramidTooltip {...p} />}
+            />
+            <Bar dataKey="left" stackId="hand" fill={PYRAMID_LEFT_COLOR} isAnimationActive={false} />
+            <Bar dataKey="right" stackId="hand" fill={PYRAMID_RIGHT_COLOR} isAnimationActive={false} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  )
+})
+
+interface HandPyramidTooltipProps {
+  active?: boolean
+  label?: unknown
+  payload?: ReadonlyArray<{ payload?: PyramidDatum }>
+}
+
+function HandPyramidTooltip({ active, label, payload }: HandPyramidTooltipProps): JSX.Element | null {
+  const { t } = useTranslation()
+  if (!active || !payload?.length) return null
+  const datum = payload[0]?.payload
+  if (!datum) return null
+  const displayLabel = typeof label === 'string' || typeof label === 'number' ? label : datum.category
+  const leftCount = Math.abs(datum.left)
+  const rightCount = datum.right
+  const unit = t('analyze.unit.keys')
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-edge)',
+        color: 'var(--color-content)',
+        fontSize: 12,
+        padding: '4px 8px',
+        borderRadius: 4,
+      }}
+    >
+      <div style={{ color: 'var(--color-content-secondary)' }}>{displayLabel}</div>
+      <div>
+        {t('analyze.ergonomics.hand.left')}: {leftCount.toLocaleString()} {unit}
+      </div>
+      <div>
+        {t('analyze.ergonomics.hand.right')}: {rightCount.toLocaleString()} {unit}
+      </div>
+    </div>
+  )
+}
+
 function mergeLayerHeatmaps(
   layerCells: Record<number, TypingHeatmapByCell>,
 ): Map<string, TypingHeatmapCell> {
@@ -162,10 +281,6 @@ export function ErgonomicsChart({
     [mergedHeatmap, keys, fingerOverrides],
   )
 
-  const fingerData: BarDatum[] = FINGER_LIST.map((f) => ({
-    label: t(`analyze.ergonomics.finger.${f}`),
-    value: aggregation.finger[f],
-  }))
   const handData: BarDatum[] = [
     {
       label: t('analyze.ergonomics.hand.left'),
@@ -180,6 +295,24 @@ export function ErgonomicsChart({
     label: t(`analyze.ergonomics.rowCategory.${r}`),
     value: aggregation.row[r],
   }))
+  const fingerPyramidData: PyramidDatum[] = FINGER_KINDS.map((kind) => {
+    const leftRaw = aggregation.finger[`left-${kind}`]
+    return {
+      category: t(`analyze.ergonomics.fingerKind.${kind}`),
+      // Negate explicitly only for non-zero counts so the row doesn't
+      // carry a `-0` that could trip up recharts' sign-based stacking.
+      left: leftRaw === 0 ? 0 : -leftRaw,
+      right: aggregation.finger[`right-${kind}`],
+    }
+  })
+  const rowPyramidData: PyramidDatum[] = ROW_ORDER.map((r) => {
+    const leftRaw = aggregation.rowByHand.left[r]
+    return {
+      category: t(`analyze.ergonomics.rowCategory.${r}`),
+      left: leftRaw === 0 ? 0 : -leftRaw,
+      right: aggregation.rowByHand.right[r],
+    }
+  })
 
   if (loading) {
     return (
@@ -205,34 +338,52 @@ export function ErgonomicsChart({
 
   return (
     <div className="flex h-full flex-col gap-4 overflow-y-auto pr-1" data-testid="analyze-ergonomics">
-      <Section
-        title={t('analyze.ergonomics.fingerLoad')}
-        data={fingerData}
-        orientation="vertical"
-        height={360}
-        testId="analyze-ergonomics-finger"
-      />
-      {/* Hand Balance has just two bars, so it's pinned to a narrower
-        * column while Row Usage (6 categories) takes the rest of the
-        * width. `min-w-0` keeps the recharts measurement from forcing
-        * either child past its grid track. */}
+      {/* Row 1: Hand Balance pairs with the per-finger pyramid so the
+        * left/right summary sits next to its breakdown. Hand Balance
+        * carries only two bars and reads naturally narrow; the pyramid
+        * needs the wider column to keep the diverging axis legible.
+        * `min-w-0` keeps recharts measurement from forcing either child
+        * past its grid track. */}
       <div className="grid grid-cols-[1fr_3fr] gap-4">
         <div className="min-w-0">
           <Section
             title={t('analyze.ergonomics.handBalance')}
             data={handData}
             orientation="horizontal"
-            height={200}
+            height={280}
             testId="analyze-ergonomics-hand"
           />
         </div>
+        <div className="min-w-0">
+          <HandPyramidChart
+            title={t('analyze.ergonomics.fingerLoad')}
+            data={fingerPyramidData}
+            height={280}
+            yAxisWidth={64}
+            testId="analyze-ergonomics-finger"
+          />
+        </div>
+      </div>
+      {/* Row 2: Row balance (sum across hands) sits next to its
+        * left/right pyramid so the totals and the per-hand split
+        * read together. */}
+      <div className="grid grid-cols-[1fr_3fr] gap-4">
         <div className="min-w-0">
           <Section
             title={t('analyze.ergonomics.rowUsage')}
             data={rowData}
             orientation="horizontal"
-            height={200}
+            height={240}
             testId="analyze-ergonomics-row"
+          />
+        </div>
+        <div className="min-w-0">
+          <HandPyramidChart
+            title={t('analyze.ergonomics.rowLoad')}
+            data={rowPyramidData}
+            height={240}
+            yAxisWidth={72}
+            testId="analyze-ergonomics-row-pyramid"
           />
         </div>
       </div>
