@@ -3,6 +3,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  LabelList,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
+import {
   primaryDeviceScope,
   scopeToSelectValue,
   type DeviceScope,
@@ -23,7 +34,6 @@ import {
   avgIkiFromHist,
   percentileFromHist,
 } from './analyze-bigram-heatmap'
-import { Tooltip as UITooltip } from '../ui/Tooltip'
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
 import type { RangeMs } from './analyze-types'
 
@@ -447,14 +457,6 @@ function EmptyQuadrant({ text }: { text: string }): JSX.Element {
   return <div className="py-4 text-center text-[12px] text-content-muted">{text}</div>
 }
 
-interface FingerBarRow {
-  pairKey: string
-  fromFinger: FingerType
-  toFinger: FingerType
-  count: number
-  avgIki: number
-}
-
 interface FingerBarChartProps {
   entries: readonly TypingBigramTopEntry[]
   snapshot: TypingKeymapSnapshot | null
@@ -470,19 +472,27 @@ function BigramFingerBarChart({
 }: FingerBarChartProps): JSX.Element {
   const { t } = useTranslation()
   const fingerMap = useKeycodeFingerMap(snapshot, fingerOverrides)
-  const rows = useMemo<FingerBarRow[]>(() => {
+  const data = useMemo<BarDatum[]>(() => {
     if (fingerMap.size === 0) return []
     const totals = aggregateFingerPairs(entries, fingerMap)
-    const ranked: FingerBarRow[] = []
+    const ranked: BarDatum[] = []
     for (const [pairKey, total] of totals) {
       const avg = avgIkiFromHist(total.hist)
       if (avg === null) continue
       const [fromFinger, toFinger] = pairKey.split('_') as [FingerType, FingerType]
-      ranked.push({ pairKey, fromFinger, toFinger, count: total.count, avgIki: avg })
+      const fromLabel = t(`analyze.finger.short.${fromFinger}`)
+      const toLabel = t(`analyze.finger.short.${toFinger}`)
+      ranked.push({
+        id: pairKey,
+        label: `${fromLabel} → ${toLabel}`,
+        value: avg,
+        count: total.count,
+        color: fromFinger.startsWith('left-') ? BAR_LEFT : BAR_RIGHT,
+      })
     }
-    ranked.sort((a, b) => b.avgIki - a.avgIki || a.pairKey.localeCompare(b.pairKey))
+    ranked.sort((a, b) => b.value - a.value || a.id.localeCompare(b.id))
     return ranked.slice(0, Math.max(listLimit, 0))
-  }, [entries, fingerMap, listLimit])
+  }, [entries, fingerMap, listLimit, t])
 
   if (snapshot === null) {
     return (
@@ -491,31 +501,12 @@ function BigramFingerBarChart({
       </div>
     )
   }
-  if (rows.length === 0) {
+  if (data.length === 0) {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
-  const max = rows.reduce((acc, r) => Math.max(acc, r.avgIki), 1)
   return (
-    <div className={BAR_GRID_CLASS} data-testid="analyze-bigrams-finger-bars">
-      {rows.map((row) => {
-        const fromLabel = t(`analyze.finger.short.${row.fromFinger}`)
-        const toLabel = t(`analyze.finger.short.${row.toFinger}`)
-        const tooltip = t('analyze.bigrams.cellTooltip', {
-          count: row.count,
-          avgIki: Math.round(row.avgIki),
-        })
-        const isLeft = row.fromFinger.startsWith('left-')
-        return (
-          <BarRow
-            key={row.pairKey}
-            label={`${fromLabel} → ${toLabel}`}
-            value={row.avgIki}
-            max={max}
-            tooltip={tooltip}
-            color={isLeft ? BAR_LEFT : BAR_RIGHT}
-          />
-        )
-      })}
+    <div data-testid="analyze-bigrams-finger-bars">
+      <BigramBarChart data={data} yAxisWidth={70} unit="ms" />
     </div>
   )
 }
@@ -527,36 +518,28 @@ interface KeyBarChartProps {
 
 function BigramKeyBarChart({ entries, listLimit }: KeyBarChartProps): JSX.Element {
   const { t } = useTranslation()
-  const rows = useMemo(() => {
-    const ranked = entries
-      .filter((e) => e.avgIki !== null)
-      .map((e) => ({ entry: e, avgIki: e.avgIki as number }))
-    ranked.sort((a, b) => b.avgIki - a.avgIki || a.entry.bigramId.localeCompare(b.entry.bigramId))
+  const data = useMemo<BarDatum[]>(() => {
+    const ranked: BarDatum[] = []
+    for (const entry of entries) {
+      if (entry.avgIki === null) continue
+      ranked.push({
+        id: entry.bigramId,
+        label: bigramPairLabel(entry.bigramId),
+        value: entry.avgIki,
+        count: entry.count,
+        color: BAR_LEFT,
+      })
+    }
+    ranked.sort((a, b) => b.value - a.value || a.id.localeCompare(b.id))
     return ranked.slice(0, Math.max(listLimit, 0))
   }, [entries, listLimit])
 
-  if (rows.length === 0) {
+  if (data.length === 0) {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
-  const max = rows.reduce((acc, r) => Math.max(acc, r.avgIki), 1)
   return (
-    <div className={BAR_GRID_CLASS} data-testid="analyze-bigrams-key-bars">
-      {rows.map(({ entry, avgIki }) => {
-        const tooltip = t('analyze.bigrams.cellTooltip', {
-          count: entry.count,
-          avgIki: Math.round(avgIki),
-        })
-        return (
-          <BarRow
-            key={entry.bigramId}
-            label={bigramPairLabel(entry.bigramId)}
-            value={avgIki}
-            max={max}
-            tooltip={tooltip}
-            color={BAR_LEFT}
-          />
-        )
-      })}
+    <div data-testid="analyze-bigrams-key-bars">
+      <BigramBarChart data={data} yAxisWidth={56} unit="ms" />
     </div>
   )
 }
@@ -564,38 +547,109 @@ function BigramKeyBarChart({ entries, listLimit }: KeyBarChartProps): JSX.Elemen
 const BAR_LEFT = '#3b82f6'
 const BAR_RIGHT = '#ef4444'
 
-interface BarRowProps {
+interface BarDatum {
+  id: string
   label: string
   value: number
-  max: number
-  tooltip: string
+  count: number
   color: string
 }
 
-function BarRow({ label, value, max, tooltip, color }: BarRowProps): JSX.Element {
-  const pct = Math.max(0, Math.min(100, (value / Math.max(max, 1)) * 100))
-  // `display: contents` lets the two children participate as direct
-  // grid items of the parent BarChartGrid — required so every row
-  // shares the same `max-content` label column width.
+const BAR_ROW_PX = 24
+const CHART_VERTICAL_PADDING_PX = 16
+
+interface BigramBarChartProps {
+  data: BarDatum[]
+  yAxisWidth: number
+  unit: string
+}
+
+/** Horizontal bar chart shared by the Finger and Key bigram quadrants.
+ * Each row is one categorical bar; height is sized to fit the row count
+ * so the parent quadrant's `overflow-auto` handles long lists. recharts'
+ * native Tooltip provides the cursor-following bubble that matches the
+ * Ergonomics tab's bar charts. */
+function BigramBarChart({ data, yAxisWidth, unit }: BigramBarChartProps): JSX.Element {
+  // Floor at 120px so single-row charts don't squeeze the axis labels.
+  const height = Math.max(120, data.length * BAR_ROW_PX + CHART_VERTICAL_PADDING_PX * 2 + 24)
   return (
-    <div className="contents">
-      <span className="whitespace-nowrap font-mono text-content-muted">{label}</span>
-      <UITooltip
-        content={tooltip}
-        side="bottom"
-        wrapperAs="span"
-        wrapperClassName="block w-full"
-      >
-        <span className="flex items-center gap-2">
-          <span
-            className="block h-3 rounded"
-            style={{ width: `${pct}%`, minWidth: 1, backgroundColor: color }}
+    <div style={{ height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart
+          data={data}
+          layout="vertical"
+          margin={{ top: CHART_VERTICAL_PADDING_PX, right: 40, bottom: CHART_VERTICAL_PADDING_PX, left: 4 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" horizontal={false} />
+          <XAxis
+            type="number"
+            stroke="var(--color-content-muted)"
+            fontSize={11}
+            tickFormatter={(v) => `${Math.round(Number(v))}`}
           />
-          <span className="tabular-nums text-content-muted">{Math.round(value)}</span>
-        </span>
-      </UITooltip>
+          <YAxis
+            type="category"
+            dataKey="label"
+            stroke="var(--color-content-muted)"
+            fontSize={11}
+            width={yAxisWidth}
+            interval={0}
+          />
+          <Tooltip
+            cursor={{ fill: 'var(--color-surface-dim)' }}
+            content={(p) => <BigramCellTooltip {...p} />}
+          />
+          <Bar dataKey="value" isAnimationActive={false}>
+            {data.map((row) => (
+              <Cell key={row.id} fill={row.color} />
+            ))}
+            <LabelList
+              dataKey="value"
+              position="right"
+              formatter={(v: unknown) => `${Math.round(Number(v))} ${unit}`}
+              style={{ fill: 'var(--color-content-muted)', fontSize: 11 }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
     </div>
   )
 }
 
-const BAR_GRID_CLASS = 'grid grid-cols-[max-content_1fr] items-center gap-x-2 gap-y-1 text-[12px]'
+interface BigramCellTooltipProps {
+  active?: boolean
+  label?: unknown
+  payload?: ReadonlyArray<{ payload?: BarDatum }>
+}
+
+/** recharts content renderer — the default `formatter` path renders a
+ * leading separator when the item name is empty, and threading a name
+ * through every row would obscure the per-bigram label that's already
+ * on the Y axis. Owning the markup keeps the bubble compact. */
+function BigramCellTooltip({ active, label, payload }: BigramCellTooltipProps): JSX.Element | null {
+  const { t } = useTranslation()
+  if (!active || !payload?.length) return null
+  const datum = payload[0]?.payload
+  if (!datum) return null
+  const displayLabel = typeof label === 'string' || typeof label === 'number' ? label : datum.label
+  return (
+    <div
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-edge)',
+        color: 'var(--color-content)',
+        fontSize: 12,
+        padding: '4px 8px',
+        borderRadius: 4,
+      }}
+    >
+      <div style={{ color: 'var(--color-content-secondary)' }}>{displayLabel}</div>
+      <div>
+        {t('analyze.bigrams.cellTooltip', {
+          count: datum.count,
+          avgIki: Math.round(datum.value),
+        })}
+      </div>
+    </div>
+  )
+}
