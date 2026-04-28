@@ -276,36 +276,32 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScope, snapshot, h
 
   const scopeKey = scopeToSelectValue(deviceScope)
 
-  useEffect(() => {
-    setLayerCells(new Map())
-    // appScope change invalidates every cached layer the same way a
-    // device-scope change does — different filters mean different
-    // aggregates per cell.
-  }, [uid, range, scopeKey, appScope])
-
   const selectedLayersKey = selectedLayers.join(',')
   useEffect(() => {
+    // Fetch every selected layer in lock-step whenever any axis
+    // changes (uid / range / device scope / app filter / selected
+    // layer set). Splitting the cache-clear from the fetch into two
+    // effects loses the second effect's stale-state read: clearing
+    // schedules a layerCells={} update, but the fetch effect closes
+    // over the previous (still-populated) cells, sees "nothing new
+    // to fetch" and exits — leaving the rendered Map empty until the
+    // user touches another input. Recompute the whole map atomically.
     let cancelled = false
-    const layersToFetch = selectedLayers.filter((l) => !layerCells.has(l))
-    if (layersToFetch.length === 0) {
-      setLoading(false)
-      return
-    }
     setLoading(true)
-    void Promise.all(layersToFetch.map((layer) =>
+    void Promise.all(selectedLayers.map((layer) =>
       window.vialAPI
         .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScope)
         .catch(() => ({} as TypingHeatmapByCell)),
     )).then((results) => {
       if (cancelled) return
-      setLayerCells((prev) => {
-        const m = new Map(prev)
-        layersToFetch.forEach((layer, i) => m.set(layer, results[i]))
-        return m
-      })
+      const next = new Map<number, TypingHeatmapByCell>()
+      selectedLayers.forEach((layer, i) => next.set(layer, results[i] ?? {}))
+      setLayerCells(next)
       setLoading(false)
     })
     return () => { cancelled = true }
+    // selectedLayersKey carries the layer-set identity (joined string)
+    // so an unchanged array doesn't refire on every render.
   }, [uid, range, scopeKey, selectedLayersKey, appScope])
 
   const layout = snapshot.layout as KeyboardLayout | null
