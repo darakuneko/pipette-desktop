@@ -1200,6 +1200,10 @@
         "all": "全デバイス合算",
         "hashShort": "{{hash}}…"
       },
+      "app": "アプリ",
+      "appOption": {
+        "none": "全アプリ合算"
+      },
       "unit": "表示",
       "unitOption": {
         "sec": "秒",

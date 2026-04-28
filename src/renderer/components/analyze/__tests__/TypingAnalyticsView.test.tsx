@@ -108,6 +108,11 @@ Object.defineProperty(window, 'vialAPI', {
     typingAnalyticsListItems: () => Promise.resolve([]),
     typingAnalyticsListItemsLocal: () => Promise.resolve([]),
     typingAnalyticsListItemsForHash: () => Promise.resolve([]),
+    // The AppSelect filter mounted in the analyze pane fetches the
+    // distinct app names for the current range. An empty list keeps
+    // the dropdown showing only "All apps" — fine for these tests
+    // since they don't exercise the app filter.
+    typingAnalyticsListAppsForRange: () => Promise.resolve([]),
     pipetteSettingsGet: () => Promise.resolve(null),
     // `useAnalyzeFilters` debounces filter writes through this setter.
     // Stubbing it with a no-op keeps the tests focused on prop

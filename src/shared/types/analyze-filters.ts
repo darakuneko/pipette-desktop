@@ -291,6 +291,14 @@ export interface LayoutComparisonFilters {
  * and reader. */
 export interface AnalyzeFilterSettings {
   deviceScopes?: DeviceScope[]
+  /** Restrict charts to minutes tagged with this app name. `null`
+   * (or absent) means "no app filter" — the chart sees every minute
+   * including mixed/unknown ones. The list of available apps comes
+   * from `typingAnalyticsListAppsForRange` for the current range; a
+   * stale name (no longer present in the result) is silently dropped
+   * to `null` on load via `normalizeAppScope` so charts never query
+   * for an app that has no rows. */
+  appScope?: string | null
   heatmap?: HeatmapFilters
   wpm?: WpmFilters
   interval?: IntervalFilters
@@ -299,6 +307,15 @@ export interface AnalyzeFilterSettings {
   ergonomics?: ErgonomicsFilters
   bigrams?: BigramFilters
   layoutComparison?: LayoutComparisonFilters
+}
+
+/** Coerces persisted values back to a clean `string | null`. Empty
+ * strings collapse to null so the dropdown's "no filter" choice is
+ * canonical regardless of how it was last serialized. */
+export function normalizeAppScope(value: unknown): string | null {
+  if (typeof value !== 'string') return null
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
 }
 
 /** Shared primitive guards. Exported so the main-process store
@@ -457,6 +474,11 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (typeof value !== 'object' || Array.isArray(value)) return false
   const o = value as Record<string, unknown>
   if (o.deviceScopes !== undefined && !isValidDeviceScopesArray(o.deviceScopes)) return false
+  // appScope: string | null | undefined — anything else (number, object,
+  // array) rejects the whole settings object so a malformed write can't
+  // leak through. Empty strings are accepted on validation but the
+  // normalizer collapses them to null on read.
+  if (o.appScope !== undefined && o.appScope !== null && typeof o.appScope !== 'string') return false
   if (!isValidHeatmapFilters(o.heatmap)) return false
   if (!isValidWpmFilters(o.wpm)) return false
   if (!isValidIntervalFilters(o.interval)) return false

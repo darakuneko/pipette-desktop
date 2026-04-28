@@ -51,6 +51,7 @@ import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { DeviceMultiSelect } from './DeviceMultiSelect'
+import { AppSelect } from './AppSelect'
 import { RangeDayPicker } from './RangeDayPicker'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
@@ -196,6 +197,7 @@ export function AnalyzePane({
   const {
     filters: {
       deviceScopes,
+      appScope,
       heatmap: heatmapFilter,
       wpm: wpmFilter,
       interval: intervalFilter,
@@ -207,6 +209,7 @@ export function AnalyzePane({
     },
     ready: filtersReady,
     setDeviceScopes,
+    setAppScope,
     setHeatmap,
     setWpm,
     setInterval: setIntervalFilter,
@@ -789,16 +792,33 @@ export function AnalyzePane({
             {selected && (
               <>
                 {!(analysisTab === 'interval' && intervalFilter.viewMode === 'distribution') ? (
-                  <label className={FILTER_LABEL}>
-                    <span>{t('analyze.filters.device')}</span>
-                    <DeviceMultiSelect
-                      value={deviceScopes}
-                      ownDevice={deviceInfos.own}
-                      remoteDevices={deviceInfos.remotes}
-                      onChange={setDeviceScopes}
-                      ariaLabel={t('analyze.filters.device')}
-                    />
-                  </label>
+                  <>
+                    <label className={FILTER_LABEL}>
+                      <span>{t('analyze.filters.device')}</span>
+                      <DeviceMultiSelect
+                        value={deviceScopes}
+                        ownDevice={deviceInfos.own}
+                        remoteDevices={deviceInfos.remotes}
+                        onChange={setDeviceScopes}
+                        ariaLabel={t('analyze.filters.device')}
+                      />
+                    </label>
+                    {/* App filter sits next to the Device picker so the
+                        user reads the scope in the same row: keyboard,
+                        device, app, period. The dropdown self-empties
+                        to "All apps" when no minutes are tagged. */}
+                    <label className={FILTER_LABEL}>
+                      <span>{t('analyze.filters.app')}</span>
+                      <AppSelect
+                        uid={selected.uid}
+                        range={range}
+                        deviceScopes={deviceScopes}
+                        value={appScope}
+                        onChange={setAppScope}
+                        ariaLabel={t('analyze.filters.app')}
+                      />
+                    </label>
+                  </>
                 ) : (
                   <>
                     <span />

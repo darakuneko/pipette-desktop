@@ -1202,6 +1202,10 @@
         "all": "All devices",
         "hashShort": "{{hash}}…"
       },
+      "app": "App",
+      "appOption": {
+        "none": "All apps"
+      },
       "unit": "Display",
       "unitOption": {
         "sec": "Seconds",
