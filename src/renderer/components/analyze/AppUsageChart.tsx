@@ -112,10 +112,12 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
   )
 
   // Color palette: known apps cycle through the shared chart palette;
-  // the Unknown slice always uses the muted color so the eye treats it
-  // as the "missing data" bucket rather than a real app.
+  // the Unknown slice uses a flat neutral grey so the eye treats it
+  // as the "missing data" bucket rather than a real app, while still
+  // being visible on both themes (the surface-dim fill blended into
+  // the panel background and made the slice unreadable).
   const colorFor = (datum: PieDatum, index: number): string => {
-    if (datum.isUnknown) return 'var(--color-surface-dim)'
+    if (datum.isUnknown) return '#9ca3af'
     return chartSeriesColor(index)
   }
 
@@ -148,9 +150,13 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
               ))}
             </Pie>
             <Tooltip
-              formatter={(value: number) => [
+              // Recharts default tooltip drops the second tuple element
+              // when it's empty, hiding the slice name. Pass the
+              // datum's name through so the user sees "VSCode: 1234
+              // keystrokes" instead of just the count.
+              formatter={(value: number, name: string) => [
                 t('analyze.appUsage.tooltipKeystrokes', { count: value }),
-                '',
+                name,
               ]}
             />
             <Legend />
