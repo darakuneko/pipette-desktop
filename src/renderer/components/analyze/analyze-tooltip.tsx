@@ -18,6 +18,8 @@ const SHELL_STYLE = {
 
 const HEADER_STYLE = { color: 'var(--color-content-secondary)' } as const
 
+const FOOTER_STYLE = { color: 'var(--color-content-secondary)', marginTop: 4 } as const
+
 /** Use this when a chart wants recharts' built-in item/swatch
  * rendering; reach for `TooltipShell` instead when supplying a custom
  * `content` renderer. */
@@ -31,14 +33,18 @@ interface TooltipShellProps {
   /** Optional first line in `var(--color-content-secondary)`. Skip for
    * single-line tooltips that don't need a separate header row. */
   header?: ReactNode
+  /** Optional trailing line in `var(--color-content-secondary)` with a
+   * 4px top gap, for context like sample-size caveats. */
+  footer?: ReactNode
   children: ReactNode
 }
 
-export function TooltipShell({ header, children }: TooltipShellProps): JSX.Element {
+export function TooltipShell({ header, footer, children }: TooltipShellProps): JSX.Element {
   return (
     <div style={SHELL_STYLE}>
       {header ? <div style={HEADER_STYLE}>{header}</div> : null}
       {children}
+      {footer ? <div style={FOOTER_STYLE}>{footer}</div> : null}
     </div>
   )
 }

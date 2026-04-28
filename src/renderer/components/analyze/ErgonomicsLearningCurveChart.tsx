@@ -31,12 +31,16 @@ import type {
   RangeMs,
 } from './analyze-types'
 import { listMatrixCellsByDayForScope } from './analyze-fetch'
+import { TooltipShell } from './analyze-tooltip'
 import {
   buildLearningCurve,
   summarizeLearningCurve,
   type LearningCurveBucket,
   DEFAULT_LEARNING_MIN_SAMPLE,
 } from './analyze-ergonomics-curve'
+
+const pct = (v: number): string => `${Math.round(v * 100)}%`
+const signedPct = (v: number): string => `${v >= 0 ? '+' : ''}${pct(v)}`
 
 interface Props {
   uid: string
@@ -78,19 +82,20 @@ function LearningCurveTooltip({ active, payload }: LearningCurveTooltipProps): J
   const datum = payload[0]?.payload
   if (!datum) return null
   const labelDate = new Date(datum.bucketStartMs).toLocaleDateString()
-  const pct = (v: number) => `${Math.round(v * 100)}%`
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        border: '1px solid var(--color-edge)',
-        color: 'var(--color-content)',
-        fontSize: 12,
-        padding: '6px 10px',
-        borderRadius: 4,
-      }}
+    <TooltipShell
+      header={labelDate}
+      footer={
+        <>
+          {t('analyze.ergonomics.learning.totalKeystrokes', {
+            count: datum.totalKeystrokes,
+          })}
+          {!datum.qualified && (
+            <> · {t('analyze.ergonomics.learning.belowMinSample')}</>
+          )}
+        </>
+      }
     >
-      <div style={{ color: 'var(--color-content-secondary)' }}>{labelDate}</div>
       <div>
         {t('analyze.ergonomics.learning.score.overall')}: {pct(datum.overall)}
       </div>
@@ -103,15 +108,7 @@ function LearningCurveTooltip({ active, payload }: LearningCurveTooltipProps): J
       <div>
         {t('analyze.ergonomics.learning.score.homeRowStay')}: {pct(datum.homeRowStay)}
       </div>
-      <div style={{ color: 'var(--color-content-secondary)', marginTop: 4 }}>
-        {t('analyze.ergonomics.learning.totalKeystrokes', {
-          count: datum.totalKeystrokes,
-        })}
-        {!datum.qualified && (
-          <> · {t('analyze.ergonomics.learning.belowMinSample')}</>
-        )}
-      </div>
-    </div>
+    </TooltipShell>
   )
 }
 
@@ -222,8 +219,6 @@ export function ErgonomicsLearningCurveChart({
   // Safe: `data.length === 0` early-returned above so the array is
   // guaranteed non-empty by the time we read the latest bucket.
   const latestBucket = result.buckets[result.buckets.length - 1]
-  const pct = (v: number) => `${Math.round(v * 100)}%`
-  const signedPct = (v: number) => `${v >= 0 ? '+' : ''}${Math.round(v * 100)}%`
 
   return (
     <div
@@ -273,7 +268,7 @@ export function ErgonomicsLearningCurveChart({
             <YAxis
               type="number"
               domain={[0, 1]}
-              tickFormatter={(v) => `${Math.round(Number(v) * 100)}%`}
+              tickFormatter={(v) => pct(Number(v))}
               stroke="var(--color-content-muted)"
               fontSize={11}
               width={48}
