@@ -7,6 +7,7 @@ import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
+import { useCurrentAppName } from '../../typing-test/useCurrentAppName'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
@@ -54,9 +55,16 @@ export interface TypingTestPaneProps {
    * AppConfig.typingHeatmapWindowMin. */
   heatmapWindowMin?: number
   onHeatmapWindowMinChange?: (minutes: number) => void
+  /** AppConfig flag — when on (and REC running), the analytics
+   * service tags every minute payload with the active application
+   * name. Toggle is intentionally inert until REC starts so the user
+   * controls one switch at a time. */
+  monitorAppEnabled?: boolean
+  onMonitorAppEnabledChange?: (enabled: boolean) => void
   /** Which tab of the view-only menu is currently open. Window shows
    * size / always-on-top controls; REC shows the recording toggle and
-   * the entry point to the analytics page. Persisted per keyboard via
+   * the entry point to the analytics page; Monitor App shows the
+   * active-application capture toggle. Persisted per keyboard via
    * PipetteSettings. */
   menuTab?: TypingViewMenuTab
   onMenuTabChange?: (tab: TypingViewMenuTab) => void
@@ -99,6 +107,8 @@ export function TypingTestPane({
   onRecordingConsentAccepted,
   heatmapWindowMin,
   onHeatmapWindowMinChange,
+  monitorAppEnabled,
+  onMonitorAppEnabledChange,
   menuTab = 'window',
   onMenuTabChange,
   onViewAnalytics,
@@ -121,6 +131,13 @@ export function TypingTestPane({
     windowMs: (heatmapWindowMin ?? 5) * 60 * 1_000,
   })
   const heatmapActive = heatmapMaxTotal > 0
+  // Slow-poll the active app name only while the user is looking at
+  // the Monitor App tab and recording is on. Outside this narrow
+  // window the hook unmounts its interval entirely.
+  const liveAppName = useCurrentAppName({
+    enabled:
+      !!viewOnly && menuTab === 'monitorApp' && !!recordEnabled && !!monitorAppEnabled,
+  })
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [showConsentModal, setShowConsentModal] = useState(false)
 
@@ -435,8 +452,9 @@ export function TypingTestPane({
             onClick={(e) => e.stopPropagation()}
             {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
           >
-            {/* Tab row — Window (sizing + always-on-top) vs REC
-                (recording toggle + analytics entry). The active tab is
+            {/* Tab row — Window (sizing + always-on-top) / REC
+                (recording toggle + analytics entry) / Monitor App
+                (active-app capture toggle). The active tab is
                 persisted per keyboard via PipetteSettings. */}
             <div role="tablist" className="flex gap-1">
               <button
@@ -459,10 +477,25 @@ export function TypingTestPane({
               >
                 {t('editor.typingTest.tab.rec')}
               </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={menuTab === 'monitorApp'}
+                data-testid="menu-tab-monitor-app"
+                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'monitorApp' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onMenuTabChange?.('monitorApp')}
+              >
+                {t('editor.typingTest.tab.monitorApp')}
+              </button>
             </div>
 
+            {/* Each tab body is wrapped in its own flex column so we can
+                pin a shared min-h. REC currently has the most controls
+                (Start/Stop, View Analytics, HeatMap window), so the
+                other tabs match its natural height. Keep this in sync
+                if any tab grows/shrinks meaningfully. */}
             {menuTab === 'window' && (
-              <>
+              <div className="flex min-h-[100px] flex-col gap-1.5">
                 <button
                   type="button"
                   role="menuitem"
@@ -506,11 +539,11 @@ export function TypingTestPane({
                     {t('editor.typingTest.alwaysOnTop')}
                   </button>
                 )}
-              </>
+              </div>
             )}
 
             {menuTab === 'rec' && (
-              <>
+              <div className="flex min-h-[100px] flex-col gap-1.5">
                 {onRecordEnabledChange && (
                   <button
                     type="button"
@@ -553,7 +586,50 @@ export function TypingTestPane({
                     </select>
                   </div>
                 )}
-              </>
+              </div>
+            )}
+
+            {menuTab === 'monitorApp' && (
+              <div className="flex min-h-[100px] flex-col gap-1.5">
+                {onMonitorAppEnabledChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={monitorAppEnabled ?? false}
+                    aria-disabled={!recordEnabled}
+                    data-testid="monitor-app-toggle"
+                    title={!recordEnabled ? t('editor.typingTest.monitorApp.recOff') : undefined}
+                    className={
+                      !recordEnabled
+                        ? 'whitespace-nowrap rounded border border-edge px-2 py-1 text-content-muted opacity-60 cursor-not-allowed'
+                        : `whitespace-nowrap rounded border px-2 py-1 transition-colors ${monitorAppEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`
+                    }
+                    onClick={() => {
+                      // Inert while REC is off so there's exactly one
+                      // entry point that starts data collection (REC).
+                      if (!recordEnabled) return
+                      onMonitorAppEnabledChange(!monitorAppEnabled)
+                    }}
+                  >
+                    {monitorAppEnabled
+                      ? t('editor.typingTest.monitorApp.enabled')
+                      : t('editor.typingTest.monitorApp.disabled')}
+                  </button>
+                )}
+                {/* Live preview only matters once we're actually
+                    capturing. While REC is off the toggle itself is
+                    disabled so the preview slot would just be noise. */}
+                {recordEnabled && monitorAppEnabled && (
+                  <div
+                    data-testid="monitor-app-current"
+                    className="rounded border border-edge bg-surface-alt px-2 py-1 text-content-secondary"
+                  >
+                    {liveAppName
+                      ? t('editor.typingTest.monitorApp.currentApp', { app: liveAppName })
+                      : t('editor.typingTest.monitorApp.noApp')}
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Separator — what follows is always visible regardless of tab */}

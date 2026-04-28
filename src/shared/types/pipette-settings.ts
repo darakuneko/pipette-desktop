@@ -27,9 +27,10 @@ export const VIEW_MODES = ['editor', 'typingView', 'typingTest'] as const
 export type ViewMode = typeof VIEW_MODES[number]
 
 /** Which tab of the typing-view menu is currently open. Persisted so
- * the next entry restores the user's last-chosen pane (Window controls
- * vs. recording + analytics). */
-export const TYPING_VIEW_MENU_TABS = ['window', 'rec'] as const
+ * the next entry restores the user's last-chosen pane. Window =
+ * sizing / always-on-top; REC = recording toggle + analytics entry;
+ * Monitor App = active-application capture toggle (gated on REC). */
+export const TYPING_VIEW_MENU_TABS = ['window', 'rec', 'monitorApp'] as const
 export type TypingViewMenuTab = typeof TYPING_VIEW_MENU_TABS[number]
 
 export function isTypingViewMenuTab(value: unknown): value is TypingViewMenuTab {

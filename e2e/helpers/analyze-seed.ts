@@ -221,12 +221,19 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
     },
   }
 
+  // Round-robin app tag across the dummy minutes so the App Usage
+  // pie has multiple slices and WPM-by-App has multiple bars. The
+  // 4-cycle includes a `null` so docs / e2e also exercise the
+  // "mixed/unknown" bucket without a separate seed pass.
+  const APP_CYCLE: (string | null)[] = ['Code', 'Slack', 'Chrome', null]
+
   const matrixRows: unknown[] = []
   const statsRows: unknown[] = []
   const bigramRows: unknown[] = []
   const minuteBase = Math.floor((nowMs - 60_000) / 60_000) * 60_000
   for (const offset of dummyMinuteOffsets()) {
     const minuteTs = minuteBase - offset * 60_000
+    const appName = APP_CYCLE[offset % APP_CYCLE.length] ?? null
 
     const bigrams: Record<string, { c: number; h: readonly number[] }> = {}
     for (const pair of DUMMY_TA_BIGRAM_PER_MINUTE) {
@@ -240,6 +247,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
         scopeId: DUMMY_TA_SCOPE_ID,
         minuteTs,
         bigrams,
+        appName,
       },
     })
     // Layer 0 bulk typing — base layer covers most presses.
@@ -258,6 +266,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
           count: 12 + col,
           tapCount: 12 + col,
           holdCount: 0,
+          appName,
         },
       })
     }
@@ -279,6 +288,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
           count: 3,
           tapCount: isLtHold ? 1 : 3,
           holdCount: isLtHold ? 2 : 0,
+          appName,
         },
       })
     }
@@ -297,6 +307,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
         count: 5,
         tapCount: 5,
         holdCount: 0,
+        appName,
       },
     })
     matrixRows.push({
@@ -313,6 +324,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
         count: 2,
         tapCount: 2,
         holdCount: 0,
+        appName,
       },
     })
     // Mirror the matrix rows above: layer-0 bulk (6 cols, 12..17) + layer-0 ops (5 × 3) + layer 1 (5) + layer 2 (2).
@@ -334,6 +346,7 @@ function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
         intervalP50Ms: 160,
         intervalP75Ms: 260,
         intervalMaxMs: 520,
+        appName,
       },
     })
   }

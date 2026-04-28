@@ -288,4 +288,104 @@ describe('MinuteBuffer', () => {
     const [snap] = buffer.drainAll()
     expect(snap.bigrams.size).toBe(0)
   })
+
+  describe('app-name tagging', () => {
+    it('returns null appName when markAppName never fires', () => {
+      // Default state: aggregator never observed an active app, so the
+      // snapshot must say "unknown / not collected" rather than guess.
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBeNull()
+    })
+
+    it('returns the single app when only one was observed', () => {
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      buffer.markAppName('VSCode')
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBe('VSCode')
+    })
+
+    it('collapses to null when multiple distinct apps were observed', () => {
+      // The "single app per minute" filter rule lives at finalize time:
+      // any minute that saw ≥2 apps must look indistinguishable from a
+      // never-tagged minute on the read side, so the size>1 set is
+      // forced to null here rather than carrying mixed state forward.
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      buffer.markAppName('VSCode')
+      buffer.markAppName('Slack')
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBeNull()
+    })
+
+    it('treats the same app tagged twice as a single observation', () => {
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      buffer.markAppName('VSCode')
+      buffer.markAppName('VSCode')
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBe('VSCode')
+    })
+
+    it('ignores null tags so "no observation" is distinguishable from "mixed"', () => {
+      // markAppName(null) is the no-op path: app-monitor returns null
+      // when Monitor App is off / failed, and we don't want a single OS
+      // hiccup to retroactively poison a single-app minute as mixed.
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      buffer.markAppName('VSCode')
+      buffer.markAppName(null)
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBe('VSCode')
+    })
+
+    it('tags every live entry across scopes in one call', () => {
+      // OS focus is shared across scopes; one markAppName call covers
+      // every keyboard / device / minute currently in flight.
+      const fpA = fingerprint({ uid: '0xAAAA' })
+      const fpB = fingerprint({ uid: '0xBBBB' })
+      buffer.addEvent(charEvent('a', 1_000), fpA)
+      buffer.addEvent(charEvent('b', 1_000), fpB)
+      buffer.markAppName('VSCode')
+      const snaps = buffer.drainAll().sort((x, y) => x.scopeId.localeCompare(y.scopeId))
+      expect(snaps).toHaveLength(2)
+      expect(snaps[0].appName).toBe('VSCode')
+      expect(snaps[1].appName).toBe('VSCode')
+    })
+
+    it('does not bleed app tags into a fresh minute after a drain', () => {
+      // drainAll empties the buffer, so a follow-up minute must start
+      // with an empty app set. Otherwise stale tags from the previous
+      // minute would force every later minute into the mixed bucket.
+      const fp = fingerprint()
+      buffer.addEvent(charEvent('a', 1_000), fp)
+      buffer.markAppName('VSCode')
+      buffer.drainAll()
+      buffer.addEvent(charEvent('b', MINUTE_MS + 500), fp)
+      buffer.markAppName('Slack')
+      const [snap] = buffer.drainAll()
+      expect(snap.appName).toBe('Slack')
+    })
+
+    it('drainClosed produces appName for closed minutes only', () => {
+      // The boundary case the live heatmap relies on: closed minutes
+      // ship with their final appName, while the open minute keeps its
+      // app set alive for further tagging.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 500), fp) // minute 0
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, MINUTE_MS + 500), fp) // minute 1
+      buffer.markAppName('VSCode')
+      const closed = buffer.drainClosed(MINUTE_MS)
+      expect(closed).toHaveLength(1)
+      expect(closed[0].appName).toBe('VSCode')
+      // Open minute should still be available; tagging again should
+      // accumulate, not reset.
+      buffer.markAppName('Slack')
+      const remaining = buffer.drainAll()
+      expect(remaining).toHaveLength(1)
+      expect(remaining[0].appName).toBeNull() // VSCode + Slack → mixed
+    })
+  })
 })

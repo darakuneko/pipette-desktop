@@ -29,6 +29,22 @@ vi.mock('../../pipette-settings-store', () => ({
   setupPipetteSettingsStore: vi.fn(),
 }))
 
+// app-config pulls in electron-store which needs `projectName` at
+// import time. We never read the config in this suite (the analytics
+// pipeline only consults it via getCurrentAppName, mocked below), so a
+// minimal stub keeps the module load side-effect-free.
+vi.mock('../../app-config', () => ({
+  loadAppConfig: () => ({ typingMonitorAppEnabled: false }),
+}))
+
+// app-monitor would otherwise spawn the gdbus fallback for every flush
+// and slow the suite. With Monitor App stubbed off via the app-config
+// mock above this would already short-circuit, but pinning to null is
+// clearer and isolates these tests from the platform.
+vi.mock('../app-monitor', () => ({
+  getCurrentAppName: vi.fn(async () => null),
+}))
+
 const mockMachineId = vi.fn<(original?: boolean) => Promise<string>>()
 
 vi.mock('node-machine-id', () => ({

@@ -6,6 +6,15 @@
 
 export const JSONL_SCHEMA_VERSION = 1
 
+/** Active-application name attached to per-minute payloads. Resolved at
+ * flush time from the OS focus state; null when Monitor App was off,
+ * the lookup failed, or the minute observed a mix of apps (the
+ * aggregator collapses size>1 sets to null so app-filtered analytics
+ * always look at single-app minutes only). Optional on the wire for
+ * backward compatibility with v7 master files written before this
+ * field existed. */
+export type AppNameField = string | null
+
 export type JsonlRowKind =
   | 'scope'
   | 'char-minute'
@@ -31,6 +40,7 @@ export interface JsonlCharMinutePayload {
   minuteTs: number
   char: string
   count: number
+  appName?: AppNameField
 }
 
 export interface JsonlMatrixMinutePayload {
@@ -43,6 +53,7 @@ export interface JsonlMatrixMinutePayload {
   count: number
   tapCount: number
   holdCount: number
+  appName?: AppNameField
 }
 
 export interface JsonlMinuteStatsPayload {
@@ -56,6 +67,7 @@ export interface JsonlMinuteStatsPayload {
   intervalP50Ms: number | null
   intervalP75Ms: number | null
   intervalMaxMs: number | null
+  appName?: AppNameField
 }
 
 export interface JsonlSessionPayload {
@@ -79,6 +91,7 @@ export interface JsonlBigramMinutePayload {
   /** Pair key format: `${prevKeycode}_${currKeycode}` (numeric keycodes
    * joined by underscore). One row per minute aggregates all bigrams. */
   bigrams: Record<string, JsonlBigramMinuteEntry>
+  appName?: AppNameField
 }
 
 /** Number of buckets in the bigram IKI histogram. Kept as a constant so
@@ -208,7 +221,8 @@ function isCharMinutePayload(p: Record<string, unknown>): boolean {
     hasStringField(p, 'scopeId') &&
     hasNumberField(p, 'minuteTs') &&
     hasStringField(p, 'char') &&
-    hasNumberField(p, 'count')
+    hasNumberField(p, 'count') &&
+    isOptionalAppName(p)
   )
 }
 
@@ -222,13 +236,23 @@ function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
     hasNumberField(p, 'keycode') &&
     hasNumberField(p, 'count') &&
     hasNumberField(p, 'tapCount') &&
-    hasNumberField(p, 'holdCount')
+    hasNumberField(p, 'holdCount') &&
+    isOptionalAppName(p)
   )
 }
 
 function isNumericOrNull(p: Record<string, unknown>, key: string): boolean {
   const value = p[key]
   return value === null || (typeof value === 'number' && Number.isFinite(value))
+}
+
+/** appName is optional on the wire (v7 master files predate it). When
+ * present it must be string | null; missing is treated the same as
+ * null on read. Anything else (number, object, etc.) rejects the row. */
+function isOptionalAppName(p: Record<string, unknown>): boolean {
+  if (!('appName' in p)) return true
+  const v = p.appName
+  return v === null || typeof v === 'string'
 }
 
 function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
@@ -242,7 +266,8 @@ function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
     isNumericOrNull(p, 'intervalP25Ms') &&
     isNumericOrNull(p, 'intervalP50Ms') &&
     isNumericOrNull(p, 'intervalP75Ms') &&
-    isNumericOrNull(p, 'intervalMaxMs')
+    isNumericOrNull(p, 'intervalMaxMs') &&
+    isOptionalAppName(p)
   )
 }
 
@@ -271,6 +296,7 @@ function isBigramMinuteEntry(value: unknown): boolean {
 
 function isBigramMinutePayload(p: Record<string, unknown>): boolean {
   if (!hasStringField(p, 'scopeId') || !hasNumberField(p, 'minuteTs')) return false
+  if (!isOptionalAppName(p)) return false
   const bigrams = p.bigrams
   if (typeof bigrams !== 'object' || bigrams === null) return false
   for (const value of Object.values(bigrams as Record<string, unknown>)) {

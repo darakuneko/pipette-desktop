@@ -274,7 +274,17 @@
       "viewAnalytics": "View Analytics",
       "tab": {
         "window": "Window",
-        "rec": "REC"
+        "rec": "REC",
+        "monitorApp": "Monitor App"
+      },
+      "monitorApp": {
+        "enabled": "Tracking app",
+        "disabled": "Track app",
+        "currentApp": "Current: {{app}}",
+        "noApp": "No app detected",
+        "recOff": "Start REC first to enable",
+        "linuxNote": "On Wayland / GNOME, install the FocusedWindow GNOME Shell extension to enable detection.",
+        "macosPermission": "macOS requires Accessibility permission for app detection."
       },
       "heatmap": {
         "legend": "Heatmap: last 1 hour"
@@ -294,13 +304,14 @@
         "collectedItems": [
           "Per-minute character frequency",
           "Per-key press counts (row/col/layer/keycode, tap vs hold)",
-          "Typing speed distribution (interval percentiles)"
+          "Typing speed distribution (interval percentiles)",
+          "Active application name (only when Monitor App is on; minutes that observe multiple apps are recorded as unknown)"
         ],
         "notCollectedHeading": "What we do NOT collect",
         "notCollectedItems": [
           "Individual keystroke timing",
           "Text content / passwords / specific words",
-          "Application context (which app or window)"
+          "Window title / URL / file path"
         ],
         "accept": "Enable"
       },
@@ -633,6 +644,20 @@
     "noKeyboards": "No typing data yet.",
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
+    "appUsage": {
+      "title": "App Usage Distribution",
+      "loading": "Loading app usage…",
+      "empty": "No app data — turn on Monitor App and start REC to populate this chart.",
+      "unknown": "Unknown / Mixed",
+      "other": "Other",
+      "tooltipKeystrokes": "{{count}} keystrokes"
+    },
+    "wpmByApp": {
+      "title": "WPM by App",
+      "loading": "Loading WPM by app…",
+      "empty": "No app-tagged minutes yet — turn on Monitor App and start REC to populate this chart.",
+      "tooltipWpm": "{{wpm}} WPM ({{keystrokes}} keystrokes)"
+    },
     "tablistLabel": "Analysis type",
     "splitView": {
       "toggle": "Split View",

@@ -68,6 +68,8 @@ import { KeymapSnapshotTimeline } from './KeymapSnapshotTimeline'
 import { LayerUsageChart } from './LayerUsageChart'
 import { SummaryView } from './SummaryView'
 import { WpmChart } from './WpmChart'
+import { WpmByAppChart } from './WpmByAppChart'
+import { AppUsageChart } from './AppUsageChart'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 import { shiftLocalMonth } from './analyze-streak-goal'
 
@@ -1003,14 +1005,26 @@ export function AnalyzePane({
                   fingerOverrides={fingerAssignments}
                 />
               ) : analysisTab === 'wpm' ? (
-                <WpmChart
-                  uid={selected.uid}
-                  range={range}
-                  deviceScopes={deviceScopes}
-                  granularity={wpmFilter.granularity}
-                  viewMode={wpmFilter.viewMode}
-                  minActiveMs={wpmFilter.minActiveMs}
-                />
+                <div className="flex flex-col gap-6">
+                  <WpmChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                    granularity={wpmFilter.granularity}
+                    viewMode={wpmFilter.viewMode}
+                    minActiveMs={wpmFilter.minActiveMs}
+                  />
+                  {/* WPM by App lives under the regular WPM chart so
+                      the user reads aggregate first and per-app
+                      breakdown second. The chart self-empties when
+                      Monitor App is off, so it doesn't render noise
+                      for users who haven't opted in. */}
+                  <WpmByAppChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                  />
+                </div>
               ) : analysisTab === 'interval' ? (
                 <IntervalChart
                   uid={selected.uid}
@@ -1021,17 +1035,27 @@ export function AnalyzePane({
                   viewMode={intervalFilter.viewMode}
                 />
               ) : analysisTab === 'activity' ? (
-                <ActivityChart
-                  uid={selected.uid}
-                  range={range}
-                  deviceScope={deviceScopes[0]}
-                  metric={activityFilter.metric}
-                  view={activityFilter.view}
-                  minActiveMs={wpmFilter.minActiveMs}
-                  calendarFilter={activityFilter.calendar}
-                  nowMs={nowMs}
-                  onShiftCalendarMonth={(delta) => setActivity({ calendar: { endMonthIso: shiftLocalMonth(activityFilter.calendar.endMonthIso, delta) } })}
-                />
+                <div className="flex flex-col gap-6">
+                  <ActivityChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScope={deviceScopes[0]}
+                    metric={activityFilter.metric}
+                    view={activityFilter.view}
+                    minActiveMs={wpmFilter.minActiveMs}
+                    calendarFilter={activityFilter.calendar}
+                    nowMs={nowMs}
+                    onShiftCalendarMonth={(delta) => setActivity({ calendar: { endMonthIso: shiftLocalMonth(activityFilter.calendar.endMonthIso, delta) } })}
+                  />
+                  {/* App Usage Distribution sits under the activity
+                      heatmap. Hides itself when Monitor App is off
+                      and there are no app-tagged minutes. */}
+                  <AppUsageChart
+                    uid={selected.uid}
+                    range={range}
+                    deviceScopes={deviceScopes}
+                  />
+                </div>
               ) : analysisTab === 'keyHeatmap' ? (
                 effectiveSnapshot !== null ? (
                   <KeyHeatmapChart

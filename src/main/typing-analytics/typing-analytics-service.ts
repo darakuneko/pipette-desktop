@@ -29,6 +29,7 @@ import type { KleKey } from '../../shared/kle/types'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
 import { isHashScope, isOwnScope, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
+import { getCurrentAppName } from './app-monitor'
 import { ensureCacheIsFresh } from './cache-rebuild'
 import {
   getKeymapSnapshotForRange,
@@ -186,6 +187,15 @@ export function setupTypingAnalyticsIpc(): void {
       closeSessionsForUid(uid)
       await flushNow({ final: true })
     },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_CURRENT_APP_NAME,
+    // Pure passthrough — getCurrentAppName already enforces the
+    // Monitor App config gate and returns null on any failure, so
+    // there's no extra validation to do here. The Monitor App tab
+    // calls this on a slow poll for the live preview.
+    async (): Promise<string | null> => getCurrentAppName(),
   )
 
   secureHandle(
@@ -604,6 +614,62 @@ export function setupTypingAnalyticsIpc(): void {
         out[key] = { total: cell.total, tap: cell.tap, hold: cell.hold }
       }
       return out
+    },
+  )
+
+  // --- Monitor App range aggregates ---------------------------------
+  // Shared validator so the three sister handlers below stay terse and
+  // share one source of truth for "what does a valid range query look
+  // like." Returns null on any rejection; callers translate that to []
+  // since the renderer expects a list shape regardless of failure mode.
+  const parseAppRangeArgs = async (
+    uid: unknown,
+    sinceMs: unknown,
+    untilMs: unknown,
+    scope: unknown,
+  ): Promise<{ uid: string; machineHash: string | null; sinceMs: number; untilMs: number } | null> => {
+    if (typeof uid !== 'string' || uid.length === 0) return null
+    if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
+    if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) return null
+    const parsedScope = parseDeviceScope(scope)
+    if (parsedScope === null) return null
+    const machineHash = isOwnScope(parsedScope)
+      ? await getMachineHash()
+      : isHashScope(parsedScope)
+        ? parsedScope.machineHash
+        : null
+    return {
+      uid,
+      machineHash,
+      sinceMs: Math.floor(sinceMs / MINUTE_MS) * MINUTE_MS,
+      untilMs: Math.ceil(untilMs / MINUTE_MS) * MINUTE_MS,
+    }
+  }
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_APPS_FOR_RANGE,
+    async (_event, uid, sinceMs, untilMs, scope): Promise<{ name: string; keystrokes: number; activeMs: number }[]> => {
+      const args = await parseAppRangeArgs(uid, sinceMs, untilMs, scope)
+      if (!args) return []
+      return getTypingAnalyticsDB().listAppsForUidInRange(args.uid, args.machineHash, args.sinceMs, args.untilMs)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_APP_USAGE_FOR_RANGE,
+    async (_event, uid, sinceMs, untilMs, scope): Promise<{ name: string; keystrokes: number; activeMs: number }[]> => {
+      const args = await parseAppRangeArgs(uid, sinceMs, untilMs, scope)
+      if (!args) return []
+      return getTypingAnalyticsDB().getAppUsageForUidInRange(args.uid, args.machineHash, args.sinceMs, args.untilMs)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE,
+    async (_event, uid, sinceMs, untilMs, scope): Promise<{ name: string; keystrokes: number; activeMs: number }[]> => {
+      const args = await parseAppRangeArgs(uid, sinceMs, untilMs, scope)
+      if (!args) return []
+      return getTypingAnalyticsDB().getWpmByAppForUidInRange(args.uid, args.machineHash, args.sinceMs, args.untilMs)
     },
   )
 
@@ -1299,6 +1365,11 @@ function extractKleKeysFromSnapshot(snapshot: TypingKeymapSnapshot): KleKey[] {
 }
 
 function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRow[] {
+  // appName carries through to every per-minute row so the JSONL master
+  // file is the source of truth for app filtering after a cache rebuild.
+  // Older v7 master files predate this field; the readers fall back to
+  // null on missing.
+  const appName = snapshot.appName
   const rows: JsonlRow[] = [
     {
       id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs),
@@ -1315,6 +1386,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         intervalP50Ms: snapshot.intervalP50Ms,
         intervalP75Ms: snapshot.intervalP75Ms,
         intervalMaxMs: snapshot.intervalMaxMs,
+        appName,
       },
     },
   ]
@@ -1323,7 +1395,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, char),
       kind: 'char-minute',
       updated_at: updatedAt,
-      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count },
+      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count, appName },
     })
   }
   for (const cell of snapshot.matrixCounts.values()) {
@@ -1341,6 +1413,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         count: cell.count,
         tapCount: cell.tapCount,
         holdCount: cell.holdCount,
+        appName,
       },
     })
   }
@@ -1357,6 +1430,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         scopeId: snapshot.scopeId,
         minuteTs: snapshot.minuteTs,
         bigrams,
+        appName,
       },
     })
   }
@@ -1468,6 +1542,19 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
   } catch (err) {
     log('error', `typing-analytics DB open failed: ${String(err)}`)
     return
+  }
+
+  // Resolve the active application name once per flush, then tag every
+  // open buffer entry. Done before the drain so the snapshot finalize
+  // sees the up-to-date app set. Errors inside getCurrentAppName are
+  // swallowed there (returns null), so this never blocks a flush.
+  try {
+    const appName = await getCurrentAppName()
+    minuteBuffer.markAppName(appName)
+  } catch (err) {
+    // Defensive — getCurrentAppName already catches its own errors,
+    // but a bug in markAppName shouldn't drop the whole flush either.
+    log('warn', `typing-analytics app-name tag failed: ${String(err)}`)
   }
 
   const snapshots = options.final

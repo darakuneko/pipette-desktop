@@ -135,6 +135,21 @@ export const IpcChannels = {
   TYPING_ANALYTICS_DELETE_REMOTE_DAY: 'typing-analytics:delete-remote-day',
   TYPING_ANALYTICS_EXPORT: 'typing-analytics:export',
   TYPING_ANALYTICS_IMPORT: 'typing-analytics:import',
+  /** Read the currently focused application's name. Backed by
+   * app-monitor.getCurrentAppName, which honours the
+   * typingMonitorAppEnabled AppConfig flag (returns null when off).
+   * Used by the Monitor App tab live preview; not on a hot path. */
+  TYPING_ANALYTICS_GET_CURRENT_APP_NAME: 'typing-analytics:get-current-app-name',
+  /** Distinct app_name list (with keystroke totals) for the analyze
+   * range. Drives the App selector dropdown — values become the
+   * `appScope` arg of every per-app-aware range query. */
+  TYPING_ANALYTICS_LIST_APPS_FOR_RANGE: 'typing-analytics:list-apps-for-range',
+  /** Per-app keystroke / activeMs aggregate over the analyze range.
+   * Backs the App Usage Distribution pie chart. */
+  TYPING_ANALYTICS_GET_APP_USAGE_FOR_RANGE: 'typing-analytics:get-app-usage-for-range',
+  /** Per-app WPM aggregate (mean over single-app minutes) over the
+   * analyze range. Backs the "WPM by App" bar chart. */
+  TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE: 'typing-analytics:get-wpm-by-app-for-range',
 
   // Language Store (renderer → main → renderer)
   LANG_LIST: 'lang:list',

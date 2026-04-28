@@ -6,6 +6,12 @@ import type { FingerType, RowCategory } from '../kle/kle-ergonomics'
 export const TYPING_ANALYTICS_REV = 1
 export const TYPING_ANALYTICS_VERSION = 1
 
+/** Sentinel name returned by Monitor App aggregates for minutes that
+ * have NULL app_name (Monitor App off, lookup failed, or mixed apps).
+ * Shared between the SQL COALESCE and the chart-side label mapping so
+ * the two sides can't drift. */
+export const TYPING_APP_UNKNOWN_NAME = '__unknown__'
+
 export const DEFAULT_TYPING_SYNC_SPAN_DAYS = 7
 export const ALLOWED_TYPING_SYNC_SPAN_DAYS = [1, 7, 30, 90] as const
 export type TypingSyncSpanDays = typeof ALLOWED_TYPING_SYNC_SPAN_DAYS[number]

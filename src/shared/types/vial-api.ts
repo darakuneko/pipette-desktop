@@ -152,6 +152,25 @@ export interface VialAPI {
   // Typing Analytics
   typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>
   typingAnalyticsFlush(uid: string): Promise<void>
+  typingAnalyticsGetCurrentAppName(): Promise<string | null>
+  typingAnalyticsListAppsForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  typingAnalyticsGetAppUsageForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  typingAnalyticsGetWpmByAppForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
   typingAnalyticsListKeyboards(): Promise<TypingKeyboardSummary[]>
   typingAnalyticsListItems(uid: string): Promise<TypingDailySummary[]>
   typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>

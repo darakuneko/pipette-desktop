@@ -47,6 +47,13 @@ export interface MinuteSnapshot {
    * persisting; the snapshot exposes raw IKIs so consumers can choose
    * their own bucketing if needed. */
   bigrams: Map<string, number[]>
+  /** Active application name observed during this minute, or null when:
+   *  - Monitor App is disabled
+   *  - the minute observed multiple distinct apps (mixed → null)
+   *  - no app was tagged before flush (no flushes hit this scope yet)
+   * Computed from the entry's app-set on finalize so the consumer sees
+   * a flat string|null and never has to reason about set semantics. */
+  appName: string | null
 }
 
 interface Entry {
@@ -60,6 +67,11 @@ interface Entry {
   keystrokes: number
   firstEventMs: number
   lastEventMs: number
+  /** Distinct apps observed across this minute. Populated by
+   * {@link MinuteBuffer.markAppName} (called by the analytics service
+   * just before each flush). Size>1 collapses to null on finalize so
+   * downstream consumers only see "single app" or "mixed/unknown". */
+  appSet: Set<string>
 }
 
 function floorMinute(ts: number): number {
@@ -80,6 +92,15 @@ function finalize(entry: Entry): MinuteSnapshot {
   const avg = sorted.length
     ? Math.round(sorted.reduce((a, b) => a + b, 0) / sorted.length)
     : null
+  // appSet semantics:
+  //   size === 0 → minute saw no app tag (Monitor App off or never sampled) → null
+  //   size === 1 → single app dominated the minute → that app
+  //   size  > 1 → mixed minute, app-filtered analytics must skip it → null
+  let appName: string | null = null
+  if (entry.appSet.size === 1) {
+    // Iterator is the only way to peek a Set without copying.
+    appName = entry.appSet.values().next().value ?? null
+  }
   return {
     scopeId: entry.scopeId,
     fingerprint: entry.fingerprint,
@@ -95,6 +116,7 @@ function finalize(entry: Entry): MinuteSnapshot {
     charCounts: entry.charCounts,
     matrixCounts: entry.matrixCounts,
     bigrams: entry.bigrams,
+    appName,
   }
 }
 
@@ -124,6 +146,7 @@ export class MinuteBuffer {
         keystrokes: 0,
         firstEventMs: event.ts,
         lastEventMs: event.ts,
+        appSet: new Set<string>(),
       }
       this.buffers.set(key, entry)
     }
@@ -191,6 +214,23 @@ export class MinuteBuffer {
     ) {
       this.previousMatrixKeycode = currKeycode
       this.previousMatrixTimestamp = ts
+    }
+  }
+
+  /** Tag every currently-open buffer entry with an observed application
+   * name. Called once per flush from typing-analytics-service after it
+   * resolves the active app via app-monitor. Null appName is a no-op:
+   * we can't distinguish "no observation" from "observed-as-mixed" by
+   * adding null to the set, so the absence of any add is what signals
+   * "no app observed" downstream (size === 0 in finalize → null).
+   *
+   * Tags every live entry (across all scope IDs). When multiple
+   * keyboards are typing in parallel they share the OS focus, so the
+   * same app applies to all of them. */
+  markAppName(appName: string | null): void {
+    if (appName === null) return
+    for (const entry of this.buffers.values()) {
+      entry.appSet.add(appName)
     }
   }
 

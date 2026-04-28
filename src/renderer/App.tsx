@@ -797,6 +797,8 @@ export function App() {
             onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
             typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
             onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
+            typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
+            onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}

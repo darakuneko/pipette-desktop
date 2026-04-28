@@ -31,6 +31,7 @@
     "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts"
   },
   "dependencies": {
+    "@paymoapp/active-window": "^2.1.4",
     "@zxcvbn-ts/core": "^3.0.4",
     "@zxcvbn-ts/language-common": "^3.0.4",
     "@zxcvbn-ts/language-en": "^3.0.2",

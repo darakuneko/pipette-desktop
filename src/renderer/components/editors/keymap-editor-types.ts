@@ -137,6 +137,14 @@ export interface KeymapEditorProps {
    * through AppConfig so the choice survives app restarts. */
   typingHeatmapWindowMin?: number
   onTypingHeatmapWindowMinChange?: (minutes: number) => void
+  /** AppConfig flag for the Monitor App tab. When true (and REC is
+   * running) the analytics service tags each minute with the active
+   * application name. Disabling stops new tags but does not erase
+   * historical data. The toggle in the typing-view popover is greyed
+   * out until REC starts so the user has a single, predictable point
+   * where data collection begins. */
+  typingMonitorAppEnabled?: boolean
+  onTypingMonitorAppEnabledChange?: (enabled: boolean) => void
   typingViewMenuTab?: TypingViewMenuTab
   onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
   /** Called when the typing-view REC tab triggers "View Analytics".

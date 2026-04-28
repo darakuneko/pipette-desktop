@@ -13,6 +13,7 @@ import {
   type JsonlBigramMinuteEntry,
   type JsonlBigramMinutePayload,
 } from '../jsonl/jsonl-row'
+import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 
 export interface TypingScopeRow {
   id: string
@@ -33,6 +34,10 @@ export interface CharMinuteRow {
   minuteTs: number
   char: string
   count: number
+  /** Active application captured at flush time. Optional on the input
+   * shape to keep older callers / fixtures terse; the DB layer
+   * normalizes missing to null on insert. */
+  appName?: string | null
 }
 
 export interface MatrixMinuteRow {
@@ -50,6 +55,8 @@ export interface MatrixMinuteRow {
   /** Portion of `count` attributed to a hold on the release edge.
    * Defaults to 0 for the same reasons as `tapCount`. */
   holdCount?: number
+  /** See {@link CharMinuteRow.appName}. */
+  appName?: string | null
 }
 
 export interface MinuteStatsRow {
@@ -63,6 +70,8 @@ export interface MinuteStatsRow {
   intervalP50Ms: number | null
   intervalP75Ms: number | null
   intervalMaxMs: number | null
+  /** See {@link CharMinuteRow.appName}. */
+  appName?: string | null
 }
 
 export interface SessionRow {
@@ -273,6 +282,12 @@ export class TypingAnalyticsDB {
   private readonly deleteSessionsBeforeStmt: Statement
   private readonly getMetaStmt: Statement
   private readonly setMetaStmt: Statement
+  // App-aware aggregates for the Monitor App charts. machineHash is
+  // optional via the @machineHash IS NULL trick so a single statement
+  // serves both "all devices" and "this device" scopes.
+  private readonly selectAppsForUidInRangeStmt: Statement
+  private readonly selectAppUsageForUidInRangeStmt: Statement
+  private readonly selectWpmByAppForUidInRangeStmt: Statement
 
   constructor(dbPath: string) {
     mkdirSync(dirname(dbPath), { recursive: true })
@@ -317,11 +332,20 @@ export class TypingAnalyticsDB {
       WHERE excluded.updated_at > typing_scopes.updated_at
     `)
 
+    // app_name on conflict: keep the existing value when the same app
+    // is observed twice in a flush; collapse to NULL the moment a
+    // different app shows up so app-filtered queries see the minute
+    // as mixed. This matches the aggregator's "size>1 set => null"
+    // payload contract on the read side.
     this.upsertCharMinuteStmt = this.db.prepare(`
-      INSERT INTO typing_char_minute (scope_id, minute_ts, char, count, updated_at, is_deleted)
-      VALUES (@scopeId, @minuteTs, @char, @count, @updatedAt, 0)
+      INSERT INTO typing_char_minute (scope_id, minute_ts, char, count, app_name, updated_at, is_deleted)
+      VALUES (@scopeId, @minuteTs, @char, @count, @appName, @updatedAt, 0)
       ON CONFLICT(scope_id, minute_ts, char) DO UPDATE SET
         count = typing_char_minute.count + excluded.count,
+        app_name = CASE
+          WHEN typing_char_minute.app_name IS excluded.app_name THEN typing_char_minute.app_name
+          ELSE NULL
+        END,
         updated_at = excluded.updated_at,
         is_deleted = 0
     `)
@@ -330,11 +354,13 @@ export class TypingAnalyticsDB {
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
         tap_count, hold_count,
+        app_name,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
         @tapCount, @holdCount,
+        @appName,
         @updatedAt, 0
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
@@ -342,6 +368,10 @@ export class TypingAnalyticsDB {
         tap_count = typing_matrix_minute.tap_count + excluded.tap_count,
         hold_count = typing_matrix_minute.hold_count + excluded.hold_count,
         keycode = excluded.keycode,
+        app_name = CASE
+          WHEN typing_matrix_minute.app_name IS excluded.app_name THEN typing_matrix_minute.app_name
+          ELSE NULL
+        END,
         updated_at = excluded.updated_at,
         is_deleted = 0
     `)
@@ -351,12 +381,14 @@ export class TypingAnalyticsDB {
         scope_id, minute_ts, keystrokes, active_ms,
         interval_avg_ms, interval_min_ms,
         interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
+        app_name,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @keystrokes, @activeMs,
         @intervalAvgMs, @intervalMinMs,
         @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
+        @appName,
         @updatedAt, 0
       )
       ON CONFLICT(scope_id, minute_ts) DO UPDATE SET
@@ -368,6 +400,10 @@ export class TypingAnalyticsDB {
         interval_p50_ms = excluded.interval_p50_ms,
         interval_p75_ms = excluded.interval_p75_ms,
         interval_max_ms = MAX(typing_minute_stats.interval_max_ms, excluded.interval_max_ms),
+        app_name = CASE
+          WHEN typing_minute_stats.app_name IS excluded.app_name THEN typing_minute_stats.app_name
+          ELSE NULL
+        END,
         updated_at = excluded.updated_at,
         is_deleted = 0
     `)
@@ -435,15 +471,20 @@ export class TypingAnalyticsDB {
       WHERE excluded.updated_at > typing_scopes.updated_at
     `)
 
+    // Merge variants pass-through app_name from the LWW winner. v7
+    // remote payloads predate app_name and arrive without it; the
+    // import layer normalizes missing fields to null so the bind
+    // parameter is always defined.
     this.mergeCharMinuteStmt = this.db.prepare(`
       INSERT INTO typing_char_minute (
-        scope_id, minute_ts, char, count, updated_at, is_deleted
+        scope_id, minute_ts, char, count, app_name, updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @char, @count, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @char, @count, @appName, @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, char) DO UPDATE SET
         count = excluded.count,
+        app_name = excluded.app_name,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_char_minute.updated_at
@@ -453,11 +494,13 @@ export class TypingAnalyticsDB {
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
         tap_count, hold_count,
+        app_name,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
         @tapCount, @holdCount,
+        @appName,
         @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
@@ -465,6 +508,7 @@ export class TypingAnalyticsDB {
         count = excluded.count,
         tap_count = excluded.tap_count,
         hold_count = excluded.hold_count,
+        app_name = excluded.app_name,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_matrix_minute.updated_at
@@ -475,12 +519,14 @@ export class TypingAnalyticsDB {
         scope_id, minute_ts, keystrokes, active_ms,
         interval_avg_ms, interval_min_ms,
         interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
+        app_name,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @keystrokes, @activeMs,
         @intervalAvgMs, @intervalMinMs,
         @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
+        @appName,
         @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts) DO UPDATE SET
@@ -492,6 +538,7 @@ export class TypingAnalyticsDB {
         interval_p50_ms = excluded.interval_p50_ms,
         interval_p75_ms = excluded.interval_p75_ms,
         interval_max_ms = excluded.interval_max_ms,
+        app_name = excluded.app_name,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_minute_stats.updated_at
@@ -515,14 +562,15 @@ export class TypingAnalyticsDB {
 
     this.mergeBigramMinuteStmt = this.db.prepare(`
       INSERT INTO typing_bigram_minute (
-        scope_id, minute_ts, bigram_id, count, hist, updated_at, is_deleted
+        scope_id, minute_ts, bigram_id, count, hist, app_name, updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @bigramId, @count, @hist, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @bigramId, @count, @hist, @appName, @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, bigram_id) DO UPDATE SET
         count = excluded.count,
         hist = excluded.hist,
+        app_name = excluded.app_name,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_bigram_minute.updated_at
@@ -971,6 +1019,73 @@ export class TypingAnalyticsDB {
          AND t.minute_ts < @untilMs
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
+    `)
+
+    // --- Monitor App aggregates ---------------------------------------
+    // Single SELECT per query — @machineHash IS NULL collapses the
+    // hash filter when the caller wants all devices, so two physical
+    // statements would just duplicate. Ranking key is keystrokes
+    // descending so the dropdown / pie chart picks up the most-used
+    // apps without further sorting.
+    this.selectAppsForUidInRangeStmt = this.db.prepare(`
+      SELECT t.app_name AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.app_name IS NOT NULL
+       GROUP BY t.app_name
+       ORDER BY keystrokes DESC
+    `)
+
+    // App-Usage Distribution aggregates per app, plus a synthetic
+    // bucket for unknown / mixed minutes. NULL groups under the
+    // shared sentinel so the renderer can render it as a single
+    // "Mixed/Unknown" slice without a special-case query.
+    this.selectAppUsageForUidInRangeStmt = this.db.prepare(`
+      SELECT COALESCE(t.app_name, '${TYPING_APP_UNKNOWN_NAME}') AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+       GROUP BY name
+       ORDER BY keystrokes DESC
+    `)
+
+    // WPM-by-app uses keystrokes/active_ms ratio per minute averaged
+    // across single-app minutes. NULL minutes are excluded — the
+    // "single app per minute" rule means mixed minutes can't be
+    // attributed to any one app, so they don't belong in this chart.
+    // wpm formula matches the renderer's chart-side calculation:
+    // keystrokes / 5 (chars / word) / activeMs * 60_000 (ms / min).
+    this.selectWpmByAppForUidInRangeStmt = this.db.prepare(`
+      SELECT t.app_name AS name,
+             SUM(t.keystrokes) AS keystrokes,
+             SUM(t.active_ms) AS activeMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.app_name IS NOT NULL
+         AND t.active_ms > 0
+       GROUP BY t.app_name
+       ORDER BY keystrokes DESC
     `)
 
     // Bigram per-pair rows in range. The aggregation layer sums each
@@ -1495,6 +1610,12 @@ export class TypingAnalyticsDB {
     matrixCounts: MatrixMinuteRow[],
     updatedAt: number,
   ): void {
+    // app_name flows uniformly across stats / char / matrix per minute:
+    // a flush either contributed under one specific app or it didn't.
+    // Per-row override is also accepted (`row.appName`) so test
+    // fixtures that hand-build mixed rows still work; live ingestion
+    // sets stats.appName once and lets the rows inherit.
+    const minuteAppName = stats.appName ?? null
     const upsertTx = this.db.transaction(() => {
       this.upsertMinuteStatsStmt.run({
         scopeId: stats.scopeId,
@@ -1507,6 +1628,7 @@ export class TypingAnalyticsDB {
         intervalP50Ms: stats.intervalP50Ms,
         intervalP75Ms: stats.intervalP75Ms,
         intervalMaxMs: stats.intervalMaxMs,
+        appName: minuteAppName,
         updatedAt,
       })
       for (const c of charCounts) {
@@ -1515,6 +1637,7 @@ export class TypingAnalyticsDB {
           minuteTs: c.minuteTs,
           char: c.char,
           count: c.count,
+          appName: c.appName ?? minuteAppName,
           updatedAt,
         })
       }
@@ -1529,6 +1652,7 @@ export class TypingAnalyticsDB {
           count: m.count,
           tapCount: m.tapCount ?? 0,
           holdCount: m.holdCount ?? 0,
+          appName: m.appName ?? minuteAppName,
           updatedAt,
         })
       }
@@ -1793,6 +1917,57 @@ export class TypingAnalyticsDB {
     untilMs: number,
   ): TypingMinuteStatsRow[] {
     return this.selectMinuteStatsInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs }) as TypingMinuteStatsRow[]
+  }
+
+  /** Distinct application names with keystroke totals over the range.
+   * `machineHash === null` widens the scope to all devices. NULL
+   * (mixed/unknown) minutes are excluded so the dropdown only lists
+   * filterable values. */
+  listAppsForUidInRange(
+    uid: string,
+    machineHash: string | null,
+    sinceMs: number,
+    untilMs: number,
+  ): { name: string; keystrokes: number; activeMs: number }[] {
+    return this.selectAppsForUidInRangeStmt.all({ uid, machineHash, sinceMs, untilMs }) as {
+      name: string
+      keystrokes: number
+      activeMs: number
+    }[]
+  }
+
+  /** Per-app keystroke / activeMs aggregates including a synthetic
+   * `__unknown__` bucket for NULL (Monitor App off / mixed minute /
+   * lookup failed). The renderer maps the sentinel to a localized
+   * "Unknown" label. */
+  getAppUsageForUidInRange(
+    uid: string,
+    machineHash: string | null,
+    sinceMs: number,
+    untilMs: number,
+  ): { name: string; keystrokes: number; activeMs: number }[] {
+    return this.selectAppUsageForUidInRangeStmt.all({ uid, machineHash, sinceMs, untilMs }) as {
+      name: string
+      keystrokes: number
+      activeMs: number
+    }[]
+  }
+
+  /** Per-app WPM aggregate. Only single-app minutes contribute (NULL
+   * is excluded by the SQL); the renderer computes wpm =
+   * keystrokes / 5 / activeMs * 60_000 from the returned keystrokes
+   * + activeMs sums so it matches the WPM tab's existing formula. */
+  getWpmByAppForUidInRange(
+    uid: string,
+    machineHash: string | null,
+    sinceMs: number,
+    untilMs: number,
+  ): { name: string; keystrokes: number; activeMs: number }[] {
+    return this.selectWpmByAppForUidInRangeStmt.all({ uid, machineHash, sinceMs, untilMs }) as {
+      name: string
+      keystrokes: number
+      activeMs: number
+    }[]
   }
 
   /** Per-(scope, minute, bigram) rows in `[sinceMs, untilMs)` for the
@@ -2063,6 +2238,7 @@ export class TypingAnalyticsDB {
       minuteTs: row.minuteTs,
       char: row.char,
       count: row.count,
+      appName: row.appName ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2079,6 +2255,7 @@ export class TypingAnalyticsDB {
       count: row.count,
       tapCount: row.tapCount ?? 0,
       holdCount: row.holdCount ?? 0,
+      appName: row.appName ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2096,6 +2273,7 @@ export class TypingAnalyticsDB {
       intervalP50Ms: row.intervalP50Ms,
       intervalP75Ms: row.intervalP75Ms,
       intervalMaxMs: row.intervalMaxMs,
+      appName: row.appName ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2117,6 +2295,7 @@ export class TypingAnalyticsDB {
    * a transaction (see {@link applyRowsToCache}). */
   mergeBigramMinute(row: BigramMinuteExportRow): void {
     const isDeleted = row.isDeleted ? 1 : 0
+    const appName = row.appName ?? null
     for (const bigramId of Object.keys(row.bigrams)) {
       const entry = row.bigrams[bigramId]
       this.mergeBigramMinuteStmt.run({
@@ -2125,6 +2304,7 @@ export class TypingAnalyticsDB {
         bigramId,
         count: entry.c,
         hist: encodeHistBuffer(entry.h),
+        appName,
         updatedAt: row.updatedAt,
         isDeleted,
       })
@@ -2150,6 +2330,29 @@ export class TypingAnalyticsDB {
           ADD COLUMN tap_count INTEGER NOT NULL DEFAULT 0;
         ALTER TABLE typing_matrix_minute
           ADD COLUMN hold_count INTEGER NOT NULL DEFAULT 0;
+      `)
+    }
+    // v3 -> v4: Add app_name to the four minute rollups so app-filtered
+    // analytics can restrict to single-app minutes. NULL means
+    // mixed/unknown/disabled — existing rows are populated as NULL.
+    // Indices match those defined in schema.ts; created here with the
+    // same names so a fresh install hits the CREATE INDEX IF NOT EXISTS
+    // path and an upgrade hits this branch — both end with the same
+    // indices.
+    if (fromVersion < 4) {
+      this.db.exec(`
+        ALTER TABLE typing_char_minute ADD COLUMN app_name TEXT;
+        ALTER TABLE typing_matrix_minute ADD COLUMN app_name TEXT;
+        ALTER TABLE typing_minute_stats ADD COLUMN app_name TEXT;
+        ALTER TABLE typing_bigram_minute ADD COLUMN app_name TEXT;
+        CREATE INDEX IF NOT EXISTS idx_char_minute_scope_app_ts
+          ON typing_char_minute(scope_id, app_name, minute_ts);
+        CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_app_ts
+          ON typing_matrix_minute(scope_id, app_name, minute_ts);
+        CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_app_ts
+          ON typing_minute_stats(scope_id, app_name, minute_ts);
+        CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_app_ts
+          ON typing_bigram_minute(scope_id, app_name, minute_ts);
       `)
     }
   }

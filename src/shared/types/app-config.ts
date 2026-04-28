@@ -45,6 +45,13 @@ export interface AppConfig {
    * disclosure. Gates the REC-tab "Start" button so the modal can
    * surface what the recorder collects vs what it does not. */
   typingRecordingConsentAccepted: boolean
+  /** Whether to record the active application name alongside typing
+   * data while REC is on. Resolved per flush in the main process — no
+   * setInterval is spawned. When false the analytics aggregator
+   * receives null and minute payloads carry appName=null. The Monitor
+   * App tab in the typing view exposes the toggle; UI only enables
+   * the toggle while REC is running. */
+  typingMonitorAppEnabled: boolean
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -64,6 +71,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'maxKeymapHistory',
   'typingHeatmapWindowMin',
   'typingRecordingConsentAccepted',
+  'typingMonitorAppEnabled',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -82,4 +90,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   maxKeymapHistory: 100,
   typingHeatmapWindowMin: 5,
   typingRecordingConsentAccepted: false,
+  typingMonitorAppEnabled: true,
 }

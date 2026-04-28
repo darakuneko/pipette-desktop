@@ -272,7 +272,17 @@
       "viewAnalytics": "分析ビュー",
       "tab": {
         "window": "ウィンドウ",
-        "rec": "REC"
+        "rec": "REC",
+        "monitorApp": "Monitor App"
+      },
+      "monitorApp": {
+        "enabled": "アプリ取得中",
+        "disabled": "アプリ取得",
+        "currentApp": "現在: {{app}}",
+        "noApp": "アプリ未検出",
+        "recOff": "先に REC を開始してください",
+        "linuxNote": "Wayland / GNOME 環境では FocusedWindow GNOME Shell 拡張のインストールが必要です。",
+        "macosPermission": "macOS ではアプリ検出にアクセシビリティ権限が必要です。"
       },
       "heatmap": {
         "legend": "ヒートマップ: 直近 1 時間"
@@ -292,13 +302,14 @@
         "collectedItems": [
           "1 分単位の文字頻度",
           "キー押下回数（row/col/layer/keycode、tap / hold 別）",
-          "タイピング速度の分布（interval パーセンタイル）"
+          "タイピング速度の分布（interval パーセンタイル）",
+          "アクティブなアプリケーション名（Monitor App ON 時のみ。1 分内に複数アプリを観測した場合は不明として記録）"
         ],
         "notCollectedHeading": "収集しない情報",
         "notCollectedItems": [
           "個別の打鍵タイミング",
           "入力テキスト / パスワード / 特定の単語",
-          "アプリケーション コンテキスト（どのアプリ・ウィンドウか）"
+          "ウィンドウタイトル / URL / ファイルパス"
         ],
         "accept": "有効化"
       },
@@ -631,6 +642,20 @@
     "noKeyboards": "まだ打鍵データがありません",
     "noData": "選択した期間にデータがありません",
     "selectKeyboard": "一覧からキーボードを選択してください",
+    "appUsage": {
+      "title": "アプリ別利用配分",
+      "loading": "アプリ利用データを読み込み中…",
+      "empty": "アプリ データがありません — Monitor App を有効化して REC を開始してください",
+      "unknown": "不明 / 混在",
+      "other": "その他",
+      "tooltipKeystrokes": "{{count}} 打鍵"
+    },
+    "wpmByApp": {
+      "title": "アプリ別 WPM",
+      "loading": "アプリ別 WPM を読み込み中…",
+      "empty": "アプリ タグ付きの 1 分集約がまだありません — Monitor App を有効化して REC を開始してください",
+      "tooltipWpm": "{{wpm}} WPM ({{keystrokes}} 打鍵)"
+    },
     "tablistLabel": "分析種別",
     "splitView": {
       "toggle": "分割表示",

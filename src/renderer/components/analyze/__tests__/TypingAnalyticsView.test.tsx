@@ -58,6 +58,11 @@ vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyhea
 vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
 vi.mock('../BigramsChart', () => ({ BigramsChart: mockSummary('mock-bigrams') }))
 vi.mock('../LayerUsageChart', () => ({ LayerUsageChart: mockSummary('mock-layer') }))
+// Monitor App charts mounted alongside their parent tabs (WPM /
+// Activity). Mocked here so the existing "renders mock-wpm" specs
+// still see a single mock and don't trip on the new IPC calls.
+vi.mock('../WpmByAppChart', () => ({ WpmByAppChart: mockSummary('mock-wpm-by-app') }))
+vi.mock('../AppUsageChart', () => ({ AppUsageChart: mockSummary('mock-app-usage') }))
 // Summary tab is the default landing tab. Mock it shallow so the
 // streak/goal IPCs underneath don't matter for shell-level smoke tests.
 vi.mock('../SummaryView', () => ({
