@@ -147,6 +147,11 @@ export interface AnalyzePaneProps {
   selectedUid: string | null
   /** Called when the user picks a different keyboard in this pane. */
   onSelectUid: (uid: string | null) => void
+  /** Forwarded to the Layout Comparison sub-view so the page footer can
+   * render the skip-rate warning beside the split-view toggle. The
+   * callback receives `null` whenever no Layout Comparison result is
+   * loaded (different tab, no snapshot, no target picked). */
+  onSkipPercentChange?: (percent: number | null) => void
 }
 
 export function AnalyzePane({
@@ -156,6 +161,7 @@ export function AnalyzePane({
   loading,
   selectedUid,
   onSelectUid,
+  onSkipPercentChange,
 }: AnalyzePaneProps): JSX.Element {
   // Pane A keeps the historical (unsuffixed) testids so existing
   // selectors keep working; pane B appends `-b` so split-mode renders
@@ -1036,6 +1042,7 @@ export function AnalyzePane({
                   deviceScopes={deviceScopes}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
+                  onSkipPercentChange={onSkipPercentChange}
                 />
               ) : analysisTab === 'layer' ? (
                 // Two columns side-by-side, each scrolling independently.

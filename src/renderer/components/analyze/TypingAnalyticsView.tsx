@@ -8,10 +8,11 @@
 // the Analyze page resets to the single-pane view so the user starts
 // from a known state.
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 import { AnalyzePane } from './AnalyzePane'
+import { formatSharePercent } from './analyze-format'
 
 // Below this viewport width the two panes can't fit side-by-side
 // without crushing the per-tab filter row, so the toggle is disabled
@@ -23,6 +24,10 @@ const SPLIT_MIN_WIDTH_PX = 1280
 // color/state classes.
 const FOOTER_BUTTON_BASE =
   'inline-flex items-center justify-center whitespace-nowrap rounded border px-2.5 py-1 text-xs leading-none transition-colors'
+
+// Hide the skip-rate warning until the unmappable share is meaningful;
+// matches the threshold the LayoutComparisonView used to apply inline.
+const SKIP_RATE_WARNING_THRESHOLD = 0.05
 
 interface TypingAnalyticsViewProps {
   /** Pre-select this keyboard on mount if it exists in the current
@@ -44,6 +49,8 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
   const [loading, setLoading] = useState(true)
   const [selectedUidA, setSelectedUidA] = useState<string | null>(initialUid ?? null)
   const [selectedUidB, setSelectedUidB] = useState<string | null>(null)
+  const [skipPercentA, setSkipPercentA] = useState<number | null>(null)
+  const [skipPercentB, setSkipPercentB] = useState<number | null>(null)
   const [isWideViewport, setIsWideViewport] = useState<boolean>(
     () => typeof window === 'undefined' || window.innerWidth >= SPLIT_MIN_WIDTH_PX,
   )
@@ -99,6 +106,28 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   const handleSelectUidB = setSelectedUidB
 
+  // Combine the per-pane skip rates into a single footer line. The
+  // pane prefix only appears when split-view is on so single-pane
+  // users see the bare percentage they used to get inside the panel.
+  const skipWarningMessage = useMemo(() => {
+    const aOver = skipPercentA !== null && skipPercentA > SKIP_RATE_WARNING_THRESHOLD
+    const bOver = splitVisible && skipPercentB !== null && skipPercentB > SKIP_RATE_WARNING_THRESHOLD
+    if (!aOver && !bOver) return ''
+    const formatOne = (percent: number): string =>
+      t('analyze.layoutComparison.skipWarning', { percent: formatSharePercent(percent) })
+    if (aOver && bOver && skipPercentA !== null && skipPercentB !== null) {
+      return [
+        `A: ${formatOne(skipPercentA)}`,
+        `B: ${formatOne(skipPercentB)}`,
+      ].join('  ·  ')
+    }
+    if (aOver && skipPercentA !== null) {
+      return splitVisible ? `A: ${formatOne(skipPercentA)}` : formatOne(skipPercentA)
+    }
+    if (bOver && skipPercentB !== null) return `B: ${formatOne(skipPercentB)}`
+    return ''
+  }, [skipPercentA, skipPercentB, splitVisible, t])
+
   return (
     <div
       className="flex h-full min-h-[70vh] flex-col gap-3"
@@ -112,6 +141,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
           loading={loading}
           selectedUid={selectedUidA}
           onSelectUid={setSelectedUidA}
+          onSkipPercentChange={setSkipPercentA}
         />
         {splitVisible && (
           <AnalyzePane
@@ -121,10 +151,17 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
             loading={loading}
             selectedUid={selectedUidB}
             onSelectUid={handleSelectUidB}
+            onSkipPercentChange={setSkipPercentB}
           />
         )}
       </div>
-      <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-edge pt-2">
+      <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-edge pt-2">
+        <div
+          className="min-w-0 flex-1 truncate text-left text-[12px] text-content-muted"
+          data-testid="analyze-skip-warning"
+        >
+          {skipWarningMessage}
+        </div>
         <button
           type="button"
           role="switch"

@@ -2,9 +2,10 @@
 //
 // Layout Comparison Phase 1 orchestrator. Owns source / target
 // selection state, fires the IPC fetch, and renders all three Phase 1
-// panels at once (Heatmap Diff on top, then Finger Diff + Metric
-// Table side-by-side) so the user can scan position / finger / number
-// shifts together without flipping a sub-view.
+// panels in a 2-column / 2-row grid: Heatmap Diff and Finger Diff
+// stacked on the left, Metric Table spanning both rows on the right —
+// so the user can scan position / finger shifts against the same
+// numeric baseline without flipping a sub-view.
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -22,7 +23,6 @@ import type {
 import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
 import { fetchLayoutComparisonForRange } from './analyze-fetch'
 import { LAYOUT_COMPARISON_PHASE_1_METRICS } from './layout-comparison-metrics'
-import { formatSharePercent } from './analyze-format'
 import { LayoutComparisonFingerDiff } from './LayoutComparisonFingerDiff'
 import { LayoutComparisonHeatmapDiff } from './LayoutComparisonHeatmapDiff'
 import { LayoutComparisonMetricTable } from './LayoutComparisonMetricTable'
@@ -40,9 +40,13 @@ interface Props {
    * read-only on the filter so the IPC fetch stays the side-effect
    * source of truth. */
   filter: Required<LayoutComparisonFilters>
+  /** Notifies the page chrome (TypingAnalyticsView footer) of the
+   * current max skip rate so the warning can render alongside the
+   * split-view toggle instead of as a banner inside the panel. The
+   * effect emits `null` whenever no result is loaded so the chrome
+   * can clear stale values when the user switches tab / range. */
+  onSkipPercentChange?: (percent: number | null) => void
 }
-
-const SKIP_RATE_WARNING_THRESHOLD = 0.05
 
 export function LayoutComparisonView({
   uid,
@@ -50,6 +54,7 @@ export function LayoutComparisonView({
   deviceScopes,
   snapshot,
   filter,
+  onSkipPercentChange,
 }: Props): JSX.Element {
   const { t } = useTranslation()
   const sourceLayoutId = filter.sourceLayoutId
@@ -126,6 +131,14 @@ export function LayoutComparisonView({
     return max
   }, [result])
 
+  // Push skip rate changes up to the page chrome and clear the value
+  // on unmount so the footer doesn't keep showing a stale percentage
+  // after the user navigates to another tab.
+  useEffect(() => {
+    onSkipPercentChange?.(skipPercent)
+  }, [skipPercent, onSkipPercentChange])
+  useEffect(() => () => onSkipPercentChange?.(null), [onSkipPercentChange])
+
   // The Heatmap Diff panel paints onto a KeyboardWidget, so it needs
   // the snapshot's KLE geometry. snapshot.layout is `unknown` by type
   // — every Analyze chart casts it the same way.
@@ -149,29 +162,19 @@ export function LayoutComparisonView({
         <Empty message={t('analyze.layoutComparison.noData')} testid="analyze-layout-comparison-no-data" />
       ) : (
         <>
-          {skipPercent !== null && skipPercent > SKIP_RATE_WARNING_THRESHOLD && (
-            <div
-              className="rounded border border-amber-400/60 bg-amber-50/40 px-3 py-2 text-[12px] text-amber-900 dark:bg-amber-900/20 dark:text-amber-200"
-              role="status"
-              data-testid="analyze-layout-comparison-skip-warning"
-            >
-              {t('analyze.layoutComparison.skipWarning', {
-                percent: formatSharePercent(skipPercent),
-              })}
-            </div>
-          )}
           {(() => {
             // Fetch site enforces `targets = [source, target]`, so
             // [1] is always present once the result lands.
             const candidate = result.targets[1]
             const targetLabel = columnLabels[1] ?? candidate.layoutId
             return (
-              <>
-                {/* Each panel scrolls independently — heatmap on top
-                  * gets its own overflow box (KeyboardWidget can run
-                  * tall on full keyboards) and the bottom grid lets
-                  * finger / metric scroll inside their own halves. */}
-                <div className="min-h-0 overflow-auto">
+              // Three panels share a 2-column / 2-row grid: heatmap +
+              // finger diff stack on the left so they can scan
+              // position vs. finger shifts together, and the metric
+              // table spans both rows on the right so the numeric
+              // baseline stays visible alongside either chart.
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_2fr] lg:grid-rows-2">
+                <div className="min-w-0 min-h-0 overflow-auto lg:col-start-1 lg:row-start-1">
                   <LayoutComparisonHeatmapDiff
                     current={result.targets[0]}
                     target={candidate}
@@ -179,25 +182,23 @@ export function LayoutComparisonView({
                     targetLabel={targetLabel}
                   />
                 </div>
-                <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_2fr]">
-                  {/* Finger diff: hide overflow on both axes — the
-                    * chart now flexes to fill this panel, so neither
-                    * direction should ever need a scrollbar. */}
-                  <div className="min-w-0 min-h-0 overflow-hidden">
-                    <LayoutComparisonFingerDiff
-                      current={result.targets[0]}
-                      target={candidate}
-                      targetLabel={targetLabel}
-                    />
-                  </div>
-                  <div className="min-w-0 min-h-0 overflow-auto">
-                    <LayoutComparisonMetricTable
-                      columnLabels={columnLabels}
-                      targets={result.targets}
-                    />
-                  </div>
+                {/* Finger diff: hide overflow on both axes — the
+                  * chart now flexes to fill this panel, so neither
+                  * direction should ever need a scrollbar. */}
+                <div className="min-w-0 min-h-0 overflow-hidden lg:col-start-1 lg:row-start-2">
+                  <LayoutComparisonFingerDiff
+                    current={result.targets[0]}
+                    target={candidate}
+                    targetLabel={targetLabel}
+                  />
                 </div>
-              </>
+                <div className="min-w-0 min-h-0 overflow-auto lg:col-start-2 lg:row-span-2">
+                  <LayoutComparisonMetricTable
+                    columnLabels={columnLabels}
+                    targets={result.targets}
+                  />
+                </div>
+              </div>
             )
           })()}
         </>

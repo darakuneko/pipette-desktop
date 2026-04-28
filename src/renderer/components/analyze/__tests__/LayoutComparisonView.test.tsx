@@ -55,8 +55,9 @@ function makeSnapshot(): TypingKeymapSnapshot {
 function renderView(overrides: {
   filter?: Partial<Required<LayoutComparisonFilters>>
   snapshot?: TypingKeymapSnapshot | null
+  onSkipPercentChange?: (percent: number | null) => void
 } = {}): void {
-  const { filter, snapshot = makeSnapshot() } = overrides
+  const { filter, snapshot = makeSnapshot(), onSkipPercentChange } = overrides
   render(
     <LayoutComparisonView
       uid="0xAABB"
@@ -64,6 +65,7 @@ function renderView(overrides: {
       deviceScopes={['own']}
       snapshot={snapshot}
       filter={{ ...DEFAULT_FILTER, ...filter }}
+      onSkipPercentChange={onSkipPercentChange}
     />,
   )
 }
@@ -123,7 +125,7 @@ describe('LayoutComparisonView', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the skip warning banner when any target exceeds 5%', async () => {
+  it('emits the max skip rate via onSkipPercentChange when a result loads', async () => {
     fetchSpy.mockResolvedValue(
       makeResult({
         targets: [
@@ -132,10 +134,14 @@ describe('LayoutComparisonView', () => {
         ],
       }),
     )
-    renderView({ filter: { targetLayoutId: 'colemak' } })
+    const onSkipPercentChange = vi.fn()
+    renderView({ filter: { targetLayoutId: 'colemak' }, onSkipPercentChange })
     await waitFor(() => {
-      expect(screen.getByTestId('analyze-layout-comparison-skip-warning')).toBeTruthy()
+      expect(onSkipPercentChange).toHaveBeenCalledWith(0.12)
     })
+    // The legacy inline banner is no longer rendered — the page footer
+    // owns the warning now (see TypingAnalyticsView).
+    expect(screen.queryByTestId('analyze-layout-comparison-skip-warning')).toBeNull()
   })
 
   it('renders all three panels (heatmap / finger / metric) at once', async () => {
