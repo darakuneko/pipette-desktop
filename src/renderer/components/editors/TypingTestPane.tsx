@@ -622,7 +622,11 @@ export function TypingTestPane({
                 type="button"
                 role="menuitem"
                 data-testid="view-only-toggle"
-                className="whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
+                // Mirrors the StatusBar disconnect button: red text on
+                // a default-edge border so "exit" reads as the
+                // destructive / out-of-mode action rather than the
+                // accent-coloured primary path.
+                className="whitespace-nowrap rounded border border-edge px-2 py-1 text-red-500 transition-colors hover:text-red-600"
                 onClick={handleViewOnlyToggle}
               >
                 {t('editor.typingTest.exitViewOnly')}
