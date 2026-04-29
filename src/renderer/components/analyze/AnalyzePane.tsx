@@ -579,23 +579,6 @@ export function AnalyzePane({
     layoutComparisonFilter, fingerAssignments, t,
   ])
 
-  // Ergonomics-only "open finger assignment" button. Rendered in two
-  // places (Row 1 in single-pane mode, Row 2 in split mode under the
-  // device value via `col-start-4`) so the long Tailwind class string
-  // stays in one place. The optional col-start lets the split-mode
-  // call site land the button under the device select.
-  const renderFingerAssignmentButton = (extraClassName = '') => (
-    <button
-      type="button"
-      className={`${extraClassName} justify-self-start rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-secondary`}
-      onClick={() => setFingerModalOpen(true)}
-      disabled={effectiveSnapshot === null}
-      data-testid={tid("analyze-finger-assignment-open")}
-    >
-      {t('analyze.fingerAssignment.button')}
-    </button>
-  )
-
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
   // the JSX stays in one place. Order: View → Range size + cursor
@@ -839,22 +822,19 @@ export function AnalyzePane({
                   selectedSavedAt={selectedSnapshotSavedAt}
                   onSelectSnapshot={handleSelectSnapshot}
                 />
-                {/* Period and the Ergonomics finger-assignment button
-                 * stay on Row 1 in single-pane mode but slide down to
-                 * Row 2 when split-view is on so the per-pane row
-                 * stays narrow enough for two panes to fit. */}
+                {/* Period stays on Row 1 in single-pane mode but
+                 * slides down to Row 2 when split-view is on so the
+                 * per-pane row stays narrow enough for two panes to
+                 * fit. */}
                 {!splitMode && (
-                  <>
-                    <RangeDayPicker
-                      range={range}
-                      snapshotBoundaries={snapshotBoundaries}
-                      nowMs={nowMs}
-                      onChange={setRange}
-                      labelKey="analyze.filters.period"
-                      testIdPrefix={tid("analyze-filter-range")}
-                    />
-                    {analysisTab === 'ergonomics' && renderFingerAssignmentButton()}
-                  </>
+                  <RangeDayPicker
+                    range={range}
+                    snapshotBoundaries={snapshotBoundaries}
+                    nowMs={nowMs}
+                    onChange={setRange}
+                    labelKey="analyze.filters.period"
+                    testIdPrefix={tid("analyze-filter-range")}
+                  />
                 )}
               </>
             )}
@@ -868,20 +848,14 @@ export function AnalyzePane({
           {selected && (
             <div className="col-span-10 grid grid-cols-subgrid items-center gap-x-3 gap-y-2">
               {splitMode && (
-                <>
-                  <RangeDayPicker
-                    range={range}
-                    snapshotBoundaries={snapshotBoundaries}
-                    nowMs={nowMs}
-                    onChange={setRange}
-                    labelKey="analyze.filters.period"
-                    testIdPrefix={tid("analyze-filter-range")}
-                  />
-                  {/* col-start-4: align under the device select on Row 1
-                   * (col 1=keyboard label, col 2=keyboard select, col
-                   * 3=device label, col 4=device select). */}
-                  {analysisTab === 'ergonomics' && renderFingerAssignmentButton('col-start-4')}
-                </>
+                <RangeDayPicker
+                  range={range}
+                  snapshotBoundaries={snapshotBoundaries}
+                  nowMs={nowMs}
+                  onChange={setRange}
+                  labelKey="analyze.filters.period"
+                  testIdPrefix={tid("analyze-filter-range")}
+                />
               )}
               {analysisTab === 'wpm' && (
                 <>
@@ -1095,6 +1069,7 @@ export function AnalyzePane({
                     viewMode={ergonomicsFilter.viewMode}
                     period={ergonomicsFilter.period}
                     learningMinSampleKeystrokes={ergonomicsFilter.minSampleKeystrokes}
+                    onOpenFingerAssignment={() => setFingerModalOpen(true)}
                   />
                 ) : (
                   <div className="py-4 text-center text-[13px] text-content-muted" data-testid={tid("analyze-ergonomics-no-snapshot")}>

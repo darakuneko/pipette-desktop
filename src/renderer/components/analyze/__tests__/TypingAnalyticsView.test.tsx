@@ -55,7 +55,25 @@ vi.mock('../WpmChart', () => ({ WpmChart: mockSummary('mock-wpm') }))
 vi.mock('../IntervalChart', () => ({ IntervalChart: mockSummary('mock-interval') }))
 vi.mock('../ActivityChart', () => ({ ActivityChart: mockSummary('mock-activity') }))
 vi.mock('../KeyHeatmapChart', () => ({ KeyHeatmapChart: mockSummary('mock-keyheatmap') }))
-vi.mock('../ErgonomicsChart', () => ({ ErgonomicsChart: mockSummary('mock-ergonomics') }))
+vi.mock('../ErgonomicsChart', () => ({
+  // Surface the finger-assignment open callback as a button so the
+  // modal-open test can drive it; the button now lives inside the real
+  // chart's title row instead of the AnalyzePane filter bar.
+  ErgonomicsChart: (props: MockChartProps & { onOpenFingerAssignment?: () => void }) => (
+    <div data-testid="mock-ergonomics">
+      {`${props.uid}:${scopeText(primaryScope(props))}:range=${props.range.fromMs}-${props.range.toMs}`}
+      {props.onOpenFingerAssignment ? (
+        <button
+          type="button"
+          data-testid="analyze-finger-assignment-open"
+          onClick={props.onOpenFingerAssignment}
+        >
+          open
+        </button>
+      ) : null}
+    </div>
+  ),
+}))
 vi.mock('../BigramsChart', () => ({ BigramsChart: mockSummary('mock-bigrams') }))
 vi.mock('../LayerUsageChart', () => ({ LayerUsageChart: mockSummary('mock-layer') }))
 // Monitor App charts mounted alongside their parent tabs (WPM /
