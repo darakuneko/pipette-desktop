@@ -136,8 +136,9 @@ export const IpcChannels = {
   TYPING_ANALYTICS_EXPORT: 'typing-analytics:export',
   TYPING_ANALYTICS_IMPORT: 'typing-analytics:import',
   /** Distinct app_name list (with keystroke totals) for the analyze
-   * range. Drives the App selector dropdown — values become the
-   * `appScope` arg of every per-app-aware range query. */
+   * range. Drives the App selector dropdown — selected values are
+   * collected into the `appScopes` array passed to every per-app-aware
+   * range query. */
   TYPING_ANALYTICS_LIST_APPS_FOR_RANGE: 'typing-analytics:list-apps-for-range',
   /** Per-app keystroke / activeMs aggregate over the analyze range.
    * Backs the App Usage Distribution pie chart. */

@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// App-name filter for the Analyze panel. The dropdown is populated
-// from `typingAnalyticsListAppsForRange` for the current uid + device
+// Multi-select App-name filter for the Analyze panel. Backed by
+// `typingAnalyticsListAppsForRange` for the current uid + device
 // scope + range, so the option list always reflects what's actually
 // available — picking an app that no longer has data is impossible.
 //
-// `value === null` is the "no filter" choice and is rendered as the
-// first option. Selections are passed back to the parent as
-// `string | null`; the parent normalizes empty strings via
-// `normalizeAppScope`.
+// `value` is a `string[]`; the empty array is the "no filter" choice
+// (every minute including mixed/unknown). Stale persisted names that
+// disappear from the option list are silently dropped on the next
+// `onChange`. Renders as a button that opens a checkbox popover so
+// the filter row stays compact even with a long-tail app list.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { scopeToSelectValue, type DeviceScope } from '../../../shared/types/analyze-filters'
 import type { RangeMs } from './analyze-types'
 import { FILTER_SELECT } from './analyze-filter-styles'
 
-const NONE_VALUE = '__none__'
-
 interface Props {
   uid: string
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
-  value: string | null
-  onChange: (next: string | null) => void
+  value: string[]
+  onChange: (next: string[]) => void
   ariaLabel?: string
   testId?: string
 }
@@ -43,6 +42,8 @@ export function AppSelect({
 }: Props) {
   const { t } = useTranslation()
   const [options, setOptions] = useState<AppOption[]>([])
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const scope = scopeToSelectValue(deviceScopes[0] ?? 'own')
 
   useEffect(() => {
@@ -61,41 +62,110 @@ export function AppSelect({
     }
   }, [uid, range.fromMs, range.toMs, scope])
 
-  // Drop a stale persisted name silently — the parent's
-  // normalizeAppScope already coerces unknowns to null on next save,
-  // but this guard catches the in-flight case where the option list
-  // refreshes after the user changed device scope.
+  // Drop stale persisted names silently — the parent's
+  // normalizeAppScopes already trims unknowns on load, but this
+  // catches the in-flight case where the option list refreshes after
+  // the user changed device scope.
   useEffect(() => {
-    if (value === null) return
+    if (value.length === 0) return
     if (options.length === 0) return
-    if (!options.some((o) => o.name === value)) onChange(null)
+    const known = new Set(options.map((o) => o.name))
+    const filtered = value.filter((v) => known.has(v))
+    if (filtered.length !== value.length) onChange(filtered)
   }, [options, value, onChange])
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const next = e.target.value === NONE_VALUE ? null : e.target.value
-    if (next === value) return
-    onChange(next)
+  // Close the popover on outside click or Escape. Outside-click
+  // mirrors native `<select>` blur; Escape gives keyboard users a
+  // dismissal path even before full keyboard navigation lands.
+  useEffect(() => {
+    if (!open) return
+    const onMouseDown = (e: MouseEvent) => {
+      if (!containerRef.current) return
+      if (containerRef.current.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('mousedown', onMouseDown)
+    window.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('mousedown', onMouseDown)
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const valueSet = useMemo(() => new Set(value), [value])
+
+  const buttonLabel = useMemo(() => {
+    if (value.length === 0) return t('analyze.filters.appOption.none')
+    if (value.length === 1) return value[0]
+    return t('analyze.filters.appOption.multi', { first: value[0], rest: value.length - 1 })
+  }, [value, t])
+
+  const toggleApp = (name: string) => {
+    if (valueSet.has(name)) onChange(value.filter((v) => v !== name))
+    else onChange([...value, name])
   }
 
-  // Order matches DeviceMultiSelect: per-item entries first, the
-  // "all-X aggregate" sits at the bottom because picking it is a
-  // switch-away from the per-item picks above.
+  const clearAll = () => {
+    if (value.length === 0) return
+    onChange([])
+  }
+
   return (
-    <select
-      className={FILTER_SELECT}
-      value={value ?? NONE_VALUE}
-      onChange={handleChange}
-      aria-label={ariaLabel}
-      data-testid={testId}
-    >
-      {options.map((o) => (
-        <option key={o.name} value={o.name} data-testid={`${testId}-option-${o.name}`}>
-          {o.name}
-        </option>
-      ))}
-      <option value={NONE_VALUE} data-testid={`${testId}-option-none`}>
-        {t('analyze.filters.appOption.none')}
-      </option>
-    </select>
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        className={`${FILTER_SELECT} text-left`}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-testid={testId}
+      >
+        {buttonLabel}
+      </button>
+      {open && (
+        <div
+          className="absolute left-0 top-full z-20 mt-1 max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+          role="listbox"
+          aria-multiselectable="true"
+        >
+          <button
+            type="button"
+            // "全アプリ" is the no-filter sentinel. Disable it once the
+            // user has picked anything specific so they have to clear
+            // the multi-select intentionally before re-entering the
+            // unfiltered view.
+            className="w-full rounded px-2 py-1 text-left text-content-secondary transition-colors hover:bg-surface-dim disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={clearAll}
+            disabled={value.length === 0}
+            data-testid={`${testId}-option-none`}
+          >
+            {t('analyze.filters.appOption.none')}
+          </button>
+          {options.length > 0 && <div className="my-1 border-t border-edge" />}
+          {options.map((o) => {
+            const checked = valueSet.has(o.name)
+            return (
+              <label
+                key={o.name}
+                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+                data-testid={`${testId}-option-${o.name}`}
+              >
+                <input
+                  type="checkbox"
+                  className="cursor-pointer"
+                  checked={checked}
+                  onChange={() => toggleApp(o.name)}
+                />
+                <span className="flex-1 truncate">{o.name}</span>
+              </label>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

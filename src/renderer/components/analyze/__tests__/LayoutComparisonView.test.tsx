@@ -63,6 +63,7 @@ function renderView(overrides: {
       uid="0xAABB"
       range={range}
       deviceScopes={['own']}
+      appScopes={[]}
       snapshot={snapshot}
       filter={{ ...DEFAULT_FILTER, ...filter }}
       onSkipPercentChange={onSkipPercentChange}

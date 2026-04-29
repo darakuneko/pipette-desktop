@@ -9,8 +9,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PipetteSettings } from '../../shared/types/pipette-settings'
 import { DEFAULT_PIPETTE_SETTINGS } from '../../shared/types/pipette-settings'
 import {
+  appScopesEqual,
   deviceScopesEqual,
-  normalizeAppScope,
+  normalizeAppScopes,
   normalizeDeviceScopes,
   type ActivityCalendarFilters,
   type ActivityFilters,
@@ -38,11 +39,11 @@ export interface AnalyzeFiltersState {
    * normalizer themselves. */
   deviceScopes: DeviceScope[]
   /** Per-app filter restricting all charts to minutes tagged with
-   * this application name. `null` means "no app filter" (every
-   * minute, including mixed/unknown). The dropdown's option list is
-   * fetched from the analyze range; stale persisted names are
-   * silently coerced back to `null` on next load. */
-  appScope: string | null
+   * one of these application names. Empty array = "no app filter"
+   * (every minute, including mixed/unknown). The dropdown's option
+   * list is fetched from the analyze range; stale persisted names
+   * are silently dropped on next load via `normalizeAppScopes`. */
+  appScopes: string[]
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>
   interval: Required<IntervalFilters>
@@ -59,7 +60,7 @@ export interface AnalyzeFiltersState {
 
 export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   deviceScopes: ['own'],
-  appScope: null,
+  appScopes: [],
   heatmap: {
     selectedLayers: [0],
     groups: [[0]],
@@ -119,7 +120,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
   // single canonical shape so chart consumers never see invalid input.
   return {
     deviceScopes: normalizeDeviceScopes(saved.deviceScopes),
-    appScope: normalizeAppScope(saved.appScope),
+    appScopes: normalizeAppScopes(saved.appScopes),
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
@@ -148,7 +149,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
 function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
   return {
     deviceScopes: state.deviceScopes,
-    appScope: state.appScope,
+    appScopes: state.appScopes,
     heatmap: state.heatmap,
     wpm: state.wpm,
     interval: state.interval,
@@ -164,7 +165,7 @@ export interface UseAnalyzeFiltersReturn {
   filters: AnalyzeFiltersState
   ready: boolean
   setDeviceScopes: (v: readonly DeviceScope[]) => void
-  setAppScope: (v: string | null) => void
+  setAppScopes: (v: string[]) => void
   setHeatmap: (patch: Partial<HeatmapFilters>) => void
   setWpm: (patch: Partial<WpmFilters>) => void
   setInterval: (patch: Partial<IntervalFilters>) => void
@@ -310,9 +311,9 @@ export function useAnalyzeFilters(
     })
   }, [update])
 
-  const setAppScope = useCallback((v: string | null) => {
-    const next = normalizeAppScope(v)
-    update((prev) => (prev.appScope === next ? prev : { ...prev, appScope: next }))
+  const setAppScopes = useCallback((v: string[]) => {
+    const next = normalizeAppScopes(v)
+    update((prev) => (appScopesEqual(prev.appScopes, next) ? prev : { ...prev, appScopes: next }))
   }, [update])
 
   const setHeatmap = useCallback((patch: Partial<HeatmapFilters>) => {
@@ -359,7 +360,7 @@ export function useAnalyzeFilters(
     filters,
     ready,
     setDeviceScopes,
-    setAppScope,
+    setAppScopes,
     setHeatmap,
     setWpm,
     setInterval,

@@ -18,10 +18,10 @@ import type { DeviceScope } from './analyze-types'
 interface Props {
   uid: string
   deviceScope: DeviceScope
-  /** App filter — see WpmChart.Props.appScope. Forwarded to the
+  /** App filter — see WpmChart.Props.appScopes. Forwarded to the
    * daily-summary fetch and to TypingProfileCard so every per-app
    * subview re-aggregates from the same single-app minute set. */
-  appScope: string | null
+  appScopes: string[]
   /** Snapshot the parent already resolved for the current scope —
    * Profile uses it to map bigram keycodes to fingers / hands. */
   snapshot: TypingKeymapSnapshot | null
@@ -30,8 +30,8 @@ interface Props {
   fingerOverrides: Record<string, FingerType>
 }
 
-export function SummaryView({ uid, deviceScope, appScope, snapshot, fingerOverrides }: Props) {
-  const { daily } = useDailySummary(uid, deviceScope, appScope)
+export function SummaryView({ uid, deviceScope, appScopes, snapshot, fingerOverrides }: Props) {
+  const { daily } = useDailySummary(uid, deviceScope, appScopes)
   const today = useLocalToday()
   return (
     <div className="flex h-full w-full flex-col gap-3">
@@ -40,7 +40,7 @@ export function SummaryView({ uid, deviceScope, appScope, snapshot, fingerOverri
       <TypingProfileCard
         uid={uid}
         deviceScope={deviceScope}
-        appScope={appScope}
+        appScopes={appScopes}
         daily={daily}
         today={today}
         snapshot={snapshot}
@@ -52,7 +52,7 @@ export function SummaryView({ uid, deviceScope, appScope, snapshot, fingerOverri
           in a different app, which is the opposite of what the card
           is meant to convey, so we only render it when no app filter
           is active. */}
-      {appScope === null && (
+      {appScopes.length === 0 && (
         <StreakGoalCard uid={uid} daily={daily} today={today} />
       )}
     </div>

@@ -42,8 +42,8 @@ interface BigramsChartProps {
   uid: string
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
-  /** App filter — see WpmChart.Props.appScope. */
-  appScope: string | null
+  /** App filter — see WpmChart.Props.appScopes. */
+  appScopes: string[]
   topLimit: number
   slowLimit: number
   fingerLimit: number
@@ -71,7 +71,7 @@ export function BigramsChart({
   uid,
   range,
   deviceScopes,
-  appScope,
+  appScopes,
   topLimit,
   slowLimit,
   fingerLimit,
@@ -101,7 +101,7 @@ export function BigramsChart({
     setError(false)
     fetchBigramAggregateForRange(uid, scope, range.fromMs, range.toMs, 'top', {
       limit: ALL_PAIRS_LIMIT,
-    }, appScope)
+    }, appScopes)
       .then((next) => {
         if (cancelled) return
         setResult(next)
@@ -118,7 +118,7 @@ export function BigramsChart({
     }
     // scope is captured inside the effect via closure but not listed —
     // scopeKey is the stable identity proxy.
-  }, [uid, range.fromMs, range.toMs, scopeKey, appScope])
+  }, [uid, range.fromMs, range.toMs, scopeKey, appScopes.join('|')])
 
   const entries = result.entries
 

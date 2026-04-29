@@ -29,11 +29,11 @@ export function listMinuteStatsForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingMinuteStatsRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScope)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScope)
-  return window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScope)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, scope.machineHash, fromMs, toMs, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, fromMs, toMs, appScopes)
+  return window.vialAPI.typingAnalyticsListMinuteStats(uid, fromMs, toMs, appScopes)
 }
 
 export function listBksMinuteForScope(
@@ -41,11 +41,11 @@ export function listBksMinuteForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingBksMinuteRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, scope.machineHash, fromMs, toMs, appScope)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, fromMs, toMs, appScope)
-  return window.vialAPI.typingAnalyticsListBksMinute(uid, fromMs, toMs, appScope)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListBksMinuteForHash(uid, scope.machineHash, fromMs, toMs, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListBksMinuteLocal(uid, fromMs, toMs, appScopes)
+  return window.vialAPI.typingAnalyticsListBksMinute(uid, fromMs, toMs, appScopes)
 }
 
 export function listMatrixCellsForScope(
@@ -53,11 +53,11 @@ export function listMatrixCellsForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingMatrixCellRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsForHash(uid, scope.machineHash, fromMs, toMs, appScope)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsLocal(uid, fromMs, toMs, appScope)
-  return window.vialAPI.typingAnalyticsListMatrixCells(uid, fromMs, toMs, appScope)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsForHash(uid, scope.machineHash, fromMs, toMs, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsLocal(uid, fromMs, toMs, appScopes)
+  return window.vialAPI.typingAnalyticsListMatrixCells(uid, fromMs, toMs, appScopes)
 }
 
 /** Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
@@ -70,11 +70,11 @@ export function listMatrixCellsByDayForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingMatrixCellDailyRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayForHash(uid, scope.machineHash, fromMs, toMs, appScope)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayLocal(uid, fromMs, toMs, appScope)
-  return window.vialAPI.typingAnalyticsListMatrixCellsByDay(uid, fromMs, toMs, appScope)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayForHash(uid, scope.machineHash, fromMs, toMs, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListMatrixCellsByDayLocal(uid, fromMs, toMs, appScopes)
+  return window.vialAPI.typingAnalyticsListMatrixCellsByDay(uid, fromMs, toMs, appScopes)
 }
 
 export function listLayerUsageForScope(
@@ -82,11 +82,11 @@ export function listLayerUsageForScope(
   scope: DeviceScope,
   fromMs: number,
   toMs: number,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingLayerUsageRow[]> {
-  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListLayerUsageForHash(uid, scope.machineHash, fromMs, toMs, appScope)
-  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListLayerUsageLocal(uid, fromMs, toMs, appScope)
-  return window.vialAPI.typingAnalyticsListLayerUsage(uid, fromMs, toMs, appScope)
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListLayerUsageForHash(uid, scope.machineHash, fromMs, toMs, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListLayerUsageLocal(uid, fromMs, toMs, appScopes)
+  return window.vialAPI.typingAnalyticsListLayerUsage(uid, fromMs, toMs, appScopes)
 }
 
 /** Fetch the matrix heatmap for every layer in `snapshot.keymap`,
@@ -101,7 +101,7 @@ export async function fetchMatrixHeatmapAllLayers(
   fromMs: number,
   toMs: number,
   scope: DeviceScope,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<Record<number, TypingHeatmapByCell>> {
   const layerCount = Array.isArray(snapshot.keymap) ? snapshot.keymap.length : 0
   if (layerCount === 0) return {}
@@ -109,7 +109,7 @@ export async function fetchMatrixHeatmapAllLayers(
   const results = await Promise.all(
     layerIdxs.map((l) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, l, fromMs, toMs, scope, appScope)
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, l, fromMs, toMs, scope, appScopes)
         .catch(() => ({} as TypingHeatmapByCell)),
     ),
   )
@@ -128,9 +128,9 @@ export function fetchBigramAggregateForRange(
   toMs: number,
   view: TypingBigramAggregateView,
   options?: TypingBigramAggregateOptions,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<TypingBigramAggregateResult> {
-  return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options, appScope)
+  return window.vialAPI.typingAnalyticsGetBigramAggregateForRange(uid, fromMs, toMs, view, scope, options, appScopes)
 }
 
 /** Layout Comparison metrics fetch. Single channel; the main-side
@@ -143,7 +143,7 @@ export function fetchLayoutComparisonForRange(
   fromMs: number,
   toMs: number,
   options: LayoutComparisonOptions,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): Promise<LayoutComparisonResult | null> {
-  return window.vialAPI.typingAnalyticsGetLayoutComparisonForRange(uid, fromMs, toMs, scope, options, appScope)
+  return window.vialAPI.typingAnalyticsGetLayoutComparisonForRange(uid, fromMs, toMs, scope, options, appScopes)
 }

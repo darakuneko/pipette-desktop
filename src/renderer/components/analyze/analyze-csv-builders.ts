@@ -92,7 +92,7 @@ interface ScopeArgs {
   /** Restrict every IPC the builder issues to single-app minutes
    * matching this name. `null` (or absent) means "no app filter" so
    * the existing all-apps export shape is preserved. */
-  appScope?: string | null
+  appScopes?: string[]
 }
 
 // --- Heatmap ranking ---------------------------------------------
@@ -102,13 +102,13 @@ export async function buildHeatmapCsv(args: ScopeArgs & {
   heatmap: Required<HeatmapFilters>
   t: TFunction
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, snapshot, heatmap, t } = args
+  const { uid, range, deviceScope, appScopes = [], snapshot, heatmap, t } = args
   const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
 
   const layerCells = new Map<number, TypingHeatmapByCell>()
   await Promise.all(selectedLayers.map(async (layer) => {
     try {
-      const cells = await window.vialAPI.typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScope)
+      const cells = await window.vialAPI.typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes)
       layerCells.set(layer, cells)
     } catch {
       layerCells.set(layer, {})
@@ -153,8 +153,8 @@ export async function buildWpmCsv(args: ScopeArgs & {
   viewMode: WpmViewMode
   minActiveMs: number
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, granularity, viewMode, minActiveMs } = args
-  const rows = await listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope).catch(() => [])
+  const { uid, range, deviceScope, appScopes = [], granularity, viewMode, minActiveMs } = args
+  const rows = await listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes).catch(() => [])
 
   if (viewMode === 'timeOfDay') {
     const hourOfDay = buildHourOfDayWpm({ rows, range, minActiveMs })
@@ -173,7 +173,7 @@ export async function buildWpmCsv(args: ScopeArgs & {
 
   const bucketMs = granularity === 'auto' ? pickBucketMs(range) : granularity
   const buckets = bucketMinuteStats(rows, range, bucketMs)
-  const bksRows = await listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs, appScope).catch(() => [])
+  const bksRows = await listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes).catch(() => [])
   const bksRate = buildBksRateBuckets({ bksRows, minuteRows: rows, range, bucketMs })
   const bksByBucket = new Map<number, number | null>()
   for (const b of bksRate.buckets) bksByBucket.set(b.bucketStartMs, b.bksPercent)
@@ -204,11 +204,11 @@ export async function buildIntervalCsv(args: ScopeArgs & {
   granularity: GranularityChoice
   viewMode: IntervalViewMode
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, granularity, viewMode } = args
+  const { uid, range, deviceScope, appScopes = [], granularity, viewMode } = args
   // Distribution forces own scope to match the live chart's
   // anti-meta-aggregate rule (see IntervalChart.tsx).
   const effectiveScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
-  const rows = await listMinuteStatsForScope(uid, effectiveScope, range.fromMs, range.toMs, appScope).catch(() => [])
+  const rows = await listMinuteStatsForScope(uid, effectiveScope, range.fromMs, range.toMs, appScopes).catch(() => [])
 
   if (viewMode === 'distribution') {
     const histogram = buildIntervalHistogram(rows, range)
@@ -245,14 +245,14 @@ export async function buildActivityCsv(args: ScopeArgs & {
   metric: ActivityMetric
   minActiveMs: number
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, metric, minActiveMs } = args
+  const { uid, range, deviceScope, appScopes = [], metric, minActiveMs } = args
 
   if (metric === 'sessions') {
     // Sessions stay un-filtered by app: the typing_sessions table
     // tracks "started typing → idle gap" boundaries and has no
     // app_name column; routing the filter through here would silently
     // drop every session, which would read as a bug. Match the
-    // SessionDistribution chart's behaviour and ignore appScope.
+    // SessionDistribution chart's behaviour and ignore appScopes.
     const sessions = isHashScope(deviceScope)
       ? await window.vialAPI.typingAnalyticsListSessionsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs).catch(() => [])
       : isOwnScope(deviceScope)
@@ -266,7 +266,7 @@ export async function buildActivityCsv(args: ScopeArgs & {
     }
   }
 
-  const rows = await listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope).catch(() => [])
+  const rows = await listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes).catch(() => [])
   const grid = buildActivityGrid({ rows, range, minActiveMs })
   const csvRows = grid.cells.map((c) => [c.dow, c.hour, c.keystrokes, c.activeMs, c.wpm, c.qualified ? 1 : 0])
   return {
@@ -282,11 +282,11 @@ export async function buildLayerCsv(args: ScopeArgs & {
   baseLayer: number
   t: TFunction
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, snapshot, baseLayer, t } = args
+  const { uid, range, deviceScope, appScopes = [], snapshot, baseLayer, t } = args
 
   const [keystrokeRows, activationCells, prefs] = await Promise.all([
-    listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs, appScope).catch(() => []),
-    listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope).catch(() => []),
+    listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes).catch(() => []),
+    listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes).catch(() => []),
     window.vialAPI.pipetteSettingsGet(uid).catch(() => null),
   ])
   const layerNames = Array.isArray(prefs?.layerNames) ? prefs.layerNames : []
@@ -334,10 +334,10 @@ export async function buildErgonomicsCsv(args: ScopeArgs & {
   fingerOverrides: Record<string, FingerType>
   t: TFunction
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, snapshot, fingerOverrides, t } = args
+  const { uid, range, deviceScope, appScopes = [], snapshot, fingerOverrides, t } = args
   const layout = snapshot.layout as KeyboardLayout | null
   const keys = layout?.keys ?? []
-  const layerCells = await fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScope)
+  const layerCells = await fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScopes)
   const merged = mergeLayerHeatmaps(layerCells)
   const aggregation = aggregateErgonomics(merged, keys, fingerOverrides)
 
@@ -365,9 +365,9 @@ export async function buildErgonomicsCsv(args: ScopeArgs & {
 const BIGRAMS_EXPORT_LIMIT = 5000
 
 export async function buildBigramsCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null } = args
+  const { uid, range, deviceScope, appScopes = [] } = args
   const result = await fetchBigramAggregateForRange(
-    uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT }, appScope,
+    uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT }, appScopes,
   ).catch(() => ({ view: 'top' as const, entries: [] }))
   const entries = result.view === 'top' ? result.entries : []
   const rows = entries.map((e) => [
@@ -388,7 +388,7 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
   targetLayoutId: string
   t: TFunction
 }): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScope = null, sourceLayoutId, targetLayoutId, t } = args
+  const { uid, range, deviceScope, appScopes = [], sourceLayoutId, targetLayoutId, t } = args
   const header = ['layout_id', 'layout_label', 'metric', 'key', 'label', 'value']
   const source = pickLayoutComparisonInput(sourceLayoutId)
   const target = pickLayoutComparisonInput(targetLayoutId)
@@ -397,7 +397,7 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
   }
   const result = await fetchLayoutComparisonForRange(uid, deviceScope, range.fromMs, range.toMs, {
     source, targets: [source, target], metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
-  }, appScope).catch(() => null)
+  }, appScopes).catch(() => null)
 
   const rows: unknown[][] = []
   for (const targetResult of result?.targets ?? []) {

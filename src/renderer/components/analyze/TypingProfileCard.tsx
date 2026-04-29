@@ -39,10 +39,10 @@ import { useKeycodeFingerMap } from './use-keycode-finger-map'
 interface Props {
   uid: string
   deviceScope: DeviceScope
-  /** App filter — see WpmChart.Props.appScope. Threaded into the
+  /** App filter — see WpmChart.Props.appScopes. Threaded into the
    * bigram and minute-stats fetches so the per-app summary doesn't
    * blend across the whole 30-day window. */
-  appScope: string | null
+  appScopes: string[]
   daily: ReadonlyArray<TypingDailySummary>
   today: string
   /** Required for the keycode → finger map. When `null`, hand
@@ -61,7 +61,7 @@ const BIGRAM_FETCH_LIMIT = 5_000
 export function TypingProfileCard({
   uid,
   deviceScope,
-  appScope,
+  appScopes,
   daily,
   today,
   snapshot,
@@ -80,22 +80,22 @@ export function TypingProfileCard({
 
   useEffect(() => {
     let cancelled = false
-    fetchBigramAggregateForRange(uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAM_FETCH_LIMIT }, appScope)
+    fetchBigramAggregateForRange(uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAM_FETCH_LIMIT }, appScopes)
       .then((res) => {
         if (cancelled) return
         setBigrams(res.view === 'top' ? res.entries : [])
       })
       .catch(() => { if (!cancelled) setBigrams([]) })
     return () => { cancelled = true }
-  }, [uid, deviceScope, range, appScope])
+  }, [uid, deviceScope, range, appScopes.join('|')])
 
   useEffect(() => {
     let cancelled = false
-    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScope)
+    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes)
       .then((rows) => { if (!cancelled) setMinuteStats(rows) })
       .catch(() => { if (!cancelled) setMinuteStats([]) })
     return () => { cancelled = true }
-  }, [uid, deviceScope, range, appScope])
+  }, [uid, deviceScope, range, appScopes.join('|')])
 
   const keycodeFinger = useKeycodeFingerMap(snapshot, fingerOverrides)
 

@@ -50,9 +50,9 @@ export interface AnalyzeExportContext {
   range: RangeMs
   deviceScope: DeviceScope
   /** App filter forwarded to every builder so the CSV mirrors what
-   * the on-screen chart shows for the current selection. `null` =
-   * "All apps" — same row set as the pre-Monitor-App export. */
-  appScope: string | null
+   * the on-screen chart shows for the current selection. Empty array
+   * = "All apps" — same row set as the pre-Monitor-App export. */
+  appScopes: string[]
   snapshot: TypingKeymapSnapshot | null
   heatmap: Required<HeatmapFilters>
   wpm: { granularity: GranularityChoice; viewMode: WpmViewMode; minActiveMs: number }
@@ -226,13 +226,13 @@ function pickBuilders(
 ): Array<Promise<CsvBundleEntry>> {
   const out: Array<Promise<CsvBundleEntry>> = []
   // Bundle the scope axes once so every builder gets the same
-  // (uid, range, deviceScope, appScope) tuple without each call site
+  // (uid, range, deviceScope, appScopes) tuple without each call site
   // repeating the per-axis fan-out.
   const scope = {
     uid: ctx.uid,
     range: ctx.range,
     deviceScope: ctx.deviceScope,
-    appScope: ctx.appScope,
+    appScopes: ctx.appScopes,
   }
   if (selected.heatmap && ctx.snapshot !== null) {
     out.push(buildHeatmapCsv({ ...scope, snapshot: ctx.snapshot, heatmap: ctx.heatmap, t }))

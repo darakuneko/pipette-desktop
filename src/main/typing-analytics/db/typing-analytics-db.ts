@@ -700,7 +700,10 @@ export class TypingAnalyticsDB {
     // Aggregates across every machine_hash (the Analyze tab can scope
     // device-wise at the renderer, but the SQL stays device-agnostic
     // so `deviceScope: 'all'` works without a second statement).
-    // App filter: @appName IS NULL is the no-filter sentinel.
+    // App filter: @appNamesJson is a JSON array of app names; an
+    // empty array (`'[]'`) is the no-filter sentinel so the same
+    // prepared statement covers single-app, multi-app and unfiltered
+    // queries via SQLite's `json_each`.
     this.selectMatrixHeatmapInRangeStmt = this.db.prepare(`
       SELECT m.row AS row, m.col AS col,
              SUM(m.count) AS total,
@@ -714,7 +717,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.row, m.col
     `)
 
@@ -732,7 +735,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.row, m.col
     `)
 
@@ -772,7 +775,7 @@ export class TypingAnalyticsDB {
        WHERE s.keyboard_uid = @uid
          AND s.is_deleted = 0
          AND t.is_deleted = 0
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -790,7 +793,7 @@ export class TypingAnalyticsDB {
          AND s.machine_hash = @machineHash
          AND s.is_deleted = 0
          AND t.is_deleted = 0
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -849,7 +852,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY dow, hour
     `)
 
@@ -865,7 +868,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY dow, hour
     `)
 
@@ -884,7 +887,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -900,7 +903,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -926,7 +929,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -945,7 +948,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -972,7 +975,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -993,7 +996,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (@appName IS NULL OR m.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -1003,11 +1006,12 @@ export class TypingAnalyticsDB {
     // only groups by minute_ts (a scope can legitimately write to the
     // same minute_ts bucket more than once when a machine_hash change
     // lands; SUM / MIN / AVG / MAX merges those scopes into one row).
-    // App filter: @appName IS NULL means "no filter" so the same
-    // statement serves both filtered and unfiltered queries. Mixed /
-    // unknown minutes (app_name IS NULL on the row) only show up when
-    // no filter is set, matching the semantic the analytics service
-    // uses on the write side.
+    // App filter: @appNamesJson is a JSON array of app names; an
+    // empty array (`'[]'`) means "no filter" so the same statement
+    // serves both filtered and unfiltered queries. Mixed / unknown
+    // minutes (app_name IS NULL on the row) only show up when no
+    // filter is set, matching the semantic the analytics service uses
+    // on the write side.
     this.selectMinuteStatsInRangeForUidStmt = this.db.prepare(`
       SELECT t.minute_ts AS minuteMs,
              SUM(t.keystrokes) AS keystrokes,
@@ -1024,7 +1028,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1046,7 +1050,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1136,7 +1140,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1153,7 +1157,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1223,7 +1227,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1246,7 +1250,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1271,7 +1275,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (@appName IS NULL OR t.app_name = @appName)
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1294,7 +1298,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (@appName IS NULL OR t.app_name = @appName)
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1318,7 +1322,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (@appName IS NULL OR t.app_name = @appName)
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1342,7 +1346,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (@appName IS NULL OR t.app_name = @appName)
+             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1360,7 +1364,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1377,7 +1381,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1394,7 +1398,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
@@ -1412,7 +1416,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (@appName IS NULL OR t.app_name = @appName)
+         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
@@ -1793,14 +1797,14 @@ export class TypingAnalyticsDB {
     sinceMs: number,
     untilMs: number,
     machineHash?: string,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): Map<string, { total: number; tap: number; hold: number }> {
     const stmt = machineHash !== undefined
       ? this.selectMatrixHeatmapInRangeForHashStmt
       : this.selectMatrixHeatmapInRangeStmt
     const params = machineHash !== undefined
-      ? { uid, machineHash, layer, sinceMs, untilMs, appName: appScope }
-      : { uid, layer, sinceMs, untilMs, appName: appScope }
+      ? { uid, machineHash, layer, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }
+      : { uid, layer, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }
     const rows = stmt.all(params) as Array<{
       row: number
       col: number
@@ -1828,9 +1832,9 @@ export class TypingAnalyticsDB {
    * and ordered newest first. Live rows only. */
   listDailySummariesForUid(
     uid: string,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingDailySummary[] {
-    return this.selectDailySummariesForUidStmt.all({ uid, appName: appScope }) as TypingDailySummary[]
+    return this.selectDailySummariesForUidStmt.all({ uid, appNamesJson: JSON.stringify(appScopes) }) as TypingDailySummary[]
   }
 
   /** Daily summaries for a keyboard uid restricted to a single
@@ -1841,9 +1845,9 @@ export class TypingAnalyticsDB {
   listDailySummariesForUidAndHash(
     uid: string,
     machineHash: string,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingDailySummary[] {
-    return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash, appName: appScope }) as TypingDailySummary[]
+    return this.selectDailySummariesForUidAndHashStmt.all({ uid, machineHash, appNamesJson: JSON.stringify(appScopes) }) as TypingDailySummary[]
   }
 
   /** Daily interval summaries (min/p25/p50/p75/max) for a keyboard uid,
@@ -1871,9 +1875,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingActivityCell[] {
-    return this.selectActivityGridForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingActivityCell[]
+    return this.selectActivityGridForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingActivityCell[]
   }
 
   /** Same as {@link listActivityGridForUid} but restricted to a single
@@ -1884,9 +1888,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingActivityCell[] {
-    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingActivityCell[]
+    return this.selectActivityGridForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingActivityCell[]
   }
 
   /** Per-layer keystroke totals for the Analyze > Layer tab. Layers
@@ -1897,9 +1901,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingLayerUsageRow[] {
-    return this.selectLayerUsageForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingLayerUsageRow[]
+    return this.selectLayerUsageForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingLayerUsageRow[]
   }
 
   /** Same as {@link listLayerUsageForUid} but restricted to one
@@ -1909,9 +1913,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingLayerUsageRow[] {
-    return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingLayerUsageRow[]
+    return this.selectLayerUsageForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingLayerUsageRow[]
   }
 
   /** Per-(layer, row, col) press totals for the Analyze > Layer
@@ -1922,9 +1926,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMatrixCellRow[] {
-    return this.selectMatrixCellsForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingMatrixCellRow[]
+    return this.selectMatrixCellsForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingMatrixCellRow[]
   }
 
   /** Same as {@link listMatrixCellsForUid} but restricted to one
@@ -1934,9 +1938,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMatrixCellRow[] {
-    return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingMatrixCellRow[]
+    return this.selectMatrixCellsForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingMatrixCellRow[]
   }
 
   /** Per-(localDay, layer, row, col) press totals for the Analyze
@@ -1948,9 +1952,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMatrixCellDailyRow[] {
-    const rows = this.selectMatrixCellsByDayForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as MatrixCellsByDayDbRow[]
+    const rows = this.selectMatrixCellsByDayForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as MatrixCellsByDayDbRow[]
     return rows.map(matrixCellsByDayDbRowToDailyRow)
   }
 
@@ -1961,28 +1965,29 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMatrixCellDailyRow[] {
-    const rows = this.selectMatrixCellsByDayForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as MatrixCellsByDayDbRow[]
+    const rows = this.selectMatrixCellsByDayForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as MatrixCellsByDayDbRow[]
     return rows.map(matrixCellsByDayDbRowToDailyRow)
   }
 
   /** Minute-raw stats for the Analyze WPM / Interval charts over the
    * `[sinceMs, untilMs)` window. Callers bucket these on the renderer
    * side so the SQL layer is independent of the user-picked bucket
-   * width. Rows ordered by minute_ts ASC. `appScope === null` (or
-   * omitted) keeps the result identical to the pre-filter behaviour. */
+   * width. Rows ordered by minute_ts ASC. An empty `appScopes` array
+   * (or omitted) keeps the result identical to the pre-filter
+   * behaviour. */
   listMinuteStatsInRangeForUid(
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMinuteStatsRow[] {
     return this.selectMinuteStatsInRangeForUidStmt.all({
       uid,
       sinceMs,
       untilMs,
-      appName: appScope,
+      appNamesJson: JSON.stringify(appScopes),
     }) as TypingMinuteStatsRow[]
   }
 
@@ -1993,14 +1998,14 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingMinuteStatsRow[] {
     return this.selectMinuteStatsInRangeForUidAndHashStmt.all({
       uid,
       machineHash,
       sinceMs,
       untilMs,
-      appName: appScope,
+      appNamesJson: JSON.stringify(appScopes),
     }) as TypingMinuteStatsRow[]
   }
 
@@ -2064,10 +2069,10 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): BigramMinuteCellRow[] {
     return this.toBigramMinuteCellRows(
-      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }),
+      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }),
     )
   }
 
@@ -2078,7 +2083,7 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): BigramMinuteCellRow[] {
     return this.toBigramMinuteCellRows(
       this.selectBigramMinutesInRangeForUidAndHashStmt.all({
@@ -2086,7 +2091,7 @@ export class TypingAnalyticsDB {
         machineHash,
         sinceMs,
         untilMs,
-        appName: appScope,
+        appNamesJson: JSON.stringify(appScopes),
       }),
     )
   }
@@ -2124,9 +2129,9 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingBksMinuteRow[] {
-    return this.selectBksMinuteInRangeForUidStmt.all({ uid, sinceMs, untilMs, appName: appScope }) as TypingBksMinuteRow[]
+    return this.selectBksMinuteInRangeForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingBksMinuteRow[]
   }
 
   /** Same as {@link listBksMinuteInRangeForUid} but restricted to a
@@ -2136,9 +2141,9 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): TypingBksMinuteRow[] {
-    return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appName: appScope }) as TypingBksMinuteRow[]
+    return this.selectBksMinuteInRangeForUidAndHashStmt.all({ uid, machineHash, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes) }) as TypingBksMinuteRow[]
   }
 
   /** Peak records for the Analyze summary cards across every scope of
@@ -2148,17 +2153,17 @@ export class TypingAnalyticsDB {
     uid: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): PeakRecords {
     // typing_sessions has no app_name column — sessions span multiple
     // minutes and the app focus can change during one. We deliberately
-    // ignore appScope for the session record so it stays a measure of
+    // ignore appScopes for the session record so it stays a measure of
     // raw uninterrupted typing rather than vanishing when the user
     // crosses an app boundary mid-burst. The four minute-stats records
     // do honour the filter so the WPM / keystroke-per-minute peaks
     // match the rest of the per-app aggregates.
     const sessParams = { uid, sinceMs, untilMs }
-    const params = { ...sessParams, appName: appScope }
+    const params = { ...sessParams, appNamesJson: JSON.stringify(appScopes) }
     const wpm = this.selectPeakWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const low = this.selectLowestWpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidStmt.get(params) as { value: number; atMs: number } | undefined
@@ -2180,10 +2185,10 @@ export class TypingAnalyticsDB {
     machineHash: string,
     sinceMs: number,
     untilMs: number,
-    appScope: string | null = null,
+    appScopes: readonly string[] = [],
   ): PeakRecords {
     const sessParams = { uid, machineHash, sinceMs, untilMs }
-    const params = { ...sessParams, appName: appScope }
+    const params = { ...sessParams, appNamesJson: JSON.stringify(appScopes) }
     const wpm = this.selectPeakWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const low = this.selectLowestWpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined
     const kpm = this.selectPeakKpmInRangeForUidAndHashStmt.get(params) as { value: number; atMs: number } | undefined

@@ -1200,7 +1200,8 @@
       },
       "app": "アプリ",
       "appOption": {
-        "none": "全アプリ合算"
+        "none": "全アプリ合算",
+        "multi": "{{first}} 他{{rest}}件"
       },
       "unit": "表示",
       "unitOption": {

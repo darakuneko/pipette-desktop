@@ -34,8 +34,8 @@ interface Props {
   uid: string
   range: RangeMs
   deviceScopes: readonly DeviceScope[]
-  /** App filter — see WpmChart.Props.appScope. */
-  appScope: string | null
+  /** App filter — see WpmChart.Props.appScopes. */
+  appScopes: string[]
   snapshot: TypingKeymapSnapshot | null
   /** Persisted source / target read from `useAnalyzeFilters`. The
    * AnalyzePane filter row owns the picker UI; this view stays
@@ -54,7 +54,7 @@ export function LayoutComparisonView({
   uid,
   range,
   deviceScopes,
-  appScope,
+  appScopes,
   snapshot,
   filter,
   onSkipPercentChange,
@@ -68,6 +68,9 @@ export function LayoutComparisonView({
 
   const scope = primaryDeviceScope(deviceScopes)
   const scopeKey = scopeToSelectValue(scope)
+  // Stable string identity for the app filter so the effect doesn't
+  // refire when the parent passes a fresh-but-equal array.
+  const appScopesKey = appScopes.join('|')
 
   // Run the fetch only when the user has both ends of the comparison
   // chosen and there's a snapshot to anchor against. The IPC handler
@@ -98,7 +101,7 @@ export function LayoutComparisonView({
       source,
       targets: [source, target],
       metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
-    }, appScope)
+    }, appScopes)
       .then((next) => {
         if (cancelled) return
         setResult(next)
@@ -113,7 +116,8 @@ export function LayoutComparisonView({
     return () => {
       cancelled = true
     }
-  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch, appScope])
+    // appScopesKey carries appScopes' identity for memo equality.
+  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch, appScopesKey])
 
   const columnLabels = useMemo(() => {
     if (!result) return []

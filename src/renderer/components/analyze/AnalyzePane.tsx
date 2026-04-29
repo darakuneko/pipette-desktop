@@ -206,7 +206,7 @@ export function AnalyzePane({
   const {
     filters: {
       deviceScopes,
-      appScope,
+      appScopes,
       heatmap: heatmapFilter,
       wpm: wpmFilter,
       interval: intervalFilter,
@@ -218,7 +218,7 @@ export function AnalyzePane({
     },
     ready: filtersReady,
     setDeviceScopes,
-    setAppScope,
+    setAppScopes,
     setHeatmap,
     setWpm,
     setInterval: setIntervalFilter,
@@ -553,7 +553,9 @@ export function AnalyzePane({
         ? t('analyze.snapshotTimeline.current')
         : formatDateTime(selectedSnapshotSavedAt)
     const rangeLabel = `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
-    const appLabel = appScope ?? t('analyze.filters.appOption.none')
+    const appLabel = appScopes.length === 0
+      ? t('analyze.filters.appOption.none')
+      : appScopes.join(', ')
 
     return {
       uid: selected.uid,
@@ -561,7 +563,7 @@ export function AnalyzePane({
       machineHashOrAll,
       range,
       deviceScope: scope,
-      appScope,
+      appScopes,
       snapshot: effectiveSnapshot,
       heatmap: heatmapFilter,
       wpm: {
@@ -583,7 +585,7 @@ export function AnalyzePane({
       conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
-    selected, deviceScopes, appScope, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    selected, deviceScopes, appScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
     heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
     layoutComparisonFilter, fingerAssignments, t,
   ])
@@ -813,8 +815,8 @@ export function AnalyzePane({
                           uid={selected.uid}
                           range={range}
                           deviceScopes={deviceScopes}
-                          value={appScope}
-                          onChange={setAppScope}
+                          value={appScopes}
+                          onChange={setAppScopes}
                           ariaLabel={t('analyze.filters.app')}
                         />
                       </label>
@@ -1013,7 +1015,7 @@ export function AnalyzePane({
                 <SummaryView
                   uid={selected.uid}
                   deviceScope={deviceScopes[0]}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />
@@ -1022,7 +1024,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   granularity={wpmFilter.granularity}
                   viewMode={wpmFilter.viewMode}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1032,7 +1034,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}
@@ -1042,7 +1044,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScope={deviceScopes[0]}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   metric={activityFilter.metric}
                   view={activityFilter.view}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1056,7 +1058,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScope={deviceScopes[0]}
-                    appScope={appScope}
+                    appScopes={appScopes}
                     snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
@@ -1072,7 +1074,7 @@ export function AnalyzePane({
                     uid={selected.uid}
                     range={range}
                     deviceScopes={deviceScopes}
-                    appScope={appScope}
+                    appScopes={appScopes}
                     snapshot={effectiveSnapshot}
                     fingerOverrides={fingerAssignments}
                     viewMode={ergonomicsFilter.viewMode}
@@ -1090,7 +1092,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   topLimit={bigramsFilter.topLimit}
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}
@@ -1107,7 +1109,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   range={range}
                   deviceScopes={deviceScopes}
-                  appScope={appScope}
+                  appScopes={appScopes}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
                   onSkipPercentChange={onSkipPercentChange}
@@ -1125,7 +1127,7 @@ export function AnalyzePane({
                       uid={selected.uid}
                       range={range}
                       deviceScopes={deviceScopes}
-                      appScope={appScope}
+                      appScopes={appScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="keystrokes"
                       baseLayer={layerFilter.baseLayer}
@@ -1136,7 +1138,7 @@ export function AnalyzePane({
                       uid={selected.uid}
                       range={range}
                       deviceScopes={deviceScopes}
-                      appScope={appScope}
+                      appScopes={appScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="activations"
                       baseLayer={layerFilter.baseLayer}

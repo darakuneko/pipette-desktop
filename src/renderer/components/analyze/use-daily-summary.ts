@@ -21,33 +21,39 @@ export interface DailySummaryState {
 }
 
 /** Fetches the cross-machine daily summary for `uid` honouring
- * `deviceScope` (own / all / hash) and the optional `appScope` filter.
- * Returns the latest payload, or `[]` before the IPC resolves and on
- * error. Re-fires whenever `uid` / the scope / the app filter changes;
- * cancels in-flight responses on unmount or any of the swaps. */
+ * `deviceScope` (own / all / hash) and the optional `appScopes`
+ * filter (empty array = no filter). Returns the latest payload, or
+ * `[]` before the IPC resolves and on error. Re-fires whenever `uid`
+ * / the scope / the app filter changes; cancels in-flight responses
+ * on unmount or any of the swaps. */
 export function useDailySummary(
   uid: string,
   deviceScope: DeviceScope,
-  appScope: string | null = null,
+  appScopes: string[] = [],
 ): DailySummaryState {
   const [daily, setDaily] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
   const scopeKey = scopeToSelectValue(deviceScope)
+  // Stable string identity for the app filter so the effect doesn't
+  // refire when the parent passes a fresh-but-equal array each render.
+  const appScopesKey = appScopes.join('|')
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
     const dailyPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash, appScope)
+      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash, appScopes)
       : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsListItemsLocal(uid, appScope)
-        : window.vialAPI.typingAnalyticsListItems(uid, appScope)
+        ? window.vialAPI.typingAnalyticsListItemsLocal(uid, appScopes)
+        : window.vialAPI.typingAnalyticsListItems(uid, appScopes)
     void dailyPromise
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, appScope])
+    // appScopesKey carries the array's identity, so the raw array can
+    // be omitted from deps.
+  }, [uid, scopeKey, appScopesKey])
 
   return { daily, loading }
 }

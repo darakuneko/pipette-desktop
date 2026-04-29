@@ -27,7 +27,7 @@ import type {
 } from '../../shared/types/typing-analytics'
 import type { KleKey } from '../../shared/kle/types'
 import { canonicalScopeKey } from '../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, parseDeviceScope } from '../../shared/types/analyze-filters'
+import { isHashScope, isOwnScope, normalizeAppScopes, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
 import { getCurrentAppName } from './app-monitor'
 import { ensureCacheIsFresh } from './cache-rebuild'
@@ -95,14 +95,6 @@ import {
 
 const FLUSH_DEBOUNCE_MS = 1_000
 
-/** Coerce an IPC `appScope` argument to `string | null`. Empty
- * strings collapse to null so the analyze panel's "All apps" choice
- * round-trips identically whether the renderer sends `null` or `''`. */
-function parseAppScopeArg(value: unknown): string | null {
-  if (typeof value !== 'string') return null
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
 
 let initialization: Promise<void> | null = null
 let ipcRegistered = false
@@ -205,9 +197,9 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS,
-    async (_event, uid: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, appScopes: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
-      return listTypingDailySummaries(uid, parseAppScopeArg(appScope))
+      return listTypingDailySummaries(uid, normalizeAppScopes(appScopes))
     },
   )
 
@@ -247,10 +239,10 @@ export function setupTypingAnalyticsIpc(): void {
   // wired into sync-service so they share the same credential check.
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL,
-    async (_event, uid: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, appScopes: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const ownHash = await getMachineHash()
-      return listTypingDailySummariesForHash(uid, ownHash, parseAppScopeArg(appScope))
+      return listTypingDailySummariesForHash(uid, ownHash, normalizeAppScopes(appScopes))
     },
   )
 
@@ -264,10 +256,10 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, appScope: unknown): Promise<TypingDailySummary[]> => {
+    async (_event, uid: unknown, machineHash: unknown, appScopes: unknown): Promise<TypingDailySummary[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
-      return listTypingDailySummariesForHash(uid, machineHash, parseAppScopeArg(appScope))
+      return listTypingDailySummariesForHash(uid, machineHash, normalizeAppScopes(appScopes))
     },
   )
 
@@ -282,45 +274,45 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingActivityCell[]> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingActivityCell[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingActivityGridForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return listTypingActivityGridForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingLayerUsageRow[]> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingLayerUsageRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingLayerUsageInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return listTypingLayerUsageInRangeForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellRow[]> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMatrixCellsInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsInRangeForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellDailyRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMatrixCellsByDayInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsByDayInRangeForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
@@ -332,14 +324,14 @@ export function setupTypingAnalyticsIpc(): void {
       machineHash: unknown,
       sinceMs: unknown,
       untilMs: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      const app = parseAppScopeArg(appScope)
-      return listTypingMinuteStatsInRangeForHash(uid, machineHash, since, until, app)
+      const apps = normalizeAppScopes(appScopes)
+      return listTypingMinuteStatsInRangeForHash(uid, machineHash, since, until, apps)
     },
   )
 
@@ -356,23 +348,23 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingBksMinuteRow[]> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingBksMinuteRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       if (typeof machineHash !== 'string' || machineHash.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingBksMinuteInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return listTypingBksMinuteInRangeForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH,
-    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, machineHash: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       if (typeof machineHash !== 'string' || machineHash.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return getTypingPeakRecordsInRangeForHash(uid, machineHash, since, until, parseAppScopeArg(appScope))
+      return getTypingPeakRecordsInRangeForHash(uid, machineHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
@@ -404,85 +396,85 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingActivityCell[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingActivityCell[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingActivityGrid(uid, since, until, parseAppScopeArg(appScope))
+      return listTypingActivityGrid(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingActivityCell[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingActivityCell[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingActivityGridForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return listTypingActivityGridForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingLayerUsageRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingLayerUsageRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingLayerUsageInRange(uid, since, until, parseAppScopeArg(appScope))
+      return listTypingLayerUsageInRange(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingLayerUsageRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingLayerUsageRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingLayerUsageInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return listTypingLayerUsageInRangeForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMatrixCellsInRange(uid, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsInRange(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingMatrixCellsInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsInRangeForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellDailyRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingMatrixCellsByDayInRange(uid, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsByDayInRange(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingMatrixCellDailyRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingMatrixCellDailyRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingMatrixCellsByDayInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return listTypingMatrixCellsByDayInRangeForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
@@ -493,13 +485,13 @@ export function setupTypingAnalyticsIpc(): void {
       uid: unknown,
       sinceMs: unknown,
       untilMs: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      const app = parseAppScopeArg(appScope)
-      return listTypingMinuteStatsInRange(uid, since, until, app)
+      const apps = normalizeAppScopes(appScopes)
+      return listTypingMinuteStatsInRange(uid, since, until, apps)
     },
   )
 
@@ -510,14 +502,14 @@ export function setupTypingAnalyticsIpc(): void {
       uid: unknown,
       sinceMs: unknown,
       untilMs: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<TypingMinuteStatsRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      const app = parseAppScopeArg(appScope)
-      return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until, app)
+      const apps = normalizeAppScopes(appScopes)
+      return listTypingMinuteStatsInRangeForHash(uid, ownHash, since, until, apps)
     },
   )
 
@@ -544,43 +536,43 @@ export function setupTypingAnalyticsIpc(): void {
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingBksMinuteRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingBksMinuteRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return listTypingBksMinuteInRange(uid, since, until, parseAppScopeArg(appScope))
+      return listTypingBksMinuteInRange(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<TypingBksMinuteRow[]> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<TypingBksMinuteRow[]> => {
       if (typeof uid !== 'string' || uid.length === 0) return []
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return listTypingBksMinuteInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return listTypingBksMinuteInRangeForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
-      return getTypingPeakRecordsInRange(uid, since, until, parseAppScopeArg(appScope))
+      return getTypingPeakRecordsInRange(uid, since, until, normalizeAppScopes(appScopes))
     },
   )
 
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL,
-    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScope: unknown): Promise<PeakRecords> => {
+    async (_event, uid: unknown, sinceMs: unknown, untilMs: unknown, appScopes: unknown): Promise<PeakRecords> => {
       if (typeof uid !== 'string' || uid.length === 0) return emptyPeakRecords()
       const since = typeof sinceMs === 'number' && Number.isFinite(sinceMs) && sinceMs >= 0 ? sinceMs : 0
       const until = typeof untilMs === 'number' && Number.isFinite(untilMs) && untilMs > since ? untilMs : Number.MAX_SAFE_INTEGER
       const ownHash = await getMachineHash()
-      return getTypingPeakRecordsInRangeForHash(uid, ownHash, since, until, parseAppScopeArg(appScope))
+      return getTypingPeakRecordsInRangeForHash(uid, ownHash, since, until, normalizeAppScopes(appScopes))
     },
   )
 
@@ -619,7 +611,7 @@ export function setupTypingAnalyticsIpc(): void {
       sinceMs: unknown,
       untilMs: unknown,
       scope: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<TypingHeatmapByCell> => {
       if (typeof uid !== 'string' || uid.length === 0) return {}
       if (typeof layer !== 'number' || !Number.isFinite(layer) || layer < 0) return {}
@@ -638,8 +630,8 @@ export function setupTypingAnalyticsIpc(): void {
         : isHashScope(parsedScope)
           ? parsedScope.machineHash
           : undefined
-      const app = parseAppScopeArg(appScope)
-      const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash, app)
+      const apps = normalizeAppScopes(appScopes)
+      const totals = db.aggregateMatrixCountsForUidInRange(uid, layer, sinceMinuteMs, untilMinuteMs, machineHash, apps)
       const out: TypingHeatmapByCell = {}
       for (const [key, cell] of totals) {
         out[key] = { total: cell.total, tap: cell.tap, hold: cell.hold }
@@ -714,7 +706,7 @@ export function setupTypingAnalyticsIpc(): void {
       view: unknown,
       scope: unknown,
       options: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<TypingBigramAggregateResult> => {
       // Reject unknown views up front so parsedView is the trusted union
       // and downstream branches can return literal-typed empty results.
@@ -732,7 +724,7 @@ export function setupTypingAnalyticsIpc(): void {
       const opts = parseBigramAggregateOptions(options)
       const limit = opts.limit ?? 30
       const minSample = opts.minSampleCount ?? 5
-      const app = parseAppScopeArg(appScope)
+      const apps = normalizeAppScopes(appScopes)
 
       const db = getTypingAnalyticsDB()
       const machineHash = isOwnScope(parsedScope)
@@ -741,8 +733,8 @@ export function setupTypingAnalyticsIpc(): void {
           ? parsedScope.machineHash
           : undefined
       const rows = machineHash === undefined
-        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs, app)
-        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, app)
+        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs, apps)
+        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, apps)
       const totals = aggregatePairTotals(rows)
       if (parsedView === 'slow') {
         return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit) }
@@ -760,7 +752,7 @@ export function setupTypingAnalyticsIpc(): void {
       untilMs: unknown,
       scope: unknown,
       options: unknown,
-      appScope: unknown,
+      appScopes: unknown,
     ): Promise<LayoutComparisonResult | null> => {
       if (typeof uid !== 'string' || uid.length === 0) return null
       if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return null
@@ -769,7 +761,7 @@ export function setupTypingAnalyticsIpc(): void {
       if (parsedScope === null) return null
       const opts = parseLayoutComparisonOptions(options)
       if (!opts) return null
-      const appName = parseAppScopeArg(appScope)
+      const apps = normalizeAppScopes(appScopes)
       // Snapshots are only stored for the own device, so we always
       // resolve the source layer + KleKey geometry against the local
       // machine hash regardless of which scope the metric counts use.
@@ -790,7 +782,7 @@ export function setupTypingAnalyticsIpc(): void {
         sinceMinuteMs,
         untilMinuteMs,
         matrixHash,
-        appName,
+        apps,
       )
       return computeLayoutComparison({
         matrixCounts,
@@ -868,9 +860,9 @@ export function listTypingKeyboards(): TypingKeyboardSummary[] {
 /** Day-level summaries for one keyboard uid, newest first. */
 export function listTypingDailySummaries(
   uid: string,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingDailySummary[] {
-  return getTypingAnalyticsDB().listDailySummariesForUid(uid, appScope)
+  return getTypingAnalyticsDB().listDailySummariesForUid(uid, appScopes)
 }
 
 /** Pure-cache lookup for the Analyze > Interval chart. Returns every
@@ -897,9 +889,9 @@ export function listTypingActivityGrid(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingActivityCell[] {
-  return getTypingAnalyticsDB().listActivityGridForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listActivityGridForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingActivityGridForHash(
@@ -907,9 +899,9 @@ export function listTypingActivityGridForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingActivityCell[] {
-  return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listActivityGridForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Per-layer keystroke totals for the Analyze > Layer tab. Covers
@@ -918,9 +910,9 @@ export function listTypingLayerUsageInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingLayerUsageRow[] {
-  return getTypingAnalyticsDB().listLayerUsageForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listLayerUsageForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingLayerUsageInRangeForHash(
@@ -928,9 +920,9 @@ export function listTypingLayerUsageInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingLayerUsageRow[] {
-  return getTypingAnalyticsDB().listLayerUsageForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listLayerUsageForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Per-cell matrix totals for the Analyze > Layer activations mode.
@@ -939,9 +931,9 @@ export function listTypingMatrixCellsInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMatrixCellRow[] {
-  return getTypingAnalyticsDB().listMatrixCellsForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMatrixCellsForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingMatrixCellsInRangeForHash(
@@ -949,9 +941,9 @@ export function listTypingMatrixCellsInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMatrixCellRow[] {
-  return getTypingAnalyticsDB().listMatrixCellsForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMatrixCellsForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Per-(localDay, layer, row, col) totals for the Analyze Ergonomic
@@ -962,9 +954,9 @@ export function listTypingMatrixCellsByDayInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMatrixCellDailyRow[] {
-  return getTypingAnalyticsDB().listMatrixCellsByDayForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMatrixCellsByDayForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingMatrixCellsByDayInRangeForHash(
@@ -972,23 +964,23 @@ export function listTypingMatrixCellsByDayInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMatrixCellDailyRow[] {
-  return getTypingAnalyticsDB().listMatrixCellsByDayForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMatrixCellsByDayForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Minute-raw stats for the Analyze WPM / Interval charts over the
  * `[sinceMs, untilMs)` window. Callers bucket these on the renderer.
- * `appScope === null` (or omitted) keeps the pre-filter behaviour;
- * a non-null name restricts the query to single-app minutes that
- * matched it. */
+ * Empty `appScopes` (or omitted) keeps the pre-filter behaviour; a
+ * non-empty array restricts the query to minutes whose tagged app
+ * matches one of the listed names. */
 export function listTypingMinuteStatsInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMinuteStatsRow[] {
-  return getTypingAnalyticsDB().listMinuteStatsInRangeForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingMinuteStatsInRangeForHash(
@@ -996,9 +988,9 @@ export function listTypingMinuteStatsInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingMinuteStatsRow[] {
-  return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listMinuteStatsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Live sessions that intersect `[sinceMs, untilMs)`. Powers the
@@ -1025,9 +1017,9 @@ export function listTypingBksMinuteInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingBksMinuteRow[] {
-  return getTypingAnalyticsDB().listBksMinuteInRangeForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listBksMinuteInRangeForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function listTypingBksMinuteInRangeForHash(
@@ -1035,18 +1027,18 @@ export function listTypingBksMinuteInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingBksMinuteRow[] {
-  return getTypingAnalyticsDB().listBksMinuteInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().listBksMinuteInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 export function getTypingPeakRecordsInRange(
   uid: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): PeakRecords {
-  return getTypingAnalyticsDB().getPeakRecordsInRangeForUid(uid, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUid(uid, sinceMs, untilMs, appScopes)
 }
 
 export function getTypingPeakRecordsInRangeForHash(
@@ -1054,9 +1046,9 @@ export function getTypingPeakRecordsInRangeForHash(
   machineHash: string,
   sinceMs: number,
   untilMs: number,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): PeakRecords {
-  return getTypingAnalyticsDB().getPeakRecordsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScope)
+  return getTypingAnalyticsDB().getPeakRecordsInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, appScopes)
 }
 
 /** Day-level summaries restricted to a single `machineHash`. When
@@ -1065,9 +1057,9 @@ export function getTypingPeakRecordsInRangeForHash(
 export function listTypingDailySummariesForHash(
   uid: string,
   machineHash: string,
-  appScope: string | null = null,
+  appScopes: readonly string[] = [],
 ): TypingDailySummary[] {
-  return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash, appScope)
+  return getTypingAnalyticsDB().listDailySummariesForUidAndHash(uid, machineHash, appScopes)
 }
 
 /** Per-keyboard device infos for the Analyze > Device filter: own

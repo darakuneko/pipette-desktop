@@ -33,8 +33,8 @@ interface Props {
   uid: string
   range: RangeMs
   deviceScope: DeviceScope
-  /** App filter — see WpmChart.Props.appScope. */
-  appScope: string | null
+  /** App filter — see WpmChart.Props.appScopes. */
+  appScopes: string[]
   snapshot: TypingKeymapSnapshot
   /** Persisted filter state for this tab — `selectedLayers` / `groups`
    * / ranking controls / normalization. Lifted to `TypingAnalyticsView`
@@ -263,7 +263,7 @@ function groupOf(groups: number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
 }
 
-export function KeyHeatmapChart({ uid, range, deviceScope, appScope, snapshot, heatmap, onHeatmapChange }: Props) {
+export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, heatmap, onHeatmapChange }: Props) {
   const { t } = useTranslation()
   const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
@@ -290,7 +290,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScope, snapshot, h
     setLoading(true)
     void Promise.all(selectedLayers.map((layer) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScope)
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes)
         .catch(() => ({} as TypingHeatmapByCell)),
     )).then((results) => {
       if (cancelled) return
@@ -302,7 +302,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScope, snapshot, h
     return () => { cancelled = true }
     // selectedLayersKey carries the layer-set identity (joined string)
     // so an unchanged array doesn't refire on every render.
-  }, [uid, range, scopeKey, selectedLayersKey, appScope])
+  }, [uid, range, scopeKey, selectedLayersKey, appScopes])
 
   const layout = snapshot.layout as KeyboardLayout | null
 
