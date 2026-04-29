@@ -21,7 +21,7 @@ import {
   type AnalyzeFilterSnapshotMeta,
 } from '../shared/types/analyze-filter-store'
 
-const MAX_ENTRIES_PER_KEYBOARD = 30
+const MAX_ENTRIES_PER_KEYBOARD = 50
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false

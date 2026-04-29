@@ -132,7 +132,7 @@ Individual tabs add their own filters above the chart (view mode, granularity, u
 
 The bookmark icon in the panel header opens the **Saved search conditions** side panel. Save the active filters under a label, restore a saved set later, rename / delete entries, or export the current condition's chart data as CSV. Each saved entry shows a one-line summary of the filters (devices, apps, snapshot, range) under its label.
 
-- Up to **30 entries per keyboard** — the panel surfaces a cap warning when you reach the limit; delete an existing entry to make room
+- Up to **50 entries per keyboard** — the panel surfaces a cap warning when you reach the limit; delete an existing entry to make room
 - Synced via Cloud Sync (when enabled) so the same set is available on other signed-in machines
 - Loading an entry written by a newer Pipette release shows an unsupported-version error rather than guessing at unknown fields
 
