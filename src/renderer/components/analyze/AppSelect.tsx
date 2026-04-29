@@ -47,18 +47,24 @@ export function AppSelect({
   const scope = scopeToSelectValue(deviceScopes[0] ?? 'own')
 
   useEffect(() => {
+    // 150 ms debounce so range scrubbing (date-picker drag) doesn't
+    // fan out one IPC per intermediate value before the user lands on
+    // the final range.
     let cancelled = false
-    window.vialAPI
-      .typingAnalyticsListAppsForRange(uid, range.fromMs, range.toMs, scope)
-      .then((rows) => {
-        if (cancelled) return
-        setOptions(rows.map((r) => ({ name: r.name, keystrokes: r.keystrokes })))
-      })
-      .catch(() => {
-        if (!cancelled) setOptions([])
-      })
+    const id = window.setTimeout(() => {
+      window.vialAPI
+        .typingAnalyticsListAppsForRange(uid, range.fromMs, range.toMs, scope)
+        .then((rows) => {
+          if (cancelled) return
+          setOptions(rows.map((r) => ({ name: r.name, keystrokes: r.keystrokes })))
+        })
+        .catch(() => {
+          if (!cancelled) setOptions([])
+        })
+    }, 150)
     return () => {
       cancelled = true
+      window.clearTimeout(id)
     }
   }, [uid, range.fromMs, range.toMs, scope])
 

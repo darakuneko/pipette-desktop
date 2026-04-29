@@ -205,6 +205,17 @@ function matrixCellsByDayDbRowToDailyRow(r: MatrixCellsByDayDbRow): TypingMatrix
   }
 }
 
+/** SQL fragment for the per-app filter shared by every range-aware
+ * Analyze query. `column` is interpolated raw (always a hard-coded
+ * `m.app_name` / `t.app_name`, never user input — interpolating user
+ * input would break parameterised binding). `@appNamesJson` is a JSON
+ * array; an empty array (`'[]'`) short-circuits the IN-subquery so
+ * the same prepared statement covers single-app, multi-app and
+ * unfiltered queries. */
+function appFilterClause(column: string): string {
+  return `AND (json_array_length(@appNamesJson) = 0 OR ${column} IN (SELECT value FROM json_each(@appNamesJson)))`
+}
+
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
   private readonly upsertScopeStmt: Statement
@@ -717,7 +728,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.row, m.col
     `)
 
@@ -735,7 +746,7 @@ export class TypingAnalyticsDB {
          AND m.layer = @layer
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.row, m.col
     `)
 
@@ -775,7 +786,7 @@ export class TypingAnalyticsDB {
        WHERE s.keyboard_uid = @uid
          AND s.is_deleted = 0
          AND t.is_deleted = 0
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -793,7 +804,7 @@ export class TypingAnalyticsDB {
          AND s.machine_hash = @machineHash
          AND s.is_deleted = 0
          AND t.is_deleted = 0
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY date
        ORDER BY date DESC
     `)
@@ -852,7 +863,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY dow, hour
     `)
 
@@ -868,7 +879,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY dow, hour
     `)
 
@@ -887,7 +898,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -903,7 +914,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.layer
        ORDER BY m.layer ASC
     `)
@@ -929,7 +940,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -948,7 +959,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY m.layer, m.row, m.col
     `)
 
@@ -975,7 +986,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -996,7 +1007,7 @@ export class TypingAnalyticsDB {
          AND m.is_deleted = 0
          AND m.minute_ts >= @sinceMs
          AND m.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR m.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('m.app_name')}
        GROUP BY date, m.layer, m.row, m.col
        ORDER BY date ASC
     `)
@@ -1028,7 +1039,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1050,7 +1061,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        ORDER BY t.minute_ts ASC
     `)
@@ -1140,7 +1151,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1157,7 +1168,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        ORDER BY t.bigram_id ASC, t.minute_ts ASC
     `)
 
@@ -1227,7 +1238,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1250,7 +1261,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        HAVING backspaceCount > 0
        ORDER BY t.minute_ts ASC
@@ -1275,7 +1286,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+             ${appFilterClause('t.app_name')}
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1298,7 +1309,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+             ${appFilterClause('t.app_name')}
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1322,7 +1333,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+             ${appFilterClause('t.app_name')}
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1346,7 +1357,7 @@ export class TypingAnalyticsDB {
              AND t.is_deleted = 0
              AND t.minute_ts >= @sinceMs
              AND t.minute_ts < @untilMs
-             AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+             ${appFilterClause('t.app_name')}
            GROUP BY t.minute_ts
         ) AS total
        WHERE total.active_ms > 0
@@ -1364,7 +1375,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1381,7 +1392,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY t.minute_ts
        HAVING value > 0
        ORDER BY value DESC
@@ -1398,7 +1409,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
@@ -1416,7 +1427,7 @@ export class TypingAnalyticsDB {
          AND t.is_deleted = 0
          AND t.minute_ts >= @sinceMs
          AND t.minute_ts < @untilMs
-         AND (json_array_length(@appNamesJson) = 0 OR t.app_name IN (SELECT value FROM json_each(@appNamesJson)))
+         ${appFilterClause('t.app_name')}
        GROUP BY day
        HAVING value > 0
        ORDER BY value DESC
