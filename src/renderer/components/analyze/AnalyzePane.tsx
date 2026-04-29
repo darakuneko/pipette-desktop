@@ -742,7 +742,7 @@ export function AnalyzePane({
          * group; the rest of the filters render once a keyboard is
          * selected. */}
         <div
-          className={`grid min-w-0 items-center gap-x-3 gap-y-2 overflow-x-clip overflow-y-visible border-b border-edge pb-3 ${
+          className={`grid min-w-0 items-center gap-x-3 gap-y-2 overflow-x-auto border-b border-edge pb-3 ${
             selected !== null && (!filtersReady || syncingAnalytics) ? 'pointer-events-none opacity-60' : ''
           }`}
           // 10 outer columns shared via `grid-cols-subgrid` on each row

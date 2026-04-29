@@ -10,9 +10,10 @@
 // `onChange`. Renders as a button that opens a checkbox popover so
 // the filter row stays compact even with a long-tail app list.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { scopeToSelectValue, type DeviceScope } from '../../../shared/types/analyze-filters'
+import { AnchoredPopover } from '../ui/AnchoredPopover'
 import type { RangeMs } from './analyze-types'
 import { FILTER_SELECT } from './analyze-filter-styles'
 
@@ -43,7 +44,7 @@ export function AppSelect({
   const { t } = useTranslation()
   const [options, setOptions] = useState<AppOption[]>([])
   const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const scope = scopeToSelectValue(deviceScopes[0] ?? 'own')
 
   useEffect(() => {
@@ -80,27 +81,6 @@ export function AppSelect({
     if (filtered.length !== value.length) onChange(filtered)
   }, [options, value, onChange])
 
-  // Close the popover on outside click or Escape. Outside-click
-  // mirrors native `<select>` blur; Escape gives keyboard users a
-  // dismissal path even before full keyboard navigation lands.
-  useEffect(() => {
-    if (!open) return
-    const onMouseDown = (e: MouseEvent) => {
-      if (!containerRef.current) return
-      if (containerRef.current.contains(e.target as Node)) return
-      setOpen(false)
-    }
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
-    }
-    window.addEventListener('mousedown', onMouseDown)
-    window.addEventListener('keydown', onKeyDown)
-    return () => {
-      window.removeEventListener('mousedown', onMouseDown)
-      window.removeEventListener('keydown', onKeyDown)
-    }
-  }, [open])
-
   const valueSet = useMemo(() => new Set(value), [value])
 
   const buttonLabel = useMemo(() => {
@@ -119,9 +99,14 @@ export function AppSelect({
     onChange([])
   }
 
+  // Memoised so AnchoredPopover's outside-click / Escape effect doesn't
+  // tear down + re-attach window listeners on every parent render.
+  const handleClose = useCallback(() => setOpen(false), [])
+
   return (
-    <div ref={containerRef} className="relative">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         className={`${FILTER_SELECT} text-left`}
         onClick={() => setOpen((prev) => !prev)}
@@ -132,46 +117,47 @@ export function AppSelect({
       >
         {buttonLabel}
       </button>
-      {open && (
-        <div
-          className="absolute left-0 top-full z-20 mt-1 max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
-          role="listbox"
-          aria-multiselectable="true"
+      <AnchoredPopover
+        anchorRef={triggerRef}
+        open={open}
+        onClose={handleClose}
+        className="z-20 max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+        role="listbox"
+        aria-multiselectable
+      >
+        <button
+          type="button"
+          // "全アプリ" is the no-filter sentinel. Disable it once the
+          // user has picked anything specific so they have to clear
+          // the multi-select intentionally before re-entering the
+          // unfiltered view.
+          className="w-full rounded px-2 py-1 text-left text-content-secondary transition-colors hover:bg-surface-dim disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={clearAll}
+          disabled={value.length === 0}
+          data-testid={`${testId}-option-none`}
         >
-          <button
-            type="button"
-            // "全アプリ" is the no-filter sentinel. Disable it once the
-            // user has picked anything specific so they have to clear
-            // the multi-select intentionally before re-entering the
-            // unfiltered view.
-            className="w-full rounded px-2 py-1 text-left text-content-secondary transition-colors hover:bg-surface-dim disabled:cursor-not-allowed disabled:opacity-40"
-            onClick={clearAll}
-            disabled={value.length === 0}
-            data-testid={`${testId}-option-none`}
-          >
-            {t('analyze.filters.appOption.none')}
-          </button>
-          {options.length > 0 && <div className="my-1 border-t border-edge" />}
-          {options.map((o) => {
-            const checked = valueSet.has(o.name)
-            return (
-              <label
-                key={o.name}
-                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
-                data-testid={`${testId}-option-${o.name}`}
-              >
-                <input
-                  type="checkbox"
-                  className="cursor-pointer"
-                  checked={checked}
-                  onChange={() => toggleApp(o.name)}
-                />
-                <span className="flex-1 truncate">{o.name}</span>
-              </label>
-            )
-          })}
-        </div>
-      )}
-    </div>
+          {t('analyze.filters.appOption.none')}
+        </button>
+        {options.length > 0 && <div className="my-1 border-t border-edge" />}
+        {options.map((o) => {
+          const checked = valueSet.has(o.name)
+          return (
+            <label
+              key={o.name}
+              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+              data-testid={`${testId}-option-${o.name}`}
+            >
+              <input
+                type="checkbox"
+                className="cursor-pointer"
+                checked={checked}
+                onChange={() => toggleApp(o.name)}
+              />
+              <span className="flex-1 truncate">{o.name}</span>
+            </label>
+          )
+        })}
+      </AnchoredPopover>
+    </>
   )
 }

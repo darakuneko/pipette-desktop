@@ -20,10 +20,11 @@
 // previous datetime-local pair: this widget only chooses the (day,
 // time) endpoints; the chart layer applies the half-open filter.
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { DayPicker, type DateRange, type Matcher } from 'react-day-picker'
 import { endOfDay, format, startOfDay } from 'date-fns'
+import { AnchoredPopover } from '../ui/AnchoredPopover'
 import type { RangeMs } from './analyze-types'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
@@ -82,32 +83,15 @@ export function RangeDayPicker({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [pendingRange, setPendingRange] = useState<DateRange | undefined>(undefined)
-  const wrapperRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
-  // Click-outside / Escape: same dropdown idiom the legacy
-  // DeviceMultiSelect used. Resetting `pendingRange` here means a
-  // reopen always starts from the committed range.
-  useEffect(() => {
-    if (!open) return
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false)
-        setPendingRange(undefined)
-      }
-    }
-    const handleOutside = (e: MouseEvent) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
-        setOpen(false)
-        setPendingRange(undefined)
-      }
-    }
-    window.addEventListener('keydown', handleEscape)
-    window.addEventListener('mousedown', handleOutside)
-    return () => {
-      window.removeEventListener('keydown', handleEscape)
-      window.removeEventListener('mousedown', handleOutside)
-    }
-  }, [open])
+  // Resetting `pendingRange` on close means a reopen always starts
+  // from the committed range. AnchoredPopover handles outside click /
+  // Escape and calls this when either fires.
+  const handleClose = useCallback(() => {
+    setOpen(false)
+    setPendingRange(undefined)
+  }, [])
 
   const fromTimeStr = formatHHmm(range.fromMs)
   const toTimeStr = formatHHmm(range.toMs)
@@ -167,70 +151,70 @@ export function RangeDayPicker({
   return (
     <label className={FILTER_LABEL}>
       <span>{t(labelKey)}</span>
-      <div className="relative" ref={wrapperRef}>
-        <button
-          type="button"
-          className={`${FILTER_SELECT} flex items-center gap-1 text-left`}
-          onClick={() => setOpen((prev) => !prev)}
-          aria-haspopup="dialog"
-          aria-expanded={open}
-          data-testid={testIdPrefix}
-        >
-          <span className="whitespace-nowrap">{buttonLabel}</span>
-          <span aria-hidden="true">▾</span>
-        </button>
-        {open && (
-          <div
-            className="absolute z-50 mt-1 flex flex-col items-center rounded-md border border-edge bg-surface p-3 shadow-lg"
-            role="dialog"
-            data-testid={`${testIdPrefix}-popover`}
-          >
-            <DayPicker
-              mode="range"
-              selected={displayedRange}
-              onSelect={handleDayPickerSelect}
-              disabled={disabledDays}
-              defaultMonth={new Date(range.fromMs)}
-              navLayout="around"
-              showOutsideDays
-            />
-            <div className="mt-2 flex items-center gap-2 border-t border-edge pt-2 text-[12px] text-content-secondary">
-              <span className="whitespace-nowrap">{format(range.fromMs, 'yyyy/MM/dd')}</span>
-              <input
-                type="time"
-                className={`${FILTER_SELECT} rdp-time-input`}
-                value={fromTimeStr}
-                onChange={handleFromTimeChange}
-                onClick={(e) => {
-                  // Native time picker only opens off the indicator
-                  // by default; we hide that via CSS so the bare text
-                  // alone needs to call `showPicker()` to bring up
-                  // the dropdown. Wrapped in a typeof check for jsdom
-                  // / older Chromium that lacks the API.
-                  if (typeof e.currentTarget.showPicker === 'function') {
-                    e.currentTarget.showPicker()
-                  }
-                }}
-                data-testid={`${testIdPrefix}-from`}
-              />
-              <span aria-hidden="true">—</span>
-              <span className="whitespace-nowrap">{format(range.toMs, 'yyyy/MM/dd')}</span>
-              <input
-                type="time"
-                className={`${FILTER_SELECT} rdp-time-input`}
-                value={toTimeStr}
-                onChange={handleToTimeChange}
-                onClick={(e) => {
-                  if (typeof e.currentTarget.showPicker === 'function') {
-                    e.currentTarget.showPicker()
-                  }
-                }}
-                data-testid={`${testIdPrefix}-to`}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={`${FILTER_SELECT} flex items-center gap-1 text-left`}
+        onClick={() => setOpen((prev) => !prev)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        data-testid={testIdPrefix}
+      >
+        <span className="whitespace-nowrap">{buttonLabel}</span>
+        <span aria-hidden="true">▾</span>
+      </button>
+      <AnchoredPopover
+        anchorRef={triggerRef}
+        open={open}
+        onClose={handleClose}
+        className="z-50 flex flex-col items-center rounded-md border border-edge bg-surface p-3 shadow-lg"
+        role="dialog"
+        data-testid={`${testIdPrefix}-popover`}
+      >
+        <DayPicker
+          mode="range"
+          selected={displayedRange}
+          onSelect={handleDayPickerSelect}
+          disabled={disabledDays}
+          defaultMonth={new Date(range.fromMs)}
+          navLayout="around"
+          showOutsideDays
+        />
+        <div className="mt-2 flex items-center gap-2 border-t border-edge pt-2 text-[12px] text-content-secondary">
+          <span className="whitespace-nowrap">{format(range.fromMs, 'yyyy/MM/dd')}</span>
+          <input
+            type="time"
+            className={`${FILTER_SELECT} rdp-time-input`}
+            value={fromTimeStr}
+            onChange={handleFromTimeChange}
+            onClick={(e) => {
+              // Native time picker only opens off the indicator
+              // by default; we hide that via CSS so the bare text
+              // alone needs to call `showPicker()` to bring up
+              // the dropdown. Wrapped in a typeof check for jsdom
+              // / older Chromium that lacks the API.
+              if (typeof e.currentTarget.showPicker === 'function') {
+                e.currentTarget.showPicker()
+              }
+            }}
+            data-testid={`${testIdPrefix}-from`}
+          />
+          <span aria-hidden="true">—</span>
+          <span className="whitespace-nowrap">{format(range.toMs, 'yyyy/MM/dd')}</span>
+          <input
+            type="time"
+            className={`${FILTER_SELECT} rdp-time-input`}
+            value={toTimeStr}
+            onChange={handleToTimeChange}
+            onClick={(e) => {
+              if (typeof e.currentTarget.showPicker === 'function') {
+                e.currentTarget.showPicker()
+              }
+            }}
+            data-testid={`${testIdPrefix}-to`}
+          />
+        </div>
+      </AnchoredPopover>
     </label>
   )
 }
