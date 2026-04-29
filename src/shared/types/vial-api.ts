@@ -14,6 +14,7 @@ import type {
   UnlockStatus,
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
+import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
@@ -133,6 +134,14 @@ export interface VialAPI {
   snapshotStoreUpdate(uid: string, entryId: string, json: string, vilVersion?: number): Promise<{ success: boolean; error?: string }>
   snapshotStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   snapshotStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
+
+  // Analyze Filter Store (per-keyboard search-condition snapshots)
+  analyzeFilterStoreList(uid: string): Promise<{ success: boolean; entries?: AnalyzeFilterSnapshotMeta[]; error?: string }>
+  analyzeFilterStoreSave(uid: string, json: string, label: string): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }>
+  analyzeFilterStoreLoad(uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
+  analyzeFilterStoreUpdate(uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }>
+  analyzeFilterStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
+  analyzeFilterStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
 
   // Favorite Store (internal save/load)
   favoriteStoreList(type: string): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }>

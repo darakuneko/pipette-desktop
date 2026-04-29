@@ -130,7 +130,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
 
   return (
     <div
-      className="flex h-full min-h-[70vh] flex-col gap-3"
+      className="flex h-full min-h-[70vh] flex-col"
       data-testid="analyze-view"
     >
       <div className="flex flex-1 min-h-0 min-w-0 gap-4">

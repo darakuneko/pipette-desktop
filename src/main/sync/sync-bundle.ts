@@ -9,6 +9,7 @@ import { keyboardMetaFilePath, readKeyboardMetaIndex } from './keyboard-meta'
 import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
+import type { AnalyzeFilterSnapshotIndex } from '../../shared/types/analyze-filter-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import {
@@ -26,10 +27,10 @@ import {
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 
-export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | null> {
+export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | null> {
   try {
     const raw = await readFile(join(dir, 'index.json'), 'utf-8')
-    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex
+    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex
   } catch {
     return null
   }
@@ -122,7 +123,17 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
 
   files['index.json'] = JSON.stringify(index, null, 2)
 
-  const type: SyncBundle['type'] = parts[0] === 'favorites' ? 'favorite' : 'layout'
+  // keyboards/{uid}/analyze_filters mirrors the snapshots layout but is
+  // its own bundle type so the export-categorisation in sync-ipc.ts
+  // doesn't lump them in with keymap snapshots.
+  let type: SyncBundle['type']
+  if (parts[0] === 'favorites') {
+    type = 'favorite'
+  } else if (parts[2] === 'analyze_filters') {
+    type = 'analyze-filter'
+  } else {
+    type = 'layout'
+  }
 
   return { type, key: parts[1], index, files }
 }
@@ -186,6 +197,11 @@ export async function collectAllSyncUnits(): Promise<string[]> {
         await access(join(keyboardsDir, uid, 'snapshots', 'index.json'))
         units.push(`keyboards/${uid}/snapshots`)
       } catch { /* no snapshots */ }
+      // analyze filter snapshots (index-based, mirrors snapshots layout)
+      try {
+        await access(join(keyboardsDir, uid, 'analyze_filters', 'index.json'))
+        units.push(`keyboards/${uid}/analyze_filters`)
+      } catch { /* no analyze filter snapshots */ }
     }
   } catch { /* dir doesn't exist */ }
 

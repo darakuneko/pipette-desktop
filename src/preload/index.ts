@@ -10,6 +10,7 @@ import * as protocol from './protocol'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
+import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
@@ -191,6 +192,20 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_RENAME, uid, entryId, newLabel),
   snapshotStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_DELETE, uid, entryId),
+
+  // --- Analyze Filter Store (per-keyboard search-condition snapshots) ---
+  analyzeFilterStoreList: (uid: string): Promise<{ success: boolean; entries?: AnalyzeFilterSnapshotMeta[]; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_LIST, uid),
+  analyzeFilterStoreSave: (uid: string, json: string, label: string): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SAVE, uid, json, label),
+  analyzeFilterStoreLoad: (uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_LOAD, uid, entryId),
+  analyzeFilterStoreUpdate: (uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_UPDATE, uid, entryId, json),
+  analyzeFilterStoreRename: (uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_RENAME, uid, entryId, newLabel),
+  analyzeFilterStoreDelete: (uid: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_DELETE, uid, entryId),
 
   // --- Favorite Store (internal save/load via IPC) ---
   favoriteStoreList: (type: string): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }> =>

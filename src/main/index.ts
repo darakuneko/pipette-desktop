@@ -4,6 +4,7 @@ import { statSync } from 'node:fs'
 import { IpcChannels } from '../shared/ipc/channels'
 import { setupFileIO } from './file-io'
 import { setupSnapshotStore } from './snapshot-store'
+import { setupAnalyzeFilterStore } from './analyze-filter-store'
 import { setupFavoriteStore } from './favorite-store'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
@@ -288,6 +289,7 @@ app.whenReady().then(() => {
   setupHidIpc()
   setupFileIO()
   setupSnapshotStore()
+  setupAnalyzeFilterStore()
   setupFavoriteStore()
   setupPipetteSettingsStore()
   setupLanguageStore()

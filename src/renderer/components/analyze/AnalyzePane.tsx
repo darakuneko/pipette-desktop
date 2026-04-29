@@ -47,7 +47,11 @@ import type {
   WpmViewMode,
 } from './analyze-types'
 import type { SyncProgress } from '../../../shared/types/sync'
+import { SlidersHorizontal } from 'lucide-react'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
+import { useAnalyzeFilterStore, type AnalyzeFilterSnapshotPayload } from '../../hooks/useAnalyzeFilterStore'
+import { useEscapeClose } from '../../hooks/useEscapeClose'
+import { AnalyzeFilterStorePanel } from './AnalyzeFilterStorePanel'
 import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { DeviceMultiSelect } from './DeviceMultiSelect'
@@ -244,6 +248,31 @@ export function AnalyzePane({
   const [fingersLoading, setFingersLoading] = useState(false)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
   const [exportModalOpen, setExportModalOpen] = useState(false)
+  const [storePanelOpen, setStorePanelOpen] = useState(false)
+  const storePanelRef = useRef<HTMLDivElement>(null)
+  const storeToggleRef = useRef<HTMLButtonElement>(null)
+  const filterStore = useAnalyzeFilterStore({ uid: selectedUid })
+
+  // Close on Escape — match the keymap editor's overlay UX. Outside-click
+  // closes too, but we have to filter out clicks on the toggle button or
+  // we'd race with `handleToggleStorePanel` and end up re-opening.
+  useEscapeClose(() => setStorePanelOpen(false), storePanelOpen)
+  useEffect(() => {
+    if (!storePanelOpen) return
+    // Capture-phase listener so descendant handlers that call
+    // `stopPropagation` (chart legend rows, filter row controls) cannot
+    // suppress the close. The contains() guards still let clicks on
+    // the toggle button and inside the panel pass through untouched.
+    const onMouseDown = (e: MouseEvent): void => {
+      const target = e.target as Node | null
+      if (!target) return
+      if (storePanelRef.current?.contains(target)) return
+      if (storeToggleRef.current?.contains(target)) return
+      setStorePanelOpen(false)
+    }
+    window.addEventListener('mousedown', onMouseDown, true)
+    return () => window.removeEventListener('mousedown', onMouseDown, true)
+  }, [storePanelOpen])
   // `loaded` gates the "persisted hash no longer exists" fallback so a
   // slow fetch doesn't clobber a valid selection before the list
   // resolves; `error` lets the loading-phase overlay release after a
@@ -517,6 +546,84 @@ export function AnalyzePane({
     [selectedUid],
   )
 
+  // Pull the saved-entry list when the keyboard changes so the count /
+  // list reflects the new uid even before the user opens the panel.
+  const { refreshEntries: refreshFilterEntries } = filterStore
+  useEffect(() => {
+    void refreshFilterEntries()
+  }, [refreshFilterEntries])
+
+  const handleSaveFilterSnapshot = useCallback(
+    async (label: string): Promise<string | null> => {
+      if (!selectedUid) return null
+      const payload: AnalyzeFilterSnapshotPayload = {
+        version: 1,
+        analysisTab,
+        range,
+        filters: {
+          deviceScopes,
+          appScopes,
+          heatmap: heatmapFilter,
+          wpm: wpmFilter,
+          interval: intervalFilter,
+          activity: activityFilter,
+          layer: layerFilter,
+          ergonomics: ergonomicsFilter,
+          bigrams: bigramsFilter,
+          layoutComparison: layoutComparisonFilter,
+        },
+      }
+      return filterStore.saveSnapshot(label, payload)
+    },
+    [
+      selectedUid, analysisTab, range,
+      deviceScopes, appScopes, heatmapFilter, wpmFilter, intervalFilter,
+      activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
+      layoutComparisonFilter, filterStore,
+    ],
+  )
+
+  const handleLoadFilterSnapshot = useCallback(
+    async (entryId: string): Promise<boolean> => {
+      const payload = await filterStore.loadSnapshot(entryId)
+      if (!payload) return false
+      setAnalysisTab(payload.analysisTab)
+      setRange(payload.range)
+      setDeviceScopes(payload.filters.deviceScopes)
+      setAppScopes(payload.filters.appScopes)
+      setHeatmap(payload.filters.heatmap)
+      setWpm(payload.filters.wpm)
+      setIntervalFilter(payload.filters.interval)
+      setActivity(payload.filters.activity)
+      setLayer(payload.filters.layer)
+      setErgonomics(payload.filters.ergonomics)
+      setBigrams(payload.filters.bigrams)
+      setLayoutComparison(payload.filters.layoutComparison)
+      return true
+    },
+    [
+      filterStore, setAnalysisTab, setRange, setDeviceScopes, setAppScopes,
+      setHeatmap, setWpm, setIntervalFilter, setActivity, setLayer,
+      setErgonomics, setBigrams, setLayoutComparison,
+    ],
+  )
+
+  const handleToggleStorePanel = useCallback(() => {
+    setStorePanelOpen((prev) => {
+      const next = !prev
+      if (next) void refreshFilterEntries()
+      return next
+    })
+  }, [refreshFilterEntries])
+
+  const handleExportEntryCsv = useCallback(
+    async (entryId: string): Promise<void> => {
+      const ok = await handleLoadFilterSnapshot(entryId)
+      if (ok) setExportModalOpen(true)
+    },
+    [handleLoadFilterSnapshot],
+  )
+
   const selected = selectedUid
     ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
     : null
@@ -685,7 +792,7 @@ export function AnalyzePane({
 
   return (
     <>
-      <section className="relative flex flex-1 min-h-0 min-w-0 flex-col gap-3 overflow-auto">
+      <section className="relative flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden">
         {currentPhase !== null && (
           // Device name is intentionally omitted — the Keyboards select
           // already surfaces which keyboard is selected, so the overlay
@@ -727,22 +834,29 @@ export function AnalyzePane({
               ))}
             </div>
             <button
+              ref={storeToggleRef}
               type="button"
-              className={`${TAB_BTN_BASE} ${TAB_BTN_IDLE}`}
-              onClick={() => setExportModalOpen(true)}
-              disabled={exportCtx === null}
-              data-testid={tid("analyze-export-open")}
+              aria-label={t('analyzeFilterStore.title')}
+              aria-expanded={storePanelOpen}
+              aria-controls={tid("analyze-filter-store-panel-overlay")}
+              className={`rounded p-1.5 transition-colors ${storePanelOpen ? 'bg-surface text-accent shadow-sm' : 'text-content-muted hover:bg-surface hover:text-content'}`}
+              onClick={handleToggleStorePanel}
+              data-testid={tid("analyze-filter-store-toggle")}
             >
-              {t('analyze.export.csv')}
+              <SlidersHorizontal size={16} aria-hidden="true" />
             </button>
           </div>
         )}
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* Filter row — always visible. Keyboard select is the first
          * column so the user can pick a keyboard from inside the filter
          * group; the rest of the filters render once a keyboard is
-         * selected. */}
+         * selected. Wrapped (with the chart below) inside the
+         * `relative overflow-hidden` block so the slide-in panel
+         * starts directly under the tab bar and covers the filter row
+         * along with the chart. */}
         <div
-          className={`grid min-w-0 items-center gap-x-3 gap-y-2 overflow-x-auto border-b border-edge pb-3 ${
+          className={`grid min-w-0 shrink-0 items-center gap-x-3 gap-y-2 overflow-x-auto border-b border-edge pb-3 mt-3 ${
             selected !== null && (!filtersReady || syncingAnalytics) ? 'pointer-events-none opacity-60' : ''
           }`}
           // 10 outer columns shared via `grid-cols-subgrid` on each row
@@ -1010,7 +1124,7 @@ export function AnalyzePane({
 
         {selected ? (
           <>
-            <div className="flex-1 min-h-0 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
+            <div className="flex-1 mt-3 min-h-0 overflow-x-clip overflow-y-auto [&_*]:focus:outline-none [&_*]:focus-visible:outline-none" data-testid={tid("analyze-chart")}>
               {analysisTab === 'summary' ? (
                 <SummaryView
                   uid={selected.uid}
@@ -1169,10 +1283,36 @@ export function AnalyzePane({
             </div>
           </>
         ) : (
-          <div className="py-6 text-center text-sm text-content-muted">
+          <div className="mt-3 py-6 text-center text-sm text-content-muted">
             {t('analyze.selectKeyboard')}
           </div>
         )}
+          <div
+            ref={storePanelRef}
+            id={tid("analyze-filter-store-panel-overlay")}
+            // Panel covers only the chart wrapper, not the tab + filter
+            // rows above. That keeps the menu-icon toggle clickable while
+            // the panel is open. `shadow-lg` only when open — when
+            // translated off-screen the shadow's left bleed lands inside
+            // the visible area and reads as a stray gradient.
+            className={`absolute inset-y-0 right-0 z-10 w-fit min-w-[320px] rounded-l-lg border-l border-edge-subtle bg-surface-alt transition-transform duration-200 ease-out ${storePanelOpen ? 'translate-x-0 shadow-lg' : 'translate-x-full'}`}
+            inert={!storePanelOpen || undefined}
+            data-testid={tid("analyze-filter-store-panel-container")}
+          >
+            <AnalyzeFilterStorePanel
+              uidSelected={selectedUid !== null}
+              entries={filterStore.entries}
+              saving={filterStore.saving}
+              loading={filterStore.loading}
+              onSave={handleSaveFilterSnapshot}
+              onLoad={handleLoadFilterSnapshot}
+              onRename={filterStore.renameEntry}
+              onDelete={filterStore.deleteEntry}
+              onExportCurrentCsv={exportCtx !== null ? () => setExportModalOpen(true) : null}
+              onExportEntryCsv={exportCtx !== null ? handleExportEntryCsv : null}
+            />
+          </div>
+        </div>
       </section>
       <FingerAssignmentModal
         isOpen={fingerModalOpen}

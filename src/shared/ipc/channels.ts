@@ -37,6 +37,14 @@ export const IpcChannels = {
   SNAPSHOT_STORE_RENAME: 'snapshot-store:rename',
   SNAPSHOT_STORE_DELETE: 'snapshot-store:delete',
 
+  // Analyze Filter Store (renderer → main → renderer)
+  ANALYZE_FILTER_STORE_LIST: 'analyze-filter-store:list',
+  ANALYZE_FILTER_STORE_SAVE: 'analyze-filter-store:save',
+  ANALYZE_FILTER_STORE_LOAD: 'analyze-filter-store:load',
+  ANALYZE_FILTER_STORE_UPDATE: 'analyze-filter-store:update',
+  ANALYZE_FILTER_STORE_RENAME: 'analyze-filter-store:rename',
+  ANALYZE_FILTER_STORE_DELETE: 'analyze-filter-store:delete',
+
   // Sideload JSON (renderer → main → renderer)
   SIDELOAD_JSON: 'dialog:sideload-json',
 
