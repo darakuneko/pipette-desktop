@@ -2,7 +2,7 @@
 
 import { useMemo, memo } from 'react'
 import type { KleKey } from '../../../shared/kle/types'
-import { repositionLayoutKeys } from '../../../shared/kle/filter-keys'
+import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { posKey } from '../../../shared/kle/pos-key'
 import { KeyWidget } from './KeyWidget'
 import { EncoderWidget } from './EncoderWidget'
@@ -139,16 +139,13 @@ function KeyboardWidgetInner({
 }: Props) {
   const effectiveTheme = useEffectiveTheme()
 
-  // Reposition selected layout alternatives to align with option 0, then filter
+  // Reposition runs on the full key list (including decals) so option 0's
+  // bounding box is computed correctly; decals are dropped afterwards by
+  // `filterVisibleKeys`. Mirrors `widgets/keyboard_widget.py:place_widgets` +
+  // `update_layout` in vial-gui.
   const visibleKeys = useMemo(() => {
-    if (!layoutOptions || layoutOptions.size === 0) return keys
-    const repositioned = repositionLayoutKeys(keys, layoutOptions)
-    return repositioned.filter((key) => {
-      if (key.layoutIndex < 0) return true
-      const selectedOption = layoutOptions.get(key.layoutIndex)
-      if (selectedOption === undefined) return key.layoutOption === 0
-      return key.layoutOption === selectedOption
-    })
+    const opts = layoutOptions ?? new Map<number, number>()
+    return filterVisibleKeys(repositionLayoutKeys(keys, opts), opts)
   }, [keys, layoutOptions])
 
   // Calculate SVG bounds (track min to normalize position)
