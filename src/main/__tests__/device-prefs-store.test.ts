@@ -304,6 +304,64 @@ describe('pipette-settings-store', () => {
       expect(result.success).toBe(false)
       expect(result.error).toContain('Invalid prefs')
     })
+
+    it('accepts typingRecordEnabled boolean and round-trips it', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingRecordEnabled: true,
+      }) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingRecordEnabled: boolean }
+      expect(prefs.typingRecordEnabled).toBe(true)
+    })
+
+    it('rejects prefs with non-boolean typingRecordEnabled', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingRecordEnabled: 'yes',
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
+    })
+
+    it.each([1, 7, 30, 90])('accepts typingSyncSpanDays=%i', async (span) => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingSyncSpanDays: span,
+      }) as { success: boolean }
+      expect(result.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingSyncSpanDays: number }
+      expect(prefs.typingSyncSpanDays).toBe(span)
+    })
+
+    it.each([0, 2, 14, 365, -1, 7.5])('rejects disallowed typingSyncSpanDays=%s', async (span) => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingSyncSpanDays: span,
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
+    })
   })
 
   describe('sync notification', () => {

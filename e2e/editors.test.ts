@@ -4,6 +4,7 @@ import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { launchApp } from './helpers/electron'
 import { connectTestDevice } from './helpers/test-device'
+import { TEST_DEVICE } from './test-device.config'
 
 let app: ElectronApplication
 let page: Page
@@ -304,16 +305,12 @@ test.describe('Matrix Tester', () => {
 // --- Status Bar ---
 
 test.describe('Status Bar', () => {
-  test('shows device name and Vial protocol version', async () => {
+  test('shows device name', async () => {
     await expect(page.locator('[data-testid="editor-content"]')).toBeVisible()
 
     const statusBar = page.locator('[data-testid="status-bar"]')
     await expect(statusBar).toBeVisible()
-
-    // Check Vial protocol version display (already guaranteed by connectTestDevice)
-    const vialVersion = page.locator('[data-testid="status-vial-protocol"]')
-    await expect(vialVersion).toBeVisible()
-    await expect(vialVersion).toHaveText(/Vial v\d+/)
+    await expect(statusBar).toContainText(TEST_DEVICE.productName)
   })
 
   test('has disconnect button', async () => {

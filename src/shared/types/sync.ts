@@ -2,6 +2,7 @@
 
 import type { FavoriteType, FavoriteIndex } from './favorite-store'
 import type { SnapshotIndex } from './snapshot-store'
+import type { AnalyzeFilterSnapshotIndex } from './analyze-filter-store'
 import type { AppConfig } from './app-config'
 import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 
@@ -18,9 +19,9 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'settings' | 'keyboard-meta'
-  key: string // FavoriteType, UID, or 'keyboard-names' for meta
-  index: FavoriteIndex | SnapshotIndex | KeyboardMetaIndex
+  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device'
+  key: string // FavoriteType, UID, 'keyboard-names' for meta, or `${uid}|${machineHash}` for device
+  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex
   files: Record<string, string> // filename -> content (empty for meta)
 }
 
@@ -57,11 +58,15 @@ export interface SyncAuthStatus {
 export type FavoriteSyncUnit = `favorites/${FavoriteType}`
 export type KeyboardSettingsSyncUnit = `keyboards/${string}/settings`
 export type KeyboardSnapshotsSyncUnit = `keyboards/${string}/snapshots`
+export type KeyboardAnalyzeFiltersSyncUnit = `keyboards/${string}/analyze_filters`
+export type KeyboardTypingAnalyticsDeviceSyncUnit = `keyboards/${string}/devices/${string}`
 export type SyncUnit =
   | FavoriteSyncUnit
   | KeyboardSettingsSyncUnit
   | KeyboardSnapshotsSyncUnit
+  | KeyboardAnalyzeFiltersSyncUnit
   | KeyboardMetaSyncUnit
+  | KeyboardTypingAnalyticsDeviceSyncUnit
 
 export interface PasswordStrength {
   score: number // 0-4

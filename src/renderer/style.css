@@ -1,6 +1,62 @@
 @import "tailwindcss";
+@import "react-day-picker/style.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* react-day-picker — pull palette from app tokens so the calendar
+ * matches the Analyze filter row in both light and dark modes. */
+.rdp-root {
+  --rdp-accent-color: var(--accent);
+  --rdp-accent-background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  --rdp-background-color: var(--surface);
+  --rdp-today-color: var(--accent);
+  --rdp-range_middle-color: var(--content);
+  --rdp-range_middle-background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  --rdp-range_start-color: var(--content-inverse);
+  --rdp-range_start-background: var(--accent);
+  --rdp-range_end-color: var(--content-inverse);
+  --rdp-range_end-background: var(--accent);
+  --rdp-day-height: 36px;
+  --rdp-day-width: 44px;
+  color: var(--content);
+}
+.rdp-root .rdp-caption_label,
+.rdp-root .rdp-month_caption,
+.rdp-root .rdp-weekday {
+  color: var(--content-secondary);
+}
+.rdp-root .rdp-day_button {
+  color: var(--content);
+  font-size: 13px;
+  font-weight: 400;
+}
+.rdp-root .rdp-selected .rdp-day_button {
+  font-weight: 500;
+}
+.rdp-root .rdp-disabled .rdp-day_button {
+  color: var(--content-secondary);
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+.rdp-root .rdp-outside .rdp-day_button {
+  color: var(--content-muted);
+}
+
+/* Suppress the native clock-icon picker indicator on the time inputs
+ * inside RangeDayPicker — the bare HH:mm text doubles as the click
+ * surface that calls `showPicker()`. Width is pinned so the row stays
+ * proportional to the calendar grid above it. */
+.rdp-time-input {
+  width: 4rem;
+  text-align: center;
+}
+.rdp-time-input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+.rdp-time-input::-webkit-inner-spin-button,
+.rdp-time-input::-webkit-clear-button {
+  display: none;
+}
 
 /* Interactive elements use pointer cursor */
 button:not(:disabled),

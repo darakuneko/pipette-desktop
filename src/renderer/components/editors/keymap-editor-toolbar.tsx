@@ -3,26 +3,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { MIN_SCALE, MAX_SCALE } from './keymap-editor-types'
 
-const TOOLTIP_STYLE = 'pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg text-xs font-medium text-content whitespace-nowrap opacity-0 transition-opacity delay-300'
-
-export function IconTooltip({ label, side = 'right', children }: {
-  label: string
-  side?: 'right' | 'top-end'
-  children: React.ReactNode
-}) {
-  const posClass = side === 'right'
-    ? 'left-full top-1/2 -translate-y-1/2 ml-2'
-    : 'bottom-full right-0 mb-2'
-  return (
-    <div className="group/tip relative">
-      {children}
-      <div className={`${TOOLTIP_STYLE} ${posClass} group-hover/tip:opacity-100`}>
-        {label}
-      </div>
-    </div>
-  )
-}
-
 export function ScaleInput({ scale, onScaleChange }: { scale: number; onScaleChange: (delta: number) => void }) {
   const display = `${Math.round(scale * 100)}`
   const [editing, setEditing] = useState(false)

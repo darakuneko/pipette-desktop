@@ -11,6 +11,7 @@ import { DataNavTree } from './DataNavTree'
 import { DataNavBreadcrumb } from './DataNavBreadcrumb'
 import { FavoriteTabContent } from './FavoriteTabContent'
 import { KeyboardSavesContent } from './KeyboardSavesContent'
+import { TypingAnalyticsContent } from './TypingAnalyticsContent'
 import { useDataNavTree } from './useDataNavTree'
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { FavHubEntryResult } from '../editors/FavoriteHubActions'
@@ -208,6 +209,28 @@ export function DataModal({
       )
     }
 
+    if (path.page === 'typing') {
+      return (
+        <TypingAnalyticsContent
+          key={`typing-${path.uid}`}
+          uid={path.uid}
+          onDeleted={() => { void nav.refreshTypingKeyboards() }}
+        />
+      )
+    }
+
+    if (path.page === 'sync-typing-device') {
+      return (
+        <TypingAnalyticsContent
+          key={`sync-typing-${path.uid}-${path.machineHash}`}
+          uid={path.uid}
+          mode="sync"
+          machineHash={path.machineHash}
+          onDeleted={() => { void nav.refreshTypingKeyboards() }}
+        />
+      )
+    }
+
     if (path.page === 'hub-keyboard') {
       const filtered = hubPostsFiltered.filter((p) => p.keyboard_name === path.keyboardName)
       return renderHubContent(filtered)
@@ -264,6 +287,8 @@ export function DataModal({
           <div className="w-[220px] shrink-0 border-r border-edge overflow-y-auto">
             <DataNavTree
               storedKeyboards={nav.storedKeyboards}
+              typingKeyboards={nav.typingKeyboards}
+              hasRemoteTyping={nav.hasRemoteTyping}
               activePath={nav.activePath}
               onNavigate={nav.setActivePath}
               isExpanded={nav.isExpanded}
@@ -275,6 +300,8 @@ export function DataModal({
               onSyncKeyboardSelect={nav.onSyncKeyboardSelect}
               downloadingUid={nav.downloadingUid}
               downloadErrorByUid={nav.downloadErrorByUid}
+              remoteTypingHashes={nav.remoteTypingHashes}
+              ensureRemoteTypingHashes={nav.ensureRemoteTypingHashes}
             />
           </div>
 

@@ -31,6 +31,29 @@ const mockResetKeyboardData = vi.fn().mockResolvedValue({ success: true })
 const mockResetLocalTargets = vi.fn().mockResolvedValue({ success: true })
 const mockExportLocalData = vi.fn().mockResolvedValue({ success: true })
 const mockImportLocalData = vi.fn().mockResolvedValue({ success: true })
+const mockTypingAnalyticsListKeyboards = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItems = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItemsLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListItemsForHash = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListIntervalItems = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListIntervalItemsLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListActivityGrid = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListActivityGridLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListMinuteStats = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListMinuteStatsLocal = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsSaveKeymapSnapshot = vi.fn().mockResolvedValue({ saved: false, savedAt: null })
+const mockTypingAnalyticsGetKeymapSnapshotForRange = vi.fn().mockResolvedValue(null)
+const mockTypingAnalyticsListRemoteHashes = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListLocalDeviceDays = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsHasRemote = vi.fn().mockResolvedValue(false)
+const mockTypingAnalyticsListRemoteCloudHashes = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsListRemoteCloudDays = vi.fn().mockResolvedValue([])
+const mockTypingAnalyticsFetchRemoteDay = vi.fn().mockResolvedValue(true)
+const mockTypingAnalyticsDeleteRemoteDay = vi.fn().mockResolvedValue(true)
+const mockTypingAnalyticsExport = vi.fn().mockResolvedValue({ written: 0, cancelled: true })
+const mockTypingAnalyticsImport = vi.fn().mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
+const mockTypingAnalyticsDeleteItems = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+const mockTypingAnalyticsDeleteAll = vi.fn().mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -45,6 +68,29 @@ Object.defineProperty(window, 'vialAPI', {
     resetLocalTargets: mockResetLocalTargets,
     exportLocalData: mockExportLocalData,
     importLocalData: mockImportLocalData,
+    typingAnalyticsListKeyboards: mockTypingAnalyticsListKeyboards,
+    typingAnalyticsListItems: mockTypingAnalyticsListItems,
+    typingAnalyticsListItemsLocal: mockTypingAnalyticsListItemsLocal,
+    typingAnalyticsListItemsForHash: mockTypingAnalyticsListItemsForHash,
+    typingAnalyticsListIntervalItems: mockTypingAnalyticsListIntervalItems,
+    typingAnalyticsListIntervalItemsLocal: mockTypingAnalyticsListIntervalItemsLocal,
+    typingAnalyticsListActivityGrid: mockTypingAnalyticsListActivityGrid,
+    typingAnalyticsListActivityGridLocal: mockTypingAnalyticsListActivityGridLocal,
+    typingAnalyticsListMinuteStats: mockTypingAnalyticsListMinuteStats,
+    typingAnalyticsListMinuteStatsLocal: mockTypingAnalyticsListMinuteStatsLocal,
+    typingAnalyticsSaveKeymapSnapshot: mockTypingAnalyticsSaveKeymapSnapshot,
+    typingAnalyticsGetKeymapSnapshotForRange: mockTypingAnalyticsGetKeymapSnapshotForRange,
+    typingAnalyticsListRemoteHashes: mockTypingAnalyticsListRemoteHashes,
+    typingAnalyticsListLocalDeviceDays: mockTypingAnalyticsListLocalDeviceDays,
+    typingAnalyticsHasRemote: mockTypingAnalyticsHasRemote,
+    typingAnalyticsListRemoteCloudHashes: mockTypingAnalyticsListRemoteCloudHashes,
+    typingAnalyticsListRemoteCloudDays: mockTypingAnalyticsListRemoteCloudDays,
+    typingAnalyticsFetchRemoteDay: mockTypingAnalyticsFetchRemoteDay,
+    typingAnalyticsDeleteRemoteDay: mockTypingAnalyticsDeleteRemoteDay,
+    typingAnalyticsExport: mockTypingAnalyticsExport,
+    typingAnalyticsImport: mockTypingAnalyticsImport,
+    typingAnalyticsDeleteItems: mockTypingAnalyticsDeleteItems,
+    typingAnalyticsDeleteAll: mockTypingAnalyticsDeleteAll,
   },
   writable: true,
 })
@@ -96,6 +142,29 @@ describe('DataModal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockListStoredKeyboards.mockResolvedValue([])
+    mockTypingAnalyticsListKeyboards.mockResolvedValue([])
+    mockTypingAnalyticsListItems.mockResolvedValue([])
+    mockTypingAnalyticsListItemsLocal.mockResolvedValue([])
+    mockTypingAnalyticsListItemsForHash.mockResolvedValue([])
+    mockTypingAnalyticsListIntervalItems.mockResolvedValue([])
+    mockTypingAnalyticsListIntervalItemsLocal.mockResolvedValue([])
+    mockTypingAnalyticsListActivityGrid.mockResolvedValue([])
+    mockTypingAnalyticsListActivityGridLocal.mockResolvedValue([])
+    mockTypingAnalyticsListMinuteStats.mockResolvedValue([])
+    mockTypingAnalyticsListMinuteStatsLocal.mockResolvedValue([])
+    mockTypingAnalyticsSaveKeymapSnapshot.mockResolvedValue({ saved: false, savedAt: null })
+    mockTypingAnalyticsGetKeymapSnapshotForRange.mockResolvedValue(null)
+    mockTypingAnalyticsListRemoteHashes.mockResolvedValue([])
+    mockTypingAnalyticsListLocalDeviceDays.mockResolvedValue([])
+    mockTypingAnalyticsHasRemote.mockResolvedValue(false)
+    mockTypingAnalyticsListRemoteCloudHashes.mockResolvedValue([])
+    mockTypingAnalyticsListRemoteCloudDays.mockResolvedValue([])
+    mockTypingAnalyticsFetchRemoteDay.mockResolvedValue(true)
+    mockTypingAnalyticsDeleteRemoteDay.mockResolvedValue(true)
+    mockTypingAnalyticsExport.mockResolvedValue({ written: 0, cancelled: true })
+    mockTypingAnalyticsImport.mockResolvedValue({ result: { imported: 0, rejections: [] }, cancelled: true })
+    mockTypingAnalyticsDeleteItems.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+    mockTypingAnalyticsDeleteAll.mockResolvedValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     resetDataNavCache()
   })
 

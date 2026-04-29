@@ -52,6 +52,7 @@ describe('google-drive', () => {
     it('converts keyboard sync units to drive filename', () => {
       expect(driveFileName('keyboards/0x1234/settings')).toBe('keyboards_0x1234_settings.enc')
       expect(driveFileName('keyboards/0x1234/snapshots')).toBe('keyboards_0x1234_snapshots.enc')
+      expect(driveFileName('keyboards/0x1234/devices/hash-abc')).toBe('keyboards_0x1234_devices_hash-abc.enc')
     })
   })
 
@@ -67,6 +68,10 @@ describe('google-drive', () => {
 
     it('parses keyboard snapshots drive filename to sync unit', () => {
       expect(syncUnitFromFileName('keyboards_0x1234_snapshots.enc')).toBe('keyboards/0x1234/snapshots')
+    })
+
+    it('parses keyboard device JSONL drive filename to sync unit', () => {
+      expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc.enc')).toBe('keyboards/0x1234/devices/hash-abc')
     })
 
     it('round-trips the keyboard-meta singleton sync unit', () => {

@@ -6,7 +6,7 @@
     "clickToSelect": "クリックして選択",
     "cancel": "キャンセル",
     "delete": "削除",
-    "confirmDelete": "削除する？",
+    "confirmDelete": "削除しますか？",
     "close": "閉じる",
     "reset": "リセット",
     "confirmReset": "リセットする？",
@@ -27,7 +27,11 @@
     "saving": "保存中...",
     "back": "戻る",
     "exported": "エクスポート済み",
-    "imported": "インポート済み"
+    "imported": "インポート済み",
+    "load": "読み込み",
+    "labelPlaceholder": "ラベル",
+    "noLabel": "（ラベルなし）",
+    "synced": "同期データ"
   },
   "app": {
     "title": "Pipette",
@@ -39,6 +43,7 @@
     "loadDummy": "JSONファイルから読み込み…",
     "keyboardTab": "デバイス",
     "fileTab": "ファイル",
+    "analyzeTab": "分析",
     "loadPipetteFile": ".pipetteファイルを読み込み…",
     "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できます。ライティングとマトリクステスター以外の全機能が利用可能です。",
     "selectKeyboard": "ローカル保存ファイルを選択",
@@ -85,7 +90,6 @@
       "redo": "やり直し",
       "zoomIn": "拡大",
       "zoomOut": "縮小",
-
       "copySelected": "選択キーを貼り付け ({{count}})",
       "clickToPaste": "キーをクリックして貼り付け",
       "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → キーをクリックでペースト",
@@ -148,7 +152,7 @@
       "deleteKeycode": "キーコード削除",
       "editAction": "アクション編集",
       "asciiOnly": "ASCII文字（英数字・記号）のみ対応しています",
-      "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください。",
+      "unlockClickAgain": "アンロック後、もう一度マクロキーをクリックしてエディタを開いてください",
       "unlockWarning": "パスワードや機密情報をマクロに保存しないでください。再生・共有される可能性があります。",
       "invalidMacroEntry": "インデックス{{index}}のマクロが無効です"
     },
@@ -164,7 +168,7 @@
       "saturation": "彩度",
       "value": "明度",
       "hex": "HEX",
-      "noLighting": "このキーボードはライティング制御をサポートしていません。",
+      "noLighting": "このキーボードはライティング制御をサポートしていません",
       "colorPicker": {
         "label": "カラーピッカー",
         "palette": "パレット",
@@ -267,11 +271,45 @@
       "viewOnly": "タイピングビュー",
       "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
+      "recordStart": "開始",
+      "recordStop": "停止",
+      "viewAnalytics": "分析ビュー",
+      "tab": {
+        "window": "ウィンドウ",
+        "rec": "REC"
+      },
+      "monitorApp": {
+        "label": "Monitor App"
+      },
+      "heatmap": {
+        "legend": "ヒートマップ: 直近 1 時間"
+      },
       "closeHint": "クリックでメニューを開く",
+      "recordingIndicator": "記録中",
       "resetSize": "初期サイズ",
       "fitSize": "フィット",
       "baseLayer": "Base Layer",
       "baseLayerShort": "Base",
+      "heatmapWindow": "ヒートマップの表示期間（分）",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} 分",
+      "consent": {
+        "title": "タイピング分析の記録を有効にしますか？",
+        "collectedHeading": "収集する情報",
+        "collectedItems": [
+          "1 分単位の文字頻度",
+          "キー押下回数（row/col/layer/keycode、tap / hold 別）",
+          "タイピング速度の分布（interval パーセンタイル）",
+          "アクティブなアプリケーション名（Monitor App ON 時のみ。1 分内に複数アプリを観測した場合は不明として記録）"
+        ],
+        "notCollectedHeading": "収集しない情報",
+        "notCollectedItems": [
+          "個別の打鍵タイミング",
+          "入力テキスト / パスワード / 特定の単語",
+          "ウィンドウタイトル / URL / ファイルパス"
+        ],
+        "accept": "有効化"
+      },
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",
       "language": {
@@ -303,7 +341,7 @@
   "error": {
     "loadFailed": "レイアウトファイルの読み込みに失敗しました",
     "saveFailed": "レイアウトファイルの保存に失敗しました",
-    "exampleUid": "固有のUIDを設定してください。",
+    "exampleUid": "固有のUIDを設定してください",
     "dummyMode": "ダミーモード",
     "pipetteFileMode": "ファイルモード",
     "unsavedChanges": "未保存の変更があります",
@@ -336,7 +374,7 @@
     "combo": "Combo",
     "keyOverride": "Key Override",
     "altRepeatKey": "Alt Repeat Key",
-    "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません。",
+    "settingsNote": "この機能はキーボード全体に適用され、個別のキーに割り当てることはできません",
     "macroMoreActions": "残り {{count}} 行",
     "user": "User",
     "midi": "MIDI",
@@ -404,8 +442,8 @@
   },
   "unlock": {
     "title": "キーボードのロック解除",
-    "instructions": "ハイライトされたキーを押し続けてロックを解除してください。",
-    "hint": "キャンセルするにはキーボードを抜き差ししてください。",
+    "instructions": "ハイライトされたキーを押し続けてロックを解除してください",
+    "hint": "キャンセルするにはキーボードを抜き差ししてください",
     "progress": "進捗: {{current}} / {{total}}",
     "cancel": "キャンセル"
   },
@@ -452,21 +490,16 @@
     "pdfFooterLabel": ".pdf"
   },
   "layoutStore": {
-    "load": "読み込み",
     "title": "データ",
-    "labelPlaceholder": "ラベル",
     "noSavedLayouts": "保存済みレイアウトはありません",
     "saveFailed": "レイアウトの保存に失敗しました",
     "maxEntriesReached": "保存数の上限（30件）に達しました。新しく保存するには既存のエントリを削除してください。",
     "loadFailed": "レイアウトの読み込みに失敗しました",
-    "confirmDelete": "削除しますか？",
-    "noLabel": "（ラベルなし）",
     "rename": "名前変更",
     "delete": "削除",
     "current": "現在の状態",
     "import": "インポート",
     "saveCurrentState": "現在の状態を保存",
-    "history": "同期データ",
     "export": "エクスポート",
     "exportCurrent": "現在の状態をエクスポート",
     "confirmOverwrite": "上書きしますか？",
@@ -475,13 +508,25 @@
     "exportPdf": ".pdf",
     "versionPrefix": "v{{version}} - "
   },
+  "analyzeFilterStore": {
+    "title": "検索条件の保存",
+    "tabSave": "条件保存",
+    "selectKeyboard": "保存条件を管理するにはキーボードを選択してください。",
+    "saveFailed": "検索条件の保存に失敗しました",
+    "loadFailed": "検索条件の読み込みに失敗しました",
+    "unsupportedVersion": "新しいバージョンの Pipette で作成された検索条件のため読み込めません。",
+    "maxEntriesReached": "保存可能な上限 ({{max}}件) に達しました。古い条件を削除してください。",
+    "csv": ".csv",
+    "syncedCount": "同期データ: {{count}}",
+    "empty": "保存された検索条件はありません"
+  },
   "sync": {
     "title": "設定",
     "googleAccount": "Googleアカウント",
     "connected": "接続済み",
     "signOut": "接続解除",
     "confirmDisconnect": "接続解除しますか？",
-    "disconnectHubWarning": "Pipette Hub も切断されます。",
+    "disconnectHubWarning": "Pipette Hub も切断されます",
     "signIn": "接続",
     "authenticating": "認証を待機中...",
     "authFailed": "認証に失敗しました。もう一度お試しください。",
@@ -492,10 +537,10 @@
     "passwordTooWeak": "パスワードが弱すぎます",
     "passwordSetFailed": "パスワードの設定に失敗しました",
     "changePassword": "パスワード変更",
-    "changePasswordInfo": "すべての同期データが新しいパスワードで再暗号化されます。",
+    "changePasswordInfo": "すべての同期データが新しいパスワードで再暗号化されます",
     "changingPassword": "パスワードを変更中...",
     "settingPassword": "パスワードを設定中...",
-    "samePassword": "現在と同じパスワードには変更できません。",
+    "samePassword": "現在と同じパスワードには変更できません",
     "changePasswordUndecryptable": "復号できないファイルがあります。先に復号できないファイルをスキャンして削除してください。",
     "autoSync": "自動同期",
     "enable": "有効",
@@ -522,20 +567,20 @@
     "statusError": "エラー",
     "noSyncYet": "未同期",
     "readiness": {
-      "unauthenticated": "Google にサインインして同期を開始してください。",
-      "noPasswordFile": "同期パスワードを設定してください。",
-      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)。",
-      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません。",
-      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています。"
+      "unauthenticated": "Google にサインインして同期を開始してください",
+      "noPasswordFile": "同期パスワードを設定してください",
+      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)",
+      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません",
+      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています"
     },
     "changePasswordError": {
-      "unauthenticated": "パスワードを変更する前に Google にサインインしてください。",
+      "unauthenticated": "パスワードを変更する前に Google にサインインしてください",
       "noPasswordFile": "保存済みパスワードがありません。先にパスワードを設定してください。",
-      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)。",
-      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません。",
-      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました。"
+      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)",
+      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません",
+      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました"
     },
-    "changePasswordInProgress": "同期実行中のためパスワードを変更できません。",
+    "changePasswordInProgress": "同期実行中のためパスワードを変更できません",
     "troubleshooting": "トラブルシューティング",
     "localData": "ローカルデータ",
     "import": "インポート",
@@ -547,7 +592,7 @@
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
     "undecryptable": "復号できないファイル",
     "scanRemote": "スキャン",
-    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします。",
+    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします",
     "scanUndecryptable": "スキャン",
     "scanning": "スキャン中...",
     "downloading": "ダウンロード中...",
@@ -583,7 +628,7 @@
     "basicViewTypeJis": "JIS",
     "security": "セキュリティ",
     "autoLockTime": "自動ロック時間",
-    "autoLockDescription": "無操作時に自動ロック。",
+    "autoLockDescription": "無操作時に自動ロック",
     "autoLockMinutes": "{{minutes}}分",
     "maxKeymapHistory": "キーマップ履歴の上限",
     "language": "言語",
@@ -594,6 +639,667 @@
       "version": "バージョン {{version}}",
       "license": "ライセンス: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
+    }
+  },
+  "analyze": {
+    "placeholder": "分析チャートを準備中です",
+    "noKeyboards": "まだ打鍵データがありません",
+    "noData": "選択した期間にデータがありません",
+    "selectKeyboard": "一覧からキーボードを選択してください",
+    "appUsage": {
+      "title": "アプリ別利用配分",
+      "loading": "アプリ利用データを読み込み中…",
+      "empty": "アプリ データがありません — Monitor App を有効化して REC を開始してください",
+      "unknown": "不明 / 混在",
+      "other": "その他",
+      "tooltipKeystrokesLabel": "打鍵",
+      "tooltipShareLabel": "比率"
+    },
+    "wpmByApp": {
+      "title": "アプリ別 WPM",
+      "loading": "アプリ別 WPM を読み込み中…",
+      "empty": "アプリ タグ付きの 1 分集約がまだありません — Monitor App を有効化して REC を開始してください",
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "打鍵"
+    },
+    "tablistLabel": "分析種別",
+    "splitView": {
+      "toggle": "分割表示",
+      "narrowWindow": "ウィンドウが狭すぎて分割表示できません — 幅を広げてください"
+    },
+    "export": {
+      "csv": "エクスポート",
+      "categoriesLabel": "出力するカテゴリ",
+      "confirm": ".csv",
+      "failed": "出力に失敗しました",
+      "snapshotMissing": "ヒートマップ・エルゴノミクス・レイアウト比較はキーマップスナップショットが必要なため、この期間では出力できません",
+      "conditionLabel": {
+        "device": "デバイス",
+        "app": "アプリ",
+        "keymap": "キーマップ",
+        "range": "期間"
+      },
+      "fingerOverrides": "指割り当て",
+      "fingerOverridesDefault": "デフォルト",
+      "fingerOverridesCustomized": "カスタム ({{count}})",
+      "category": {
+        "heatmap": "ヒートマップ",
+        "wpm": "WPM",
+        "interval": "間隔",
+        "activity": "活動量",
+        "ergonomics": "エルゴノミクス",
+        "bigrams": "バイグラム",
+        "layoutComparison": "レイアウト比較",
+        "layer": "レイヤー"
+      }
+    },
+    "loading": {
+      "keyboards": "キーボード一覧読み込み中…",
+      "settings": "設定読み込み中…",
+      "syncing": "クラウド同期中…",
+      "snapshot": "キーマップ読み込み中…",
+      "preparing": "チャート準備中…"
+    },
+    "unit": {
+      "keys": "回",
+      "activations": "回"
+    },
+    "snapshotTimeline": {
+      "title": "キーマップ履歴",
+      "current": "現在のキーマップ"
+    },
+    "wpm": {
+      "legend": "WPM",
+      "description": "WPM — Words per minute\nアクティブ 1 分あたりの打鍵数を 5 で割った値 (英語 1 語 = 5 文字換算)",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakWpm": "最高 WPM",
+          "lowestWpm": "最低WPM",
+          "weightedMedianWpm": "重み付き中央値WPM",
+          "totalBackspaces": "Bksp 合計",
+          "overallBksPercent": "平均 Bksp %",
+          "overallBksPercentDesc": "取得した打鍵のうち Backspace の割合"
+        }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "Bksp % — 取得した打鍵のうち Backspace の割合\nキー入力ストリームから集計、タイピングテスト以外の通常打鍵も含む"
+      },
+      "timeOfDay": {
+        "tooltipLabel": "時間帯",
+        "summary": {
+          "label": "時間帯別 WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakHour": "ピーク時間帯",
+          "peakHourDesc": "WPM が最大の時間帯",
+          "lowestHour": "最遅時間帯",
+          "lowestHourDesc": "WPM が最小の時間帯 (打鍵のない時間帯は除外)",
+          "activeHours": "活動時間帯数",
+          "activeHoursDesc": "1 回以上打鍵があった時間帯の数 (24 中)"
+        }
+      }
+    },
+    "interval": {
+      "legend": {
+        "min": "最小",
+        "p25": "p25",
+        "p50": "中央値",
+        "p75": "p75",
+        "max": "最大"
+      },
+      "description": {
+        "min": "最小 — 1 分内で記録された最短の打鍵間隔 (最速の瞬間)",
+        "p25": "p25 — 下側四分位\n各分の p25 の日次平均、1/4 のタイミングがこれより短い",
+        "p50": "中央値 — 各分の中央値の日次平均\n半分のタイミングがこれより短い",
+        "p75": "p75 — 上側四分位\n各分の p75 の日次平均、3/4 のタイミングがこれより短い",
+        "max": "最大 — 1 分内で記録された最長の打鍵間隔 (途中の最長停止)"
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "推定打鍵数",
+        "summary": {
+          "label": "打鍵リズムサマリ",
+          "totalKeystrokes": "合計打鍵",
+          "medianP50": "中央値インターバル",
+          "fast": "高速 (<200ms)",
+          "fastDesc": "インターバルが 200ms 未満の割合",
+          "normal": "標準 (200-500ms)",
+          "normalDesc": "インターバルが 200ms〜500ms の割合",
+          "slow": "緩慢 (500ms-2s)",
+          "slowDesc": "インターバルが 500ms〜2s の割合",
+          "pause": "ポーズ (>=2s)",
+          "pauseDesc": "インターバルが 2s 以上の割合",
+          "longestPause": "最長打鍵間隔（1分）"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "インターバルサマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "medianP50": "重み付き中央値",
+          "shortest": "最短打鍵間隔（1分）",
+          "longestPause": "最長打鍵間隔（1分）"
+        }
+      }
+    },
+    "activity": {
+      "tableLabel": "時間帯 × 曜日の活動量",
+      "tableLabelWpm": "時間帯 × 曜日の WPM",
+      "hourHeader": "{{hour}}時",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWithShare": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys) (総打鍵の {{share}}%)",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
+      "legendLow": "0",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
+      "legendHighWpm": "{{wpm}} WPM",
+      "legendLowDesc": "このセルで打鍵がなかった状態",
+      "legendHighDesc": "ピーク値 ({{count}} $t(analyze.unit.keys))\nセルの濃度は 0 からこの値まで線形にスケール",
+      "legendHighDescWpm": "ピーク WPM ({{wpm}} WPM)\nセルの濃度はこの値まで線形にスケール\n薄く表示されるセルは Min sample 閾値を満たしていない",
+      "legendScaleDesc": "0 (空) からピーク値までの線形スケール",
+      "summary": {
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
+        "wpmContext": "{{wpm}} WPM"
+      },
+      "keystrokes": {
+        "summary": {
+          "label": "活動量サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "mostFrequentDow": "最頻曜日",
+          "mostFrequentDowDesc": "合計打鍵数が最大の曜日",
+          "mostFrequentHour": "最頻時間帯",
+          "mostFrequentHourDesc": "合計打鍵数が最大の時間帯",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "合計打鍵数が最大の (時間帯 × 曜日) セル",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1 回以上打鍵があったセル数 (168 中)"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "活動量 WPM サマリ",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "WPM が最大の (時間帯 × 曜日) セル",
+          "lowestCell": "最遅セル",
+          "lowestCellDesc": "WPM が最小の (時間帯 × 曜日) セル (打鍵があるセルのみ)",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1 回以上打鍵があったセル数 (168 中)"
+        }
+      },
+      "sessions": {
+        "tooltipLabel": "セッション",
+        "tooltipValue": "{{count}} 件 ({{share}}%)",
+        "bin": {
+          "lt5Min": "5分未満",
+          "5to15Min": "5-15分",
+          "15to30Min": "15-30分",
+          "30to60Min": "30-60分",
+          "1to2Hours": "1-2時間",
+          "2to4Hours": "2-4時間",
+          "gtFourHours": "4時間以上"
+        },
+        "summary": {
+          "label": "セッション分布サマリ",
+          "sessionCount": "セッション数",
+          "totalDuration": "合計時間",
+          "meanDuration": "平均セッション長",
+          "medianDuration": "中央値セッション長",
+          "longestDuration": "最長セッション",
+          "shortestDuration": "最短セッション"
+        }
+      },
+      "dow": {
+        "0": "日",
+        "1": "月",
+        "2": "火",
+        "3": "水",
+        "4": "木",
+        "5": "金",
+        "6": "土"
+      },
+      "calendar": {
+        "gridLabel": "年間アクティビティカレンダー",
+        "monthShortYear": "{{year}}-{{monthShort}}",
+        "monthShort": {
+          "1": "1月",
+          "2": "2月",
+          "3": "3月",
+          "4": "4月",
+          "5": "5月",
+          "6": "6月",
+          "7": "7月",
+          "8": "8月",
+          "9": "9月",
+          "10": "10月",
+          "11": "11月",
+          "12": "12月"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys)（{{activeDuration}}）",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM（{{activeDuration}}）",
+        "cellTooltipSessions": "{{date}} — 開始セッション {{count}}",
+        "cellTooltipEmpty": "{{date}} — 活動なし",
+        "summary": {
+          "label": "カレンダーサマリー",
+          "total": "合計打鍵",
+          "avgWpm": "平均 WPM",
+          "activeDays": "活動日数",
+          "activeDaysValue": "{{active}} / {{total}}（{{share}}%）",
+          "peak": "ピーク日",
+          "avg": "活動日平均"
+        }
+      }
+    },
+    "analysisTab": {
+      "summary": "サマリー",
+      "wpm": "WPM",
+      "interval": "間隔",
+      "activity": "活動量",
+      "keyHeatmap": "ヒートマップ",
+      "ergonomics": "エルゴノミクス",
+      "bigrams": "バイグラム",
+      "layoutComparison": "レイアウト比較",
+      "layer": "レイヤー",
+      "byApp": "アプリ別"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "今日のサマリー",
+        "ariaLabel": "今日のサマリー",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間"
+      },
+      "weeklyReport": {
+        "sectionTitle": "直近 7 日",
+        "ariaLabel": "週次レポート",
+        "delta": "{{glyph}} {{sign}}{{pct}}%（前 7 日比）",
+        "deltaInsufficient": "{{glyph}} —（前 7 日比）",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間",
+        "activeDurationContext": "{{previous}}（前 7 日）",
+        "activeDaysLabel": "アクティブ日数",
+        "activeDaysUnit": "日"
+      },
+      "profile": {
+        "sectionTitle": "タイピングプロファイル（直近 {{days}} 日）",
+        "ariaLabel": "タイピングプロファイル",
+        "insufficient": "データ不足",
+        "speedLabel": "スピード",
+        "speedDesc": "期間全体の WPM を Slow（30 未満）/ Medium（30–50）/ Fast（50 以上）に分類。安定するまで数日かかります",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "ゆっくり",
+          "medium": "標準",
+          "fast": "速い"
+        },
+        "handBalanceLabel": "左右バランス",
+        "handBalanceDesc": "バイグラムキーが左右どちらの手で打鍵されたかの比率。50/50 から ±5% 以内なら均衡と判定します",
+        "handBalanceContext": "左 {{leftPct}}% / 右 {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "左寄り",
+          "balanced": "均衡",
+          "rightBias": "右寄り"
+        },
+        "sfbLabel": "SFB 率",
+        "sfbDesc": "同じ指で連続して打鍵したバイグラムの割合。低いほど打鍵が滑らか。<4% 低 / 4–8% 中 / 8%以上 高",
+        "sfbContext": "同指 {{pct}}%",
+        "sfb": {
+          "low": "低い",
+          "medium": "中くらい",
+          "high": "高い"
+        },
+        "fatigueLabel": "疲労リスク",
+        "fatigueDesc": "ピーク時間帯と最低時間帯の WPM 差。差が大きいほど疲労リスクが高い傾向です",
+        "fatigueContext": "ピーク→最低 {{pct}}% 低下",
+        "fatigue": {
+          "low": "低",
+          "medium": "中",
+          "high": "高"
+        }
+      }
+    },
+    "bigrams": {
+      "loading": "バイグラムデータを読み込み中…",
+      "empty": "この期間のバイグラムデータはまだありません。打鍵を記録してから再度開いてください",
+      "error": "バイグラムデータの取得に失敗しました。再試行するかログを確認してください",
+      "quadrant": {
+        "top": "頻出ペア",
+        "slow": "ペア間隔",
+        "fingerIki": "指間隔"
+      },
+      "column": {
+        "pair": "ペア",
+        "count": "回数",
+        "avgIki": "平均間隔",
+        "p95": "p95 間隔"
+      },
+      "fingerIki": {
+        "noSnapshot": "指間隔には keymap snapshot が必要です。Record セッションを開始するか snapshot のある期間を選択してください",
+        "sortLabel": "並び順",
+        "sort": {
+          "desc": "遅い順",
+          "asc": "早い順"
+        }
+      },
+      "pairIntervalThreshold": {
+        "label": "平均間隔",
+        "suffix": "ms 以上",
+        "ariaLabel": "平均間隔の最小値 (ms)"
+      },
+      "cellTooltipOccurrencesLabel": "出現",
+      "cellTooltipAvgIkiLabel": "平均間隔"
+    },
+    "keyHeatmap": {
+      "layer": "レイヤー",
+      "layerOption": "レイヤー {{i}}",
+      "layerOptionMulti": "レイヤー {{layers}}",
+      "bondToggle": "レイヤー {{i}} を別グループと結合",
+      "noLayout": "このスナップショットにレイアウトデータがありません",
+      "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
+      "ranking": {
+        "frequentUsedN": "上位",
+        "frequentUsed": "よく使うキー",
+        "colKey": "キー",
+        "colLayer": "レイヤー",
+        "colMatrix": "マトリクス",
+        "colCount": "回数",
+        "aggregate": "集計",
+        "aggregateOption": {
+          "cell": "物理",
+          "char": "文字"
+        },
+        "keyGroup": "グループ",
+        "keyGroupOption": {
+          "all": "すべて",
+          "char": "文字",
+          "modifier": "修飾",
+          "layerOp": "レイヤー操作"
+        },
+        "emptyFrequentUsed": "この期間に押下されたキーがありません"
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "指別打鍵量",
+      "handBalance": "左右バランス",
+      "rowUsage": "段別バランス",
+      "rowLoad": "段別打鍵量",
+      "noSnapshot": "この期間のキーマップスナップショットがありません。レコーディングを開始して取得してください。",
+      "noLayout": "このスナップショットにはレイアウト情報がありません",
+      "noData": "この期間の打鍵データがありません",
+      "finger": {
+        "left-pinky": "左小指",
+        "left-ring": "左薬指",
+        "left-middle": "左中指",
+        "left-index": "左人差し指",
+        "left-thumb": "左親指",
+        "right-thumb": "右親指",
+        "right-index": "右人差し指",
+        "right-middle": "右中指",
+        "right-ring": "右薬指",
+        "right-pinky": "右小指"
+      },
+      "fingerKind": {
+        "thumb": "親指",
+        "index": "人差し指",
+        "middle": "中指",
+        "ring": "薬指",
+        "pinky": "小指"
+      },
+      "hand": {
+        "left": "左手",
+        "right": "右手"
+      },
+      "rowCategory": {
+        "function": "F 行",
+        "number": "数字行",
+        "top": "上段",
+        "home": "ホーム行",
+        "bottom": "下段",
+        "thumb": "親指段"
+      },
+      "learning": {
+        "noData": "この期間にはマトリクスの活動が十分にありません。打鍵を増やすか、期間を広げてください。",
+        "belowMinSample": "下限未満",
+        "totalKeystrokes": "{{count}} 打鍵",
+        "relativeTrendNote": "スコアは絶対評価ではなく相対トレンド指標です。数値そのものではなく、線が時間とともにどう動くかに注目してください。",
+        "score": {
+          "overall": "総合",
+          "fingerLoad": "指の偏り",
+          "handBalance": "左右バランス",
+          "homeRowStay": "ホーム行率"
+        },
+        "summary": {
+          "latestOverall": "最新スコア",
+          "delta_one": "前 1 区間との差",
+          "delta_other": "過去 {{count}} 区間との差",
+          "baselineMean": "基準 {{value}}",
+          "bucketCount": "区間数",
+          "qualifiedCount": "有効区間"
+        }
+      }
+    },
+    "layoutComparison": {
+      "sourceLabel": "現在",
+      "targetLabel": "比較",
+      "noTargetOption": "—",
+      "noTarget": "比較するレイアウトを選んでください。",
+      "noSnapshot": "この期間のキーマップスナップショットがありません。レコードを開始すると保存されます。",
+      "noData": "この期間に打鍵データが記録されていません。",
+      "loading": "レイアウト比較を計算中…",
+      "fetchError": "レイアウト比較の計算に失敗しました。",
+      "skipWarning": "{{percent}}% のイベントがこのレイアウトに対応できませんでした。下の数値は参考値として扱ってください。",
+      "fingerDiffTitle": "{{target}} との指負担差分",
+      "heatmapDiffTitle": "{{target}} との位置別負担差分",
+      "heatmapDiffLegend": {
+        "decrease": "比較先で減少",
+        "increase": "比較先で増加"
+      },
+      "headers": {
+        "metric": "指標",
+        "current": "現在"
+      },
+      "metrics": {
+        "fingerLoad": "指の負担",
+        "handBalance": "左右バランス",
+        "rowDist": "行分布",
+        "homeRow": "ホーム行率"
+      }
+    },
+    "layer": {
+      "title": "レイヤー別打鍵数",
+      "activationsTitle": "レイヤー起動回数",
+      "layerLabel": "レイヤー {{layer}}",
+      "noData": "この期間にレイヤー別の打鍵記録がありません",
+      "noActivations": "この期間にレイヤー操作キーの押下記録がありません",
+      "requiresSnapshot": "レイヤー起動回数の表示にはキーマップスナップショットが必要です。この期間に record を開始すると取得できます。"
+    },
+    "finger": {
+      "short": {
+        "left-pinky": "左小",
+        "left-ring": "左薬",
+        "left-middle": "左中",
+        "left-index": "左人",
+        "left-thumb": "左親",
+        "right-thumb": "右親",
+        "right-index": "右人",
+        "right-middle": "右中",
+        "right-ring": "右薬",
+        "right-pinky": "右小"
+      }
+    },
+    "fingerAssignment": {
+      "button": "指割り当て",
+      "title": "指割り当て設定",
+      "subtitle": "キーをクリックして推定値を上書きできます",
+      "save": "保存",
+      "reset": "推定に戻す",
+      "resetAll": "全てリセット",
+      "noSnapshot": "この期間のキーマップスナップショットがありません",
+      "popoverLabel": "指の選択",
+      "leftHand": "左手",
+      "rightHand": "右手"
+    },
+    "peak": {
+      "peakKeystrokesPerMin": "1 分最大打鍵",
+      "peakKeystrokesPerDay": "1 日最大打鍵",
+      "longestSession": "最長セッション (分)",
+      "longestSessionDesc": "5 分以上の無入力で区切られた最長の連続タイピング",
+      "unit": {
+        "kpm": "回/分",
+        "kpd": "回/日",
+        "minutes": "分"
+      }
+    },
+    "streakGoal": {
+      "sectionTitle": "打鍵記録連続日数",
+      "ariaLabel": "連続記録日数と打鍵記録目標設定のサマリ",
+      "currentStreakLabel": "現在",
+      "currentStreakDesc": "現在のサイクルで連続達成した日数\n目標日数に達すると履歴に記録後リセット",
+      "currentValue": "{{current}}/{{goalDays}} 日",
+      "longestStreakLabel": "履歴中最長",
+      "goalLabel": "目標設定",
+      "goalDaysAria": "目標連続日数",
+      "goalKeystrokesAria": "1 日あたりの目標打鍵数",
+      "changeWarning": "目標を変更すると現在のカウントがクリアされます",
+      "confirm": "確定",
+      "daysUnit": "日",
+      "keystrokesUnit": "回/日",
+      "historyButton": "達成履歴",
+      "historyTitle": "達成履歴",
+      "historyEmpty": "達成履歴はまだありません",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} 日 / {{keystrokes}} 回",
+      "historyColumn": {
+        "period": "期間",
+        "goal": "目標",
+        "days": "日数",
+        "total": "合計打鍵数",
+        "average": "平均 / 日"
+      }
+    },
+    "filters": {
+      "keyboard": "キーボード",
+      "from": "開始",
+      "to": "終了",
+      "period": "期間",
+      "device": "デバイス",
+      "deviceOption": {
+        "own": "このデバイス",
+        "all": "全デバイス合算",
+        "hashShort": "{{hash}}…"
+      },
+      "app": "アプリ",
+      "appOption": {
+        "none": "全アプリ合算",
+        "multi": "{{first}} 他{{rest}}件"
+      },
+      "unit": "表示",
+      "unitOption": {
+        "sec": "秒",
+        "ms": "ミリ秒"
+      },
+      "intervalViewMode": "ビュー",
+      "intervalViewModeOption": {
+        "timeSeries": "時系列",
+        "distribution": "分布"
+      },
+      "wpmViewMode": "ビュー",
+      "wpmViewModeOption": {
+        "timeSeries": "時系列",
+        "timeOfDay": "時間帯別"
+      },
+      "wpmMinSample": "最小サンプル",
+      "wpmMinSampleOption": {
+        "sec30": "30秒",
+        "min1": "1分",
+        "min2": "2分",
+        "min5": "5分"
+      },
+      "ergonomicsViewMode": "ビュー",
+      "ergonomicsViewModeOption": {
+        "snapshot": "スナップショット",
+        "learning": "学習曲線"
+      },
+      "ergonomicsPeriod": "区間",
+      "ergonomicsPeriodOption": {
+        "week": "週",
+        "month": "月"
+      },
+      "activityMetric": "指標",
+      "activityMetricOption": {
+        "keystrokes": "打鍵数",
+        "wpm": "WPM",
+        "sessions": "セッション"
+      },
+      "activityView": "ビュー",
+      "activityViewOption": {
+        "grid": "時間",
+        "calendar": "日"
+      },
+      "calendarNormalization": "正規化",
+      "calendarNormalizationOption": {
+        "absolute": "絶対値",
+        "shareOfWeekly": "週内シェア",
+        "shareOfTotal": "期間シェア"
+      },
+      "calendarRange": "表示期間",
+      "calendarRangeOption": {
+        "3": "3ヶ月",
+        "6": "6ヶ月",
+        "12": "12ヶ月"
+      },
+      "calendarRangePrev": "前の月",
+      "calendarRangeNext": "次の月",
+      "layerViewMode": "表示",
+      "layerViewModeOption": {
+        "keystrokes": "打鍵数",
+        "activations": "起動回数"
+      },
+      "layerBaseLayer": "ベース",
+      "normalization": "正規化",
+      "normalizationOption": {
+        "absolute": "絶対数",
+        "perHour": "1 時間あたり",
+        "shareOfTotal": "総打鍵比 (%)"
+      },
+      "granularity": "粒度",
+      "granularityOption": {
+        "auto": "自動",
+        "min1": "1分",
+        "min5": "5分",
+        "min10": "10分",
+        "min15": "15分",
+        "min30": "30分",
+        "hour1": "1時間",
+        "hour3": "3時間",
+        "hour6": "6時間",
+        "hour12": "12時間",
+        "day1": "1日",
+        "day3": "3日",
+        "week1": "1週間",
+        "month1": "1ヶ月"
+      }
     }
   },
   "dataModal": {
@@ -621,9 +1327,42 @@
     "deleteKeyboardConfirm": "このキーボードの全データを削除しますか？",
     "importExportDesc": "ローカルにある全てのデータをインポート/エクスポート（キーボード、お気に入り、設定）",
     "deleteAll": "全てのデータを削除",
-    "deleteAllConfirm": "同期データを含む全てのデータが削除されます。",
+    "deleteAllConfirm": "同期データを含む全てのデータが削除されます",
     "syncNoOrphans": "同期データは全てローカルにあります",
-    "resetAppSettings": "アプリケーション設定をリセット"
+    "resetAppSettings": "アプリケーション設定をリセット",
+    "typing": {
+      "title": "タイピング",
+      "noKeyboards": "タイピングデータがありません",
+      "noItems": "このキーボードのタイピングデータはありません",
+      "summaryLine": "{{days}} 日分 / 合計 {{keystrokes}} 打",
+      "colDate": "日付",
+      "colKeystrokes": "打鍵数",
+      "colActiveMs": "アクティブ時間",
+      "selectAll": "全ての日を選択",
+      "selectRow": "{{date}} を選択",
+      "deleteSelected": "選択した日を削除 ({{count}})",
+      "deleteAll": "このキーボードの全データを削除",
+      "confirmDeleteSelected": "このデバイスで記録された {{count}} 日分を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全ての日を削除しますか？ 同期先からも消えますが、他のデバイスで記録された分は残ります。削除した日付のデータは再 import できなくなります — 必要なら先に Export してください。",
+      "exportLabel": "Export…",
+      "importLabel": "Import…",
+      "importStatus": {
+        "importing": "取り込み中…",
+        "exporting": "書き出し中…",
+        "imported": "{{count}} 日分を取り込みました",
+        "exported": "{{count}} 日分を書き出しました",
+        "reason": {
+          "invalid-filename": "ファイル名が export 規則に一致しません",
+          "live-day-locked": "このファイルは現在記録中のためロックされています — {{unlock}} に解除",
+          "duplicate-in-batch": "同じ日付を指す別ファイルが同じバッチに含まれています",
+          "no-matching-target": "ローカルにもクラウドにもこの日付のデータがありません",
+          "empty-or-invalid-content": "ファイルが空、または不正な行が含まれます",
+          "rows-outside-day-window": "行の timestamp がファイル名の日付範囲外です",
+          "read-error": "ファイルを読み込めませんでした"
+        }
+      },
+      "noRemoteDevices": "このキーボードを他のデバイスで打ったデータはありません"
+    }
   },
   "editorSettings": {
     "title": "メニュー",
@@ -662,7 +1401,7 @@
     "hub": "Hub",
     "hubPosts": "Hub 投稿",
     "noPosts": "投稿はまだありません",
-    "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください。",
+    "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください",
     "renameFailed": "名前変更に失敗しました",
     "deleteFailed": "削除に失敗しました",
     "hubSynced": "同期しました",
@@ -695,17 +1434,12 @@
     "button": "お気に入り",
     "save": "お気に入り保存",
     "loadFav": "お気に入り読込",
-    "load": "読み込み",
-    "labelPlaceholder": "ラベル",
     "noSaved": "保存済みのお気に入りはありません",
     "saveFailed": "お気に入りの保存に失敗しました",
     "loadFailed": "お気に入りの読み込みに失敗しました",
-    "confirmDelete": "削除しますか？",
-    "noLabel": "（ラベルなし）",
     "rename": "名前変更",
     "delete": "削除",
     "saveCurrentState": "現在の状態を保存",
-    "history": "同期データ",
     "export": "エクスポート",
     "exportAll": "すべてエクスポート",
     "import": "インポート",

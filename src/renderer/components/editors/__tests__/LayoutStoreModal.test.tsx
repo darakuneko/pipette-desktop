@@ -63,7 +63,7 @@ describe('LayoutStoreModal', () => {
     const labels = screen.getAllByTestId('layout-store-entry-label')
     expect(labels[0].textContent).toBe('First Layout')
     // Entry with empty label shows noLabel key
-    expect(labels[1].textContent).toBe('layoutStore.noLabel')
+    expect(labels[1].textContent).toBe('common.noLabel')
   })
 
   it('calls onLoad when load button clicked', () => {

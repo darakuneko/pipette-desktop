@@ -697,15 +697,20 @@ function buildV6(): VersionedKeycodeMap {
     kc[`USER${String(x).padStart(2, '0')}`] = kc.QK_KB + x
   }
 
-  // Build masked set from entries ending with "(kc)"
+  // Build masked set from entries ending with "(kc)" plus a reverse
+  // map (outer code → template qmkId) so serializeInternal can fall
+  // back to a meaningful label even when the keyboard's per-layer
+  // Keycode objects haven't been created yet.
   const masked = new Set<number>()
+  const maskedTemplates = new Map<number, string>()
   for (const [name, val] of Object.entries(kc)) {
     if (name.endsWith('(kc)')) {
       masked.add(val)
+      maskedTemplates.set(val, name)
     }
   }
 
-  return { kc, masked }
+  return { kc, masked, maskedTemplates }
 }
 
 export const keycodesV6: VersionedKeycodeMap = buildV6()

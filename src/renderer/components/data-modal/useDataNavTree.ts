@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import type { DataNavPath } from './data-modal-types'
 import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/types/sync'
+import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 
 export interface UseDataNavTreeOptions {
   showHubTab: boolean
@@ -25,16 +26,44 @@ export function resetDataNavCache(): void {
 
 export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOptions) {
   const [storedKeyboards, setStoredKeyboards] = useState<StoredKeyboardInfo[]>([])
+  const [typingKeyboards, setTypingKeyboards] = useState<TypingKeyboardSummary[]>([])
+  const [hasRemoteTyping, setHasRemoteTyping] = useState(false)
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(
     () => cachedExpandedNodes ?? new Set(),
   )
   const [activePath, setActivePath] = useState<DataNavPath | null>(cachedActivePath)
   const fetchedRef = useRef(false)
+  const typingFetchedRef = useRef(false)
 
   // Sync scan state
   const [syncScanResult, setSyncScanResult] = useState<SyncDataScanResult | null>(null)
   const [syncScanning, setSyncScanning] = useState(false)
   const syncScannedRef = useRef(false)
+
+  // Remote typing hashes keyed by uid — populated lazily when the user
+  // expands Sync > Typing > {keyboard} so startup stays quiet.
+  const [remoteTypingHashes, setRemoteTypingHashes] = useState<Record<string, string[]>>({})
+  const remoteTypingFetchedRef = useRef<Set<string>>(new Set())
+  const refreshRemoteTypingHashes = useCallback(async (uid: string) => {
+    try {
+      // Merge cache-known hashes (immediate) with cloud-discovered
+      // hashes (authoritative) so a device we've never fetched from
+      // still appears in the Sync > Typing tree.
+      const [local, cloud] = await Promise.all([
+        window.vialAPI.typingAnalyticsListRemoteHashes(uid),
+        window.vialAPI.typingAnalyticsListRemoteCloudHashes(uid),
+      ])
+      const merged = Array.from(new Set<string>([...local, ...cloud])).sort()
+      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: merged }))
+    } catch {
+      setRemoteTypingHashes((prev) => ({ ...prev, [uid]: [] }))
+    }
+  }, [])
+  const ensureRemoteTypingHashes = useCallback((uid: string) => {
+    if (remoteTypingFetchedRef.current.has(uid)) return
+    remoteTypingFetchedRef.current.add(uid)
+    void refreshRemoteTypingHashes(uid)
+  }, [refreshRemoteTypingHashes])
 
   // Lazy-download state for sync keyboards
   const [downloadingUid, setDownloadingUid] = useState<string | null>(null)
@@ -44,6 +73,12 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     if (fetchedRef.current) return
     fetchedRef.current = true
     window.vialAPI.listStoredKeyboards().then(setStoredKeyboards).catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (typingFetchedRef.current) return
+    typingFetchedRef.current = true
+    window.vialAPI.typingAnalyticsListKeyboards().then(setTypingKeyboards).catch(() => {})
   }, [])
 
   // Auto-scan sync when enabled
@@ -89,6 +124,20 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     const keyboards = await window.vialAPI.listStoredKeyboards()
     setStoredKeyboards(keyboards)
   }, [])
+
+  const refreshTypingKeyboards = useCallback(async () => {
+    // The remote-typing probe is fire-and-forget alongside the local
+    // listing — both feed Sync > Typing visibility decisions and hiding
+    // it on a transient cloud failure is the safer default.
+    const [keyboards, hasRemote] = await Promise.all([
+      window.vialAPI.typingAnalyticsListKeyboards().catch(() => [] as TypingKeyboardSummary[]),
+      syncEnabled
+        ? window.vialAPI.typingAnalyticsHasRemote().catch(() => false)
+        : Promise.resolve(false),
+    ])
+    setTypingKeyboards(keyboards)
+    setHasRemoteTyping(hasRemote)
+  }, [syncEnabled])
 
   const onSyncKeyboardSelect = useCallback(
     async (uid: string, name: string) => {
@@ -140,6 +189,8 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
 
   return {
     storedKeyboards,
+    typingKeyboards,
+    hasRemoteTyping,
     expandedNodes,
     toggleExpand,
     isExpanded,
@@ -147,11 +198,14 @@ export function useDataNavTree({ showHubTab, syncEnabled }: UseDataNavTreeOption
     setActivePath,
     showHubTab,
     refreshStoredKeyboards,
+    refreshTypingKeyboards,
     syncScanResult: filteredSyncScanResult,
     syncScanning,
     handleSyncScan,
     onSyncKeyboardSelect,
     downloadingUid,
     downloadErrorByUid,
+    remoteTypingHashes,
+    ensureRemoteTypingHashes,
   }
 }

@@ -33,6 +33,9 @@ General preferences that apply across all keyboards.
 | Auto sync | Enable/disable cloud sync |
 | Hub enabled | Enable/disable Pipette Hub integration |
 | Window position & size | Restored on next launch |
+| Typing recording consent | Whether the typing-analytics recording consent dialog has been accepted (gates the REC tab Start button) |
+| Typing-view heatmap window | Window length (minutes) for the typing-view real-time heatmap overlay |
+| Monitor App enabled | Whether to capture the active application name during typing-analytics recording. Required for the App filter and By App tab in Analyze |
 
 ### Per-Keyboard Settings
 
@@ -53,6 +56,38 @@ Settings tied to a specific keyboard, identified by its unique ID.
 | Typing test config | Mode, word count, and other test preferences |
 | Typing test language | Selected language pack |
 | Typing view preferences | Compact window size and always-on-top setting |
+| Record enabled | User-chosen state of the REC toggle in the typing view; recording is gated additionally on Typing View being open |
+| Typing view menu tab | Last active menu pane tab in Typing View (Window / REC) |
+| Typing sync span | How many days of typing-analytics history to sync (per-device JSONL) |
+| Analyze finger assignments | Manual `row,col → finger` overrides for the Ergonomics tab |
+| Analyze goal | Daily keystroke goal, target consecutive days, and goal-edit history for the Streak / Goal cards |
+| Analyze filters | Per-tab filter state (device scope, app scope, view modes, ranking limits, snapshot selection) for the Analyze dashboard |
+| Analyze compare filters | Same shape as Analyze filters, bound to the secondary pane in the Analyze split-view |
+
+### Typing Analytics
+
+Per-keyboard typing history that feeds the Analyze page (see OPERATION-GUIDE §1.4). Recorded while you are in Typing View and the Record toggle in the typing-test pane is set to Start; typing-test results flow into the same stream.
+
+| Item | Description |
+|------|-------------|
+| Keystroke events | Per-keystroke records aggregated into minute buckets |
+| Minute stats | WPM, Backspace %, interval percentiles, and other per-minute summaries |
+| Matrix activity | Per-cell press counts with the active layer at the time |
+| Sessions | Start / end markers for each typing session |
+| Keymap snapshots | Point-in-time keymap captures used to resolve heatmap positions and layer-op targets |
+| App tag | Active application name attached to each minute when Monitor App is on. Minutes that observed only one app carry that name; minutes that observed multiple apps are tagged as unknown; minutes captured while Monitor App was off are not tagged. Powers the App filter and the By App tab in Analyze |
+
+**What is synced, what is local cache**
+
+| Storage | Path (under user data directory) | Scope |
+|---------|-----------------------------------|-------|
+| Per-device typing log (master) | `sync/keyboards/{uid}/devices/{machineHash}/{YYYY-MM-DD}.jsonl` | **Synced** across your signed-in devices |
+| Keymap snapshots (master) | `typing-analytics/keymaps/{uid}/{machineHash}/*.json` | Local only (per machine) |
+| Query cache (SQLite) | `local/typing-analytics.db` | Local only — rebuilt from the JSONL master when missing or stale |
+
+The JSONL master is the source of truth and survives cache rebuilds. When the app can't find the SQLite cache (first launch on a new machine, file corruption, schema upgrade), it replays the JSONL log to rebuild it; no data is lost.
+
+**Layer names in the chart** come from Per-Keyboard Settings above, not from typing analytics — renaming a layer in the layer panel updates the axis label in Analyze the next time you open it.
 
 ### Snapshots
 

@@ -4,6 +4,7 @@ import { statSync } from 'node:fs'
 import { IpcChannels } from '../shared/ipc/channels'
 import { setupFileIO } from './file-io'
 import { setupSnapshotStore } from './snapshot-store'
+import { setupAnalyzeFilterStore } from './analyze-filter-store'
 import { setupFavoriteStore } from './favorite-store'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
@@ -16,6 +17,14 @@ import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
 import { loadWindowState, saveWindowState, setupAppConfigIpc, MIN_WIDTH, MIN_HEIGHT } from './app-config'
+import {
+  setupTypingAnalytics,
+  setupTypingAnalyticsIpc,
+  hasTypingAnalyticsPendingWork,
+  flushTypingAnalyticsBeforeQuit,
+  setTypingAnalyticsSyncNotifier,
+} from './typing-analytics/typing-analytics-service'
+import { registerPreSyncQuitFinalizer, notifyChange } from './sync/sync-service'
 import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -280,6 +289,7 @@ app.whenReady().then(() => {
   setupHidIpc()
   setupFileIO()
   setupSnapshotStore()
+  setupAnalyzeFilterStore()
   setupFavoriteStore()
   setupPipetteSettingsStore()
   setupLanguageStore()
@@ -291,6 +301,16 @@ app.whenReady().then(() => {
   setupLogIpc()
   setupShellIpc()
   setupWindowIpc()
+  setTypingAnalyticsSyncNotifier(notifyChange)
+  setupTypingAnalyticsIpc()
+  registerPreSyncQuitFinalizer({
+    hasWork: hasTypingAnalyticsPendingWork,
+    run: flushTypingAnalyticsBeforeQuit,
+  })
+  setupTypingAnalytics().catch((err: unknown) => {
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    log('error', `Failed to initialize typing analytics: ${detail}`)
+  })
   createWindow()
 
   app.on('activate', () => {

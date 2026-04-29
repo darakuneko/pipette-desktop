@@ -157,7 +157,7 @@ export function LayoutStoreEntry({
               data-testid="layout-store-entry-label"
               onClick={rename ? () => rename.startRename(entry.id, entry.label) : undefined}
             >
-              {entry.label || t('layoutStore.noLabel')}
+              {entry.label || t('common.noLabel')}
             </div>
           )}
         </div>
@@ -171,7 +171,7 @@ export function LayoutStoreEntry({
                 onClick={() => { onDelete(entry.id); setConfirmDeleteId(null) }}
                 data-testid="layout-store-delete-confirm"
               >
-                {t('layoutStore.confirmDelete')}
+                {t('common.confirmDelete')}
               </button>
               <button
                 type="button"
@@ -191,7 +191,7 @@ export function LayoutStoreEntry({
                   onClick={() => onLoad(entry.id)}
                   data-testid="layout-store-load-btn"
                 >
-                  {t('layoutStore.load')}
+                  {t('common.load')}
                 </button>
               )}
               <button

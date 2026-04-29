@@ -8,7 +8,49 @@ import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
-import { VIEW_MODES } from '../shared/types/pipette-settings'
+import { VIEW_MODES, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
+import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
+import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
+
+const FINGER_SET = new Set<FingerType>(FINGER_LIST)
+const KEY_POS_RE = /^\d+,\d+$/
+
+function isValidIsoTimestamp(v: unknown): v is string {
+  if (typeof v !== 'string' || v.length === 0) return false
+  const ms = Date.parse(v)
+  return Number.isFinite(ms)
+}
+
+function isValidGoalHistoryEntry(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  const obj = value as Record<string, unknown>
+  if (!isPositiveInt(obj.days)) return false
+  if (!isPositiveInt(obj.keystrokes)) return false
+  if (!isValidIsoTimestamp(obj.effectiveFrom)) return false
+  return true
+}
+
+function isValidAnalyzeSettings(value: unknown): boolean {
+  if (value == null) return true
+  if (typeof value !== 'object' || Array.isArray(value)) return false
+  const obj = value as Record<string, unknown>
+  if ('fingerAssignments' in obj && obj.fingerAssignments != null) {
+    const fa = obj.fingerAssignments
+    if (typeof fa !== 'object' || Array.isArray(fa)) return false
+    for (const [k, v] of Object.entries(fa as Record<string, unknown>)) {
+      if (!KEY_POS_RE.test(k)) return false
+      if (typeof v !== 'string' || !FINGER_SET.has(v as FingerType)) return false
+    }
+  }
+  if ('goalDays' in obj && obj.goalDays != null && !isPositiveInt(obj.goalDays)) return false
+  if ('goalKeystrokes' in obj && obj.goalKeystrokes != null && !isPositiveInt(obj.goalKeystrokes)) return false
+  if ('goalHistory' in obj && obj.goalHistory != null) {
+    if (!Array.isArray(obj.goalHistory)) return false
+    if (!obj.goalHistory.every(isValidGoalHistoryEntry)) return false
+  }
+  if ('filters' in obj && obj.filters != null && !isValidAnalyzeFilterSettings(obj.filters)) return false
+  return true
+}
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
@@ -41,7 +83,11 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
     if (typeof ws.width !== 'number' || typeof ws.height !== 'number') return false
   }
   if ('typingTestViewOnlyAlwaysOnTop' in obj && obj.typingTestViewOnlyAlwaysOnTop != null && typeof obj.typingTestViewOnlyAlwaysOnTop !== 'boolean') return false
+  if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
+  if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
+  if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
   if ('viewMode' in obj && obj.viewMode != null && !VIEW_MODES.includes(obj.viewMode as ViewMode)) return false
+  if ('analyze' in obj && !isValidAnalyzeSettings(obj.analyze)) return false
   if ('_rev' in obj && obj._rev !== 1) return false
   return true
 }
@@ -54,6 +100,11 @@ function validatePrefs(prefs: unknown): asserts prefs is PipetteSettings {
 
 function getDataPath(uid: string): string {
   return join(app.getPath('userData'), 'sync', 'keyboards', uid, 'pipette_settings.json')
+}
+
+export async function readPipetteSettings(uid: string): Promise<PipetteSettings | null> {
+  if (!isSafePathSegment(uid)) return null
+  return readData(uid)
 }
 
 async function readData(uid: string): Promise<PipetteSettings | null> {
@@ -77,7 +128,11 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
+      typingRecordEnabled: parsed.typingRecordEnabled,
+      typingSyncSpanDays: parsed.typingSyncSpanDays,
+      typingViewMenuTab: parsed.typingViewMenuTab,
       viewMode: parsed.viewMode,
+      analyze: parsed.analyze,
     }
   } catch {
     return null

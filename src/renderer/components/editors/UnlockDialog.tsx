@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { KleKey } from '../../../shared/kle/types'
+import { posKey } from '../../../shared/kle/pos-key'
 import { KeyboardWidget } from '../keyboard'
 import { useEscapeSwallow } from '../../hooks/useEscapeClose'
 
@@ -40,7 +41,7 @@ export function UnlockDialog({
   // Highlight unlock keys in the keyboard widget
   const highlightedKeys = new Set<string>()
   for (const [row, col] of unlockKeys) {
-    highlightedKeys.add(`${row},${col}`)
+    highlightedKeys.add(posKey(row, col))
   }
 
   // Store callbacks in refs so the interval handler always sees the

@@ -32,12 +32,15 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
+import { AnalyzePage } from './components/analyze/AnalyzePage'
+import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
 import { ROW_CLASS } from './components/editors/modal-controls'
 import { ModalCloseButton } from './components/editors/ModalCloseButton'
 import { decodeLayoutOptions } from '../shared/kle/layout-options'
 import { generateKeymapC } from '../shared/keymap-export'
 import { generateKeymapPdf } from '../shared/pdf-export'
+import { resolveTappingTermMs } from '../shared/qmk-settings-tapping-term'
 import {
   serialize as serializeKeycode,
   serializeForCExport,
@@ -269,6 +272,11 @@ export function App() {
   // Hide content during view→edit transition animation
   const [viewExitTransition, setViewExitTransition] = useState(false)
 
+  // Analytics page shell. Session-local boolean — entering the page
+  // from the REC tab of the typing view exits the compact window
+  // and hands the main content area over to TypingAnalyticsPage.
+  const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
+
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
     setViewExitTransition(true)
@@ -281,6 +289,52 @@ export function App() {
     }) })
   }, [devicePrefs])
 
+  // Persist the record toggle — snapshot capture is handled by the
+  // recording-active effect below so any path that activates recording
+  // (direct toggle, view re-entry with persisted ON, cold-start after
+  // device connect) produces a layout anchor, not just the toggle
+  // edge.
+  const handleTypingRecordEnabledChange = useCallback((enabled: boolean) => {
+    devicePrefs.setTypingRecordEnabled(enabled)
+  }, [devicePrefs])
+
+  // Save a keymap snapshot every time recording activates or the
+  // active keyboard changes while recording is already active. A
+  // keyboard edit made between sessions (user tweaks a layer, comes
+  // back, hits Record) must produce a new snapshot so the Analyze
+  // heatmap reflects the layout actually in use — not a stale one
+  // from the previous toggle-ON. `saveKeymapSnapshotIfChanged` on
+  // main dedupes by content, so re-firing on unrelated keyboard
+  // state churn is cheap (no file write when the keymap is equal).
+  const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
+  useEffect(() => {
+    const active = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+    const uid = keyboard.uid
+    const prev = recordingSnapshotRef.current
+    recordingSnapshotRef.current = { active, uid }
+    if (!active) return
+    if (prev.active && prev.uid === uid) return
+    const snap = buildKeymapSnapshot(keyboard)
+    if (!snap) return
+    void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
+  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, keyboard])
+
+  const handleViewAnalytics = useCallback(() => {
+    setViewExitTransition(true)
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      window.vialAPI.setWindowCompactMode(false).then(() => {
+        devicePrefs.setTypingTestViewOnly(false)
+        // Leaving the typing view — flip the persisted viewMode back
+        // to 'editor' too so the next session-restore doesn't reopen
+        // the compact window behind the analytics page.
+        devicePrefs.setViewMode('editor')
+        if (editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
+        setAnalyticsPageOpen(true)
+        setViewExitTransition(false)
+      }).catch(() => { setViewExitTransition(false) })
+    }) })
+  }, [devicePrefs, editorUI.typingTestMode])
+
   // Enter typing view-only mode (compact window + typing test). Assumes unlocked.
   const { typingTestViewOnlyWindowSize, setTypingTestViewOnly } = devicePrefs
   const enterTypingViewOnly = useCallback(() => {
@@ -291,6 +345,17 @@ export function App() {
       }
     }).catch(() => {})
   }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
+
+  // Back from the analytics page should return the user to wherever
+  // they came from — which today is always the typing view (there's
+  // no other entry point yet). Close the page and re-enter the
+  // compact window + typing-test mode in one step so the user lands
+  // exactly where they were before clicking View Analytics.
+  const handleAnalyticsBack = useCallback(() => {
+    setAnalyticsPageOpen(false)
+    enterTypingViewOnly()
+    devicePrefs.setViewMode('typingView')
+  }, [enterTypingViewOnly, devicePrefs])
 
   // One-shot guard: prevents re-restoring the same uid after an initial restore
   const restoreRequestedUidRef = useRef<string | null>(null)
@@ -616,6 +681,12 @@ export function App() {
       )}
 
       <div className="flex min-h-0 flex-1 flex-col">
+        {analyticsPageOpen ? (
+          <AnalyzePage
+            initialUid={keyboard.uid && keyboard.uid !== EMPTY_UID ? keyboard.uid : undefined}
+            onBack={handleAnalyticsBack}
+          />
+        ) : (
         <div className={`flex min-h-0 flex-1 flex-col ${editorUI.typingTestMode && devicePrefs.typingTestViewOnly ? 'overflow-hidden p-0' : 'overflow-auto p-4'}`} data-testid="editor-content" style={viewExitTransition ? { display: 'none' } : undefined}>
           <KeymapEditor
             ref={keymapEditorRef}
@@ -664,6 +735,7 @@ export function App() {
             qmkSettingsSet={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsSet : api.qmkSettingsSet) : undefined}
             qmkSettingsReset={editorUI.hasAnySettings ? (device.isPipetteFile ? keyboard.pipetteFileQmkSettingsReset : api.qmkSettingsReset) : undefined}
             onSettingsUpdate={editorUI.hasAnySettings ? keyboard.updateQmkSettingsValue : undefined}
+            tappingTermMs={resolveTappingTermMs(keyboard.qmkSettingsValues)}
             autoAdvance={devicePrefs.autoAdvance}
             onAutoAdvanceChange={devicePrefs.setAutoAdvance}
             basicViewType={devicePrefs.basicViewType}
@@ -719,6 +791,17 @@ export function App() {
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
+            typingRecordEnabled={devicePrefs.typingRecordEnabled}
+            onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
+            typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
+            onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
+            typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}
+            onTypingRecordingConsentAccepted={() => appConfig.set('typingRecordingConsentAccepted', true)}
+            typingMonitorAppEnabled={appConfig.config.typingMonitorAppEnabled}
+            onTypingMonitorAppEnabledChange={(enabled) => appConfig.set('typingMonitorAppEnabled', enabled)}
+            typingViewMenuTab={devicePrefs.typingViewMenuTab}
+            onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
+            onViewAnalytics={handleViewAnalytics}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
@@ -736,6 +819,7 @@ export function App() {
             onDeviceListActiveChange={device.setDeviceListActive}
           />
         </div>
+        )}
 
         {(fileIO.error || sideload.error || layoutStore.error) && (
           <div className="bg-danger/10 px-4 py-1.5 text-xs text-danger">
@@ -744,7 +828,7 @@ export function App() {
         )}
       </div>
 
-      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && (
+      {!(editorUI.typingTestMode && devicePrefs.typingTestViewOnly) && !analyticsPageOpen && (
         <StatusBar
           deviceName={device.connectedDevice.productName || 'Unknown'}
           loadedLabel={lifecycle.lastLoadedLabel}

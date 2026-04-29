@@ -7,6 +7,7 @@ import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
 import { WordDisplay } from './WordDisplay'
+import { Tooltip } from '../components/ui/Tooltip'
 
 const GAP_Y_PX = 4 // corresponds to Tailwind gap-y-1 (0.25rem at 16px base)
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
@@ -361,16 +362,17 @@ export function TypingTestView({
 
       {/* Restart button */}
       <div className="-my-2">
-        <button
-          type="button"
-          data-testid={state.status === 'finished' ? 'typing-test-restart' : 'typing-test-restart-running'}
-          className="rounded-md border border-edge p-1.5 text-content-secondary transition-colors hover:text-content"
-          onClick={onRestart}
-          aria-label={t('editor.typingTest.restart')}
-          title={t('editor.typingTest.restart')}
-        >
-          <RotateCcw size={18} aria-hidden="true" />
-        </button>
+        <Tooltip content={t('editor.typingTest.restart')}>
+          <button
+            type="button"
+            data-testid={state.status === 'finished' ? 'typing-test-restart' : 'typing-test-restart-running'}
+            className="rounded-md border border-edge p-1.5 text-content-secondary transition-colors hover:text-content"
+            onClick={onRestart}
+            aria-label={t('editor.typingTest.restart')}
+          >
+            <RotateCcw size={18} aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
 
       {/* Finished results */}

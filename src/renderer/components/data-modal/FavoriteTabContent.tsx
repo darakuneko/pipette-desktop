@@ -109,7 +109,7 @@ export function FavoriteTabContent({
                         data-testid="data-modal-fav-entry-label"
                         onClick={() => rename.startRename(entry.id, entry.label)}
                       >
-                        {entry.label || t('favoriteStore.noLabel')}
+                        {entry.label || t('common.noLabel')}
                       </div>
                     )}
                   </div>
@@ -122,7 +122,7 @@ export function FavoriteTabContent({
                           onClick={() => { void manage.deleteEntry(entry.id); setConfirmDeleteId(null) }}
                           data-testid="data-modal-fav-delete-confirm"
                         >
-                          {t('favoriteStore.confirmDelete')}
+                          {t('common.confirmDelete')}
                         </button>
                         <button
                           type="button"

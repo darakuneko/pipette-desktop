@@ -4,6 +4,13 @@
 export interface VersionedKeycodeMap {
   kc: Record<string, number>
   masked: Set<number>
+  /** Reverse map from masked-outer code (e.g. 0x4100) to its template
+   * qmkId (e.g. "LT1(kc)"). Used as a fallback in serializeInternal
+   * when RAWCODES_MAP hasn't been populated by recreateKeyboardKeycodes
+   * yet — the protocol's mask layout is static and known up front, so
+   * we can still produce a meaningful label without the live
+   * keyboard's layer-count-based Keycode objects. */
+  maskedTemplates: Map<number, string>
 }
 
 function buildV5(): VersionedKeycodeMap {
@@ -700,15 +707,20 @@ function buildV5(): VersionedKeycodeMap {
     kc[`USER${String(x).padStart(2, '0')}`] = kc.QK_KB + x
   }
 
-  // Build masked set from entries ending with "(kc)"
+  // Build masked set from entries ending with "(kc)" plus a reverse
+  // map (outer code → template qmkId) so serializeInternal can fall
+  // back to a meaningful label even when the keyboard's per-layer
+  // Keycode objects haven't been created yet.
   const masked = new Set<number>()
+  const maskedTemplates = new Map<number, string>()
   for (const [name, val] of Object.entries(kc)) {
     if (name.endsWith('(kc)')) {
       masked.add(val)
+      maskedTemplates.set(val, name)
     }
   }
 
-  return { kc, masked }
+  return { kc, masked, maskedTemplates }
 }
 
 export const keycodesV5: VersionedKeycodeMap = buildV5()

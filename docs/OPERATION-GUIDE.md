@@ -83,6 +83,377 @@ Per-entry actions in the favorites list:
 
 A **breadcrumb navigation** at the top of the content area shows the current path (e.g., "Local › Favorites › Tap Dance")
 
+### 1.4 Analyze
+
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data is recorded while you are in Typing View (the compact window opened from the status bar) and the Record toggle in the typing-test pane is set to Start. Typing-test results are recorded in the same stream.
+
+**Access**
+
+There are two entry points:
+
+- **Analyze tab** on the device selection screen — open the page without connecting a keyboard. Useful for reviewing data from keyboards that are currently unplugged
+- **View Analytics** button in the Typing Test pane — jumps to Analyze for the keyboard you are currently using, then returns to the typing view when you go back
+
+**Keyboard selector**
+
+The Keyboards select at the top of the filter row lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).
+
+**Analysis tabs**
+
+The tab bar above the chart groups ten analyses by intent — overview, performance, behavior, load, and optimization:
+
+| Group | Tab | What it shows |
+|-------|-----|---------------|
+| Overview | **Summary** | Today / last-7-days deltas, typing profile cards (Speed / Hand balance / SFB / Fatigue), goal streak record |
+| Performance | **WPM** | Words-per-minute over time, or by hour of day |
+| Performance | **Interval** | Keystroke interval percentiles (min / p25 / median / p75 / max), as a time series or a distribution |
+| Behavior | **Activity** | Hour × day-of-week grid or sliding-month calendar, colored by keystrokes / WPM / sessions |
+| Behavior | **By App** | Active-application breakdown — App Usage Distribution donut and WPM by App horizontal bars. Requires Monitor App data |
+| Load | **Heatmap** | Press count per physical key, overlaid on the keymap (per layer). Requires a keymap snapshot in range |
+| Load | **Ergonomics** | Per-finger keystroke totals, with a manual finger-assignment editor and a Learning curve view. Requires a snapshot |
+| Load | **Bigrams** | Top key-pair counts, pair-interval ranking, and per-finger IKI bar chart |
+| Load | **Layer** | Per-layer keystroke counts or layer-op activations |
+| Optimization | **Layout Comparison** | Simulate how your recorded typing would land on alternative layouts (Colemak / Dvorak / etc.). Requires a snapshot |
+
+The Heatmap, Ergonomics, Bigrams > Finger IKI, Layout Comparison, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
+
+**Common filters**
+
+The following filters are always available:
+
+- **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Bigrams Finger IKI / Layer activations) never mix two layouts in one view. Snapshots are listed on the Keymap snapshot timeline so you can flip between recorded keymap revisions and "Current keymap" without leaving the page
+- **From** / **To** — the time range to analyze. Both inputs are clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
+- **Device** — multi-select. Pick any combination of `This device` and remote-machine hashes to merge or isolate per-machine data. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
+- **App** — multi-select dropdown listing every active application name observed during the range. Defaults to **All apps** (no filter); selecting one or more apps narrows every chart except **By App** to minutes tagged with one of the chosen apps. The dropdown only populates after Monitor App has been enabled and at least one minute has been tagged with an app name. Persisted per keyboard
+
+Individual tabs add their own filters above the chart (view mode, granularity, unit, etc.); those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
+
+**Saved search conditions**
+
+The bookmark icon in the panel header opens the **Saved search conditions** side panel. Save the active filters under a label, restore a saved set later, rename / delete entries, or export the current condition's chart data as CSV. Each saved entry shows a one-line summary of the filters (devices, apps, snapshot, range) under its label.
+
+- Up to **50 entries per keyboard** — the panel surfaces a cap warning when you reach the limit; delete an existing entry to make room
+- Synced via Cloud Sync (when enabled) so the same set is available on other signed-in machines
+- Loading an entry written by a newer Pipette release shows an unsupported-version error rather than guessing at unknown fields
+
+#### Summary
+
+The Summary tab is the default landing view. It collects four read-only cards built from the same minute-bucket aggregates as the rest of the page, so you can scan the latest highs / averages / streaks before drilling into a specific tab.
+
+![Analyze — Summary](screenshots/analyze-summary.png)
+
+- **Today** — Keystrokes, WPM, Typing duration for the current local day
+- **Last 7 days** — Keystrokes, WPM, Typing duration, Active days, each with a delta arrow comparing the prior 7 days. Insufficient prior data renders as `—`
+- **Typing profile (last N days)** — Four qualitative read-outs computed over the recent window:
+  - **Speed** — overall WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50)
+  - **Hand balance** — share of bigram keystrokes per hand. Within ±5% of 50/50 reads as Balanced
+  - **SFB rate** — share of bigrams typed with the same finger. <4% Low / 4–8% Medium / ≥8% High
+  - **Fatigue risk** — drop from peak hour to slowest hour WPM. Wider gap = higher risk
+- **Goal streak record** — Current cycle progress (`current / goalDays`), longest historical streak, and editable Goal settings (consecutive days × keystrokes/day). Changing the goal clears the current cycle counter. The **Achievement history** button opens a modal that lists every completed cycle with period, goal, days, total keystrokes, and average per day
+
+The Summary tab respects the App filter — selecting one or more apps narrows every card to minutes tagged with those apps.
+
+#### Heatmap
+
+The Heatmap tab counts every press per physical key and paints the result on the keymap layout, one layer at a time. It's useful for spotting over- or under-used keys per layer and for tuning the layout.
+
+**Keymap panel**
+
+Keys are tinted by press count (dim = low, saturated accent = high). When a keyboard has more than one layer, a layer toggle bar appears above the panel (**Layer 0**, **Layer 1**, …) and each button shows the per-layer count. Hovering a key opens a tooltip inside the chart with the bound keycode and the count; the tooltip never spills outside the heatmap frame.
+
+**Ranking controls**
+
+Below the heatmap is a ranking table. Four filters control what it shows:
+
+- **Normalize** — `Absolute` (raw count), `Per hour` (count ÷ active hours), `Share of total` (% of total presses in range)
+- **Aggregate** — `By cell` collapses every press of the same physical cell; `By character` collapses every press of the same keycode regardless of where on the keymap it sits
+- **Group** — `All`, `Character`, `Modifier`, `Layer op`
+- **Top N** — 10 / 20 / 30 / … / 100
+
+Columns are **Key**, **Layer** (only when the group spans multiple layers), **Matrix**, **Count**.
+
+![Analyze — Heatmap](screenshots/analyze-heatmap.png)
+
+**Empty states**
+
+- **No snapshot** — "No keymap snapshot recorded for this range. Start a record session to capture one."
+- **No layout** — "Layout data not available for this snapshot." The snapshot exists but lacks KLE geometry
+- **No activity** — "No key presses in this range." Ranking table only
+
+#### WPM
+
+The WPM tab charts Words Per Minute — keystrokes per minute divided by 5 — either as a time series or binned by hour of day.
+
+**View Mode**
+
+- **Time series** — WPM over the selected range as a line chart. A red dashed **Bksp %** line is always overlaid on a secondary right-hand axis (0–100 %) so speed and error rate sit together; click the Bksp legend entry to hide it if you only want the WPM line
+
+  ![Analyze — WPM Time Series](screenshots/analyze-wpm-time-series.png)
+
+- **Time of day** — Bar chart of the 24 hours in the local day. Each bar is the average WPM for that hour across the range. Bars that did not meet **Min sample** render in a muted tone
+
+  ![Analyze — WPM Time of Day](screenshots/analyze-wpm-time-of-day.png)
+
+**Min sample** (both views)
+
+`30s`, `1 min`, `2 min`, `5 min`. Minutes with fewer keystrokes than the chosen WPM-worth-of-keys threshold are dropped from the chart so very light sessions don't skew the line.
+
+**Granularity** (Time series only)
+
+Bucket width of the time series (`Auto`, `1 min`, `5 min`, … `1 week`, `1 month`).
+
+**Summary cards**
+
+- **Time series** — Total keystrokes, Active typing time, Overall WPM, Peak WPM, Lowest WPM, Weighted median WPM, Peak K/min, Peak K/day, Total Bksp, Overall Bksp %
+- **Time of day** — Total keystrokes, Active typing time, Overall WPM, Peak hour, Slowest hour, Active hours (N / 24)
+
+#### Interval
+
+The Interval tab visualizes the time between consecutive keystrokes, either as percentile lines over time or as a distribution histogram.
+
+**View Mode**
+
+- **Time series** — Five percentile lines on a log-scale Y axis: **Min**, **p25**, **Median**, **p75**, **Max**. The Median line is drawn thickest. Click a legend entry to hide a line. The Y-axis label reads `sec (log)` or `ms (log)` depending on Display
+
+  ![Analyze — Interval Time Series](screenshots/analyze-interval-time-series.png)
+
+- **Distribution** — Bar chart of nine fixed bins (`<50ms`, `50-100ms`, `100-200ms`, `200-500ms`, `500ms-1s`, `1-2s`, `2-5s`, `5-10s`, `>10s`). Bars are colored by band: **Fast** (green, <200ms), **Normal** (blue, 200–500ms), **Slow** (orange, 500ms–2s), **Pause** (red, ≥2s). The **Device** filter is hidden in Distribution mode because bins are always computed from this device alone
+
+  ![Analyze — Interval Distribution](screenshots/analyze-interval-distribution.png)
+
+**Display** (both views)
+
+`Seconds` / `Milliseconds`. Switches the unit used in tooltips and on the Y axis. The distribution bin labels stay in their native unit.
+
+**Granularity** (Time series only)
+
+Same options as WPM.
+
+**Summary cards**
+
+- **Time series** — Total keystrokes, Active typing time, Weighted median interval, Shortest interval (per min), Longest interval (per min)
+- **Distribution** — Total keystrokes, Median interval, Fast (<200ms) share, Normal (200–500ms) share, Slow (500ms–2s) share, Pause (≥2s) share, Longest interval (per min), Longest session
+
+#### Activity
+
+The Activity tab groups typing by day-of-week × hour so you can see when you actually type. The filter row offers two orthogonal pickers: **View** (chart geometry) and **Metric** (what each cell measures).
+
+**View**
+
+- **Hour** — the historical 24 × 7 hour-of-day × day-of-week grid (or sessions histogram when Metric = Sessions). Driven by the top-level Period picker
+- **Day** — sliding-window day calendar. Adds a **Range** selector (3 / 6 / 12 months) plus prev / next month cursor buttons so you can browse the month-by-month heatmap; the current month stops at today so future days stay blank
+
+**Metric**
+
+- **Keystrokes** — keystroke count. Empty cells are dim, the busiest cell is fully saturated. In Grid view a non-empty cell tooltip shows both the raw count and its share of the range total (e.g. `Mon 09:00 — 1,234 keys (5.2% of total)`)
+
+  ![Analyze — Activity Keystrokes](screenshots/analyze-activity-keystrokes.png)
+
+- **WPM** — average WPM per cell. In Grid view, cells that don't meet **Min sample** are desaturated instead of pinning the color scale
+- **Sessions** — In Grid view this swaps to a histogram of session lengths in seven bins (`<5 min`, `5-15 min`, `15-30 min`, `30-60 min`, `1-2 h`, `2-4 h`, `>4 h`); in Calendar view each cell counts the **sessions whose start fell on that date** (not sessions active on that date)
+
+**Day-only controls** (View = Day)
+
+- **Normalize** — `Absolute` colors by the peak day in the rendered window, `Share of week` divides each cell by the column's weekly total, `Share of total` divides by the grand total of the rendered range
+- **Range** — `3 months`, `6 months`, `12 months`. Sets the visible window relative to the cursor month
+- **Prev / Next month buttons** — slide the visible window one month earlier or later. The current month is the right-most column; future days stay blank
+
+  ![Analyze — Activity Calendar](screenshots/analyze-activity-calendar.png)
+
+Clicking a populated cell jumps the rest of the Analyze pane to that single day. The snapshot picker auto-selects the snapshot that contains the date so dependent tabs (Heatmap, Ergonomics, Layer activations) stay aligned with the keymap that was active.
+
+**Min sample** (View = Grid, Metric = WPM)
+
+Same options as the WPM tab.
+
+**Peak records**
+
+Four stat cards above the grid summarize the peaks across the selected range: Peak WPM, Peak K/min, Peak K/day, Longest session (min). They stay visible for every metric so you always see the overall highs at a glance.
+
+**Summary cards**
+
+Under the grid, the summary depends on the metric:
+
+- **Keystrokes** — Total keystrokes, Active typing time, Busiest day, Busiest hour, Peak cell, Active cells (N / 168). The count context under each card also carries its share of the range total (e.g. `800 keys (40.0%)`)
+- **WPM** — Total keystrokes, Active typing time, Overall WPM, Peak cell, Slowest cell, Active cells (N / 168)
+- **Sessions** — Session count, Total duration, Mean duration, Median duration, Longest session, Shortest session
+
+#### Ergonomics
+
+The Ergonomics tab reports the physical load of your typing — per finger, per hand, per row — based on the key → finger assignment in the snapshot keymap.
+
+Like Heatmap, this view needs a keymap snapshot that overlaps the range.
+
+**Sections**
+
+Three bar charts stack vertically:
+
+1. **Finger Load** — 10 vertical bars, one per finger from left pinky to right pinky
+2. **Hand Balance** — 2 horizontal bars (Left / Right)
+3. **Row Usage** — 6 horizontal bars (Function / Number / Top / Home / Bottom / Thumb)
+
+![Analyze — Ergonomics](screenshots/analyze-ergonomics.png)
+
+**Finger assignment**
+
+Each key is auto-assigned to a finger based on the layout's KLE metadata (column position and the standard column-to-finger mapping). Click the **Finger assignment** button at the top of the tab to override any key manually:
+
+![Analyze — Finger Assignment](screenshots/analyze-finger-assignment-modal.png)
+
+- Each key shows a short finger code (`Lp`, `Lr`, `Lm`, `Li`, `Lt` / `Rt`, `Ri`, `Rm`, `Rr`, `Rp`). Manually overridden keys are prefixed with `*`
+- Click a key → popover to pick a finger
+- **Save** persists the overrides; **Reset all** clears every override (disabled when there are none). **Reset to estimate** in the per-key popover clears just that key
+- Overrides apply immediately once you close the modal — Finger Load, Hand Balance, and Row Usage all recompute
+
+**Learning curve**
+
+Set the **View** filter to **Learning curve** to swap the four-pane snapshot for a weekly / monthly trend chart. The view buckets per-day matrix counts into the chosen **Period** (week / month) and folds each bucket into three sub-scores plus a composite score:
+
+- **Finger load** — how evenly the 10 fingers share the load (1 = perfectly even, 0 = one-finger lock-in)
+- **Hand balance** — how close the left / right split is to 50 / 50
+- **Home row stay** — fraction of keystrokes on the home row
+
+The bold line is the composite **Overall** score (weighted mean of the three sub-scores); the dashed lines are the individual sub-scores. The summary cards at the top show the latest bucket's overall score, the delta against the prior buckets, and the qualified bucket count (a bucket is qualified once its keystroke total clears the min-sample threshold; below-threshold buckets stay visible but are flagged in the tooltip).
+
+![Analyze — Ergonomic Learning Curve](screenshots/analyze-ergonomics-learning.png)
+
+> The composite score is a **relative trend indicator**, not a calibrated absolute metric. The weights are heuristic and finger-stddev is sensitive to layout choices. Read the curve as "is my distribution improving over time?" rather than as a numeric grade.
+
+**Empty states**
+
+- **No snapshot** — same message as Heatmap
+- **No layout** — "Layout data not available for this snapshot."
+- **No activity** — "No keystrokes recorded in this range."
+- **No data** (Learning curve only) — "Not enough matrix activity in this range. Type more or widen the period filter."
+
+#### Bigrams
+
+The Bigrams tab analyzes consecutive key-press pairs (bigrams) and the inter-key interval (IKI) between them. Bigrams are aggregated per minute as the typing happens, so the tab works over any selected range without re-scanning raw events.
+
+**Quadrant layout**
+
+The view is a 3-quadrant grid; each quadrant has its own list-size selector (10 / 20 / 30 / … / 100). Bars are rendered with recharts so tooltips track the cursor.
+
+| Quadrant | What it shows |
+|----------|---------------|
+| **Top pairs** | Pair ranking by total occurrence count. Click the **Count** or **Avg IKI** column to flip the sort |
+| **Pair interval** | Pair ranking by average IKI (slowest first). Click any of **Count**, **Avg IKI**, or **p95** to re-sort. The Avg interval threshold (see Common filters) hides faster-than-threshold pairs |
+| **Finger IKI** | Per-(from-finger → to-finger) average IKI bar chart. Bars are coloured blue for left-hand starts and red for right-hand starts. Same Avg interval threshold applies |
+
+![Analyze — Bigrams](screenshots/analyze-bigrams.png)
+
+**Snapshot requirement**
+
+Only the **Finger IKI** quadrant needs a keymap snapshot — it has to map each numeric keycode in the bigram pairs to a finger, which depends on the snapshot's keymap and layout. The Top pairs and Pair interval quadrants both render directly from the recorded pair counts and work without a snapshot.
+
+**Common filters**
+
+- **Range** — same `From` / `To` pickers as the rest of Analyze. The view re-aggregates over the chosen window
+- **Device** — `This device` only or all synced devices, identical to the other tabs
+- **Avg interval (ms or slower)** — minimum-IKI threshold rendered inline in both the Finger IKI and Slow pairs quadrant headers. Pairs whose average IKI is below the threshold are hidden in both quadrants at once (the input is shared, so editing it in one quadrant updates the other). `0` disables the filter; the value is persisted per keyboard via `PipetteSettings`. The IKI used for comparison is approximate (histogram bucket-center weighted average), so the cut-off is best treated as a coarse "ignore pairs faster than ~N ms" filter
+
+**Empty states**
+
+- **No bigram data** — "No bigram data in this range yet. Record some typing and try again." Shown when the range has no recorded pair activity
+- **No snapshot (Finger IKI quadrant only)** — "Finger heatmap needs a keymap snapshot. Start a record session or pick a range with one." The other three quadrants still render
+- **Threshold filtered everything out** — when **Avg interval** is set high enough that no pair survives, the Finger IKI and Pair interval quadrants both fall back to "No bigram data in this range yet." Lower the threshold to bring rows back
+
+#### By App
+
+The By App tab breaks the recorded data down by the active application name captured during typing. It only populates after Monitor App has been enabled in the Typing View and at least one minute has been tagged with an app name. This tab intentionally **ignores the App filter** — applying it would collapse the chart to a single slice / bar.
+
+![Analyze — By App](screenshots/analyze-by-app.png)
+
+**App Usage Distribution** (donut)
+
+Per-app share of total keystrokes for the selected range. Minutes tagged with multiple apps fold into an `Unknown / Mixed` slice; minutes that pre-date Monitor App or were captured while it was disabled go to `Other`. Hover for the tooltip with the per-slice keystrokes count and share percentage.
+
+**WPM by App** (horizontal bars)
+
+Per-app median WPM as a horizontal bar chart, ranked by share of activity. Bars below the configured min-sample threshold render in a muted tone. Hover for the per-bar WPM and keystroke count.
+
+**Empty state**
+
+- "No app data — turn on Monitor App and start REC to populate this chart." Shown when no app-tagged minutes exist in the range
+
+#### Layout Comparison
+
+The Layout Comparison simulates how your recorded typing would land on a different keyboard layout — Colemak, Dvorak, Colemak DH, and 30+ others — without touching your firmware. Pick a candidate from the dropdown and the tab folds your matrix activity through that layout's character map to show how your finger / hand / row workload would shift.
+
+**Pickers**
+
+- **Current layout** — what character convention to interpret your recorded events with. Defaults to QWERTY; change it if your firmware fires keycodes for a different layout natively
+- **Compare to** — the candidate layout to simulate against. Picks are persisted per keyboard so the comparison reopens to the same target after a reload
+
+**Panels**
+
+Once a target is picked, all three panels render at once so you can read the spatial, per-finger, and tabular views together without flipping a sub-view:
+
+| Panel | What it shows |
+|-------|---------------|
+| **Heatmap diff** (top, full width) | Per-physical-key delta painted over the keyboard. Red shades where the candidate sends more activity to that key, blue shades where it sends less |
+| **Finger diff** (bottom-left) | Per-finger signed delta bar chart. Red bars mark fingers that take more load on the candidate, green bars mark fingers that take less |
+| **Metric table** (bottom-right) | Side-by-side share-of-events table with finger load (per finger), hand balance (left / right), row distribution, and home-row stay rate |
+
+![Analyze — Layout Comparison Heatmap Diff](screenshots/analyze-layout-comparison-heatmap-diff.png)
+
+![Analyze — Layout Comparison Finger Diff](screenshots/analyze-layout-comparison-finger-diff.png)
+
+![Analyze — Layout Comparison Metric](screenshots/analyze-layout-comparison-metric.png)
+
+**Skip-rate warning**
+
+Some events can't be mapped onto a candidate — for example, when the source character has no equivalent on the target layout, or the firmware hasn't bound the candidate's keycode anywhere. When that share rises above 5% the view shows a warning so you know the metrics are approximate.
+
+**Empty states**
+
+- **No snapshot** — same empty state as the rest of the snapshot-bound tabs. Start a record session in the chosen range to capture one
+- **No target picked** — the empty hint stays until you pick a comparison layout from the dropdown
+- **Fetch error** — generic "failed to compute the layout comparison" message; reload or pick a smaller range and retry
+
+The Layer tab breaks usage down by keyboard layer.
+
+**View Mode**
+
+- **Keystrokes** — sums every press at the layer that was active at the time. Reflects `MO`, `LT`, `TG`, and any other layer op live, because the active layer is recorded when the press happens. Works with or without a keymap snapshot
+
+  ![Analyze — Layer Keystrokes](screenshots/analyze-layer-keystrokes.png)
+
+- **Activations** — counts how many times each layer was *reached* through a layer-op keycode. Requires a keymap snapshot so the layer-op target can be resolved:
+  - `MO` / `TG` / `TO` / `DF` / `PDF` / `OSL` / `TT` — counted on press
+  - `LT` / `LM` — counted only on hold (so a tapped `LT0(KC_ESC)` doesn't look like a layer transition)
+
+  ![Analyze — Layer Activations](screenshots/analyze-layer-activations.png)
+
+**Base Layer**
+
+Appears only in Activations mode on keyboards with two or more layers. Selects the layer you are analyzing from — that layer is dropped from the bar list so a "hold the same layer you're already on" press (e.g., `LT0(KC_ESC)` while base = 0) doesn't show up as a transition.
+
+**Layer names**
+
+If you have named layers in the layer panel (see §2.3), the name is appended to the axis label (e.g., `Layer 0 · Base`) so you can tell layers apart without counting.
+
+**Empty states**
+
+- **Keystrokes, no activity** — nothing pressed in range
+- **Activations, no activity** — no layer-op keys pressed in range
+- **Activations, no snapshot** — "Layer activations need a keymap snapshot. Start a record session in this range to capture one." Keystrokes mode keeps working without a snapshot
+
+#### CSV Export
+
+The **Export** button on the panel header opens a category-pick modal that writes the chart data for the active filters as a `.csv` file. Eight categories can be ticked independently:
+
+- **Heatmap** — per-cell press counts (snapshot-bound)
+- **WPM** — per-bucket WPM time series
+- **Interval** — per-bucket interval percentiles
+- **Activity** — hour × day-of-week or day-cell counts depending on the View setting
+- **Ergonomics** — per-finger / per-hand / per-row totals (snapshot-bound)
+- **Bigrams** — Top pairs / Pair interval / Finger IKI rows
+- **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound)
+- **Layer** — per-layer keystroke or activation counts
+
+The modal lists the active conditions (Device, App, Keymap, Period) above the category list so the file you save is unambiguous about which slice it captures. Heatmap, Ergonomics, and Layout Comparison entries are unavailable when the range has no overlapping snapshot — the modal shows a "snapshot missing" notice for those categories. Manual finger overrides are noted next to the Ergonomics row.
+
 ---
 
 ## 2. Keymap Editor
@@ -578,21 +949,65 @@ Click the **Typing View** button in the status bar (visible when Typing Test is 
 - The toolbar, keycode palette, typing test UI, and status bar are hidden
 - The window maintains its aspect ratio when resized
 
-**Controls Panel**
+**Menu Pane**
 
 ![View-Only — Controls](screenshots/view-only-controls.png)
 
-Click anywhere on the keyboard area to toggle the controls panel (bottom-right popup):
+Click anywhere on the keyboard area to toggle the menu pane (bottom-right popup). The pane is split into **Window** and **REC** tabs at the top, with a shared **Base** layer selector and **Exit Typing View** button at the bottom.
 
-- **Base**: Select which layer to display (when the keyboard has multiple layers)
-- **top**: Keep the window above other windows (always-on-top; not available on Wayland)
+**Window tab** (default)
+
 - **Default Size**: Reset the window to its default calculated size
 - **Fit Size**: Adjust the window height to match the current width while preserving the aspect ratio
+- **Top**: Keep the window above other windows (always-on-top; not available on Wayland)
+
+**REC tab**
+
+Recording controls and the Monitor App toggle. Detailed in **Typing analytics recording** below.
+
+**Shared controls** (visible in both tabs)
+
+- **Base**: Select which layer to display (when the keyboard has multiple layers)
 - **Exit Typing View**: Return to the full editor
 
-Press Escape or click the keyboard area again to close the panel. A hint text appears at the bottom when hovering over the window. The window size and always-on-top preference are saved per keyboard.
+Press Escape or click the keyboard area again to close the pane. A hint text appears at the bottom when hovering over the window. The window size, always-on-top preference, and the active menu tab are saved per keyboard.
 
 > **Note**: Auto-lock is suspended while in Typing View mode. If the keyboard is disconnected while in view-only mode, the window automatically restores to its normal size.
+
+#### Typing analytics recording
+
+While Typing View is open, the **REC** tab in the Menu Pane records per-key and per-minute statistics that feed the Analyze page (§1.4). Recording stays off by default.
+
+![Typing Test — REC Tab](screenshots/typing-test-rec-tab.png)
+
+**Start / Stop**
+
+Press the toggle once to start recording — the button shows **Start** while idle and **Stop** while recording. The Recording indicator appears at the top of the Typing View window so you can tell at a glance whether data is being captured.
+
+The very first time you press Start, a consent dialog appears:
+
+![Typing Test — Recording Consent](screenshots/typing-test-rec-consent.png)
+
+| Section | Items |
+|---------|-------|
+| **What we collect** | Per-minute character frequency · Per-key press counts (row / col / layer / keycode, tap vs hold) · Typing speed distribution (interval percentiles) · Active application name (only when Monitor App is on; minutes that observe multiple apps are recorded as unknown) |
+| **What we do NOT collect** | Individual keystroke timing · Text content / passwords / specific words · Window title / URL / file path |
+
+Click **Enable** to opt in — your consent is persisted in app settings (not synced) and the dialog never appears again. Click **Cancel** to back out without starting; you can press Start later to see the dialog again.
+
+**Monitor App**
+
+When the Monitor App toggle is on (and REC is in the Stop / recording state), Pipette resolves the foreground application name once per data flush so each minute can be tagged with the app that owned the keystrokes. Minutes that observed only one app carry that app's name; minutes that observed multiple apps are tagged as `Unknown / Mixed`. The tags drive the **App** filter and the **By App** tab in Analyze.
+
+- The button is greyed out while REC is **Start** (not recording) state — turning it on without REC has no effect, so the UI funnels you through Start first
+- The on/off state is global (AppConfig), not per-keyboard, and is **not** synced to other machines
+- **Linux / Wayland**: requires the FocusedWindow GNOME Shell extension (see README). Without it, every minute is recorded as `null`
+- **macOS**: requires the Accessibility permission (see README). Without it, every minute is recorded as `null`
+- Turning Monitor App off keeps existing tags in the database; only newly recorded minutes go untagged
+
+**View Analytics**
+
+Jumps directly to the Analyze page for this keyboard so you can review the stream you just recorded. Going back returns you to Typing View.
 
 #### View Mode Memory and Auto-Restore
 

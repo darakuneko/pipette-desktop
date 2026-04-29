@@ -14,10 +14,34 @@ import type {
   UnlockStatus,
 } from './protocol'
 import type { SnapshotMeta } from './snapshot-store'
+import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { AppConfig } from './app-config'
+import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
 import type { PipetteSettings } from './pipette-settings'
+import type {
+  TypingActivityCell,
+  TypingAnalyticsDeviceInfoBundle,
+  TypingAnalyticsEvent,
+  TypingDailySummary,
+  TypingHeatmapByCell,
+  TypingIntervalDailySummary,
+  TypingKeyboardSummary,
+  TypingKeymapSnapshot,
+  TypingKeymapSnapshotSummary,
+  TypingLayerUsageRow,
+  TypingMatrixCellRow,
+  TypingMatrixCellDailyRow,
+  TypingMinuteStatsRow,
+  TypingSessionRow,
+  TypingBksMinuteRow,
+  TypingTombstoneResult,
+  PeakRecords,
+  TypingBigramAggregateOptions,
+  TypingBigramAggregateResult,
+  TypingBigramAggregateView,
+} from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
 import type { NotificationFetchResult } from './notification'
@@ -111,6 +135,14 @@ export interface VialAPI {
   snapshotStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   snapshotStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
 
+  // Analyze Filter Store (per-keyboard search-condition snapshots)
+  analyzeFilterStoreList(uid: string): Promise<{ success: boolean; entries?: AnalyzeFilterSnapshotMeta[]; error?: string }>
+  analyzeFilterStoreSave(uid: string, json: string, label: string, summary?: string): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }>
+  analyzeFilterStoreLoad(uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
+  analyzeFilterStoreUpdate(uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }>
+  analyzeFilterStoreRename(uid: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
+  analyzeFilterStoreDelete(uid: string, entryId: string): Promise<{ success: boolean; error?: string }>
+
   // Favorite Store (internal save/load)
   favoriteStoreList(type: string): Promise<{ success: boolean; entries?: SavedFavoriteMeta[]; error?: string }>
   favoriteStoreSave(type: string, json: string, label: string): Promise<{ success: boolean; entry?: SavedFavoriteMeta; error?: string }>
@@ -125,6 +157,76 @@ export interface VialAPI {
   // Pipette Settings Store
   pipetteSettingsGet(uid: string): Promise<PipetteSettings | null>
   pipetteSettingsSet(uid: string, prefs: PipetteSettings): Promise<{ success: boolean; error?: string }>
+
+  // Typing Analytics
+  typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>
+  typingAnalyticsFlush(uid: string): Promise<void>
+  typingAnalyticsListAppsForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  typingAnalyticsGetAppUsageForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  typingAnalyticsGetWpmByAppForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+  ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  typingAnalyticsListKeyboards(): Promise<TypingKeyboardSummary[]>
+  typingAnalyticsListItems(uid: string, appScopes?: string[]): Promise<TypingDailySummary[]>
+  typingAnalyticsDeleteItems(uid: string, dates: string[]): Promise<TypingTombstoneResult>
+  typingAnalyticsDeleteAll(uid: string): Promise<TypingTombstoneResult>
+  typingAnalyticsGetMatrixHeatmap(uid: string, layer: number, sinceMs: number): Promise<TypingHeatmapByCell>
+  typingAnalyticsListItemsLocal(uid: string, appScopes?: string[]): Promise<TypingDailySummary[]>
+  typingAnalyticsListDeviceInfos(uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null>
+  typingAnalyticsListItemsForHash(uid: string, machineHash: string, appScopes?: string[]): Promise<TypingDailySummary[]>
+  typingAnalyticsListIntervalItems(uid: string): Promise<TypingIntervalDailySummary[]>
+  typingAnalyticsListIntervalItemsLocal(uid: string): Promise<TypingIntervalDailySummary[]>
+  typingAnalyticsListIntervalItemsForHash(uid: string, machineHash: string): Promise<TypingIntervalDailySummary[]>
+  typingAnalyticsListActivityGrid(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGridLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingActivityCell[]>
+  typingAnalyticsListActivityGridForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingActivityCell[]>
+  typingAnalyticsListLayerUsage(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListLayerUsageLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListLayerUsageForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingLayerUsageRow[]>
+  typingAnalyticsListMatrixCells(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellRow[]>
+  typingAnalyticsListMatrixCellsByDay(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMatrixCellsByDayForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMatrixCellDailyRow[]>
+  typingAnalyticsListMinuteStats(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStatsLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListMinuteStatsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingMinuteStatsRow[]>
+  typingAnalyticsListSessions(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
+  typingAnalyticsListSessionsLocal(uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
+  typingAnalyticsListSessionsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]>
+  typingAnalyticsListBksMinute(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsListBksMinuteLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsListBksMinuteForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<TypingBksMinuteRow[]>
+  typingAnalyticsGetPeakRecords(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecordsLocal(uid: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<PeakRecords>
+  typingAnalyticsGetPeakRecordsForHash(uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes?: string[]): Promise<PeakRecords>
+  typingAnalyticsSaveKeymapSnapshot(partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }>
+  typingAnalyticsGetKeymapSnapshotForRange(uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null>
+  typingAnalyticsListKeymapSnapshots(uid: string): Promise<TypingKeymapSnapshotSummary[]>
+  typingAnalyticsGetMatrixHeatmapForRange(uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScopes?: string[]): Promise<TypingHeatmapByCell>
+  typingAnalyticsGetBigramAggregateForRange(uid: string, sinceMs: number, untilMs: number, view: TypingBigramAggregateView, scope: DeviceScope, options?: TypingBigramAggregateOptions, appScopes?: string[]): Promise<TypingBigramAggregateResult>
+  typingAnalyticsListLocalDeviceDays(uid: string, machineHash: string): Promise<string[]>
+  typingAnalyticsHasRemote(): Promise<boolean>
+  typingAnalyticsListRemoteCloudHashes(uid: string): Promise<string[]>
+  typingAnalyticsListRemoteCloudDays(uid: string, machineHash: string): Promise<string[]>
+  typingAnalyticsFetchRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
+  typingAnalyticsDeleteRemoteDay(uid: string, machineHash: string, utcDay: string): Promise<boolean>
+  typingAnalyticsExport(uid: string, dates: string[]): Promise<{ written: number; cancelled: boolean }>
+  typingAnalyticsImport(): Promise<{ result: { imported: number; rejections: { fileName: string; reason: string }[] }; cancelled: boolean }>
 
   // App Config
   appConfigGetAll(): Promise<AppConfig>
@@ -147,6 +249,7 @@ export interface VialAPI {
   syncFetchRemoteBundle(syncUnit: string): Promise<unknown>
   syncDeleteFiles(fileIds: string[]): Promise<{ success: boolean; error?: string }>
   syncCheckPasswordExists(): Promise<boolean>
+  syncAnalyticsNow(uid: string): Promise<boolean>
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store

@@ -27,7 +27,11 @@
     "saving": "Saving...",
     "back": "Back",
     "exported": "Exported",
-    "imported": "Imported"
+    "imported": "Imported",
+    "load": "Load",
+    "labelPlaceholder": "Label",
+    "noLabel": "(No label)",
+    "synced": "Synced"
   },
   "app": {
     "title": "Pipette",
@@ -39,6 +43,7 @@
     "loadDummy": "Load from JSON file…",
     "keyboardTab": "Device",
     "fileTab": "File",
+    "analyzeTab": "Analyze",
     "loadPipetteFile": "Load .pipette file…",
     "loadPipetteFileDescription": "Open a .pipette file for offline editing. All features except lighting and matrix tester are available.",
     "noSavedFiles": "No saved files",
@@ -268,11 +273,45 @@
       "viewOnly": "Typing View",
       "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
+      "recordStart": "Start",
+      "recordStop": "Stop",
+      "viewAnalytics": "View Analytics",
+      "tab": {
+        "window": "Window",
+        "rec": "REC"
+      },
+      "monitorApp": {
+        "label": "Monitor App"
+      },
+      "heatmap": {
+        "legend": "Heatmap: last 1 hour"
+      },
       "closeHint": "Click to open menu",
+      "recordingIndicator": "Recording",
       "resetSize": "Default Size",
       "fitSize": "Fit Size",
       "baseLayer": "Base Layer",
       "baseLayerShort": "Base",
+      "heatmapWindow": "Heatmap window (minutes)",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} min",
+      "consent": {
+        "title": "Enable typing analytics recording?",
+        "collectedHeading": "What we collect",
+        "collectedItems": [
+          "Per-minute character frequency",
+          "Per-key press counts (row/col/layer/keycode, tap vs hold)",
+          "Typing speed distribution (interval percentiles)",
+          "Active application name (only when Monitor App is on; minutes that observe multiple apps are recorded as unknown)"
+        ],
+        "notCollectedHeading": "What we do NOT collect",
+        "notCollectedItems": [
+          "Individual keystroke timing",
+          "Text content / passwords / specific words",
+          "Window title / URL / file path"
+        ],
+        "accept": "Enable"
+      },
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {
@@ -453,21 +492,16 @@
     "pdfFooterLabel": ".pdf"
   },
   "layoutStore": {
-    "load": "Load",
     "title": "Data",
-    "labelPlaceholder": "Label",
     "noSavedLayouts": "No saved layouts",
     "saveFailed": "Failed to save layout",
     "maxEntriesReached": "Maximum saved layouts reached (30). Delete an existing entry to save a new one.",
     "loadFailed": "Failed to load layout",
-    "confirmDelete": "Delete?",
-    "noLabel": "(No label)",
     "rename": "Rename",
     "delete": "Delete",
     "current": "Current",
     "import": "Import",
     "saveCurrentState": "Save Current State",
-    "history": "Synced Data",
     "export": "Export",
     "exportCurrent": "Export Current State",
     "confirmOverwrite": "Overwrite?",
@@ -475,6 +509,18 @@
     "exportKeymapC": ".c",
     "exportPdf": ".pdf",
     "versionPrefix": "v{{version}} - "
+  },
+  "analyzeFilterStore": {
+    "title": "Saved search conditions",
+    "tabSave": "Save",
+    "selectKeyboard": "Select a keyboard to manage saved conditions.",
+    "saveFailed": "Failed to save search condition",
+    "loadFailed": "Failed to load search condition",
+    "unsupportedVersion": "This saved condition was written by a newer version of Pipette and cannot be loaded.",
+    "maxEntriesReached": "Maximum saved conditions reached ({{max}}). Delete an existing entry to save a new one.",
+    "csv": ".csv",
+    "syncedCount": "Synced: {{count}}",
+    "empty": "No saved conditions yet."
   },
   "sync": {
     "title": "Settings",
@@ -597,6 +643,667 @@
       "licenseValue": "GPL-3.0-or-later"
     }
   },
+  "analyze": {
+    "placeholder": "Analysis charts coming soon.",
+    "noKeyboards": "No typing data yet.",
+    "noData": "No data for the selected period.",
+    "selectKeyboard": "Select a keyboard from the list.",
+    "appUsage": {
+      "title": "App Usage Distribution",
+      "loading": "Loading app usage…",
+      "empty": "No app data — turn on Monitor App and start REC to populate this chart.",
+      "unknown": "Unknown / Mixed",
+      "other": "Other",
+      "tooltipKeystrokesLabel": "Keystrokes",
+      "tooltipShareLabel": "Share"
+    },
+    "wpmByApp": {
+      "title": "WPM by App",
+      "loading": "Loading WPM by app…",
+      "empty": "No app-tagged minutes yet — turn on Monitor App and start REC to populate this chart.",
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "Keystrokes"
+    },
+    "tablistLabel": "Analysis type",
+    "splitView": {
+      "toggle": "Split View",
+      "narrowWindow": "Window too narrow for split view — resize wider to enable."
+    },
+    "export": {
+      "csv": "Export",
+      "categoriesLabel": "Categories to export",
+      "confirm": ".csv",
+      "failed": "Export failed.",
+      "snapshotMissing": "Heatmap, Ergonomics, and Layout Comparison need a keymap snapshot to export and are unavailable for this range.",
+      "conditionLabel": {
+        "device": "Device",
+        "app": "App",
+        "keymap": "Keymap",
+        "range": "Period"
+      },
+      "fingerOverrides": "Finger override",
+      "fingerOverridesDefault": "Default",
+      "fingerOverridesCustomized": "Customized ({{count}})",
+      "category": {
+        "heatmap": "Heatmap",
+        "wpm": "WPM",
+        "interval": "Interval",
+        "activity": "Activity",
+        "ergonomics": "Ergonomics",
+        "bigrams": "Bigrams",
+        "layoutComparison": "Layout Comparison",
+        "layer": "Layer"
+      }
+    },
+    "loading": {
+      "keyboards": "Loading keyboards…",
+      "settings": "Loading settings…",
+      "syncing": "Syncing analytics…",
+      "snapshot": "Loading keymap snapshot…",
+      "preparing": "Preparing charts…"
+    },
+    "unit": {
+      "keys": "keys",
+      "activations": "activations"
+    },
+    "snapshotTimeline": {
+      "title": "Keymap snapshots",
+      "current": "Current keymap"
+    },
+    "wpm": {
+      "legend": "WPM",
+      "description": "WPM — Words per minute\nKeystrokes divided by 5, per minute of active typing.",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakWpm": "Peak WPM",
+          "lowestWpm": "Lowest WPM",
+          "weightedMedianWpm": "Weighted median WPM",
+          "totalBackspaces": "Total Bksp",
+          "overallBksPercent": "Overall Bksp %",
+          "overallBksPercentDesc": "Share of keystrokes that were Backspace."
+        }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "Bksp % — Share of keystrokes that were Backspace.\nSourced from the keystroke event stream, including all typing not just typing tests."
+      },
+      "timeOfDay": {
+        "tooltipLabel": "Hour",
+        "summary": {
+          "label": "Time-of-day WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakHour": "Peak hour",
+          "peakHourDesc": "Hour with the highest WPM.",
+          "lowestHour": "Slowest hour",
+          "lowestHourDesc": "Hour with the lowest WPM (excluding hours with no activity).",
+          "activeHours": "Active hours",
+          "activeHoursDesc": "Number of hours with at least one keystroke (out of 24)."
+        }
+      }
+    },
+    "interval": {
+      "legend": {
+        "min": "Min",
+        "p25": "p25",
+        "p50": "Median",
+        "p75": "p75",
+        "max": "Max"
+      },
+      "description": {
+        "min": "Min — Shortest keystroke interval recorded within any minute (fastest single moment).",
+        "p25": "p25 — Lower quartile\nDaily average of each minute's p25; 1/4 of intervals are shorter.",
+        "p50": "Median — Daily average of each minute's median\nHalf of intervals are shorter.",
+        "p75": "p75 — Upper quartile\nDaily average of each minute's p75; 3/4 of intervals are shorter.",
+        "max": "Max — Longest keystroke interval recorded within any minute (longest pause)."
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "Estimated keystrokes",
+        "summary": {
+          "label": "Typing rhythm summary",
+          "totalKeystrokes": "Total keystrokes",
+          "medianP50": "Median interval",
+          "fast": "Fast (<200ms)",
+          "fastDesc": "Share of intervals shorter than 200ms.",
+          "normal": "Normal (200-500ms)",
+          "normalDesc": "Share of intervals between 200ms and 500ms.",
+          "slow": "Slow (500ms-2s)",
+          "slowDesc": "Share of intervals between 500ms and 2s.",
+          "pause": "Pause (>=2s)",
+          "pauseDesc": "Share of intervals of 2s or longer.",
+          "longestPause": "Longest interval (per min)"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "Interval summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "medianP50": "Weighted median interval",
+          "shortest": "Shortest interval (per min)",
+          "longestPause": "Longest interval (per min)"
+        }
+      }
+    },
+    "activity": {
+      "tableLabel": "Hour × day-of-week activity",
+      "tableLabelWpm": "Hour × day-of-week WPM",
+      "hourHeader": "{{hour}}:00",
+      "cellTitle": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWithShare": "{{dow}} {{hour}}:00 — {{keystrokes}} $t(analyze.unit.keys) ({{share}}% of total)",
+      "cellTitleWpm": "{{dow}} {{hour}}:00 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
+      "legendLow": "0",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
+      "legendHighWpm": "{{wpm}} WPM",
+      "legendLowDesc": "No keystrokes recorded in this cell.",
+      "legendHighDesc": "Peak ({{count}} $t(analyze.unit.keys)).\nCell opacity scales linearly from 0 to this value.",
+      "legendHighDescWpm": "Peak WPM ({{wpm}} WPM).\nCell opacity scales linearly to this value.\nDesaturated cells did not meet the Min sample threshold.",
+      "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak.",
+      "summary": {
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
+        "wpmContext": "{{wpm}} WPM"
+      },
+      "keystrokes": {
+        "summary": {
+          "label": "Activity summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "mostFrequentDow": "Busiest day",
+          "mostFrequentDowDesc": "Day of week with the most keystrokes.",
+          "mostFrequentHour": "Busiest hour",
+          "mostFrequentHourDesc": "Hour with the most keystrokes.",
+          "peakCell": "Peak cell",
+          "peakCellDesc": "Cell (hour × day-of-week) with the most keystrokes.",
+          "activeCells": "Active cells",
+          "activeCellsDesc": "Cells with at least one keystroke (out of 168)."
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "Activity WPM summary",
+          "totalKeystrokes": "Total keystrokes",
+          "activeDuration": "Active typing time",
+          "overallWpm": "Overall WPM",
+          "peakCell": "Peak cell",
+          "peakCellDesc": "Cell (hour × day-of-week) with the highest WPM.",
+          "lowestCell": "Slowest cell",
+          "lowestCellDesc": "Cell (hour × day-of-week) with the lowest WPM (active cells only).",
+          "activeCells": "Active cells",
+          "activeCellsDesc": "Cells with at least one keystroke (out of 168)."
+        }
+      },
+      "sessions": {
+        "tooltipLabel": "Sessions",
+        "tooltipValue": "{{count}} sessions ({{share}}%)",
+        "bin": {
+          "lt5Min": "<5 min",
+          "5to15Min": "5-15 min",
+          "15to30Min": "15-30 min",
+          "30to60Min": "30-60 min",
+          "1to2Hours": "1-2 h",
+          "2to4Hours": "2-4 h",
+          "gtFourHours": ">4 h"
+        },
+        "summary": {
+          "label": "Session distribution summary",
+          "sessionCount": "Session count",
+          "totalDuration": "Total duration",
+          "meanDuration": "Mean duration",
+          "medianDuration": "Median duration",
+          "longestDuration": "Longest session",
+          "shortestDuration": "Shortest session"
+        }
+      },
+      "dow": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "calendar": {
+        "gridLabel": "Year activity calendar",
+        "monthShortYear": "{{year}} {{monthShort}}",
+        "monthShort": {
+          "1": "Jan",
+          "2": "Feb",
+          "3": "Mar",
+          "4": "Apr",
+          "5": "May",
+          "6": "Jun",
+          "7": "Jul",
+          "8": "Aug",
+          "9": "Sep",
+          "10": "Oct",
+          "11": "Nov",
+          "12": "Dec"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys) ({{activeDuration}})",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM ({{activeDuration}})",
+        "cellTooltipSessions": "{{date}} — {{count}} sessions started",
+        "cellTooltipEmpty": "{{date}} — no activity",
+        "summary": {
+          "label": "Calendar summary",
+          "total": "Total keystrokes",
+          "avgWpm": "Average WPM",
+          "activeDays": "Active days",
+          "activeDaysValue": "{{active}} / {{total}} ({{share}}%)",
+          "peak": "Peak day",
+          "avg": "Average per active day"
+        }
+      }
+    },
+    "analysisTab": {
+      "summary": "Summary",
+      "wpm": "WPM",
+      "interval": "Interval",
+      "activity": "Activity",
+      "keyHeatmap": "Heatmap",
+      "ergonomics": "Ergonomics",
+      "bigrams": "Bigrams",
+      "layoutComparison": "Layout Comparison",
+      "layer": "Layer",
+      "byApp": "By App"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "Today",
+        "ariaLabel": "Today summary",
+        "keystrokesLabel": "Keystrokes",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "Typing"
+      },
+      "weeklyReport": {
+        "sectionTitle": "Last 7 days",
+        "ariaLabel": "Weekly report",
+        "delta": "{{glyph}} {{sign}}{{pct}}% (vs prior 7 days)",
+        "deltaInsufficient": "{{glyph}} — (vs prior 7 days)",
+        "keystrokesLabel": "Keystrokes",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "Typing",
+        "activeDurationContext": "{{previous}} (prior 7 days)",
+        "activeDaysLabel": "Active days",
+        "activeDaysUnit": "days"
+      },
+      "profile": {
+        "sectionTitle": "Typing profile (last {{days}} days)",
+        "ariaLabel": "Typing profile",
+        "insufficient": "Not enough data",
+        "speedLabel": "Speed",
+        "speedDesc": "Window-wide WPM bucketed into Slow (<30) / Medium (30–50) / Fast (≥50). Needs a few days of typing to settle.",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "Slow",
+          "medium": "Medium",
+          "fast": "Fast"
+        },
+        "handBalanceLabel": "Hand balance",
+        "handBalanceDesc": "Share of bigram keystrokes that landed on each hand. Within ±5% of 50/50 reads as balanced.",
+        "handBalanceContext": "L {{leftPct}}% / R {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "Left-biased",
+          "balanced": "Balanced",
+          "rightBias": "Right-biased"
+        },
+        "sfbLabel": "SFB rate",
+        "sfbDesc": "Share of bigrams typed with the same finger. Lower is easier on the hand. <4% Low, 4–8% Medium, ≥8% High.",
+        "sfbContext": "{{pct}}% same-finger",
+        "sfb": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        },
+        "fatigueLabel": "Fatigue risk",
+        "fatigueDesc": "WPM gap between your peak hour and your slowest hour over the window. Wider gap = greater fatigue risk.",
+        "fatigueContext": "{{pct}}% drop peak→low",
+        "fatigue": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High"
+        }
+      }
+    },
+    "bigrams": {
+      "loading": "Loading bigram data…",
+      "empty": "No bigram data in this range yet. Record some typing and try again.",
+      "error": "Failed to load bigram data. Try again or check the logs.",
+      "quadrant": {
+        "top": "Top pairs",
+        "slow": "Pair interval",
+        "fingerIki": "Finger IKI"
+      },
+      "column": {
+        "pair": "Pair",
+        "count": "Count",
+        "avgIki": "Avg IKI",
+        "p95": "p95 IKI"
+      },
+      "fingerIki": {
+        "noSnapshot": "Finger interval needs a keymap snapshot. Start a record session or pick a range with one.",
+        "sortLabel": "Sort",
+        "sort": {
+          "desc": "Slowest first",
+          "asc": "Fastest first"
+        }
+      },
+      "pairIntervalThreshold": {
+        "label": "Avg interval",
+        "suffix": "ms or slower",
+        "ariaLabel": "Minimum avg interval (ms)"
+      },
+      "cellTooltipOccurrencesLabel": "Occurrences",
+      "cellTooltipAvgIkiLabel": "Avg interval"
+    },
+    "keyHeatmap": {
+      "layer": "Layer",
+      "layerOption": "Layer {{i}}",
+      "layerOptionMulti": "Layer {{layers}}",
+      "bondToggle": "Bond Layer {{i}} with another group",
+      "noLayout": "Layout data not available for this snapshot.",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "ranking": {
+        "frequentUsedN": "Top N",
+        "frequentUsed": "Frequently Used",
+        "colKey": "Key",
+        "colLayer": "Layer",
+        "colMatrix": "Matrix",
+        "colCount": "Count",
+        "aggregate": "Aggregate",
+        "aggregateOption": {
+          "cell": "By cell",
+          "char": "By character"
+        },
+        "keyGroup": "Group",
+        "keyGroupOption": {
+          "all": "All",
+          "char": "Character",
+          "modifier": "Modifier",
+          "layerOp": "Layer op"
+        },
+        "emptyFrequentUsed": "No key presses in this range."
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "Finger Load",
+      "handBalance": "Hand Balance",
+      "rowUsage": "Row Balance",
+      "rowLoad": "Row Load",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "noLayout": "Layout data not available for this snapshot.",
+      "noData": "No keystrokes recorded in this range.",
+      "finger": {
+        "left-pinky": "L Pinky",
+        "left-ring": "L Ring",
+        "left-middle": "L Middle",
+        "left-index": "L Index",
+        "left-thumb": "L Thumb",
+        "right-thumb": "R Thumb",
+        "right-index": "R Index",
+        "right-middle": "R Middle",
+        "right-ring": "R Ring",
+        "right-pinky": "R Pinky"
+      },
+      "fingerKind": {
+        "thumb": "Thumb",
+        "index": "Index",
+        "middle": "Middle",
+        "ring": "Ring",
+        "pinky": "Pinky"
+      },
+      "hand": {
+        "left": "Left",
+        "right": "Right"
+      },
+      "rowCategory": {
+        "function": "Function",
+        "number": "Number",
+        "top": "Top",
+        "home": "Home",
+        "bottom": "Bottom",
+        "thumb": "Thumb"
+      },
+      "learning": {
+        "noData": "Not enough matrix activity in this range. Type more or widen the period filter.",
+        "belowMinSample": "below min sample",
+        "totalKeystrokes": "{{count}} keystrokes",
+        "relativeTrendNote": "Scores are a relative trend, not a calibrated absolute. Watch the line move over time rather than reading the percentage as a grade.",
+        "score": {
+          "overall": "Overall",
+          "fingerLoad": "Finger load",
+          "handBalance": "Hand balance",
+          "homeRowStay": "Home row stay"
+        },
+        "summary": {
+          "latestOverall": "Latest score",
+          "delta_one": "vs last bucket",
+          "delta_other": "vs prior {{count}} buckets",
+          "baselineMean": "Baseline {{value}}",
+          "bucketCount": "Buckets",
+          "qualifiedCount": "Qualified"
+        }
+      }
+    },
+    "layoutComparison": {
+      "sourceLabel": "Current layout",
+      "targetLabel": "Compare to",
+      "noTargetOption": "—",
+      "noTarget": "Pick a layout to compare against your typing.",
+      "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "noData": "No matrix activity recorded in this range.",
+      "loading": "Loading layout comparison…",
+      "fetchError": "Failed to compute the layout comparison.",
+      "skipWarning": "{{percent}}% of events couldn't map onto this layout. Treat the metrics below as approximate.",
+      "fingerDiffTitle": "Finger load delta vs {{target}}",
+      "heatmapDiffTitle": "Per-key load delta vs {{target}}",
+      "heatmapDiffLegend": {
+        "decrease": "Less on candidate",
+        "increase": "More on candidate"
+      },
+      "headers": {
+        "metric": "Metric",
+        "current": "Current"
+      },
+      "metrics": {
+        "fingerLoad": "Finger load",
+        "handBalance": "Hand balance",
+        "rowDist": "Row distribution",
+        "homeRow": "Home-row stay"
+      }
+    },
+    "layer": {
+      "title": "Keystrokes per layer",
+      "activationsTitle": "Layer activations",
+      "layerLabel": "Layer {{layer}}",
+      "noData": "No layer activity recorded in this range.",
+      "noActivations": "No layer-op keys pressed in this range.",
+      "requiresSnapshot": "Layer activations need a keymap snapshot. Start a record session in this range to capture one."
+    },
+    "finger": {
+      "short": {
+        "left-pinky": "Lp",
+        "left-ring": "Lr",
+        "left-middle": "Lm",
+        "left-index": "Li",
+        "left-thumb": "Lt",
+        "right-thumb": "Rt",
+        "right-index": "Ri",
+        "right-middle": "Rm",
+        "right-ring": "Rr",
+        "right-pinky": "Rp"
+      }
+    },
+    "fingerAssignment": {
+      "button": "Finger assignment",
+      "title": "Finger assignment",
+      "subtitle": "Click a key to override the estimated finger.",
+      "save": "Save",
+      "reset": "Reset to estimate",
+      "resetAll": "Reset all",
+      "noSnapshot": "No keymap snapshot available for this range.",
+      "popoverLabel": "Select finger",
+      "leftHand": "Left hand",
+      "rightHand": "Right hand"
+    },
+    "peak": {
+      "peakKeystrokesPerMin": "Peak K/min",
+      "peakKeystrokesPerDay": "Peak K/day",
+      "longestSession": "Longest session (min)",
+      "longestSessionDesc": "Longest continuous typing run, separated by 5+ minutes of idle.",
+      "unit": {
+        "kpm": "K/min",
+        "kpd": "K/day",
+        "minutes": "min"
+      }
+    },
+    "streakGoal": {
+      "sectionTitle": "Goal streak records",
+      "ariaLabel": "Goal streak and daily keystroke goal summary",
+      "currentStreakLabel": "Current",
+      "currentStreakDesc": "Days completed in the current cycle\nResets after reaching the target days",
+      "currentValue": "{{current}}/{{goalDays}} days",
+      "longestStreakLabel": "Longest in history",
+      "goalLabel": "Goal settings",
+      "goalDaysAria": "Target consecutive days",
+      "goalKeystrokesAria": "Target keystrokes per day",
+      "changeWarning": "Changing the goal clears the current cycle counter",
+      "confirm": "Confirm",
+      "daysUnit": "days",
+      "keystrokesUnit": "keystrokes/day",
+      "historyButton": "Achievement history",
+      "historyTitle": "Goal achievement history",
+      "historyEmpty": "No completed cycles yet",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} days / {{keystrokes}} keystrokes",
+      "historyColumn": {
+        "period": "Period",
+        "goal": "Goal",
+        "days": "Days",
+        "total": "Total keystrokes",
+        "average": "Avg / day"
+      }
+    },
+    "filters": {
+      "keyboard": "Keyboards",
+      "from": "Start",
+      "to": "End",
+      "period": "Period",
+      "device": "Device",
+      "deviceOption": {
+        "own": "This device",
+        "all": "All devices",
+        "hashShort": "{{hash}}…"
+      },
+      "app": "App",
+      "appOption": {
+        "none": "All apps",
+        "multi": "{{first}} +{{rest}}"
+      },
+      "unit": "Display",
+      "unitOption": {
+        "sec": "Seconds",
+        "ms": "Milliseconds"
+      },
+      "intervalViewMode": "View",
+      "intervalViewModeOption": {
+        "timeSeries": "Time series",
+        "distribution": "Distribution"
+      },
+      "wpmViewMode": "View",
+      "wpmViewModeOption": {
+        "timeSeries": "Time series",
+        "timeOfDay": "Time of day"
+      },
+      "wpmMinSample": "Min sample",
+      "wpmMinSampleOption": {
+        "sec30": "30s",
+        "min1": "1 min",
+        "min2": "2 min",
+        "min5": "5 min"
+      },
+      "ergonomicsViewMode": "View",
+      "ergonomicsViewModeOption": {
+        "snapshot": "Snapshot",
+        "learning": "Learning curve"
+      },
+      "ergonomicsPeriod": "Period",
+      "ergonomicsPeriodOption": {
+        "week": "Weekly",
+        "month": "Monthly"
+      },
+      "activityMetric": "Metric",
+      "activityMetricOption": {
+        "keystrokes": "Keystrokes",
+        "wpm": "WPM",
+        "sessions": "Sessions"
+      },
+      "activityView": "View",
+      "activityViewOption": {
+        "grid": "Hour",
+        "calendar": "Day"
+      },
+      "calendarNormalization": "Normalize",
+      "calendarNormalizationOption": {
+        "absolute": "Absolute",
+        "shareOfWeekly": "Share of week",
+        "shareOfTotal": "Share of total"
+      },
+      "calendarRange": "Range",
+      "calendarRangeOption": {
+        "3": "3 months",
+        "6": "6 months",
+        "12": "12 months"
+      },
+      "calendarRangePrev": "Previous month",
+      "calendarRangeNext": "Next month",
+      "layerViewMode": "View",
+      "layerViewModeOption": {
+        "keystrokes": "Keystrokes",
+        "activations": "Activations"
+      },
+      "layerBaseLayer": "Base",
+      "normalization": "Normalize",
+      "normalizationOption": {
+        "absolute": "Absolute",
+        "perHour": "Per hour",
+        "shareOfTotal": "Share of total"
+      },
+      "granularity": "Granularity",
+      "granularityOption": {
+        "auto": "Auto",
+        "min1": "1 min",
+        "min5": "5 min",
+        "min10": "10 min",
+        "min15": "15 min",
+        "min30": "30 min",
+        "hour1": "1 hour",
+        "hour3": "3 hours",
+        "hour6": "6 hours",
+        "hour12": "12 hours",
+        "day1": "1 day",
+        "day3": "3 days",
+        "week1": "1 week",
+        "month1": "1 month"
+      }
+    }
+  },
   "dataModal": {
     "title": "Data",
     "tabLocal": "Local",
@@ -624,7 +1331,40 @@
     "deleteAll": "Delete All Data",
     "deleteAllConfirm": "This will delete all data including synced data.",
     "syncNoOrphans": "All synced data is available locally",
-    "resetAppSettings": "Reset application settings"
+    "resetAppSettings": "Reset application settings",
+    "typing": {
+      "title": "Typing",
+      "noKeyboards": "No recorded typing data",
+      "noItems": "No typing data for this keyboard",
+      "summaryLine": "{{days}} day(s), {{keystrokes}} keystrokes total",
+      "colDate": "Date",
+      "colKeystrokes": "Keystrokes",
+      "colActiveMs": "Active time",
+      "selectAll": "Select all days",
+      "selectRow": "Select {{date}}",
+      "deleteSelected": "Delete selected ({{count}})",
+      "deleteAll": "Delete all for this keyboard",
+      "confirmDeleteSelected": "Delete {{count}} day(s) of this device's records? Synced copies will drop too, days recorded by other devices remain. Once deleted, those dates can no longer be re-imported — export first if you need a backup.",
+      "confirmDeleteAll": "Delete every day this device recorded for this keyboard? Synced copies will drop too, days recorded by other devices remain. Once deleted, those dates can no longer be re-imported — export first if you need a backup.",
+      "exportLabel": "Export…",
+      "importLabel": "Import…",
+      "importStatus": {
+        "importing": "Importing…",
+        "exporting": "Exporting…",
+        "imported": "Imported {{count}} day(s).",
+        "exported": "Exported {{count}} day(s).",
+        "reason": {
+          "invalid-filename": "filename does not match the export pattern",
+          "live-day-locked": "this day's file is currently being recorded — unlocks at {{unlock}}",
+          "duplicate-in-batch": "another file in this batch already targeted the same day",
+          "no-matching-target": "no local or cloud copy of this day to overwrite",
+          "empty-or-invalid-content": "file is empty or contains invalid lines",
+          "rows-outside-day-window": "row timestamps fall outside the day the filename claims",
+          "read-error": "could not read the file"
+        }
+      },
+      "noRemoteDevices": "No other devices have typed on this keyboard"
+    }
   },
   "editorSettings": {
     "title": "Menu",
@@ -696,17 +1436,12 @@
     "button": "Fav",
     "save": "Save Fav",
     "loadFav": "Load Fav",
-    "load": "Load",
-    "labelPlaceholder": "Label",
     "noSaved": "No saved favorites",
     "saveFailed": "Failed to save favorite",
     "loadFailed": "Failed to load favorite",
-    "confirmDelete": "Delete?",
-    "noLabel": "(No label)",
     "rename": "Rename",
     "delete": "Delete",
     "saveCurrentState": "Save Current State",
-    "history": "Synced Data",
     "export": "Export",
     "exportAll": "Export All",
     "import": "Import",

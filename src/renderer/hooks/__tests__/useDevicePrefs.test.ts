@@ -803,6 +803,175 @@ describe('useDevicePrefs', () => {
     })
   })
 
+  describe('typingViewMenuTab', () => {
+    it('defaults to "window" when not in storage', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingViewMenuTab).toBe('window')
+    })
+
+    it('restores stored typingViewMenuTab from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingViewMenuTab: 'rec',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingViewMenuTab).toBe('rec')
+    })
+
+    it('falls back to "window" for an unknown typingViewMenuTab value', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingViewMenuTab: 'bogus',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingViewMenuTab).toBe('window')
+    })
+
+    it('setTypingViewMenuTab saves via IPC and updates state', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+
+      act(() => {
+        result.current.setTypingViewMenuTab('rec')
+      })
+
+      expect(result.current.typingViewMenuTab).toBe('rec')
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        typingViewMenuTab: 'rec',
+      }))
+    })
+
+    it('setTypingViewMenuTab skips the IPC save when the value is unchanged', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+
+      act(() => {
+        result.current.setTypingViewMenuTab('window')
+      })
+
+      expect(result.current.typingViewMenuTab).toBe('window')
+      expect(mockPipetteSettingsSet).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('typingRecordEnabled', () => {
+    it('defaults to false for a new device', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingRecordEnabled).toBe(false)
+    })
+
+    it('restores typingRecordEnabled from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingRecordEnabled: true,
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingRecordEnabled).toBe(true)
+    })
+
+    it('falls back to false when IPC returns a non-boolean typingRecordEnabled', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingRecordEnabled: 'yes',
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      expect(result.current.typingRecordEnabled).toBe(false)
+    })
+
+    it('setTypingRecordEnabled saves via IPC and updates state', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+
+      act(() => {
+        result.current.setTypingRecordEnabled(true)
+      })
+
+      expect(result.current.typingRecordEnabled).toBe(true)
+      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+        typingRecordEnabled: true,
+      }))
+    })
+
+    it('setTypingRecordEnabled skips the IPC save when the value is unchanged', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+      mockPipetteSettingsSet.mockClear()
+
+      act(() => {
+        result.current.setTypingRecordEnabled(false)
+      })
+
+      expect(result.current.typingRecordEnabled).toBe(false)
+      expect(mockPipetteSettingsSet).not.toHaveBeenCalled()
+    })
+  })
+
+
   describe('remapLabel and isRemapped', () => {
     it('remapLabel delegates to remapKeycode with current layout', async () => {
       setupMocks()

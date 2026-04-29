@@ -174,7 +174,7 @@ export function LayoutStoreContent({
                     type="text"
                     value={saveLabel}
                     onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
-                    placeholder={t('layoutStore.labelPlaceholder')}
+                    placeholder={t('common.labelPlaceholder')}
                     maxLength={200}
                     className="flex-1 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
                     data-testid="layout-store-save-input"
@@ -243,7 +243,7 @@ export function LayoutStoreContent({
                   type="text"
                   value={saveLabel}
                   onChange={(e) => { setSaveLabel(e.target.value); setConfirmOverwriteId(null) }}
-                  placeholder={t('layoutStore.labelPlaceholder')}
+                  placeholder={t('common.labelPlaceholder')}
                   maxLength={200}
                   className="flex-1 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
                   data-testid="layout-store-save-input"
@@ -311,7 +311,7 @@ export function LayoutStoreContent({
       {/* History section */}
       {!isDummy && (
         <div className={`${sectionGap}${isPanel ? ' flex-1 min-h-0 flex flex-col' : ''}`}>
-          <SectionHeader label={t('layoutStore.history')} count={entries.length} />
+          <SectionHeader label={t('common.synced')} count={entries.length} />
 
           {loading && (
             <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>

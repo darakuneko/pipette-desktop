@@ -14,6 +14,7 @@ import { startOAuthFlow, getAuthStatus, signOut } from './google-auth'
 import { clearHubTokenCache } from '../hub/hub-ipc'
 import { deleteFilesByPrefix, deleteFile } from './google-drive'
 import {
+  executeAnalyticsSync,
   executeSync,
   hasPendingChanges,
   cancelPendingChanges,
@@ -33,9 +34,19 @@ import {
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  deleteRemoteTypingDay,
+  fetchRemoteTypingDay,
+  hasAnyRemoteTypingData,
+  listRemoteTypingDaysFor,
+  listRemoteTypingHashesForUidFromCloud,
+  listRemoteFileNames,
   SyncCredentialError,
 } from './sync-service'
-import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason } from '../../shared/types/sync'
+import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult } from '../typing-analytics/import-export'
+import { getMachineHash } from '../typing-analytics/machine-hash'
+import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
+import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
+import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
 import type { SnapshotIndex, SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -337,12 +348,19 @@ export function setupSyncIpc(): void {
     wrapIpc('Export failed', async () => {
       const syncUnits = await collectAllSyncUnits()
 
-      const bundleTypeToCategory: Record<string, string> = {
+      // Only sync-bundle types covered by the import contract below are
+      // exported. A missing entry is a hard skip rather than a silent
+      // fallback so new types don't get misfiled under 'snapshots' — the
+      // prior ?? 'snapshots' default hid typing-analytics and
+      // keyboard-meta bundles inside the snapshots category even though
+      // neither has an importer.
+      type ExportCategory = 'favorites' | 'snapshots' | 'settings'
+      const bundleTypeToCategory: Partial<Record<SyncBundle['type'], ExportCategory>> = {
         favorite: 'favorites',
         layout: 'snapshots',
         settings: 'settings',
       }
-      const categories: Record<string, Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
+      const categories: Record<ExportCategory, Record<string, { index: FavoriteIndex | SnapshotIndex; files: Record<string, string> }>> = {
         snapshots: {},
         favorites: {},
         settings: {},
@@ -351,7 +369,8 @@ export function setupSyncIpc(): void {
       for (const syncUnit of syncUnits) {
         const bundle = await bundleSyncUnit(syncUnit)
         if (!bundle) continue
-        const category = bundleTypeToCategory[bundle.type] ?? 'snapshots'
+        const category = bundleTypeToCategory[bundle.type]
+        if (!category) continue // typing-analytics / keyboard-meta not in export contract yet
         categories[category][bundle.key] = { index: bundle.index, files: bundle.files }
       }
 
@@ -494,6 +513,121 @@ export function setupSyncIpc(): void {
 
   // --- Pending status (renderer polls on mount) ---
   secureHandle(IpcChannels.SYNC_PENDING_STATUS, () => hasPendingChanges())
+
+  // --- Analyze-panel analytics sync (separate mutex) ---
+  secureHandle(
+    IpcChannels.SYNC_ANALYTICS_NOW,
+    async (_event, uid: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      return executeAnalyticsSync(uid)
+    },
+  )
+
+  // --- Typing analytics cloud operations (Sync tab) ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_HAS_REMOTE,
+    async (): Promise<boolean> => hasAnyRemoteTypingData(),
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES,
+    async (_event, uid: unknown): Promise<string[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      return listRemoteTypingHashesForUidFromCloud(uid)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS,
+    async (_event, uid: unknown, machineHash: unknown): Promise<string[]> => {
+      if (typeof uid !== 'string' || uid.length === 0) return []
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return []
+      return listRemoteTypingDaysFor(uid, machineHash)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_FETCH_REMOTE_DAY,
+    async (_event, uid: unknown, machineHash: unknown, utcDay: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return false
+      if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
+      return fetchRemoteTypingDay(uid, machineHash, utcDay)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_DELETE_REMOTE_DAY,
+    async (_event, uid: unknown, machineHash: unknown, utcDay: unknown): Promise<boolean> => {
+      if (typeof uid !== 'string' || uid.length === 0) return false
+      if (typeof machineHash !== 'string' || machineHash.length === 0) return false
+      if (typeof utcDay !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(utcDay)) return false
+      return deleteRemoteTypingDay(uid, machineHash, utcDay)
+    },
+  )
+
+  // --- Typing analytics export / import ---
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_EXPORT,
+    async (_event, uid: unknown, dates: unknown): Promise<{ written: number; cancelled: boolean }> => {
+      if (typeof uid !== 'string' || uid.length === 0) {
+        return { written: 0, cancelled: true }
+      }
+      // Empty array short-circuits before opening the dialog so the user
+      // doesn't pick a directory just to receive zero files.
+      if (!Array.isArray(dates) || dates.length === 0 || dates.some((d) => typeof d !== 'string')) {
+        return { written: 0, cancelled: true }
+      }
+      const result = await dialog.showOpenDialog(getDialogWindow()!, {
+        title: 'Export typing data',
+        properties: ['openDirectory', 'createDirectory'],
+      })
+      if (result.canceled || result.filePaths.length === 0) {
+        return { written: 0, cancelled: true }
+      }
+      const ownHash = await getMachineHash()
+      const userData = app.getPath('userData')
+      const filter = new Set(dates as string[])
+      const out = await exportTypingDataForKeyboard(userData, uid, ownHash, result.filePaths[0], filter)
+      return { written: out.written, cancelled: false }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_IMPORT,
+    async (): Promise<{ result: ImportResult; cancelled: boolean }> => {
+      const dialogResult = await dialog.showOpenDialog(getDialogWindow()!, {
+        title: 'Import typing data',
+        filters: [{ name: 'Typing data', extensions: ['jsonl'] }],
+        properties: ['openFile', 'multiSelections'],
+      })
+      const empty: ImportResult = { imported: 0, rejections: [] }
+      if (dialogResult.canceled || dialogResult.filePaths.length === 0) {
+        return { result: empty, cancelled: true }
+      }
+      const userData = app.getPath('userData')
+      // Pull the Drive listing once for the whole batch — without this
+      // each rejected-but-cloud-known import would round-trip the full
+      // appData listing again.
+      const remoteNames = await listRemoteFileNames()
+      const importResult = await importTypingDataFiles(userData, dialogResult.filePaths, {
+        cloudHasFile: remoteNames === null
+          ? null
+          // Cloud encrypts each sync unit as `<name>.enc`; the export
+          // form drops `.enc`, so flip it back here for the lookup.
+          : async (name) => remoteNames.has(name.replace(/\.jsonl$/, '.enc')),
+      })
+      if (importResult.imported > 0) {
+        try {
+          const ownHash = await getMachineHash()
+          await ensureCacheIsFresh(getTypingAnalyticsDB(), userData, ownHash, { force: true })
+        } catch (err) {
+          console.warn('[sync-ipc] typing-analytics import: cache rebuild failed; will retry on next launch', err)
+        }
+      }
+      return { result: importResult, cancelled: false }
+    },
+  )
 
   // --- Change notification (from stores) ---
   secureOn(IpcChannels.SYNC_NOTIFY_CHANGE, (_event, syncUnit: string) => {

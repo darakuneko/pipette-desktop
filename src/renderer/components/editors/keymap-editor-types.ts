@@ -6,7 +6,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -127,6 +127,37 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   typingTestViewOnlyAlwaysOnTop?: boolean
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  typingRecordEnabled?: boolean
+  onTypingRecordEnabledChange?: (enabled: boolean) => void
+  /** AppConfig flag — true once the user has accepted the recording
+   * disclosure, so the REC tab Start button can skip the modal. */
+  typingRecordingConsentAccepted?: boolean
+  onTypingRecordingConsentAccepted?: () => void
+  /** Window length in minutes for the typing-view heatmap. Flows
+   * through AppConfig so the choice survives app restarts. */
+  typingHeatmapWindowMin?: number
+  onTypingHeatmapWindowMinChange?: (minutes: number) => void
+  /** AppConfig flag for the Monitor App tab. When true (and REC is
+   * running) the analytics service tags each minute with the active
+   * application name. Disabling stops new tags but does not erase
+   * historical data. The toggle in the typing-view popover is greyed
+   * out until REC starts so the user has a single, predictable point
+   * where data collection begins. */
+  typingMonitorAppEnabled?: boolean
+  onTypingMonitorAppEnabledChange?: (enabled: boolean) => void
+  typingViewMenuTab?: TypingViewMenuTab
+  onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
+  /** Called when the typing-view REC tab triggers "View Analytics".
+   * KeymapEditor forwards to the App shell so the shell can exit the
+   * compact window and swap to the analytics page. The record toggle
+   * is preserved across the navigation — leaving the compact window
+   * stops the sink via typingTestViewOnly without touching the
+   * persisted preference. */
+  onViewAnalytics?: () => void
+  /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
+   * useTypingTest so masked-key tap/hold classification uses the same
+   * timeout QMK itself enforces. */
+  tappingTermMs?: number
   deviceName?: string
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void
