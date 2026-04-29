@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Trophy } from 'lucide-react'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
+import { buildCsv } from '../../shared/csv-export'
 import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
 import { formatDate } from '../components/editors/store-modal-shared'
@@ -38,25 +39,11 @@ const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 const CSV_HEADERS = ['date', 'wpm', 'accuracy', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
 
-function escapeCsvField(value: unknown): string {
-  let str = value == null ? '' : String(value)
-  // Neutralize spreadsheet formula injection (strip leading whitespace first)
-  str = str.replace(/^[\t\r\n ]+/, '')
-  if (str.length > 0 && '=+-@'.includes(str[0])) {
-    str = `'${str}`
-  }
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`
-  }
-  return str
-}
-
-function buildCsv(results: TypingTestResult[]): string {
-  const header = CSV_HEADERS.join(',')
-  const rows = results.map((r) =>
-    CSV_HEADERS.map((key) => escapeCsvField(r[key])).join(','),
+function buildResultsCsv(results: TypingTestResult[]): string {
+  return buildCsv(
+    CSV_HEADERS,
+    results.map((r) => CSV_HEADERS.map((key) => r[key])),
   )
-  return [header, ...rows].join('\n')
 }
 
 export function TypingTestHistory({ results, onExportCsv }: Props) {
@@ -71,7 +58,7 @@ export function TypingTestHistory({ results, onExportCsv }: Props) {
   }, [sortColumn])
 
   const handleExport = useCallback(() => {
-    onExportCsv?.(buildCsv(results))
+    onExportCsv?.(buildResultsCsv(results))
   }, [results, onExportCsv])
 
   const filtered = useMemo(() => {

@@ -10,6 +10,7 @@ export const IpcChannels = {
   FILE_EXPORT_KEYMAP_C: 'file:export-keymap-c',
   FILE_EXPORT_PDF: 'file:export-pdf',
   FILE_EXPORT_CSV: 'file:export-csv',
+  FILE_EXPORT_CSV_BUNDLE: 'file:export-csv-bundle',
   FILE_EXPORT_JSON: 'file:export-json',
 
   // Logging (preload → main)
@@ -35,6 +36,14 @@ export const IpcChannels = {
   SNAPSHOT_STORE_UPDATE: 'snapshot-store:update',
   SNAPSHOT_STORE_RENAME: 'snapshot-store:rename',
   SNAPSHOT_STORE_DELETE: 'snapshot-store:delete',
+
+  // Analyze Filter Store (renderer → main → renderer)
+  ANALYZE_FILTER_STORE_LIST: 'analyze-filter-store:list',
+  ANALYZE_FILTER_STORE_SAVE: 'analyze-filter-store:save',
+  ANALYZE_FILTER_STORE_LOAD: 'analyze-filter-store:load',
+  ANALYZE_FILTER_STORE_UPDATE: 'analyze-filter-store:update',
+  ANALYZE_FILTER_STORE_RENAME: 'analyze-filter-store:rename',
+  ANALYZE_FILTER_STORE_DELETE: 'analyze-filter-store:delete',
 
   // Sideload JSON (renderer → main → renderer)
   SIDELOAD_JSON: 'dialog:sideload-json',
@@ -72,10 +81,79 @@ export const IpcChannels = {
   SYNC_FETCH_REMOTE_BUNDLE: 'sync:fetch-remote-bundle',
   SYNC_DELETE_FILES: 'sync:delete-files',
   SYNC_CHECK_PASSWORD_EXISTS: 'sync:check-password-exists',
+  SYNC_ANALYTICS_NOW: 'sync:analytics-now',
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',
   PIPETTE_SETTINGS_SET: 'pipette-settings:set',
+
+  // Typing Analytics (renderer ↔ main)
+  TYPING_ANALYTICS_EVENT: 'typing-analytics:event',
+  TYPING_ANALYTICS_FLUSH: 'typing-analytics:flush',
+  TYPING_ANALYTICS_LIST_KEYBOARDS: 'typing-analytics:list-keyboards',
+  TYPING_ANALYTICS_LIST_ITEMS: 'typing-analytics:list-items',
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS: 'typing-analytics:list-interval-items',
+  TYPING_ANALYTICS_LIST_ACTIVITY_GRID: 'typing-analytics:list-activity-grid',
+  TYPING_ANALYTICS_LIST_LAYER_USAGE: 'typing-analytics:list-layer-usage',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS: 'typing-analytics:list-matrix-cells',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY: 'typing-analytics:list-matrix-cells-by-day',
+  TYPING_ANALYTICS_LIST_MINUTE_STATS: 'typing-analytics:list-minute-stats',
+  TYPING_ANALYTICS_LIST_SESSIONS: 'typing-analytics:list-sessions',
+  TYPING_ANALYTICS_LIST_BKS_MINUTE: 'typing-analytics:list-bks-minute',
+  TYPING_ANALYTICS_DELETE_ITEMS: 'typing-analytics:delete-items',
+  TYPING_ANALYTICS_DELETE_ALL: 'typing-analytics:delete-all',
+  TYPING_ANALYTICS_GET_MATRIX_HEATMAP: 'typing-analytics:get-matrix-heatmap',
+  // v7 Local/Sync split — hash-scoped list and delete
+  TYPING_ANALYTICS_LIST_ITEMS_LOCAL: 'typing-analytics:list-items-local',
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL: 'typing-analytics:list-interval-items-local',
+  TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL: 'typing-analytics:list-activity-grid-local',
+  TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL: 'typing-analytics:list-layer-usage-local',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL: 'typing-analytics:list-matrix-cells-local',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL: 'typing-analytics:list-matrix-cells-by-day-local',
+  TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL: 'typing-analytics:list-minute-stats-local',
+  TYPING_ANALYTICS_LIST_SESSIONS_LOCAL: 'typing-analytics:list-sessions-local',
+  TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL: 'typing-analytics:list-bks-minute-local',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS: 'typing-analytics:get-peak-records',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL: 'typing-analytics:get-peak-records-local',
+  TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT: 'typing-analytics:save-keymap-snapshot',
+  TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE: 'typing-analytics:get-keymap-snapshot-for-range',
+  TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS: 'typing-analytics:list-keymap-snapshots',
+  TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE: 'typing-analytics:get-matrix-heatmap-for-range',
+  TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE: 'typing-analytics:get-bigram-aggregate-for-range',
+  TYPING_ANALYTICS_GET_LAYOUT_COMPARISON_FOR_RANGE: 'typing-analytics:get-layout-comparison-for-range',
+  TYPING_ANALYTICS_LIST_DEVICE_INFOS: 'typing-analytics:list-device-infos',
+  TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH: 'typing-analytics:list-items-for-hash',
+  // Per-hash variants used by the Analyze Device select when scoping
+  // to a specific remote machine hash. `*Local` is own-hash only, `*`
+  // is all-hash merged; these fill in "pick one remote hash".
+  TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_FOR_HASH: 'typing-analytics:list-interval-items-for-hash',
+  TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH: 'typing-analytics:list-activity-grid-for-hash',
+  TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH: 'typing-analytics:list-layer-usage-for-hash',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH: 'typing-analytics:list-matrix-cells-for-hash',
+  TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH: 'typing-analytics:list-matrix-cells-by-day-for-hash',
+  TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH: 'typing-analytics:list-minute-stats-for-hash',
+  TYPING_ANALYTICS_LIST_SESSIONS_FOR_HASH: 'typing-analytics:list-sessions-for-hash',
+  TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH: 'typing-analytics:list-bks-minute-for-hash',
+  TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH: 'typing-analytics:get-peak-records-for-hash',
+  TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS: 'typing-analytics:list-local-device-days',
+  TYPING_ANALYTICS_HAS_REMOTE: 'typing-analytics:has-remote',
+  TYPING_ANALYTICS_LIST_REMOTE_CLOUD_HASHES: 'typing-analytics:list-remote-cloud-hashes',
+  TYPING_ANALYTICS_LIST_REMOTE_CLOUD_DAYS: 'typing-analytics:list-remote-cloud-days',
+  TYPING_ANALYTICS_FETCH_REMOTE_DAY: 'typing-analytics:fetch-remote-day',
+  TYPING_ANALYTICS_DELETE_REMOTE_DAY: 'typing-analytics:delete-remote-day',
+  TYPING_ANALYTICS_EXPORT: 'typing-analytics:export',
+  TYPING_ANALYTICS_IMPORT: 'typing-analytics:import',
+  /** Distinct app_name list (with keystroke totals) for the analyze
+   * range. Drives the App selector dropdown — selected values are
+   * collected into the `appScopes` array passed to every per-app-aware
+   * range query. */
+  TYPING_ANALYTICS_LIST_APPS_FOR_RANGE: 'typing-analytics:list-apps-for-range',
+  /** Per-app keystroke / activeMs aggregate over the analyze range.
+   * Backs the App Usage Distribution pie chart. */
+  TYPING_ANALYTICS_GET_APP_USAGE_FOR_RANGE: 'typing-analytics:get-app-usage-for-range',
+  /** Per-app WPM aggregate (mean over single-app minutes) over the
+   * analyze range. Backs the "WPM by App" bar chart. */
+  TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE: 'typing-analytics:get-wpm-by-app-for-range',
 
   // Language Store (renderer → main → renderer)
   LANG_LIST: 'lang:list',

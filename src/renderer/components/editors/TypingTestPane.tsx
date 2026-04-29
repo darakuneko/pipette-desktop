@@ -5,12 +5,15 @@ import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
+import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
+import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
+import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 
@@ -37,6 +40,41 @@ export interface TypingTestPaneProps {
   onViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   viewOnlyAlwaysOnTop?: boolean
   onViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  recordEnabled?: boolean
+  onRecordEnabledChange?: (enabled: boolean) => void
+  /** Whether the user has accepted the typing-recording disclosure.
+   * The REC tab Start button gates on this — first-time enable opens
+   * the consent modal, subsequent enables skip it. */
+  recordingConsentAccepted?: boolean
+  onRecordingConsentAccepted?: () => void
+  /** Window length in minutes for the typing-view heatmap overlay.
+   * Exposed as a REC-tab dropdown so the user can dial how far back
+   * the overlay reaches; data older than the window is dropped, data
+   * within decays smoothly. Backed by
+   * AppConfig.typingHeatmapWindowMin. */
+  heatmapWindowMin?: number
+  onHeatmapWindowMinChange?: (minutes: number) => void
+  /** AppConfig flag — when on (and REC running), the analytics
+   * service tags every minute payload with the active application
+   * name. Toggle is intentionally inert until REC starts so the user
+   * controls one switch at a time. */
+  monitorAppEnabled?: boolean
+  onMonitorAppEnabledChange?: (enabled: boolean) => void
+  /** Which tab of the view-only menu is currently open. Window shows
+   * size / always-on-top controls; REC shows the recording toggle and
+   * the entry point to the analytics page; Monitor App shows the
+   * active-application capture toggle. Persisted per keyboard via
+   * PipetteSettings. */
+  menuTab?: TypingViewMenuTab
+  onMenuTabChange?: (tab: TypingViewMenuTab) => void
+  /** Called when the user picks "View Analytics" from the REC tab.
+   * The parent owns the navigation — the pane only surfaces the
+   * entry point. */
+  onViewAnalytics?: () => void
+  /** Keyboard uid used for the typing-view heatmap query. The heatmap
+   * stays hidden while this is unset or recording is off so a session
+   * without a device never sees stale overlay data. */
+  keyboardUid?: string
 }
 
 export function TypingTestPane({
@@ -62,9 +100,69 @@ export function TypingTestPane({
   onViewOnlyWindowSizeChange,
   viewOnlyAlwaysOnTop,
   onViewOnlyAlwaysOnTopChange,
+  recordEnabled,
+  onRecordEnabledChange,
+  recordingConsentAccepted,
+  onRecordingConsentAccepted,
+  heatmapWindowMin,
+  onHeatmapWindowMinChange,
+  monitorAppEnabled,
+  onMonitorAppEnabledChange,
+  menuTab = 'window',
+  onMenuTabChange,
+  onViewAnalytics,
+  keyboardUid,
 }: TypingTestPaneProps) {
   const { t } = useTranslation()
+
+  // Heatmap overlay for view-only + record mode. Gated on both flags
+  // so the overlay never shows up in editor mode and never lingers
+  // after the user toggles record off.
+  const {
+    cells: heatmapCells,
+    maxTotal: heatmapMaxTotal,
+    maxTap: heatmapMaxTap,
+    maxHold: heatmapMaxHold,
+  } = useTypingHeatmap({
+    uid: keyboardUid ?? null,
+    layer: typingTest.effectiveLayer,
+    enabled: !!viewOnly && !!recordEnabled,
+    windowMs: (heatmapWindowMin ?? 5) * 60 * 1_000,
+  })
+  const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
+  const [showConsentModal, setShowConsentModal] = useState(false)
+
+  const handleRecordToggle = useCallback(() => {
+    if (!onRecordEnabledChange) return
+    // Stopping is always allowed without re-prompting; only the
+    // first transition from "off → on" needs the disclosure.
+    if (recordEnabled) {
+      onRecordEnabledChange(false)
+      return
+    }
+    if (!recordingConsentAccepted) {
+      // Hide the REC overlay so the modal isn't visually overlapped
+      // by the popover; the cancel/accept handlers reopen it so the
+      // user lands back where they started.
+      setViewOnlyControlsOpen(false)
+      setShowConsentModal(true)
+      return
+    }
+    onRecordEnabledChange(true)
+  }, [onRecordEnabledChange, recordEnabled, recordingConsentAccepted])
+
+  const handleConsentAccept = useCallback(() => {
+    onRecordingConsentAccepted?.()
+    setShowConsentModal(false)
+    setViewOnlyControlsOpen(true)
+    onRecordEnabledChange?.(true)
+  }, [onRecordingConsentAccepted, onRecordEnabledChange])
+
+  const handleConsentCancel = useCallback(() => {
+    setShowConsentModal(false)
+    setViewOnlyControlsOpen(true)
+  }, [])
   const [viewOnlyControlsOpen, setViewOnlyControlsOpen] = useState(false)
   const [mouseOver, setMouseOver] = useState(false)
 
@@ -208,6 +306,12 @@ export function TypingTestPane({
 
   return (
     <>
+      {showConsentModal && (
+        <TypingRecordingConsentModal
+          onAccept={handleConsentAccept}
+          onCancel={handleConsentCancel}
+        />
+      )}
       {!viewOnly && (
         <TypingTestView
           state={typingTest.state}
@@ -301,20 +405,36 @@ export function TypingTestPane({
             everPressedKeys={undefined}
             remappedKeys={remappedKeys}
             layoutOptions={layoutOptions}
+            heatmapCells={heatmapCells}
+            heatmapMaxTotal={heatmapMaxTotal}
+            heatmapMaxTap={heatmapMaxTap}
+            heatmapMaxHold={heatmapMaxHold}
             scale={viewOnly ? 1 : scale}
             layerLabel={layerLabel}
             layerLabelTestId="layer-label"
             contentRef={contentRef}
           />
+          {heatmapActive && (
+            <p
+              data-testid="typing-test-heatmap-legend"
+              className="mt-1 text-center text-[11px] text-content-muted"
+            >
+              {t('editor.typingTest.heatmap.legend')}
+            </p>
+          )}
         </div>
         </div>
       </div>
       {viewOnly && (
         <>
         <div
-          className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || !mouseOver ? 'opacity-0' : 'opacity-100'}`}
+          className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || (!mouseOver && !recordEnabled) ? 'opacity-0' : 'opacity-100'}`}
         >
-          <span className="text-[10px] text-content-muted">{t('editor.typingTest.closeHint')}</span>
+          <span className={`text-[10px] ${!mouseOver && recordEnabled ? 'text-accent' : 'text-content-muted'}`}>
+            {mouseOver
+              ? t('editor.typingTest.closeHint')
+              : t('editor.typingTest.recordingIndicator')}
+          </span>
         </div>
         <div ref={controlsBarRef} className="fixed bottom-0 right-0 z-50">
           <div
@@ -324,6 +444,162 @@ export function TypingTestPane({
             onClick={(e) => e.stopPropagation()}
             {...(!viewOnlyControlsOpen && { inert: '' } as Record<string, string>)}
           >
+            {/* Tab row — Window (sizing + always-on-top) / REC
+                (recording toggle + analytics entry) / Monitor App
+                (active-app capture toggle). The active tab is
+                persisted per keyboard via PipetteSettings. */}
+            <div role="tablist" className="flex gap-1">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={menuTab === 'window'}
+                data-testid="menu-tab-window"
+                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'window' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onMenuTabChange?.('window')}
+              >
+                {t('editor.typingTest.tab.window')}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={menuTab === 'rec'}
+                data-testid="menu-tab-rec"
+                className={`flex-1 whitespace-nowrap rounded border px-2 py-1 transition-colors ${menuTab === 'rec' ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                onClick={() => onMenuTabChange?.('rec')}
+              >
+                {t('editor.typingTest.tab.rec')}
+              </button>
+            </div>
+
+            {/* Each tab body is wrapped in its own flex column so we can
+                pin a shared min-h. REC currently has the most controls
+                (Start/Stop, View Analytics, HeatMap window), so the
+                other tabs match its natural height. Keep this in sync
+                if any tab grows/shrinks meaningfully. */}
+            {menuTab === 'window' && (
+              <div className="flex min-h-[100px] flex-col gap-1.5">
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="reset-window-size"
+                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  onClick={() => {
+                    const size = getDefaultCompactSize()
+                    window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                    if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                    setViewOnlyControlsOpen(false)
+                  }}
+                >
+                  {t('editor.typingTest.resetSize')}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  data-testid="fit-window-size"
+                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  onClick={() => {
+                    const defaultSize = getDefaultCompactSize()
+                    const ratio = defaultSize.height / defaultSize.width
+                    const w = window.innerWidth
+                    const h = Math.round(w * ratio)
+                    const size = { width: w, height: h }
+                    window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+                    if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
+                    setViewOnlyControlsOpen(false)
+                  }}
+                >
+                  {t('editor.typingTest.fitSize')}
+                </button>
+                {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="always-on-top-toggle"
+                    className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                    onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
+                  >
+                    {t('editor.typingTest.alwaysOnTop')}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {menuTab === 'rec' && (
+              <div className="flex min-h-[100px] flex-col gap-1.5">
+                {onRecordEnabledChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={recordEnabled ?? false}
+                    data-testid="typing-record-toggle"
+                    className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${recordEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+                    onClick={handleRecordToggle}
+                  >
+                    {recordEnabled ? t('editor.typingTest.recordStop') : t('editor.typingTest.recordStart')}
+                  </button>
+                )}
+                {/* Monitor App lives directly under the Start/Stop
+                    button so the recording-related toggles read top
+                    to bottom. The label is fixed; the on/off state
+                    only changes the border / background colour. The
+                    button is greyed out while REC is off so app-name
+                    capture has exactly one entry point. */}
+                {onMonitorAppEnabledChange && (
+                  <button
+                    type="button"
+                    role="menuitemcheckbox"
+                    aria-checked={monitorAppEnabled ?? false}
+                    aria-disabled={!recordEnabled}
+                    data-testid="monitor-app-toggle"
+                    className={
+                      !recordEnabled
+                        ? 'whitespace-nowrap rounded border border-edge px-2 py-1 text-content-muted opacity-60 cursor-not-allowed'
+                        : `whitespace-nowrap rounded border px-2 py-1 transition-colors ${monitorAppEnabled ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`
+                    }
+                    onClick={() => {
+                      if (!recordEnabled) return
+                      onMonitorAppEnabledChange(!monitorAppEnabled)
+                    }}
+                  >
+                    {t('editor.typingTest.monitorApp.label')}
+                  </button>
+                )}
+                {onViewAnalytics && (
+                  <button
+                    type="button"
+                    role="menuitem"
+                    data-testid="view-analytics"
+                    className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                    onClick={() => {
+                      setViewOnlyControlsOpen(false)
+                      onViewAnalytics()
+                    }}
+                  >
+                    {t('editor.typingTest.viewAnalytics')}
+                  </button>
+                )}
+                {onHeatmapWindowMinChange && (
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="text-content-muted">{t('editor.typingTest.heatmapWindowShort')}</span>
+                    <select
+                      data-testid="heatmap-window-select"
+                      aria-label={t('editor.typingTest.heatmapWindow')}
+                      value={heatmapWindowMin ?? 5}
+                      onChange={(e) => onHeatmapWindowMinChange(Number(e.target.value))}
+                      className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                    >
+                      {TYPING_HEATMAP_WINDOW_OPTIONS.map((m) => (
+                        <option key={m} value={m}>{t('editor.typingTest.heatmapWindowOption', { minutes: m })}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Separator — what follows is always visible regardless of tab */}
+            <div className="mt-1 border-t border-edge-subtle" aria-hidden="true" />
+
             {layers > 1 && (
               <div className="flex items-center justify-between gap-1">
                 <span className="text-content-muted">{t('editor.typingTest.baseLayerShort')}</span>
@@ -340,55 +616,17 @@ export function TypingTestPane({
                 </select>
               </div>
             )}
-            {alwaysOnTopSupported && onViewOnlyAlwaysOnTopChange && (
-              <button
-                type="button"
-                role="menuitem"
-                data-testid="always-on-top-toggle"
-                className={`whitespace-nowrap rounded border px-2 py-1 transition-colors ${viewOnlyAlwaysOnTop ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-                onClick={() => onViewOnlyAlwaysOnTopChange(!viewOnlyAlwaysOnTop)}
-              >
-                {t('editor.typingTest.alwaysOnTop')}
-              </button>
-            )}
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="reset-window-size"
-              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
-              onClick={() => {
-                const size = getDefaultCompactSize()
-                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                setViewOnlyControlsOpen(false)
-              }}
-            >
-              {t('editor.typingTest.resetSize')}
-            </button>
-            <button
-              type="button"
-              role="menuitem"
-              data-testid="fit-window-size"
-              className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
-              onClick={() => {
-                const defaultSize = getDefaultCompactSize()
-                const ratio = defaultSize.height / defaultSize.width
-                const w = window.innerWidth
-                const h = Math.round(w * ratio)
-                const size = { width: w, height: h }
-                window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
-                if (onViewOnlyWindowSizeChange) onViewOnlyWindowSizeChange(size)
-                setViewOnlyControlsOpen(false)
-              }}
-            >
-              {t('editor.typingTest.fitSize')}
-            </button>
+
             {onViewOnlyChange && (
               <button
                 type="button"
                 role="menuitem"
                 data-testid="view-only-toggle"
-                className="mt-2 whitespace-nowrap rounded border border-accent bg-accent/10 px-2 py-1 text-accent transition-colors"
+                // Mirrors the StatusBar disconnect button: red text on
+                // a default-edge border so "exit" reads as the
+                // destructive / out-of-mode action rather than the
+                // accent-coloured primary path.
+                className="whitespace-nowrap rounded border border-edge px-2 py-1 text-red-500 transition-colors hover:text-red-600"
                 onClick={handleViewOnlyToggle}
               >
                 {t('editor.typingTest.exitViewOnly')}

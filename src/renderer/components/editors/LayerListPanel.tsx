@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
+import { Tooltip } from '../ui/Tooltip'
 
 const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-[12px] font-semibold tabular-nums transition-colors'
 const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-md border px-3 py-1.5 transition-colors'
@@ -129,15 +130,17 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
         <div className="shrink-0">
           <div className="border-t border-edge" style={collapsed ? { maxWidth: '2rem' } : undefined} />
           <div className="flex pt-2">
-            <button
-              type="button"
-              className={LAYER_TOGGLE_BTN}
-              onClick={onToggleCollapse}
-              aria-label={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}
-              data-testid={collapsed ? 'layer-panel-expand-btn' : 'layer-panel-collapse-btn'}
-            >
-              {collapsed ? <ChevronsRight size={14} aria-hidden="true" /> : <ChevronsLeft size={14} aria-hidden="true" />}
-            </button>
+            <Tooltip content={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}>
+              <button
+                type="button"
+                className={LAYER_TOGGLE_BTN}
+                onClick={onToggleCollapse}
+                aria-label={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}
+                data-testid={collapsed ? 'layer-panel-expand-btn' : 'layer-panel-collapse-btn'}
+              >
+                {collapsed ? <ChevronsRight size={14} aria-hidden="true" /> : <ChevronsLeft size={14} aria-hidden="true" />}
+              </button>
+            </Tooltip>
           </div>
         </div>
       </div>

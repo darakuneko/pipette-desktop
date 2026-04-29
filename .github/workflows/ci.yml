@@ -7,6 +7,12 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # Tests rely on local wall-clock semantics that the codebase
+      # standardises on JST (e.g. analyze-streak-goal `resolveGoalAt`
+      # uses `toLocalDate`). Pin the runner to Asia/Tokyo so date-based
+      # goal-history comparisons match the developer-machine baseline.
+      TZ: Asia/Tokyo
     steps:
       - uses: actions/checkout@v6
 
@@ -16,6 +22,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+
+      - name: Install Linux build dependencies for native modules
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint

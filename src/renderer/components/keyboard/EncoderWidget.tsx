@@ -10,6 +10,7 @@ import {
   KEY_BORDER_COLOR,
   KEY_SELECTED_COLOR,
   KEY_TEXT_COLOR,
+  KEY_INVERTED_TEXT_COLOR,
   KEY_MASK_RECT_COLOR,
 } from './constants'
 
@@ -47,7 +48,7 @@ function EncoderWidgetInner({
   const masked = isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
   const fillColor = selected && !innerSelected ? KEY_SELECTED_COLOR : KEY_BG_COLOR
-  const labelColor = selected && !innerSelected ? 'var(--content-inverse)' : KEY_TEXT_COLOR
+  const labelColor = selected && !innerSelected ? KEY_INVERTED_TEXT_COLOR : KEY_TEXT_COLOR
   const fontSize = Math.max(8, Math.min(12, 12 * scale))
   const outerBorderActive = selected && !innerSelected
 

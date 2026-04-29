@@ -35,7 +35,7 @@ test('shows device selector on launch', async () => {
 })
 
 test('shows select device prompt', async () => {
-  await expect(page.locator('text=Select a device')).toBeVisible()
+  await expect(page.locator('text=Select Device')).toBeVisible()
 })
 
 // --- Device discovery (node-hid, no permission dialog) ---

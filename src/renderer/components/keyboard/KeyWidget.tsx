@@ -21,10 +21,13 @@ import {
   KEY_EVER_PRESSED_COLOR,
   KEY_HIGHLIGHT_COLOR,
   KEY_TEXT_COLOR,
+  KEY_INVERTED_TEXT_COLOR,
   KEY_REMAP_COLOR,
   KEY_MASK_RECT_COLOR,
   KEY_HOVER_COLOR,
 } from './constants'
+import { shouldInvertText } from './fill-luminance'
+import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { computeUnionPath } from '../../../shared/kle/rect-union'
 
 interface Props {
@@ -38,6 +41,27 @@ interface Props {
   highlighted?: boolean
   everPressed?: boolean
   remapped?: boolean
+  /** Heatmap fill for the outer rect (or the whole key on non-masked
+   * keys). Lives below the pressed / selected / multi / highlighted /
+   * everPressed priority levels so the immediate feedback colours are
+   * never painted over by the overlay. Null leaves the default key
+   * background in place. */
+  heatmapOuterFill?: string | null
+  /** Heatmap fill for the inner (tap) rect of a masked LT/MT key.
+   * Null leaves the default mask-rect colour in place so masked keys
+   * still visually announce themselves when there is no tap data
+   * yet. Ignored for non-masked keys. */
+  heatmapInnerFill?: string | null
+  /** Direct background override. Sits below every interactive / heatmap
+   * state so "pressed" and friends still win. Used by the Finger
+   * Assignment modal to paint keys in their estimated finger colour. */
+  customFill?: string | null
+  /** Bypasses the global keycode registration when rendering labels.
+   *  The Analyze view uses this so snapshots whose LT/LM composites are
+   *  not covered by the connected keyboard's current layer count still
+   *  get pretty multi-part labels. `masked` also dictates which render
+   *  branch (plain vs. tap/hold-split) the widget takes. */
+  labelOverride?: { outer: string; inner: string; masked: boolean }
   onClick?: (key: KleKey, maskClicked: boolean, event?: { ctrlKey: boolean; shiftKey: boolean }) => void
   onDoubleClick?: (key: KleKey, rect: DOMRect, maskClicked: boolean) => void
   onHover?: (key: KleKey, keycode: string, rect: DOMRect) => void
@@ -45,6 +69,12 @@ interface Props {
   hoverMaskParts?: boolean
   selectedFill?: boolean
   scale?: number
+  /** Current effective theme. Drives the invert-text decision for
+   * light-fill keys (pressed green, heatmap warm end, etc.). Optional
+   * so direct KeyWidget callers (KeycodeField, Macro chips) don't have
+   * to thread the hook; defaults to 'light' which matches the label
+   * default. KeyboardWidget always passes the real value. */
+  effectiveTheme?: EffectiveTheme
 }
 
 function KeyWidgetInner({
@@ -58,6 +88,10 @@ function KeyWidgetInner({
   highlighted,
   everPressed,
   remapped,
+  heatmapOuterFill,
+  heatmapInnerFill,
+  customFill,
+  labelOverride,
   onClick,
   onDoubleClick,
   onHover,
@@ -65,6 +99,7 @@ function KeyWidgetInner({
   hoverMaskParts,
   selectedFill = true,
   scale = 1,
+  effectiveTheme = 'light',
 }: Props) {
   const [hoveredPart, setHoveredPart] = useState<'outer' | 'inner' | null>(null)
   const s = KEY_UNIT * scale
@@ -85,32 +120,51 @@ function KeyWidgetInner({
   const h = gh - 2 * inset
 
   // Key fill color (always use theme colors, ignore KLE color overrides)
-  // Priority: pressed > selected > multiSelected > highlighted > everPressed > default
+  // Priority: pressed > selected > multiSelected > highlighted > everPressed
+  //           > hover > heatmap > customFill > default
+  // Heatmap sits below every interactive state so the typing-view
+  // overlay can never mask immediate user feedback (pressed, selection).
   // For masked keys with inner selected, use default fill (stroke-only selection)
-  const masked = isMask(keycode)
+  const masked = labelOverride?.masked ?? isMask(keycode)
   const innerSelected = selected && selectedMaskPart && masked
   let fillColor = KEY_BG_COLOR
-  let invertText = false
   if (pressed) fillColor = KEY_PRESSED_COLOR
-  else if (selected && !innerSelected && selectedFill) { fillColor = KEY_SELECTED_COLOR; invertText = true }
+  else if (selected && !innerSelected && selectedFill) fillColor = KEY_SELECTED_COLOR
   else if (multiSelected) fillColor = KEY_MULTI_SELECTED_COLOR
-  else if (highlighted) { fillColor = KEY_HIGHLIGHT_COLOR; invertText = true }
+  else if (highlighted) fillColor = KEY_HIGHLIGHT_COLOR
   else if (everPressed) fillColor = KEY_EVER_PRESSED_COLOR
   else if (hoverMaskParts && masked && hoveredPart === 'outer') fillColor = KEY_HOVER_COLOR
+  else if (heatmapOuterFill) fillColor = heatmapOuterFill
+  else if (customFill) fillColor = customFill
 
-  // Label text color: inverted when key is selected/highlighted, remap color
-  // for remapped keys in non-mask mode, default otherwise
+  // Label text color: invert when the fill is light enough to wash out
+  // the default label (see `fill-luminance.ts`); otherwise pick the
+  // remap tint for remapped keys and fall back to the default.
+  const invertText = shouldInvertText(fillColor, effectiveTheme)
   let labelColor = KEY_TEXT_COLOR
-  if (invertText) labelColor = 'var(--content-inverse)'
+  if (invertText) labelColor = KEY_INVERTED_TEXT_COLOR
   else if (remapped) labelColor = KEY_REMAP_COLOR
 
+  // Inner rect fill + matching label colour for masked keys. The inner
+  // rect's fill picks up hover/heatmap just like the outer, so its
+  // label runs through the same invert decision.
+  const innerFillColor =
+    hoverMaskParts && hoveredPart === 'inner'
+      ? KEY_HOVER_COLOR
+      : heatmapInnerFill ?? KEY_MASK_RECT_COLOR
+  const innerLabelColor = shouldInvertText(innerFillColor, effectiveTheme)
+    ? KEY_INVERTED_TEXT_COLOR
+    : KEY_TEXT_COLOR
+
   // Label
-  const outerLabel = keycodeLabel(keycode)
+  const outerLabel = labelOverride?.outer ?? keycodeLabel(keycode)
   const innerLabel = maskKeycode
     ? keycodeLabel(maskKeycode)
-    : masked
-      ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
-      : ''
+    : labelOverride
+      ? labelOverride.inner
+      : masked
+        ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
+        : ''
 
   // Text rendering: split by \n for multi-line labels
   const labelLines = outerLabel.split('\n')
@@ -243,7 +297,7 @@ function KeyWidgetInner({
           height={innerH}
           rx={innerCorner}
           ry={innerCorner}
-          fill={hoverMaskParts && hoveredPart === 'inner' ? KEY_HOVER_COLOR : KEY_MASK_RECT_COLOR}
+          fill={innerFillColor}
           stroke={innerBorderActive ? KEY_SELECTED_COLOR : KEY_BORDER_COLOR}
           strokeWidth={innerBorderActive ? 2 : 1}
           onClick={handleInnerClick}
@@ -267,15 +321,18 @@ function KeyWidgetInner({
             fontFamily="sans-serif"
             style={{ pointerEvents: 'none' }}
           >
-            {keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')}
+            {labelOverride
+              ? labelOverride.outer
+              : keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')}
           </text>
-          {/* Inner (base) label - always use normal text color against inner rect bg */}
+          {/* Inner (base) label - inverts when the inner rect fill is
+              light enough to wash the default label out. */}
           <text
             x={x + w / 2}
             y={innerY + innerH / 2}
             textAnchor="middle"
             dominantBaseline="central"
-            fill={KEY_TEXT_COLOR}
+            fill={innerLabelColor}
             fontSize={fontSize * 0.85}
             fontFamily="sans-serif"
             style={{ pointerEvents: 'none' }}

@@ -76,10 +76,9 @@ export async function connectTestDevice(page: Page): Promise<void> {
     timeout: CONNECT_TIMEOUT_MS,
   })
 
-  // Wait for keyboard reload to populate the protocol version.
-  // vialProtocol starts at -1 and becomes non-negative after getKeyboardId().
-  await expect(page.locator('[data-testid="status-vial-protocol"]')).toHaveText(
-    /Vial v\d+/,
-    { timeout: CONNECT_TIMEOUT_MS },
-  )
+  // `editor-content` mounts only after the keymap / definition payloads
+  // resolve, so its visibility is a reliable "connection complete" signal.
+  await expect(page.locator('[data-testid="editor-content"]')).toBeVisible({
+    timeout: CONNECT_TIMEOUT_MS,
+  })
 }

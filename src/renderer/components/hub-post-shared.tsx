@@ -136,7 +136,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
                 disabled={busy}
                 data-testid={`hub-confirm-delete-${post.id}`}
               >
-                {t('layoutStore.confirmDelete')}
+                {t('common.confirmDelete')}
               </button>
               <button
                 type="button"

@@ -23,6 +23,16 @@ export function formatDate(value: string | number): string {
   return `${formatDateShort(value)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
 }
 
+/** Same as {@link formatDate} but drops the seconds digit. Use when
+ * the timestamp is informational (e.g. peak-record context) rather
+ * than audit-log precise — the narrower form fits the compact card
+ * layouts the Analyze view uses. */
+export function formatDateTime(value: string | number): string {
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return String(value)
+  return `${formatDateShort(value)} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
 interface SectionHeaderProps {
   label: string
   count?: number

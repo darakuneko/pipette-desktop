@@ -37,9 +37,7 @@ export function HistoryToggle({ results, deviceName }: HistoryToggleProps) {
         data-testid="typing-test-history-toggle"
         className={historyToggleClass(showHistory)}
         onClick={() => setShowHistory((v) => !v)}
-        aria-label={t('editor.typingTest.history.title')}
         aria-pressed={showHistory}
-        title={t('editor.typingTest.history.title')}
       >
         {t('editor.typingTest.history.title')}
       </button>

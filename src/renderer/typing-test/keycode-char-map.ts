@@ -80,8 +80,11 @@ export function extractLMLayer(code: number): number | null {
   return match ? Number(match[1]) : null
 }
 
-/** Check whether a code falls in the LT or MT keycode ranges (v5 & v6). */
-function isTapKeycode(code: number): boolean {
+/** Check whether a code falls in the LT or MT keycode ranges (v5 & v6).
+ * Exported so the typing-view tap/hold detector can distinguish LT/MT
+ * presses (which need release-edge timing) from non-tap masked keys
+ * like LSFT(kc) that fire together without a tap/hold ambiguity. */
+export function isTapKeycode(code: number): boolean {
   // LT (Layer Tap): 0x4000–0x4FFF (both v5 and v6)
   if ((code & 0xf000) === 0x4000) return true
   // MT (Mod Tap) v6: 0x2000–0x3FFF

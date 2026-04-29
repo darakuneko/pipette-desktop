@@ -34,22 +34,19 @@ Download the latest release for your platform:
 - **Linux (x86_64 AppImage)**  
   https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-linux-x86_64.AppImage
 
-> Linux users: make the AppImage executable before launching.
-> ```bash
-> chmod +x Pipette-linux-x86_64.AppImage
-> ```
-
 ---
 
-### Distribution Policy
+### Linux
 
-Pipette is officially distributed only as an AppImage on Linux.
+#### AppImage executable
 
-We do not provide or document distro-specific packages (.deb, .rpm, AUR, Flatpak, Snap, etc.) in order to keep the maintenance and support scope focused on the AppImage release.
+Make the AppImage executable before launching:
 
-Community-maintained packages may exist, but they are not officially supported.
+```bash
+chmod +x Pipette-linux-x86_64.AppImage
+```
 
-### Linux: AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
+#### AppImage Sandbox (Ubuntu 24.04+ / Debian 13+)
 
 On distributions that restrict unprivileged user namespaces (e.g. Ubuntu 24.04+, Debian 13+ via AppArmor's `unprivileged_userns_restricted` flag), the AppImage may fail to launch with a sandbox / user namespace error.
 
@@ -72,6 +69,41 @@ sudo systemctl reload apparmor.service
 ```
 
 Replace `YOUR_USER` and adjust the filename/path to match your setup.
+
+#### udev Rules
+
+udev rules are required to access keyboards:
+
+```bash
+sudo cp scripts/99-vial.rules /etc/udev/rules.d/
+sudo udevadm control --reload-rules && sudo udevadm trigger
+```
+
+#### Monitor App on Wayland (GNOME Shell extension)
+
+The typing-view Monitor App toggle tags each minute of recording with the active application name. X11 exposes the focused window directly, but on Wayland the desktop sandboxes window focus, so Pipette falls back to a GNOME Shell extension.
+
+To enable Monitor App on Wayland, install the **Focused Window D-Bus** GNOME Shell extension:
+
+https://extensions.gnome.org/extension/5592/focused-window-d-bus/
+
+Without the extension Monitor App silently records `null` for every minute on Wayland — keystroke counts still flow to the analytics, but per-app breakdowns are unavailable. Compositors other than GNOME Shell (KDE Plasma, Sway, etc.) are not currently supported; each would need its own focus-bridge implementation.
+
+#### Distribution Policy
+
+Pipette is officially distributed only as an AppImage on Linux.
+
+We do not provide or document distro-specific packages (.deb, .rpm, AUR, Flatpak, Snap, etc.) in order to keep the maintenance and support scope focused on the AppImage release.
+
+Community-maintained packages may exist, but they are not officially supported.
+
+### macOS
+
+#### Accessibility permission for Monitor App
+
+The typing-view Monitor App toggle requires the **Accessibility** permission on macOS to resolve the foreground application name. Grant access in **System Settings → Privacy & Security → Accessibility** and add Pipette Desktop to the allowed list.
+
+Without this permission, Monitor App silently records `null` for every minute on macOS — keystroke counts still flow to the analytics, but per-app breakdowns are unavailable.
 
 ## Usage
 
@@ -160,15 +192,6 @@ pnpm dist         # Package for all platforms
 pnpm dist:linux   # Linux (AppImage)
 pnpm dist:win     # Windows (NSIS installer)
 pnpm dist:mac     # macOS (dmg)
-```
-
-### Linux: udev Rules
-
-udev rules are required to access keyboards:
-
-```bash
-sudo cp scripts/99-vial.rules /etc/udev/rules.d/
-sudo udevadm control --reload-rules && sudo udevadm trigger
 ```
 
 ## Architecture

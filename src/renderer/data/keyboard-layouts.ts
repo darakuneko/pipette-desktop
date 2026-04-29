@@ -2,6 +2,8 @@
 // Ported from Python vial-gui keymaps (src/main/python/keymap/*.py)
 // Each layout maps qmkId → display string (not qmkId → qmkId)
 
+import type { LayoutComparisonInputLayout } from '../../shared/types/typing-analytics'
+
 export interface KeyboardLayoutDef {
   id: string
   name: string
@@ -1361,3 +1363,12 @@ export const LAYOUT_BY_ID = new Map(KEYBOARD_LAYOUTS.map((l) => [l.id, l]))
 
 /** Set for O(1) membership checks on layout IDs */
 export const LAYOUT_ID_SET: ReadonlySet<string> = new Set(KEYBOARD_LAYOUTS.map((l) => l.id))
+
+/** Project the {id, map} subset Layout Comparison / Layout Comparison
+ * IPC payloads carry. Returns `null` when the id is unknown so the
+ * caller can short-circuit a malformed request before crossing IPC. */
+export function pickLayoutComparisonInput(id: string): LayoutComparisonInputLayout | null {
+  const def = LAYOUT_BY_ID.get(id)
+  if (!def) return null
+  return { id: def.id, map: def.map }
+}

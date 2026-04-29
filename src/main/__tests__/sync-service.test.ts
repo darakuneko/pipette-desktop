@@ -41,8 +41,13 @@ vi.mock('electron', () => ({
 const mockListFiles = vi.fn(async () => [])
 const mockDownloadFile = vi.fn(async () => ({}))
 const mockUploadFile = vi.fn(async () => 'file-id')
+const mockDeleteFile = vi.fn(async () => {})
 const mockDriveFileName = vi.fn((syncUnit: string) => syncUnit.replaceAll('/', '_') + '.enc')
 const mockSyncUnitFromFileName = vi.fn((name: string) => {
+  const dayMatch = name.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
+  if (dayMatch) return `keyboards/${dayMatch[1]}/devices/${dayMatch[2]}/days/${dayMatch[3]}`
+  const deviceMatch = name.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
+  if (deviceMatch) return `keyboards/${deviceMatch[1]}/devices/${deviceMatch[2]}`
   const kbMatch = name.match(/^keyboards_(.+?)_(settings|snapshots)\.enc$/)
   if (kbMatch) return `keyboards/${kbMatch[1]}/${kbMatch[2]}`
   const favMatch = name.match(/^favorites_(.+)\.enc$/)
@@ -54,6 +59,7 @@ vi.mock('../sync/google-drive', () => ({
   listFiles: (...args: unknown[]) => mockListFiles(...args),
   downloadFile: (...args: unknown[]) => mockDownloadFile(...args),
   uploadFile: (...args: unknown[]) => mockUploadFile(...args),
+  deleteFile: (...args: unknown[]) => mockDeleteFile(...args),
   driveFileName: (...args: unknown[]) => mockDriveFileName(...args),
   syncUnitFromFileName: (...args: unknown[]) => mockSyncUnitFromFileName(...args),
 }))
@@ -90,14 +96,92 @@ vi.mock('../app-config', () => ({
   saveAppConfig: vi.fn(async () => {}),
 }))
 
+vi.mock('../typing-analytics/sync', () => ({
+  typingAnalyticsDeviceSyncUnit: (uid: string, machineHash: string) =>
+    `keyboards/${uid}/devices/${machineHash}`,
+  typingAnalyticsDeviceDaySyncUnit: (uid: string, machineHash: string, day: string) =>
+    `keyboards/${uid}/devices/${machineHash}/days/${day}`,
+  parseTypingAnalyticsDeviceSyncUnit: (syncUnit: string) => {
+    const parts = syncUnit.split('/')
+    if (parts.length !== 4) return null
+    if (parts[0] !== 'keyboards' || parts[2] !== 'devices') return null
+    if (parts[1].length === 0 || parts[3].length === 0) return null
+    return { uid: parts[1], machineHash: parts[3] }
+  },
+  parseTypingAnalyticsDeviceDaySyncUnit: (syncUnit: string) => {
+    const parts = syncUnit.split('/')
+    if (parts.length !== 6) return null
+    if (parts[0] !== 'keyboards' || parts[2] !== 'devices' || parts[4] !== 'days') return null
+    if (parts[1].length === 0 || parts[3].length === 0 || !/^\d{4}-\d{2}-\d{2}$/.test(parts[5])) return null
+    return { uid: parts[1], machineHash: parts[3], utcDay: parts[5] }
+  },
+}))
+
+const mockApplyRowsToCache = vi.fn(() => ({ scopes: 0, charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }))
+vi.mock('../typing-analytics/jsonl/apply-to-cache', () => ({
+  applyRowsToCache: (...args: unknown[]) => mockApplyRowsToCache(...args),
+}))
+
+const mockReadRows = vi.fn(async () => ({ rows: [], lastId: null, partialLineSkipped: false }))
+vi.mock('../typing-analytics/jsonl/jsonl-reader', () => ({
+  readRows: (...args: unknown[]) => mockReadRows(...args),
+}))
+
+const mockListLocalKeyboardUids = vi.fn(() => [] as string[])
+const mockTombstoneRowsForUidHashInRange = vi.fn(() => ({
+  charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0,
+}))
+vi.mock('../typing-analytics/db/typing-analytics-db', () => ({
+  getTypingAnalyticsDB: vi.fn(() => ({
+    listLocalKeyboardUids: mockListLocalKeyboardUids,
+    tombstoneRowsForUidHashInRange: mockTombstoneRowsForUidHashInRange,
+  })),
+}))
+
+vi.mock('../typing-analytics/machine-hash', () => ({
+  getMachineHash: vi.fn(async () => 'test-machine-hash'),
+}))
+
+interface MockTypingSyncState {
+  _rev: 2
+  my_device_id: string
+  read_pointers: Record<string, string | null>
+  uploaded: Record<string, string[]>
+  reconciled_at: Record<string, number | null>
+  last_synced_at: number
+}
+let mockSyncState: MockTypingSyncState | null = null
+const mockLoadSyncState = vi.fn(async () => mockSyncState ? { ...mockSyncState } : null)
+const mockSaveSyncState = vi.fn(async (_userData: string, state: MockTypingSyncState) => {
+  mockSyncState = state
+})
+vi.mock('../typing-analytics/sync-state', () => ({
+  loadSyncState: (...args: unknown[]) => mockLoadSyncState(...args as [string]),
+  saveSyncState: (...args: unknown[]) => mockSaveSyncState(...args as [string, MockTypingSyncState]),
+  emptySyncState: (myDeviceId: string): MockTypingSyncState => ({
+    _rev: 2,
+    my_device_id: myDeviceId,
+    read_pointers: {},
+    uploaded: {},
+    reconciled_at: {},
+    last_synced_at: 0,
+  }),
+  isReconcilePending: (state: MockTypingSyncState, uid: string, hash: string): boolean => {
+    const v = state.reconciled_at[`${uid}|${hash}`]
+    return v === undefined || v === null
+  },
+}))
+
 vi.stubGlobal('fetch', vi.fn())
 
-import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn } from '../sync/sync-crypto'
+import { decrypt as mockDecryptFn, encrypt as mockEncryptFn, storePassword as mockStorePasswordFn, clearPassword as mockClearPasswordFn, retrievePasswordResult as mockRetrievePasswordResultFn } from '../sync/sync-crypto'
 import type { SyncProgress } from '../../shared/types/sync'
 import {
   executeSync,
+  isAnalyticsSyncUnit,
   matchesScope,
   notifyChange,
+  shouldDownloadSyncUnit,
   setProgressCallback,
   startPolling,
   stopPolling,
@@ -110,8 +194,14 @@ import {
   changePassword,
   checkPasswordCheckExists,
   setPasswordAndValidate,
+  setupBeforeQuitHandler,
+  registerPreSyncQuitFinalizer,
+  registerBeforeQuitFinalizer,
+  deleteRemoteTypingDay,
+  fetchRemoteTypingDay,
   _resetForTests,
 } from '../sync/sync-service'
+import { app } from 'electron'
 
 const POLL_INTERVAL_MS = 3 * 60 * 1000
 
@@ -227,6 +317,9 @@ describe('sync-service', () => {
     vi.useFakeTimers(FAKE_TIMER_OPTS)
     mockUserDataPath = await mkdtemp(join(tmpdir(), 'sync-service-test-'))
     mockAutoSync = false
+    mockSyncState = null
+    mockListLocalKeyboardUids.mockReturnValue([])
+    mockTombstoneRowsForUidHashInRange.mockReturnValue({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
     _resetForTests()
   })
 
@@ -717,6 +810,76 @@ describe('sync-service', () => {
     })
   })
 
+  describe('typing-analytics device merge', () => {
+    const uid = '0xtype'
+    const remoteHash = 'hash-remote'
+    const fileName = `keyboards_${uid}_devices_${remoteHash}.enc`
+    const syncUnit = `keyboards/${uid}/devices/${remoteHash}`
+
+    function makeDeviceEnvelope(dataJsonl: string): Record<string, unknown> {
+      return {
+        version: 1,
+        syncUnit,
+        updatedAt: '2025-01-01T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'typing-analytics-device',
+          key: `${uid}|${remoteHash}`,
+          index: { uid, entries: [] },
+          files: { 'data.jsonl': dataJsonl },
+        }),
+      }
+    }
+
+    it('writes the remote JSONL to disk and replays new rows into the cache', async () => {
+      mockListFiles.mockResolvedValue([
+        { id: 'dev-1', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      const payload = JSON.stringify({ id: 'x', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
+      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope(payload))
+
+      // Force local uid visibility so scope 'all' keeps the unit (lazy gate).
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
+
+      await executeSync('download')
+
+      const written = await readFile(
+        join(mockUserDataPath, 'sync', 'keyboards', uid, 'devices', `${remoteHash}.jsonl`),
+        'utf-8',
+      )
+      expect(written).toBe(payload)
+      expect(mockReadRows).toHaveBeenCalled()
+    })
+
+    it('surfaces cache-apply errors as failedUnits so polling can retry', async () => {
+      const progressEvents: SyncProgress[] = []
+      setProgressCallback((p) => progressEvents.push({ ...p }))
+
+      mockReadRows.mockResolvedValueOnce({
+        rows: [{ id: 'row-1', kind: 'scope', updated_at: 1, payload: {} } as unknown as { id: string }],
+        lastId: 'row-1',
+        partialLineSkipped: false,
+      } as unknown as { rows: never[]; lastId: string | null; partialLineSkipped: boolean })
+      mockApplyRowsToCache.mockImplementationOnce(() => {
+        throw new Error('sqlite schema mismatch')
+      })
+
+      mockListFiles.mockResolvedValue([
+        { id: 'dev-2', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
+      ])
+      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope('{"id":"row-1","kind":"scope","updated_at":1,"payload":{}}\n'))
+
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
+
+      await executeSync('download')
+
+      const final = progressEvents[progressEvents.length - 1]
+      expect(final.status).toBe('partial')
+      expect(final.failedUnits).toEqual([syncUnit])
+    })
+  })
+
   describe('settings timestamp NaN handling', () => {
     const uid = 'test-kb'
 
@@ -1180,6 +1343,47 @@ describe('sync-service', () => {
       })
     })
 
+    describe('isAnalyticsSyncUnit', () => {
+      it('identifies v7 per-day typing-analytics units', () => {
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/devices/hashabc/days/2026-04-19')).toBe(true)
+        expect(isAnalyticsSyncUnit('keyboards/uid-a/devices/machineHash-xyz')).toBe(true)
+      })
+
+      it('rejects non-analytics keyboard sub-units', () => {
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/settings')).toBe(false)
+        expect(isAnalyticsSyncUnit('keyboards/0x1234/snapshots')).toBe(false)
+        expect(isAnalyticsSyncUnit('keyboards/0x1234')).toBe(false)
+      })
+
+      it('rejects unrelated units', () => {
+        expect(isAnalyticsSyncUnit('favorites/macro')).toBe(false)
+        expect(isAnalyticsSyncUnit('meta/keyboard-names')).toBe(false)
+        expect(isAnalyticsSyncUnit('')).toBe(false)
+      })
+    })
+
+    describe('shouldDownloadSyncUnit', () => {
+      const local = new Set(['uid-a'])
+      const analyticsUnit = 'keyboards/uid-a/devices/hash/days/2026-04-19'
+      const settingsUnit = 'keyboards/uid-a/settings'
+      const favoritesUnit = 'favorites/macro'
+
+      it("keeps analytics when scope is 'all' (manual sync path)", () => {
+        expect(shouldDownloadSyncUnit(analyticsUnit, 'all', local)).toBe(true)
+      })
+
+      it('keeps analytics when scope is an explicit keyboard scope (manual keyboard sync)', () => {
+        expect(shouldDownloadSyncUnit(analyticsUnit, { keyboard: 'uid-a' }, local)).toBe(true)
+      })
+
+      it('drops analytics when scope is the connect-time favorites+keyboard shape', () => {
+        const scope = { favorites: true as const, keyboard: 'uid-a' }
+        expect(shouldDownloadSyncUnit(analyticsUnit, scope, local)).toBe(false)
+        expect(shouldDownloadSyncUnit(settingsUnit, scope, local)).toBe(true)
+        expect(shouldDownloadSyncUnit(favoritesUnit, scope, local)).toBe(true)
+      })
+    })
+
     describe('executeSync with scope', () => {
       it('downloads only favorites files when scope is "favorites"', async () => {
         mockListFiles.mockResolvedValue([
@@ -1615,6 +1819,473 @@ describe('sync-service', () => {
 
       await expect(setPasswordAndValidate('wrong-password')).rejects.toThrow()
       expect(mockClearPassword).toHaveBeenCalled()
+    })
+  })
+
+  describe('setupBeforeQuitHandler phased ordering', () => {
+    function captureBeforeQuitHandler(): (e: { preventDefault: () => void }) => void {
+      setupBeforeQuitHandler()
+      const mockOn = vi.mocked(app.on)
+      const match = mockOn.mock.calls.find(([event]) => event === 'before-quit')
+      if (!match) throw new Error('before-quit handler not registered')
+      return match[1] as (e: { preventDefault: () => void }) => void
+    }
+
+    it('runs pre-sync finalizers before the sync flush, then extra finalizers', async () => {
+      const order: string[] = []
+      const preSyncFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {
+          order.push('pre-sync')
+          // Pre-sync finalizer enqueues a sync unit that the flush must pick up.
+          notifyChange('keyboards/0xAABB/settings')
+        }),
+      }
+      const extraFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {
+          order.push('extra')
+        }),
+      }
+      registerPreSyncQuitFinalizer(preSyncFinalizer)
+      registerBeforeQuitFinalizer(extraFinalizer)
+
+      // Seed pendingChanges so the sync-flush phase becomes observable.
+      notifyChange('favorites/tapDance')
+
+      const handler = captureBeforeQuitHandler()
+      const preventDefault = vi.fn()
+      handler({ preventDefault })
+      await flushIO()
+
+      expect(preventDefault).toHaveBeenCalled()
+      expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(extraFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(order).toEqual(['pre-sync', 'extra'])
+      expect(app.quit).toHaveBeenCalled()
+    })
+
+    it('skips the handler entirely when nothing has work', () => {
+      const handler = captureBeforeQuitHandler()
+      const preventDefault = vi.fn()
+      handler({ preventDefault })
+      expect(preventDefault).not.toHaveBeenCalled()
+    })
+
+    it('runs only pre-sync finalizers when there is no extra work and sync is empty', async () => {
+      const preSyncFinalizer = {
+        hasWork: () => true,
+        run: vi.fn(async () => {}),
+      }
+      registerPreSyncQuitFinalizer(preSyncFinalizer)
+
+      const handler = captureBeforeQuitHandler()
+      handler({ preventDefault: vi.fn() })
+      await flushIO()
+
+      expect(preSyncFinalizer.run).toHaveBeenCalledTimes(1)
+      expect(app.quit).toHaveBeenCalled()
+    })
+  })
+
+  // v7 sync scenario coverage. These tests exercise the per-day
+  // upload / reconcile / delete code paths with a stateful sync-state
+  // mock and a real filesystem tmpDir for local JSONL files, while
+  // Google Drive calls stay mocked.
+  describe('v7 typing-analytics sync scenarios', () => {
+    const OWN_HASH = 'test-machine-hash'
+    const REMOTE_HASH = 'remote-hash-xyz'
+    const UID = '0xDEAD'
+    const cloudFileName = (hash: string, day: string): string =>
+      `keyboards_${UID}_devices_${hash}_days_${day}.enc`
+    const pointerKey = (hash: string): string => `${UID}|${hash}`
+    const ownDayPath = (day: string, hash = OWN_HASH): string =>
+      join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', hash, `${day}.jsonl`)
+
+    async function writeDayFile(day: string, hash = OWN_HASH, content = '{"id":"x"}\n'): Promise<void> {
+      const path = ownDayPath(day, hash)
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', UID, 'devices', hash), { recursive: true })
+      await writeFile(path, content, 'utf-8')
+    }
+
+    function cloudDriveFile(hash: string, day: string): { id: string; name: string; modifiedTime: string } {
+      return { id: `drive-${hash}-${day}`, name: cloudFileName(hash, day), modifiedTime: '2026-04-19T00:00:00.000Z' }
+    }
+
+    async function fileExists(path: string): Promise<boolean> {
+      try {
+        await access(path)
+        return true
+      } catch { return false }
+    }
+
+    // --- Reconcile rule 2: uploaded has, local missing → cloud delete ---
+    it('reconcile rule 2: drops cloud file when uploaded lists a day but local file is gone', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      // Only day 18 exists locally; day 17 was Local-deleted.
+      await writeDayFile('2026-04-18')
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-17'),
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-17')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- Reconcile rule 3: uploaded has, cloud missing → local unlink ---
+    it('reconcile rule 3: unlinks local file when uploaded has the day but cloud does not', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
+        last_synced_at: 1_000,
+      }
+      await writeDayFile('2026-04-17')
+      await writeDayFile('2026-04-18')
+      // Cloud lost day 17 (Sync-deleted from another device).
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(await fileExists(ownDayPath('2026-04-17'))).toBe(false)
+      expect(await fileExists(ownDayPath('2026-04-18'))).toBe(true)
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- Reconcile orphan cleanup: first run ---
+    it('reconcile orphan: deletes cloud-only days when reconciled_at is pending', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: null },
+        last_synced_at: 0,
+      }
+      await writeDayFile('2026-04-18')
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'), // orphan: not local, not uploaded
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-16')
+      expect(typeof mockSyncState?.reconciled_at[pointerKey(OWN_HASH)]).toBe('number')
+    })
+
+    // --- Reconcile skip: reconciled_at set ---
+    it('reconcile skip: leaves cloud orphans alone once reconciled_at is a timestamp', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+    })
+
+    // --- Rule 1 new-day upload + uploaded bookkeeping ---
+    it('rule 1: uploading a new own-hash day records it into sync_state.uploaded', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: {},
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 }, // reconcile already done
+        last_synced_at: 5_000,
+      }
+      await writeDayFile('2026-04-18')
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+
+      await executeSync('upload')
+
+      expect(mockUploadFile).toHaveBeenCalledWith(
+        cloudFileName(OWN_HASH, '2026-04-18'),
+        expect.anything(),
+        undefined,
+      )
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- deleteRemoteTypingDay E2E ---
+    it('deleteRemoteTypingDay: removes cloud + local + cache tombstone in one call', async () => {
+      const day = '2026-04-18'
+      const localPath = ownDayPath(day, REMOTE_HASH)
+      await writeDayFile(day, REMOTE_HASH, '{"id":"remote"}\n')
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, day),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      const ok = await deleteRemoteTypingDay(UID, REMOTE_HASH, day)
+
+      expect(ok).toBe(true)
+      expect(mockDeleteFile).toHaveBeenCalledWith(`drive-${REMOTE_HASH}-${day}`)
+      expect(await fileExists(localPath)).toBe(false)
+      const tombstoneCall = mockTombstoneRowsForUidHashInRange.mock.calls.at(-1)
+      expect(tombstoneCall?.[0]).toBe(UID)
+      expect(tombstoneCall?.[1]).toBe(REMOTE_HASH)
+    })
+
+    it('deleteRemoteTypingDay: tombstones cache even when the cloud file is already gone', async () => {
+      const day = '2026-04-18'
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+
+      const ok = await deleteRemoteTypingDay(UID, REMOTE_HASH, day)
+
+      expect(ok).toBe(false)
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+      expect(mockTombstoneRowsForUidHashInRange).toHaveBeenCalled()
+    })
+
+    // --- mergeDeviceDayBundle full replay idempotency (via download flow) ---
+    it('download: same remote day merged twice replays rows each call (LWW idempotency)', async () => {
+      const day = '2026-04-18'
+      const payload = JSON.stringify({ id: 'x', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
+      mockReadRows.mockResolvedValue({ rows: [{ id: 'x', kind: 'scope', updated_at: 1, payload: {} }], lastId: 'x', partialLineSkipped: false })
+      mockDownloadFile.mockResolvedValue({
+        version: 1,
+        syncUnit: `keyboards/${UID}/devices/${REMOTE_HASH}/days/${day}`,
+        updatedAt: '2026-04-18T00:00:00.000Z',
+        salt: 's',
+        iv: 'i',
+        ciphertext: JSON.stringify({
+          type: 'typing-analytics-device',
+          key: `${UID}|${REMOTE_HASH}|${day}`,
+          index: { uid: UID, entries: [] },
+          files: { 'data.jsonl': payload },
+        }),
+      })
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, day),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      // Local uid seeded so the lazy scope filter keeps the unit.
+      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', UID), { recursive: true })
+
+      await executeSync('download')
+      const firstCalls = mockApplyRowsToCache.mock.calls.length
+      await executeSync('download')
+      const secondCalls = mockApplyRowsToCache.mock.calls.length
+
+      expect(secondCalls).toBeGreaterThan(firstCalls)
+    })
+
+    // --- Reconcile: remote hashes are not touched ---
+    it('reconcile hash-scope: remote device days stay intact (own-hash only)', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: [] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: null },
+        last_synced_at: 0,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(REMOTE_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).not.toHaveBeenCalled()
+    })
+
+    // --- Same-day re-upload dedup: current day keeps `uploaded` at 1 ---
+    it('same-day re-upload: uploaded array stays a single entry across repeated flushes', async () => {
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: {},
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      await writeDayFile('2026-04-18')
+      mockListLocalKeyboardUids.mockReturnValue([UID])
+
+      // First upload: cloud empty, `uploaded` grows by one.
+      mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+      await executeSync('upload')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+
+      // Second upload: cloud now has the file; the implementation passes
+      // the existing drive id to uploadFile (update-in-place), and
+      // `uploaded` stays deduped to a single day.
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      await executeSync('upload')
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual(['2026-04-18'])
+    })
+
+    // --- fetchRemoteTypingDay branches ---
+    describe('fetchRemoteTypingDay branches', () => {
+      it('returns false when the user is not authenticated', async () => {
+        vi.mocked(mockRetrievePasswordResultFn).mockResolvedValueOnce({ ok: false, reason: 'unauthenticated' })
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, '2026-04-18')
+        expect(ok).toBe(false)
+        expect(mockListFiles).not.toHaveBeenCalled()
+      })
+
+      it('returns false when the requested cloud file is missing', async () => {
+        mockListFiles.mockResolvedValue([PASSWORD_CHECK_DRIVE_FILE])
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, '2026-04-18')
+        expect(ok).toBe(false)
+        expect(mockDownloadFile).not.toHaveBeenCalled()
+      })
+
+      it('own-hash is treated as a no-op (mergeDeviceDayBundle early-returns)', async () => {
+        const day = '2026-04-18'
+        mockListFiles.mockResolvedValue([
+          cloudDriveFile(OWN_HASH, day),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile.mockResolvedValue({
+          version: 1,
+          syncUnit: `keyboards/${UID}/devices/${OWN_HASH}/days/${day}`,
+          updatedAt: '2026-04-18T00:00:00.000Z',
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'typing-analytics-device',
+            key: `${UID}|${OWN_HASH}|${day}`,
+            index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': '' },
+          }),
+        })
+
+        const ok = await fetchRemoteTypingDay(UID, OWN_HASH, day)
+        expect(ok).toBe(true)
+        // Download + decrypt ran (we don't short-circuit before decrypt),
+        // but no cache apply because mergeDeviceDayBundle exits when
+        // machineHash === ownHash.
+        expect(mockApplyRowsToCache).not.toHaveBeenCalled()
+      })
+
+      it('remote day download: file written locally and rows replayed', async () => {
+        const day = '2026-04-18'
+        const payload = JSON.stringify({ id: 'y', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
+        mockReadRows.mockResolvedValue({
+          rows: [{ id: 'y', kind: 'scope', updated_at: 1, payload: {} }],
+          lastId: 'y',
+          partialLineSkipped: false,
+        })
+        mockListFiles.mockResolvedValue([
+          cloudDriveFile(REMOTE_HASH, day),
+          PASSWORD_CHECK_DRIVE_FILE,
+        ])
+        mockDownloadFile.mockResolvedValue({
+          version: 1,
+          syncUnit: `keyboards/${UID}/devices/${REMOTE_HASH}/days/${day}`,
+          updatedAt: '2026-04-18T00:00:00.000Z',
+          salt: 's',
+          iv: 'i',
+          ciphertext: JSON.stringify({
+            type: 'typing-analytics-device',
+            key: `${UID}|${REMOTE_HASH}|${day}`,
+            index: { uid: UID, entries: [] },
+            files: { 'data.jsonl': payload },
+          }),
+        })
+
+        const ok = await fetchRemoteTypingDay(UID, REMOTE_HASH, day)
+        expect(ok).toBe(true)
+        expect(await fileExists(ownDayPath(day, REMOTE_HASH))).toBe(true)
+        expect(mockApplyRowsToCache).toHaveBeenCalled()
+      })
+    })
+
+    // --- v1 state → executeSync triggers orphan reconcile on first run ---
+    it('v1-shaped state: first executeSync upload treats reconciled_at missing as pending', async () => {
+      // Simulate a v1-migrated state: the migration leaves `reconciled_at`
+      // as an empty object, so `isReconcilePending` returns true for any
+      // key. The first upload pass must perform orphan cleanup and then
+      // stamp `reconciled_at`.
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: {},
+        reconciled_at: {}, // empty map — no key has been reconciled yet
+        last_synced_at: 0,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-16'), // cloud orphan
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+
+      await executeSync('upload')
+
+      expect(mockDeleteFile).toHaveBeenCalledWith('drive-test-machine-hash-2026-04-16')
+      expect(typeof mockSyncState?.reconciled_at[pointerKey(OWN_HASH)]).toBe('number')
+    })
+
+    // --- 0:00 UTC crossing delete: one local date spans two UTC days ---
+    it('local-date delete spanning 0:00 UTC unlinks both UTC day files', async () => {
+      // A non-UTC wall-clock timezone interprets "2026-04-18" as a 24h
+      // window that includes the last hours of UTC 2026-04-17 and early
+      // hours of 2026-04-18. The delete must unlink both.
+      await writeDayFile('2026-04-17')
+      await writeDayFile('2026-04-18')
+      mockSyncState = {
+        _rev: 2,
+        my_device_id: OWN_HASH,
+        read_pointers: {},
+        uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
+        reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
+        last_synced_at: 5_000,
+      }
+      mockListFiles.mockResolvedValue([
+        cloudDriveFile(OWN_HASH, '2026-04-17'),
+        cloudDriveFile(OWN_HASH, '2026-04-18'),
+        PASSWORD_CHECK_DRIVE_FILE,
+      ])
+      // Simulate "both days already gone locally" (the TZ-straddling
+      // delete path in typing-analytics-service maps one local date to
+      // two UTC days and unlinks each). Here we verify reconcile rule 2
+      // fires for both in the same pass.
+      const { unlink } = await import('node:fs/promises')
+      await unlink(ownDayPath('2026-04-17'))
+      await unlink(ownDayPath('2026-04-18'))
+
+      await executeSync('upload')
+
+      const deletedIds = mockDeleteFile.mock.calls.map((c) => c[0]).sort()
+      expect(deletedIds).toEqual([
+        'drive-test-machine-hash-2026-04-17',
+        'drive-test-machine-hash-2026-04-18',
+      ])
+      expect(mockSyncState?.uploaded[pointerKey(OWN_HASH)]).toEqual([])
     })
   })
 })

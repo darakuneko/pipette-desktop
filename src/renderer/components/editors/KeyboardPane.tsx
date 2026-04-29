@@ -2,6 +2,7 @@
 
 import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { KleKey } from '../../../shared/kle/types'
+import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 
 const PANE_CLASS = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2 border-2 border-edge-subtle'
 
@@ -25,6 +26,10 @@ export interface KeyboardPaneProps {
   remappedKeys: Set<string>
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>
+  heatmapCells?: Map<string, TypingHeatmapCell> | null
+  heatmapMaxTotal?: number
+  heatmapMaxTap?: number
+  heatmapMaxHold?: number
   scale: number
   layerLabel: string
   layerLabelTestId: string
@@ -53,6 +58,10 @@ export function KeyboardPane({
   remappedKeys,
   multiSelectedKeys,
   layoutOptions,
+  heatmapCells,
+  heatmapMaxTotal,
+  heatmapMaxTap,
+  heatmapMaxHold,
   scale,
   layerLabel,
   layerLabelTestId,
@@ -88,6 +97,10 @@ export function KeyboardPane({
           remappedKeys={remappedKeys}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}
+          heatmapCells={heatmapCells}
+          heatmapMaxTotal={heatmapMaxTotal}
+          heatmapMaxTap={heatmapMaxTap}
+          heatmapMaxHold={heatmapMaxHold}
           scale={scale}
           onKeyClick={isActive ? onKeyClick : undefined}
           onKeyDoubleClick={isActive ? onKeyDoubleClick : undefined}

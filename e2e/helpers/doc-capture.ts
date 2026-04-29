@@ -7,6 +7,16 @@ import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { dismissNotificationModal, isAvailable } from './doc-capture-common'
+import {
+  DUMMY_SNAPSHOTS,
+  DUMMY_TA_UID,
+  seedDummySnapshots,
+  restoreSnapshots,
+  seedDummyTypingAnalytics,
+  restoreTypingAnalytics,
+  seedDummyFilterStore,
+  restoreFilterStore,
+} from './analyze-seed'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
@@ -160,48 +170,6 @@ async function connectDevice(page: Page): Promise<boolean> {
   await page.waitForTimeout(2000)
   console.log(`Connected to ${DEVICE_NAME}`)
   return true
-}
-
-// --- Dummy snapshot data for File tab ---
-
-const DUMMY_SNAPSHOTS = [
-  {
-    uid: 'doc-dummy-uid-1',
-    name: 'Corne',
-    entries: [
-      { id: 'doc-snap-1', label: 'Default', filename: 'Corne_2026-03-10T12-00-00.pipette', savedAt: '2026-03-10T12:00:00.000Z', updatedAt: '2026-03-15T09:30:00.000Z', vilVersion: 2 },
-      { id: 'doc-snap-2', label: 'Gaming', filename: 'Corne_2026-03-12T14-30-00.pipette', savedAt: '2026-03-12T14:30:00.000Z', vilVersion: 2 },
-    ],
-  },
-  {
-    uid: 'doc-dummy-uid-2',
-    name: 'Sofle',
-    entries: [
-      { id: 'doc-snap-3', label: 'Work', filename: 'Sofle_2026-03-08T09-00-00.pipette', savedAt: '2026-03-08T09:00:00.000Z', vilVersion: 2 },
-    ],
-  },
-]
-
-function seedDummySnapshots(snapshotBase: string): Map<string, string | null> {
-  const backups = new Map<string, string | null>()
-  for (const kb of DUMMY_SNAPSHOTS) {
-    const dir = join(snapshotBase, kb.uid, 'snapshots')
-    mkdirSync(dir, { recursive: true })
-    const indexPath = join(dir, 'index.json')
-    backups.set(indexPath, existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null)
-    writeFileSync(indexPath, JSON.stringify({ uid: kb.uid, entries: kb.entries }, null, 2), 'utf-8')
-  }
-  return backups
-}
-
-function restoreSnapshots(backups: Map<string, string | null>): void {
-  for (const [path, original] of backups) {
-    if (original != null) {
-      writeFileSync(path, original, 'utf-8')
-    } else {
-      try { unlinkSync(path) } catch { /* ignore */ }
-    }
-  }
 }
 
 // --- Phase 1: Device Selection ---
@@ -420,6 +388,363 @@ async function captureSettingsModal(page: Page): Promise<void> {
   const closeBtn = page.locator('[data-testid="settings-close"]')
   if (await isAvailable(closeBtn)) {
     await closeBtn.click()
+    await page.waitForTimeout(300)
+  }
+}
+
+// --- Phase 1.8: Analyze Page (from device selector, Analyze tab) ---
+
+// Captures the Analyze page from the device-selection screen. Real typing data
+// is required for the charts to render; when no data exists on this machine,
+// the sidebar is empty and we fall back to capturing only the overview so the
+// guide still has a reference image. The per-tab sub-screenshots (Heatmap,
+// WPM, Interval, Activity, Ergonomics, Layer) are skipped in that case.
+async function captureAnalyzePage(page: Page): Promise<void> {
+  console.log('\n--- Phase 1.8: Analyze Page ---')
+
+  const analyzeTab = page.locator('[data-testid="tab-analyze"]')
+  if (!(await isAvailable(analyzeTab))) {
+    console.log('  [skip] tab-analyze not found')
+    return
+  }
+  await analyzeTab.click()
+  await page.waitForTimeout(500)
+
+  const analyzePage = page.locator('[data-testid="analyze-page"]')
+  if (!(await isAvailable(analyzePage))) {
+    console.log('  [skip] analyze-page did not open')
+    return
+  }
+
+  // Analyze only lists keyboards with recorded data — skip cleanly if none.
+  const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
+  const firstKbValue = (await isAvailable(firstKbOption))
+    ? await firstKbOption.getAttribute('value')
+    : null
+  if (firstKbValue) {
+    await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
+    await page.waitForTimeout(500)
+  } else {
+    console.log('  [warn] no keyboards listed — capturing overview only')
+  }
+
+  // Summary: default landing tab. Capture the four-card overview, then
+  // surface the Goal Achievements modal from the Streak / Goal card.
+  const summaryTab = page.locator('[data-testid="analyze-tab-summary"]')
+  if (await isAvailable(summaryTab)) {
+    await summaryTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-summary', { fullPage: true })
+
+    const goalHistoryBtn = page.locator('[data-testid="analyze-streak-goal-history-open"]')
+    if ((await isAvailable(goalHistoryBtn)) && (await goalHistoryBtn.isEnabled())) {
+      await goalHistoryBtn.click()
+      await page.waitForTimeout(500)
+      const goalModal = page.locator('[data-testid="analyze-goal-achievements-modal"]')
+      if (await isAvailable(goalModal)) {
+        await captureNamed(page, 'analyze-goal-achievements', { element: goalModal })
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(300)
+      } else {
+        console.log('  [warn] analyze-goal-achievements-modal did not open')
+      }
+    } else {
+      console.log('  [skip] analyze-streak-goal-history-open not available')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-summary not found')
+  }
+
+  // App filter popover — opens the multi-select dropdown for the App
+  // chip in the common filter row. Captured as a full-page screenshot
+  // so the open state and the row context land together.
+  const appFilter = page.locator('[data-testid="analyze-filter-app"]')
+  if (await isAvailable(appFilter)) {
+    await appFilter.click()
+    await page.waitForTimeout(300)
+    await captureNamed(page, 'analyze-app-filter', { fullPage: true })
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-app not found')
+  }
+
+  // Filter Store side panel — toggle open, capture the panel as an
+  // element shot, then close so subsequent tabs render unobstructed.
+  const filterStoreToggle = page.locator('[data-testid="analyze-filter-store-toggle"]')
+  if (await isAvailable(filterStoreToggle)) {
+    await filterStoreToggle.click()
+    await page.waitForTimeout(400)
+    const storePanel = page.locator('[data-testid="analyze-filter-store-panel"]')
+    if (await isAvailable(storePanel)) {
+      await captureNamed(page, 'analyze-filter-store', { element: storePanel })
+    } else {
+      console.log('  [warn] analyze-filter-store-panel did not open')
+    }
+    await filterStoreToggle.click()
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-store-toggle not found')
+  }
+
+  // Snapshot timeline — focused element capture, no tab switch needed.
+  // The element is a `<label>` wrapper that Playwright may report as not
+  // visible when nothing is rendered inside; treat the failure as a skip
+  // so the rest of the Analyze captures keep running.
+  const snapTimeline = page.locator('[data-testid="analyze-snapshot-timeline"]')
+  if (await isAvailable(snapTimeline)) {
+    try {
+      await captureNamed(page, 'analyze-snapshot-timeline', { element: snapTimeline })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.split('\n')[0] : 'unknown'
+      console.log(`  [warn] analyze-snapshot-timeline capture failed — ${msg}`)
+    }
+  } else {
+    console.log('  [skip] analyze-snapshot-timeline not found')
+  }
+
+  // Heatmap: requires a snapshot; empty state is captured if none exists.
+  const heatmapTab = page.locator('[data-testid="analyze-tab-keyHeatmap"]')
+  if (await isAvailable(heatmapTab)) {
+    await heatmapTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-heatmap', { fullPage: true })
+  } else {
+    console.log('  [skip] analyze-tab-keyHeatmap not found')
+  }
+
+  const wpmTab = page.locator('[data-testid="analyze-tab-wpm"]')
+  if (await isAvailable(wpmTab)) {
+    await wpmTab.click()
+    await page.waitForTimeout(800)
+    const wpmViewMode = page.locator('[data-testid="analyze-filter-wpm-view-mode"]')
+    if (await isAvailable(wpmViewMode)) {
+      await wpmViewMode.selectOption('timeSeries')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-wpm-time-series', { fullPage: true })
+      await wpmViewMode.selectOption('timeOfDay')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-wpm-time-of-day', { fullPage: true })
+    } else {
+      console.log('  [warn] wpm view-mode select not found — capturing default only')
+      await captureNamed(page, 'analyze-wpm-time-series', { fullPage: true })
+    }
+  } else {
+    console.log('  [skip] analyze-tab-wpm not found')
+  }
+
+  const intervalTab = page.locator('[data-testid="analyze-tab-interval"]')
+  if (await isAvailable(intervalTab)) {
+    await intervalTab.click()
+    await page.waitForTimeout(800)
+    const intervalViewMode = page.locator('[data-testid="analyze-filter-interval-view-mode"]')
+    if (await isAvailable(intervalViewMode)) {
+      await intervalViewMode.selectOption('timeSeries')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
+      await intervalViewMode.selectOption('distribution')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-interval-distribution', { fullPage: true })
+    } else {
+      console.log('  [warn] interval view-mode select not found — capturing default only')
+      await captureNamed(page, 'analyze-interval-time-series', { fullPage: true })
+    }
+  } else {
+    console.log('  [skip] analyze-tab-interval not found')
+  }
+
+  // Activity: representative captures for the keystrokes grid and the
+  // year-spanning calendar. Both run from the same metric select; the
+  // calendar capture comes second so the metric ends in calendar mode
+  // ready for the operation guide screenshot.
+  const activityTab = page.locator('[data-testid="analyze-tab-activity"]')
+  if (await isAvailable(activityTab)) {
+    await activityTab.click()
+    await page.waitForTimeout(800)
+    const activityMetric = page.locator('[data-testid="analyze-filter-activity-metric"]')
+    if (await isAvailable(activityMetric)) {
+      await activityMetric.selectOption('keystrokes')
+      await page.waitForTimeout(500)
+    }
+    await captureNamed(page, 'analyze-activity-keystrokes', { fullPage: true })
+
+    // Calendar view — switch via the View select. The chart always
+    // renders the selected year (current year by default), which
+    // gives the guide a representative full-year shape without
+    // touching the year picker.
+    const activityView = page.locator('[data-testid="analyze-filter-activity-view"]')
+    if (await isAvailable(activityView)) {
+      await activityView.selectOption('calendar')
+      await page.waitForTimeout(800)
+      await captureNamed(page, 'analyze-activity-calendar', { fullPage: true })
+    }
+  } else {
+    console.log('  [skip] analyze-tab-activity not found')
+  }
+
+  const ergonomicsTab = page.locator('[data-testid="analyze-tab-ergonomics"]')
+  if (await isAvailable(ergonomicsTab)) {
+    await ergonomicsTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-ergonomics', { fullPage: true })
+
+    // Learning curve sub-view: switch the View filter to 'learning'
+    // and capture the trend chart, then restore the snapshot view so
+    // the rest of the run keeps the historical layout.
+    const viewModeSelect = page.locator('[data-testid="analyze-filter-ergonomics-view-mode"]')
+    if (await isAvailable(viewModeSelect)) {
+      await viewModeSelect.selectOption('learning')
+      await page.waitForTimeout(800)
+      await captureNamed(page, 'analyze-ergonomics-learning', { fullPage: true })
+      await viewModeSelect.selectOption('snapshot')
+      await page.waitForTimeout(400)
+    } else {
+      console.log('  [skip] analyze-filter-ergonomics-view-mode not found — learning capture skipped')
+    }
+
+    // Open button is disabled when no snapshot is available — gate on isEnabled.
+    const fingerBtn = page.locator('[data-testid="analyze-finger-assignment-open"]')
+    if ((await isAvailable(fingerBtn)) && (await fingerBtn.isEnabled())) {
+      await fingerBtn.click()
+      await page.waitForTimeout(500)
+      const fingerModal = page.locator('[data-testid="finger-assignment-modal"]')
+      if (await isAvailable(fingerModal)) {
+        // Element screenshot so the modal fills the frame instead of the dimmed backdrop.
+        await captureNamed(page, 'analyze-finger-assignment-modal', { element: fingerModal })
+        const closeBtn = page.locator('[data-testid="finger-assignment-close"]')
+        if (await isAvailable(closeBtn)) {
+          await closeBtn.click()
+          await page.waitForTimeout(500)
+        }
+      } else {
+        console.log('  [warn] finger-assignment-modal did not open')
+      }
+    } else {
+      console.log('  [warn] finger-assignment button not available — modal capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-ergonomics not found')
+  }
+
+  const bigramsTab = page.locator('[data-testid="analyze-tab-bigrams"]')
+  if (await isAvailable(bigramsTab)) {
+    await bigramsTab.click()
+    await page.waitForTimeout(800)
+    // Element screenshot of the 2x2 quadrant grid keeps the four sub-views
+    // legible — `fullPage` would dilute each quadrant against sidebar/filters.
+    const bigramsContent = page.locator('[data-testid="analyze-bigrams-content"]')
+    if (await isAvailable(bigramsContent)) {
+      await captureNamed(page, 'analyze-bigrams', { element: bigramsContent })
+    } else {
+      console.log('  [warn] analyze-bigrams-content not visible — capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-bigrams not found')
+  }
+
+  const layoutComparisonTab = page.locator('[data-testid="analyze-tab-layoutComparison"]')
+  if (await isAvailable(layoutComparisonTab)) {
+    await layoutComparisonTab.click()
+    await page.waitForTimeout(500)
+    // Pick Colemak so each diff panel actually has something to render.
+    // All three panels render simultaneously, so we capture each one
+    // via its data-testid root rather than flipping a sub-view toggle.
+    const targetSelect = page.locator('[data-testid="analyze-layout-comparison-target-select"]')
+    if (await isAvailable(targetSelect)) {
+      await targetSelect.selectOption('colemak')
+      await page.waitForTimeout(800)
+
+      const heatmapPanel = page.locator('[data-testid="analyze-layout-comparison-heatmap-diff"]')
+      if (await isAvailable(heatmapPanel)) {
+        await captureNamed(page, 'analyze-layout-comparison-heatmap-diff', { element: heatmapPanel })
+      } else {
+        console.log('  [warn] layout-comparison heatmap panel not visible — capture skipped')
+      }
+
+      const fingerPanel = page.locator('[data-testid="analyze-layout-comparison-finger-diff"]')
+      if (await isAvailable(fingerPanel)) {
+        await captureNamed(page, 'analyze-layout-comparison-finger-diff', { element: fingerPanel })
+      } else {
+        console.log('  [warn] layout-comparison finger panel not visible — capture skipped')
+      }
+
+      const metricPanel = page.locator('[data-testid="analyze-layout-comparison-metric-table"]')
+      if (await isAvailable(metricPanel)) {
+        await captureNamed(page, 'analyze-layout-comparison-metric', { element: metricPanel })
+      } else {
+        console.log('  [warn] layout-comparison metric panel not visible — capture skipped')
+      }
+    } else {
+      console.log('  [warn] layout-comparison target select not found — capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-layoutComparison not found')
+  }
+
+  const layerTab = page.locator('[data-testid="analyze-tab-layer"]')
+  if (await isAvailable(layerTab)) {
+    await layerTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-layer-keystrokes', { fullPage: true })
+
+    const viewModeSelect = page.locator('[data-testid="analyze-filter-layer-view-mode"]')
+    if (await isAvailable(viewModeSelect)) {
+      await viewModeSelect.selectOption('activations')
+      await page.waitForTimeout(500)
+      await captureNamed(page, 'analyze-layer-activations', { fullPage: true })
+    } else {
+      console.log('  [warn] view-mode select not found — activations capture skipped')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-layer not found — Layer screenshots skipped')
+  }
+
+  // By App: per-application breakdown (App Usage donut + WPM by App).
+  // Intentionally ignores the App filter so capturing the full chart
+  // does not require seeding a filter selection.
+  const byAppTab = page.locator('[data-testid="analyze-tab-byApp"]')
+  if (await isAvailable(byAppTab)) {
+    await byAppTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-by-app', { fullPage: true })
+  } else {
+    console.log('  [skip] analyze-tab-byApp not found')
+  }
+
+  // CSV export modal — opened via the Filter Store side panel's
+  // "current CSV" button (the panel is the only entry point to the
+  // export modal). Re-open the panel, click the export button, capture
+  // the category-pick modal as an element shot, then close everything
+  // so the run leaves no .csv files behind.
+  const filterStoreToggleAgain = page.locator('[data-testid="analyze-filter-store-toggle"]')
+  if (await isAvailable(filterStoreToggleAgain)) {
+    await filterStoreToggleAgain.click()
+    await page.waitForTimeout(400)
+    const exportCurrentBtn = page.locator('[data-testid="analyze-filter-store-export-current-csv"]')
+    if ((await isAvailable(exportCurrentBtn)) && (await exportCurrentBtn.isEnabled())) {
+      await exportCurrentBtn.click()
+      await page.waitForTimeout(400)
+      const exportModal = page.locator('[data-testid="analyze-export-modal"]')
+      if (await isAvailable(exportModal)) {
+        await captureNamed(page, 'analyze-export-modal', { element: exportModal })
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(300)
+      } else {
+        console.log('  [warn] analyze-export-modal did not open')
+      }
+    } else {
+      console.log('  [skip] analyze-filter-store-export-current-csv not available')
+    }
+    await filterStoreToggleAgain.click()
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-store-toggle not found for export modal')
+  }
+
+  // Return to the Keyboard tab so subsequent phases can connect as usual.
+  const kbTab = page.locator('[data-testid="tab-keyboard"]')
+  if (await isAvailable(kbTab)) {
+    await kbTab.click()
     await page.waitForTimeout(300)
   }
 }
@@ -1142,7 +1467,11 @@ async function main(): Promise<void> {
   const favBackups = seedDummyFavorites(favBase)
   const kbBase = join(userDataPath, 'sync', 'keyboards')
   const snapBackups = seedDummySnapshots(kbBase)
-  console.log(`Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards`)
+  const taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
+  const filterStoreBackups = seedDummyFilterStore(kbBase)
+  console.log(
+    `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
+  )
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -1157,6 +1486,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(page)
     if (!connected) {
@@ -1187,6 +1517,8 @@ async function main(): Promise<void> {
     await app.close()
     restoreFavorites(favBackups, favBase)
     restoreSnapshots(snapBackups)
+    restoreTypingAnalytics(taBackup)
+    restoreFilterStore(filterStoreBackups)
   }
 }
 

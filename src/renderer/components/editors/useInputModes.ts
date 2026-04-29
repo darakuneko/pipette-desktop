@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingAnalyticsEventPayload, TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
@@ -26,6 +27,12 @@ export interface UseInputModesOptions {
   onSaveTypingTestResult?: (result: TypingTestResult) => void
   typingTestHistory?: TypingTestResult[]
   typingTestViewOnly?: boolean
+  typingRecordEnabled?: boolean
+  typingRecordKeyboard?: TypingAnalyticsKeyboard
+  /** TAPPING_TERM (ms) forwarded to useTypingTest for masked-key
+   * tap/hold classification. Defaults to QMK's 200 ms when the
+   * keyboard hasn't reported one. */
+  tappingTermMs?: number
 }
 
 export interface UseInputModesReturn {
@@ -57,6 +64,9 @@ export function useInputModes({
   onSaveTypingTestResult,
   typingTestHistory,
   typingTestViewOnly,
+  typingRecordEnabled,
+  typingRecordKeyboard,
+  tappingTermMs,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
   const [matrixMode, setMatrixMode] = useState(false)
@@ -139,11 +149,40 @@ export function useInputModes({
   }, [matrixMode, unlocked, resetMatrixState, enterMatrixMode, onUnlock])
 
   // --- Typing test ---
-  const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage)
+  const keyboardRef = useRef(typingRecordKeyboard)
+  keyboardRef.current = typingRecordKeyboard
+  const analyticsSink = useMemo<((event: TypingAnalyticsEventPayload) => void) | undefined>(() => {
+    // Recording lifecycle — see .claude/plans/typing-analytics.md.
+    //
+    // Events only flow to the main process when all three conditions hold:
+    //   1. typing-view compact window is open (typingTestViewOnly)
+    //   2. user has Start pressed on the record toggle (typingRecordEnabled)
+    //   3. useTypingTest's processMatrixFrame / processKeyEvent actually
+    //      fires, which is gated to typingTestMode by useInputModes below
+    //
+    // typingRecordEnabled is the user's explicit Start/Stop choice —
+    // persisted in PipetteSettings + synced across devices. Leaving
+    // the typing view (Exit, analytics navigation, disconnect) stops
+    // the sink via typingTestViewOnly=false without touching the
+    // toggle, so the next re-entry resumes recording automatically.
+    if (!typingRecordEnabled || !typingTestViewOnly) return undefined
+    return (payload) => {
+      const keyboard = keyboardRef.current
+      if (!keyboard) return
+      window.vialAPI
+        .typingAnalyticsEvent({ ...payload, keyboard })
+        .catch(() => { /* fire-and-forget */ })
+    }
+  }, [typingRecordEnabled, typingTestViewOnly])
+  const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
+    onAnalyticsEvent: analyticsSink,
+    tappingTermMs,
+  })
   const {
     restart: restartTypingTest,
     restartWithCountdown,
     processMatrixFrame,
+    resetMatrixPressTracking,
     processKeyEvent,
     setWindowFocused,
   } = typingTest
@@ -185,6 +224,31 @@ export function useInputModes({
     if (!typingTestMode) return
     processMatrixFrame(pressedKeys, keymap)
   }, [pressedKeys, typingTestMode, processMatrixFrame, keymap])
+
+  // Effective recording condition: view-only + record toggle on. Anything
+  // else leaves the analytics pipeline idle.
+  const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
+
+  // Reset matrix press-edge tracking when keymap changes or recording toggles
+  // so the next frame doesn't emit stale press events against an old state.
+  useEffect(() => {
+    resetMatrixPressTracking()
+  }, [keymap, recordingActive, resetMatrixPressTracking])
+
+  // When recording transitions off (either the toggle flips or the user
+  // leaves view-only mode), finalize the open session in main and flush
+  // its data for the active keyboard.
+  const prevRecordingActiveRef = useRef(recordingActive)
+  useEffect(() => {
+    const wasOn = prevRecordingActiveRef.current
+    prevRecordingActiveRef.current = recordingActive
+    if (wasOn && !recordingActive) {
+      const uid = typingRecordKeyboard?.uid
+      if (uid) {
+        window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
+      }
+    }
+  }, [recordingActive, typingRecordKeyboard])
 
   // Capture-phase keydown listener for typing test
   useEffect(() => {
