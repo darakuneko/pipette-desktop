@@ -1100,8 +1100,8 @@
       }
     },
     "layoutComparison": {
-      "sourceLabel": "現在のレイアウト",
-      "targetLabel": "比較するレイアウト",
+      "sourceLabel": "現在",
+      "targetLabel": "比較",
       "noTargetOption": "—",
       "noTarget": "比較するレイアウトを選んでください。",
       "noSnapshot": "この期間のキーマップスナップショットがありません。レコードを開始すると保存されます。",
