@@ -178,7 +178,7 @@ export function ActivityCalendarChart({
     !daily.some((d) => d.date > dateRange.dateToIso)
 
   return (
-    <div className="flex w-full flex-col gap-3 py-1" data-testid="analyze-activity-calendar">
+    <div className="flex w-full flex-col gap-3" data-testid="analyze-activity-calendar">
       <div className="flex items-center gap-2">
         <button
           type="button"
