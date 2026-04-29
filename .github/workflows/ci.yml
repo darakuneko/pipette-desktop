@@ -7,6 +7,12 @@ on:
 jobs:
   check:
     runs-on: ubuntu-latest
+    env:
+      # Tests rely on local wall-clock semantics that the codebase
+      # standardises on JST (e.g. analyze-streak-goal `resolveGoalAt`
+      # uses `toLocalDate`). Pin the runner to Asia/Tokyo so date-based
+      # goal-history comparisons match the developer-machine baseline.
+      TZ: Asia/Tokyo
     steps:
       - uses: actions/checkout@v6
 
