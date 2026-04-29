@@ -13,7 +13,7 @@ import {
 } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { computeWpm, formatWpm } from './analyze-wpm'
-import { TooltipShell } from './analyze-tooltip'
+import { Stat, TooltipShell } from './analyze-tooltip'
 
 interface Props {
   uid: string
@@ -45,8 +45,8 @@ function WpmByAppTooltip({ active, payload }: WpmByAppTooltipProps): JSX.Element
   if (!datum) return null
   return (
     <TooltipShell header={datum.name}>
-      <div>{t('analyze.wpmByApp.tooltipWpm', { wpm: formatWpm(datum.wpm) })}</div>
-      <div>{t('analyze.wpmByApp.tooltipKeystrokes', { count: datum.keystrokes.toLocaleString() })}</div>
+      <Stat label={t('analyze.wpmByApp.tooltipWpmLabel')} value={formatWpm(datum.wpm)} />
+      <Stat label={t('analyze.wpmByApp.tooltipKeystrokesLabel')} value={datum.keystrokes.toLocaleString()} />
     </TooltipShell>
   )
 }

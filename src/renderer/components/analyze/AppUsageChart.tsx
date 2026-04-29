@@ -16,7 +16,7 @@ import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { chartSeriesColor } from '../../utils/chart-palette'
 import { formatSharePercent } from './analyze-format'
-import { TooltipShell } from './analyze-tooltip'
+import { Stat, TooltipShell } from './analyze-tooltip'
 
 interface Props {
   uid: string
@@ -54,12 +54,14 @@ function AppUsageTooltip({ active, payload, total }: AppUsageTooltipProps): JSX.
   if (!datum || total <= 0) return null
   return (
     <TooltipShell header={datum.name}>
-      <div>
-        {t('analyze.appUsage.tooltipShare', {
-          count: datum.value.toLocaleString(),
-          share: `${formatSharePercent(datum.value / total)}%`,
-        })}
-      </div>
+      <Stat
+        label={t('analyze.appUsage.tooltipKeystrokesLabel')}
+        value={datum.value.toLocaleString()}
+      />
+      <Stat
+        label={t('analyze.appUsage.tooltipShareLabel')}
+        value={`${formatSharePercent(datum.value / total)}%`}
+      />
     </TooltipShell>
   )
 }

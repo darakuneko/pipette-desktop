@@ -1,8 +1,18 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Shared tooltip primitives for Analyze charts. Default recharts
-// `<Tooltip contentStyle=…>` paths are out of scope — those keep
-// recharts' built-in item/swatch rendering, which the shell can't
-// replicate.
+//
+// Shared tooltip primitives for Analyze charts.
+//
+// === Convention (mirror this in new charts) ===
+//
+//   Header (optional, secondary color)   ← context: bucket date, app name, category…
+//   Label: VALUE                         ← `Label:` normal, `VALUE` semibold (font-weight 600)
+//   Label: VALUE                         ← one stat per row when there are multiple stats
+//   Footer (optional, secondary color)   ← caveats: sample-size, missing-data note…
+//
+// Bold weight is applied to the value only; labels stay at the default
+// weight. Use the `Stat` helper to enforce this in custom-content
+// tooltips, and `boldValue` to wrap recharts' default-tooltip
+// formatter return so the same look carries through there.
 
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -19,6 +29,8 @@ const SHELL_STYLE = {
 const HEADER_STYLE = { color: 'var(--color-content-secondary)' } as const
 
 const FOOTER_STYLE = { color: 'var(--color-content-secondary)', marginTop: 4 } as const
+
+const VALUE_STYLE = { fontWeight: 600 } as const
 
 /** Use this when a chart wants recharts' built-in item/swatch
  * rendering; reach for `TooltipShell` instead when supplying a custom
@@ -49,6 +61,27 @@ export function TooltipShell({ header, footer, children }: TooltipShellProps): J
   )
 }
 
+interface StatProps {
+  label: ReactNode
+  value: ReactNode
+}
+
+/** Wrap a value passed to recharts' default-tooltip `formatter` so the
+ * value renders semibold while the item name keeps the default weight. */
+export function boldValue(v: ReactNode): JSX.Element {
+  return <span style={VALUE_STYLE}>{v}</span>
+}
+
+/** One `Label: VALUE` row inside a `TooltipShell` body. Label keeps
+ * the default weight; value renders semibold for at-a-glance scanning. */
+export function Stat({ label, value }: StatProps): JSX.Element {
+  return (
+    <div>
+      {label}: {boldValue(value)}
+    </div>
+  )
+}
+
 interface Props {
   active?: boolean
   label?: unknown
@@ -65,7 +98,7 @@ export function KeystrokeCountTooltip({ active, label, payload, unitKey = 'analy
   const displayLabel = typeof label === 'string' || typeof label === 'number' ? label : ''
   return (
     <TooltipShell>
-      {displayLabel}: {formatted} {t(unitKey)}
+      <Stat label={displayLabel} value={`${formatted} ${t(unitKey)}`} />
     </TooltipShell>
   )
 }

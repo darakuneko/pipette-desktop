@@ -31,7 +31,7 @@ import type {
   RangeMs,
 } from './analyze-types'
 import { listMatrixCellsByDayForScope } from './analyze-fetch'
-import { TooltipShell } from './analyze-tooltip'
+import { Stat, TooltipShell } from './analyze-tooltip'
 import {
   buildLearningCurve,
   summarizeLearningCurve,
@@ -96,18 +96,10 @@ function LearningCurveTooltip({ active, payload }: LearningCurveTooltipProps): J
         </>
       }
     >
-      <div>
-        {t('analyze.ergonomics.learning.score.overall')}: {pct(datum.overall)}
-      </div>
-      <div>
-        {t('analyze.ergonomics.learning.score.fingerLoad')}: {pct(datum.fingerLoadDeviation)}
-      </div>
-      <div>
-        {t('analyze.ergonomics.learning.score.handBalance')}: {pct(datum.handBalance)}
-      </div>
-      <div>
-        {t('analyze.ergonomics.learning.score.homeRowStay')}: {pct(datum.homeRowStay)}
-      </div>
+      <Stat label={t('analyze.ergonomics.learning.score.overall')} value={pct(datum.overall)} />
+      <Stat label={t('analyze.ergonomics.learning.score.fingerLoad')} value={pct(datum.fingerLoadDeviation)} />
+      <Stat label={t('analyze.ergonomics.learning.score.handBalance')} value={pct(datum.handBalance)} />
+      <Stat label={t('analyze.ergonomics.learning.score.homeRowStay')} value={pct(datum.homeRowStay)} />
     </TooltipShell>
   )
 }

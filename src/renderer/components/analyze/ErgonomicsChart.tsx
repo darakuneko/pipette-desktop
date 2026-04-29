@@ -31,7 +31,7 @@ import type {
 } from './analyze-types'
 import { aggregateErgonomics, ROW_ORDER } from './analyze-ergonomics'
 import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
-import { KeystrokeCountTooltip, TooltipShell } from './analyze-tooltip'
+import { KeystrokeCountTooltip, Stat, TooltipShell } from './analyze-tooltip'
 import { ErgonomicsLearningCurveChart } from './ErgonomicsLearningCurveChart'
 
 interface Props {
@@ -221,12 +221,14 @@ function HandPyramidTooltip({ active, label, payload }: HandPyramidTooltipProps)
   const unit = t('analyze.unit.keys')
   return (
     <TooltipShell header={displayLabel}>
-      <div>
-        {t('analyze.ergonomics.hand.left')}: {leftCount.toLocaleString()} {unit}
-      </div>
-      <div>
-        {t('analyze.ergonomics.hand.right')}: {rightCount.toLocaleString()} {unit}
-      </div>
+      <Stat
+        label={t('analyze.ergonomics.hand.left')}
+        value={`${leftCount.toLocaleString()} ${unit}`}
+      />
+      <Stat
+        label={t('analyze.ergonomics.hand.right')}
+        value={`${rightCount.toLocaleString()} ${unit}`}
+      />
     </TooltipShell>
   )
 }

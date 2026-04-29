@@ -25,7 +25,7 @@ import {
   type ActivityCell,
 } from './analyze-activity'
 import { formatActiveDuration, formatSharePercent } from './analyze-format'
-import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
+import { ANALYZE_TOOLTIP_DEFAULTS, boldValue } from './analyze-tooltip'
 import {
   toKeystrokesItems,
   toSessionsItems,
@@ -349,10 +349,10 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
                 const c = Number(entry?.payload?.count ?? 0)
                 const s = Number(entry?.payload?.share ?? 0)
                 return [
-                  t('analyze.activity.sessions.tooltipValue', {
+                  boldValue(t('analyze.activity.sessions.tooltipValue', {
                     count: c.toLocaleString(),
                     share: formatSharePercent(s),
-                  }),
+                  })),
                   t('analyze.activity.sessions.tooltipLabel'),
                 ]
               }}

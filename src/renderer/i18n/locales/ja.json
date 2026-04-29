@@ -641,14 +641,15 @@
       "empty": "アプリ データがありません — Monitor App を有効化して REC を開始してください",
       "unknown": "不明 / 混在",
       "other": "その他",
-      "tooltipShare": "{{count}} 打鍵 ({{share}})"
+      "tooltipKeystrokesLabel": "打鍵",
+      "tooltipShareLabel": "比率"
     },
     "wpmByApp": {
       "title": "アプリ別 WPM",
       "loading": "アプリ別 WPM を読み込み中…",
       "empty": "アプリ タグ付きの 1 分集約がまだありません — Monitor App を有効化して REC を開始してください",
-      "tooltipWpm": "{{wpm}} WPM",
-      "tooltipKeystrokes": "{{count}} 打鍵"
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "打鍵"
     },
     "tablistLabel": "分析種別",
     "splitView": {
@@ -995,7 +996,8 @@
         "suffix": "ms 以上",
         "ariaLabel": "平均間隔の最小値 (ms)"
       },
-      "cellTooltip": "{{count}} 回 · 平均 {{avgIki}} ms"
+      "cellTooltipOccurrencesLabel": "出現",
+      "cellTooltipAvgIkiLabel": "平均間隔"
     },
     "keyHeatmap": {
       "layer": "レイヤー",

@@ -52,6 +52,14 @@ export function formatPercentLabel(value: number | undefined): string {
   return `${(value * 100).toFixed(1)}%`
 }
 
+/** Signed `+12.3%` / `-4.5%` / `0.0%` percent for delta charts. Use
+ * for diff-style values where the sign carries information (positive
+ * = increase). */
+export function formatSignedPercent(value: number): string {
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${(value * 100).toFixed(1)}%`
+}
+
 export interface WeightedSample {
   value: number
   weight: number

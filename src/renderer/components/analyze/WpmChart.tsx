@@ -30,7 +30,7 @@ import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { listBksMinuteForScope, listMinuteStatsForScope } from './analyze-fetch'
 import { buildBksRateBuckets, type BksRateSummary } from './analyze-error-proxy'
 import { formatActiveDuration, formatBucketAxisLabel, formatHourLabel } from './analyze-format'
-import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
+import { ANALYZE_TOOLTIP_DEFAULTS, boldValue } from './analyze-tooltip'
 import {
   buildHourOfDayWpm,
   buildWpmTimeSeriesSummaryFromBuckets,
@@ -250,7 +250,7 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
                   const ks = Number(item?.payload?.keystrokes ?? 0)
                   const ms = Number(item?.payload?.activeMs ?? 0)
                   return [
-                    `${formatWpm(wpm)} WPM — ${ks.toLocaleString()} ${t('analyze.unit.keys')} / ${formatActiveDuration(ms)}`,
+                    boldValue(`${formatWpm(wpm)} WPM — ${ks.toLocaleString()} ${t('analyze.unit.keys')} / ${formatActiveDuration(ms)}`),
                     t('analyze.wpm.timeOfDay.tooltipLabel'),
                   ]
                 }}
@@ -316,11 +316,11 @@ export function WpmChart({ uid, range, deviceScopes, appScope, granularity, view
               labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
               formatter={(value, _name, item) => {
                 if (item?.dataKey === 'bksPercent') {
-                  if (value === null || value === undefined) return ['—', t('analyze.wpm.errorProxy.legend')]
+                  if (value === null || value === undefined) return [boldValue('—'), t('analyze.wpm.errorProxy.legend')]
                   const n = typeof value === 'number' ? value : Number(value)
-                  return [`${n.toFixed(1)}%`, t('analyze.wpm.errorProxy.legend')]
+                  return [boldValue(`${n.toFixed(1)}%`), t('analyze.wpm.errorProxy.legend')]
                 }
-                return [value as string | number, t('analyze.wpm.legend')]
+                return [boldValue(value as string | number), t('analyze.wpm.legend')]
               }}
             />
             <Legend

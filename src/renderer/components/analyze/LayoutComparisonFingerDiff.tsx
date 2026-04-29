@@ -16,12 +16,13 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
-  type TooltipProps,
   XAxis,
   YAxis,
 } from 'recharts'
 import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
 import type { LayoutComparisonTargetResult } from '../../../shared/types/typing-analytics'
+import { formatSignedPercent } from './analyze-format'
+import { Stat, TooltipShell } from './analyze-tooltip'
 
 interface Props {
   current: LayoutComparisonTargetResult
@@ -47,18 +48,19 @@ function colorForDiff(diff: number): string {
   return 'var(--color-content-muted)'
 }
 
-function DiffTooltip({
-  active,
-  payload,
-}: TooltipProps<number, string>): JSX.Element | null {
-  if (!active || !payload || payload.length === 0) return null
-  const datum = payload[0].payload as DiffDatum
-  const sign = datum.diff > 0 ? '+' : ''
+interface DiffTooltipProps {
+  active?: boolean
+  payload?: ReadonlyArray<{ payload?: DiffDatum }>
+}
+
+function DiffTooltip({ active, payload }: DiffTooltipProps): JSX.Element | null {
+  if (!active || !payload?.length) return null
+  const datum = payload[0]?.payload
+  if (!datum) return null
   return (
-    <div className="rounded border border-edge bg-surface px-2 py-1 text-[12px] text-content shadow">
-      <div className="font-medium">{datum.label}</div>
-      <div className="tabular-nums">{`${sign}${(datum.diff * 100).toFixed(1)}%`}</div>
-    </div>
+    <TooltipShell>
+      <Stat label={datum.label} value={formatSignedPercent(datum.diff)} />
+    </TooltipShell>
   )
 }
 
@@ -107,7 +109,7 @@ export function LayoutComparisonFingerDiff({ current, target, targetLabel }: Pro
             <ReferenceLine y={0} stroke="var(--color-content-muted)" />
             <Tooltip
               cursor={{ fill: 'var(--color-surface-dim)' }}
-              content={DiffTooltip}
+              content={(props) => <DiffTooltip {...props} />}
             />
             <Bar dataKey="diff" isAnimationActive={false}>
               {data.map((entry) => (

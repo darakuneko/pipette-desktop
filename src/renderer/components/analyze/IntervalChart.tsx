@@ -21,7 +21,7 @@ import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, Ra
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { listMinuteStatsForScope } from './analyze-fetch'
 import { formatBucketAxisLabel, formatSharePercent } from './analyze-format'
-import { ANALYZE_TOOLTIP_DEFAULTS } from './analyze-tooltip'
+import { ANALYZE_TOOLTIP_DEFAULTS, boldValue } from './analyze-tooltip'
 import { formatDateTime } from '../editors/store-modal-shared'
 import {
   buildIntervalHistogram,
@@ -237,7 +237,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granul
                   const w = Number(entry?.payload?.weight ?? 0)
                   const s = Number(entry?.payload?.share ?? 0)
                   return [
-                    `${Math.round(w).toLocaleString()} (${formatShare(s)})`,
+                    boldValue(`${Math.round(w).toLocaleString()} (${formatShare(s)})`),
                     t('analyze.interval.distribution.tooltipLabel'),
                   ]
                 }}
@@ -301,8 +301,8 @@ export function IntervalChart({ uid, range, deviceScopes, appScope, unit, granul
             labelFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
             formatter={(value) => {
               const n = typeof value === 'number' ? value : Number(value)
-              if (!Number.isFinite(n)) return String(value)
-              return unit === 'sec' ? `${(n / 1000).toFixed(3)} s` : `${n} ms`
+              if (!Number.isFinite(n)) return boldValue(String(value))
+              return boldValue(unit === 'sec' ? `${(n / 1000).toFixed(3)} s` : `${n} ms`)
             }}
           />
           <Legend

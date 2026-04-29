@@ -643,14 +643,15 @@
       "empty": "No app data — turn on Monitor App and start REC to populate this chart.",
       "unknown": "Unknown / Mixed",
       "other": "Other",
-      "tooltipShare": "{{count}} keystrokes ({{share}})"
+      "tooltipKeystrokesLabel": "Keystrokes",
+      "tooltipShareLabel": "Share"
     },
     "wpmByApp": {
       "title": "WPM by App",
       "loading": "Loading WPM by app…",
       "empty": "No app-tagged minutes yet — turn on Monitor App and start REC to populate this chart.",
-      "tooltipWpm": "{{wpm}} WPM",
-      "tooltipKeystrokes": "{{count}} keystrokes"
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "Keystrokes"
     },
     "tablistLabel": "Analysis type",
     "splitView": {
@@ -997,7 +998,8 @@
         "suffix": "ms or slower",
         "ariaLabel": "Minimum avg interval (ms)"
       },
-      "cellTooltip": "{{count}} occurrences · avg {{avgIki}} ms"
+      "cellTooltipOccurrencesLabel": "Occurrences",
+      "cellTooltipAvgIkiLabel": "Avg interval"
     },
     "keyHeatmap": {
       "layer": "Layer",
