@@ -79,7 +79,16 @@ const TAB_BTN_BASE =
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
-const ANALYSIS_TABS: AnalysisTabKey[] = ['summary', 'keyHeatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer', 'byApp']
+// Grouped left → right: 全体像 (summary) / パフォーマンス (wpm,
+// interval) / 行動分析 (activity, byApp) / 負荷分析 (keyHeatmap,
+// ergonomics, bigrams, layer) / 最適化 (layoutComparison).
+const ANALYSIS_TABS: AnalysisTabKey[] = [
+  'summary',
+  'wpm', 'interval',
+  'activity', 'byApp',
+  'keyHeatmap', 'ergonomics', 'bigrams', 'layer',
+  'layoutComparison',
+]
 const DAY_MS = 86_400_000
 /** Default analyze window: most keyboards generate enough data in a
  * week for the charts to feel populated without the user needing to
