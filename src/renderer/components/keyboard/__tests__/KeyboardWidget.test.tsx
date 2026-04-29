@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // @vitest-environment jsdom
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, it, expect, vi } from 'vitest'
 import { render } from '@testing-library/react'
 import { rotatePoint, KeyboardWidget } from '../KeyboardWidget'
 import { KEY_UNIT, KEY_SPACING, KEY_SIZE_RATIO, KEY_SPACING_RATIO, KEYBOARD_PADDING } from '../constants'
+import { parseKle } from '../../../../shared/kle/kle-parser'
 import type { KleKey } from '../../../../shared/kle/types'
 
 vi.mock('../../../../shared/keycodes/keycodes', () => ({
@@ -147,6 +150,57 @@ describe('KeyboardWidget bounds with rotation', () => {
     // Rotation expands the bounds beyond the unrotated baseline
     expect(vbW).toBeGreaterThan(unrotatedW)
     expect(vbH).toBeGreaterThan(unrotatedH)
+  })
+})
+
+describe('KeyboardWidget decal handling', () => {
+  it('does not render keys flagged as decal', () => {
+    const keys: KleKey[] = [
+      makeKey({ x: 0, y: 0, row: 0, col: 0 }),
+      makeKey({ x: 1, y: 0, row: 0, col: 1, decal: true }),
+      makeKey({ x: 2, y: 0, row: 0, col: 2 }),
+    ]
+
+    const { container } = render(
+      <KeyboardWidget
+        keys={keys}
+        keycodes={new Map([['0,0', 'KC_A'], ['0,1', 'KC_B'], ['0,2', 'KC_C']])}
+      />,
+    )
+    const svg = container.querySelector('svg')!
+    const renderedKeyGroups = svg.querySelectorAll(':scope > g')
+    expect(renderedKeyGroups.length).toBe(2)
+  })
+
+  // Regression for issue #129: MB-44 defines its bottom-row Blocker via the
+  // KLE `d: true` flag. The widget must skip those keys instead of rendering
+  // them as a small unlabelled cap.
+  it('does not render Blocker decal from MB-44 fixture (issue #129)', () => {
+    const fixturePath = join(
+      __dirname,
+      '../../../../..',
+      'e2e/fixtures/e2e_test_decal_blocker.json',
+    )
+    const fixture = JSON.parse(readFileSync(fixturePath, 'utf-8')) as {
+      layouts: { keymap: unknown[][] }
+    }
+    const layout = parseKle(fixture.layouts.keymap)
+
+    const decalCount = layout.keys.filter((k) => k.decal).length
+    expect(decalCount).toBeGreaterThan(0)
+    const expectedVisible = layout.keys.length - decalCount
+
+    const keycodesMap = new Map<string, string>()
+    for (const k of layout.keys) {
+      keycodesMap.set(`${k.row},${k.col}`, 'KC_A')
+    }
+
+    const { container } = render(
+      <KeyboardWidget keys={layout.keys} keycodes={keycodesMap} />,
+    )
+    const svg = container.querySelector('svg')!
+    const renderedKeyGroups = svg.querySelectorAll(':scope > g')
+    expect(renderedKeyGroups.length).toBe(expectedVisible)
   })
 })
 
