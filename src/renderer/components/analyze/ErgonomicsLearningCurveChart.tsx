@@ -217,31 +217,6 @@ export function ErgonomicsLearningCurveChart({
       className="flex h-full flex-col gap-3 overflow-y-auto pr-1"
       data-testid="analyze-ergonomics-learning"
     >
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <TrendCard
-          label={t('analyze.ergonomics.learning.summary.latestOverall')}
-          value={pct(latestBucket.overall)}
-        />
-        {trend && (
-          <TrendCard
-            label={t('analyze.ergonomics.learning.summary.delta', {
-              count: trend.baselineCount,
-            })}
-            value={signedPct(trend.delta)}
-            delta={t('analyze.ergonomics.learning.summary.baselineMean', {
-              value: pct(trend.baselineMean),
-            })}
-          />
-        )}
-        <TrendCard
-          label={t('analyze.ergonomics.learning.summary.bucketCount')}
-          value={String(result.buckets.length)}
-        />
-        <TrendCard
-          label={t('analyze.ergonomics.learning.summary.qualifiedCount')}
-          value={String(qualifiedCount)}
-        />
-      </div>
       <div style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -307,6 +282,31 @@ export function ErgonomicsLearningCurveChart({
             />
           </LineChart>
         </ResponsiveContainer>
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <TrendCard
+          label={t('analyze.ergonomics.learning.summary.latestOverall')}
+          value={pct(latestBucket.overall)}
+        />
+        {trend && (
+          <TrendCard
+            label={t('analyze.ergonomics.learning.summary.delta', {
+              count: trend.baselineCount,
+            })}
+            value={signedPct(trend.delta)}
+            delta={t('analyze.ergonomics.learning.summary.baselineMean', {
+              value: pct(trend.baselineMean),
+            })}
+          />
+        )}
+        <TrendCard
+          label={t('analyze.ergonomics.learning.summary.bucketCount')}
+          value={String(result.buckets.length)}
+        />
+        <TrendCard
+          label={t('analyze.ergonomics.learning.summary.qualifiedCount')}
+          value={String(qualifiedCount)}
+        />
       </div>
       <p className="text-[11px] text-content-muted">
         {t('analyze.ergonomics.learning.relativeTrendNote')}
