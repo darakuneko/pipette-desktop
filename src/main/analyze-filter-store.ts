@@ -119,6 +119,7 @@ export function setupAnalyzeFilterStore(): void {
       uid: string,
       json: string,
       label: string,
+      summary?: string,
     ): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }> => {
       try {
         validateUid(uid)
@@ -143,6 +144,7 @@ export function setupAnalyzeFilterStore(): void {
           const entry: AnalyzeFilterSnapshotMeta = {
             id: randomUUID(),
             label,
+            ...(summary ? { summary } : {}),
             filename,
             savedAt: nowIso,
             updatedAt: nowIso,

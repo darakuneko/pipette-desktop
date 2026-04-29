@@ -247,6 +247,16 @@ export function AnalyzeFilterStorePanel({
                           </div>
                         </div>
 
+                        {entry.summary && (
+                          <div
+                            className="mb-1 truncate text-[11px] text-content-muted"
+                            title={entry.summary}
+                            data-testid={`analyze-filter-store-entry-summary-${entry.id}`}
+                          >
+                            {entry.summary}
+                          </div>
+                        )}
+
                         {/* Bottom row: date + .csv export */}
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-[11px] text-content-muted">

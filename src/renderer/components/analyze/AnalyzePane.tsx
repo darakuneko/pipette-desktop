@@ -546,6 +546,86 @@ export function AnalyzePane({
     [selectedUid],
   )
 
+  const selected = selectedUid
+    ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
+    : null
+
+  // Snapshot the filter state in the shape AnalyzeExportModal needs.
+  // The modal calls per-category builders directly with these values
+  // so the exported CSV reflects the same conditions the visible
+  // chart is using; keep the deps focused on filter primitives so the
+  // memo doesn't churn on unrelated rerenders.
+  const exportCtx = useMemo<AnalyzeExportContext | null>(() => {
+    if (!selected) return null
+    const scope = deviceScopes[0] ?? 'own'
+    const machineHashOrAll = isHashScope(scope)
+      ? scope.machineHash
+      : isAllScope(scope)
+        ? 'all'
+        : (deviceInfos.own?.machineHash ?? 'own')
+
+    // Reuse the same labels the filter row already shows so the modal
+    // reads as a context echo, not a separate source of truth.
+    const remoteHit = isHashScope(scope)
+      ? deviceInfos.remotes.find((r) => r.machineHash === scope.machineHash) ?? null
+      : null
+    const deviceLabel = isAllScope(scope)
+      ? t('analyze.filters.deviceOption.all')
+      : isHashScope(scope) && remoteHit !== null
+        ? formatDeviceLabel(remoteHit)
+        : deviceInfos.own !== null
+          ? formatDeviceLabel(deviceInfos.own)
+          : t('analyze.filters.deviceOption.own')
+    // KeymapSnapshotTimeline labels the newest snapshot as "current",
+    // so mirror that here: if the explicit pick matches the latest
+    // savedAt the row is logically still "current keymap" — printing
+    // a literal timestamp would diverge from the filter row.
+    const latestSnapshotSavedAt = snapshotSummaries.length > 0
+      ? Math.max(...snapshotSummaries.map((s) => s.savedAt))
+      : null
+    const keymapLabel = effectiveSnapshot === null
+      ? '—'
+      : selectedSnapshotSavedAt === null || selectedSnapshotSavedAt === latestSnapshotSavedAt
+        ? t('analyze.snapshotTimeline.current')
+        : formatDateTime(selectedSnapshotSavedAt)
+    const rangeLabel = `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
+    const appLabel = appScopes.length === 0
+      ? t('analyze.filters.appOption.none')
+      : appScopes.join(', ')
+
+    return {
+      uid: selected.uid,
+      keyboardName: selected.productName,
+      machineHashOrAll,
+      range,
+      deviceScope: scope,
+      appScopes,
+      snapshot: effectiveSnapshot,
+      heatmap: heatmapFilter,
+      wpm: {
+        granularity: wpmFilter.granularity,
+        viewMode: wpmFilter.viewMode,
+        minActiveMs: wpmFilter.minActiveMs,
+      },
+      interval: {
+        viewMode: intervalFilter.viewMode,
+        granularity: wpmFilter.granularity,
+      },
+      activity: {
+        metric: activityFilter.metric,
+        minActiveMs: wpmFilter.minActiveMs,
+      },
+      layer: { baseLayer: layerFilter.baseLayer },
+      layoutComparison: layoutComparisonFilter,
+      fingerOverrides: fingerAssignments,
+      conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
+    }
+  }, [
+    selected, deviceScopes, appScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    snapshotSummaries, heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
+    layoutComparisonFilter, fingerAssignments, t,
+  ])
+
   // Pull the saved-entry list when the keyboard changes so the count /
   // list reflects the new uid even before the user opens the panel.
   const { refreshEntries: refreshFilterEntries } = filterStore
@@ -573,13 +653,26 @@ export function AnalyzePane({
           layoutComparison: layoutComparisonFilter,
         },
       }
-      return filterStore.saveSnapshot(label, payload)
+      // Comma-separated condition values shown under the saved entry's
+      // label so the user can recognise it without loading the full
+      // snapshot. Built from `exportCtx` which already memoises the same
+      // user-visible labels the filter row renders. Keyboard name is
+      // omitted because the store is already scoped per keyboard.
+      const summary = exportCtx
+        ? [
+            exportCtx.conditions.device,
+            exportCtx.conditions.app,
+            exportCtx.conditions.keymap,
+            exportCtx.conditions.range,
+          ].filter(Boolean).join(', ')
+        : undefined
+      return filterStore.saveSnapshot(label, payload, summary)
     },
     [
       selectedUid, analysisTab, range,
       deviceScopes, appScopes, heatmapFilter, wpmFilter, intervalFilter,
       activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
-      layoutComparisonFilter, filterStore,
+      layoutComparisonFilter, filterStore, exportCtx,
     ],
   )
 
@@ -623,79 +716,6 @@ export function AnalyzePane({
     },
     [handleLoadFilterSnapshot],
   )
-
-  const selected = selectedUid
-    ? keyboards.find((kb) => kb.uid === selectedUid) ?? null
-    : null
-
-  // Snapshot the filter state in the shape AnalyzeExportModal needs.
-  // The modal calls per-category builders directly with these values
-  // so the exported CSV reflects the same conditions the visible
-  // chart is using; keep the deps focused on filter primitives so the
-  // memo doesn't churn on unrelated rerenders.
-  const exportCtx = useMemo<AnalyzeExportContext | null>(() => {
-    if (!selected) return null
-    const scope = deviceScopes[0] ?? 'own'
-    const machineHashOrAll = isHashScope(scope)
-      ? scope.machineHash
-      : isAllScope(scope)
-        ? 'all'
-        : (deviceInfos.own?.machineHash ?? 'own')
-
-    // Reuse the same labels the filter row already shows so the modal
-    // reads as a context echo, not a separate source of truth.
-    const remoteHit = isHashScope(scope)
-      ? deviceInfos.remotes.find((r) => r.machineHash === scope.machineHash) ?? null
-      : null
-    const deviceLabel = isAllScope(scope)
-      ? t('analyze.filters.deviceOption.all')
-      : isHashScope(scope) && remoteHit !== null
-        ? formatDeviceLabel(remoteHit)
-        : deviceInfos.own !== null
-          ? formatDeviceLabel(deviceInfos.own)
-          : t('analyze.filters.deviceOption.own')
-    const keymapLabel = effectiveSnapshot === null
-      ? '—'
-      : selectedSnapshotSavedAt === null
-        ? t('analyze.snapshotTimeline.current')
-        : formatDateTime(selectedSnapshotSavedAt)
-    const rangeLabel = `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
-    const appLabel = appScopes.length === 0
-      ? t('analyze.filters.appOption.none')
-      : appScopes.join(', ')
-
-    return {
-      uid: selected.uid,
-      keyboardName: selected.productName,
-      machineHashOrAll,
-      range,
-      deviceScope: scope,
-      appScopes,
-      snapshot: effectiveSnapshot,
-      heatmap: heatmapFilter,
-      wpm: {
-        granularity: wpmFilter.granularity,
-        viewMode: wpmFilter.viewMode,
-        minActiveMs: wpmFilter.minActiveMs,
-      },
-      interval: {
-        viewMode: intervalFilter.viewMode,
-        granularity: wpmFilter.granularity,
-      },
-      activity: {
-        metric: activityFilter.metric,
-        minActiveMs: wpmFilter.minActiveMs,
-      },
-      layer: { baseLayer: layerFilter.baseLayer },
-      layoutComparison: layoutComparisonFilter,
-      fingerOverrides: fingerAssignments,
-      conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
-    }
-  }, [
-    selected, deviceScopes, appScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
-    heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
-    layoutComparisonFilter, fingerAssignments, t,
-  ])
 
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so

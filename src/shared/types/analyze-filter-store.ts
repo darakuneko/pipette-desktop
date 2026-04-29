@@ -7,6 +7,11 @@
 export interface AnalyzeFilterSnapshotMeta {
   id: string // UUID v4
   label: string
+  /** Snapshot of the user-visible filter labels (keyboard, device, app,
+   * keymap, range) joined with ", " at save time. Surfaced under the
+   * label in the panel so the user can recognise saved conditions
+   * without having to load each snapshot. */
+  summary?: string
   filename: string // {label-or-uid}_{timestamp}.json
   savedAt: string // ISO 8601
   updatedAt?: string

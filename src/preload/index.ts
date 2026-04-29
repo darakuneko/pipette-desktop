@@ -196,8 +196,8 @@ const vialAPI = {
   // --- Analyze Filter Store (per-keyboard search-condition snapshots) ---
   analyzeFilterStoreList: (uid: string): Promise<{ success: boolean; entries?: AnalyzeFilterSnapshotMeta[]; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_LIST, uid),
-  analyzeFilterStoreSave: (uid: string, json: string, label: string): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SAVE, uid, json, label),
+  analyzeFilterStoreSave: (uid: string, json: string, label: string, summary?: string): Promise<{ success: boolean; entry?: AnalyzeFilterSnapshotMeta; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SAVE, uid, json, label, summary),
   analyzeFilterStoreLoad: (uid: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_LOAD, uid, entryId),
   analyzeFilterStoreUpdate: (uid: string, entryId: string, json: string): Promise<{ success: boolean; error?: string }> =>

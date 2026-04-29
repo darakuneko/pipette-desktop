@@ -66,13 +66,14 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
   const saveSnapshot = useCallback(async (
     label: string,
     payload: AnalyzeFilterSnapshotPayload,
+    summary?: string,
   ): Promise<string | null> => {
     if (!uid) return null
     setError(null)
     setSaving(true)
     try {
       const json = JSON.stringify(payload, null, 2)
-      const result = await window.vialAPI.analyzeFilterStoreSave(uid, json, label)
+      const result = await window.vialAPI.analyzeFilterStoreSave(uid, json, label, summary)
       if (!result.success) {
         setError(result.error === ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES
           ? t('analyzeFilterStore.maxEntriesReached')
