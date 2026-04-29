@@ -26,3 +26,9 @@ export interface AnalyzeFilterSnapshotIndex {
 /** Stable IPC error code for the per-keyboard cap so renderer/main agree
  * without string comparison drift. */
 export const ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES = 'max entries reached'
+
+/** Per-keyboard maximum number of saved Analyze search-condition
+ * entries. Shared between main (enforces the cap on save) and renderer
+ * (formats the cap-reached toast via i18n interpolation) so the number
+ * cannot drift between the validator and the user-facing message. */
+export const ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD = 50

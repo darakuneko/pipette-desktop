@@ -17,11 +17,12 @@ import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
+  ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD,
   type AnalyzeFilterSnapshotIndex,
   type AnalyzeFilterSnapshotMeta,
 } from '../shared/types/analyze-filter-store'
 
-const MAX_ENTRIES_PER_KEYBOARD = 50
+const MAX_ENTRIES_PER_KEYBOARD = ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false

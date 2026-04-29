@@ -10,6 +10,7 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
+  ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD,
   type AnalyzeFilterSnapshotMeta,
 } from '../../shared/types/analyze-filter-store'
 import type { AnalysisTabKey, RangeMs } from '../components/analyze/analyze-types'
@@ -76,7 +77,7 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
       const result = await window.vialAPI.analyzeFilterStoreSave(uid, json, label, summary)
       if (!result.success) {
         setError(result.error === ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES
-          ? t('analyzeFilterStore.maxEntriesReached')
+          ? t('analyzeFilterStore.maxEntriesReached', { max: ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD })
           : t('analyzeFilterStore.saveFailed'))
         return null
       }

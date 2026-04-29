@@ -515,7 +515,7 @@
     "saveFailed": "検索条件の保存に失敗しました",
     "loadFailed": "検索条件の読み込みに失敗しました",
     "unsupportedVersion": "新しいバージョンの Pipette で作成された検索条件のため読み込めません。",
-    "maxEntriesReached": "保存可能な上限 (50件) に達しました。古い条件を削除してください。",
+    "maxEntriesReached": "保存可能な上限 ({{max}}件) に達しました。古い条件を削除してください。",
     "csv": ".csv",
     "syncedCount": "同期データ: {{count}}",
     "empty": "保存された検索条件はありません"
