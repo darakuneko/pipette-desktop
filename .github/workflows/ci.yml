@@ -17,6 +17,9 @@ jobs:
           node-version: 24
           cache: pnpm
 
+      - name: Install Linux build dependencies for native modules
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
+
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: npx tsx scripts/check-hook-deps-tdz.ts
