@@ -475,3 +475,69 @@ export function restoreTypingAnalytics(backup: TypingAnalyticsSeedBackup): void 
     try { unlinkSync(path) } catch { /* ignore */ }
   }
 }
+
+// --- Dummy Analyze filter store entries ---
+//
+// Lays down a minimal `index.json` plus per-entry payloads under the same
+// keyboard UID seeded by seedDummyTypingAnalytics, so the Analyze "Saved
+// search conditions" panel renders with two example entries for the
+// operation guide screenshot. Each payload is a no-op snapshot of the
+// active filters (range + empty `filters`) so the load button works
+// without forcing the seeded view into an unexpected sub-tab.
+
+export const DUMMY_FILTER_STORE_UID = DUMMY_TA_UID
+
+export const DUMMY_FILTER_STORE_ENTRIES = [
+  {
+    id: 'doc-filter-1',
+    label: 'Last 7 days · all apps',
+    summary: 'All apps · This device · Last 7 days',
+    filename: 'doc-filter-1.json',
+    savedAt: '2026-04-20T10:00:00.000Z',
+  },
+  {
+    id: 'doc-filter-2',
+    label: 'Coding sessions',
+    summary: 'Code · This device · Last 30 days',
+    filename: 'doc-filter-2.json',
+    savedAt: '2026-04-25T14:30:00.000Z',
+  },
+]
+
+export function seedDummyFilterStore(snapshotBase: string): Map<string, string | null> {
+  const backups = new Map<string, string | null>()
+  const dir = join(snapshotBase, DUMMY_FILTER_STORE_UID, 'analyze_filters')
+  mkdirSync(dir, { recursive: true })
+
+  const indexPath = join(dir, 'index.json')
+  backups.set(indexPath, existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null)
+  writeFileSync(
+    indexPath,
+    JSON.stringify({ uid: DUMMY_FILTER_STORE_UID, entries: DUMMY_FILTER_STORE_ENTRIES }, null, 2),
+    'utf-8',
+  )
+
+  for (const entry of DUMMY_FILTER_STORE_ENTRIES) {
+    const payloadPath = join(dir, entry.filename)
+    backups.set(payloadPath, existsSync(payloadPath) ? readFileSync(payloadPath, 'utf-8') : null)
+    const savedAtMs = Date.parse(entry.savedAt)
+    const payload = {
+      version: 1,
+      analysisTab: 'summary',
+      range: { fromMs: savedAtMs - 7 * 86400_000, toMs: savedAtMs },
+      filters: {},
+    }
+    writeFileSync(payloadPath, JSON.stringify(payload, null, 2), 'utf-8')
+  }
+  return backups
+}
+
+export function restoreFilterStore(backups: Map<string, string | null>): void {
+  for (const [path, original] of backups) {
+    if (original != null) {
+      writeFileSync(path, original, 'utf-8')
+    } else {
+      try { unlinkSync(path) } catch { /* ignore */ }
+    }
+  }
+}

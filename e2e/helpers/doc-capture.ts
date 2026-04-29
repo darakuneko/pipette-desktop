@@ -14,6 +14,8 @@ import {
   restoreSnapshots,
   seedDummyTypingAnalytics,
   restoreTypingAnalytics,
+  seedDummyFilterStore,
+  restoreFilterStore,
 } from './analyze-seed'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
@@ -426,6 +428,81 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [warn] no keyboards listed — capturing overview only')
   }
 
+  // Summary: default landing tab. Capture the four-card overview, then
+  // surface the Goal Achievements modal from the Streak / Goal card.
+  const summaryTab = page.locator('[data-testid="analyze-tab-summary"]')
+  if (await isAvailable(summaryTab)) {
+    await summaryTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-summary', { fullPage: true })
+
+    const goalHistoryBtn = page.locator('[data-testid="analyze-streak-goal-history-open"]')
+    if ((await isAvailable(goalHistoryBtn)) && (await goalHistoryBtn.isEnabled())) {
+      await goalHistoryBtn.click()
+      await page.waitForTimeout(500)
+      const goalModal = page.locator('[data-testid="analyze-goal-achievements-modal"]')
+      if (await isAvailable(goalModal)) {
+        await captureNamed(page, 'analyze-goal-achievements', { element: goalModal })
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(300)
+      } else {
+        console.log('  [warn] analyze-goal-achievements-modal did not open')
+      }
+    } else {
+      console.log('  [skip] analyze-streak-goal-history-open not available')
+    }
+  } else {
+    console.log('  [skip] analyze-tab-summary not found')
+  }
+
+  // App filter popover — opens the multi-select dropdown for the App
+  // chip in the common filter row. Captured as a full-page screenshot
+  // so the open state and the row context land together.
+  const appFilter = page.locator('[data-testid="analyze-filter-app"]')
+  if (await isAvailable(appFilter)) {
+    await appFilter.click()
+    await page.waitForTimeout(300)
+    await captureNamed(page, 'analyze-app-filter', { fullPage: true })
+    await page.keyboard.press('Escape')
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-app not found')
+  }
+
+  // Filter Store side panel — toggle open, capture the panel as an
+  // element shot, then close so subsequent tabs render unobstructed.
+  const filterStoreToggle = page.locator('[data-testid="analyze-filter-store-toggle"]')
+  if (await isAvailable(filterStoreToggle)) {
+    await filterStoreToggle.click()
+    await page.waitForTimeout(400)
+    const storePanel = page.locator('[data-testid="analyze-filter-store-panel"]')
+    if (await isAvailable(storePanel)) {
+      await captureNamed(page, 'analyze-filter-store', { element: storePanel })
+    } else {
+      console.log('  [warn] analyze-filter-store-panel did not open')
+    }
+    await filterStoreToggle.click()
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-store-toggle not found')
+  }
+
+  // Snapshot timeline — focused element capture, no tab switch needed.
+  // The element is a `<label>` wrapper that Playwright may report as not
+  // visible when nothing is rendered inside; treat the failure as a skip
+  // so the rest of the Analyze captures keep running.
+  const snapTimeline = page.locator('[data-testid="analyze-snapshot-timeline"]')
+  if (await isAvailable(snapTimeline)) {
+    try {
+      await captureNamed(page, 'analyze-snapshot-timeline', { element: snapTimeline })
+    } catch (err) {
+      const msg = err instanceof Error ? err.message.split('\n')[0] : 'unknown'
+      console.log(`  [warn] analyze-snapshot-timeline capture failed — ${msg}`)
+    }
+  } else {
+    console.log('  [skip] analyze-snapshot-timeline not found')
+  }
+
   // Heatmap: requires a snapshot; empty state is captured if none exists.
   const heatmapTab = page.locator('[data-testid="analyze-tab-keyHeatmap"]')
   if (await isAvailable(heatmapTab)) {
@@ -620,6 +697,48 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     }
   } else {
     console.log('  [skip] analyze-tab-layer not found — Layer screenshots skipped')
+  }
+
+  // By App: per-application breakdown (App Usage donut + WPM by App).
+  // Intentionally ignores the App filter so capturing the full chart
+  // does not require seeding a filter selection.
+  const byAppTab = page.locator('[data-testid="analyze-tab-byApp"]')
+  if (await isAvailable(byAppTab)) {
+    await byAppTab.click()
+    await page.waitForTimeout(800)
+    await captureNamed(page, 'analyze-by-app', { fullPage: true })
+  } else {
+    console.log('  [skip] analyze-tab-byApp not found')
+  }
+
+  // CSV export modal — opened via the Filter Store side panel's
+  // "current CSV" button (the panel is the only entry point to the
+  // export modal). Re-open the panel, click the export button, capture
+  // the category-pick modal as an element shot, then close everything
+  // so the run leaves no .csv files behind.
+  const filterStoreToggleAgain = page.locator('[data-testid="analyze-filter-store-toggle"]')
+  if (await isAvailable(filterStoreToggleAgain)) {
+    await filterStoreToggleAgain.click()
+    await page.waitForTimeout(400)
+    const exportCurrentBtn = page.locator('[data-testid="analyze-filter-store-export-current-csv"]')
+    if ((await isAvailable(exportCurrentBtn)) && (await exportCurrentBtn.isEnabled())) {
+      await exportCurrentBtn.click()
+      await page.waitForTimeout(400)
+      const exportModal = page.locator('[data-testid="analyze-export-modal"]')
+      if (await isAvailable(exportModal)) {
+        await captureNamed(page, 'analyze-export-modal', { element: exportModal })
+        await page.keyboard.press('Escape')
+        await page.waitForTimeout(300)
+      } else {
+        console.log('  [warn] analyze-export-modal did not open')
+      }
+    } else {
+      console.log('  [skip] analyze-filter-store-export-current-csv not available')
+    }
+    await filterStoreToggleAgain.click()
+    await page.waitForTimeout(200)
+  } else {
+    console.log('  [skip] analyze-filter-store-toggle not found for export modal')
   }
 
   // Return to the Keyboard tab so subsequent phases can connect as usual.
@@ -1349,8 +1468,9 @@ async function main(): Promise<void> {
   const kbBase = join(userDataPath, 'sync', 'keyboards')
   const snapBackups = seedDummySnapshots(kbBase)
   const taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
+  const filterStoreBackups = seedDummyFilterStore(kbBase)
   console.log(
-    `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}`,
+    `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
   )
 
   const page = await app.firstWindow()
@@ -1398,6 +1518,7 @@ async function main(): Promise<void> {
     restoreFavorites(favBackups, favBase)
     restoreSnapshots(snapBackups)
     restoreTypingAnalytics(taBackup)
+    restoreFilterStore(filterStoreBackups)
   }
 }
 
