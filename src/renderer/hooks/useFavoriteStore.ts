@@ -10,6 +10,12 @@ export interface UseFavoriteStoreOptions {
   serialize: () => unknown
   apply: (data: unknown) => void
   enabled?: boolean
+  /**
+   * Vial protocol of the live keyboard. Written into v3 export files so
+   * importers can resolve protocol-specific keycode values. Falls back to
+   * 6 (current default) when no keyboard is connected.
+   */
+  vialProtocol: number
 }
 
 export interface FavoriteImportResultState {
@@ -40,7 +46,7 @@ export interface UseFavoriteStoreReturn {
   importFavorites: () => Promise<boolean>
 }
 
-export function useFavoriteStore({ favoriteType, serialize, apply, enabled = true }: UseFavoriteStoreOptions): UseFavoriteStoreReturn {
+export function useFavoriteStore({ favoriteType, serialize, apply, enabled = true, vialProtocol }: UseFavoriteStoreOptions): UseFavoriteStoreReturn {
   const { t } = useTranslation()
   const [entries, setEntries] = useState<SavedFavoriteMeta[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -155,7 +161,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     try {
       const data = serialize()
       const json = JSON.stringify({ type: favoriteType, data })
-      const result = await window.vialAPI.favoriteStoreExportCurrent(favoriteType, json)
+      const result = await window.vialAPI.favoriteStoreExportCurrent(favoriteType, vialProtocol, json)
       if (!result.success) {
         if (result.error !== 'cancelled') {
           setError(t('favoriteStore.exportFailed'))
@@ -169,7 +175,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } finally {
       setExporting(false)
     }
-  }, [enabled, favoriteType, serialize, t])
+  }, [enabled, favoriteType, serialize, vialProtocol, t])
 
   const importCurrent = useCallback(async (): Promise<boolean> => {
     setError(null)
@@ -194,8 +200,8 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     setExporting(true)
     try {
       const result = entryId !== undefined
-        ? await window.vialAPI.favoriteStoreExport(favoriteType, entryId)
-        : await window.vialAPI.favoriteStoreExport(favoriteType)
+        ? await window.vialAPI.favoriteStoreExport(favoriteType, vialProtocol, entryId)
+        : await window.vialAPI.favoriteStoreExport(favoriteType, vialProtocol)
       if (!result.success) {
         if (result.error !== 'cancelled') {
           setError(t('favoriteStore.exportFailed'))
@@ -209,7 +215,7 @@ export function useFavoriteStore({ favoriteType, serialize, apply, enabled = tru
     } finally {
       setExporting(false)
     }
-  }, [favoriteType, t])
+  }, [favoriteType, vialProtocol, t])
 
   const exportFavorites = useCallback(async (): Promise<boolean> => {
     return doExport()

@@ -117,6 +117,7 @@ export function MacroEditor({
       updateActions(loaded)
     },
     enabled: !isDummy,
+    vialProtocol,
   })
 
   // Sync active macro when initialMacro changes (e.g. modal re-opened with different index)

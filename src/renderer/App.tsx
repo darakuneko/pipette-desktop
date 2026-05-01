@@ -239,6 +239,7 @@ export function App() {
     buildHubPostParams: entryOps.buildHubPostParams,
     activityCount: keyboard.activityCount,
     pipetteFileSavedActivityRef: lifecycle.pipetteFileSavedActivityRef,
+    vialProtocol: keyboard.vialProtocol,
   })
 
   const migration = useSnapshotMigration({
@@ -955,6 +956,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
+          vialProtocol={keyboard.vialProtocol}
           onClose={() => editorUI.setComboInitialIndex(null)}
           hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
           hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
@@ -979,6 +981,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
+          vialProtocol={keyboard.vialProtocol}
           onClose={() => editorUI.setAltRepeatKeyInitialIndex(null)}
           hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
           hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
@@ -1003,6 +1006,7 @@ export function App() {
           quickSelect={devicePrefs.quickSelect}
           splitKeyMode={devicePrefs.splitKeyMode}
           basicViewType={devicePrefs.basicViewType}
+          vialProtocol={keyboard.vialProtocol}
           onClose={() => editorUI.setKeyOverrideInitialIndex(null)}
           hubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
           hubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}

@@ -69,6 +69,8 @@ export interface KeycodeEntryModalOptions<TEntry extends Record<string, unknown>
   onUnlock?: () => void
   quickSelect?: boolean
   isDummy?: boolean
+  /** Vial protocol of the live keyboard. Forwarded to favorite export (v3) so importers can resolve protocol-specific keycode values. */
+  vialProtocol: number
   // TabbedKeycodes tile content
   tapDanceEntries?: TapDanceEntry[]
   deserializedMacros?: MacroAction[][]
@@ -129,6 +131,7 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
   const {
     entry, index, onSave, onClose,
     unlocked, onUnlock, quickSelect, isDummy,
+    vialProtocol,
     tapDanceEntries, deserializedMacros,
   } = options
 
@@ -149,6 +152,7 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
     serialize: () => editedEntry,
     apply: (data) => setEditedEntry(data as TEntry),
     enabled: showFavorites,
+    vialProtocol,
   })
 
   // Clear action

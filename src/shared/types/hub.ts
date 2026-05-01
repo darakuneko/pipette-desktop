@@ -94,6 +94,8 @@ export interface HubUploadFavoritePostParams {
   type: FavoriteType
   entryId: string
   title: string
+  /** Vial protocol of the keyboard the entry was authored against. Written into the v3 export. */
+  vialProtocol: number
 }
 
 export interface HubUpdateFavoritePostParams extends HubUploadFavoritePostParams {

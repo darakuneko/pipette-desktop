@@ -218,10 +218,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_RENAME, type, entryId, newLabel),
   favoriteStoreDelete: (type: string, entryId: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_DELETE, type, entryId),
-  favoriteStoreExport: (scope: string, entryId?: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT, scope, entryId),
-  favoriteStoreExportCurrent: (scope: string, data: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT_CURRENT, scope, data),
+  favoriteStoreExport: (scope: string, vialProtocol: number, entryId?: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT, scope, vialProtocol, entryId),
+  favoriteStoreExportCurrent: (scope: string, vialProtocol: number, data: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_EXPORT_CURRENT, scope, vialProtocol, data),
   favoriteStoreImport: (): Promise<FavoriteImportResult> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT),
   favoriteStoreImportToCurrent: (scope: string): Promise<{ success: boolean; data?: unknown; error?: string }> =>
