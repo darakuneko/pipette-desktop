@@ -8,7 +8,7 @@ import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubU
 import { getIdToken } from '../sync/google-auth'
 import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub } from './hub-client'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
-import { isValidFavoriteType, FAV_TYPE_TO_EXPORT_KEY, serializeFavData } from '../../shared/favorite-data'
+import { isValidFavoriteType, isValidVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
 import { readFile } from 'node:fs/promises'
@@ -180,7 +180,11 @@ function isSafePathSegment(segment: string): boolean {
   return /^[a-zA-Z0-9_.-]+$/.test(segment) && segment !== '.' && segment !== '..'
 }
 
-async function buildFavoriteExportJson(type: FavoriteType, entryId: string): Promise<string> {
+async function buildFavoriteExportJson(
+  type: FavoriteType,
+  entryId: string,
+  vialProtocol: number,
+): Promise<string> {
   const favDir = join(app.getPath('userData'), 'sync', 'favorites', type)
   const indexPath = join(favDir, 'index.json')
   const indexRaw = await readFile(indexPath, 'utf-8')
@@ -198,19 +202,13 @@ async function buildFavoriteExportJson(type: FavoriteType, entryId: string): Pro
   const exportKey = FAV_TYPE_TO_EXPORT_KEY[type]
   const serializedData = serializeFavData(type, parsed.data, serializeKeycode)
 
-  const exportFile = {
-    app: 'pipette' as const,
-    version: 2 as const,
-    scope: 'fav' as const,
-    exportedAt: new Date().toISOString(),
-    categories: {
-      [exportKey]: [{
-        label: entry.label,
-        savedAt: entry.savedAt,
-        data: serializedData,
-      }],
-    },
-  }
+  const exportFile = buildFavExportFile(vialProtocol, {
+    [exportKey]: [{
+      label: entry.label,
+      savedAt: entry.savedAt,
+      data: serializedData,
+    }],
+  })
 
   return JSON.stringify(exportFile)
 }
@@ -366,9 +364,10 @@ export function setupHubIpc(): void {
     params: HubUploadFavoritePostParams,
   ): Promise<{ title: string; postType: string; jsonFile: { name: string; data: Buffer } }> {
     if (!isValidFavoriteType(params.type)) throw new Error('Invalid favorite type')
+    if (!isValidVialProtocol(params.vialProtocol)) throw new Error('Invalid vialProtocol')
     const title = validateTitle(params.title)
     const postType = FAV_TYPE_TO_EXPORT_KEY[params.type]
-    const jsonStr = await buildFavoriteExportJson(params.type, params.entryId)
+    const jsonStr = await buildFavoriteExportJson(params.type, params.entryId, params.vialProtocol)
     return { title, postType, jsonFile: { name: `${postType}.json`, data: Buffer.from(jsonStr, 'utf-8') } }
   }
 

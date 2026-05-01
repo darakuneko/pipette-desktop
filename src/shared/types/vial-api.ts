@@ -149,8 +149,8 @@ export interface VialAPI {
   favoriteStoreLoad(type: string, entryId: string): Promise<{ success: boolean; data?: string; error?: string }>
   favoriteStoreRename(type: string, entryId: string, newLabel: string): Promise<{ success: boolean; error?: string }>
   favoriteStoreDelete(type: string, entryId: string): Promise<{ success: boolean; error?: string }>
-  favoriteStoreExport(scope: string, entryId?: string): Promise<{ success: boolean; error?: string }>
-  favoriteStoreExportCurrent(scope: string, data: string): Promise<{ success: boolean; error?: string }>
+  favoriteStoreExport(scope: string, vialProtocol: number, entryId?: string): Promise<{ success: boolean; error?: string }>
+  favoriteStoreExportCurrent(scope: string, vialProtocol: number, data: string): Promise<{ success: boolean; error?: string }>
   favoriteStoreImport(): Promise<FavoriteImportResult>
   favoriteStoreImportToCurrent(scope: string): Promise<{ success: boolean; data?: unknown; error?: string }>
 

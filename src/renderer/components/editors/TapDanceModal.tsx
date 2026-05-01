@@ -28,6 +28,7 @@ interface Props {
   quickSelect?: boolean
   splitKeyMode?: SplitKeyMode
   basicViewType?: BasicViewType
+  vialProtocol: number
 }
 
 const TAPPING_TERM_MIN = 0
@@ -57,7 +58,7 @@ export function TapDanceModal({
   tapDanceEntries, deserializedMacros,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult,
   onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
-  quickSelect, splitKeyMode, basicViewType,
+  quickSelect, splitKeyMode, basicViewType, vialProtocol,
 }: Props) {
   const { t } = useTranslation()
 
@@ -68,6 +69,7 @@ export function TapDanceModal({
     onClose,
     isDummy,
     quickSelect,
+    vialProtocol,
     tapDanceEntries,
     deserializedMacros,
     splitKeyMode,

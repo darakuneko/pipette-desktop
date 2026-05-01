@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import type { FavoriteType, FavoriteExportFile } from './types/favorite-store'
+import type { FavoriteType, FavoriteExportFile, FavoriteExportEntry } from './types/favorite-store'
 
 export const FAVORITE_TYPES: readonly FavoriteType[] = ['tapDance', 'macro', 'combo', 'keyOverride', 'altRepeatKey']
 
@@ -30,6 +30,25 @@ export const FAV_KEYCODE_FIELDS: Record<FavoriteType, readonly string[]> = {
 
 export function isValidFavoriteType(v: unknown): v is FavoriteType {
   return typeof v === 'string' && FAVORITE_TYPES.includes(v)
+}
+
+export function isValidVialProtocol(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v)
+}
+
+export function buildFavExportFile(
+  vialProtocol: number,
+  categories: Record<string, FavoriteExportEntry[]>,
+  exportedAt: string = new Date().toISOString(),
+): FavoriteExportFile {
+  return {
+    app: 'pipette',
+    version: 3,
+    scope: 'fav',
+    exportedAt,
+    vial_protocol: vialProtocol,
+    categories,
+  }
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -78,8 +97,13 @@ function isValidAltRepeatKeyData(data: unknown): boolean {
 
 export function isValidFavExportFile(v: unknown): v is FavoriteExportFile {
   if (!isRecord(v)) return false
-  if (v.app !== 'pipette' || v.version !== 2 || v.scope !== 'fav') return false
+  if (v.app !== 'pipette' || v.scope !== 'fav') return false
+  if (v.version !== 2 && v.version !== 3) return false
   if (typeof v.exportedAt !== 'string') return false
+  // vial_protocol: optional. v3 exports written by Pipette include it;
+  // v2 (legacy) and out-of-spec v3 without it both fall back to the
+  // default protocol on import.
+  if (v.vial_protocol !== undefined && typeof v.vial_protocol !== 'number') return false
   const cats = v.categories
   if (!isRecord(cats)) return false
   for (const key of Object.keys(cats)) {

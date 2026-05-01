@@ -336,14 +336,15 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      const result = await handler(fakeEvent, 'tapDance', 6) as { success: boolean }
       expect(result.success).toBe(true)
 
       const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
       expect(exported.app).toBe('pipette')
-      expect(exported.version).toBe(2)
+      expect(exported.version).toBe(3)
       expect(exported.scope).toBe('fav')
       expect(exported.exportedAt).toBeTruthy()
+      expect(exported.vial_protocol).toBe(6)
       expect(exported.categories.td).toHaveLength(1)
       expect(exported.categories.td[0].label).toBe('My TD')
       expect(exported.categories.td[0].savedAt).toBeTruthy()
@@ -361,7 +362,7 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance', saved1.entry.id) as { success: boolean }
+      const result = await handler(fakeEvent, 'tapDance', 6, saved1.entry.id) as { success: boolean }
       expect(result.success).toBe(true)
 
       const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
@@ -382,7 +383,7 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      const result = await handler(fakeEvent, 'tapDance', 6) as { success: boolean }
       expect(result.success).toBe(true)
 
       const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
@@ -394,14 +395,14 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: true, filePath: '' })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance') as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'tapDance', 6) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('cancelled')
     })
 
     it('returns error for invalid scope', async () => {
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'qmkSettings') as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'qmkSettings', 6) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('Invalid scope')
     })
@@ -414,7 +415,7 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      await handler(fakeEvent, 'tapDance')
+      await handler(fakeEvent, 'tapDance', 6)
 
       expect(dialog.showSaveDialog).toHaveBeenCalledWith(
         expect.anything(),
@@ -431,21 +432,21 @@ describe('favorite-store', () => {
       vi.mocked(BrowserWindow.fromWebContents).mockReturnValueOnce(null as unknown as Electron.BrowserWindow)
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance') as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'tapDance', 6) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('No window')
     })
 
     it('returns error for non-string entryId', async () => {
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance', 123) as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'tapDance', 6, 123) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('Invalid entryId')
     })
 
     it('returns error when single-entry export target does not exist', async () => {
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance', 'nonexistent-id') as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'tapDance', 6, 'nonexistent-id') as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('Entry not found')
     })
@@ -460,7 +461,7 @@ describe('favorite-store', () => {
       await deleteHandler(fakeEvent, 'tapDance', saved.entry.id)
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance', saved.entry.id) as { success: boolean; error: string }
+      const result = await handler(fakeEvent, 'tapDance', 6, saved.entry.id) as { success: boolean; error: string }
       expect(result.success).toBe(false)
       expect(result.error).toBe('Entry not found')
     })
@@ -476,7 +477,7 @@ describe('favorite-store', () => {
       vi.mocked(dialog.showSaveDialog).mockResolvedValue({ canceled: false, filePath: exportPath })
 
       const handler = getHandler(IpcChannels.FAVORITE_STORE_EXPORT)
-      const result = await handler(fakeEvent, 'tapDance') as { success: boolean }
+      const result = await handler(fakeEvent, 'tapDance', 6) as { success: boolean }
       expect(result.success).toBe(true)
 
       const exported = JSON.parse(await readFile(exportPath, 'utf-8'))
