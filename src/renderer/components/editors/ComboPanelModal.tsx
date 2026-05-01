@@ -29,6 +29,7 @@ interface Props {
   quickSelect?: boolean
   splitKeyMode?: SplitKeyMode
   basicViewType?: BasicViewType
+  vialProtocol: number
 }
 
 const comboAdapter: KeycodeEntryModalAdapter<ComboEntry> = {
@@ -69,6 +70,7 @@ export function ComboPanelModal({
   quickSelect,
   splitKeyMode,
   basicViewType,
+  vialProtocol,
 }: Props) {
   const hook = useKeycodeEntryModal(comboAdapter, {
     entry: entries[initialIndex],
@@ -78,6 +80,7 @@ export function ComboPanelModal({
     unlocked,
     onUnlock,
     quickSelect,
+    vialProtocol,
     tapDanceEntries,
     deserializedMacros,
     splitKeyMode,

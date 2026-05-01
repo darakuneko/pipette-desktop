@@ -31,6 +31,7 @@ interface Props {
   quickSelect?: boolean
   splitKeyMode?: SplitKeyMode
   basicViewType?: BasicViewType
+  vialProtocol: number
 }
 
 const optionEntries = Object.entries(AltRepeatKeyOptions).filter(
@@ -65,7 +66,7 @@ export function AltRepeatKeyPanelModal({
   tapDanceEntries, deserializedMacros, onClose,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult,
   onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
-  quickSelect, splitKeyMode, basicViewType,
+  quickSelect, splitKeyMode, basicViewType, vialProtocol,
 }: Props) {
   const { t } = useTranslation()
 
@@ -77,6 +78,7 @@ export function AltRepeatKeyPanelModal({
     unlocked,
     onUnlock,
     quickSelect,
+    vialProtocol,
     tapDanceEntries,
     deserializedMacros,
     splitKeyMode,

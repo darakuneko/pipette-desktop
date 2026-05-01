@@ -32,6 +32,7 @@ interface Props {
   quickSelect?: boolean
   splitKeyMode?: SplitKeyMode
   basicViewType?: BasicViewType
+  vialProtocol: number
 }
 
 type ModifierFieldName = 'triggerMods' | 'negativeMods' | 'suppressedMods'
@@ -76,7 +77,7 @@ export function KeyOverridePanelModal({
   tapDanceEntries, deserializedMacros, onClose,
   hubOrigin, hubNeedsDisplayName, hubUploading, hubUploadResult,
   onUploadToHub, onUpdateOnHub, onRemoveFromHub, onRenameOnHub,
-  quickSelect, splitKeyMode, basicViewType,
+  quickSelect, splitKeyMode, basicViewType, vialProtocol,
 }: Props) {
   const { t } = useTranslation()
 
@@ -88,6 +89,7 @@ export function KeyOverridePanelModal({
     unlocked,
     onUnlock,
     quickSelect,
+    vialProtocol,
     tapDanceEntries,
     deserializedMacros,
     splitKeyMode,

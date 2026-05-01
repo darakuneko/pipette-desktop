@@ -278,7 +278,27 @@ describe('isValidFavExportFile', () => {
 
     it('rejects unsupported version', () => {
       const file = makeValidExportFile()
+      ;(file as Record<string, unknown>).version = 4
+      expect(isValidFavExportFile(file)).toBe(false)
+    })
+
+    it('accepts v3 file with vial_protocol', () => {
+      const file = makeValidExportFile()
       ;(file as Record<string, unknown>).version = 3
+      ;(file as Record<string, unknown>).vial_protocol = 6
+      expect(isValidFavExportFile(file)).toBe(true)
+    })
+
+    it('accepts v3 file without vial_protocol (lenient — falls back to default protocol on import)', () => {
+      const file = makeValidExportFile()
+      ;(file as Record<string, unknown>).version = 3
+      expect(isValidFavExportFile(file)).toBe(true)
+    })
+
+    it('rejects non-numeric vial_protocol', () => {
+      const file = makeValidExportFile()
+      ;(file as Record<string, unknown>).version = 3
+      ;(file as Record<string, unknown>).vial_protocol = '6'
       expect(isValidFavExportFile(file)).toBe(false)
     })
 

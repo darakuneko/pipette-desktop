@@ -33,6 +33,8 @@ interface Options {
   }>
   activityCount: number
   pipetteFileSavedActivityRef: React.MutableRefObject<number>
+  /** Vial protocol of the live keyboard. Forwarded to favorite Hub uploads (v3 export). */
+  vialProtocol: number
 }
 
 export function useHubState(options: Options) {
@@ -51,6 +53,7 @@ export function useHubState(options: Options) {
     buildHubPostParams,
     activityCount,
     pipetteFileSavedActivityRef,
+    vialProtocol,
   } = options
 
   const { t } = useTranslation()
@@ -447,7 +450,7 @@ export function useHubState(options: Options) {
     await runFavHubOperation(type, entryId, false, async (entry) => {
       try {
         const result = await window.vialAPI.hubUploadFavoritePost({
-          type, entryId, title: entry.label || type,
+          type, entryId, title: entry.label || type, vialProtocol,
         })
         if (result.success) {
           if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
@@ -459,13 +462,13 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.uploadFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t])
+  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t, vialProtocol])
 
   const handleFavUpdateOnHub = useCallback(async (type: FavoriteType, entryId: string) => {
     await runFavHubOperation(type, entryId, true, async (entry) => {
       try {
         const result = await window.vialAPI.hubUpdateFavoritePost({
-          type, entryId, title: entry.label || type, postId: entry.hubPostId!,
+          type, entryId, title: entry.label || type, postId: entry.hubPostId!, vialProtocol,
         })
         if (result.success) {
           setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
@@ -476,7 +479,7 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t])
+  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t, vialProtocol])
 
   const handleFavRemoveFromHub = useCallback(async (type: FavoriteType, entryId: string) => {
     await runFavHubOperation(type, entryId, true, async (entry) => {

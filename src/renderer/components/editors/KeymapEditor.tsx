@@ -1039,6 +1039,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           onSave={handleTdModalSave} onClose={handleTdModalClose} isDummy={isDummy}
           tapDanceEntries={tapDanceEntries} deserializedMacros={deserializedMacros}
           quickSelect={quickSelect} splitKeyMode={splitKeyMode} basicViewType={basicViewType}
+          vialProtocol={vialProtocol ?? 0}
           hubOrigin={favHubOrigin} hubNeedsDisplayName={favHubNeedsDisplayName}
           hubUploading={favHubUploading} hubUploadResult={favHubUploadResult}
           onUploadToHub={onFavUploadToHub ? (entryId) => onFavUploadToHub('tapDance', entryId) : undefined}
