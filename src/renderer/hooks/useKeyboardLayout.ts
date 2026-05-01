@@ -7,22 +7,32 @@ import { useAppConfig } from './useAppConfig'
 
 export type { KeyboardLayoutId }
 
-function getRemapTable(layout: KeyboardLayoutId): Record<string, string> | null {
-  const def = LAYOUT_BY_ID.get(layout)
-  if (!def || Object.keys(def.map).length === 0) return null
-  return def.map
+export function remapKeycode(qmkId: string, layout: KeyboardLayoutId): string {
+  const mapped = LAYOUT_BY_ID.get(layout)?.map[qmkId]
+  return mapped !== undefined ? mapped : qmkId
 }
 
-export function remapKeycode(qmkId: string, layout: KeyboardLayoutId): string {
-  const table = getRemapTable(layout)
-  if (!table) return qmkId
-  return table[qmkId] ?? qmkId
+/**
+ * Resolve a display label for a qmkId, consulting the layout's
+ * `compositeLabels` first (composite keycodes such as `LALT(KC_L)`),
+ * then falling back to the basic-key `map`.
+ *
+ * Returns the original qmkId when neither source has an entry.
+ */
+export function remapLabel(qmkId: string, layout: KeyboardLayoutId): string {
+  const def = LAYOUT_BY_ID.get(layout)
+  if (!def) return qmkId
+  const composite = def.compositeLabels?.[qmkId]
+  if (composite !== undefined) return composite
+  const mapped = def.map[qmkId]
+  return mapped !== undefined ? mapped : qmkId
 }
 
 export function isRemappedKeycode(qmkId: string, layout: KeyboardLayoutId): boolean {
-  const table = getRemapTable(layout)
-  if (!table) return false
-  return qmkId in table
+  const def = LAYOUT_BY_ID.get(layout)
+  if (!def) return false
+  if (def.compositeLabels && qmkId in def.compositeLabels) return true
+  return qmkId in def.map
 }
 
 interface UseKeyboardLayoutReturn {
@@ -43,9 +53,9 @@ export function useKeyboardLayout(): UseKeyboardLayoutReturn {
     set('currentKeyboardLayout', newLayout)
   }, [set])
 
-  const remapLabel = useCallback(
+  const remapLabelCb = useCallback(
     (qmkId: string): string => {
-      return remapKeycode(qmkId, layout)
+      return remapLabel(qmkId, layout)
     },
     [layout],
   )
@@ -57,5 +67,5 @@ export function useKeyboardLayout(): UseKeyboardLayoutReturn {
     [layout],
   )
 
-  return { layout, setLayout, remapLabel, isRemapped }
+  return { layout, setLayout, remapLabel: remapLabelCb, isRemapped }
 }

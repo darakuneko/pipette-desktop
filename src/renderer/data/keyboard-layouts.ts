@@ -8,6 +8,18 @@ export interface KeyboardLayoutDef {
   id: string
   name: string
   map: Record<string, string>
+  /**
+   * Optional override for composite keycodes such as `LALT(KC_L)` → "Cmd L".
+   *
+   * Looked up before `map` in `remapLabel` (see `useKeyboardLayout.ts`).
+   * Lets contributors attach OS × language specific labels to individual
+   * composite qmkIds without disturbing basic-key remap behavior.
+   *
+   * Pipette ships no defaults here — contributor PRs add layout-specific
+   * entries. Reviewers must check that the same label is not assigned to
+   * different composite qmkIds within one layout (label collision).
+   */
+  compositeLabels?: Record<string, string>
 }
 
 export const KEYBOARD_LAYOUTS: KeyboardLayoutDef[] = [

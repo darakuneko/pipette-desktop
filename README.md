@@ -222,6 +222,10 @@ Contributions are welcome! In particular:
 
 - **Translations** — Add a locale JSON file to `src/renderer/i18n/locales/` and register it in `src/renderer/i18n/index.ts`.
   PRs for new languages or corrections to existing translations are appreciated.
+- **Keyboard layout composite labels** — `KeyboardLayoutDef.compositeLabels` in `src/renderer/data/keyboard-layouts.ts`
+  lets a layout override the label of an individual composite keycode (e.g. `LALT(KC_L)` → "Cmd L" on macOS).
+  Add the full qmkId → display string mapping to the relevant layout. Reviewers must check that the
+  same label is not assigned to two different composite qmkIds within one layout (label collision).
 - **Bug reports & feature requests** — Open an issue to let us know.
 
 ## Acknowledgments
