@@ -3,8 +3,33 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act } from '@testing-library/react'
-import { useKeyboardLayout, remapKeycode, isRemappedKeycode } from '../useKeyboardLayout'
+import { useKeyboardLayout, remapKeycode, remapLabel, isRemappedKeycode } from '../useKeyboardLayout'
 import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
+import { KEYBOARD_LAYOUTS, LAYOUT_BY_ID } from '../../data/keyboard-layouts'
+
+const COMPOSITE_TEST_LAYOUT_ID = '__composite-test__'
+
+function withCompositeTestLayout(
+  compositeLabels: Record<string, string>,
+  body: () => void,
+): void {
+  const def = {
+    id: COMPOSITE_TEST_LAYOUT_ID,
+    name: 'Composite Test',
+    map: { KC_A: 'カスタムA' },
+    compositeLabels,
+  }
+  const insertedAt = KEYBOARD_LAYOUTS.push(def) - 1
+  LAYOUT_BY_ID.set(COMPOSITE_TEST_LAYOUT_ID, def)
+  try {
+    body()
+  } finally {
+    LAYOUT_BY_ID.delete(COMPOSITE_TEST_LAYOUT_ID)
+    if (KEYBOARD_LAYOUTS[insertedAt] === def) {
+      KEYBOARD_LAYOUTS.splice(insertedAt, 1)
+    }
+  }
+}
 
 describe('remapKeycode', () => {
   describe('QWERTY (identity)', () => {
@@ -182,6 +207,60 @@ describe('isRemappedKeycode', () => {
   it('returns false for non-remapped keys in Japanese layout', () => {
     expect(isRemappedKeycode('KC_A', 'japanese')).toBe(false)
     expect(isRemappedKeycode('KC_Q', 'japanese')).toBe(false)
+  })
+})
+
+describe('remapLabel (composite override)', () => {
+  it('returns the composite label when defined', () => {
+    withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
+      expect(remapLabel('LALT(KC_L)', COMPOSITE_TEST_LAYOUT_ID)).toBe('Alt L')
+    })
+  })
+
+  it('falls back to basic-key map when composite has no entry', () => {
+    withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
+      // Basic key still uses `map`
+      expect(remapLabel('KC_A', COMPOSITE_TEST_LAYOUT_ID)).toBe('カスタムA')
+    })
+  })
+
+  it('passes the qmkId through when neither table covers it', () => {
+    withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
+      expect(remapLabel('KC_Z', COMPOSITE_TEST_LAYOUT_ID)).toBe('KC_Z')
+    })
+  })
+
+  it('still works for layouts without compositeLabels (qwerty)', () => {
+    expect(remapLabel('KC_A', 'qwerty')).toBe('KC_A')
+    expect(remapLabel('LALT(KC_L)', 'qwerty')).toBe('LALT(KC_L)')
+  })
+
+  it('preserves existing remapKeycode behavior on layouts that only define map', () => {
+    expect(remapLabel('KC_S', 'dvorak')).toBe('O')
+    expect(remapLabel('KC_LBRACKET', 'japanese')).toBe('`\n@')
+  })
+
+  it('marks composite-only entries as remapped', () => {
+    withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
+      expect(isRemappedKeycode('LALT(KC_L)', COMPOSITE_TEST_LAYOUT_ID)).toBe(true)
+      // basic-key remap also still detected
+      expect(isRemappedKeycode('KC_A', COMPOSITE_TEST_LAYOUT_ID)).toBe(true)
+      expect(isRemappedKeycode('KC_Z', COMPOSITE_TEST_LAYOUT_ID)).toBe(false)
+    })
+  })
+
+  it('treats an empty compositeLabels object as no-op', () => {
+    withCompositeTestLayout({}, () => {
+      expect(remapLabel('LALT(KC_L)', COMPOSITE_TEST_LAYOUT_ID)).toBe('LALT(KC_L)')
+      expect(isRemappedKeycode('LALT(KC_L)', COMPOSITE_TEST_LAYOUT_ID)).toBe(false)
+    })
+  })
+
+  it('does not affect remapKeycode (basic-key-only) lookups', () => {
+    withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
+      // remapKeycode still ignores compositeLabels
+      expect(remapKeycode('LALT(KC_L)', COMPOSITE_TEST_LAYOUT_ID)).toBe('LALT(KC_L)')
+    })
   })
 })
 

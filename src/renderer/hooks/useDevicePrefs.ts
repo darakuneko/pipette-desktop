@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { LAYOUT_ID_SET } from '../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
-import { remapKeycode, isRemappedKeycode } from './useKeyboardLayout'
+import { remapLabel as remapLabelFn, isRemappedKeycode } from './useKeyboardLayout'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode } from '../../shared/types/pipette-settings'
@@ -470,7 +470,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
 
   const remapLabel = useCallback(
-    (qmkId: string): string => remapKeycode(qmkId, layout),
+    (qmkId: string): string => remapLabelFn(qmkId, layout),
     [layout],
   )
 
