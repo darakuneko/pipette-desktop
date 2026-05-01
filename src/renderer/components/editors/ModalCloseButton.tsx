@@ -2,7 +2,6 @@
 
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
-import { Tooltip } from '../ui/Tooltip'
 
 interface Props {
   testid: string
@@ -13,16 +12,14 @@ export function ModalCloseButton({ testid, onClick }: Props) {
   const { t } = useTranslation()
 
   return (
-    <Tooltip content={t('common.close')}>
-      <button
-        type="button"
-        data-testid={testid}
-        className="rounded p-1 text-content-muted hover:text-content"
-        onClick={onClick}
-        aria-label={t('common.close')}
-      >
-        <X size={20} aria-hidden="true" />
-      </button>
-    </Tooltip>
+    <button
+      type="button"
+      data-testid={testid}
+      className="rounded p-1 text-content-muted hover:text-content"
+      onClick={onClick}
+      aria-label={t('common.close')}
+    >
+      <X size={20} aria-hidden="true" />
+    </button>
   )
 }

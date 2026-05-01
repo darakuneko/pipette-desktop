@@ -192,18 +192,16 @@ export function MacroActionItem({
           </Tooltip>
         </div>
         {onCloseEdit && (
-          <Tooltip content={t('common.close')} wrapperClassName="ml-auto">
-            <button
-              type="button"
-              data-testid="macro-close-edit"
-              className="rounded p-1 text-content-muted hover:text-content disabled:opacity-50"
-              onClick={onCloseEdit}
-              disabled={disabled}
-              aria-label={t('common.close')}
-            >
-              <X size={20} aria-hidden="true" />
-            </button>
-          </Tooltip>
+          <button
+            type="button"
+            data-testid="macro-close-edit"
+            className="ml-auto rounded p-1 text-content-muted hover:text-content disabled:opacity-50"
+            onClick={onCloseEdit}
+            disabled={disabled}
+            aria-label={t('common.close')}
+          >
+            <X size={20} aria-hidden="true" />
+          </button>
         )}
       </div>
     )

@@ -69,7 +69,7 @@ export function SettingsModal({
         aria-modal="true"
         aria-busy={syncState.busy}
         aria-labelledby="settings-title"
-        className="w-[640px] max-w-[90vw] h-[min(840px,85vh)] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-[760px] max-w-[90vw] h-[min(840px,85vh)] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         data-testid="settings-modal"
       >
