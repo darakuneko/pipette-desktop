@@ -433,7 +433,12 @@ describe('typing-analytics-service', () => {
         expect(result.minuteStats).toBeGreaterThan(0)
         expect(listTypingDailySummaries(sampleKeyboard.uid)).toEqual([])
         const machineHash = await getMachineHash()
-        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/devices/${machineHash}`)
+        // Tombstone notify fires one per-day unit per affected UTC day.
+        expect(notifier).toHaveBeenCalledWith(
+          expect.stringMatching(
+            new RegExp(`^keyboards/${sampleKeyboard.uid}/devices/${machineHash}/days/\\d{4}-\\d{2}-\\d{2}$`),
+          ),
+        )
       })
 
       it('deleteAllTypingForKeyboard wipes every live row for the uid', async () => {
@@ -441,12 +446,20 @@ describe('typing-analytics-service', () => {
         setTypingAnalyticsSyncNotifier(notifier)
         await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 10, 12, 0, 0))
         await seedKeyboardData(sampleKeyboard, Date.UTC(2026, 3, 14, 12, 0, 0), 'b')
+        // Forget the per-day flush notifications fired during seeding so
+        // the assertion below sees only the delete-time notifies.
+        notifier.mockClear()
 
         const result = await deleteAllTypingForKeyboard(sampleKeyboard.uid)
         expect(result.charMinutes).toBeGreaterThan(0)
         expect(listTypingKeyboards().map((k) => k.uid)).not.toContain(sampleKeyboard.uid)
         const machineHash = await getMachineHash()
-        expect(notifier).toHaveBeenCalledWith(`keyboards/${sampleKeyboard.uid}/devices/${machineHash}`)
+        // Delete-all notifies one per-day unit per day captured before the
+        // unlink. Both seeded UTC days must show up exactly once.
+        const expectedUnits = ['2026-04-10', '2026-04-14'].map(
+          (day) => `keyboards/${sampleKeyboard.uid}/devices/${machineHash}/days/${day}`,
+        )
+        expect(notifier.mock.calls.map((call) => call[0]).sort()).toEqual(expectedUnits.sort())
       })
 
       it('deleteTypingDailySummaries is a no-op when the dates array is empty', async () => {
@@ -607,7 +620,7 @@ describe('typing-analytics-service', () => {
     })
   })
 
-  describe('v7 per-day JSONL output', () => {
+  describe('per-day JSONL output', () => {
     async function readDayRows(uid: string, machineHash: string, utcDay: string): Promise<JsonlRow[]> {
       const path = deviceDayJsonlPath(mockUserDataPath, uid, machineHash, utcDay)
       const { rows } = await readRows(path)
@@ -616,7 +629,7 @@ describe('typing-analytics-service', () => {
     const charsOnDay = (rows: JsonlRow[]): string[] =>
       rows.flatMap((r) => (r.kind === 'char-minute' ? [r.payload.char] : []))
 
-    it('writes each flush to {hash}/{utcDay}.jsonl and no longer mirrors the v6 flat path', async () => {
+    it('writes each flush to {hash}/{utcDay}.jsonl with no flat sibling', async () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
       const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
@@ -628,10 +641,11 @@ describe('typing-analytics-service', () => {
       const dayPath = deviceDayJsonlPath(mockUserDataPath, sampleKeyboard.uid, hash, '2026-04-14')
       expect(existsSync(dayPath)).toBe(true)
 
-      // Mirror write is dropped — flat `{hash}.jsonl` only exists
-      // for legacy v6 imports, never from a fresh v7 flush.
-      const legacyPath = join(deviceDayDir(mockUserDataPath, sampleKeyboard.uid, hash), '..', `${hash}.jsonl`)
-      expect(existsSync(legacyPath)).toBe(false)
+      // Guard against a stray flat `{hash}.jsonl` ever being written
+      // alongside the per-day directory — there is no code path for it
+      // anymore, but the assertion locks the invariant in place.
+      const flatPath = join(deviceDayDir(mockUserDataPath, sampleKeyboard.uid, hash), '..', `${hash}.jsonl`)
+      expect(existsSync(flatPath)).toBe(false)
 
       const rows = await readDayRows(sampleKeyboard.uid, hash, '2026-04-14')
       expect(rows.some((r) => r.kind === 'scope')).toBe(true)

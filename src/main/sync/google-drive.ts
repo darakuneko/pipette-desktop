@@ -170,18 +170,10 @@ export function driveFilenamePrefix(syncUnitPrefix: string): string {
 export function syncUnitFromFileName(fileName: string): string | null {
   // "keyboards_0x1234_devices_{hash}_days_{YYYY-MM-DD}.enc"
   //   → "keyboards/0x1234/devices/{hash}/days/{YYYY-MM-DD}"
-  // Matched first so the trailing `_days_{date}` segment isn't eaten
-  // by the broader v6 `devices_(.+)` pattern below. The day regex
-  // pins to exactly `YYYY-MM-DD` so machineHash strings containing
-  // `_days_...` shaped substrings can't false-match.
+  // The day regex pins to exactly `YYYY-MM-DD` so machineHash strings
+  // containing `_days_...` shaped substrings can't false-match.
   const dayMatch = fileName.match(/^keyboards_(.+?)_devices_(.+?)_days_(\d{4}-\d{2}-\d{2})\.enc$/)
   if (dayMatch) return `keyboards/${dayMatch[1]}/devices/${dayMatch[2]}/days/${dayMatch[3]}`
-
-  // "keyboards_0x1234_devices_{hash}.enc" → "keyboards/0x1234/devices/{hash}"
-  // Matched before the 3-part pattern so machineHash segments with
-  // underscores don't get mis-split by the shorter regex.
-  const deviceMatch = fileName.match(/^keyboards_(.+?)_devices_(.+)\.enc$/)
-  if (deviceMatch) return `keyboards/${deviceMatch[1]}/devices/${deviceMatch[2]}`
 
   // "keyboards_0x1234_settings.enc" → "keyboards/0x1234/settings"
   // "keyboards_0x1234_snapshots.enc" → "keyboards/0x1234/snapshots"

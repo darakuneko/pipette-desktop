@@ -1,27 +1,25 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Persistent pointer-bookkeeping for the typing-analytics JSONL master
-// files. Tracks, per JSONL file, the last row id that has already been
-// applied to the local SQLite cache so subsequent passes only read the
-// tail. See .claude/plans/typing-analytics.md.
+// Persistent bookkeeping for the typing-analytics sync pipeline.
+// Tracks per-keyboard own-hash upload state so the sync pass can tell
+// "never uploaded" apart from "uploaded then remotely deleted", plus a
+// reconcile-pending timestamp per own hash. See
+// .claude/plans/typing-analytics.md.
 
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { readPointerKey } from './jsonl/paths'
 import { isUtcDay, type UtcDay } from './jsonl/utc-day'
 
-/** Current schema version. v1: read_pointers only. v2: adds `uploaded`
- * (per own-hash list of UTC days successfully uploaded to cloud) and
- * `reconciled_at` (timestamp of the last own-hash cloud orphan
- * reconcile, or `null` to force one on the next sync pass). */
-export const SYNC_STATE_REV = 2
+/** Current schema version.
+ *  - v1 / v2: tracked `read_pointers` for the now-removed flat-file
+ *    merge path; v2 added `uploaded` and `reconciled_at`.
+ *  - v3 drops `read_pointers` since per-day bundles are replayed in
+ *    full and the merge layer never consulted the pointer. */
+export const SYNC_STATE_REV = 3
 
 export interface TypingSyncState {
   _rev: typeof SYNC_STATE_REV
   my_device_id: string
-  /** key = `{uid}|{machineHash}`, value = composite id of the last row
-   * applied to the local cache from that file. `null` means "nothing
-   * applied yet" so the next pass reads from the top. */
-  read_pointers: Record<string, string | null>
   /** key = `{uid}|{ownHash}`, value = UTC days this device has uploaded
    * to cloud. Used to distinguish "new day, needs upload" from "day was
    * Sync-deleted remotely, clean local". Only populated for own hashes
@@ -30,9 +28,9 @@ export interface TypingSyncState {
   /** key = `{uid}|{ownHash}`, value = epoch-ms of the last successful
    * own-hash reconcile pass, or `null` when a reconcile is pending
    * (e.g. after a cache rebuild). A missing entry is treated the same
-   * as `null` by the sync pass (pending), so a v1→v2 migration that
-   * leaves this map empty still forces an initial reconcile for every
-   * own hash before the 3 upload rules run. */
+   * as `null` by the sync pass (pending), so an older state that
+   * migrates with an empty map still forces an initial reconcile for
+   * every own hash before the upload rules run. */
   reconciled_at: Record<string, number | null>
   last_synced_at: number
 }
@@ -45,19 +43,10 @@ export function emptySyncState(myDeviceId: string): TypingSyncState {
   return {
     _rev: SYNC_STATE_REV,
     my_device_id: myDeviceId,
-    read_pointers: {},
     uploaded: {},
     reconciled_at: {},
     last_synced_at: 0,
   }
-}
-
-function isPointersRecord(value: unknown): value is Record<string, string | null> {
-  if (typeof value !== 'object' || value === null) return false
-  for (const val of Object.values(value)) {
-    if (val !== null && typeof val !== 'string') return false
-  }
-  return true
 }
 
 function isUploadedRecord(value: unknown): value is Record<string, UtcDay[]> {
@@ -84,7 +73,6 @@ function parseSyncState(raw: unknown): TypingSyncState | null {
   if (typeof raw !== 'object' || raw === null) return null
   const obj = raw as Record<string, unknown>
   if (typeof obj.my_device_id !== 'string') return null
-  if (!isPointersRecord(obj.read_pointers)) return null
   if (typeof obj.last_synced_at !== 'number' || !Number.isFinite(obj.last_synced_at)) return null
 
   if (obj._rev === SYNC_STATE_REV) {
@@ -93,21 +81,32 @@ function parseSyncState(raw: unknown): TypingSyncState | null {
     return {
       _rev: SYNC_STATE_REV,
       my_device_id: obj.my_device_id,
-      read_pointers: obj.read_pointers,
       uploaded: obj.uploaded,
       reconciled_at: obj.reconciled_at,
       last_synced_at: obj.last_synced_at,
     }
   }
-  // v1 → v2: preserve read_pointers and my_device_id, initialise the
-  // new fields empty. Because missing entries in `reconciled_at` are
-  // treated as pending (see field comment), v1 users automatically go
-  // through the initial orphan-reconcile on their first v7 sync pass.
+  // v2 → v3: drop the removed `read_pointers` and keep the upload /
+  // reconcile bookkeeping. Older states forced an initial reconcile via
+  // the empty `reconciled_at` map; that property is preserved here.
+  if (obj._rev === 2) {
+    if (!isUploadedRecord(obj.uploaded)) return null
+    if (!isReconciledAtRecord(obj.reconciled_at)) return null
+    return {
+      _rev: SYNC_STATE_REV,
+      my_device_id: obj.my_device_id,
+      uploaded: obj.uploaded,
+      reconciled_at: obj.reconciled_at,
+      last_synced_at: obj.last_synced_at,
+    }
+  }
+  // v1 → v3: drop `read_pointers` and start with empty upload /
+  // reconcile maps so the first sync pass treats every own hash as
+  // pending reconcile.
   if (obj._rev === 1) {
     return {
       _rev: SYNC_STATE_REV,
       my_device_id: obj.my_device_id,
-      read_pointers: obj.read_pointers,
       uploaded: {},
       reconciled_at: {},
       last_synced_at: obj.last_synced_at,

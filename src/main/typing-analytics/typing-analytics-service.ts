@@ -58,10 +58,7 @@ import {
   type TypingTombstoneResult,
   type PeakRecords,
 } from './db/typing-analytics-db'
-import {
-  typingAnalyticsDeviceDaySyncUnit,
-  typingAnalyticsDeviceSyncUnit,
-} from './sync'
+import { typingAnalyticsDeviceDaySyncUnit } from './sync'
 import { getMachineHash } from './machine-hash'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import {
@@ -84,7 +81,6 @@ import { computeLayoutComparison } from './compute-layout-comparison'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
-  readPointerKey,
 } from './jsonl/paths'
 import { utcDayFromMs, type UtcDay } from './jsonl/utc-day'
 import {
@@ -234,7 +230,7 @@ export function setupTypingAnalyticsIpc(): void {
     },
   )
 
-  // v7 Local / Sync split handlers. The Local tab filters to own hash,
+  // Local / Sync split handlers. The Local tab filters to own hash,
   // the Sync tab iterates remote hashes. Cloud-facing handlers are
   // wired into sync-service so they share the same credential check.
   secureHandle(
@@ -1136,41 +1132,19 @@ function localDayRangeMs(date: string): { startMs: number; endMs: number } | nul
   return { startMs, endMs }
 }
 
-/** Append rows to a JSONL master file, apply them to the cache, and
- * advance the sync-state pointer for (uid, machineHash) to the last row
- * id in this batch. Does NOT save the sync state — callers batch the
- * write so multi-uid flushes hit disk once. */
-async function persistOwnJsonlAt(
-  path: string,
-  uid: string,
-  rows: readonly JsonlRow[],
-  machineHash: string,
-  state: TypingSyncState,
-): Promise<void> {
-  await appendRowsToFile(path, rows)
-  applyRowsToCache(getTypingAnalyticsDB(), rows)
-  const lastId = rows[rows.length - 1]?.id
-  if (lastId) state.read_pointers[readPointerKey(uid, machineHash)] = lastId
-}
-
-/** v7 per-day layout. Multiple days within a single flush must be
- * persisted in ascending chronological order so the pointer lands on
- * the most recent row. */
-function persistOwnJsonlDay(
+/** Append rows to a per-day JSONL master file and replay them into the
+ * local cache. The caller batches `saveSyncState` afterwards so a
+ * multi-uid flush hits disk once. */
+async function persistOwnJsonlDay(
   uid: string,
   utcDay: UtcDay,
   rows: readonly JsonlRow[],
   machineHash: string,
   userDataDir: string,
-  state: TypingSyncState,
 ): Promise<void> {
-  return persistOwnJsonlAt(
-    deviceDayJsonlPath(userDataDir, uid, machineHash, utcDay),
-    uid,
-    rows,
-    machineHash,
-    state,
-  )
+  const path = deviceDayJsonlPath(userDataDir, uid, machineHash, utcDay)
+  await appendRowsToFile(path, rows)
+  applyRowsToCache(getTypingAnalyticsDB(), rows)
 }
 
 /** Delete the local per-day JSONL files covering the requested
@@ -1220,7 +1194,7 @@ export async function deleteTypingDailySummaries(
     result.minuteStats += r.minuteStats
     result.sessions += r.sessions
   }
-  await notifySyncIfTouched(uid, result)
+  await notifySyncIfTouched(uid, result, [...utcDays])
   return result
 }
 
@@ -1232,7 +1206,12 @@ export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTom
   await flushNow({ final: true })
   const machineHash = await getMachineHash()
   const userDataDir = app.getPath('userData')
-  for (const day of await listDeviceDays(userDataDir, uid, machineHash)) {
+  // Snapshot the days *before* unlinking so the post-tombstone notify
+  // can still iterate over them — once the unlink loop has removed every
+  // per-day file, a fresh listDeviceDays would only see the now-empty
+  // directory and return [].
+  const days = await listDeviceDays(userDataDir, uid, machineHash)
+  for (const day of days) {
     try {
       await unlinkOwnDayFile(userDataDir, uid, machineHash, day)
     } catch (err) {
@@ -1242,7 +1221,7 @@ export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTom
   const db = getTypingAnalyticsDB()
   const updatedAt = Date.now()
   const result = db.tombstoneAllRowsForUid(uid, updatedAt)
-  await notifySyncIfTouched(uid, result)
+  await notifySyncIfTouched(uid, result, days)
   return result
 }
 
@@ -1259,14 +1238,24 @@ async function unlinkOwnDayFile(
   }
 }
 
-async function notifySyncIfTouched(uid: string, result: TypingTombstoneResult): Promise<void> {
+/** Emit one per-day sync-unit per affected day so the upload pipeline
+ * picks up the new rows for each `(uid, machineHash, day)` independently.
+ * Caller is responsible for materialising the affected `days` *before*
+ * any unlink so a delete-and-notify flow doesn't lose the day list. */
+async function notifySyncIfTouched(
+  uid: string,
+  result: TypingTombstoneResult,
+  days: readonly UtcDay[],
+): Promise<void> {
   const touched = result.charMinutes + result.matrixMinutes + result.minuteStats + result.sessions
-  if (touched === 0) return
+  if (touched === 0 || days.length === 0) return
   const notifier = syncNotifier
   if (!notifier) return
   try {
     const machineHash = await getMachineHash()
-    notifier(typingAnalyticsDeviceSyncUnit(uid, machineHash))
+    for (const day of days) {
+      notifier(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
+    }
   } catch (err) {
     log('warn', `typing-analytics sync notify failed for ${uid}: ${String(err)}`)
   }
@@ -1416,7 +1405,7 @@ function extractKleKeysFromSnapshot(snapshot: TypingKeymapSnapshot): KleKey[] {
 function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRow[] {
   // appName carries through to every per-minute row so the JSONL master
   // file is the source of truth for app filtering after a cache rebuild.
-  // Older v7 master files predate this field; the readers fall back to
+  // Older master files predate this field; the readers fall back to
   // null on missing.
   const appName = snapshot.appName
   const rows: JsonlRow[] = [
@@ -1665,7 +1654,7 @@ async function doFlushPass(options: { final: boolean }): Promise<void> {
       for (const day of orderedDays) {
         const rows = byDay.get(day)
         if (!rows || rows.length === 0) continue
-        await persistOwnJsonlDay(uid, day, rows, machineHash, userDataDir, state)
+        await persistOwnJsonlDay(uid, day, rows, machineHash, userDataDir)
         writtenDays.push(day)
       }
       if (writtenDays.length === 0) continue

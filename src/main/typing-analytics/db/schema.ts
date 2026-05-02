@@ -49,10 +49,10 @@ CREATE TABLE IF NOT EXISTS typing_char_minute (
   minute_ts INTEGER NOT NULL,
   char TEXT NOT NULL,
   count INTEGER NOT NULL,
-  -- Active application captured at flush time. NULL for v7 rows
-  -- predating Monitor App, for minutes that observed multiple apps,
-  -- and when the lookup failed. App-filtered analytics queries
-  -- compare against this column directly.
+  -- Active application captured at flush time. NULL for rows that
+  -- predate Monitor App, for minutes that observed multiple apps, and
+  -- when the lookup failed. App-filtered analytics queries compare
+  -- against this column directly.
   app_name TEXT,
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,

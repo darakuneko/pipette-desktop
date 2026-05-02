@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Streaming reader for the per-device typing-analytics JSONL files. Takes
-// an optional `afterId` pointer and yields rows that appear strictly
-// after that id, so a call site tracking `read_pointers[deviceId]` only
-// pays for the tail it has not yet imported. A trailing line without a
-// newline terminator is treated as partial (crash-truncated) and
-// skipped — the caller keeps the previous pointer and retries next pass.
+// Streaming reader for the per-device typing-analytics JSONL files.
+// Reads every row in the file by default; an optional `afterId` pointer
+// lets a caller resume from a known row id without re-reading the head.
+// A trailing line without a newline terminator is treated as partial
+// (crash-truncated) and skipped — the caller keeps the previous pointer
+// and retries next pass.
 
 import { createReadStream } from 'node:fs'
 import { open } from 'node:fs/promises'

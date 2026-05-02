@@ -56,7 +56,8 @@ describe('google-drive', () => {
     it('converts keyboard sync units to drive filename', () => {
       expect(driveFileName('keyboards/0x1234/settings')).toBe('keyboards_0x1234_settings.enc')
       expect(driveFileName('keyboards/0x1234/snapshots')).toBe('keyboards_0x1234_snapshots.enc')
-      expect(driveFileName('keyboards/0x1234/devices/hash-abc')).toBe('keyboards_0x1234_devices_hash-abc.enc')
+      expect(driveFileName('keyboards/0x1234/devices/hash-abc/days/2026-04-19'))
+        .toBe('keyboards_0x1234_devices_hash-abc_days_2026-04-19.enc')
     })
   })
 
@@ -74,8 +75,15 @@ describe('google-drive', () => {
       expect(syncUnitFromFileName('keyboards_0x1234_snapshots.enc')).toBe('keyboards/0x1234/snapshots')
     })
 
-    it('parses keyboard device JSONL drive filename to sync unit', () => {
-      expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc.enc')).toBe('keyboards/0x1234/devices/hash-abc')
+    it('parses per-day device JSONL drive filename to sync unit', () => {
+      expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc_days_2026-04-19.enc'))
+        .toBe('keyboards/0x1234/devices/hash-abc/days/2026-04-19')
+    })
+
+    it('returns null for the legacy flat device JSONL filename shape', () => {
+      // The flat `{hash}.enc` form (no `_days_` segment) was retired with
+      // the v7 cutover; it must no longer round-trip into a sync unit.
+      expect(syncUnitFromFileName('keyboards_0x1234_devices_hash-abc.enc')).toBeNull()
     })
 
     it('round-trips the keyboard-meta singleton sync unit', () => {

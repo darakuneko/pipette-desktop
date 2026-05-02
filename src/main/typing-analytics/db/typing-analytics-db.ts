@@ -492,7 +492,7 @@ export class TypingAnalyticsDB {
       WHERE excluded.updated_at > typing_scopes.updated_at
     `)
 
-    // Merge variants pass-through app_name from the LWW winner. v7
+    // Merge variants pass-through app_name from the LWW winner. Older
     // remote payloads predate app_name and arrive without it; the
     // import layer normalizes missing fields to null so the bind
     // parameter is always defined.

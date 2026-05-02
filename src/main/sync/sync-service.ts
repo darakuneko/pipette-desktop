@@ -38,7 +38,6 @@ import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/ty
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
-  parseTypingAnalyticsDeviceSyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
 } from '../typing-analytics/sync'
 import { applyRowsToCache } from '../typing-analytics/jsonl/apply-to-cache'
@@ -46,8 +45,6 @@ import { readRows } from '../typing-analytics/jsonl/jsonl-reader'
 import {
   deviceDayDir,
   deviceDayJsonlPath,
-  deviceJsonlPath,
-  devicesDir,
   listDeviceDays,
   readPointerKey,
 } from '../typing-analytics/jsonl/paths'
@@ -427,7 +424,7 @@ async function uploadSyncUnit(
 
   await uploadFile(targetName, envelope, existing?.id)
 
-  // Post-upload bookkeeping: record a successful cloud upload for v7
+  // Post-upload bookkeeping: record a successful cloud upload for
   // per-day units so the reconcile logic can later distinguish
   // "never uploaded" from "uploaded then remotely deleted".
   const dayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
@@ -455,44 +452,11 @@ async function recordDayUploaded(dayRef: {
   await saveSyncState(userData, state)
 }
 
-/** Write the downloaded v6 flat JSONL to the owning device's local
- * path, then replay only the rows after the previously-applied pointer
- * into the cache DB. Leaves the sync-state file with an updated pointer
- * so the next pass skips already-applied rows. No-op when the unit's
- * machineHash matches our own (our local file is the authoritative copy
- * and will be re-uploaded on the next flush). */
-async function mergeDeviceBundle(
-  remoteBundle: SyncBundle,
-  deviceRef: { uid: string; machineHash: string },
-  userData: string,
-  ownHash: string,
-): Promise<void> {
-  if (deviceRef.machineHash === ownHash) return
-  const data = remoteBundle.files['data.jsonl']
-  if (!data) return
-
-  const localPath = deviceJsonlPath(userData, deviceRef.uid, deviceRef.machineHash)
-  await mkdir(devicesDir(userData, deviceRef.uid), { recursive: true })
-  await writeFile(localPath, data, 'utf-8')
-
-  const state = (await loadSyncState(userData)) ?? emptySyncState(ownHash)
-  const pointerKey = readPointerKey(deviceRef.uid, deviceRef.machineHash)
-  const priorPointer = state.read_pointers[pointerKey] ?? null
-
-  const { rows, lastId } = await readRows(localPath, { afterId: priorPointer })
-  if (rows.length > 0) {
-    applyRowsToCache(getTypingAnalyticsDB(), rows)
-  }
-  state.read_pointers[pointerKey] = lastId
-  state.last_synced_at = Date.now()
-  await saveSyncState(userData, state)
-}
-
-/** Write a downloaded v7 per-day JSONL under the owning device's
- * `{hash}/` directory and apply any rows newer than the pointer. Each
- * day is a distinct file so a partial download of one day does not
- * affect other days for the same remote hash. No-op when the unit's
- * machineHash matches our own. */
+/** Write a downloaded per-day JSONL under the owning device's `{hash}/`
+ * directory and apply every row in the file. Each day is a distinct
+ * file so a partial download of one day does not affect other days for
+ * the same remote hash. No-op when the unit's machineHash matches our
+ * own. */
 async function mergeDeviceDayBundle(
   remoteBundle: SyncBundle,
   dayRef: { uid: string; machineHash: string; utcDay: UtcDay },
@@ -507,12 +471,9 @@ async function mergeDeviceDayBundle(
   await mkdir(deviceDayDir(userData, dayRef.uid, dayRef.machineHash), { recursive: true })
   await writeFile(localPath, data, 'utf-8')
 
-  // Per-day bundles are replayed in full, not against the hash-level
-  // `read_pointers` — the pointer points at whatever day was last
-  // processed for this hash, so fetching an older day afterwards would
-  // see `afterId` already past every row in that file and apply 0
-  // rows. The LWW merge is idempotent, so replaying the whole day is
-  // cheap and correct. `read_pointers` only tracks v6 flat merges.
+  // Per-day bundles are replayed in full. The LWW merge is idempotent,
+  // so re-applying every row in the file is cheap, correct, and avoids
+  // any per-hash `afterId` bookkeeping at the merge layer.
   const { rows } = await readRows(localPath)
   if (rows.length > 0) {
     applyRowsToCache(getTypingAnalyticsDB(), rows)
@@ -548,11 +509,6 @@ async function mergeSyncUnit(
   const dayRef = parseTypingAnalyticsDeviceDaySyncUnit(syncUnit)
   if (dayRef) {
     await mergeDeviceDayBundle(remoteBundle, dayRef, userData, await getMachineHash())
-    return false
-  }
-  const deviceRef = parseTypingAnalyticsDeviceSyncUnit(syncUnit)
-  if (deviceRef) {
-    await mergeDeviceBundle(remoteBundle, deviceRef, userData, await getMachineHash())
     return false
   }
 
@@ -770,8 +726,8 @@ async function executeDownloadSync(
   return failedUnits
 }
 
-/** Scan the remote file list for v7 per-day typing-analytics units
- * owned by `ownHash`, grouped by keyboard uid. Units with a malformed
+/** Scan the remote file list for per-day typing-analytics units owned
+ * by `ownHash`, grouped by keyboard uid. Units with a malformed
  * filename are skipped. */
 function collectRemoteOwnHashDays(
   remoteFiles: DriveFile[],
