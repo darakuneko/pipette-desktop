@@ -11,7 +11,7 @@
 //
 // See `.claude/docs/TESTING-POLICY.md` §7 for the full rationale.
 
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, rmSync, unlinkSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { createHash } from 'node:crypto'
 import nodeMachineId from 'node-machine-id'
@@ -95,9 +95,127 @@ const DUMMY_TA_ALPHA_ROW: Record<string, string> = {
 
 export interface TypingAnalyticsSeedBackup {
   jsonlPath: string
+  /** Per-day jsonl masters seeded for the Ergonomic Learning Curve so the
+   * `analyze-ergonomics-learning` screenshot has multiple weekly buckets to
+   * draw a trend through. Each file holds rows for its own UTC day. */
+  historicalJsonlPaths: string[]
   snapshotPath: string
+  /** Older snapshot used by the Learning Curve capture. Selecting this
+   * snapshot in the Analyze timeline expands the range to
+   * `[olderSavedAt, latestSavedAt)`, which is what brings the historical
+   * matrix-minute rows above into scope. */
+  olderSnapshotPath: string
   syncStatePath: string
   dbPath: string
+}
+
+// --- Historical seed for the Ergonomic Learning Curve view ---
+//
+// The base seed only covers the last 4 hours of "today", so the learning
+// curve always falls into its empty state. Layering 7 weeks of sparse
+// matrix-minute history onto the same scope gives the Learning Curve
+// 7 weekly buckets with a deliberate upward trend (more home-row stay
+// and fewer index-finger collisions over time). The history is gated to
+// the older snapshot's active window so it only appears when the user
+// (or doc-capture) explicitly selects that snapshot — the default
+// "Current keymap" range stays at -4h..now and the other Analyze
+// screenshots see the same data they always have.
+
+const HISTORICAL_WEEKS = 7
+const HISTORICAL_DAY_OFFSETS_PER_WEEK = [0, 2, 4] as const // Mon-ish / Wed-ish / Fri-ish
+const HISTORICAL_KEYSTROKES_PER_DAY = 500
+// Cols 3..10 cover both hands and all 8 non-thumb fingers symmetrically
+// (left pinky/ring/middle/index + right index/middle/ring/pinky), so the
+// hand-balance and finger-load scores are well-defined per bucket.
+const HISTORICAL_COLS = [3, 4, 5, 6, 7, 8, 9, 10] as const
+
+function lerp(weekIdx: number, fromVal: number, toVal: number): number {
+  if (HISTORICAL_WEEKS <= 1) return toVal
+  return fromVal + ((toVal - fromVal) * weekIdx) / (HISTORICAL_WEEKS - 1)
+}
+
+function historicalHomeFraction(weekIdx: number): number {
+  // 0.30 (oldest, top-row dominant) → 0.65 (newest, home-row dominant)
+  return lerp(weekIdx, 0.3, 0.65)
+}
+
+function historicalColWeights(weekIdx: number): number[] {
+  // Index columns (6 = left index, 7 = right index) carry extra weight at
+  // week 0 and equal weight at week 6. Drives a finger-load deviation
+  // improvement from "index-overloaded" to "evenly spread".
+  const indexBoost = lerp(weekIdx, 2, 0)
+  return HISTORICAL_COLS.map((col) => 1 + (col === 6 || col === 7 ? indexBoost : 0))
+}
+
+interface HistoricalCellRow {
+  matrixRow: number
+  col: number
+  count: number
+}
+
+function distributeHistoricalCells(weekIdx: number): HistoricalCellRow[] {
+  const homeTotal = Math.round(HISTORICAL_KEYSTROKES_PER_DAY * historicalHomeFraction(weekIdx))
+  const topTotal = HISTORICAL_KEYSTROKES_PER_DAY - homeTotal
+  const weights = historicalColWeights(weekIdx)
+  const totalWeight = weights.reduce((a, b) => a + b, 0)
+  const out: HistoricalCellRow[] = []
+  HISTORICAL_COLS.forEach((col, i) => {
+    const share = weights[i] / totalWeight
+    for (const [matrixRow, total] of [[2, homeTotal], [1, topTotal]] as const) {
+      const count = Math.round(total * share)
+      if (count > 0) out.push({ matrixRow, col, count })
+    }
+  })
+  return out
+}
+
+function buildScopeRow(machineHash: string, nowMs: number): Record<string, unknown> {
+  return {
+    id: `scope|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}`,
+    kind: 'scope',
+    updated_at: nowMs,
+    payload: {
+      id: DUMMY_TA_SCOPE_ID,
+      machineHash,
+      osPlatform: 'linux',
+      osRelease: '6.8.0-docs',
+      osArch: 'x64',
+      keyboardUid: DUMMY_TA_UID,
+      keyboardVendorId: 0x4153,
+      keyboardProductId: 0x4d47,
+      keyboardProductName: DUMMY_TA_PRODUCT_NAME,
+    },
+  }
+}
+
+const NOON_OFFSET_MS = 12 * 3_600_000
+
+function buildHistoricalDayJsonlContent(machineHash: string, dayMs: number, weekIdx: number, nowMs: number): string {
+  // Match the FK-resolution dance in apply-to-cache: each historical
+  // day file ships its own scope row at the top so the matrix-minute
+  // rows below resolve their FK target even when this file is the
+  // first one ingested in the rebuild order.
+  const minuteTs = Math.floor((dayMs + NOON_OFFSET_MS) / 60_000) * 60_000
+  const matrixRows = distributeHistoricalCells(weekIdx).map((cell) => ({
+    id: `matrix|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}|${cell.matrixRow}|${cell.col}|0`,
+    kind: 'matrix-minute',
+    updated_at: nowMs,
+    payload: {
+      scopeId: DUMMY_TA_SCOPE_ID,
+      minuteTs,
+      row: cell.matrixRow,
+      col: cell.col,
+      layer: 0,
+      keycode: 4 + cell.col,
+      count: cell.count,
+      tapCount: cell.count,
+      holdCount: 0,
+      appName: 'Code',
+    },
+  }))
+  return [buildScopeRow(machineHash, nowMs), ...matrixRows]
+    .map((r) => JSON.stringify(r))
+    .join('\n') + '\n'
 }
 
 function readMachineHashFromSyncState(syncStatePath: string): string | null {
@@ -193,22 +311,7 @@ const DUMMY_TA_BIGRAM_PER_MINUTE: ReadonlyArray<{
 ]
 
 function buildDummyJsonlContent(machineHash: string, nowMs: number): string {
-  const scopeRow = {
-    id: `scope|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}`,
-    kind: 'scope',
-    updated_at: nowMs,
-    payload: {
-      id: DUMMY_TA_SCOPE_ID,
-      machineHash,
-      osPlatform: 'linux',
-      osRelease: '6.8.0-docs',
-      osArch: 'x64',
-      keyboardUid: DUMMY_TA_UID,
-      keyboardVendorId: 0x4153,
-      keyboardProductId: 0x4d47,
-      keyboardProductName: DUMMY_TA_PRODUCT_NAME,
-    },
-  }
+  const scopeRow = buildScopeRow(machineHash, nowMs)
   const sessionRow = {
     id: `session|${encodeURIComponent(DUMMY_TA_SESSION_ID)}`,
     kind: 'session',
@@ -427,31 +530,28 @@ export async function seedDummyTypingAnalytics(
   const machineHash =
     readMachineHashFromSyncState(syncStatePath) ?? (await computeMachineHash(userDataPath))
 
-  const jsonlPath = join(
-    userDataPath,
-    'sync',
-    'keyboards',
-    DUMMY_TA_UID,
-    'devices',
-    machineHash,
-    `${toUtcDate(nowMs)}.jsonl`,
-  )
+  const deviceDir = join(userDataPath, 'sync', 'keyboards', DUMMY_TA_UID, 'devices', machineHash)
+  const keymapsDir = join(userDataPath, 'typing-analytics', 'keymaps', DUMMY_TA_UID, machineHash)
+  const jsonlPath = join(deviceDir, `${toUtcDate(nowMs)}.jsonl`)
   const snapshotSavedAt = nowMs - 4 * 3_600_000
-  const snapshotPath = join(
-    userDataPath,
-    'typing-analytics',
-    'keymaps',
-    DUMMY_TA_UID,
-    machineHash,
-    `${snapshotSavedAt}.json`,
-  )
+  const snapshotPath = join(keymapsDir, `${snapshotSavedAt}.json`)
+  // Older snapshot anchors the Learning Curve range. Selecting it in the
+  // Analyze timeline expands the range to [olderSavedAt, snapshotSavedAt),
+  // bringing the historical matrix-minute rows below into scope. The
+  // 2-day buffer keeps the earliest seeded day well above the range
+  // floor even when the developer's timezone shifts the SQL-derived
+  // `dayMs` (local-midnight of localtime date) by up to ~14 hours.
+  const olderSnapshotSavedAt = nowMs - (HISTORICAL_WEEKS * 7 + 2) * 86400_000
+  const olderSnapshotPath = join(keymapsDir, `${olderSnapshotSavedAt}.json`)
 
-  mkdirSync(join(userDataPath, 'sync', 'keyboards', DUMMY_TA_UID, 'devices', machineHash), {
-    recursive: true,
-  })
-  mkdirSync(join(userDataPath, 'typing-analytics', 'keymaps', DUMMY_TA_UID, machineHash), {
-    recursive: true,
-  })
+  // Idempotency: wipe both dirs before writing so leftover JSONLs / snapshot
+  // JSONs from a prior interrupted run don't shadow the current seed.
+  // Stale snapshots (which `getKeymapSnapshotForRange` picks newest-in-range)
+  // can otherwise carry old layouts and break the Learning Curve render.
+  rmSync(deviceDir, { recursive: true, force: true })
+  rmSync(keymapsDir, { recursive: true, force: true })
+  mkdirSync(deviceDir, { recursive: true })
+  mkdirSync(keymapsDir, { recursive: true })
 
   writeFileSync(jsonlPath, buildDummyJsonlContent(machineHash, nowMs), 'utf-8')
   writeFileSync(
@@ -459,11 +559,40 @@ export async function seedDummyTypingAnalytics(
     JSON.stringify(buildDummyKeymapSnapshot(machineHash, snapshotSavedAt)),
     'utf-8',
   )
+  writeFileSync(
+    olderSnapshotPath,
+    JSON.stringify(buildDummyKeymapSnapshot(machineHash, olderSnapshotSavedAt)),
+    'utf-8',
+  )
+
+  // Per-day historical jsonl masters. Each file holds rows for its own UTC
+  // day, matching the v7 layout the cache rebuild expects. We snap each
+  // bucket to UTC midnight before adding a noon offset inside
+  // `buildHistoricalDayJsonlContent`, so the file name and the minute_ts
+  // it carries always describe the same UTC calendar day.
+  const todayUtcMidnightMs = Math.floor(nowMs / 86400_000) * 86400_000
+  const historicalJsonlPaths: string[] = []
+  for (let weekIdx = 0; weekIdx < HISTORICAL_WEEKS; weekIdx += 1) {
+    const weekStartMs = todayUtcMidnightMs - (HISTORICAL_WEEKS - weekIdx) * 7 * 86400_000
+    for (const dayOffset of HISTORICAL_DAY_OFFSETS_PER_WEEK) {
+      const dayMs = weekStartMs + dayOffset * 86400_000
+      const path = join(deviceDir, `${toUtcDate(dayMs)}.jsonl`)
+      writeFileSync(path, buildHistoricalDayJsonlContent(machineHash, dayMs, weekIdx, nowMs), 'utf-8')
+      historicalJsonlPaths.push(path)
+    }
+  }
 
   // Force ensureCacheIsFresh to rebuild from the JSONL master on next launch.
   try { unlinkSync(syncStatePath) } catch { /* ignore */ }
 
-  return { jsonlPath, snapshotPath, syncStatePath, dbPath }
+  return {
+    jsonlPath,
+    historicalJsonlPaths,
+    snapshotPath,
+    olderSnapshotPath,
+    syncStatePath,
+    dbPath,
+  }
 }
 
 // Delete every file we seeded plus the cache artifacts so the next real
@@ -471,7 +600,15 @@ export async function seedDummyTypingAnalytics(
 // rebuilds a clean DB. Restoring the original DB / sync_state would race
 // against the Electron process's own shutdown writes.
 export function restoreTypingAnalytics(backup: TypingAnalyticsSeedBackup): void {
-  for (const path of [backup.jsonlPath, backup.snapshotPath, backup.syncStatePath, backup.dbPath]) {
+  const paths = [
+    backup.jsonlPath,
+    ...backup.historicalJsonlPaths,
+    backup.snapshotPath,
+    backup.olderSnapshotPath,
+    backup.syncStatePath,
+    backup.dbPath,
+  ]
+  for (const path of paths) {
     try { unlinkSync(path) } catch { /* ignore */ }
   }
 }
