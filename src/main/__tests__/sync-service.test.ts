@@ -97,17 +97,8 @@ vi.mock('../app-config', () => ({
 }))
 
 vi.mock('../typing-analytics/sync', () => ({
-  typingAnalyticsDeviceSyncUnit: (uid: string, machineHash: string) =>
-    `keyboards/${uid}/devices/${machineHash}`,
   typingAnalyticsDeviceDaySyncUnit: (uid: string, machineHash: string, day: string) =>
     `keyboards/${uid}/devices/${machineHash}/days/${day}`,
-  parseTypingAnalyticsDeviceSyncUnit: (syncUnit: string) => {
-    const parts = syncUnit.split('/')
-    if (parts.length !== 4) return null
-    if (parts[0] !== 'keyboards' || parts[2] !== 'devices') return null
-    if (parts[1].length === 0 || parts[3].length === 0) return null
-    return { uid: parts[1], machineHash: parts[3] }
-  },
   parseTypingAnalyticsDeviceDaySyncUnit: (syncUnit: string) => {
     const parts = syncUnit.split('/')
     if (parts.length !== 6) return null
@@ -143,9 +134,8 @@ vi.mock('../typing-analytics/machine-hash', () => ({
 }))
 
 interface MockTypingSyncState {
-  _rev: 2
+  _rev: 3
   my_device_id: string
-  read_pointers: Record<string, string | null>
   uploaded: Record<string, string[]>
   reconciled_at: Record<string, number | null>
   last_synced_at: number
@@ -159,9 +149,8 @@ vi.mock('../typing-analytics/sync-state', () => ({
   loadSyncState: (...args: unknown[]) => mockLoadSyncState(...args as [string]),
   saveSyncState: (...args: unknown[]) => mockSaveSyncState(...args as [string, MockTypingSyncState]),
   emptySyncState: (myDeviceId: string): MockTypingSyncState => ({
-    _rev: 2,
+    _rev: 3,
     my_device_id: myDeviceId,
-    read_pointers: {},
     uploaded: {},
     reconciled_at: {},
     last_synced_at: 0,
@@ -810,76 +799,6 @@ describe('sync-service', () => {
     })
   })
 
-  describe('typing-analytics device merge', () => {
-    const uid = '0xtype'
-    const remoteHash = 'hash-remote'
-    const fileName = `keyboards_${uid}_devices_${remoteHash}.enc`
-    const syncUnit = `keyboards/${uid}/devices/${remoteHash}`
-
-    function makeDeviceEnvelope(dataJsonl: string): Record<string, unknown> {
-      return {
-        version: 1,
-        syncUnit,
-        updatedAt: '2025-01-01T00:00:00.000Z',
-        salt: 's',
-        iv: 'i',
-        ciphertext: JSON.stringify({
-          type: 'typing-analytics-device',
-          key: `${uid}|${remoteHash}`,
-          index: { uid, entries: [] },
-          files: { 'data.jsonl': dataJsonl },
-        }),
-      }
-    }
-
-    it('writes the remote JSONL to disk and replays new rows into the cache', async () => {
-      mockListFiles.mockResolvedValue([
-        { id: 'dev-1', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
-      ])
-      const payload = JSON.stringify({ id: 'x', kind: 'scope', updated_at: 1, payload: {} }) + '\n'
-      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope(payload))
-
-      // Force local uid visibility so scope 'all' keeps the unit (lazy gate).
-      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
-
-      await executeSync('download')
-
-      const written = await readFile(
-        join(mockUserDataPath, 'sync', 'keyboards', uid, 'devices', `${remoteHash}.jsonl`),
-        'utf-8',
-      )
-      expect(written).toBe(payload)
-      expect(mockReadRows).toHaveBeenCalled()
-    })
-
-    it('surfaces cache-apply errors as failedUnits so polling can retry', async () => {
-      const progressEvents: SyncProgress[] = []
-      setProgressCallback((p) => progressEvents.push({ ...p }))
-
-      mockReadRows.mockResolvedValueOnce({
-        rows: [{ id: 'row-1', kind: 'scope', updated_at: 1, payload: {} } as unknown as { id: string }],
-        lastId: 'row-1',
-        partialLineSkipped: false,
-      } as unknown as { rows: never[]; lastId: string | null; partialLineSkipped: boolean })
-      mockApplyRowsToCache.mockImplementationOnce(() => {
-        throw new Error('sqlite schema mismatch')
-      })
-
-      mockListFiles.mockResolvedValue([
-        { id: 'dev-2', name: fileName, modifiedTime: '2025-01-01T00:00:00.000Z' },
-      ])
-      mockDownloadFile.mockResolvedValue(makeDeviceEnvelope('{"id":"row-1","kind":"scope","updated_at":1,"payload":{}}\n'))
-
-      await mkdir(join(mockUserDataPath, 'sync', 'keyboards', uid), { recursive: true })
-
-      await executeSync('download')
-
-      const final = progressEvents[progressEvents.length - 1]
-      expect(final.status).toBe('partial')
-      expect(final.failedUnits).toEqual([syncUnit])
-    })
-  })
-
   describe('settings timestamp NaN handling', () => {
     const uid = 'test-kb'
 
@@ -1344,15 +1263,16 @@ describe('sync-service', () => {
     })
 
     describe('isAnalyticsSyncUnit', () => {
-      it('identifies v7 per-day typing-analytics units', () => {
+      it('identifies per-day typing-analytics units', () => {
         expect(isAnalyticsSyncUnit('keyboards/0x1234/devices/hashabc/days/2026-04-19')).toBe(true)
-        expect(isAnalyticsSyncUnit('keyboards/uid-a/devices/machineHash-xyz')).toBe(true)
       })
 
       it('rejects non-analytics keyboard sub-units', () => {
         expect(isAnalyticsSyncUnit('keyboards/0x1234/settings')).toBe(false)
         expect(isAnalyticsSyncUnit('keyboards/0x1234/snapshots')).toBe(false)
         expect(isAnalyticsSyncUnit('keyboards/0x1234')).toBe(false)
+        // Legacy flat device form (no `/days/...`) is no longer recognised.
+        expect(isAnalyticsSyncUnit('keyboards/uid-a/devices/machineHash-xyz')).toBe(false)
       })
 
       it('rejects unrelated units', () => {
@@ -1922,9 +1842,8 @@ describe('sync-service', () => {
     // --- Reconcile rule 2: uploaded has, local missing → cloud delete ---
     it('reconcile rule 2: drops cloud file when uploaded lists a day but local file is gone', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
         reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
         last_synced_at: 1_000,
@@ -1946,9 +1865,8 @@ describe('sync-service', () => {
     // --- Reconcile rule 3: uploaded has, cloud missing → local unlink ---
     it('reconcile rule 3: unlinks local file when uploaded has the day but cloud does not', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
         reconciled_at: { [pointerKey(OWN_HASH)]: 1_000 },
         last_synced_at: 1_000,
@@ -1971,9 +1889,8 @@ describe('sync-service', () => {
     // --- Reconcile orphan cleanup: first run ---
     it('reconcile orphan: deletes cloud-only days when reconciled_at is pending', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: [] },
         reconciled_at: { [pointerKey(OWN_HASH)]: null },
         last_synced_at: 0,
@@ -1994,9 +1911,8 @@ describe('sync-service', () => {
     // --- Reconcile skip: reconciled_at set ---
     it('reconcile skip: leaves cloud orphans alone once reconciled_at is a timestamp', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: [] },
         reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
         last_synced_at: 5_000,
@@ -2014,9 +1930,8 @@ describe('sync-service', () => {
     // --- Rule 1 new-day upload + uploaded bookkeeping ---
     it('rule 1: uploading a new own-hash day records it into sync_state.uploaded', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: {},
         reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 }, // reconcile already done
         last_synced_at: 5_000,
@@ -2102,9 +2017,8 @@ describe('sync-service', () => {
     // --- Reconcile: remote hashes are not touched ---
     it('reconcile hash-scope: remote device days stay intact (own-hash only)', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: [] },
         reconciled_at: { [pointerKey(OWN_HASH)]: null },
         last_synced_at: 0,
@@ -2122,9 +2036,8 @@ describe('sync-service', () => {
     // --- Same-day re-upload dedup: current day keeps `uploaded` at 1 ---
     it('same-day re-upload: uploaded array stays a single entry across repeated flushes', async () => {
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: {},
         reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
         last_synced_at: 5_000,
@@ -2232,9 +2145,8 @@ describe('sync-service', () => {
       // key. The first upload pass must perform orphan cleanup and then
       // stamp `reconciled_at`.
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: {},
         reconciled_at: {}, // empty map — no key has been reconciled yet
         last_synced_at: 0,
@@ -2258,9 +2170,8 @@ describe('sync-service', () => {
       await writeDayFile('2026-04-17')
       await writeDayFile('2026-04-18')
       mockSyncState = {
-        _rev: 2,
+        _rev: 3,
         my_device_id: OWN_HASH,
-        read_pointers: {},
         uploaded: { [pointerKey(OWN_HASH)]: ['2026-04-17', '2026-04-18'] },
         reconciled_at: { [pointerKey(OWN_HASH)]: 5_000 },
         last_synced_at: 5_000,

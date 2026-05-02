@@ -7,11 +7,9 @@ import { join } from 'node:path'
 import {
   deviceDayDir,
   deviceDayJsonlPath,
-  deviceJsonlPath,
   devicesDir,
   keyboardsRoot,
   listAllDeviceDayJsonlFiles,
-  listAllDeviceJsonlFiles,
   listDeviceDays,
   parseReadPointerKey,
   readPointerKey,
@@ -22,12 +20,6 @@ describe('path helpers', () => {
     expect(keyboardsRoot('/u')).toBe(join('/u', 'sync', 'keyboards'))
     expect(devicesDir('/u', '0xAABB')).toBe(
       join('/u', 'sync', 'keyboards', '0xAABB', 'devices'),
-    )
-  })
-
-  it('composes the per-device jsonl path from uid + machineHash', () => {
-    expect(deviceJsonlPath('/u', '0xAABB', 'hash-a')).toBe(
-      join('/u', 'sync', 'keyboards', '0xAABB', 'devices', 'hash-a.jsonl'),
     )
   })
 })
@@ -42,43 +34,6 @@ describe('readPointerKey / parseReadPointerKey', () => {
     expect(parseReadPointerKey('nopipe')).toBeNull()
     expect(parseReadPointerKey('|missing-uid')).toBeNull()
     expect(parseReadPointerKey('missing-hash|')).toBeNull()
-  })
-})
-
-describe('listAllDeviceJsonlFiles', () => {
-  let tmpDir: string
-
-  beforeEach(() => {
-    tmpDir = mkdtempSync(join(tmpdir(), 'pipette-jsonl-paths-'))
-  })
-
-  afterEach(() => {
-    rmSync(tmpDir, { recursive: true, force: true })
-  })
-
-  it('returns an empty list when the sync tree does not exist', async () => {
-    expect(await listAllDeviceJsonlFiles(tmpDir)).toEqual([])
-  })
-
-  it('returns every {uid}/devices/*.jsonl and ignores non-jsonl entries', async () => {
-    const a = devicesDir(tmpDir, '0xAABB')
-    const b = devicesDir(tmpDir, '0xCCDD')
-    mkdirSync(a, { recursive: true })
-    mkdirSync(b, { recursive: true })
-    writeFileSync(join(a, 'hash-a.jsonl'), '')
-    writeFileSync(join(a, 'hash-b.jsonl'), '')
-    writeFileSync(join(a, 'README.txt'), '')
-    writeFileSync(join(b, 'hash-a.jsonl'), '')
-
-    const refs = await listAllDeviceJsonlFiles(tmpDir)
-    const keys = refs.map((r) => `${r.uid}|${r.machineHash}`).sort()
-    expect(keys).toEqual(['0xAABB|hash-a', '0xAABB|hash-b', '0xCCDD|hash-a'])
-  })
-
-  it('skips uids that have no devices directory', async () => {
-    mkdirSync(join(tmpDir, 'sync', 'keyboards', '0xAABB'), { recursive: true })
-    writeFileSync(join(tmpDir, 'sync', 'keyboards', '0xAABB', 'settings.json'), '{}')
-    expect(await listAllDeviceJsonlFiles(tmpDir)).toEqual([])
   })
 })
 
@@ -151,7 +106,7 @@ describe('listAllDeviceDayJsonlFiles', () => {
     expect(await listAllDeviceDayJsonlFiles(tmpDir)).toEqual([])
   })
 
-  it('scans {uid}/devices/{hash}/{date}.jsonl and ignores v6 flat files', async () => {
+  it('scans {uid}/devices/{hash}/{date}.jsonl and ignores stray non-directory entries', async () => {
     const hashA = deviceDayDir(tmpDir, '0xAABB', 'hash-a')
     const hashB = deviceDayDir(tmpDir, '0xAABB', 'hash-b')
     const hashC = deviceDayDir(tmpDir, '0xCCDD', 'hash-a')
@@ -162,8 +117,9 @@ describe('listAllDeviceDayJsonlFiles', () => {
     writeFileSync(join(hashA, '2026-04-18.jsonl'), '')
     writeFileSync(join(hashB, '2026-04-19.jsonl'), '')
     writeFileSync(join(hashC, '2026-04-19.jsonl'), '')
-    // v6 flat form living alongside — must be ignored by the per-day scan.
-    writeFileSync(join(devicesDir(tmpDir, '0xAABB'), 'legacy.jsonl'), '')
+    // Stray .jsonl directly under devices/ — the scan only descends into
+    // hash directories, so plain files at this level are skipped.
+    writeFileSync(join(devicesDir(tmpDir, '0xAABB'), 'stray.jsonl'), '')
     // Junk files within a hash dir.
     writeFileSync(join(hashA, 'notes.txt'), '')
     writeFileSync(join(hashA, 'garbage.jsonl'), '')

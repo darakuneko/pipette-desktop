@@ -5,14 +5,9 @@
 // user rows, re-reads every master file, and re-applies every row via
 // the LWW merge path. See .claude/plans/typing-analytics.md.
 
-import { unlink } from 'node:fs/promises'
 import { applyRowsToCache } from './jsonl/apply-to-cache'
 import { readRows } from './jsonl/jsonl-reader'
-import {
-  listAllDeviceDayJsonlFiles,
-  listAllDeviceJsonlFiles,
-  readPointerKey,
-} from './jsonl/paths'
+import { listAllDeviceDayJsonlFiles } from './jsonl/paths'
 import { DATA_TABLE_NAMES } from './db/schema'
 import type { TypingAnalyticsDB } from './db/typing-analytics-db'
 import {
@@ -42,24 +37,16 @@ export function truncateCache(db: TypingAnalyticsDB): void {
   })()
 }
 
-/** Read every JSONL master file from disk, apply its rows to `db` in
- * order, and return the new `read_pointers` map plus the number of rows
- * touched in each table. Both the v6 flat layout
- * (`{uid}/devices/{hash}.jsonl`) and the v7 per-day layout
- * (`{uid}/devices/{hash}/{YYYY-MM-DD}.jsonl`) are read so rebuilds
- * survive the transition period. v6 files are applied first; v7 day
- * files are applied in ascending date order afterwards, so for a hash
- * that has both layouts the pointer lands on the latest per-day row.
- * The cache merge is LWW, so file order does not affect row content. */
+/** Read every per-day JSONL master file from disk, apply its rows to
+ * `db`, and return the number of rows touched per table. Per-day files
+ * (`{uid}/devices/{hash}/{YYYY-MM-DD}.jsonl`) are scanned in ascending
+ * date order; the cache merge is LWW so file order does not affect row
+ * content. */
 export async function rebuildCacheFromMasterFiles(
   db: TypingAnalyticsDB,
   userDataDir: string,
-): Promise<{
-  result: CacheRebuildResult
-  pointers: Record<string, string | null>
-}> {
+): Promise<CacheRebuildResult> {
   truncateCache(db)
-  const pointers: Record<string, string | null> = {}
   const result: CacheRebuildResult = {
     scopes: 0,
     charMinutes: 0,
@@ -69,13 +56,8 @@ export async function rebuildCacheFromMasterFiles(
     jsonlFilesRead: 0,
   }
 
-  const applyFile = async (ref: {
-    uid: string
-    machineHash: string
-    path: string
-  }): Promise<void> => {
-    const { rows, lastId } = await readRows(ref.path)
-    pointers[readPointerKey(ref.uid, ref.machineHash)] = lastId
+  const applyFile = async (ref: { path: string }): Promise<void> => {
+    const { rows } = await readRows(ref.path)
     if (rows.length === 0) return
     const applied = applyRowsToCache(db, rows)
     result.scopes += applied.scopes
@@ -86,40 +68,11 @@ export async function rebuildCacheFromMasterFiles(
     result.jsonlFilesRead += 1
   }
 
-  // Scan both layouts in parallel; they walk overlapping trees so the
-  // filesystem cache warms once. Apply serially afterwards because v7
-  // files must run after v6 for a hash that has both, and the cache
-  // merge itself is sequential inside better-sqlite3.
-  const [flatRefs, dayRefs] = await Promise.all([
-    listAllDeviceJsonlFiles(userDataDir),
-    listAllDeviceDayJsonlFiles(userDataDir),
-  ])
-  for (const ref of flatRefs) await applyFile(ref)
-  for (const ref of dayRefs) await applyFile(ref)
-
-  return { result, pointers }
-}
-
-/** Remove any v6 flat JSONL files discovered on disk. Safe to call
- * after rebuildCacheFromMasterFiles because the rows have already
- * been replayed into the cache from both the flat and per-day files.
- * Silently skips files that were already removed between the listing
- * and the unlink (expected on repeated runs). */
-export async function cleanupLegacyFlatMasterFiles(userDataDir: string): Promise<number> {
-  const refs = await listAllDeviceJsonlFiles(userDataDir)
-  let removed = 0
-  for (const ref of refs) {
-    try {
-      await unlink(ref.path)
-      removed += 1
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
-        // Leave unexpected errors for the caller's log/tests to surface.
-        throw err
-      }
-    }
+  for (const ref of await listAllDeviceDayJsonlFiles(userDataDir)) {
+    await applyFile(ref)
   }
-  return removed
+
+  return result
 }
 
 export interface EnsureCacheOptions {
@@ -136,8 +89,8 @@ export interface EnsureCacheOptions {
  *    (user migrated / regenerated `installation-id`).
  *  - `options.force` is true.
  *
- * Returns the fresh sync-state (with updated pointers + timestamp) and
- * a flag indicating whether a rebuild actually ran. */
+ * Returns the fresh sync-state and a flag indicating whether a rebuild
+ * actually ran. */
 export async function ensureCacheIsFresh(
   db: TypingAnalyticsDB,
   userDataDir: string,
@@ -154,19 +107,9 @@ export async function ensureCacheIsFresh(
     return { rebuilt: false, state: existing }
   }
 
-  const { pointers } = await rebuildCacheFromMasterFiles(db, userDataDir)
-  // One-shot v7 migration: per-day files are the canonical master now,
-  // so delete any v6 flat `{hash}.jsonl` files after their rows have
-  // been replayed. Failures are tolerated — the flat files are still
-  // harmless, they just become a leftover the next rebuild will re-read.
-  try {
-    await cleanupLegacyFlatMasterFiles(userDataDir)
-  } catch {
-    /* non-fatal; rerun on next rebuild */
-  }
+  await rebuildCacheFromMasterFiles(db, userDataDir)
   const state: TypingSyncState = {
     ...emptySyncState(myDeviceId),
-    read_pointers: pointers,
     last_synced_at: Date.now(),
   }
   await saveSyncState(userDataDir, state)

@@ -11,8 +11,8 @@ export const JSONL_SCHEMA_VERSION = 1
  * the lookup failed, or the minute observed a mix of apps (the
  * aggregator collapses size>1 sets to null so app-filtered analytics
  * always look at single-app minutes only). Optional on the wire for
- * backward compatibility with v7 master files written before this
- * field existed. */
+ * backward compatibility with master files written before this field
+ * existed. */
 export type AppNameField = string | null
 
 export type JsonlRowKind =
@@ -246,9 +246,10 @@ function isNumericOrNull(p: Record<string, unknown>, key: string): boolean {
   return value === null || (typeof value === 'number' && Number.isFinite(value))
 }
 
-/** appName is optional on the wire (v7 master files predate it). When
- * present it must be string | null; missing is treated the same as
- * null on read. Anything else (number, object, etc.) rejects the row. */
+/** appName is optional on the wire (master files written before the
+ * field was added omit it). When present it must be string | null;
+ * missing is treated the same as null on read. Anything else (number,
+ * object, etc.) rejects the row. */
 function isOptionalAppName(p: Record<string, unknown>): boolean {
   if (!('appName' in p)) return true
   const v = p.appName

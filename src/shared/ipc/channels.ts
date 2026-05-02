@@ -103,7 +103,7 @@ export const IpcChannels = {
   TYPING_ANALYTICS_DELETE_ITEMS: 'typing-analytics:delete-items',
   TYPING_ANALYTICS_DELETE_ALL: 'typing-analytics:delete-all',
   TYPING_ANALYTICS_GET_MATRIX_HEATMAP: 'typing-analytics:get-matrix-heatmap',
-  // v7 Local/Sync split — hash-scoped list and delete
+  // Local/Sync split — hash-scoped list and delete
   TYPING_ANALYTICS_LIST_ITEMS_LOCAL: 'typing-analytics:list-items-local',
   TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL: 'typing-analytics:list-interval-items-local',
   TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL: 'typing-analytics:list-activity-grid-local',

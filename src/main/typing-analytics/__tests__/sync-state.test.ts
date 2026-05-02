@@ -36,7 +36,8 @@ describe('sync-state persistence', () => {
   it('saves and round-trips a state document', async () => {
     const state = {
       ...emptySyncState('hash-self'),
-      read_pointers: { [readPointerKey('0xAABB', 'hash-a')]: 'char|s|60000|a' },
+      uploaded: { [readPointerKey('0xAABB', 'hash-self')]: ['2026-04-17'] },
+      reconciled_at: { [readPointerKey('0xAABB', 'hash-self')]: 1_700_000 },
       last_synced_at: 1_234_567,
     }
     await saveSyncState(tmpDir, state)
@@ -52,7 +53,6 @@ describe('sync-state persistence', () => {
       JSON.stringify({
         _rev: SYNC_STATE_REV + 1,
         my_device_id: 'x',
-        read_pointers: {},
         uploaded: {},
         reconciled_at: {},
         last_synced_at: 0,
@@ -61,7 +61,7 @@ describe('sync-state persistence', () => {
     expect(await loadSyncState(tmpDir)).toBeNull()
   })
 
-  it('migrates a v1 document by preserving pointers and initialising new fields', async () => {
+  it('migrates a v1 document by dropping read_pointers and initialising the new fields', async () => {
     const path = syncStatePath(tmpDir)
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(
@@ -76,14 +76,36 @@ describe('sync-state persistence', () => {
     expect(await loadSyncState(tmpDir)).toEqual({
       _rev: SYNC_STATE_REV,
       my_device_id: 'hash-self',
-      read_pointers: { [readPointerKey('0xAABB', 'hash-a')]: 'char|s|60000|a' },
       uploaded: {},
       reconciled_at: {},
       last_synced_at: 42,
     })
   })
 
-  it('round-trips a v2 document with uploaded + reconciled_at populated', async () => {
+  it('migrates a v2 document by dropping read_pointers and keeping uploaded + reconciled_at', async () => {
+    const path = syncStatePath(tmpDir)
+    mkdirSync(dirname(path), { recursive: true })
+    writeFileSync(
+      path,
+      JSON.stringify({
+        _rev: 2,
+        my_device_id: 'hash-self',
+        read_pointers: { [readPointerKey('0xAABB', 'hash-a')]: 'char|s|60000|a' },
+        uploaded: { [readPointerKey('0xAABB', 'hash-self')]: ['2026-04-17'] },
+        reconciled_at: { [readPointerKey('0xAABB', 'hash-self')]: 1_700_000 },
+        last_synced_at: 99,
+      }),
+    )
+    expect(await loadSyncState(tmpDir)).toEqual({
+      _rev: SYNC_STATE_REV,
+      my_device_id: 'hash-self',
+      uploaded: { [readPointerKey('0xAABB', 'hash-self')]: ['2026-04-17'] },
+      reconciled_at: { [readPointerKey('0xAABB', 'hash-self')]: 1_700_000 },
+      last_synced_at: 99,
+    })
+  })
+
+  it('round-trips a current-rev document with uploaded + reconciled_at populated', async () => {
     const state = {
       ...emptySyncState('hash-self'),
       uploaded: { [readPointerKey('0xAABB', 'hash-self')]: ['2026-04-17', '2026-04-18'] },
@@ -93,7 +115,7 @@ describe('sync-state persistence', () => {
     expect(await loadSyncState(tmpDir)).toEqual(state)
   })
 
-  it('loadSyncState rejects a v2 document with non-ISO dates in uploaded', async () => {
+  it('loadSyncState rejects a document with non-ISO dates in uploaded', async () => {
     const path = syncStatePath(tmpDir)
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(
@@ -101,7 +123,6 @@ describe('sync-state persistence', () => {
       JSON.stringify({
         _rev: SYNC_STATE_REV,
         my_device_id: 'x',
-        read_pointers: {},
         uploaded: { 'k': ['2026/04/17'] },
         reconciled_at: {},
         last_synced_at: 0,
@@ -110,7 +131,7 @@ describe('sync-state persistence', () => {
     expect(await loadSyncState(tmpDir)).toBeNull()
   })
 
-  it('loadSyncState rejects a v2 document with non-finite reconciled_at', async () => {
+  it('loadSyncState rejects a document with non-finite reconciled_at', async () => {
     const path = syncStatePath(tmpDir)
     mkdirSync(dirname(path), { recursive: true })
     writeFileSync(
@@ -118,7 +139,6 @@ describe('sync-state persistence', () => {
       JSON.stringify({
         _rev: SYNC_STATE_REV,
         my_device_id: 'x',
-        read_pointers: {},
         uploaded: {},
         reconciled_at: { 'k': 'not-a-number' },
         last_synced_at: 0,
@@ -135,7 +155,6 @@ describe('sync-state persistence', () => {
       JSON.stringify({
         _rev: SYNC_STATE_REV,
         my_device_id: 'x',
-        read_pointers: {},
         uploaded: {},
         reconciled_at: { 'k': null },
         last_synced_at: 0,

@@ -16,16 +16,13 @@ import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import {
   deviceDayJsonlPath,
-  deviceJsonlPath,
   listDeviceDays,
 } from '../typing-analytics/jsonl/paths'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
-  parseTypingAnalyticsDeviceSyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
-  typingAnalyticsDeviceSyncUnit,
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 
@@ -47,7 +44,7 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
 
-  // Handle "keyboards/{uid}/devices/{hash}/days/{YYYY-MM-DD}" — v7 per-day
+  // Handle "keyboards/{uid}/devices/{hash}/days/{YYYY-MM-DD}" — per-day
   // JSONL master. One bundle per (uid, hash, day), so cloud storage grows
   // as new days are recorded and each day's file is uploaded / deleted
   // independently of the others.
@@ -60,26 +57,6 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
         type: 'typing-analytics-device',
         key: `${dayRef.uid}|${dayRef.machineHash}|${dayRef.utcDay}`,
         index: { uid: dayRef.uid, entries: [] } as SnapshotIndex,
-        files: { 'data.jsonl': content },
-      }
-    } catch {
-      return null
-    }
-  }
-
-  // Handle v6 "keyboards/{uid}/devices/{machineHash}" — flat JSONL master
-  // file. Kept while the v6 mirror write is still in place so existing
-  // remote devices' flat files remain readable. Removed in a later
-  // chunk once sync has fully switched to the per-day form.
-  const deviceRef = parseTypingAnalyticsDeviceSyncUnit(syncUnit)
-  if (deviceRef) {
-    const filePath = deviceJsonlPath(userData, deviceRef.uid, deviceRef.machineHash)
-    try {
-      const content = await readFile(filePath, 'utf-8')
-      return {
-        type: 'typing-analytics-device',
-        key: `${deviceRef.uid}|${deviceRef.machineHash}`,
-        index: { uid: deviceRef.uid, entries: [] } as SnapshotIndex,
         files: { 'data.jsonl': content },
       }
     } catch {
@@ -147,15 +124,14 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   return { type, key, index, files }
 }
 
-/** typing-analytics v6 flat + v7 per-day sync units. Identified
- * through the existing parsers so the shape (including `utcDay`
- * validation for v7) is single-sourced and drifts with the parsers,
- * not with a separate regex. Connect-time initial sync and 3-minute
- * polling skip these; the Analyze panel pulls them on demand via
- * `executeAnalyticsSync`. See `.claude/rules/settings-persistence.md`. */
+/** typing-analytics per-day sync units. Identified through the existing
+ * parser so the shape (including `utcDay` validation) is single-sourced
+ * and drifts with the parser, not with a separate regex. Connect-time
+ * initial sync and 3-minute polling skip these; the Analyze panel pulls
+ * them on demand via `executeAnalyticsSync`. See
+ * `.claude/rules/settings-persistence.md`. */
 export function isAnalyticsSyncUnit(syncUnit: string): boolean {
   return parseTypingAnalyticsDeviceDaySyncUnit(syncUnit) !== null
-      || parseTypingAnalyticsDeviceSyncUnit(syncUnit) !== null
 }
 
 /** Own-hash typing-analytics units for one keyboard. Narrower than
@@ -167,10 +143,6 @@ export async function collectAnalyticsSyncUnitsForUid(uid: string): Promise<stri
   const units: string[] = []
   try {
     const machineHash = await getMachineHash()
-    // v6 flat mirror (harmless no-op when the file is absent — bundle
-    // returns null and the caller skips it). Kept so mixed v6/v7
-    // installs stay uploadable.
-    units.push(typingAnalyticsDeviceSyncUnit(uid, machineHash))
     for (const day of await listDeviceDays(userData, uid, machineHash)) {
       units.push(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
     }
@@ -225,12 +197,9 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     const machineHash = await getMachineHash()
     const typingUids = getTypingAnalyticsDB().listLocalKeyboardUids(machineHash)
     for (const uid of typingUids) {
-      // v6 flat bundle: needed only while the mirror write keeps the
-      // flat file fresh. Dropped together with the mirror.
-      units.push(typingAnalyticsDeviceSyncUnit(uid, machineHash))
-      // v7 per-day bundles: one per day we've recorded against this uid.
+      // Per-day bundles: one per day we've recorded against this uid.
       // listDeviceDays returns an empty list if the per-day directory
-      // doesn't exist yet, so this silently no-ops on a pre-v7 store.
+      // doesn't exist yet, so this silently no-ops on first run.
       for (const day of await listDeviceDays(userData, uid, machineHash)) {
         units.push(typingAnalyticsDeviceDaySyncUnit(uid, machineHash, day))
       }
