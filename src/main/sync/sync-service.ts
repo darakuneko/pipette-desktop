@@ -13,6 +13,7 @@ import {
   uploadFile,
   deleteFile,
   driveFileName,
+  driveFilenamePrefix,
   syncUnitFromFileName,
   type DriveFile,
 } from './google-drive'
@@ -1223,8 +1224,12 @@ export async function executeAnalyticsSync(uid: string): Promise<boolean> {
     if (!credentials.ok) return false
     const password = credentials.password
 
-    const remoteFiles = await listFiles()
+    // Drive-side prefix filter: scope the listing to this keyboard's
+    // analytics files. The in-memory `isAnalyticsSyncUnit` + `startsWith`
+    // checks below remain as a safety net in case Drive ever returns a
+    // looser substring match.
     const prefix = `keyboards/${uid}/devices/`
+    const remoteFiles = await listFiles({ nameContains: driveFilenamePrefix(prefix) })
     let anyFailure = false
     const limit = pLimit(SYNC_CONCURRENCY)
     // Units `mergeWithRemote` already handled — it uploads any

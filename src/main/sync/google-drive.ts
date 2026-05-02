@@ -22,13 +22,29 @@ async function authHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}` }
 }
 
-export async function listFiles(): Promise<DriveFile[]> {
+export interface ListFilesOptions {
+  /** Drive `q` substring filter on the `name` field. The value is wrapped
+   * in single quotes and any embedded quotes are backslash-escaped per the
+   * Drive search-query language. Use it to keep the response narrow when
+   * the caller only cares about a known filename prefix (e.g. analytics
+   * sync only needs files for one keyboard uid).
+   *
+   * Omit (or pass an empty string) to list every file in `appDataFolder`. */
+  nameContains?: string
+}
+
+export async function listFiles(options?: ListFilesOptions): Promise<DriveFile[]> {
   const headers = await authHeaders()
   const params = new URLSearchParams({
     spaces: 'appDataFolder',
     fields: 'files(id, name, modifiedTime)',
     pageSize: '1000',
   })
+  const filter = options?.nameContains
+  if (filter) {
+    const escaped = filter.replace(/'/g, "\\'")
+    params.set('q', `name contains '${escaped}'`)
+  }
 
   const response = await fetch(`${DRIVE_API}/files?${params}`, { headers })
   if (!response.ok) {
@@ -139,7 +155,16 @@ export function driveFileName(syncUnit: string): string {
   // "keyboards/0x1234/settings" -> "keyboards_0x1234_settings.enc"
   // "keyboards/0x1234/snapshots" -> "keyboards_0x1234_snapshots.enc"
   // "keyboards/0x1234/devices/{hash}" -> "keyboards_0x1234_devices_{hash}.enc"
-  return syncUnit.replaceAll('/', '_') + '.enc'
+  return driveFilenamePrefix(syncUnit) + '.enc'
+}
+
+/** Drive filename prefix for a given sync-unit path prefix (no `.enc`
+ * suffix). Pair with `listFiles({ nameContains })` so a single sync-unit
+ * subtree is the only thing returned by the Drive listing. Shares its
+ * encoding with `driveFileName` so the two stay in lockstep if the
+ * filename scheme ever changes. */
+export function driveFilenamePrefix(syncUnitPrefix: string): string {
+  return syncUnitPrefix.replaceAll('/', '_')
 }
 
 export function syncUnitFromFileName(fileName: string): string | null {
