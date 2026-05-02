@@ -76,6 +76,18 @@ export function KeyLabelsModal({
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   /**
+   * Per-row inline status message ("Saved" / "Uploaded" / "Updated" /
+   * "Removed" or the localized error). Mirrors the FavoriteHubActions /
+   * LayoutStoreHubActions feedback so the user sees confirmation right
+   * under the affected row instead of hunting for a toast. Cleared at
+   * the start of the next operation.
+   */
+  const [lastResult, setLastResult] = useState<{
+    id: string
+    kind: 'success' | 'error'
+    message: string
+  } | null>(null)
+  /**
    * Optional override for the installed-row order. While the user is
    * dragging we manipulate this list directly; on drop we persist it
    * via `useKeyLabels.reorder` and clear the override so subsequent
@@ -167,8 +179,15 @@ export function KeyLabelsModal({
 
   const handleImport = useCallback(async () => {
     setActionError(null)
+    setLastResult(null)
     const res = await labels.importFromFile()
-    if (!res.success && res.error && res.error !== 'cancelled') {
+    if (res.success && res.data) {
+      // The store returns the (possibly overwritten) entry meta —
+      // anchor the inline "Saved" badge on whatever id ended up on
+      // disk so a re-import of the same name lights up the existing
+      // row instead of orphaning the message.
+      setLastResult({ id: res.data.id, kind: 'success', message: t('common.saved') })
+    } else if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
   }, [labels, t])
@@ -176,12 +195,25 @@ export function KeyLabelsModal({
   const runWithPending = useCallback(async (
     id: string,
     op: () => Promise<{ success: boolean; errorCode?: string; error?: string }>,
+    /** i18n key for the inline success badge under the row. */
+    successKey?: string,
+    /** i18n key used when no `error` string was returned by the op. */
+    failKey?: string,
   ): Promise<void> => {
     setPendingId(id)
     setActionError(null)
+    setLastResult(null)
     try {
       const res = await op()
-      if (!res.success) setActionError(translateError(t, res.errorCode, res.error))
+      if (res.success) {
+        if (successKey) {
+          setLastResult({ id, kind: 'success', message: t(successKey) })
+        }
+      } else {
+        const message = translateError(t, res.errorCode, res.error)
+          || (failKey ? t(failKey) : t('keyLabels.errorGeneric'))
+        setLastResult({ id, kind: 'error', message })
+      }
     } finally {
       setPendingId(null)
     }
@@ -321,18 +353,21 @@ export function KeyLabelsModal({
               setConfirmDeleteId={setConfirmDeleteId}
               confirmRemoveId={confirmRemoveId}
               setConfirmRemoveId={setConfirmRemoveId}
+              lastResult={lastResult}
               rename={rename}
               currentDisplayName={currentDisplayName}
               hubCanWrite={hubCanWrite}
               onRenameKey={handleRenameKey}
               onRenameCommit={handleRenameCommit}
-              onUpload={(id) => runWithPending(id, () => labels.hubUpload(id))}
-              onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id))}
+              onUpload={(id) => runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed')}
+              onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed')}
               onRemove={async (id) => {
-                await runWithPending(id, () => labels.hubDelete(id))
+                await runWithPending(id, () => labels.hubDelete(id), 'hub.removeSuccess', 'hub.removeFailed')
                 setConfirmRemoveId(null)
               }}
               onDelete={async (id) => {
+                // No success badge for Delete — the row tombstones away
+                // immediately, leaving the badge nowhere to render.
                 await runWithPending(id, () => labels.remove(id))
                 setConfirmDeleteId(null)
               }}
@@ -349,7 +384,11 @@ export function KeyLabelsModal({
               pendingId={pendingId}
               hubOrigin={hubOrigin}
               onDownload={(hubPostId) =>
-                runWithPending(hubPostId, () => labels.hubDownload(hubPostId))
+                // The download IPC saves the entry locally with id =
+                // hubPostId, so anchoring the badge on the same id
+                // surfaces a "Saved" badge under the new row when the
+                // user flips back to the Installed tab.
+                runWithPending(hubPostId, () => labels.hubDownload(hubPostId), 'common.saved')
               }
             />
           )}
@@ -404,6 +443,7 @@ interface InstalledTableProps {
   setConfirmDeleteId: (id: string | null) => void
   confirmRemoveId: string | null
   setConfirmRemoveId: (id: string | null) => void
+  lastResult: { id: string; kind: 'success' | 'error'; message: string } | null
   rename: ReturnType<typeof useInlineRename<string>>
   currentDisplayName: string | null
   hubCanWrite: boolean
@@ -448,6 +488,7 @@ function InstalledRowView({
   setConfirmDeleteId,
   confirmRemoveId,
   setConfirmRemoveId,
+  lastResult,
   rename,
   currentDisplayName,
   hubCanWrite,
@@ -564,9 +605,16 @@ function InstalledRowView({
         </div>
         {showHubLine ? (
           <div
-            className="mt-2 flex justify-end pr-1"
+            className="mt-2 flex items-center gap-3 pr-1"
             data-testid={`key-labels-hub-row-${row.localId}`}
           >
+            {/* Left slot is always present (even when the badge is
+                null) so HubLineActions stays anchored to the right
+                edge. Without `flex-1` here a foreign-download row
+                with only the Open link would collapse left. */}
+            <span className="flex-1 min-w-0">
+              <ResultBadge result={lastResult} rowId={row.localId} />
+            </span>
             <HubLineActions
               localId={row.localId}
               hubPostUrl={hubPostUrl}
@@ -586,12 +634,38 @@ function InstalledRowView({
             />
           </div>
         ) : (
-          // QWERTY (and any other no-action rows) gets a spacer so the
-          // card height matches the rows that do have a Hub line.
-          <div className="mt-2 h-[18px]" aria-hidden="true" />
+          // QWERTY (and any other no-action rows): keep the spacer so
+          // the card height matches Hub-aware rows, and surface the
+          // result badge on the left edge when one applies.
+          <div className="mt-2 flex h-[18px] items-center pr-1">
+            <ResultBadge result={lastResult} rowId={row.localId} />
+          </div>
         )}
       </div>
     </div>
+  )
+}
+
+interface ResultBadgeProps {
+  result: { id: string; kind: 'success' | 'error'; message: string } | null
+  rowId: string
+}
+
+/**
+ * Inline confirmation badge: "Saved" / "Uploaded" / "Updated" /
+ * "Removed" or the localized error message after a Hub or local
+ * mutation completes. Mirrors the favorite/layout-store hub-result
+ * pill so feedback is consistent across stores.
+ */
+function ResultBadge({ result, rowId }: ResultBadgeProps): JSX.Element | null {
+  if (!result || result.id !== rowId) return null
+  return (
+    <span
+      className={`text-[11px] font-medium ${result.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+      data-testid={`key-labels-result-${rowId}`}
+    >
+      {result.message}
+    </span>
   )
 }
 

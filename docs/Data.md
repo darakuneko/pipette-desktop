@@ -129,6 +129,30 @@ Reusable configurations that work across any keyboard. Individual entries can be
 
 Each favorite entry may have an associated `hubPostId` if it has been uploaded to Hub. Renaming a Hub-uploaded favorite also updates its title on Hub.
 
+### Key Labels
+
+Maps QMK keycode ids to keycap legends used by the Keymap Editor, the Keycodes Overlay Panel, the Settings → Defaults dropdown, and the Layout Comparison view. QWERTY ships built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported as a `.json` file. The store is shared across keyboards (it survives Reset Keyboard Data) and syncs entry-by-entry across machines.
+
+A Key Label `.json` is a small JSON object:
+
+```json
+{
+  "name": "Brazilian (QWERTY)",
+  "map": { "KC_2": "2\n@", "KC_QUOT": "ç", "KC_GRAVE": "KC_LALT" },
+  "compositeLabels": { "LSFT(KC_2)": "@", "LALT(KC_L)": "KC_LALT" }
+}
+```
+
+| Field | Required | Purpose |
+|------|:--:|---------|
+| `name` | Yes | Display name and uniqueness key for overwrite-on-import |
+| `map` | Yes | `QMK keycode id → label string`. Lines are split on `\n` to control the cap layout (1 = centred, 2 = stacked, 3 = three slices, 4 = 2 × 2 quadrants). Empty parts leave a slot blank |
+| `compositeLabels` | No | Overrides for composite keycodes (e.g. `LT(0,KC_A)`, `LSFT(KC_2)`). Composite caps render the inner key in an inset rectangle, so only the first two `\n` parts of the outer label are honoured |
+
+Values may also be plain QMK keycode ids (e.g. `"LALT(KC_L)": "KC_LALT"`). The editor runs the value through `keycodeLabel()` before display, so a keycode-id value resolves to that keycode's canonical legend automatically.
+
+See `docs/OPERATION-GUIDE.md` §6.2 for the full authoring guide and the modal walkthrough.
+
 ### Typing Test Language Packs
 
 Word lists downloaded from the server for the typing test. Can be managed (download / delete) from the typing test language selector.

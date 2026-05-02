@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { keycodeLabel } from '../../../shared/keycodes/keycodes'
 import type { Keycode } from '../../../shared/keycodes/keycodes'
 import type { SplitKeyMode } from '../../../shared/types/app-config'
 import { KeycodeButton } from './KeycodeButton'
@@ -24,7 +25,14 @@ interface Props {
 export function getRemapDisplayLabel(qmkId: string, remapLabel?: (qmkId: string) => string): string | undefined {
   if (!remapLabel) return undefined
   const remapped = remapLabel(qmkId)
-  return remapped !== qmkId ? remapped : undefined
+  if (remapped === qmkId) return undefined
+  // Pass the remapped value through `keycodeLabel()` so that a label
+  // expressed as another keycode id (e.g. `"KC_GRAVE": "KC_LALT"`)
+  // resolves to the canonical legend ("LAlt") in the picker — same as
+  // the main KeymapEditor's KeyWidget already does. `keycodeLabel`
+  // returns its input unchanged for non-keycode strings, so multi-line
+  // literals like `"(\n8"` and arbitrary text pass straight through.
+  return keycodeLabel(remapped)
 }
 
 /** Compute remap display props for a split key's base keycode */
