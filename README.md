@@ -16,6 +16,25 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
 
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Operation Guide](#operation-guide)
+- [Platform Setup](#platform-setup)
+  - [Linux](#linux)
+  - [macOS](#macos)
+- [Features](#features)
+- [Setup](#setup)
+- [Development](#development)
+- [Build & Distribution](#build--distribution)
+- [Architecture](#architecture)
+- [Data & Privacy](#data--privacy)
+- [Donate](#donate)
+- [Contributing](#contributing)
+- [Acknowledgments](#acknowledgments)
+- [License](#license)
+
 ## Installation
 
 Download the latest release for your platform:
@@ -29,7 +48,22 @@ Download the latest release for your platform:
 - **Linux (x86_64 AppImage)**  
   https://github.com/darakuneko/pipette-desktop/releases/latest/download/Pipette-linux-x86_64.AppImage
 
----
+## Usage
+
+### Quick Start
+
+1.  Connect your Vial-compatible keyboard via USB.
+2.  Launch Pipette.
+3.  The keyboard will be detected automatically.
+4.  Select a layer and start editing key assignments.
+
+## Operation Guide
+
+For complete instructions with screenshots:
+
+-   [Operation Guide](docs/OPERATION-GUIDE.md)
+
+## Platform Setup
 
 ### Linux
 
@@ -99,22 +133,6 @@ Community-maintained packages may exist, but they are not officially supported.
 The typing-view Monitor App toggle requires the **Accessibility** permission on macOS to resolve the foreground application name. Grant access in **System Settings → Privacy & Security → Accessibility** and add Pipette Desktop to the allowed list.
 
 Without this permission, Monitor App silently records `null` for every minute on macOS — keystroke counts still flow to the analytics, but per-app breakdowns are unavailable.
-
-## Usage
-
-### Quick Start
-
-1.  Connect your Vial-compatible keyboard via USB.
-2.  Launch Pipette.
-3.  The keyboard will be detected automatically.
-4.  Select a layer and start editing key assignments.
-
-### Detailed Guide
-
-For complete instructions with screenshots:
-
--   [Operation Guide](docs/OPERATION-GUIDE.md)
-
 
 ## Features
 

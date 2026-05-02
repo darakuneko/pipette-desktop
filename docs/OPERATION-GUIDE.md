@@ -7,6 +7,61 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
 
 ---
 
+## Table of Contents
+
+- [1. Device Connection](#1-device-connection)
+  - [1.1 Device Selection Screen](#11-device-selection-screen)
+  - [1.2 Connecting a Keyboard](#12-connecting-a-keyboard)
+  - [1.3 Data](#13-data)
+  - [1.4 Analyze](#14-analyze)
+- [2. Keymap Editor](#2-keymap-editor)
+  - [2.1 Screen Layout](#21-screen-layout)
+  - [2.2 Changing Keys](#22-changing-keys)
+  - [2.3 Layer Switching](#23-layer-switching)
+  - [2.4 Key Popover](#24-key-popover)
+  - [2.5 Layout Options](#25-layout-options)
+- [3. Keycode Palette](#3-keycode-palette)
+  - [3.1 Basic](#31-basic)
+  - [3.2 Layers](#32-layers)
+  - [3.3 Modifiers](#33-modifiers)
+  - [3.4 System](#34-system)
+  - [3.5 Lighting](#35-lighting)
+  - [3.6 Tap-Hold / Tap Dance](#36-tap-hold--tap-dance)
+  - [3.7 Macro](#37-macro)
+  - [3.8 Combo](#38-combo)
+  - [3.9 Key Override](#39-key-override)
+  - [3.10 Alt Repeat Key](#310-alt-repeat-key)
+  - [3.11 Behavior](#311-behavior)
+  - [3.12 User](#312-user)
+  - [3.13 Keyboard (Device Picker)](#313-keyboard-device-picker)
+  - [3.14 Keycodes Overlay Panel](#314-keycodes-overlay-panel)
+- [4. Toolbar](#4-toolbar)
+  - [4.1 Zoom](#41-zoom)
+  - [4.2 Undo / Redo (Keymap History)](#42-undo--redo-keymap-history)
+  - [4.3 Typing Test](#43-typing-test)
+- [5. Detail Setting Editors](#5-detail-setting-editors)
+  - [5.1 Lighting Settings](#51-lighting-settings)
+  - [5.2 Combo](#52-combo)
+  - [5.3 Key Override](#53-key-override)
+  - [5.4 Alt Repeat Key](#54-alt-repeat-key)
+  - [5.5 Favorites](#55-favorites)
+  - [5.6 JSON Editor](#56-json-editor)
+- [6. Editor Settings Panel](#6-editor-settings-panel)
+  - [6.1 Cloud Sync (Google Drive appDataFolder)](#61-cloud-sync-google-drive-appdatafolder)
+  - [6.2 Key Labels Manage](#62-key-labels-manage)
+- [7. Pipette Hub](#7-pipette-hub)
+  - [7.1 Hub Setup](#71-hub-setup)
+  - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
+  - [7.3 Uploading Favorite Entries](#73-uploading-favorite-entries)
+  - [7.4 Hub Website](#74-hub-website)
+- [8. Modal Interactions](#8-modal-interactions)
+  - [Escape to Close](#escape-to-close)
+  - [Unlock Dialog Protection](#unlock-dialog-protection)
+  - [Escape Suppression During Busy Flows](#escape-suppression-during-busy-flows)
+- [9. Status Bar](#9-status-bar)
+
+---
+
 ## 1. Device Connection
 
 ### 1.1 Device Selection Screen
