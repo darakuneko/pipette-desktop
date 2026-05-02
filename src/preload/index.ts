@@ -12,6 +12,8 @@ import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/type
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
+import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../shared/types/key-label-store'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from '../shared/types/hub-key-label'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
@@ -226,6 +228,42 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT),
   favoriteStoreImportToCurrent: (scope: string): Promise<{ success: boolean; data?: unknown; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_IMPORT_TO_CURRENT, scope),
+
+  // --- Key Label Store (local) ---
+  keyLabelStoreList: (): Promise<KeyLabelStoreResult<KeyLabelMeta[]>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_LIST),
+  keyLabelStoreListAll: (): Promise<KeyLabelStoreResult<KeyLabelMeta[]>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_LIST_ALL),
+  keyLabelStoreGet: (id: string): Promise<KeyLabelStoreResult<KeyLabelRecord>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_GET, id),
+  keyLabelStoreRename: (id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_RENAME, id, newName),
+  keyLabelStoreDelete: (id: string): Promise<KeyLabelStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_DELETE, id),
+  keyLabelStoreImport: (): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_IMPORT),
+  keyLabelStoreExport: (id: string): Promise<KeyLabelStoreResult<{ filePath: string }>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_EXPORT, id),
+  keyLabelStoreReorder: (orderedIds: string[]): Promise<KeyLabelStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_REORDER, orderedIds),
+  keyLabelStoreSetHubPostId: (id: string, hubPostId: string | null): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_SET_HUB_POST_ID, id, hubPostId),
+  keyLabelStoreHasName: (name: string, excludeId?: string): Promise<KeyLabelStoreResult<boolean>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_HAS_NAME, name, excludeId),
+
+  // --- Key Label Hub ---
+  keyLabelHubList: (params?: HubKeyLabelListParams): Promise<KeyLabelStoreResult<HubKeyLabelListResponse>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_LIST, params),
+  keyLabelHubDetail: (hubPostId: string): Promise<KeyLabelStoreResult<HubKeyLabelItem>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_DETAIL, hubPostId),
+  keyLabelHubDownload: (hubPostId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_DOWNLOAD, hubPostId),
+  keyLabelHubUpload: (localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_UPLOAD, localId),
+  keyLabelHubUpdate: (localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_UPDATE, localId),
+  keyLabelHubDelete: (localId: string): Promise<KeyLabelStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_DELETE, localId),
 
   // --- Pipette Settings Store (internal save/load via IPC) ---
   pipetteSettingsGet: (uid: string): Promise<PipetteSettings | null> =>

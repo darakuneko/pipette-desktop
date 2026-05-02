@@ -16,6 +16,8 @@ import type {
 import type { SnapshotMeta } from './snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
+import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from './key-label-store'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from './hub-key-label'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
@@ -153,6 +155,26 @@ export interface VialAPI {
   favoriteStoreExportCurrent(scope: string, vialProtocol: number, data: string): Promise<{ success: boolean; error?: string }>
   favoriteStoreImport(): Promise<FavoriteImportResult>
   favoriteStoreImportToCurrent(scope: string): Promise<{ success: boolean; data?: unknown; error?: string }>
+
+  // Key Label Store (local)
+  keyLabelStoreList(): Promise<KeyLabelStoreResult<KeyLabelMeta[]>>
+  keyLabelStoreListAll(): Promise<KeyLabelStoreResult<KeyLabelMeta[]>>
+  keyLabelStoreGet(id: string): Promise<KeyLabelStoreResult<KeyLabelRecord>>
+  keyLabelStoreRename(id: string, newName: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelStoreDelete(id: string): Promise<KeyLabelStoreResult<void>>
+  keyLabelStoreImport(): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelStoreExport(id: string): Promise<KeyLabelStoreResult<{ filePath: string }>>
+  keyLabelStoreReorder(orderedIds: string[]): Promise<KeyLabelStoreResult<void>>
+  keyLabelStoreSetHubPostId(id: string, hubPostId: string | null): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelStoreHasName(name: string, excludeId?: string): Promise<KeyLabelStoreResult<boolean>>
+
+  // Key Label Hub
+  keyLabelHubList(params?: HubKeyLabelListParams): Promise<KeyLabelStoreResult<HubKeyLabelListResponse>>
+  keyLabelHubDetail(hubPostId: string): Promise<KeyLabelStoreResult<HubKeyLabelItem>>
+  keyLabelHubDownload(hubPostId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelHubUpload(localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelHubUpdate(localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelHubDelete(localId: string): Promise<KeyLabelStoreResult<void>>
 
   // Pipette Settings Store
   pipetteSettingsGet(uid: string): Promise<PipetteSettings | null>

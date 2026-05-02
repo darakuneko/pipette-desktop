@@ -6,6 +6,31 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { KeycodesOverlayPanel } from '../KeycodesOverlayPanel'
 import { KEYBOARD_LAYOUTS } from '../../../data/keyboard-layouts'
 
+// Stub useKeyLabels so the layout dropdown sees the legacy ids
+// synchronously (no async refresh wait needed in these unit tests).
+vi.mock('../../../hooks/useKeyLabels', () => ({
+  useKeyLabels: () => ({
+    metas: [
+      { id: 'dvorak', name: 'Dvorak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+      { id: 'colemak', name: 'Colemak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+      { id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+    ],
+    loading: false,
+    error: null,
+    refresh: async () => {},
+    importFromFile: async () => ({ success: true }),
+    exportEntry: async () => ({ success: true }),
+    reorder: async () => ({ success: true }),
+    rename: async () => ({ success: true }),
+    remove: async () => ({ success: true }),
+    hubSearch: async () => ({ success: true, data: { items: [], total: 0, page: 1, per_page: 20 } }),
+    hubDownload: async () => ({ success: true }),
+    hubUpload: async () => ({ success: true }),
+    hubUpdate: async () => ({ success: true }),
+    hubDelete: async () => ({ success: true }),
+  }),
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string) => {
@@ -114,7 +139,9 @@ describe('KeycodesOverlayPanel', () => {
 
     const selector = screen.getByTestId('overlay-layout-selector')
     const options = selector.querySelectorAll('option')
-    expect(options.length).toBe(KEYBOARD_LAYOUTS.length)
+    // Built-in QWERTY + the three stub Key Label entries from the
+    // useKeyLabels mock above.
+    expect(options.length).toBe(KEYBOARD_LAYOUTS.length + 3)
   })
 
   it('calls onKeyboardLayoutChange when layout is changed', () => {

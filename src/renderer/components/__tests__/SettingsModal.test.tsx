@@ -34,6 +34,31 @@ vi.mock('../../hooks/useAppConfig', () => ({
 
 vi.mock('../../assets/app-icon.png', () => ({ default: 'test-app-icon.png' }))
 
+// Stub useKeyLabels so the layout dropdown surfaces the legacy ids
+// synchronously — the layout-change test still selects 'dvorak'.
+vi.mock('../../hooks/useKeyLabels', () => ({
+  useKeyLabels: () => ({
+    metas: [
+      { id: 'dvorak', name: 'Dvorak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+      { id: 'colemak', name: 'Colemak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+      { id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+    ],
+    loading: false,
+    error: null,
+    refresh: async () => {},
+    importFromFile: async () => ({ success: true }),
+    exportEntry: async () => ({ success: true }),
+    reorder: async () => ({ success: true }),
+    rename: async () => ({ success: true }),
+    remove: async () => ({ success: true }),
+    hubSearch: async () => ({ success: true, data: { items: [], total: 0, page: 1, per_page: 20 } }),
+    hubDownload: async () => ({ success: true }),
+    hubUpload: async () => ({ success: true }),
+    hubUpdate: async () => ({ success: true }),
+    hubDelete: async () => ({ success: true }),
+  }),
+}))
+
 vi.mock('../editors/ModalCloseButton', () => ({
   ModalCloseButton: ({ testid, onClick }: { testid: string; onClick: () => void }) => (
     <button data-testid={testid} onClick={onClick}>close</button>
@@ -42,10 +67,20 @@ vi.mock('../editors/ModalCloseButton', () => ({
 
 const mockOpenExternal = vi.fn().mockResolvedValue(undefined)
 const mockNotificationFetch = vi.fn().mockResolvedValue({ success: true, notifications: [] })
+// `useKeyLabels` (used by SettingsToolsTab to populate the layout
+// dropdown) calls `keyLabelStoreList` on mount. Stub it so the dropdown
+// can offer the legacy ids the layout-change test still selects.
+const KEY_LABEL_LIST_STUB = [
+  { id: 'dvorak', name: 'Dvorak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+  { id: 'colemak', name: 'Colemak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+  { id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
+]
 Object.defineProperty(window, 'vialAPI', {
   value: {
     openExternal: mockOpenExternal,
     notificationFetch: mockNotificationFetch,
+    keyLabelStoreList: async () => ({ success: true, data: KEY_LABEL_LIST_STUB }),
+    keyLabelStoreGet: async () => ({ success: false, errorCode: 'NOT_FOUND' }),
   },
   writable: true,
 })

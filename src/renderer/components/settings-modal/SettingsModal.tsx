@@ -40,6 +40,7 @@ export function SettingsModal({
   onHubEnabledChange,
   hubAuthenticated,
   hubDisplayName,
+  hubCanUpload = false,
   onHubDisplayNameChange,
   hubAuthConflict,
   onResolveAuthConflict,
@@ -108,6 +109,8 @@ export function SettingsModal({
               onAutoLockTimeChange={onAutoLockTimeChange}
               maxKeymapHistory={maxKeymapHistory}
               onMaxKeymapHistoryChange={onMaxKeymapHistoryChange}
+              hubDisplayName={hubDisplayName}
+              hubCanWrite={hubCanUpload}
             />
           )}
           {activeTab === 'data' && (

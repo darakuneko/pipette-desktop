@@ -22,7 +22,38 @@ import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
 import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
 import { buildCsv } from '../../../shared/csv-export'
-import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
+import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
+
+/**
+ * Async resolver that prefers the built-in `KEYBOARD_LAYOUTS` map and
+ * falls back to the local Key Label store via IPC. Returns `null`
+ * when neither side has the id (the caller writes an empty CSV).
+ */
+async function resolveComparisonInput(
+  id: string,
+): Promise<{ id: string; map: Record<string, string> } | null> {
+  const builtin = LAYOUT_BY_ID.get(id)
+  if (builtin) return { id: builtin.id, map: builtin.map }
+  try {
+    const result = await window.vialAPI.keyLabelStoreGet(id)
+    if (result.success && result.data) return { id, map: result.data.data.map }
+  } catch {
+    // fall through
+  }
+  return null
+}
+
+async function resolveLayoutLabel(id: string): Promise<string> {
+  const builtin = LAYOUT_BY_ID.get(id)
+  if (builtin) return builtin.name
+  try {
+    const result = await window.vialAPI.keyLabelStoreGet(id)
+    if (result.success && result.data) return result.data.data.name
+  } catch {
+    // fall through
+  }
+  return id
+}
 import {
   fetchBigramAggregateForRange,
   fetchLayoutComparisonForRange,
@@ -390,8 +421,10 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
 }): Promise<CsvBundleEntry> {
   const { uid, range, deviceScope, appScopes = [], sourceLayoutId, targetLayoutId, t } = args
   const header = ['layout_id', 'layout_label', 'metric', 'key', 'label', 'value']
-  const source = pickLayoutComparisonInput(sourceLayoutId)
-  const target = pickLayoutComparisonInput(targetLayoutId)
+  const [source, target] = await Promise.all([
+    resolveComparisonInput(sourceLayoutId),
+    resolveComparisonInput(targetLayoutId),
+  ])
   if (!source || !target) {
     return { slug: SLUG.layoutComparison, content: buildCsv(header, []) }
   }
@@ -400,8 +433,15 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
   }, appScopes).catch(() => null)
 
   const rows: unknown[][] = []
+  // Resolve display labels up front; downloaded entries hit the
+  // Key Label store via IPC, so caching the label here avoids a
+  // duplicate fetch per row inside the loop.
+  const labelCache = new Map<string, string>()
   for (const targetResult of result?.targets ?? []) {
-    const layoutLabel = LAYOUT_BY_ID.get(targetResult.layoutId)?.name ?? targetResult.layoutId
+    if (!labelCache.has(targetResult.layoutId)) {
+      labelCache.set(targetResult.layoutId, await resolveLayoutLabel(targetResult.layoutId))
+    }
+    const layoutLabel = labelCache.get(targetResult.layoutId) ?? targetResult.layoutId
     const push = (metric: string, key: string, label: string, value: unknown): void => {
       rows.push([targetResult.layoutId, layoutLabel, metric, key, label, value])
     }

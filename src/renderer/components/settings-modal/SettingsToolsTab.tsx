@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { THEME_OPTIONS, TIME_STEPS } from './settings-modal-shared'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import i18n, { SUPPORTED_LANGUAGES } from '../../i18n'
+import { useKeyLabels } from '../../hooks/useKeyLabels'
+import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
 import type { ThemeMode } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
@@ -29,6 +32,10 @@ export interface SettingsToolsTabProps {
   onAutoLockTimeChange: (m: AutoLockMinutes) => void
   maxKeymapHistory: number
   onMaxKeymapHistoryChange: (n: number) => void
+  /** Hub display_name; used by Key Labels modal to detect own posts. */
+  hubDisplayName?: string | null
+  /** True when Hub auth + display_name allow upload/update/remove. */
+  hubCanWrite?: boolean
 }
 
 export function SettingsToolsTab({
@@ -50,11 +57,53 @@ export function SettingsToolsTab({
   onAutoLockTimeChange,
   maxKeymapHistory,
   onMaxKeymapHistoryChange,
+  hubDisplayName = null,
+  hubCanWrite = false,
 }: SettingsToolsTabProps) {
   const { t } = useTranslation()
   const appConfig = useAppConfig()
+  const [keyLabelsOpen, setKeyLabelsOpen] = useState(false)
+  const keyLabels = useKeyLabels()
+
+  /**
+   * Default-layout dropdown options. QWERTY is materialised as a Key
+   * Label store entry by `ensureQwertyEntry`, so iterating `metas`
+   * first preserves the user-controlled drag order from the Key
+   * Labels modal. `KEYBOARD_LAYOUTS` only serves as a safety net for
+   * the brief window before `metas` has loaded.
+   */
+  const layoutOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const out: { id: string; name: string }[] = []
+    for (const meta of keyLabels.metas) {
+      if (seen.has(meta.id)) continue
+      seen.add(meta.id)
+      out.push({ id: meta.id, name: meta.name })
+    }
+    for (const def of KEYBOARD_LAYOUTS) {
+      if (seen.has(def.id)) continue
+      seen.add(def.id)
+      out.push({ id: def.id, name: def.name })
+    }
+    return out
+  }, [keyLabels.metas])
+
+  // Auto-heal an orphaned saved default layout. If the entry was
+  // deleted from the Key Label store (locally or via sync) the saved
+  // id no longer matches any option and would render as a raw UUID
+  // in the dropdown. Reset it to qwerty so the UI is coherent. We
+  // gate on `metas.length > 0` to avoid firing during the first-load
+  // window when metas have not arrived yet.
+  useEffect(() => {
+    if (keyLabels.metas.length === 0) return
+    if (!defaultLayout) return
+    const known = layoutOptions.some((o) => o.id === defaultLayout)
+    if (known) return
+    onDefaultLayoutChange('qwerty')
+  }, [keyLabels.metas, defaultLayout, layoutOptions, onDefaultLayoutChange])
 
   return (
+    <>
     <div className="pt-4 space-y-6">
       <section>
         <h4 className="mb-2 text-sm font-medium text-content-secondary">
@@ -81,26 +130,42 @@ export function SettingsToolsTab({
       </section>
 
       <section>
-        <div className={ROW_CLASS} data-testid="settings-language-row">
-          <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
-            {t('settings.language')}
-          </label>
-          <select
-            id="settings-language-selector"
-            value={appConfig.config.language ?? 'en'}
-            onChange={(e) => {
-              appConfig.set('language', e.target.value)
-              void i18n.changeLanguage(e.target.value)
-            }}
-            className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-            data-testid="settings-language-selector"
-          >
-            {SUPPORTED_LANGUAGES.map((lang) => (
-              <option key={lang.id} value={lang.id}>
-                {lang.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid grid-cols-2 gap-3">
+          <div className={ROW_CLASS} data-testid="settings-language-row">
+            <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
+              {t('settings.language')}
+            </label>
+            <select
+              id="settings-language-selector"
+              value={appConfig.config.language ?? 'en'}
+              onChange={(e) => {
+                appConfig.set('language', e.target.value)
+                void i18n.changeLanguage(e.target.value)
+              }}
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              data-testid="settings-language-selector"
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => (
+                <option key={lang.id} value={lang.id}>
+                  {lang.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className={ROW_CLASS} data-testid="settings-key-labels-row">
+            <span className="text-sm font-medium text-content-secondary">
+              {t('keyLabels.manageRow')}
+            </span>
+            <button
+              type="button"
+              onClick={() => setKeyLabelsOpen(true)}
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+              data-testid="settings-key-labels-button"
+            >
+              {t('keyLabels.edit')}
+            </button>
+          </div>
         </div>
       </section>
 
@@ -138,7 +203,7 @@ export function SettingsToolsTab({
               className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
               data-testid="settings-default-layout-selector"
             >
-              {KEYBOARD_LAYOUTS.map((layoutDef) => (
+              {layoutOptions.map((layoutDef) => (
                 <option key={layoutDef.id} value={layoutDef.id}>
                   {layoutDef.name}
                 </option>
@@ -264,5 +329,12 @@ export function SettingsToolsTab({
         </div>
       </section>
     </div>
+    <KeyLabelsModal
+      open={keyLabelsOpen}
+      onClose={() => setKeyLabelsOpen(false)}
+      currentDisplayName={hubDisplayName}
+      hubCanWrite={hubCanWrite}
+    />
+    </>
   )
 }

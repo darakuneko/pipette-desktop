@@ -19,6 +19,8 @@ import { useEntryOperations } from './hooks/useEntryOperations'
 import { useHubState } from './hooks/useHubState'
 import { useSnapshotMigration } from './hooks/useSnapshotMigration'
 import { useDeviceLifecycle } from './hooks/useDeviceLifecycle'
+import { useMissingKeyLabelNotice } from './hooks/useMissingKeyLabelNotice'
+import { MissingKeyLabelDialog } from './components/key-labels/MissingKeyLabelDialog'
 import { formatDeviceId } from './app-types'
 import { DeviceSelector } from './components/DeviceSelector'
 import { SettingsModal } from './components/SettingsModal'
@@ -223,6 +225,8 @@ export function App() {
     typingTestMode: editorUI.typingTestMode,
     typingTestViewOnly: devicePrefs.typingTestViewOnly,
   })
+
+  const missingKeyLabel = useMissingKeyLabelNotice(keyboard.uid || null)
 
   const hub = useHubState({
     hubEnabled: appConfig.config.hubEnabled,
@@ -505,6 +509,7 @@ export function App() {
             onHubEnabledChange={(enabled) => appConfig.set('hubEnabled', enabled)}
             hubAuthenticated={sync.authStatus.authenticated}
             hubDisplayName={hub.hubDisplayName}
+            hubCanUpload={hub.hubCanUpload}
             onHubDisplayNameChange={hub.handleUpdateHubDisplayName}
             hubAuthConflict={hub.hubAuthConflict}
             onResolveAuthConflict={hub.handleResolveAuthConflict}
@@ -1025,6 +1030,19 @@ export function App() {
           onClose={startupNotification.dismiss}
         />
       )}
+
+      <MissingKeyLabelDialog
+        open={missingKeyLabel.missingName !== null}
+        missingName={missingKeyLabel.missingName ?? ''}
+        onClose={() => {
+          missingKeyLabel.dismiss()
+          // Flip the active layout to qwerty so the dropdown reflects
+          // the fallback and `pipette_settings.json` is updated by
+          // useDevicePrefs' own save path. Without this the next
+          // connect would still hit the same missing id.
+          devicePrefs.setLayout('qwerty')
+        }}
+      />
     </div>
   )
 }
