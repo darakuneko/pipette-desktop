@@ -34,6 +34,7 @@ import {
   readKeyboardMetaIndex,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
+import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   parseTypingAnalyticsDeviceSyncUnit,
@@ -140,6 +141,7 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (scope === 'all') return true
   if (syncUnit === null) return false
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
+  if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
     return syncUnit.startsWith('favorites/') || syncUnit.startsWith(`keyboards/${scope.keyboard}/`)

@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useRef } from 'react'
-import { LAYOUT_ID_SET } from '../data/keyboard-layouts'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
-import { remapLabel as remapLabelFn, isRemappedKeycode } from './useKeyboardLayout'
+import { useKeyLabelLookup } from './useKeyLabelLookup'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode } from '../../shared/types/pipette-settings'
@@ -89,7 +88,11 @@ function validateIpcPrefs(
 ): ValidatedPrefs | null {
   if (!data) return null
 
-  const layout = typeof data.keyboardLayout === 'string' && LAYOUT_ID_SET.has(data.keyboardLayout)
+  // After the Key Labels migration the built-in `LAYOUT_ID_SET` only
+  // covers QWERTY. Any saved id that is not empty is accepted here; the
+  // Key Label store is consulted at render time and falls back to
+  // QWERTY when the id is not (yet) installed locally.
+  const layout = typeof data.keyboardLayout === 'string' && data.keyboardLayout.length > 0
     ? data.keyboardLayout
     : null
   const autoAdvance = typeof data.autoAdvance === 'boolean' ? data.autoAdvance : null
@@ -234,7 +237,10 @@ function useStateRef<T>(initial: T): [T, (v: T) => void, React.RefObject<T>] {
 export function useDevicePrefs(): UseDevicePrefsReturn {
   const { config, set } = useAppConfig()
 
-  const defaultLayout = LAYOUT_ID_SET.has(config.defaultKeyboardLayout)
+  // Accept any non-empty id; Key Labels installed via the modal are
+  // valid even though they are not in the built-in `LAYOUT_ID_SET`.
+  const defaultLayout = typeof config.defaultKeyboardLayout === 'string'
+    && config.defaultKeyboardLayout.length > 0
     ? config.defaultKeyboardLayout
     : 'qwerty'
   const defaultAutoAdvance = config.defaultAutoAdvance
@@ -469,14 +475,33 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     }
   }, [saveCurrentPrefs, defaultLayout, defaultAutoAdvance, defaultLayerPanelOpen, defaultBasicViewType, defaultSplitKeyMode, defaultQuickSelect])
 
+  const lookup = useKeyLabelLookup()
+
+  // Trigger an IPC fetch for non-built-in layouts so the remap callbacks
+  // see the map / compositeLabels as soon as the store responds.
+  useEffect(() => {
+    void lookup.ensure(layout)
+  }, [lookup, layout])
+
   const remapLabel = useCallback(
-    (qmkId: string): string => remapLabelFn(qmkId, layout),
-    [layout],
+    (qmkId: string): string => {
+      const composite = lookup.getCompositeLabels(layout)?.[qmkId]
+      if (composite !== undefined) return composite
+      const mapped = lookup.getMap(layout)?.[qmkId]
+      if (mapped !== undefined) return mapped
+      return qmkId
+    },
+    [lookup, layout],
   )
 
   const isRemapped = useCallback(
-    (qmkId: string): boolean => isRemappedKeycode(qmkId, layout),
-    [layout],
+    (qmkId: string): boolean => {
+      const composite = lookup.getCompositeLabels(layout)
+      if (composite && qmkId in composite) return true
+      const map = lookup.getMap(layout)
+      return Boolean(map && qmkId in map)
+    },
+    [lookup, layout],
   )
 
   return {

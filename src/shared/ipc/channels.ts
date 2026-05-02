@@ -196,6 +196,26 @@ export const IpcChannels = {
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
 
+  // Key Label Store (renderer → main → renderer)
+  KEY_LABEL_STORE_LIST: 'key-label-store:list',
+  KEY_LABEL_STORE_LIST_ALL: 'key-label-store:list-all',
+  KEY_LABEL_STORE_GET: 'key-label-store:get',
+  KEY_LABEL_STORE_RENAME: 'key-label-store:rename',
+  KEY_LABEL_STORE_DELETE: 'key-label-store:delete',
+  KEY_LABEL_STORE_IMPORT: 'key-label-store:import',
+  KEY_LABEL_STORE_EXPORT: 'key-label-store:export',
+  KEY_LABEL_STORE_REORDER: 'key-label-store:reorder',
+  KEY_LABEL_STORE_SET_HUB_POST_ID: 'key-label-store:set-hub-post-id',
+  KEY_LABEL_STORE_HAS_NAME: 'key-label-store:has-name',
+
+  // Key Label Hub (renderer → main → renderer) [filled in T3]
+  KEY_LABEL_HUB_LIST: 'key-label-hub:list',
+  KEY_LABEL_HUB_DETAIL: 'key-label-hub:detail',
+  KEY_LABEL_HUB_DOWNLOAD: 'key-label-hub:download',
+  KEY_LABEL_HUB_UPLOAD: 'key-label-hub:upload',
+  KEY_LABEL_HUB_UPDATE: 'key-label-hub:update',
+  KEY_LABEL_HUB_DELETE: 'key-label-hub:delete',
+
   // Window management (renderer → main)
   WINDOW_SET_COMPACT_MODE: 'window:set-compact-mode',
   WINDOW_SET_ASPECT_RATIO: 'window:set-aspect-ratio',

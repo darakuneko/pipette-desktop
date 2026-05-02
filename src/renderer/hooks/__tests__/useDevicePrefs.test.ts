@@ -227,14 +227,17 @@ describe('useDevicePrefs', () => {
   })
 
   describe('invalid data fallback', () => {
-    it('falls back to qwerty for invalid default layout', async () => {
+    // After the Key Labels migration any non-empty id is accepted; the
+    // store may still load it asynchronously after a hub download. Tests
+    // below reflect that "the saved id wins" rule.
+    it('keeps any non-empty string for default layout (including unknown ids)', async () => {
       setupMocks({ defaultKeyboardLayout: 'invalid-layout' })
       const { result } = renderHookWithConfig(() => useDevicePrefs())
       await act(async () => {})
-      expect(result.current.defaultLayout).toBe('qwerty')
+      expect(result.current.defaultLayout).toBe('invalid-layout')
     })
 
-    it('falls back to defaults when IPC returns invalid data', async () => {
+    it('keeps any non-empty layout id from IPC', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
@@ -248,13 +251,12 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      // layout falls back to default (qwerty), autoAdvance kept from stored
-      expect(result.current.layout).toBe('qwerty')
+      expect(result.current.layout).toBe('nonexistent')
       expect(result.current.autoAdvance).toBe(false)
     })
 
-    it('falls back to configured defaults when per-device prefs have invalid layout', async () => {
-      setupMocks({ defaultKeyboardLayout: 'dvorak' })
+    it('keeps the per-device layout id even when the configured default differs', async () => {
+      setupMocks({ defaultKeyboardLayout: 'configured-default' })
       mockPipetteSettingsGet.mockResolvedValue({
         _rev: 1,
         keyboardLayout: 'nonexistent',
@@ -267,8 +269,7 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      // layout falls back to configured default (dvorak), autoAdvance kept from stored
-      expect(result.current.layout).toBe('dvorak')
+      expect(result.current.layout).toBe('nonexistent')
       expect(result.current.autoAdvance).toBe(false)
     })
 
@@ -981,18 +982,12 @@ describe('useDevicePrefs', () => {
       expect(result.current.remapLabel('KC_A')).toBe('KC_A')
     })
 
-    it('remapLabel updates after layout change', async () => {
-      setupMocks()
-      const { result } = renderHookWithConfig(() => useDevicePrefs())
-      await act(async () => {})
-      await act(async () => {
-        await result.current.applyDevicePrefs('0xAABB')
-      })
-      act(() => {
-        result.current.setLayout('dvorak')
-      })
-      expect(result.current.remapLabel('KC_S')).toBe('O')
-    })
+    // After the Key Labels migration the only built-in layout is
+    // QWERTY; dvorak (and friends) are downloaded into the Key Label
+    // store at runtime. The async store fetch is exercised in
+    // useKeyLabelLookup tests, so this remap-after-change scenario is
+    // covered there instead.
+    it.skip('remapLabel updates after layout change (legacy: dvorak built-in)', async () => {})
 
     it('isRemapped returns false for qwerty', async () => {
       setupMocks()

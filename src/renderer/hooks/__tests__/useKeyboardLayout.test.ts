@@ -46,7 +46,13 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('Dvorak mapping (display strings)', () => {
+  // Dvorak (and friends) are no longer built-in after the Key Labels
+  // migration; they are downloaded into the Key Label store at runtime.
+  // The store-aware path is exercised by useKeyLabelLookup integration
+  // tests, so the standalone `remapKeycode` helper falls back to qwerty
+  // identity for any non-built-in id and these expectations no longer
+  // apply.
+  describe.skip('Dvorak mapping (display strings)', () => {
     it('remaps letter keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'dvorak')).toBe("'")
       expect(remapKeycode('KC_W', 'dvorak')).toBe(',')
@@ -95,7 +101,7 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('Colemak mapping (display strings)', () => {
+  describe.skip('Colemak mapping (display strings)', () => {
     it('remaps letter keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'colemak')).toBe('KC_Q') // not in map
       expect(remapKeycode('KC_W', 'colemak')).toBe('KC_W') // not in map
@@ -135,7 +141,7 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('Japanese mapping', () => {
+  describe.skip('Japanese mapping', () => {
     it('remaps Japanese-specific keys to display strings', () => {
       expect(remapKeycode('KC_LBRACKET', 'japanese')).toBe('`\n@')
       expect(remapKeycode('KC_RBRACKET', 'japanese')).toBe('{\n[')
@@ -150,7 +156,7 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('German mapping', () => {
+  describe.skip('German mapping', () => {
     it('remaps German-specific keys to display strings', () => {
       expect(remapKeycode('KC_LBRACKET', 'german')).toBe('Ü')
       expect(remapKeycode('KC_SCOLON', 'german')).toBe('Ö')
@@ -161,7 +167,7 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('French mapping', () => {
+  describe.skip('French mapping', () => {
     it('remaps French AZERTY keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'french')).toBe('A')
       expect(remapKeycode('KC_W', 'french')).toBe('Z')
@@ -172,7 +178,7 @@ describe('remapKeycode', () => {
     })
   })
 
-  describe('Russian mapping', () => {
+  describe.skip('Russian mapping', () => {
     it('remaps Russian keys to display strings', () => {
       expect(remapKeycode('KC_Q', 'russian')).toBe('Q\nЙ')
       expect(remapKeycode('KC_A', 'russian')).toBe('A\nФ')
@@ -187,27 +193,15 @@ describe('isRemappedKeycode', () => {
     expect(isRemappedKeycode('KC_A', 'qwerty')).toBe(false)
   })
 
-  it('returns true for remapped keys in German layout', () => {
-    expect(isRemappedKeycode('KC_Y', 'german')).toBe(true)
-    expect(isRemappedKeycode('KC_Z', 'german')).toBe(true)
-    expect(isRemappedKeycode('KC_LBRACKET', 'german')).toBe(true)
-    expect(isRemappedKeycode('KC_SCOLON', 'german')).toBe(true)
-  })
-
-  it('returns false for non-remapped keys in German layout', () => {
-    expect(isRemappedKeycode('KC_A', 'german')).toBe(false)
-    expect(isRemappedKeycode('KC_ENTER', 'german')).toBe(false)
-  })
-
-  it('returns true for remapped keys in Japanese layout', () => {
-    expect(isRemappedKeycode('KC_GRAVE', 'japanese')).toBe(true)
-    expect(isRemappedKeycode('KC_LBRACKET', 'japanese')).toBe(true)
-  })
-
-  it('returns false for non-remapped keys in Japanese layout', () => {
-    expect(isRemappedKeycode('KC_A', 'japanese')).toBe(false)
-    expect(isRemappedKeycode('KC_Q', 'japanese')).toBe(false)
-  })
+  // German / Japanese / Dvorak / Colemak / French / Russian are no
+  // longer built-in after the Key Labels migration; they live in the
+  // local Key Label store. The async store path is exercised by
+  // useKeyLabelLookup integration tests, so the standalone
+  // `isRemappedKeycode` helper only tests QWERTY identity here.
+  it.skip('returns true for remapped keys in German layout (legacy)', () => {})
+  it.skip('returns false for non-remapped keys in German layout (legacy)', () => {})
+  it.skip('returns true for remapped keys in Japanese layout (legacy)', () => {})
+  it.skip('returns false for non-remapped keys in Japanese layout (legacy)', () => {})
 })
 
 describe('remapLabel (composite override)', () => {
@@ -235,10 +229,10 @@ describe('remapLabel (composite override)', () => {
     expect(remapLabel('LALT(KC_L)', 'qwerty')).toBe('LALT(KC_L)')
   })
 
-  it('preserves existing remapKeycode behavior on layouts that only define map', () => {
-    expect(remapLabel('KC_S', 'dvorak')).toBe('O')
-    expect(remapLabel('KC_LBRACKET', 'japanese')).toBe('`\n@')
-  })
+  // Dvorak / Japanese have moved to the Key Label store; the standalone
+  // `remapLabel` helper now falls back to the qmkId for any non-built-in
+  // id. Store-aware remapping is covered in useKeyLabelLookup tests.
+  it.skip('preserves existing remapKeycode behavior on layouts that only define map (legacy)', () => {})
 
   it('marks composite-only entries as remapped', () => {
     withCompositeTestLayout({ 'LALT(KC_L)': 'Alt L' }, () => {
@@ -302,39 +296,19 @@ describe('useKeyboardLayout', () => {
     expect(result.current.remapLabel('KC_A')).toBe('KC_A')
   })
 
-  it('remapLabel remaps for dvorak (display strings)', async () => {
-    setupAppConfigMock({ currentKeyboardLayout: 'dvorak' })
-    const { result } = renderHookWithConfig(() => useKeyboardLayout())
-    await act(async () => {})
-    expect(result.current.remapLabel('KC_S')).toBe('O')
-    expect(result.current.remapLabel('KC_D')).toBe('E')
-  })
+  // After the Key Labels migration only QWERTY is built-in; non-QWERTY
+  // remap is exercised via useKeyLabelLookup with IPC mocks, not here.
+  it.skip('remapLabel remaps for dvorak (display strings) (legacy)', async () => {})
+  it.skip('remapLabel remaps for colemak (display strings) (legacy)', async () => {})
+  it.skip('remapLabel updates when layout changes (legacy)', async () => {})
 
-  it('remapLabel remaps for colemak (display strings)', async () => {
-    setupAppConfigMock({ currentKeyboardLayout: 'colemak' })
-    const { result } = renderHookWithConfig(() => useKeyboardLayout())
-    await act(async () => {})
-    expect(result.current.remapLabel('KC_S')).toBe('R')
-    expect(result.current.remapLabel('KC_J')).toBe('N')
-  })
-
-  it('remapLabel updates when layout changes', async () => {
-    setupAppConfigMock()
-    const { result } = renderHookWithConfig(() => useKeyboardLayout())
-    await act(async () => {})
-    expect(result.current.remapLabel('KC_S')).toBe('KC_S')
-
-    act(() => {
-      result.current.setLayout('colemak')
-    })
-    expect(result.current.remapLabel('KC_S')).toBe('R')
-  })
-
-  it('ignores invalid stored values', async () => {
+  it('keeps any non-empty stored layout id (was: ignores invalid)', async () => {
     setupAppConfigMock({ currentKeyboardLayout: 'invalid-layout' })
     const { result } = renderHookWithConfig(() => useKeyboardLayout())
     await act(async () => {})
-    expect(result.current.layout).toBe('qwerty')
+    // The id is preserved; remap falls back to the qmkId until the
+    // store loads a matching entry.
+    expect(result.current.layout).toBe('invalid-layout')
   })
 
   it('supports new layout IDs from config', async () => {
@@ -342,6 +316,7 @@ describe('useKeyboardLayout', () => {
     const { result } = renderHookWithConfig(() => useKeyboardLayout())
     await act(async () => {})
     expect(result.current.layout).toBe('japanese')
-    expect(result.current.remapLabel('KC_GRAVE')).toBe('半角\n全角')
+    // Without a Key Label store entry the remap defaults to qmkId.
+    expect(result.current.remapLabel('KC_GRAVE')).toBe('KC_GRAVE')
   })
 })

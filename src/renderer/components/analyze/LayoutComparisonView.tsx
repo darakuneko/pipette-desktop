@@ -20,7 +20,7 @@ import type {
   LayoutComparisonResult,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-import { LAYOUT_BY_ID, pickLayoutComparisonInput } from '../../data/keyboard-layouts'
+import { useKeyLabelLookup } from '../../hooks/useKeyLabelLookup'
 import { fetchLayoutComparisonForRange } from './analyze-fetch'
 import { LAYOUT_COMPARISON_PHASE_1_METRICS } from './layout-comparison-metrics'
 import { LayoutComparisonFingerDiff } from './LayoutComparisonFingerDiff'
@@ -65,6 +65,16 @@ export function LayoutComparisonView({
   const [result, setResult] = useState<LayoutComparisonResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
+  const lookup = useKeyLabelLookup()
+  // Maps are read straight from the lookup so a download elsewhere in
+  // the app re-renders this view without a manual refresh.
+  const sourceMap = lookup.getMap(sourceLayoutId)
+  const targetMap = targetLayoutId !== null ? lookup.getMap(targetLayoutId) : undefined
+
+  useEffect(() => {
+    void lookup.ensure(sourceLayoutId)
+    if (targetLayoutId !== null) void lookup.ensure(targetLayoutId)
+  }, [lookup, sourceLayoutId, targetLayoutId])
 
   const scope = primaryDeviceScope(deviceScopes)
   const scopeKey = scopeToSelectValue(scope)
@@ -84,12 +94,12 @@ export function LayoutComparisonView({
       setError(false)
       return
     }
-    const source = pickLayoutComparisonInput(sourceLayoutId)
-    const target = targetLayoutId !== null ? pickLayoutComparisonInput(targetLayoutId) : null
-    if (!source || !target) {
+    if (!sourceMap || !targetMap || targetLayoutId === null) {
       setResult(null)
       return
     }
+    const source = { id: sourceLayoutId, map: sourceMap }
+    const target = { id: targetLayoutId, map: targetMap }
     let cancelled = false
     setLoading(true)
     setError(false)
@@ -117,7 +127,9 @@ export function LayoutComparisonView({
       cancelled = true
     }
     // appScopesKey carries appScopes' identity for memo equality.
-  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch, appScopesKey])
+    // sourceMap/targetMap re-run the fetch once the lookup finishes
+    // loading a downloaded entry's payload via IPC.
+  }, [uid, range.fromMs, range.toMs, scopeKey, sourceLayoutId, targetLayoutId, shouldFetch, appScopesKey, sourceMap, targetMap])
 
   const columnLabels = useMemo(() => {
     if (!result) return []
@@ -125,9 +137,9 @@ export function LayoutComparisonView({
       if (idx === 0) {
         return t('analyze.layoutComparison.headers.current')
       }
-      return LAYOUT_BY_ID.get(target.layoutId)?.name ?? target.layoutId
+      return lookup.getName(target.layoutId) ?? target.layoutId
     })
-  }, [result, t])
+  }, [result, t, lookup])
 
   const skipPercent = useMemo(() => {
     if (!result) return null

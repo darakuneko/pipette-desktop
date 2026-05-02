@@ -71,6 +71,14 @@ export interface SettingsModalProps {
   onHubEnabledChange: (enabled: boolean) => void
   hubAuthenticated: boolean
   hubDisplayName: string | null
+  /**
+   * Live "can the user write to Hub" flag from useHubState. We pass
+   * the resolved boolean instead of recomputing in SettingsModal so
+   * Key-Labels Upload/Update/Remove buttons share the same gate as
+   * favorite / layout-store Hub actions (`hubReady && displayName`).
+   * Optional with a `false` default so test renders can omit it.
+   */
+  hubCanUpload?: boolean
   onHubDisplayNameChange: (name: string) => Promise<{ success: boolean; error?: string }>
   hubAuthConflict?: boolean
   onResolveAuthConflict?: (name: string) => Promise<{ success: boolean; error?: string }>

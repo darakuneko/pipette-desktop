@@ -822,7 +822,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
 - **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, JIS keyboard, and List views for the Basic tab
-- **Keyboard Layout**: Select the display layout for key labels (QWERTY, Dvorak, etc.)
+- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); reorder it by dragging rows in the Key Labels modal
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
@@ -1250,13 +1250,40 @@ Troubleshooting and data management functions are available in the **Data** pane
 
 The Tools tab in the Settings modal includes a **Defaults** section for setting initial preferences for new keyboard connections:
 
-- **Keyboard Layout**: Default display layout (QWERTY, Dvorak, etc.)
+- **Keyboard Layout**: Default key labels for new keyboards. The dropdown lists every entry currently installed in the **Key Labels** store (see §6.2). QWERTY ships built-in; install more from Pipette Hub or import a `.json` via **Key Labels Manage**. The drop-down preserves the manual order set in the modal — drag a row up or down there and the dropdown follows
 - **Auto Advance**: Default auto-advance behavior
 - **Instant Key Selection**: Default instant key selection behavior (see §2.2)
 - **Layer Panel Open**: Whether the layer panel starts expanded or collapsed
 - **Basic View Type**: Default view type for the Basic tab (ANSI/ISO/JIS/List)
 - **Separate Shift in Key Picker**: Default setting for separating Shift in the key picker
 - **Max Keymap History**: Maximum number of keymap changes to keep in the current keyboard's edit history (default: 100). History is cleared on disconnect or keyboard switch. See §4.2 for details.
+
+### 6.2 Key Labels Manage
+
+The Tools tab also exposes a **Key Labels Manage** row (next to the Language picker). Click **Edit** to open the Key Labels modal, which manages every label set the app uses to render keycaps in the editor, the Analyze view, and the Layout Comparison.
+
+QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same drag order and selection appear on every machine signed into the same account.
+
+**Installed tab**
+
+![Key Labels — Installed](screenshots/key-labels-installed.png)
+
+Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor.
+
+A second line under each row exposes the Hub actions:
+
+- **Open**: open the entry's Hub page in the system browser (only when the row is linked to a Hub post)
+- **Upload**: publish a new Hub post from this local entry (only for entries that have not been uploaded yet)
+- **Update**: push the current local content to the existing Hub post (owner only)
+- **Remove**: take the post down from Hub. Confirms inline before running
+
+QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like any other row.
+
+**Find on Hub tab**
+
+![Key Labels — Find on Hub](screenshots/key-labels-hub.png)
+
+Searches Pipette Hub for label sets. Type 2 or more characters to start an automatic search (debounced); the **Search** button and **Enter** still work as manual triggers. Results show the label name, the uploader, and either a **Download** action or an **Installed** marker when the same name is already present locally. Re-importing a file with a name that already exists overwrites the local entry in place (`.json` content replaced, the Hub link is preserved).
 
 ---
 

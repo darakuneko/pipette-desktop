@@ -8,8 +8,10 @@
 // can see range + comparison choices together; the subgrid above
 // already aligns them under keyboard / device.
 
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
+import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
 interface Props {
@@ -28,6 +30,32 @@ export function LayoutComparisonSelector({
   onTargetChange,
 }: Props): JSX.Element {
   const { t } = useTranslation()
+  const keyLabels = useKeyLabels()
+  /**
+   * Layout options for source / target. QWERTY is materialised as a
+   * Key Label store entry by `ensureQwertyEntry`, so iterating
+   * `metas` first preserves the user-controlled drag order from the
+   * Key Labels modal. `KEYBOARD_LAYOUTS` only serves as a safety net
+   * for the brief window before `metas` has loaded.
+   */
+  const layoutOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const out: { id: string; name: string }[] = []
+    for (const meta of keyLabels.metas) {
+      if (seen.has(meta.id)) continue
+      seen.add(meta.id)
+      out.push({ id: meta.id, name: meta.name })
+    }
+    for (const def of KEYBOARD_LAYOUTS) {
+      if (seen.has(def.id)) continue
+      seen.add(def.id)
+      out.push({ id: def.id, name: def.name })
+    }
+    if (sourceLayoutId && !seen.has(sourceLayoutId)) {
+      out.push({ id: sourceLayoutId, name: sourceLayoutId })
+    }
+    return out
+  }, [keyLabels.metas, sourceLayoutId])
   return (
     <>
       <label className={FILTER_LABEL}>
@@ -38,7 +66,7 @@ export function LayoutComparisonSelector({
           onChange={(e) => onSourceChange(e.target.value)}
           data-testid="analyze-layout-comparison-source-select"
         >
-          {KEYBOARD_LAYOUTS.map((layout) => (
+          {layoutOptions.map((layout) => (
             <option key={layout.id} value={layout.id}>
               {layout.name}
             </option>
@@ -59,7 +87,7 @@ export function LayoutComparisonSelector({
           <option value={NONE_VALUE}>
             {t('analyze.layoutComparison.noTargetOption')}
           </option>
-          {KEYBOARD_LAYOUTS.filter((layout) => layout.id !== sourceLayoutId).map((layout) => (
+          {layoutOptions.filter((layout) => layout.id !== sourceLayoutId).map((layout) => (
             <option key={layout.id} value={layout.id}>
               {layout.name}
             </option>

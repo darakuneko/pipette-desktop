@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
+import { useKeyLabels } from '../../hooks/useKeyLabels'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
@@ -81,6 +82,31 @@ export function KeycodesOverlayPanel({
   const { t } = useTranslation()
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
+  const keyLabels = useKeyLabels()
+  /**
+   * Layout dropdown options. QWERTY is materialised as a Key Label
+   * store entry by `ensureQwertyEntry`, so iterating `metas` first
+   * preserves the user-controlled drag order from the Key Labels
+   * modal. `KEYBOARD_LAYOUTS` only serves as a safety net for the
+   * brief window before `metas` has loaded. The `layoutOptions` prop
+   * above is unrelated; it carries the keyboard's own KLE
+   * `layout_options` (matrix variants).
+   */
+  const layoutSelectorOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const out: { id: string; name: string }[] = []
+    for (const meta of keyLabels.metas) {
+      if (seen.has(meta.id)) continue
+      seen.add(meta.id)
+      out.push({ id: meta.id, name: meta.name })
+    }
+    for (const def of KEYBOARD_LAYOUTS) {
+      if (seen.has(def.id)) continue
+      seen.add(def.id)
+      out.push({ id: def.id, name: def.name })
+    }
+    return out
+  }, [keyLabels.metas])
 
   // Reset to next leftmost tab if current tab disappears at runtime
   useEffect(() => {
@@ -202,7 +228,7 @@ export function KeycodesOverlayPanel({
                 className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
                 data-testid="overlay-layout-selector"
               >
-                {KEYBOARD_LAYOUTS.map((layoutDef) => (
+                {layoutSelectorOptions.map((layoutDef) => (
                   <option key={layoutDef.id} value={layoutDef.id}>
                     {layoutDef.name}
                   </option>

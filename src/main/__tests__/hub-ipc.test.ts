@@ -21,6 +21,20 @@ vi.mock('../ipc-guard', async () => {
   return { secureHandle: ipcMain.handle }
 })
 
+// Mock sync-service so importing key-label-store does not pull in
+// app-config (which constructs an electron-store at module load).
+vi.mock('../sync/sync-service', () => ({
+  notifyChange: vi.fn(),
+}))
+
+// Stub the key-label store; this suite only tests hub IPC handlers.
+vi.mock('../key-label-store', () => ({
+  KEY_LABEL_SYNC_UNIT: 'key-labels',
+  getRecord: vi.fn().mockResolvedValue({ success: false, errorCode: 'NOT_FOUND' }),
+  saveRecord: vi.fn().mockResolvedValue({ success: true, data: {} }),
+  setHubPostId: vi.fn().mockResolvedValue({ success: true, data: {} }),
+}))
+
 // Mock google-auth
 vi.mock('../sync/google-auth', () => ({
   getIdToken: vi.fn(),

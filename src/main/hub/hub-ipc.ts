@@ -8,6 +8,12 @@ import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubU
 import { getIdToken } from '../sync/google-auth'
 import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub } from './hub-client'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
+import { fetchKeyLabelList, fetchKeyLabelDetail, downloadKeyLabel, uploadKeyLabel, updateKeyLabel, deleteKeyLabel } from './hub-key-labels'
+import type { HubKeyLabelInput } from './hub-key-labels'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from '../../shared/types/hub-key-label'
+import { HUB_ERROR_KEY_LABEL_DUPLICATE } from '../../shared/types/hub-key-label'
+import { getRecord, saveRecord, setHubPostId } from '../key-label-store'
+import type { KeyLabelMeta, KeyLabelStoreResult } from '../../shared/types/key-label-store'
 import { isValidFavoriteType, isValidVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
 import { serialize as serializeKeycode } from '../../shared/keycodes/keycodes'
 import type { FavoriteType, FavoriteIndex } from '../../shared/types/favorite-store'
@@ -398,6 +404,158 @@ export function setupHubIpc(): void {
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'Update failed') }
+      }
+    },
+  )
+
+  // --- Key Label Hub handlers ---
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_LIST,
+    async (
+      _event,
+      params: HubKeyLabelListParams | undefined,
+    ): Promise<KeyLabelStoreResult<HubKeyLabelListResponse>> => {
+      try {
+        const page = clampInt(params?.page, 1, Number.MAX_SAFE_INTEGER) ?? 1
+        const perPage = clampInt(params?.perPage, 1, 100) ?? 20
+        const data = await fetchKeyLabelList({ q: params?.q, page, perPage })
+        return { success: true, data }
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub list failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_DETAIL,
+    async (_event, hubPostId: unknown): Promise<KeyLabelStoreResult<HubKeyLabelItem>> => {
+      try {
+        if (typeof hubPostId !== 'string' || !POST_ID_RE.test(hubPostId)) {
+          return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid hub post id' }
+        }
+        const detail = await fetchKeyLabelDetail(hubPostId)
+        return { success: true, data: detail }
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub detail failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_DOWNLOAD,
+    async (_event, hubPostId: unknown): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+      try {
+        if (typeof hubPostId !== 'string' || !POST_ID_RE.test(hubPostId)) {
+          return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid hub post id' }
+        }
+        const body = await downloadKeyLabel(hubPostId)
+        // The download body lacks uploader info, so look it up from
+        // the detail endpoint so the Author column has something.
+        let uploaderName: string | undefined
+        try {
+          const detail = await fetchKeyLabelDetail(hubPostId)
+          uploaderName = detail.uploader_name ?? undefined
+        } catch {
+          // best-effort; the row simply leaves Author blank.
+        }
+        const composite = body.composite_labels ?? undefined
+        // Use the Hub post id as the local id so the saved
+        // `keyboardLayout` can be matched against Hub later (e.g. the
+        // Missing Key Label dialog needs to look up the human name
+        // after the entry has been removed locally).
+        const saved = await saveRecord({
+          id: hubPostId,
+          name: body.name,
+          ...(uploaderName ? { uploaderName } : {}),
+          map: body.map,
+          ...(composite ? { compositeLabels: composite } : {}),
+          hubPostId,
+        })
+        return saved
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub download failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_UPLOAD,
+    async (_event, localId: unknown): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+      if (typeof localId !== 'string') {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
+      }
+      const record = await getRecord(localId)
+      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      const input: HubKeyLabelInput = {
+        name: record.data.meta.name,
+        map: record.data.data.map,
+        ...(record.data.data.compositeLabels ? { compositeLabels: record.data.data.compositeLabels } : {}),
+      }
+      try {
+        const result = await withTokenRetry((jwt) => uploadKeyLabel(jwt, input))
+        // Carry the response's uploader_name into the local meta so
+        // the modal immediately shows the Author column and the
+        // Update / Remove buttons (gated by isMine = author ===
+        // currentDisplayName) appear without waiting for a sync.
+        return setHubPostId(localId, result.id, result.uploader_name)
+      } catch (err) {
+        if (err instanceof Hub409Error) {
+          return { success: false, errorCode: 'DUPLICATE_NAME', error: HUB_ERROR_KEY_LABEL_DUPLICATE }
+        }
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_UPDATE,
+    async (_event, localId: unknown): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+      if (typeof localId !== 'string') {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
+      }
+      const record = await getRecord(localId)
+      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      const hubPostId = record.data.meta.hubPostId
+      if (!hubPostId) {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }
+      }
+      const input: HubKeyLabelInput = {
+        name: record.data.meta.name,
+        map: record.data.data.map,
+        ...(record.data.data.compositeLabels ? { compositeLabels: record.data.data.compositeLabels } : {}),
+      }
+      try {
+        await withTokenRetry((jwt) => updateKeyLabel(jwt, hubPostId, input))
+        return { success: true, data: record.data.meta }
+      } catch (err) {
+        if (err instanceof Hub409Error) {
+          return { success: false, errorCode: 'DUPLICATE_NAME', error: HUB_ERROR_KEY_LABEL_DUPLICATE }
+        }
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub update failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_DELETE,
+    async (_event, localId: unknown): Promise<KeyLabelStoreResult<void>> => {
+      if (typeof localId !== 'string') {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
+      }
+      const record = await getRecord(localId)
+      if (!record.success || !record.data) return record as KeyLabelStoreResult<void>
+      const hubPostId = record.data.meta.hubPostId
+      if (!hubPostId) {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }
+      }
+      try {
+        await withTokenRetry((jwt) => deleteKeyLabel(jwt, hubPostId))
+        const cleared = await setHubPostId(localId, null)
+        if (!cleared.success) return cleared as KeyLabelStoreResult<void>
+        return { success: true }
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub delete failed') }
       }
     },
   )

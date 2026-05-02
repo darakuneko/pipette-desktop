@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useCallback } from 'react'
-import { LAYOUT_BY_ID, LAYOUT_ID_SET } from '../data/keyboard-layouts'
+import { useCallback, useEffect } from 'react'
+import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
 import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useAppConfig } from './useAppConfig'
+import { useKeyLabelLookup } from './useKeyLabelLookup'
 
 export type { KeyboardLayoutId }
 
@@ -44,10 +45,22 @@ interface UseKeyboardLayoutReturn {
 
 export function useKeyboardLayout(): UseKeyboardLayoutReturn {
   const { config, set } = useAppConfig()
+  const lookup = useKeyLabelLookup()
 
-  const layout = LAYOUT_ID_SET.has(config.currentKeyboardLayout)
+  // Accept any non-empty id so Key Labels installed via the modal are
+  // honoured. The actual remap call falls back to QWERTY when the id
+  // is not in the local store yet.
+  const layout = typeof config.currentKeyboardLayout === 'string'
+    && config.currentKeyboardLayout.length > 0
     ? config.currentKeyboardLayout
     : 'qwerty'
+
+  // Make sure non-built-in layouts have their map cached. The lookup
+  // bumps an internal version on success so the callbacks below see
+  // the freshly-loaded map without an extra effect-driven setState.
+  useEffect(() => {
+    void lookup.ensure(layout)
+  }, [lookup, layout])
 
   const setLayout = useCallback((newLayout: KeyboardLayoutId) => {
     set('currentKeyboardLayout', newLayout)
@@ -55,16 +68,23 @@ export function useKeyboardLayout(): UseKeyboardLayoutReturn {
 
   const remapLabelCb = useCallback(
     (qmkId: string): string => {
-      return remapLabel(qmkId, layout)
+      const composite = lookup.getCompositeLabels(layout)?.[qmkId]
+      if (composite !== undefined) return composite
+      const mapped = lookup.getMap(layout)?.[qmkId]
+      if (mapped !== undefined) return mapped
+      return qmkId
     },
-    [layout],
+    [layout, lookup],
   )
 
   const isRemapped = useCallback(
     (qmkId: string): boolean => {
-      return isRemappedKeycode(qmkId, layout)
+      const composite = lookup.getCompositeLabels(layout)
+      if (composite && qmkId in composite) return true
+      const map = lookup.getMap(layout)
+      return Boolean(map && qmkId in map)
     },
-    [layout],
+    [layout, lookup],
   )
 
   return { layout, setLayout, remapLabel: remapLabelCb, isRemapped }

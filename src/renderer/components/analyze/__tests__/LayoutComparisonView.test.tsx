@@ -25,9 +25,19 @@ vi.mock('react-i18next', () => ({
 
 const fetchSpy = vi.fn<(...args: unknown[]) => Promise<LayoutComparisonResult | null>>()
 
+// useKeyLabelLookup pulls non-built-in maps via these IPC stubs. The
+// minimal `colemak` payload is enough for the comparison fetch to fire.
 Object.defineProperty(window, 'vialAPI', {
   value: {
     typingAnalyticsGetLayoutComparisonForRange: (...args: unknown[]) => fetchSpy(...args),
+    keyLabelStoreList: async () => ({ success: true, data: [] }),
+    keyLabelStoreGet: async (id: string) => ({
+      success: true,
+      data: {
+        meta: { id, name: id, filename: '', savedAt: '', updatedAt: '' },
+        data: { name: id, map: {} as Record<string, string> },
+      },
+    }),
   },
   writable: true,
 })

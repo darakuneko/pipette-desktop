@@ -10,8 +10,10 @@ import { FAVORITE_TYPES } from '../../shared/favorite-data'
 import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotIndex } from '../../shared/types/analyze-filter-store'
+import type { KeyLabelIndex } from '../../shared/types/key-label-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
+import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import {
   deviceDayJsonlPath,
   deviceJsonlPath,
@@ -27,10 +29,10 @@ import {
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 
-export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | null> {
+export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | null> {
   try {
     const raw = await readFile(join(dir, 'index.json'), 'utf-8')
-    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex
+    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex
   } catch {
     return null
   }
@@ -127,15 +129,22 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   // its own bundle type so the export-categorisation in sync-ipc.ts
   // doesn't lump them in with keymap snapshots.
   let type: SyncBundle['type']
-  if (parts[0] === 'favorites') {
+  let key: string
+  if (syncUnit === KEY_LABEL_SYNC_UNIT) {
+    type = 'key-label'
+    key = KEY_LABEL_SYNC_UNIT
+  } else if (parts[0] === 'favorites') {
     type = 'favorite'
+    key = parts[1]
   } else if (parts[2] === 'analyze_filters') {
     type = 'analyze-filter'
+    key = parts[1]
   } else {
     type = 'layout'
+    key = parts[1]
   }
 
-  return { type, key: parts[1], index, files }
+  return { type, key, index, files }
 }
 
 /** typing-analytics v6 flat + v7 per-day sync units. Identified
@@ -179,6 +188,11 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     await access(keyboardMetaFilePath())
     units.push(KEYBOARD_META_SYNC_UNIT)
   } catch { /* no meta */ }
+
+  try {
+    await access(join(userData, 'sync', KEY_LABEL_SYNC_UNIT, 'index.json'))
+    units.push(KEY_LABEL_SYNC_UNIT)
+  } catch { /* no key labels */ }
 
   // Scan sync/keyboards/{uid}/ for settings and snapshots
   const keyboardsDir = join(userData, 'sync', 'keyboards')
