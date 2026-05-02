@@ -1,5 +1,7 @@
 # Pipette
-
+<p align="center">
+  <img width="1024" alt="keymap-editor" src="docs/screenshots/layer-panel-collapsed.png" />
+</p>
 Refining the way you interact with your Vial-powered keyboards.
 
 Pipette is an independent, Electron-based keymap editor compatible with [Vial](https://get.vial.today/).  \
@@ -13,13 +15,6 @@ Communicates with Vial keyboards via USB HID to configure keymaps, macros, light
 [![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=flat&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)](https://playwright.dev/)
 [![pnpm](https://img.shields.io/badge/pnpm-F69220?style=flat&logo=pnpm&logoColor=white)](https://pnpm.io/)
-
-## Screenshot
-<p align="center">
-  <img width="1200" alt="keymap-editor" src="docs/screenshots/layer-panel-collapsed.png" />
-</p>
-
-https://github.com/user-attachments/assets/0faa960a-fffe-43b0-b5d0-5f079241335b
 
 ## Installation
 
