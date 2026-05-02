@@ -1266,6 +1266,8 @@ QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, �
 
 **Installed tab**
 
+![Key Labels — Installed](screenshots/key-labels-installed.png)
+
 Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor.
 
 A second line under each row exposes the Hub actions:
@@ -1278,6 +1280,8 @@ A second line under each row exposes the Hub actions:
 QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like any other row.
 
 **Find on Hub tab**
+
+![Key Labels — Find on Hub](screenshots/key-labels-hub.png)
 
 Searches Pipette Hub for label sets. Type 2 or more characters to start an automatic search (debounced); the **Search** button and **Enter** still work as manual triggers. Results show the label name, the uploader, and either a **Download** action or an **Installed** marker when the same name is already present locally. Re-importing a file with a name that already exists overwrites the local entry in place (`.json` content replaced, the Hub link is preserved).
 

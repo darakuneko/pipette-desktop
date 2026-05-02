@@ -1270,6 +1270,8 @@ QWERTY は built-in です。それ以外のラベルセット (Dvorak, Colemak,
 
 **Installed タブ**
 
+![Key Labels — Installed](screenshots/key-labels-installed.png)
+
 このマシンにあるラベルセットの一覧。各行にラベル名、アップローダー名 (Hub 由来の場合)、`.json` エクスポートショートカット、Delete ボタンが表示されます。左端のグリップをドラッグすると並び替えでき、その順序が Settings ドロップダウンとエディタ内の各 Key Labels ピッカーへ反映されます。
 
 各行の下段には Hub 操作が並びます:
@@ -1282,6 +1284,8 @@ QWERTY は built-in です。それ以外のラベルセット (Dvorak, Colemak,
 QWERTY は Hub 操作も Delete も無効ですが、他の行と同じくドラッグで並び替えできます。
 
 **Find on Hub タブ**
+
+![Key Labels — Find on Hub](screenshots/key-labels-hub.png)
 
 Pipette Hub からラベルセットを検索します。2 文字以上入力すると自動で検索が走ります (debounce 付き)。**Search** ボタンや **Enter** キーでも手動トリガー可能です。結果はラベル名、アップローダー、**Download** または既にインストール済みの場合の **Installed** 表示で表します。同じ名前のファイルを再 import すると既存ローカルエントリを上書きし (`.json` の中身は置き換え、Hub リンクは保持されます)。
 
