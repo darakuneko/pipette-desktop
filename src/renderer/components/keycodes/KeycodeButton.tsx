@@ -19,7 +19,11 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
   if (keycode.hidden) return null
 
   const label = displayLabel ?? keycode.label
-  const lines = label.split('\n')
+  // Match KeyWidget's slice(0, 4) — anything past the 4th `\n` part
+  // has no slot in the 2 × 2 quadrant layout, so dropping early keeps
+  // the picker and the main keymap visually identical.
+  const lines = label.split('\n').slice(0, 4)
+  const useQuadrant = lines.length === 4
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -30,7 +34,12 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
 
   const size = sizeClass ?? 'w-[44px] h-[44px]'
   const hover = selected ? '' : 'hover:bg-picker-item-hover'
-  const base = `flex flex-col items-center justify-center rounded border border-transparent p-1 text-xs outline-none cursor-pointer ${hover} active:bg-accent/20 ${size} transition-colors`
+  // Switch to a 2 × 2 grid for 4-part labels so the picker matches
+  // KeyWidget. 1/2/3 parts keep the existing flex-col stack.
+  const layout = useQuadrant
+    ? 'grid grid-cols-2 grid-rows-2 place-items-center'
+    : 'flex flex-col items-center justify-center'
+  const base = `${layout} rounded border border-transparent p-1 text-xs outline-none cursor-pointer ${hover} active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
     variant = 'bg-accent/20 text-accent'

@@ -1285,6 +1285,59 @@ QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like 
 
 Searches Pipette Hub for label sets. Type 2 or more characters to start an automatic search (debounced); the **Search** button and **Enter** still work as manual triggers. Results show the label name, the uploader, and either a **Download** action or an **Installed** marker when the same name is already present locally. Re-importing a file with a name that already exists overwrites the local entry in place (`.json` content replaced, the Hub link is preserved).
 
+**Authoring a Key Label**
+
+A Key Label `.json` file is a small JSON object with three fields:
+
+```json
+{
+  "name": "Brazilian (QWERTY)",
+  "map": {
+    "KC_2": "2\n@",
+    "KC_3": "3\n#",
+    "KC_LBRC": "´\n`",
+    "KC_QUOT": "ç",
+    "KC_GRAVE": "KC_LALT"
+  },
+  "compositeLabels": {
+    "LSFT(KC_2)": "@",
+    "LALT(KC_L)": "KC_LALT"
+  }
+}
+```
+
+In the example above, `"KC_GRAVE": "KC_LALT"` makes the editor render whichever cap is currently bound to `KC_GRAVE` with the canonical "LAlt" legend — the value is a keycode id, so `keycodeLabel()` resolves it on the fly.
+
+| Field | Required | Purpose |
+|------|:--:|---------|
+| `name` | Yes | Display name shown in the modal, in the Settings → Defaults dropdown, and in the Keycodes Overlay Panel |
+| `map` | Yes | `QMK keycode id → label string`. Used as the keycap legend in the Keymap Editor whenever this label set is active |
+| `compositeLabels` | No | Same shape as `map`, but for composite keycodes (e.g. `LSFT(KC_2)`, `LT(0,KC_A)`, `MT(MOD_LCTL,KC_ESC)`). Used to override the inner / outer text of the composite key. Omit the field if you don't need any composite override |
+
+A value can also be a plain QMK keycode id — the editor passes it through `keycodeLabel()` so something like `"LALT(KC_L)": "KC_LALT"` resolves to the canonical "LAlt" label without you having to spell the legend out by hand. The same shortcut works in `map`, so `"KC_8": "KC_LALT"` would render the cap as "LAlt".
+
+The label string controls how the legend is rendered. Lines are separated by `\n` and the layout is chosen by part count:
+
+| Parts | Layout | Example |
+|------|--------|---------|
+| 1 | Centred (existing behaviour) | `"8"` |
+| 2 | Stacked top / bottom | `"(\n8"` → `(` over `8` |
+| 3 | Three horizontal slices (top / middle / bottom) | `"a\nb\nc"` |
+| 4 | 2 × 2 quadrants — top-left, top-right, bottom-left, bottom-right | `"1\n2\n3\n4"` →`1\|2 / 3\|4` |
+| 5+ | Excess parts beyond 4 are dropped |  |
+
+An empty string between separators leaves the corresponding slot blank, so `"1\n2\n\n4"` renders as:
+
+```
+1 | 2
+-----
+  | 4
+```
+
+Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an inset rectangle that occupies the lower half of the cap, so only the first two `\n` parts of the outer label are honoured. Parts 3 and 4 are silently dropped to avoid colliding with the inner rect.
+
+`name` is also the uniqueness key inside the local store: importing a `.json` whose name already exists overwrites the matching entry in place (the Hub post link, if any, is preserved). To start a brand-new entry, change the `name` before importing.
+
 ---
 
 ## 7. Pipette Hub

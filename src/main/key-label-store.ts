@@ -246,12 +246,19 @@ export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreR
       try { await unlink(getEntryPath(previous.filename)) } catch { /* swallow */ }
     }
 
-    const without = index.entries.filter((e) => e.id !== id)
-    // Append new / re-saved entries at the end so the modal's
-    // "downloaded" order grows downward — matches MacroEditor's
-    // append-on-add behaviour. Existing manual order is preserved.
-    without.push(meta)
-    await writeIndex({ entries: without })
+    // Preserve list position on overwrite: replace the existing
+    // entry in place when the id was already known, otherwise append
+    // at the end so freshly-downloaded labels grow the modal list
+    // downward (matches MacroEditor's append-on-add behaviour).
+    const existingIndex = index.entries.findIndex((e) => e.id === id)
+    let nextEntries: KeyLabelMeta[]
+    if (existingIndex >= 0) {
+      nextEntries = index.entries.slice()
+      nextEntries[existingIndex] = meta
+    } else {
+      nextEntries = [...index.entries, meta]
+    }
+    await writeIndex({ entries: nextEntries })
 
     notifyChange(KEY_LABEL_SYNC_UNIT)
     return ok(meta)

@@ -9,9 +9,15 @@
 //   - `LayoutComparisonView` / analyze-csv-builders (Layout Comparison
 //     map-vs-map source / target inputs)
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { LAYOUT_BY_ID } from '../data/keyboard-layouts'
 import type { KeyLabelEntryFile } from '../../shared/types/key-label-store'
+
+// Same event name `useKeyLabels` dispatches whenever the store
+// changes — listened to here so the lookup cache gets dropped on
+// import / rename / delete / Hub download. Without this the renderer
+// would keep showing the previous map until the next app launch.
+const REFRESH_EVENT = 'pipette:key-labels-changed'
 
 export interface UseKeyLabelLookupReturn {
   /** Trigger a fetch for `id` if it is not already cached or built-in. */
@@ -29,6 +35,20 @@ export function useKeyLabelLookup(): UseKeyLabelLookupReturn {
   const cacheRef = useRef<Map<string, KeyLabelEntryFile>>(new Map())
   const inflightRef = useRef<Map<string, Promise<void>>>(new Map())
   const missingRef = useRef<Set<string>>(new Set())
+
+  // Drop the cache whenever any other place mutates the Key Labels
+  // store (import / rename / delete / Hub download). The next
+  // `ensure(id)` call will re-fetch the fresh content via IPC.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handler = (): void => {
+      cacheRef.current.clear()
+      missingRef.current.clear()
+      setVersion((v) => v + 1)
+    }
+    window.addEventListener(REFRESH_EVENT, handler)
+    return () => window.removeEventListener(REFRESH_EVENT, handler)
+  }, [])
 
   const ensure = useCallback(async (id: string): Promise<void> => {
     if (!id) return

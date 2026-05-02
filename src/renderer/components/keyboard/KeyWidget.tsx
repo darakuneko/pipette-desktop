@@ -166,8 +166,13 @@ function KeyWidgetInner({
         ? keycodeLabel(findInnerKeycode(keycode)?.qmkId ?? '')
         : ''
 
-  // Text rendering: split by \n for multi-line labels
-  const labelLines = outerLabel.split('\n')
+  // Text rendering: split by \n. Layout is part-count driven —
+  //   1 part : centered
+  //   2 parts: top / bottom (legacy "(\n8" style)
+  //   3 parts: three horizontal slices
+  //   4 parts: 2 × 2 quadrants (TL, TR, BL, BR; "" leaves a slot empty)
+  // Excess parts beyond 4 are dropped — the layout has no slot for them.
+  const labelLines = outerLabel.split('\n').slice(0, 4)
   const fontSize = Math.max(8, Math.min(12, 12 * scale))
 
   // Rotation transform
@@ -310,21 +315,47 @@ function KeyWidgetInner({
       {/* Key label */}
       {masked ? (
         <>
-          {/* Outer (modifier) label - top portion */}
-          <text
-            x={x + w / 2}
-            y={y + h * 0.25}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fill={labelColor}
-            fontSize={fontSize * 0.85}
-            fontFamily="sans-serif"
-            style={{ pointerEvents: 'none' }}
-          >
-            {labelOverride
+          {/* Outer (modifier) label — top portion. Only the first two
+              `\n` parts are honoured: a 4-part label like "1\n2\n3\n4"
+              would collide with the inner rect (which sits in the
+              bottom half), so parts 3+ are intentionally dropped. */}
+          {(() => {
+            const rawOuter = labelOverride
               ? labelOverride.outer
-              : keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')}
-          </text>
+              : keycodeLabel(findOuterKeycode(keycode)?.qmkId ?? keycode).replace(/\n?\(kc\)$/, '')
+            const outerParts = rawOuter.split('\n').slice(0, 2)
+            if (outerParts.length === 2) {
+              return outerParts.map((part, i) => (
+                <text
+                  key={i}
+                  x={x + w * (i === 0 ? 0.25 : 0.75)}
+                  y={y + h * 0.25}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fill={labelColor}
+                  fontSize={fontSize * 0.85}
+                  fontFamily="sans-serif"
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {part}
+                </text>
+              ))
+            }
+            return (
+              <text
+                x={x + w / 2}
+                y={y + h * 0.25}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fill={labelColor}
+                fontSize={fontSize * 0.85}
+                fontFamily="sans-serif"
+                style={{ pointerEvents: 'none' }}
+              >
+                {outerParts[0] ?? ''}
+              </text>
+            )
+          })()}
           {/* Inner (base) label - inverts when the inner rect fill is
               light enough to wash the default label out. */}
           <text
@@ -340,6 +371,28 @@ function KeyWidgetInner({
             {innerLabel}
           </text>
         </>
+      ) : labelLines.length === 4 ? (
+        // 2 × 2 quadrant layout. Empty strings leave the slot blank so
+        // "1\n2\n\n4" renders the bottom-left empty without affecting
+        // the other three positions.
+        labelLines.map((line, i) => {
+          const col = i % 2
+          const row = Math.floor(i / 2)
+          return (
+            <text
+              key={i}
+              x={x + w * (col === 0 ? 0.25 : 0.75)}
+              y={y + h * (row === 0 ? 0.33 : 0.67)}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill={labelColor}
+              fontSize={fontSize * 0.85}
+              fontFamily="sans-serif"
+            >
+              {line}
+            </text>
+          )
+        })
       ) : (
         labelLines.map((line, i) => (
           <text
