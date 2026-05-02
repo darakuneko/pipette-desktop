@@ -4,6 +4,34 @@ This document describes what data Pipette stores, where it lives, and how extern
 
 ---
 
+## Table of Contents
+
+- [Local Data](#local-data)
+  - [App Settings](#app-settings)
+  - [Per-Keyboard Settings](#per-keyboard-settings)
+  - [Typing Analytics](#typing-analytics)
+  - [Snapshots](#snapshots)
+  - [Favorites](#favorites)
+  - [Key Labels](#key-labels)
+  - [Typing Test Language Packs](#typing-test-language-packs)
+  - [Logs](#logs)
+  - [Authentication Credentials](#authentication-credentials)
+- [Keyboard-Side Data](#keyboard-side-data)
+- [Cloud Sync (Google Drive appDataFolder)](#cloud-sync-google-drive-appdatafolder)
+  - [How It Works](#how-it-works)
+  - [What Is Synced](#what-is-synced)
+  - [Security & Privacy](#security--privacy)
+  - [Google OAuth Scopes](#google-oauth-scopes)
+- [Pipette Hub](#pipette-hub)
+  - [What Is It](#what-is-it)
+  - [How It Works](#how-it-works-1)
+  - [What Is Uploaded](#what-is-uploaded)
+  - [Security & Privacy](#security--privacy-1)
+- [Export Formats](#export-formats)
+- [Reset Operations](#reset-operations)
+
+---
+
 ## Local Data
 
 All local data is stored under the OS user data directory:
