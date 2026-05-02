@@ -590,12 +590,34 @@ async function captureAnalyzePage(page: Page): Promise<void> {
 
     // Learning curve sub-view: switch the View filter to 'learning'
     // and capture the trend chart, then restore the snapshot view so
-    // the rest of the run keeps the historical layout.
+    // the rest of the run keeps the historical layout. We also pivot
+    // to the older keymap snapshot beforehand so the active range
+    // expands to cover the historical matrix-minute rows seeded by
+    // analyze-seed.ts; the default "Current keymap" range is only
+    // ~4 hours and would render the empty state.
     const viewModeSelect = page.locator('[data-testid="analyze-filter-ergonomics-view-mode"]')
     if (await isAvailable(viewModeSelect)) {
       await viewModeSelect.selectOption('learning')
       await page.waitForTimeout(800)
+      const snapshotSelect = page.locator('[data-testid="analyze-snapshot-timeline-select"]')
+      const optionCount = (await snapshotSelect.locator('option').count().catch(() => 0))
+      if (optionCount >= 2) {
+        const olderValue = await snapshotSelect.locator('option').nth(1).getAttribute('value')
+        if (olderValue) {
+          await snapshotSelect.selectOption(olderValue)
+          // Wait for the range update + matrix-cells-by-day re-fetch to settle.
+          await page.waitForTimeout(1500)
+        }
+      } else {
+        console.log('  [warn] only one snapshot present — learning curve may render empty')
+      }
       await captureNamed(page, 'analyze-ergonomics-learning', { fullPage: true })
+      if (optionCount >= 2) {
+        // Reset to "Current keymap" (option index 0) so the captures
+        // that follow keep the latest snapshot's 4-hour active window.
+        await snapshotSelect.selectOption({ index: 0 })
+        await page.waitForTimeout(800)
+      }
       await viewModeSelect.selectOption('snapshot')
       await page.waitForTimeout(400)
     } else {
@@ -705,7 +727,10 @@ async function captureAnalyzePage(page: Page): Promise<void> {
   const byAppTab = page.locator('[data-testid="analyze-tab-byApp"]')
   if (await isAvailable(byAppTab)) {
     await byAppTab.click()
-    await page.waitForTimeout(800)
+    // The donut animates in over several seconds; capturing too early
+    // freezes it mid-unfold (slices clipped to a sliver). 10s gives the
+    // recharts animation time to settle into its final geometry.
+    await page.waitForTimeout(10_000)
     await captureNamed(page, 'analyze-by-app', { fullPage: true })
   } else {
     console.log('  [skip] analyze-tab-byApp not found')
