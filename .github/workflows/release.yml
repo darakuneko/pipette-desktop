@@ -12,6 +12,11 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # Mirror ci.yml: tests rely on local wall-clock semantics that the
+      # codebase standardises on JST so date-based goal-history comparisons
+      # match the developer-machine baseline.
+      TZ: Asia/Tokyo
     steps:
       - uses: actions/checkout@v6
 
@@ -31,6 +36,9 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
+
+      - name: Install Linux build dependencies for native modules
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
@@ -64,7 +72,7 @@ jobs:
 
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
-        run: sudo apt-get update && sudo apt-get install -y libudev-dev
+        run: sudo apt-get update && sudo apt-get install -y libusb-1.0-0-dev libudev-dev
 
       - run: pnpm install --frozen-lockfile
 
