@@ -95,6 +95,39 @@ async function captureInstalledTab(page: Page): Promise<void> {
   }
   // Give metas refresh + sync notifications a moment to land.
   await page.waitForTimeout(500)
+  // Populate the Updated column for every foreign row by invoking the
+  // Sync IPC directly via window.vialAPI. Going through the UI would
+  // leave a "Synced" inline badge on the last-clicked row; bypassing
+  // the click handler skips that side effect so the captured screenshot
+  // stays neutral. Best-effort: errors per row are logged and ignored.
+  type FauxApi = { keyLabelHubSync(id: string): Promise<{ success: boolean; error?: string }> }
+  type FauxWindow = Window & { vialAPI: FauxApi }
+  const syncButtons = page.locator('[data-testid^="key-labels-sync-"]')
+  const ids: string[] = []
+  for (let i = 0; i < await syncButtons.count(); i++) {
+    const testid = await syncButtons.nth(i).getAttribute('data-testid')
+    if (testid) ids.push(testid.replace('key-labels-sync-', ''))
+  }
+  if (ids.length > 0) {
+    console.log(`  Priming ${ids.length} foreign row(s) via keyLabelHubSync IPC so the Updated column shows real Hub timestamps`)
+    const results = await page.evaluate(async (localIds: string[]) => {
+      const api = (window as unknown as FauxWindow).vialAPI
+      const out: { id: string; ok: boolean; error?: string }[] = []
+      for (const id of localIds) {
+        const res = await api.keyLabelHubSync(id)
+        out.push({ id, ok: res.success, error: res.error })
+      }
+      // useKeyLabels.ts listens for this event and re-runs `keyLabelStoreList`,
+      // which is how every modal instance picks up the new hubUpdatedAt.
+      window.dispatchEvent(new Event('pipette:key-labels-changed'))
+      return out
+    }, ids)
+    for (const r of results) {
+      if (!r.ok) console.log(`    [warn] Sync failed for ${r.id}: ${r.error}`)
+    }
+    // Wait for the re-list to land in the DOM.
+    await page.waitForTimeout(400)
+  }
   await capture(page, 'key-labels-installed')
 }
 

@@ -9,6 +9,7 @@ import type {
   HubKeyLabelItem,
   HubKeyLabelListResponse,
   HubKeyLabelListParams,
+  HubKeyLabelTimestampsResponse,
 } from '../../shared/types/hub-key-label'
 
 const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
@@ -96,6 +97,24 @@ export async function fetchKeyLabelDetail(hubPostId: string): Promise<HubKeyLabe
     `${HUB_API_BASE}/api/key-labels/${encodeURIComponent(hubPostId)}`,
     { method: 'GET' },
     'Hub key-label fetch failed',
+  )
+}
+
+/**
+ * Bulk freshness check: send up to 100 ids, get back `{ id, updated_at }`
+ * pairs in input order with deleted/missing ids dropped. Anonymous
+ * endpoint, no JWT. Caller is responsible for splitting larger arrays
+ * (the server enforces the 100 cap with a 400).
+ */
+export async function fetchKeyLabelTimestamps(ids: string[]): Promise<HubKeyLabelTimestampsResponse> {
+  return hubFetch<HubKeyLabelTimestampsResponse>(
+    `${HUB_API_BASE}/api/key-labels/timestamps`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    },
+    'Hub key-label timestamps fetch failed',
   )
 }
 

@@ -1383,6 +1383,8 @@
     "updating": "更新中...",
     "updateSuccess": "更新しました",
     "updateFailed": "更新に失敗しました",
+    "syncSuccess": "同期しました",
+    "syncFailed": "同期に失敗しました",
     "removeFromHub": "削除",
     "removing": "削除中...",
     "removeSuccess": "削除しました",
@@ -1467,10 +1469,12 @@
     "empty": "Key Label がまだありません。検索または Import で追加してください。",
     "actionUpload": "アップロード",
     "actionUpdate": "更新",
+    "actionSync": "同期",
     "actionRemove": "削除",
     "actionDownload": "ダウンロード",
     "actionDelete": "削除",
     "actionExport": ".json",
+    "hubRemoved": "(削除済み)",
     "errorDuplicate": "同じ名前のラベルがすでに存在します",
     "errorImportFailed": "Key Label のインポートに失敗しました",
     "errorInvalidName": "ラベル名が不正です",
@@ -1478,7 +1482,7 @@
     "errorGeneric": "操作に失敗しました",
     "missingTitle": "Key Label が見つかりません",
     "missingMessage": "Key Label「{{name}}」がインストールされていないため、QWERTY ラベルで表示します。",
-    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} からダウンロードできます。",
+    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
     "missingClose": "閉じる"
   }
 }

@@ -14,6 +14,11 @@ export interface KeyLabelMeta {
   uploaderName?: string
   /** Hub post id when synced to Pipette Hub. */
   hubPostId?: string
+  /** Hub-side `updated_at` cached locally so the Updated column shows
+   *  the same value as the Hub website (= when the author last
+   *  modified the post). Absent for never-uploaded local entries and
+   *  legacy rows that predate this field. */
+  hubUpdatedAt?: string
   /** Internal filename (`{id}_{timestamp}.json`). */
   filename: string
   /** First save time (ISO 8601). */

@@ -9,6 +9,7 @@ import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-conf
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
+import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
 
 type OverlayTab = 'layout' | 'tools' | 'data'
 
@@ -44,6 +45,10 @@ interface Props {
   unlocked: boolean
   onLock?: () => void
   isDummy?: boolean
+  /** Forwarded to KeyLabelsModal when the Key Labels Edit button opens
+   *  it from the keypicker overlay (mirrors the SettingsModal entry). */
+  hubDisplayName?: string | null
+  hubCanWrite?: boolean
   // Extra content appended to Tools tab (e.g. Import, Reset)
   toolsExtra?: React.ReactNode
   // Save tab (formerly Data)
@@ -74,6 +79,8 @@ export function KeycodesOverlayPanel({
   unlocked,
   onLock,
   isDummy,
+  hubDisplayName = null,
+  hubCanWrite = false,
   toolsExtra,
   dataPanel,
   onExportLayoutPdfAll,
@@ -82,6 +89,7 @@ export function KeycodesOverlayPanel({
   const { t } = useTranslation()
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
+  const [keyLabelsModalOpen, setKeyLabelsModalOpen] = useState(false)
   const keyLabels = useKeyLabels()
   /**
    * Layout dropdown options. QWERTY is materialised as a Key Label
@@ -126,6 +134,7 @@ export function KeycodesOverlayPanel({
   const showTabs = tabs.length > 1
 
   return (
+    <>
     <div className="flex h-full flex-col" data-testid="keycodes-overlay-panel">
       {/* Top tab bar */}
       {showTabs && (
@@ -221,19 +230,29 @@ export function KeycodesOverlayPanel({
               <label htmlFor="overlay-layout-selector" className="text-[13px] font-medium text-content">
                 {t('layout.keyboardLayout')}
               </label>
-              <select
-                id="overlay-layout-selector"
-                value={keyboardLayout}
-                onChange={(e) => onKeyboardLayoutChange?.(e.target.value as KeyboardLayoutId)}
-                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-                data-testid="overlay-layout-selector"
-              >
-                {layoutSelectorOptions.map((layoutDef) => (
-                  <option key={layoutDef.id} value={layoutDef.id}>
-                    {layoutDef.name}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  id="overlay-layout-selector"
+                  value={keyboardLayout}
+                  onChange={(e) => onKeyboardLayoutChange?.(e.target.value as KeyboardLayoutId)}
+                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                  data-testid="overlay-layout-selector"
+                >
+                  {layoutSelectorOptions.map((layoutDef) => (
+                    <option key={layoutDef.id} value={layoutDef.id}>
+                      {layoutDef.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setKeyLabelsModalOpen(true)}
+                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] font-medium text-content hover:bg-surface-dim"
+                  data-testid="overlay-key-labels-edit-button"
+                >
+                  {t('keyLabels.edit')}
+                </button>
+              </div>
             </div>
 
             {/* Auto-advance toggle */}
@@ -355,5 +374,12 @@ export function KeycodesOverlayPanel({
         )}
       </div>
     </div>
+    <KeyLabelsModal
+      open={keyLabelsModalOpen}
+      onClose={() => setKeyLabelsModalOpen(false)}
+      currentDisplayName={hubDisplayName}
+      hubCanWrite={hubCanWrite}
+    />
+    </>
   )
 }

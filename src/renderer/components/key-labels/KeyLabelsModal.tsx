@@ -10,11 +10,13 @@
 // favorite-store editors so the hub-aware modals stay consistent.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
+import { formatDateTime } from '../editors/store-modal-shared'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { HUB_ERROR_KEY_LABEL_DUPLICATE } from '../../../shared/types/hub-key-label'
 import { buildHubKeyLabelUrl } from '../../../shared/hub-urls'
@@ -25,6 +27,11 @@ import type {
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
 
 const QWERTY_ID = 'qwerty'
+
+/** Throttle for `POST /api/key-labels/timestamps`. Mirrors the
+ *  AnalyzePane analytics-sync limiter — same 5-min window so users
+ *  perceive the same "checks happen on entry, not on every flick". */
+const HUB_TIMESTAMPS_RATE_LIMIT_MS = 5 * 60 * 1000
 
 type TabId = 'installed' | 'hub'
 
@@ -97,6 +104,22 @@ export function KeyLabelsModal({
   const dragIdRef = useRef<string | null>(null)
   const [hubOrigin, setHubOrigin] = useState('')
 
+  /**
+   * Per-row Hub freshness signal collected from
+   * `POST /api/key-labels/timestamps` when the Installed tab opens.
+   * - `serverUpdatedAt > meta.hubUpdatedAt` → "update available" dot
+   *   next to Sync.
+   * - id missing from the response → the Hub post was deleted; the
+   *   row reads "(removed)" in the Updated column instead of a time.
+   */
+  const [hubFreshness, setHubFreshness] = useState<Map<string, { serverUpdatedAt?: string; removed: boolean }>>(new Map())
+  /**
+   * Wall-clock at the most recent successful timestamps fetch. Used as
+   * a 5-minute rate limit so flipping back to the Installed tab in the
+   * same session does not spam the Hub.
+   */
+  const lastTimestampsCheckAtRef = useRef<number>(0)
+
   // The Hub origin powers the "Open in browser" links; fetched once on
   // mount and reused across all rows.
   useEffect(() => {
@@ -133,6 +156,39 @@ export function KeyLabelsModal({
   const tRef = useRef(t)
   useEffect(() => { labelsRef.current = labels }, [labels])
   useEffect(() => { tRef.current = t }, [t])
+
+  // Bulk freshness check via POST /api/key-labels/timestamps. Runs
+  // when the Installed tab is shown, rate-limited so tab churn does
+  // not hammer the Hub. Failures leave the limiter untouched so the
+  // next modal entry retries (mirrors AnalyzePane's success-only
+  // bookkeeping).
+  useEffect(() => {
+    if (!open || activeTab !== 'installed') return
+    if (Date.now() - lastTimestampsCheckAtRef.current < HUB_TIMESTAMPS_RATE_LIMIT_MS) return
+    const candidates = labelsRef.current.metas.filter((m) => !!m.hubPostId && m.id !== QWERTY_ID)
+    if (candidates.length === 0) return
+    let cancelled = false
+    void (async () => {
+      const ids = candidates.map((m) => m.hubPostId).filter((x): x is string => !!x)
+      const res = await labelsRef.current.hubTimestamps(ids)
+      if (cancelled || !res.success || !res.data) return
+      lastTimestampsCheckAtRef.current = Date.now()
+      const serverMap = new Map(res.data.items.map((x) => [x.id, x.updated_at]))
+      const next = new Map<string, { serverUpdatedAt?: string; removed: boolean }>()
+      for (const meta of candidates) {
+        const hubPostId = meta.hubPostId
+        if (!hubPostId) continue
+        const serverUpdatedAt = serverMap.get(hubPostId)
+        if (serverUpdatedAt) {
+          next.set(meta.id, { serverUpdatedAt, removed: false })
+        } else {
+          next.set(meta.id, { removed: true })
+        }
+      }
+      setHubFreshness(next)
+    })()
+    return () => { cancelled = true }
+  }, [open, activeTab, labels.metas])
 
   const runSearch = useCallback(async (query: string): Promise<void> => {
     if (query.length < 2) return
@@ -284,7 +340,11 @@ export function KeyLabelsModal({
 
   if (!open) return null
 
-  return (
+  // Render via portal to document.body so the modal escapes any
+  // transformed ancestor (the keypicker overlay panel slides via
+  // `translate-x-full`, which traps `position: fixed` descendants
+  // inside its bounding box).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="key-labels-modal-backdrop"
@@ -374,6 +434,7 @@ export function KeyLabelsModal({
               onRenameCommit={handleRenameCommit}
               onUpload={(id) => runWithPending(id, () => labels.hubUpload(id), 'hub.uploadSuccess', 'hub.uploadFailed')}
               onUpdate={(id) => runWithPending(id, () => labels.hubUpdate(id), 'hub.updateSuccess', 'hub.updateFailed')}
+              onSync={(id) => runWithPending(id, () => labels.hubSync(id), 'hub.syncSuccess', 'hub.syncFailed')}
               onRemove={async (id) => {
                 await runWithPending(id, () => labels.hubDelete(id), 'hub.removeSuccess', 'hub.removeFailed')
                 setConfirmRemoveId(null)
@@ -389,6 +450,7 @@ export function KeyLabelsModal({
               onDragOver={handleDragOver}
               onDragEnd={handleDragEnd}
               hubOrigin={hubOrigin}
+              hubFreshness={hubFreshness}
             />
           ) : (
             <HubTable
@@ -407,7 +469,8 @@ export function KeyLabelsModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -448,10 +511,12 @@ interface InstalledTableProps {
   currentDisplayName: string | null
   hubCanWrite: boolean
   hubOrigin: string
+  hubFreshness: Map<string, { serverUpdatedAt?: string; removed: boolean }>
   onRenameKey: (e: React.KeyboardEvent<HTMLInputElement>, id: string) => void
   onRenameCommit: (id: string) => void | Promise<void>
   onUpload: (id: string) => void | Promise<void>
   onUpdate: (id: string) => void | Promise<void>
+  onSync: (id: string) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
   onDelete: (id: string) => void | Promise<void>
   onExport: (id: string) => void | Promise<void>
@@ -496,6 +561,7 @@ function InstalledRowView({
   onRenameCommit,
   onUpload,
   onUpdate,
+  onSync,
   onRemove,
   onDelete,
   onExport,
@@ -503,13 +569,22 @@ function InstalledRowView({
   onDragOver,
   onDragEnd,
   hubOrigin,
+  hubFreshness,
 }: InstalledRowViewProps): JSX.Element {
+  const { t } = useTranslation()
   const isMine = !row.hubPostId || row.author === currentDisplayName
   // QWERTY shows the same drag handle as the other rows; only its
   // action column stays empty (no rename / delete / hub ops).
   const isDraggable = true
   const editing = rename.editingId === row.localId
   const busy = pendingId !== null && pendingId === row.localId
+  const freshness = hubFreshness.get(row.localId)
+  // ISO 8601 strings sort lexicographically, so a string compare gives
+  // chronological ordering.
+  const hasUpdateAvailable = !!freshness && !freshness.removed
+    && !!freshness.serverUpdatedAt
+    && (!row.meta?.hubUpdatedAt || freshness.serverUpdatedAt > row.meta.hubUpdatedAt)
+  const hubRemoved = !!freshness && freshness.removed
 
   const canRename = isMine && !row.isQwerty
   const renderName = (): JSX.Element => {
@@ -584,7 +659,18 @@ function InstalledRowView({
       <div className="flex-1 min-w-0 px-1 py-2">
         <div className="flex items-center gap-3">
           <span className="flex-1 min-w-0 truncate">{renderName()}</span>
-          <span className="w-40 truncate text-content-secondary">{row.author}</span>
+          <span className="w-32 truncate text-content-secondary">{row.author}</span>
+          {/* Show Hub-side `updated_at` so the column matches Hub's
+              own display. Blank for QWERTY, never-uploaded local
+              entries, and legacy rows that predate this field. The
+              "(removed)" overrides the timestamp when the bulk
+              freshness check confirms the post is gone from Hub. */}
+          <span
+            className={`w-32 text-xs whitespace-nowrap ${hubRemoved ? 'text-rose-600' : 'text-content-secondary'}`}
+            data-testid={`key-labels-updated-at-${row.localId}`}
+          >
+            {renderUpdatedCell({ hubRemoved, hubUpdatedAt: row.meta?.hubUpdatedAt, t })}
+          </span>
           {/* Fixed-width slot keeps the Author column aligned across
               every row — without it the QWERTY row's empty actions
               area collapses to 0 px and the "pipette" label drifts
@@ -623,11 +709,13 @@ function InstalledRowView({
               busy={busy}
               hubCanWrite={hubCanWrite}
               confirmingRemove={confirmRemoveId === row.localId}
+              hasUpdateAvailable={hasUpdateAvailable}
               onOpenInBrowser={() => {
                 if (hubPostUrl) void window.vialAPI.openExternal(hubPostUrl)
               }}
               onUpload={() => void onUpload(row.localId)}
               onUpdate={() => void onUpdate(row.localId)}
+              onSync={() => void onSync(row.localId)}
               onAskRemove={() => setConfirmRemoveId(row.localId)}
               onCancelRemove={() => setConfirmRemoveId(null)}
               onConfirmRemove={() => void onRemove(row.localId)}
@@ -678,9 +766,12 @@ interface HubLineActionsProps {
   hubCanWrite: boolean
   /** True when this row is in the inline "Confirm Remove? Cancel" state. */
   confirmingRemove: boolean
+  /** True when the bulk freshness check shows Hub has a newer post. */
+  hasUpdateAvailable: boolean
   onOpenInBrowser: () => void
   onUpload: () => void
   onUpdate: () => void
+  onSync: () => void
   onAskRemove: () => void
   onCancelRemove: () => void
   onConfirmRemove: () => void
@@ -694,9 +785,11 @@ function HubLineActions({
   busy,
   hubCanWrite,
   confirmingRemove,
+  hasUpdateAvailable,
   onOpenInBrowser,
   onUpload,
   onUpdate,
+  onSync,
   onAskRemove,
   onCancelRemove,
   onConfirmRemove,
@@ -740,6 +833,28 @@ function HubLineActions({
         >
           {t('hub.openInBrowser')}
         </a>
+      )}
+      {hasHubPost && !isMine && (
+        // Pull-direction refresh; download is anonymous so no
+        // hubCanWrite gate. The red dot signals that the Hub-side
+        // updated_at is newer than the local cache (set by the bulk
+        // POST /api/key-labels/timestamps check on Installed mount).
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onSync}
+          className="inline-flex items-center gap-1 text-xs font-medium text-accent hover:underline disabled:opacity-50"
+          data-testid={`key-labels-sync-${localId}`}
+        >
+          {hasUpdateAvailable && (
+            <span
+              aria-hidden="true"
+              className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+              data-testid={`key-labels-update-available-${localId}`}
+            />
+          )}
+          {t('keyLabels.actionSync')}
+        </button>
       )}
       {hasHubPost && isMine && (
         <button
@@ -1001,4 +1116,20 @@ function translateError(
   if (code === 'INVALID_FILE') return t('keyLabels.errorImportFailed')
   if (code === 'INVALID_NAME') return t('keyLabels.errorInvalidName')
   return error ?? t('keyLabels.errorGeneric')
+}
+
+/**
+ * Picks the text shown in the Updated column. The three states are
+ * mutually exclusive: removed > has-timestamp > unknown. Extracted
+ * from the row JSX so the column is one expression and the precedence
+ * is explicit.
+ */
+function renderUpdatedCell(args: {
+  hubRemoved: boolean
+  hubUpdatedAt: string | undefined
+  t: (key: string) => string
+}): string {
+  if (args.hubRemoved) return args.t('keyLabels.hubRemoved')
+  if (args.hubUpdatedAt) return formatDateTime(args.hubUpdatedAt)
+  return ''
 }

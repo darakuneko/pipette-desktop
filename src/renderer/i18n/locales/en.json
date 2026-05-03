@@ -1385,6 +1385,8 @@
     "updating": "Updating...",
     "updateSuccess": "Updated",
     "updateFailed": "Update failed",
+    "syncSuccess": "Synced",
+    "syncFailed": "Sync failed",
     "removeFromHub": "Remove",
     "removing": "Removing...",
     "removeSuccess": "Removed",
@@ -1469,10 +1471,12 @@
     "empty": "No key labels yet. Use Search to discover or Import to add a .json file.",
     "actionUpload": "Upload",
     "actionUpdate": "Update",
+    "actionSync": "Sync",
     "actionRemove": "Remove",
     "actionDownload": "Download",
     "actionDelete": "Delete",
     "actionExport": ".json",
+    "hubRemoved": "(removed)",
     "errorDuplicate": "A label with the same name already exists",
     "errorImportFailed": "Failed to import key label",
     "errorInvalidName": "Invalid label name",
@@ -1480,7 +1484,7 @@
     "errorGeneric": "Action failed",
     "missingTitle": "Key Label not found",
     "missingMessage": "The key label \"{{name}}\" is not installed. Showing keymap with QWERTY labels.",
-    "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}.",
+    "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}, or from the keypicker overlay's Edit button.",
     "missingClose": "Close"
   }
 }

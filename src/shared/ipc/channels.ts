@@ -214,6 +214,8 @@ export const IpcChannels = {
   KEY_LABEL_HUB_DOWNLOAD: 'key-label-hub:download',
   KEY_LABEL_HUB_UPLOAD: 'key-label-hub:upload',
   KEY_LABEL_HUB_UPDATE: 'key-label-hub:update',
+  KEY_LABEL_HUB_SYNC: 'key-label-hub:sync',
+  KEY_LABEL_HUB_TIMESTAMPS: 'key-label-hub:timestamps',
   KEY_LABEL_HUB_DELETE: 'key-label-hub:delete',
 
   // Window management (renderer → main)

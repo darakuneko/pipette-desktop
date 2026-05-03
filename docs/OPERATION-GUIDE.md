@@ -877,7 +877,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
 - **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, JIS keyboard, and List views for the Basic tab
-- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); reorder it by dragging rows in the Key Labels modal
+- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); the **Edit** button next to it opens the same Key Labels Manage modal as Settings → Tools (so you can install / sync / reorder labels without leaving the editor)
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
@@ -1323,14 +1323,17 @@ QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, �
 
 ![Key Labels — Installed](screenshots/key-labels-installed.png)
 
-Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor.
+Lists every label set already on this device. Each row shows the label name, the uploader name (when the entry came from Hub), the Hub-side last-update time (`YYYY-MM-DD HH:mm`, mirrors what the Hub website displays), an `.json` export shortcut, and a Delete button. Drag the grip handle on the left to reorder rows — the order is propagated to the Settings dropdown and to every Key Labels picker in the editor.
 
 A second line under each row exposes the Hub actions:
 
 - **Open**: open the entry's Hub page in the system browser (only when the row is linked to a Hub post)
 - **Upload**: publish a new Hub post from this local entry (only for entries that have not been uploaded yet)
 - **Update**: push the current local content to the existing Hub post (owner only)
+- **Sync**: pull the latest Hub content into this local entry without losing the local rename or drag position (shown for downloaded entries you do not own). A **pulsing green dot** appears next to the Sync button when the Hub-side post is newer than your local cache — opening the modal triggers a bulk freshness check (throttled to once per 5 min) so you can spot updates without manually clicking each row
 - **Remove**: take the post down from Hub. Confirms inline before running
+
+If the Hub freshness check finds a row whose post has been deleted upstream, the Updated column reads **`(removed)`** in red instead of a timestamp; clicking Sync on such a row will fail because the Hub no longer serves it.
 
 QWERTY shows no Hub actions and cannot be deleted, but it can be reordered like any other row.
 
