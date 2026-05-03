@@ -79,10 +79,34 @@ export interface AnalyzeExportContext {
   }
 }
 
+/** Per-category result reported back to the parent for the Hub upload
+ * flow. The export flow stays self-contained (writes CSV files via
+ * exportCsvBundle), so no callback is needed there. */
+export interface AnalyzeUploadCallbacks {
+  /** Whether an upload IPC is currently in flight for the same entry —
+   * disables the confirm button + swaps the label to "Uploading…". */
+  isUploading: boolean
+  /** Last upload result for the active entry. Surfaced as a status
+   * banner under the categories list. `null` hides the banner. */
+  uploadResult: { kind: 'success' | 'error'; message: string } | null
+  /** Confirm handler invoked with the user's category selection. The
+   * parent runs the actual upload IPC and resolves with `{ ok }` so
+   * the modal can decide whether to close itself. */
+  onConfirm: (categories: ReadonlySet<Category>) => Promise<{ ok: boolean }>
+  /** Whether the active entry already lives on Hub. Switches the
+   * confirm button label between "Upload" and "Update". */
+  isExisting: boolean
+}
+
 interface Props {
   isOpen: boolean
   onClose: () => void
   ctx: AnalyzeExportContext | null
+  /** `'export'` is the historical CSV-bundle path. `'upload'` reuses
+   * the same category-picker UI but routes the confirm action to
+   * `upload.onConfirm` and swaps the button label. */
+  mode?: 'export' | 'upload'
+  upload?: AnalyzeUploadCallbacks
 }
 
 type Category = 'heatmap' | 'wpm' | 'interval' | 'activity' | 'ergonomics' | 'bigrams' | 'layoutComparison' | 'layer'
@@ -90,6 +114,7 @@ type Category = 'heatmap' | 'wpm' | 'interval' | 'activity' | 'ergonomics' | 'bi
 const CATEGORIES: readonly Category[] = [
   'heatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer',
 ]
+export type AnalyzeExportCategory = Category
 
 // Heatmap, Ergonomics, and Layout Comparison need a keymap snapshot
 // (the comparison aligns target positions against the recorded
@@ -281,7 +306,7 @@ function pickBuilders(
   return out
 }
 
-export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
+export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', upload }: Props) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState<Record<Category, boolean>>(allOn)
   const [exporting, setExporting] = useState(false)
@@ -304,7 +329,14 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
     if (REQUIRES_SNAPSHOT[c] && snapshotMissing) return false
     // Layout Comparison also needs an explicit target — without one
     // there is no "candidate vs current" diff to write to CSV.
-    if (c === 'layoutComparison' && ctx.layoutComparison.targetLayoutId === null) return false
+    // Upload mode currently never ships a layout comparison (the
+    // resolver pipeline lives in the renderer's LayoutComparisonView)
+    // so disable the toggle entirely for upload to make the limitation
+    // visible to the user.
+    if (c === 'layoutComparison') {
+      if (mode === 'upload') return false
+      if (ctx.layoutComparison.targetLayoutId === null) return false
+    }
     return true
   }
 
@@ -336,6 +368,32 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
       setExporting(false)
     }
   }
+
+  const handleUpload = async () => {
+    if (!ctx || !upload || !anySelected || upload.isUploading) return
+    setError(null)
+    const picked = new Set<Category>()
+    for (const c of CATEGORIES) {
+      if (selected[c] && isCategoryAvailable(c)) picked.add(c)
+    }
+    try {
+      const result = await upload.onConfirm(picked)
+      if (result.ok) onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('analyze.export.failed'))
+    }
+  }
+
+  const isUploading = mode === 'upload' && (upload?.isUploading ?? false)
+  const confirmLabel = mode === 'upload'
+    ? (isUploading
+        ? t(upload?.isExisting ? 'hub.updating' : 'hub.uploading')
+        : t(upload?.isExisting ? 'hub.updateOnHub' : 'hub.uploadToHub'))
+    : t('analyze.export.confirm')
+  const confirmDisabled = mode === 'upload'
+    ? !anySelected || isUploading || ctx === null
+    : !anySelected || exporting || ctx === null
+  const confirmHandler = mode === 'upload' ? handleUpload : handleExport
 
   if (!isOpen) return null
 
@@ -406,16 +464,25 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx }: Props) {
               {error}
             </p>
           )}
+          {mode === 'upload' && upload?.uploadResult && (
+            <p
+              className={`text-[12px] font-medium ${upload.uploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+              data-testid="analyze-export-upload-result"
+              role={upload.uploadResult.kind === 'error' ? 'alert' : undefined}
+            >
+              {upload.uploadResult.message}
+            </p>
+          )}
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-edge bg-surface px-5 py-3">
           <button
             type="button"
             className={FILTER_BUTTON}
-            onClick={handleExport}
-            disabled={!anySelected || exporting || ctx === null}
+            onClick={() => { void confirmHandler() }}
+            disabled={confirmDisabled}
             data-testid="analyze-export-confirm"
           >
-            {t('analyze.export.confirm')}
+            {confirmLabel}
           </button>
         </div>
       </div>

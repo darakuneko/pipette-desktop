@@ -16,6 +16,11 @@ export interface AnalyzeFilterSnapshotMeta {
   savedAt: string // ISO 8601
   updatedAt?: string
   deletedAt?: string // tombstone
+  /** Pipette Hub post id once the saved snapshot has been uploaded as
+   * an analytics post. Absent / null means "not on Hub yet"; the panel
+   * uses this to switch the row's primary action between
+   * "↑ Hub" (initial upload) and "↻ Hub" (update). */
+  hubPostId?: string
 }
 
 export interface AnalyzeFilterSnapshotIndex {

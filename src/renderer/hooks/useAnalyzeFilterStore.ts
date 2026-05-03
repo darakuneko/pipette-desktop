@@ -6,7 +6,7 @@
 // the renderer-only AnalysisTab key — main only stores the JSON
 // opaquely.
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
@@ -15,6 +15,12 @@ import {
 } from '../../shared/types/analyze-filter-store'
 import type { AnalysisTabKey, RangeMs } from '../components/analyze/analyze-types'
 import type { AnalyzeFiltersState } from './useAnalyzeFilters'
+import type {
+  HubAnalyticsCategoryId,
+  HubAnalyticsLayoutComparisonInputs,
+} from '../../shared/types/hub'
+import type { HubEntryResult } from '../components/editors/layout-store-types'
+import { localizeHubError } from '../utils/hub-error-i18n'
 
 /** Serialized snapshot payload. `version` lets us evolve the shape
  * later without losing already-saved entries — readers should bail out
@@ -42,12 +48,46 @@ export interface UseAnalyzeFilterStoreOptions {
   uid: string | null
 }
 
+/** Per-call inputs for the Hub upload pipeline. The hook stays
+ * decoupled from AnalyzePane state — the caller assembles the bits the
+ * IPC needs (keyboard meta, finger overrides, optional layout
+ * comparison maps, thumbnail, category picks) and the hook drives the
+ * round-trip + the panel's status flash. */
+export interface UploadAnalyticsToHubInput {
+  entryId: string
+  title: string
+  thumbnailBase64: string
+  keyboard: { productName: string; vendorId: number; productId: number }
+  fingerOverrides: Record<string, string>
+  layoutComparisonInputs: HubAnalyticsLayoutComparisonInputs | null
+  /** User's category selection from the upload modal. Empty / absent
+   * ships everything (back-compat with the early build). */
+  categories?: HubAnalyticsCategoryId[]
+}
+
+const HUB_RESULT_FLASH_MS = 4_000
+
 export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
   const { t } = useTranslation()
   const [entries, setEntries] = useState<AnalyzeFilterSnapshotMeta[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+  // Mirrors useHubState's flash pattern: which entry is mid-upload, and
+  // the last upload's success/failure with the entry id stamped on it
+  // so the panel can show the row-local status banner.
+  const [hubUploading, setHubUploading] = useState<string | null>(null)
+  const [hubUploadResult, setHubUploadResult] = useState<HubEntryResult | null>(null)
+  const hubResultTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const hubInflightRef = useRef(false)
+
+  const flashHubResult = useCallback((result: HubEntryResult) => {
+    setHubUploadResult(result)
+    if (hubResultTimerRef.current) clearTimeout(hubResultTimerRef.current)
+    hubResultTimerRef.current = setTimeout(() => {
+      setHubUploadResult((current) => current === result ? null : current)
+    }, HUB_RESULT_FLASH_MS)
+  }, [])
 
   const refreshEntries = useCallback(async () => {
     // Clear first so a uid switch doesn't briefly show the prior
@@ -146,6 +186,126 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
     }
   }, [uid, refreshEntries])
 
+  const uploadEntryToHub = useCallback(async (input: UploadAnalyticsToHubInput): Promise<{ ok: boolean }> => {
+    if (!uid || hubInflightRef.current) return { ok: false }
+    hubInflightRef.current = true
+    setHubUploading(input.entryId)
+    let ok = false
+    try {
+      const result = await window.vialAPI.hubUploadAnalyticsPost({
+        uid,
+        entryId: input.entryId,
+        title: input.title,
+        thumbnailBase64: input.thumbnailBase64,
+        keyboard: input.keyboard,
+        fingerOverrides: input.fingerOverrides,
+        layoutComparisonInputs: input.layoutComparisonInputs,
+        categories: input.categories,
+      })
+      if (result.success && result.postId) {
+        ok = true
+        flashHubResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId: input.entryId })
+        await refreshEntries()
+      } else {
+        flashHubResult({
+          kind: 'error',
+          message: localizeHubError(result.error, 'hub.uploadFailed', t),
+          entryId: input.entryId,
+        })
+      }
+    } catch (err) {
+      flashHubResult({
+        kind: 'error',
+        message: localizeHubError(err instanceof Error ? err.message : undefined, 'hub.uploadFailed', t),
+        entryId: input.entryId,
+      })
+    } finally {
+      hubInflightRef.current = false
+      setHubUploading(null)
+    }
+    return { ok }
+  }, [uid, refreshEntries, t, flashHubResult])
+
+  const updateEntryOnHub = useCallback(async (input: UploadAnalyticsToHubInput): Promise<{ ok: boolean }> => {
+    if (!uid || hubInflightRef.current) return { ok: false }
+    const entry = entries.find((e) => e.id === input.entryId)
+    const postId = entry?.hubPostId
+    if (!entry || !postId) {
+      flashHubResult({ kind: 'error', message: t('hub.updateFailed'), entryId: input.entryId })
+      return { ok: false }
+    }
+    hubInflightRef.current = true
+    setHubUploading(input.entryId)
+    let ok = false
+    try {
+      const result = await window.vialAPI.hubUpdateAnalyticsPost({
+        uid,
+        entryId: input.entryId,
+        title: input.title,
+        thumbnailBase64: input.thumbnailBase64,
+        keyboard: input.keyboard,
+        fingerOverrides: input.fingerOverrides,
+        layoutComparisonInputs: input.layoutComparisonInputs,
+        categories: input.categories,
+        postId,
+      })
+      if (result.success) {
+        ok = true
+        flashHubResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: input.entryId })
+        await refreshEntries()
+      } else {
+        flashHubResult({
+          kind: 'error',
+          message: localizeHubError(result.error, 'hub.updateFailed', t),
+          entryId: input.entryId,
+        })
+      }
+    } catch (err) {
+      flashHubResult({
+        kind: 'error',
+        message: localizeHubError(err instanceof Error ? err.message : undefined, 'hub.updateFailed', t),
+        entryId: input.entryId,
+      })
+    } finally {
+      hubInflightRef.current = false
+      setHubUploading(null)
+    }
+    return { ok }
+  }, [uid, entries, refreshEntries, t, flashHubResult])
+
+  // Local-only "remove from Hub" — clears the saved entry's hubPostId
+  // metadata so the row reverts to the upload state. We don't issue a
+  // Hub DELETE here today (the Hub-side delete endpoint is the user's
+  // responsibility on the Hub site); this matches the analyze panel's
+  // narrower scope vs. the keymap save panel.
+  const removeEntryFromHub = useCallback(async (entryId: string): Promise<void> => {
+    if (!uid || hubInflightRef.current) return
+    hubInflightRef.current = true
+    setHubUploading(entryId)
+    try {
+      const result = await window.vialAPI.analyzeFilterStoreSetHubPostId(uid, entryId, null)
+      if (result.success) {
+        flashHubResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
+        await refreshEntries()
+      } else {
+        flashHubResult({
+          kind: 'error',
+          message: localizeHubError(result.error, 'hub.removeFailed', t),
+          entryId,
+        })
+      }
+    } catch (err) {
+      flashHubResult({
+        kind: 'error',
+        message: localizeHubError(err instanceof Error ? err.message : undefined, 'hub.removeFailed', t),
+        entryId,
+      })
+    } finally {
+      hubInflightRef.current = false
+      setHubUploading(null)
+    }
+  }, [uid, refreshEntries, t, flashHubResult])
+
   return {
     entries,
     error,
@@ -156,5 +316,10 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
     loadSnapshot,
     renameEntry,
     deleteEntry,
+    hubUploading,
+    hubUploadResult,
+    uploadEntryToHub,
+    updateEntryOnHub,
+    removeEntryFromHub,
   }
 }

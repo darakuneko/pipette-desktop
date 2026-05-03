@@ -193,8 +193,16 @@ export const IpcChannels = {
   HUB_UPLOAD_FAVORITE_POST: 'hub:upload-favorite-post',
   HUB_UPDATE_FAVORITE_POST: 'hub:update-favorite-post',
 
+  // Hub Analytics posts
+  HUB_UPLOAD_ANALYTICS_POST: 'hub:upload-analytics-post',
+  HUB_UPDATE_ANALYTICS_POST: 'hub:update-analytics-post',
+  HUB_PREVIEW_ANALYTICS_POST: 'hub:preview-analytics-post',
+
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
+
+  // Analyze Filter Store extensions
+  ANALYZE_FILTER_STORE_SET_HUB_POST_ID: 'analyze-filter-store:set-hub-post-id',
 
   // Key Label Store (renderer → main → renderer)
   KEY_LABEL_STORE_LIST: 'key-label-store:list',

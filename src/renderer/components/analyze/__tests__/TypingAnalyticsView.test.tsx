@@ -142,6 +142,11 @@ Object.defineProperty(window, 'vialAPI', {
     // The overlay subscribes to sync progress events. The default stub
     // is a no-op subscriber returning a no-op unsubscribe function.
     syncOnProgress: () => () => {},
+    // Hub origin is fetched once on AnalyzePane mount to build "open
+    // on Hub" links. Returning a non-empty string keeps the upload
+    // panel rendering without forcing every test to override.
+    hubGetOrigin: () => Promise.resolve('https://pipette-hub-test.example'),
+    openExternal: () => Promise.resolve(undefined),
   },
   writable: true,
 })

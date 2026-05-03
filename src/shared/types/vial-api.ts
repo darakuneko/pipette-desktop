@@ -45,7 +45,7 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview } from './hub'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -314,8 +314,16 @@ export interface VialAPI {
   hubUploadFavoritePost(params: HubUploadFavoritePostParams): Promise<HubUploadResult>
   hubUpdateFavoritePost(params: HubUpdateFavoritePostParams): Promise<HubUploadResult>
 
+  // Hub Analytics posts
+  hubUploadAnalyticsPost(params: HubUploadAnalyticsPostParams): Promise<HubUploadResult>
+  hubUpdateAnalyticsPost(params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult>
+  hubPreviewAnalyticsPost(params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }>
+
   // Favorite Store extensions
   favoriteStoreSetHubPostId(type: FavoriteType, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+
+  // Analyze Filter Store extensions
+  analyzeFilterStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
 
   // Window management
   setWindowCompactMode(enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null>
