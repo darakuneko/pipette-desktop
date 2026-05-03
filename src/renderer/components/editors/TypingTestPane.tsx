@@ -233,6 +233,25 @@ export function TypingTestPane({
     return { width: w, height: h }
   }, [keys, layoutOptions])
 
+  // App.tsx entry paths (analytics back, post-unlock, view restore, status bar)
+  // call setWindowCompactMode with an undefined saved size, which main skips —
+  // leaving the window at normal size. Apply the default here so every entry
+  // path lands on a sensibly sized window.
+  const appliedDefaultSizeRef = useRef(false)
+  useEffect(() => {
+    if (!viewOnly) {
+      appliedDefaultSizeRef.current = false
+      return
+    }
+    if (viewOnlyWindowSize) return
+    if (appliedDefaultSizeRef.current) return
+    if (keys.length === 0) return
+    appliedDefaultSizeRef.current = true
+    const size = getDefaultCompactSize()
+    window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
+    onViewOnlyWindowSizeChangeRef.current?.(size)
+  }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, keys.length])
+
   // Auto-fit using CSS transform + aspect ratio lock
   useEffect(() => {
     if (!viewOnly) return
