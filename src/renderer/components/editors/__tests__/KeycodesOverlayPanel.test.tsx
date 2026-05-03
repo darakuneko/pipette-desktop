@@ -27,6 +27,8 @@ vi.mock('../../../hooks/useKeyLabels', () => ({
     hubDownload: async () => ({ success: true }),
     hubUpload: async () => ({ success: true }),
     hubUpdate: async () => ({ success: true }),
+    hubSync: async () => ({ success: true }),
+    hubTimestamps: async () => ({ success: true, data: { items: [] } }),
     hubDelete: async () => ({ success: true }),
   }),
 }))
@@ -44,6 +46,7 @@ vi.mock('react-i18next', () => ({
         'security.lock': 'Lock',
         'statusBar.locked': 'Locked',
         'statusBar.unlocked': 'Unlocked',
+        'keyLabels.edit': 'Edit',
       }
       return map[key] ?? key
     },
@@ -150,6 +153,15 @@ describe('KeycodesOverlayPanel', () => {
 
     fireEvent.change(screen.getByTestId('overlay-layout-selector'), { target: { value: 'dvorak' } })
     expect(onKeyboardLayoutChange).toHaveBeenCalledWith('dvorak')
+  })
+
+  it('opens KeyLabelsModal when the Edit button is clicked', () => {
+    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} hubDisplayName="me" hubCanWrite />)
+
+    // Modal is closed by default — backdrop should not be in the DOM yet.
+    expect(screen.queryByTestId('key-labels-modal-backdrop')).toBeNull()
+    fireEvent.click(screen.getByTestId('overlay-key-labels-edit-button'))
+    expect(screen.getByTestId('key-labels-modal-backdrop')).toBeInTheDocument()
   })
 
   it('calls onAutoAdvanceChange when toggle is clicked', () => {

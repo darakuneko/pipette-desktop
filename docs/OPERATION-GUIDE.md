@@ -877,7 +877,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
 - **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, JIS keyboard, and List views for the Basic tab
-- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); reorder it by dragging rows in the Key Labels modal
+- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); the **Edit** button next to it opens the same Key Labels Manage modal as Settings → Tools (so you can install / sync / reorder labels without leaving the editor)
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)

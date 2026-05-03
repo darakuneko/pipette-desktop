@@ -10,6 +10,7 @@
 // favorite-store editors so the hub-aware modals stay consistent.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
@@ -339,7 +340,11 @@ export function KeyLabelsModal({
 
   if (!open) return null
 
-  return (
+  // Render via portal to document.body so the modal escapes any
+  // transformed ancestor (the keypicker overlay panel slides via
+  // `translate-x-full`, which traps `position: fixed` descendants
+  // inside its bounding box).
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
       data-testid="key-labels-modal-backdrop"
@@ -464,7 +469,8 @@ export function KeyLabelsModal({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

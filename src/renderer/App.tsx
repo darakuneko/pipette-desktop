@@ -812,6 +812,8 @@ export function App() {
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
             onExportLayoutPdfCurrent={fileHandlers.handleExportLayoutPdfCurrent}
+            hubDisplayName={hub.hubDisplayName}
+            hubCanWrite={hub.hubCanUpload}
             favHubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
             favHubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
             favHubUploading={hub.favHubUploading}
