@@ -195,6 +195,8 @@ export interface SaveRecordInput {
   map: Record<string, string>
   compositeLabels?: Record<string, string>
   hubPostId?: string | null
+  /** Hub-side `updated_at` cached for the Updated column. Optional. */
+  hubUpdatedAt?: string
 }
 
 async function writeRecord(meta: KeyLabelMeta, data: KeyLabelEntryFile): Promise<void> {
@@ -234,6 +236,7 @@ export async function saveRecord(input: SaveRecordInput): Promise<KeyLabelStoreR
       updatedAt: now.toISOString(),
       ...(input.uploaderName ? { uploaderName: input.uploaderName } : {}),
       ...(input.hubPostId ? { hubPostId: input.hubPostId } : {}),
+      ...(input.hubUpdatedAt ? { hubUpdatedAt: input.hubUpdatedAt } : {}),
     }
 
     await writeRecord(meta, data)
@@ -324,6 +327,7 @@ export async function setHubPostId(
   id: string,
   hubPostId: string | null,
   uploaderName?: string | null,
+  hubUpdatedAt?: string | null,
 ): Promise<KeyLabelStoreResult<KeyLabelMeta>> {
   try {
     const index = await readIndex()
@@ -333,6 +337,9 @@ export async function setHubPostId(
     const normalized = hubPostId?.trim() || null
     if (normalized === null) {
       delete meta.hubPostId
+      // Detaching from Hub also clears the cached Hub timestamp so the
+      // Updated column blanks out (rather than showing a stale time).
+      delete meta.hubUpdatedAt
     } else {
       meta.hubPostId = normalized
     }
@@ -346,6 +353,14 @@ export async function setHubPostId(
         meta.uploaderName = trimmed
       } else {
         delete meta.uploaderName
+      }
+    }
+    if (hubUpdatedAt !== undefined) {
+      const trimmed = hubUpdatedAt?.trim() ?? ''
+      if (trimmed) {
+        meta.hubUpdatedAt = trimmed
+      } else {
+        delete meta.hubUpdatedAt
       }
     }
     meta.updatedAt = nowIso()
@@ -392,6 +407,7 @@ export async function importFromDialog(
           id: existing.id,
           ...(existing.uploaderName ? { uploaderName: existing.uploaderName } : {}),
           ...(existing.hubPostId ? { hubPostId: existing.hubPostId } : {}),
+          ...(existing.hubUpdatedAt ? { hubUpdatedAt: existing.hubUpdatedAt } : {}),
         }
         : {}),
       name: parsed.name,

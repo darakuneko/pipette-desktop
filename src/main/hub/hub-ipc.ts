@@ -8,10 +8,10 @@ import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubU
 import { getIdToken } from '../sync/google-auth'
 import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub } from './hub-client'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
-import { fetchKeyLabelList, fetchKeyLabelDetail, downloadKeyLabel, uploadKeyLabel, updateKeyLabel, deleteKeyLabel } from './hub-key-labels'
+import { fetchKeyLabelList, fetchKeyLabelDetail, fetchKeyLabelTimestamps, downloadKeyLabel, uploadKeyLabel, updateKeyLabel, deleteKeyLabel } from './hub-key-labels'
 import type { HubKeyLabelInput } from './hub-key-labels'
-import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from '../../shared/types/hub-key-label'
-import { HUB_ERROR_KEY_LABEL_DUPLICATE } from '../../shared/types/hub-key-label'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestamp, HubKeyLabelTimestampsResponse } from '../../shared/types/hub-key-label'
+import { HUB_ERROR_KEY_LABEL_DUPLICATE, HUB_KEY_LABEL_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub-key-label'
 import { getRecord, saveRecord, setHubPostId } from '../key-label-store'
 import type { KeyLabelMeta, KeyLabelStoreResult } from '../../shared/types/key-label-store'
 import { isValidFavoriteType, isValidVialProtocol, FAV_TYPE_TO_EXPORT_KEY, serializeFavData, buildFavExportFile } from '../../shared/favorite-data'
@@ -217,6 +217,36 @@ async function buildFavoriteExportJson(
   })
 
   return JSON.stringify(exportFile)
+}
+
+/**
+ * Fetch a key-label download body together with the uploader name and
+ * Hub-side `updated_at` from the detail endpoint. The detail call is
+ * best-effort: if it fails (network blip, 404 on a deleted post, etc.)
+ * we keep the caller-supplied uploader fallback so the Author column
+ * does not lose its cached value, and `hubUpdatedAt` simply stays
+ * undefined for that round.
+ */
+async function fetchHubKeyLabelPayload(
+  hubPostId: string,
+  fallbackUploader?: string,
+  fallbackHubUpdatedAt?: string,
+): Promise<{
+  body: { name: string; map: Record<string, string>; composite_labels: Record<string, string> | null }
+  uploaderName: string | undefined
+  hubUpdatedAt: string | undefined
+}> {
+  const body = await downloadKeyLabel(hubPostId)
+  let uploaderName: string | undefined = fallbackUploader
+  let hubUpdatedAt: string | undefined = fallbackHubUpdatedAt
+  try {
+    const detail = await fetchKeyLabelDetail(hubPostId)
+    uploaderName = detail.uploader_name ?? fallbackUploader
+    hubUpdatedAt = detail.updated_at ?? fallbackHubUpdatedAt
+  } catch {
+    // best-effort; keep the fallback values
+  }
+  return { body, uploaderName, hubUpdatedAt }
 }
 
 export function setupHubIpc(): void {
@@ -443,36 +473,61 @@ export function setupHubIpc(): void {
   )
 
   secureHandle(
+    IpcChannels.KEY_LABEL_HUB_TIMESTAMPS,
+    async (_event, ids: unknown): Promise<KeyLabelStoreResult<HubKeyLabelTimestampsResponse>> => {
+      if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string' && POST_ID_RE.test(id))) {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'ids must be an array of valid hub post ids' }
+      }
+      const unique = Array.from(new Set(ids as string[]))
+      if (unique.length === 0) return { success: true, data: { items: [] } }
+      try {
+        // Server caps each request at 100 ids; split larger inputs and
+        // run the chunks in parallel. Order is rebuilt from the input
+        // array so callers see input-order semantics regardless of
+        // chunking.
+        const chunks: string[][] = []
+        for (let i = 0; i < unique.length; i += HUB_KEY_LABEL_TIMESTAMPS_BATCH_LIMIT) {
+          chunks.push(unique.slice(i, i + HUB_KEY_LABEL_TIMESTAMPS_BATCH_LIMIT))
+        }
+        const responses = await Promise.all(chunks.map((chunk) => fetchKeyLabelTimestamps(chunk)))
+        const byId = new Map<string, HubKeyLabelTimestamp>()
+        for (const r of responses) {
+          for (const item of r.items) byId.set(item.id, item)
+        }
+        const items: HubKeyLabelTimestamp[] = []
+        for (const id of unique) {
+          const found = byId.get(id)
+          if (found) items.push(found)
+        }
+        return { success: true, data: { items } }
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub timestamps failed') }
+      }
+    },
+  )
+
+  secureHandle(
     IpcChannels.KEY_LABEL_HUB_DOWNLOAD,
     async (_event, hubPostId: unknown): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
       try {
         if (typeof hubPostId !== 'string' || !POST_ID_RE.test(hubPostId)) {
           return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid hub post id' }
         }
-        const body = await downloadKeyLabel(hubPostId)
-        // The download body lacks uploader info, so look it up from
-        // the detail endpoint so the Author column has something.
-        let uploaderName: string | undefined
-        try {
-          const detail = await fetchKeyLabelDetail(hubPostId)
-          uploaderName = detail.uploader_name ?? undefined
-        } catch {
-          // best-effort; the row simply leaves Author blank.
-        }
+        const { body, uploaderName, hubUpdatedAt } = await fetchHubKeyLabelPayload(hubPostId)
         const composite = body.composite_labels ?? undefined
         // Use the Hub post id as the local id so the saved
         // `keyboardLayout` can be matched against Hub later (e.g. the
         // Missing Key Label dialog needs to look up the human name
         // after the entry has been removed locally).
-        const saved = await saveRecord({
+        return await saveRecord({
           id: hubPostId,
           name: body.name,
           ...(uploaderName ? { uploaderName } : {}),
           map: body.map,
           ...(composite ? { compositeLabels: composite } : {}),
           hubPostId,
+          ...(hubUpdatedAt ? { hubUpdatedAt } : {}),
         })
-        return saved
       } catch (err) {
         return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub download failed') }
       }
@@ -494,11 +549,12 @@ export function setupHubIpc(): void {
       }
       try {
         const result = await withTokenRetry((jwt) => uploadKeyLabel(jwt, input))
-        // Carry the response's uploader_name into the local meta so
-        // the modal immediately shows the Author column and the
-        // Update / Remove buttons (gated by isMine = author ===
-        // currentDisplayName) appear without waiting for a sync.
-        return setHubPostId(localId, result.id, result.uploader_name)
+        // Carry the response's uploader_name and updated_at into the
+        // local meta so the modal immediately shows the Author and
+        // Updated columns and the Update / Remove buttons (gated by
+        // isMine = author === currentDisplayName) appear without
+        // waiting for a sync.
+        return setHubPostId(localId, result.id, result.uploader_name, result.updated_at)
       } catch (err) {
         if (err instanceof Hub409Error) {
           return { success: false, errorCode: 'DUPLICATE_NAME', error: HUB_ERROR_KEY_LABEL_DUPLICATE }
@@ -526,13 +582,53 @@ export function setupHubIpc(): void {
         ...(record.data.data.compositeLabels ? { compositeLabels: record.data.data.compositeLabels } : {}),
       }
       try {
-        await withTokenRetry((jwt) => updateKeyLabel(jwt, hubPostId, input))
-        return { success: true, data: record.data.meta }
+        const result = await withTokenRetry((jwt) => updateKeyLabel(jwt, hubPostId, input))
+        // Persist the new Hub-side updated_at so the Updated column
+        // matches Hub's own display. Pass undefined uploaderName so
+        // setHubPostId leaves the existing value alone.
+        return setHubPostId(localId, hubPostId, undefined, result.updated_at)
       } catch (err) {
         if (err instanceof Hub409Error) {
           return { success: false, errorCode: 'DUPLICATE_NAME', error: HUB_ERROR_KEY_LABEL_DUPLICATE }
         }
         return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub update failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.KEY_LABEL_HUB_SYNC,
+    async (_event, localId: unknown): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+      if (typeof localId !== 'string') {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Invalid id' }
+      }
+      const record = await getRecord(localId)
+      if (!record.success || !record.data) return record as KeyLabelStoreResult<KeyLabelMeta>
+      const hubPostId = record.data.meta.hubPostId
+      if (!hubPostId) {
+        return { success: false, errorCode: 'NOT_FOUND', error: 'Entry has no hub post' }
+      }
+      try {
+        const { body, uploaderName, hubUpdatedAt } = await fetchHubKeyLabelPayload(
+          hubPostId,
+          record.data.meta.uploaderName,
+          record.data.meta.hubUpdatedAt,
+        )
+        const composite = body.composite_labels ?? undefined
+        // Preserve the local id, name (drag/rename), and hubPostId; only
+        // refresh the payload (map / compositeLabels), uploaderName,
+        // and hubUpdatedAt.
+        return await saveRecord({
+          id: localId,
+          name: record.data.meta.name,
+          ...(uploaderName ? { uploaderName } : {}),
+          map: body.map,
+          ...(composite ? { compositeLabels: composite } : {}),
+          hubPostId,
+          ...(hubUpdatedAt ? { hubUpdatedAt } : {}),
+        })
+      } catch (err) {
+        return { success: false, errorCode: 'IO_ERROR', error: extractError(err, 'Hub sync failed') }
       }
     },
   )

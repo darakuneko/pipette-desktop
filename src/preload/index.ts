@@ -13,7 +13,7 @@ import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../shared/types/key-label-store'
-import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from '../shared/types/hub-key-label'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from '../shared/types/hub-key-label'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
@@ -262,6 +262,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_UPLOAD, localId),
   keyLabelHubUpdate: (localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_UPDATE, localId),
+  keyLabelHubSync: (localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_SYNC, localId),
+  keyLabelHubTimestamps: (ids: string[]): Promise<KeyLabelStoreResult<HubKeyLabelTimestampsResponse>> =>
+    ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_TIMESTAMPS, ids),
   keyLabelHubDelete: (localId: string): Promise<KeyLabelStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_DELETE, localId),
 

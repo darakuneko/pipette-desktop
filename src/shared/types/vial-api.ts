@@ -17,7 +17,7 @@ import type { SnapshotMeta } from './snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from './key-label-store'
-import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams } from './hub-key-label'
+import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from './hub-key-label'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
@@ -174,6 +174,8 @@ export interface VialAPI {
   keyLabelHubDownload(hubPostId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
   keyLabelHubUpload(localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
   keyLabelHubUpdate(localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelHubSync(localId: string): Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  keyLabelHubTimestamps(ids: string[]): Promise<KeyLabelStoreResult<HubKeyLabelTimestampsResponse>>
   keyLabelHubDelete(localId: string): Promise<KeyLabelStoreResult<void>>
 
   // Pipette Settings Store

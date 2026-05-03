@@ -43,9 +43,11 @@ const hubSearch = vi.fn()
 const hubDownload = vi.fn()
 const hubUpload = vi.fn()
 const hubUpdate = vi.fn()
+const hubSync = vi.fn()
+const hubTimestamps = vi.fn()
 const hubDelete = vi.fn()
 
-let metas: Array<{ id: string; name: string; uploaderName?: string; hubPostId?: string; filename: string; savedAt: string; updatedAt: string }> = []
+let metas: Array<{ id: string; name: string; uploaderName?: string; hubPostId?: string; hubUpdatedAt?: string; filename: string; savedAt: string; updatedAt: string }> = []
 
 vi.mock('../../../hooks/useKeyLabels', () => ({
   useKeyLabels: () => ({
@@ -62,6 +64,8 @@ vi.mock('../../../hooks/useKeyLabels', () => ({
     hubDownload,
     hubUpload,
     hubUpdate,
+    hubSync,
+    hubTimestamps,
     hubDelete,
   }),
 }))
@@ -96,6 +100,8 @@ describe('KeyLabelsModal', () => {
     hubDownload.mockResolvedValue({ success: true, data: meta({ id: 'd', name: 'Downloaded' }) })
     hubUpload.mockResolvedValue({ success: true, data: meta() })
     hubUpdate.mockResolvedValue({ success: true, data: meta() })
+    hubSync.mockResolvedValue({ success: true, data: meta() })
+    hubTimestamps.mockResolvedValue({ success: true, data: { items: [] } })
     hubDelete.mockResolvedValue({ success: true })
   })
 
@@ -134,13 +140,84 @@ describe('KeyLabelsModal', () => {
     expect(screen.queryByTestId('key-labels-upload-synced')).toBeNull()
   })
 
-  it('shows only Delete for downloaded foreign rows', () => {
+  it('shows Delete + Sync (pull) for downloaded foreign rows', () => {
     metas = [meta({ id: 'dl', name: 'Foreign', uploaderName: 'someone-else', hubPostId: 'hub-2' })]
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     expect(screen.getByTestId('key-labels-delete-dl')).toBeTruthy()
+    expect(screen.getByTestId('key-labels-sync-dl')).toBeTruthy()
     expect(screen.queryByTestId('key-labels-update-dl')).toBeNull()
     expect(screen.queryByTestId('key-labels-remove-dl')).toBeNull()
     expect(screen.queryByTestId('key-labels-upload-dl')).toBeNull()
+  })
+
+  it('Sync button triggers hubSync for downloaded foreign rows', async () => {
+    metas = [meta({ id: 'dl', name: 'Foreign', uploaderName: 'someone-else', hubPostId: 'hub-2' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-sync-dl'))
+    await waitFor(() => expect(hubSync).toHaveBeenCalledWith('dl'))
+  })
+
+  it('does not show Sync on owner rows (Cloud Sync handles owner data)', () => {
+    metas = [meta({ id: 'mine', name: 'Mine', uploaderName: 'me', hubPostId: 'hub-3' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(screen.queryByTestId('key-labels-sync-mine')).toBeNull()
+  })
+
+  it('shows update-available dot when bulk timestamps says Hub is newer', async () => {
+    metas = [
+      // Local cached value is older than what timestamps will report
+      { id: 'dl', name: 'Foreign', uploaderName: 'someone-else', filename: 'd.json', savedAt: 'now', updatedAt: 'now', hubPostId: 'hub-1', hubUpdatedAt: '2026-04-01T00:00:00Z' },
+    ]
+    hubTimestamps.mockResolvedValueOnce({
+      success: true,
+      data: { items: [{ id: 'hub-1', updated_at: '2026-05-02T23:29:00Z' }] },
+    })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    await waitFor(() => expect(hubTimestamps).toHaveBeenCalledWith(['hub-1']))
+    await waitFor(() => {
+      expect(screen.queryByTestId('key-labels-update-available-dl')).toBeTruthy()
+    })
+  })
+
+  it('marks rows as removed when their hubPostId is missing from timestamps response', async () => {
+    metas = [
+      { id: 'gone', name: 'Gone', uploaderName: 'someone-else', filename: 'g.json', savedAt: 'now', updatedAt: 'now', hubPostId: 'hub-2', hubUpdatedAt: '2026-04-01T00:00:00Z' },
+    ]
+    // Empty items → server says the post is gone.
+    hubTimestamps.mockResolvedValueOnce({ success: true, data: { items: [] } })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    await waitFor(() => expect(hubTimestamps).toHaveBeenCalledWith(['hub-2']))
+    await waitFor(() => {
+      // The Updated cell shows the localized "(removed)" placeholder.
+      expect(screen.getByTestId('key-labels-updated-at-gone').textContent).toBe('keyLabels.hubRemoved')
+    })
+  })
+
+  it('does not call hubTimestamps when there are no Hub-linked rows', async () => {
+    metas = [
+      { id: 'qwerty', name: 'QWERTY', filename: 'q.json', savedAt: 'now', updatedAt: 'now' },
+      { id: 'localOnly', name: 'Local Only', filename: 'l.json', savedAt: 'now', updatedAt: 'now' },
+    ]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    // No `hubPostId` anywhere → effect returns early before calling IPC.
+    await new Promise((r) => setTimeout(r, 50))
+    expect(hubTimestamps).not.toHaveBeenCalled()
+  })
+
+  it('shows hubUpdatedAt for Hub-linked rows and blanks for QWERTY/never-uploaded', () => {
+    metas = [
+      // QWERTY: never on Hub → blank
+      { id: 'qwerty', name: 'QWERTY', filename: 'q.json', savedAt: 'now', updatedAt: '2026-01-01T00:00:00Z' },
+      // Local-only entry without hubUpdatedAt → blank
+      { id: 'local', name: 'Local', filename: 'l.json', savedAt: 'now', updatedAt: '2026-04-15T11:30:00Z' },
+      // Hub-linked entry with hubUpdatedAt → shown
+      { id: 'hub', name: 'Hub', filename: 'h.json', savedAt: 'now', updatedAt: '2026-04-15T11:30:00Z', hubPostId: 'post', hubUpdatedAt: '2026-04-15T11:30:00Z' },
+    ]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    expect(screen.getByTestId('key-labels-updated-at-qwerty').textContent).toBe('')
+    expect(screen.getByTestId('key-labels-updated-at-local').textContent).toBe('')
+    // Format is locale-timezone dependent, so just assert non-empty.
+    expect(screen.getByTestId('key-labels-updated-at-hub').textContent).not.toBe('')
   })
 
   it('triggers hub search when Search button clicked', async () => {

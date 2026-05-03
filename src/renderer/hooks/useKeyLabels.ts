@@ -13,6 +13,7 @@ import type {
 import type {
   HubKeyLabelListParams,
   HubKeyLabelListResponse,
+  HubKeyLabelTimestampsResponse,
 } from '../../shared/types/hub-key-label'
 
 /**
@@ -45,6 +46,8 @@ export interface UseKeyLabelsReturn {
   hubDownload: (hubPostId: string) => Promise<KeyLabelStoreResult<KeyLabelMeta>>
   hubUpload: (id: string) => Promise<KeyLabelStoreResult<KeyLabelMeta>>
   hubUpdate: (id: string) => Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  hubSync: (id: string) => Promise<KeyLabelStoreResult<KeyLabelMeta>>
+  hubTimestamps: (ids: string[]) => Promise<KeyLabelStoreResult<HubKeyLabelTimestampsResponse>>
   hubDelete: (id: string) => Promise<KeyLabelStoreResult<void>>
 }
 
@@ -171,6 +174,21 @@ export function useKeyLabels(): UseKeyLabelsReturn {
     return result
   }, [refresh])
 
+  const hubSync = useCallback(async (id: string): Promise<KeyLabelStoreResult<KeyLabelMeta>> => {
+    const result = await window.vialAPI.keyLabelHubSync(id)
+    if (result.success) {
+      await refresh()
+      emitKeyLabelsChanged()
+    }
+    return result
+  }, [refresh])
+
+  const hubTimestamps = useCallback(async (
+    ids: string[],
+  ): Promise<KeyLabelStoreResult<HubKeyLabelTimestampsResponse>> => {
+    return window.vialAPI.keyLabelHubTimestamps(ids)
+  }, [])
+
   const hubDelete = useCallback(async (id: string): Promise<KeyLabelStoreResult<void>> => {
     const result = await window.vialAPI.keyLabelHubDelete(id)
     if (result.success) {
@@ -194,6 +212,8 @@ export function useKeyLabels(): UseKeyLabelsReturn {
     hubDownload,
     hubUpload,
     hubUpdate,
+    hubSync,
+    hubTimestamps,
     hubDelete,
   }
 }
