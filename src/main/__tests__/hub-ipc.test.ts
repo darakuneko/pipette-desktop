@@ -58,8 +58,33 @@ vi.mock('../hub/hub-client', async () => {
     fetchAuthMe: vi.fn(),
     patchAuthMe: vi.fn(),
     getHubOrigin: vi.fn(() => 'https://pipette-hub-worker.keymaps.workers.dev'),
+    uploadFeaturePostToHub: vi.fn(),
+    updateFeaturePostOnHub: vi.fn(),
+    uploadAnalyticsPostToHub: vi.fn(),
+    updateAnalyticsPostOnHub: vi.fn(),
   }
 })
+
+// Stub the analytics-side imports so the keymap / favorite test paths
+// don't pull in typing-analytics → app-config → electron-store, which
+// crashes outside an Electron runtime. Each of these is only consumed
+// from the analytics handlers; existing tests in this file don't
+// exercise those paths.
+vi.mock('../hub/hub-analytics', () => ({
+  buildAnalyticsExport: vi.fn(),
+  validateAnalyticsExport: vi.fn(),
+  estimateAnalyticsExportSizeBytes: vi.fn(() => 0),
+}))
+vi.mock('../analyze-filter-store', () => ({
+  readAnalyzeFilterEntry: vi.fn(),
+  setAnalyzeFilterHubPostId: vi.fn(),
+}))
+vi.mock('../typing-analytics/keymap-snapshots', () => ({
+  getKeymapSnapshotForRange: vi.fn(),
+}))
+vi.mock('../typing-analytics/machine-hash', () => ({
+  getMachineHash: vi.fn(),
+}))
 
 import { ipcMain } from 'electron'
 import { getIdToken } from '../sync/google-auth'

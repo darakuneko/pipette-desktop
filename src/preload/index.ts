@@ -43,7 +43,7 @@ import type {
   TypingBigramAggregateView,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
 
 /**
@@ -535,6 +535,18 @@ const vialAPI = {
   // --- Favorite Store extensions ---
   favoriteStoreSetHubPostId: (type: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_SET_HUB_POST_ID, type, entryId, hubPostId),
+
+  // --- Hub Analytics posts ---
+  hubUploadAnalyticsPost: (params: HubUploadAnalyticsPostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_ANALYTICS_POST, params),
+  hubUpdateAnalyticsPost: (params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPDATE_ANALYTICS_POST, params),
+  hubPreviewAnalyticsPost: (params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.HUB_PREVIEW_ANALYTICS_POST, params),
+
+  // --- Analyze Filter Store extensions ---
+  analyzeFilterStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SET_HUB_POST_ID, uid, entryId, hubPostId),
 
   // --- Snapshot Store extensions ---
   snapshotStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>

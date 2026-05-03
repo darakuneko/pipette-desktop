@@ -331,6 +331,65 @@ export function updateFeaturePostOnHub(
   return submitFeaturePost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, postType, jsonFile, 'Hub feature update failed')
 }
 
+// --- Analytics post support ---
+//
+// Analytics posts share the `/api/files` endpoint but use a hybrid
+// multipart shape: title + post_type=analytics + json (analytics
+// export) + thumbnail (jpeg). Distinct from the keymap upload (5
+// files) and the favorite upload (json only).
+
+function buildAnalyticsMultipartBody(
+  title: string,
+  jsonFile: HubFeatureUploadFile,
+  thumbnail: HubFeatureUploadFile,
+): { body: Buffer; boundary: string } {
+  const mp = new MultipartBuilder()
+  mp.appendField('title', title)
+  mp.appendField('post_type', 'analytics')
+  mp.appendFile('json', jsonFile.name, jsonFile.data, 'application/json')
+  mp.appendFile('thumbnail', thumbnail.name, thumbnail.data, 'image/jpeg')
+  return mp.build()
+}
+
+async function submitAnalyticsPost(
+  jwt: string,
+  method: 'POST' | 'PUT',
+  path: string,
+  title: string,
+  jsonFile: HubFeatureUploadFile,
+  thumbnail: HubFeatureUploadFile,
+  label: string,
+): Promise<HubPostResponse> {
+  const { body, boundary } = buildAnalyticsMultipartBody(title, jsonFile, thumbnail)
+  return hubFetch<HubPostResponse>(`${HUB_API_BASE}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  }, label)
+}
+
+export function uploadAnalyticsPostToHub(
+  jwt: string,
+  title: string,
+  jsonFile: HubFeatureUploadFile,
+  thumbnail: HubFeatureUploadFile,
+): Promise<HubPostResponse> {
+  return submitAnalyticsPost(jwt, 'POST', '/api/files', title, jsonFile, thumbnail, 'Hub analytics upload failed')
+}
+
+export function updateAnalyticsPostOnHub(
+  jwt: string,
+  postId: string,
+  title: string,
+  jsonFile: HubFeatureUploadFile,
+  thumbnail: HubFeatureUploadFile,
+): Promise<HubPostResponse> {
+  return submitAnalyticsPost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, jsonFile, thumbnail, 'Hub analytics update failed')
+}
+
 export function getHubOrigin(): string {
   return HUB_API_BASE
 }

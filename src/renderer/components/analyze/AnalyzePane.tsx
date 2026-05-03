@@ -65,6 +65,7 @@ import { LayoutComparisonSelector } from './LayoutComparisonSelector'
 import { LayoutComparisonView } from './LayoutComparisonView'
 import { FingerAssignmentModal } from './FingerAssignmentModal'
 import { AnalyzeExportModal, type AnalyzeExportContext } from './AnalyzeExportModal'
+import { generateAnalyzeThumbnail } from './analyze-thumbnail'
 import { formatDeviceLabel } from './DeviceMultiSelect'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { IntervalChart } from './IntervalChart'
@@ -247,7 +248,16 @@ export function AnalyzePane({
   const [fingerAssignments, setFingerAssignments] = useState<Record<string, FingerType>>({})
   const [fingersLoading, setFingersLoading] = useState(false)
   const [fingerModalOpen, setFingerModalOpen] = useState(false)
-  const [exportModalOpen, setExportModalOpen] = useState(false)
+  // The export modal does double duty: CSV export when invoked with
+  // mode 'export', Hub upload when invoked with mode 'upload'. The
+  // upload variant pins the saved entry id so the modal's onConfirm
+  // can build the upload params for that specific entry.
+  const [modalState, setModalState] = useState<
+    | { kind: 'closed' }
+    | { kind: 'export' }
+    | { kind: 'upload'; entryId: string }
+  >({ kind: 'closed' })
+  const [hubOrigin, setHubOrigin] = useState<string | null>(null)
   const [storePanelOpen, setStorePanelOpen] = useState(false)
   const storePanelRef = useRef<HTMLDivElement>(null)
   const storeToggleRef = useRef<HTMLButtonElement>(null)
@@ -712,10 +722,130 @@ export function AnalyzePane({
   const handleExportEntryCsv = useCallback(
     async (entryId: string): Promise<void> => {
       const ok = await handleLoadFilterSnapshot(entryId)
-      if (ok) setExportModalOpen(true)
+      if (ok) setModalState({ kind: 'export' })
     },
     [handleLoadFilterSnapshot],
   )
+
+  // Resolve the Hub base URL once so the Hub row can build the
+  // "open on Hub" share link without round-tripping per click. Cached
+  // per pane so two panes don't both fetch.
+  useEffect(() => {
+    if (hubOrigin !== null) return
+    void window.vialAPI.hubGetOrigin()
+      .then((origin) => { if (origin) setHubOrigin(origin) })
+      .catch(() => { /* leave origin null — share link hides */ })
+  }, [hubOrigin])
+
+  // Keyboard meta the upload IPC needs. Reads off the active typing-
+  // keyboard summary so the Hub post header carries the same labels
+  // the live Analyze view already shows.
+  const hubKeyboard = useMemo(
+    () => selected
+      ? { productName: selected.productName, vendorId: selected.vendorId, productId: selected.productId }
+      : null,
+    [selected],
+  )
+
+  // Build the upload IPC input for a saved entry. Captures the
+  // thumbnail just-in-time so cancelled / never-clicked rows pay
+  // nothing for the canvas work. The title falls back to the entry's
+  // saved label so the user doesn't have to retype it. Returns null
+  // when prerequisites (selected keyboard / matching saved entry)
+  // aren't met so the modal callback can short-circuit.
+  const buildHubUploadInput = useCallback((entryId: string) => {
+    if (!selected || !hubKeyboard) return null
+    const entry = filterStore.entries.find((e) => e.id === entryId)
+    if (!entry) return null
+    const rangeLabel = exportCtx?.conditions.range
+      ?? `${formatDateTime(range.fromMs)} - ${formatDateTime(range.toMs)}`
+    const thumbnailBase64 = generateAnalyzeThumbnail({
+      keyboardName: selected.productName,
+      rangeLabel,
+      // The thumb is text-only today; the Hub-side post grid still
+      // surfaces the real keystroke total from the JSON. Skip the
+      // extra preview round-trip just for colouring the card.
+      totalKeystrokes: 0,
+      deviceLabel: exportCtx?.conditions.device,
+    })
+    return {
+      entryId,
+      title: entry.label,
+      thumbnailBase64,
+      keyboard: hubKeyboard,
+      fingerOverrides: fingerAssignments,
+      // Layout Comparison upload remains a follow-up — see
+      // .claude/plans/done/Plan-hub-analytics-upload.md "Known
+      // Follow-up" notes. The Hub renders the empty-state for the tab.
+      layoutComparisonInputs: null,
+    }
+  }, [selected, hubKeyboard, filterStore.entries, exportCtx, range, fingerAssignments])
+
+  // Open the export modal in upload mode for the given entry. Loads
+  // the saved snapshot first so the modal's exportCtx (device / app /
+  // keymap / range labels in the header) reflects what the user will
+  // actually upload, not whatever live state happened to be active.
+  // Bound to both "Upload" and "Update on Hub" Hub-row buttons — the
+  // distinction is decided inside the modal's onConfirm handler from
+  // the loaded entry's hubPostId.
+  const openHubUploadModal = useCallback(async (entryId: string): Promise<void> => {
+    const ok = await handleLoadFilterSnapshot(entryId)
+    if (ok) setModalState({ kind: 'upload', entryId })
+  }, [handleLoadFilterSnapshot])
+
+  const handleRemoveFromHub = useCallback((entryId: string) => {
+    void filterStore.removeEntryFromHub(entryId)
+  }, [filterStore])
+
+  // Single source of truth for the panel's hub action wiring. `null`
+  // hides the row entirely (no keyboard selected). Both Upload and
+  // Update buttons route through the same modal opener — the modal
+  // looks at the loaded entry's hubPostId to decide which IPC to
+  // invoke on confirm.
+  const hubActions = useMemo(
+    () => selected
+      ? {
+          hubOrigin: hubOrigin ?? undefined,
+          hubUploading: filterStore.hubUploading,
+          hubUploadResult: filterStore.hubUploadResult,
+          onUploadToHub: openHubUploadModal,
+          onUpdateOnHub: openHubUploadModal,
+          onRemoveFromHub: handleRemoveFromHub,
+        }
+      : null,
+    [selected, hubOrigin, filterStore.hubUploading, filterStore.hubUploadResult,
+     openHubUploadModal, handleRemoveFromHub],
+  )
+
+  // Pre-compute the modal's `upload` callbacks bundle for the active
+  // upload target. Falls back to `undefined` for export mode so the
+  // modal doesn't try to render the upload status banner.
+  const uploadEntryForModal = modalState.kind === 'upload'
+    ? filterStore.entries.find((e) => e.id === modalState.entryId) ?? null
+    : null
+  const modalUploadProps = useMemo(() => {
+    if (!uploadEntryForModal) return undefined
+    const entry = uploadEntryForModal
+    const isExisting = !!entry.hubPostId
+    return {
+      isUploading: filterStore.hubUploading === entry.id,
+      uploadResult: filterStore.hubUploadResult?.entryId === entry.id
+        ? { kind: filterStore.hubUploadResult.kind, message: filterStore.hubUploadResult.message }
+        : null,
+      isExisting,
+      onConfirm: async (categories: ReadonlySet<string>) => {
+        const baseInput = buildHubUploadInput(entry.id)
+        if (!baseInput) return { ok: false }
+        const input = {
+          ...baseInput,
+          categories: Array.from(categories) as Parameters<typeof filterStore.uploadEntryToHub>[0]['categories'],
+        }
+        return isExisting
+          ? filterStore.updateEntryOnHub(input)
+          : filterStore.uploadEntryToHub(input)
+      },
+    }
+  }, [uploadEntryForModal, filterStore, buildHubUploadInput])
 
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so
@@ -1328,8 +1458,9 @@ export function AnalyzePane({
               onLoad={handleLoadFilterSnapshot}
               onRename={filterStore.renameEntry}
               onDelete={filterStore.deleteEntry}
-              onExportCurrentCsv={exportCtx !== null ? () => setExportModalOpen(true) : null}
+              onExportCurrentCsv={exportCtx !== null ? () => setModalState({ kind: 'export' }) : null}
               onExportEntryCsv={exportCtx !== null ? handleExportEntryCsv : null}
+              hubActions={hubActions}
             />
           </div>
         </div>
@@ -1342,9 +1473,11 @@ export function AnalyzePane({
         onSave={handleFingerAssignmentsSave}
       />
       <AnalyzeExportModal
-        isOpen={exportModalOpen}
-        onClose={() => setExportModalOpen(false)}
+        isOpen={modalState.kind !== 'closed'}
+        onClose={() => setModalState({ kind: 'closed' })}
         ctx={exportCtx}
+        mode={modalState.kind === 'upload' ? 'upload' : 'export'}
+        upload={modalUploadProps}
       />
     </>
   )

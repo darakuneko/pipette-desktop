@@ -62,8 +62,30 @@ vi.mock('../hub/hub-client', async () => {
     getHubOrigin: vi.fn(() => 'https://pipette-hub-worker.keymaps.workers.dev'),
     uploadFeaturePostToHub: vi.fn(),
     updateFeaturePostOnHub: vi.fn(),
+    uploadAnalyticsPostToHub: vi.fn(),
+    updateAnalyticsPostOnHub: vi.fn(),
   }
 })
+
+// Stub the analytics-side imports so the favorite test paths don't
+// pull in typing-analytics → app-config → electron-store. The
+// favorite tests don't exercise the analytics handlers, but the
+// module-level imports need to resolve.
+vi.mock('../hub/hub-analytics', () => ({
+  buildAnalyticsExport: vi.fn(),
+  validateAnalyticsExport: vi.fn(),
+  estimateAnalyticsExportSizeBytes: vi.fn(() => 0),
+}))
+vi.mock('../analyze-filter-store', () => ({
+  readAnalyzeFilterEntry: vi.fn(),
+  setAnalyzeFilterHubPostId: vi.fn(),
+}))
+vi.mock('../typing-analytics/keymap-snapshots', () => ({
+  getKeymapSnapshotForRange: vi.fn(),
+}))
+vi.mock('../typing-analytics/machine-hash', () => ({
+  getMachineHash: vi.fn(),
+}))
 
 // Mock node:fs/promises
 vi.mock('node:fs/promises', () => ({

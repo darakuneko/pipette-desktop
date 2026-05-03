@@ -4,9 +4,28 @@
 import { secureHandle } from '../ipc-guard'
 import { IpcChannels } from '../../shared/ipc/channels'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams, HubUploadFavoritePostParams, HubUpdateFavoritePostParams } from '../../shared/types/hub'
+import type {
+  HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult,
+  HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubUserResult, HubFetchMyPostsParams,
+  HubUploadFavoritePostParams, HubUpdateFavoritePostParams,
+  HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams,
+  HubAnalyticsPreview, HubAnalyticsFilters, HubAnalyticsCategoryId,
+} from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub } from './hub-client'
+import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub, uploadAnalyticsPostToHub, updateAnalyticsPostOnHub } from './hub-client'
+import {
+  buildAnalyticsExport,
+  estimateAnalyticsExportSizeBytes,
+  validateAnalyticsExport,
+  type BuildAnalyticsExportInput,
+  type DeviceScope,
+} from './hub-analytics'
+import { readAnalyzeFilterEntry, setAnalyzeFilterHubPostId } from '../analyze-filter-store'
+import { getKeymapSnapshotForRange } from '../typing-analytics/keymap-snapshots'
+import { getMachineHash } from '../typing-analytics/machine-hash'
+import type { TypingKeymapSnapshot } from '../../shared/types/typing-analytics'
+import type { LayoutComparisonMetric } from '../../shared/types/typing-analytics'
+import type { KleKey } from '../../shared/kle/types'
 import type { HubAuthResult, HubUploadFiles } from './hub-client'
 import { fetchKeyLabelList, fetchKeyLabelDetail, fetchKeyLabelTimestamps, downloadKeyLabel, uploadKeyLabel, updateKeyLabel, deleteKeyLabel } from './hub-key-labels'
 import type { HubKeyLabelInput } from './hub-key-labels'
@@ -62,6 +81,181 @@ function clampInt(value: number | undefined, min: number, max: number): number |
   const floored = Math.floor(value)
   if (!Number.isFinite(floored)) return undefined
   return Math.max(min, Math.min(max, floored))
+}
+
+function sanitizeFilenameBase(productName: string, fallback: string): string {
+  const source = (productName || fallback || 'analytics').replace(/[^a-zA-Z0-9_-]/g, '_')
+  return source.length > 0 ? source : 'analytics'
+}
+
+interface AnalyticsExportPreparation {
+  ok: true
+  exportData: Awaited<ReturnType<typeof buildAnalyticsExport>>
+}
+interface AnalyticsExportPreparationFail {
+  ok: false
+  error: string
+  /** When the failure happens before the export can be assembled
+   * (e.g. snapshot missing) we still surface the bits the dialog
+   * needs to render the validation card. Default 0 / 0 keeps the
+   * card showing red without blowing up. */
+  totalKeystrokes: number
+  rangeMs: number
+}
+
+/** Shared assembly path for both upload and preview. Reads the saved
+ * filter snapshot, resolves the keymap snapshot main-side (snapshots
+ * are local-only), folds the user's filter shape into the Hub's
+ * `HubAnalyticsFilters` shape, and runs the builder. */
+async function prepareAnalyticsExport(
+  params: HubUploadAnalyticsPostParams | (HubPreviewAnalyticsPostParams & { title: string; thumbnailBase64: string }),
+): Promise<AnalyticsExportPreparation | AnalyticsExportPreparationFail> {
+  if (!params.uid || typeof params.uid !== 'string') {
+    return { ok: false, error: 'Invalid uid', totalKeystrokes: 0, rangeMs: 0 }
+  }
+  if (!params.entryId || typeof params.entryId !== 'string') {
+    return { ok: false, error: 'Invalid entryId', totalKeystrokes: 0, rangeMs: 0 }
+  }
+  const found = await readAnalyzeFilterEntry(params.uid, params.entryId)
+  if (!found) {
+    return { ok: false, error: 'Saved filter entry not found', totalKeystrokes: 0, rangeMs: 0 }
+  }
+
+  let payload: AnalyzeFilterSnapshotPayloadShape
+  try {
+    payload = JSON.parse(found.data) as AnalyzeFilterSnapshotPayloadShape
+  } catch {
+    return { ok: false, error: 'Saved filter payload is not valid JSON', totalKeystrokes: 0, rangeMs: 0 }
+  }
+  if (!payload || typeof payload !== 'object' || payload.version !== 1) {
+    return { ok: false, error: 'Unsupported saved filter version', totalKeystrokes: 0, rangeMs: 0 }
+  }
+  const range = payload.range
+  if (!range || typeof range.fromMs !== 'number' || typeof range.toMs !== 'number') {
+    return { ok: false, error: 'Saved filter has no range', totalKeystrokes: 0, rangeMs: 0 }
+  }
+  const rangeMs = Math.max(0, range.toMs - range.fromMs)
+
+  const deviceScope = resolveDeviceScopeFromPayload(payload.filters?.deviceScopes)
+  const appScopes = Array.isArray(payload.filters?.appScopes)
+    ? payload.filters.appScopes.filter((v): v is string => typeof v === 'string')
+    : []
+
+  // Snapshots are own-only — the typing-analytics service writes them
+  // against the local machine hash. The Analyze view itself reads the
+  // snapshot via `typingAnalyticsGetKeymapSnapshotForRange` which
+  // resolves the same hash internally.
+  const ownHash = await getMachineHash()
+  const snapshot = await getKeymapSnapshotForRange(
+    app.getPath('userData'), params.uid, ownHash, range.fromMs, range.toMs,
+  )
+  if (!snapshot) {
+    return { ok: false, error: 'No keymap snapshot recorded for this range', totalKeystrokes: 0, rangeMs }
+  }
+
+  const filters = projectFiltersForHub(payload, params.fingerOverrides)
+
+  const layoutInputs = params.layoutComparisonInputs
+  const layoutComparisonInputs: BuildAnalyticsExportInput['layoutComparisonInputs'] = layoutInputs
+    ? {
+        source: layoutInputs.source,
+        target: layoutInputs.target,
+        metrics: filterValidLayoutMetrics(layoutInputs.metrics),
+        kleKeys: layoutInputs.kleKeys as KleKey[],
+        layer: layoutInputs.layer,
+      }
+    : null
+
+  // Renderer-side category picker — only the listed sections get
+  // fetched. Unset / empty array ships everything (back-compat with
+  // the early build that did not surface the picker).
+  const categories = Array.isArray(params.categories) && params.categories.length > 0
+    ? new Set(params.categories.filter((c): c is HubAnalyticsCategoryId => typeof c === 'string'))
+    : undefined
+
+  const exportData = await buildAnalyticsExport({
+    uid: params.uid,
+    productName: params.keyboard.productName,
+    vendorId: params.keyboard.vendorId,
+    productId: params.keyboard.productId,
+    snapshot: snapshot as TypingKeymapSnapshot,
+    range: { fromMs: range.fromMs, toMs: range.toMs },
+    deviceScope,
+    appScopes,
+    filters,
+    layoutComparisonInputs,
+    categories,
+  })
+
+  return { ok: true, exportData }
+}
+
+/** Subset of the renderer-side AnalyzeFilterSnapshotPayload that the
+ * main-side preparer needs to read. Re-stating the shape here keeps
+ * the main module independent of the renderer-only hook file. */
+interface AnalyzeFilterSnapshotPayloadShape {
+  version: number
+  analysisTab?: string
+  range?: { fromMs?: number; toMs?: number }
+  filters?: {
+    deviceScopes?: unknown[]
+    appScopes?: unknown[]
+    heatmap?: Record<string, unknown>
+    wpm?: Record<string, unknown>
+    interval?: Record<string, unknown>
+    activity?: Record<string, unknown>
+    layer?: Record<string, unknown>
+    ergonomics?: Record<string, unknown>
+    bigrams?: Record<string, unknown>
+    layoutComparison?: Record<string, unknown>
+  }
+}
+
+function resolveDeviceScopeFromPayload(scopes: unknown): DeviceScope {
+  if (!Array.isArray(scopes) || scopes.length === 0) return 'own'
+  const first = scopes[0]
+  if (first === 'all' || first === 'own') return first
+  if (typeof first === 'object' && first !== null) {
+    const o = first as Record<string, unknown>
+    if (o.kind === 'hash' && typeof o.machineHash === 'string' && o.machineHash.length > 0) {
+      return { kind: 'hash', machineHash: o.machineHash }
+    }
+  }
+  return 'own'
+}
+
+const VALID_LAYOUT_METRICS: ReadonlySet<LayoutComparisonMetric> = new Set([
+  'fingerLoad', 'handBalance', 'rowDist', 'homeRow',
+])
+
+function filterValidLayoutMetrics(metrics: readonly string[] | undefined): LayoutComparisonMetric[] {
+  if (!Array.isArray(metrics)) return []
+  return metrics.filter((m): m is LayoutComparisonMetric => VALID_LAYOUT_METRICS.has(m as LayoutComparisonMetric))
+}
+
+function projectFiltersForHub(
+  payload: AnalyzeFilterSnapshotPayloadShape,
+  fingerOverrides: Record<string, string> | undefined,
+): HubAnalyticsFilters {
+  const f = payload.filters ?? {}
+  // Bigrams limits are fixed (10/10/20) per HUB-ANALYTICS-API.md §4.3
+  // — the desktop never sends user-tweaked counts so the Hub size /
+  // privacy surface stays predictable.
+  const pairThreshold = typeof f.bigrams?.pairIntervalThresholdMs === 'number'
+    ? f.bigrams.pairIntervalThresholdMs
+    : undefined
+  return {
+    analysisTab: typeof payload.analysisTab === 'string' ? payload.analysisTab : 'summary',
+    heatmap: f.heatmap,
+    wpm: f.wpm,
+    interval: f.interval,
+    activity: f.activity,
+    layer: f.layer,
+    ergonomics: f.ergonomics,
+    bigrams: { topLimit: 10, slowLimit: 10, fingerLimit: 20, pairIntervalThresholdMs: pairThreshold },
+    layoutComparison: f.layoutComparison,
+    fingerOverrides: fingerOverrides && Object.keys(fingerOverrides).length > 0 ? fingerOverrides : undefined,
+  }
 }
 
 function computeTotalPages(total: number, perPage: number): number {
@@ -434,6 +628,120 @@ export function setupHubIpc(): void {
         return { success: true, postId: result.id }
       } catch (err) {
         return { success: false, error: extractError(err, 'Update failed') }
+      }
+    },
+  )
+
+  // --- Analytics post handlers ---
+  //
+  // Pattern mirrors the favorite-post upload: validate inputs → assemble
+  // payload → withTokenRetry → save the postId on success. Distinct
+  // because the analytics build step is heavier (fetches across the
+  // typing-analytics DB) and ships a thumbnail alongside the JSON.
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_ANALYTICS_POST,
+    async (_event, params: HubUploadAnalyticsPostParams): Promise<HubUploadResult> => {
+      try {
+        const built = await prepareAnalyticsExport(params)
+        if (!built.ok) return { success: false, error: built.error }
+        const title = validateTitle(params.title)
+        const baseName = sanitizeFilenameBase(params.keyboard.productName, params.uid)
+        const jsonBuffer = Buffer.from(JSON.stringify(built.exportData), 'utf-8')
+        const thumbnailBuffer = Buffer.from(params.thumbnailBase64, 'base64')
+        const result = await withTokenRetry((jwt) =>
+          uploadAnalyticsPostToHub(
+            jwt,
+            title,
+            { name: `${baseName}.json`, data: jsonBuffer },
+            { name: `${baseName}.jpg`, data: thumbnailBuffer },
+          ),
+        )
+        // Save the postId synchronously after upload so the panel can
+        // immediately show the "↻ Hub" / 🔗 affordances without a
+        // round-trip; failures here don't undo the upload (the entry
+        // would just appear unsynced and the next click would attempt
+        // a fresh upload).
+        await setAnalyzeFilterHubPostId(params.uid, params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Analytics upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPDATE_ANALYTICS_POST,
+    async (_event, params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult> => {
+      try {
+        validatePostId(params.postId)
+        const built = await prepareAnalyticsExport(params)
+        if (!built.ok) return { success: false, error: built.error }
+        const title = validateTitle(params.title)
+        const baseName = sanitizeFilenameBase(params.keyboard.productName, params.uid)
+        const jsonBuffer = Buffer.from(JSON.stringify(built.exportData), 'utf-8')
+        const thumbnailBuffer = Buffer.from(params.thumbnailBase64, 'base64')
+        const result = await withTokenRetry((jwt) =>
+          updateAnalyticsPostOnHub(
+            jwt,
+            params.postId,
+            title,
+            { name: `${baseName}.json`, data: jsonBuffer },
+            { name: `${baseName}.jpg`, data: thumbnailBuffer },
+          ),
+        )
+        // Re-stamp the postId in case the user manipulated the saved
+        // entry's metadata in another window between preview and
+        // upload — keeps the local index in sync with the Hub canon.
+        await setAnalyzeFilterHubPostId(params.uid, params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Analytics update failed') }
+      }
+    },
+  )
+
+  // Preview path used by the upload dialog. Builds the payload with
+  // the same builder the upload uses but reports size + validation
+  // without crossing the network. The thumbnail is captured later
+  // (only when the user confirms), so it's intentionally absent from
+  // the preview params.
+  secureHandle(
+    IpcChannels.HUB_PREVIEW_ANALYTICS_POST,
+    async (_event, params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }> => {
+      try {
+        const built = await prepareAnalyticsExport({
+          ...params,
+          // The preview path doesn't ship a thumbnail — pass empty
+          // strings to satisfy the shared param shape without
+          // triggering the buffer encode for nothing.
+          title: 'preview',
+          thumbnailBase64: '',
+        })
+        if (!built.ok) {
+          return {
+            success: true,
+            preview: {
+              totalKeystrokes: built.totalKeystrokes,
+              rangeMs: built.rangeMs,
+              estimatedBytes: 0,
+              validation: { ok: false, reason: built.error },
+            },
+          }
+        }
+        const validation = validateAnalyticsExport(built.exportData)
+        const estimatedBytes = estimateAnalyticsExportSizeBytes(built.exportData)
+        return {
+          success: true,
+          preview: {
+            totalKeystrokes: built.exportData.snapshot.totalKeystrokes,
+            rangeMs: built.exportData.snapshot.range.toMs - built.exportData.snapshot.range.fromMs,
+            estimatedBytes,
+            validation,
+          },
+        }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Analytics preview failed') }
       }
     },
   )

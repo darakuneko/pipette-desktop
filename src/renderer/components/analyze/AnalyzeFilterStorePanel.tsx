@@ -18,7 +18,9 @@ import {
   formatDate,
 } from '../editors/store-modal-shared'
 import { FORMAT_BTN } from '../editors/layout-store-types'
+import type { HubEntryResult } from '../editors/layout-store-types'
 import type { AnalyzeFilterSnapshotMeta } from '../../../shared/types/analyze-filter-store'
+import { AnalyzeFilterStoreHubRow } from './AnalyzeFilterStoreHubRow'
 
 // Only one tab today — kept as a single-element tab bar for visual
 // parity with the keymap editor's overlay and so the structure is
@@ -48,6 +50,18 @@ interface Props {
    * step. `null` when there's nothing to export — same null contract
    * as `onExportCurrentCsv`. */
   onExportEntryCsv: ((entryId: string) => void) | null
+  /** Render the Hub action row under each entry (mirrors the keymap
+   * save panel's pattern). `null` hides the row entirely (Hub feature
+   * unavailable, no Google login, etc.). */
+  hubActions: {
+    hubOrigin?: string
+    hubNeedsDisplayName?: boolean
+    hubUploading?: string | null
+    hubUploadResult?: HubEntryResult | null
+    onUploadToHub?: (entryId: string) => void
+    onUpdateOnHub?: (entryId: string) => void
+    onRemoveFromHub?: (entryId: string) => void
+  } | null
 }
 
 export function AnalyzeFilterStorePanel({
@@ -61,11 +75,13 @@ export function AnalyzeFilterStorePanel({
   onDelete,
   onExportCurrentCsv,
   onExportEntryCsv,
+  hubActions,
 }: Props) {
   const { t } = useTranslation()
   const [saveLabel, setSaveLabel] = useState('')
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
   const [showSaved, setShowSaved] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -257,7 +273,7 @@ export function AnalyzeFilterStorePanel({
                           </div>
                         )}
 
-                        {/* Bottom row: date + .csv export */}
+                        {/* Row 2: date + .csv export */}
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-[11px] text-content-muted">
                             {formatDate(entry.savedAt)}
@@ -274,6 +290,25 @@ export function AnalyzeFilterStorePanel({
                             </button>
                           )}
                         </div>
+
+                        {/* Row 3: Hub actions — mirrors LayoutStoreHubRow
+                         * so the keymap save panel and the analyze save
+                         * panel feel like the same surface. */}
+                        {hubActions && (
+                          <AnalyzeFilterStoreHubRow
+                            entry={entry}
+                            hubOrigin={hubActions.hubOrigin}
+                            hubNeedsDisplayName={hubActions.hubNeedsDisplayName}
+                            hubUploading={hubActions.hubUploading}
+                            hubUploadResult={hubActions.hubUploadResult}
+                            fileDisabled={loading}
+                            confirmHubRemoveId={confirmHubRemoveId}
+                            setConfirmHubRemoveId={setConfirmHubRemoveId}
+                            onUploadToHub={hubActions.onUploadToHub}
+                            onUpdateOnHub={hubActions.onUpdateOnHub}
+                            onRemoveFromHub={hubActions.onRemoveFromHub}
+                          />
+                        )}
                       </div>
                     )
                   })}

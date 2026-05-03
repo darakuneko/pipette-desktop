@@ -1420,7 +1420,25 @@
     "displayNameRequired": "Hub へのアップロードに必要です",
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",
     "accountDeactivated": "アカウントが無効化されています。サポートにお問い合わせください。",
-    "rateLimited": "リクエストが多すぎます。しばらくしてからもう一度お試しください。"
+    "rateLimited": "リクエストが多すぎます。しばらくしてからもう一度お試しください。",
+    "error": {
+      "keystrokesBelow": "この期間の打鍵数が足りません（100 打鍵以上が必要です）。",
+      "rangeExceeds": "選択した期間が 30 日を超えています。期間を短くして条件を保存し直してください。",
+      "unsupportedVersion": "新しいバージョンの Pipette で書き出されたデータのため Hub が読み込めません。Hub をアップデートしてください。",
+      "kindMismatch": "ペイロードが analytics 投稿ではありません。",
+      "invalidPayload": "ペイロードが不正なため Hub にアップロードできませんでした。",
+      "malformedPayload": "チャートデータの一部が欠けているか不正な形式のため Hub にアップロードできませんでした。",
+      "entryNotFound": "保存された条件が見つかりません。パネルを更新してから再試行してください。",
+      "malformedSavedPayload": "保存された条件ファイルが壊れているためアップロードできません。",
+      "unsupportedSavedVersion": "新しいバージョンの Pipette で保存された条件のためアップロードできません。",
+      "noRange": "保存された条件に期間情報がありません。Analyze 画面から保存し直してください。",
+      "noSnapshot": "この期間に対応するキーマップスナップショットがありません。少しキーボードを使ってから再試行してください。",
+      "invalidId": "保存された条件を特定できませんでした。パネルを更新してから再試行してください。",
+      "titleEmpty": "タイトルは必須です。",
+      "titleTooLong": "タイトルが長すぎます（200 文字以内）。",
+      "authFailed": "Hub の認証に失敗しました。一度サインアウトして再度サインインしてください。",
+      "payloadTooLarge": "ペイロードが大きすぎてアップロードできません。送信するチャートを減らすか期間を短くしてください。"
+    }
   },
   "notification": {
     "title": "お知らせ",
