@@ -338,6 +338,19 @@ export function KeyLabelsModal({
           </div>
         )}
 
+        {activeTab === 'installed' && (
+          <div className="flex items-center justify-end px-4 py-3 border-b border-edge">
+            <button
+              type="button"
+              onClick={() => void handleImport()}
+              className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
+              data-testid="key-labels-import-button"
+            >
+              {t('keyLabels.import')}
+            </button>
+          </div>
+        )}
+
         {actionError && (
           <div className="mx-4 my-2 rounded border border-rose-300 bg-rose-50 px-3 py-2 text-xs text-rose-700">
             {actionError}
@@ -393,19 +406,6 @@ export function KeyLabelsModal({
             />
           )}
         </div>
-
-        {activeTab === 'installed' && (
-          <div className="flex items-center justify-end border-t border-edge px-4 py-3">
-            <button
-              type="button"
-              onClick={() => void handleImport()}
-              className="rounded border border-edge bg-surface px-3 py-1.5 text-sm font-medium text-content hover:bg-surface-hover"
-              data-testid="key-labels-import-button"
-            >
-              {t('keyLabels.import')}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   )
