@@ -173,7 +173,7 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
       <div className="h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
-            <Pie data={data} dataKey="value" nameKey="name" outerRadius="80%" label={false}>
+            <Pie data={data} dataKey="value" nameKey="name" outerRadius="80%" label={false} animationDuration={500}>
               {data.map((d, i) => (
                 <Cell key={d.name} fill={colorFor(d, i)} />
               ))}
