@@ -1484,7 +1484,7 @@
     "errorGeneric": "Action failed",
     "missingTitle": "Key Label not found",
     "missingMessage": "The key label \"{{name}}\" is not installed. Showing keymap with QWERTY labels.",
-    "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}.",
+    "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}, or from the keypicker overlay's Edit button.",
     "missingClose": "Close"
   }
 }

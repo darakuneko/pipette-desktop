@@ -1482,7 +1482,7 @@
     "errorGeneric": "操作に失敗しました",
     "missingTitle": "Key Label が見つかりません",
     "missingMessage": "Key Label「{{name}}」がインストールされていないため、QWERTY ラベルで表示します。",
-    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} からダウンロードできます。",
+    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
     "missingClose": "閉じる"
   }
 }
