@@ -833,24 +833,24 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
           </button>
         </div>
         <div className={`flex items-center gap-1 ${pickerBrowseMode ? 'invisible' : ''}`}>
-          <Tooltip content={t('editor.keymap.zoomIn')}>
-            <button type="button" aria-label={t('editor.keymap.zoomIn')}
-              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
-              disabled={pickerEffectiveScale >= MAX_SCALE}
-              onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
-              <ZoomIn size={14} aria-hidden="true" />
-            </button>
-          </Tooltip>
-          <ScaleInput scale={pickerEffectiveScale} onScaleChange={(delta) => {
-            if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, +(pickerEffectiveScale + delta).toFixed(1))))
-            else onScaleChange?.(delta)
-          }} />
           <Tooltip content={t('editor.keymap.zoomOut')}>
             <button type="button" aria-label={t('editor.keymap.zoomOut')}
               className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
               disabled={pickerEffectiveScale <= MIN_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
               <ZoomOut size={14} aria-hidden="true" />
+            </button>
+          </Tooltip>
+          <ScaleInput scale={pickerEffectiveScale} onScaleChange={(delta) => {
+            if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, Math.min(MAX_SCALE, +(pickerEffectiveScale + delta).toFixed(1))))
+            else onScaleChange?.(delta)
+          }} />
+          <Tooltip content={t('editor.keymap.zoomIn')}>
+            <button type="button" aria-label={t('editor.keymap.zoomIn')}
+              className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
+              disabled={pickerEffectiveScale >= MAX_SCALE}
+              onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
+              <ZoomIn size={14} aria-hidden="true" />
             </button>
           </Tooltip>
         </div>
