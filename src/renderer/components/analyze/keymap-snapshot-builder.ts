@@ -43,5 +43,6 @@ export function buildKeymapSnapshot(
     matrix: { rows: kb.rows, cols: kb.cols },
     keymap,
     layout: kb.layout,
+    vialProtocol: kb.vialProtocol,
   }
 }

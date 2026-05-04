@@ -148,6 +148,7 @@ export interface TypingKeymapSnapshot {
    * subset of `KeyboardDefinition` the renderer needs to lay out
    * key widgets (labels, key positions). */
   layout: unknown
+  vialProtocol?: number
 }
 
 /** Metadata-only view of {@link TypingKeymapSnapshot}. Powers the
