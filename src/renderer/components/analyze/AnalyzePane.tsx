@@ -31,6 +31,7 @@ import {
   WPM_VIEW_MODES,
   isAllScope,
   isHashScope,
+  type LayoutComparisonFilters,
 } from '../../../shared/types/analyze-filters'
 import type {
   ActivityCalendarMonthsToShow,
@@ -77,7 +78,41 @@ import { WpmChart } from './WpmChart'
 import { WpmByAppChart } from './WpmByAppChart'
 import { AppUsageChart } from './AppUsageChart'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
+import { LAYOUT_COMPARISON_PHASE_1_METRICS } from './layout-comparison-metrics'
 import { shiftLocalMonth } from './analyze-streak-goal'
+import { useKeyLabelLookup, type UseKeyLabelLookupReturn } from '../../hooks/useKeyLabelLookup'
+import type { KeyboardLayout } from '../../../shared/kle/types'
+import type { HubAnalyticsLayoutComparisonInputs } from '../../../shared/types/hub'
+
+function resolveKleKeys(snapshot: TypingKeymapSnapshot | null): unknown[] {
+  const layout = snapshot?.layout as KeyboardLayout | null
+  return layout && Array.isArray(layout.keys) ? layout.keys : []
+}
+
+function resolveLayoutComparisonInputs(
+  filter: Required<LayoutComparisonFilters>,
+  lookup: UseKeyLabelLookupReturn,
+  snapshot: TypingKeymapSnapshot | null,
+  targetIds: string[],
+): HubAnalyticsLayoutComparisonInputs | null {
+  if (targetIds.length === 0 || !snapshot) return null
+  const sourceMap = lookup.getMap(filter.sourceLayoutId)
+  if (!sourceMap) return null
+  const targets: Array<{ id: string; name?: string; map: Record<string, string> }> = [
+    { id: filter.sourceLayoutId, name: lookup.getName(filter.sourceLayoutId), map: sourceMap },
+  ]
+  for (const tid of targetIds) {
+    const map = lookup.getMap(tid)
+    if (map) targets.push({ id: tid, name: lookup.getName(tid), map })
+  }
+  if (targets.length < 2) return null
+  return {
+    source: { id: filter.sourceLayoutId, map: sourceMap },
+    targets,
+    metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
+    kleKeys: resolveKleKeys(snapshot),
+  }
+}
 
 const TAB_BTN_BASE =
   'rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
@@ -234,6 +269,7 @@ export function AnalyzePane({
     setLayoutComparison,
   } = useAnalyzeFilters(selectedUid, paneKey)
   const [keymapSnapshot, setKeymapSnapshot] = useState<TypingKeymapSnapshot | null>(null)
+  const layoutLookup = useKeyLabelLookup()
   const [snapshotLoading, setSnapshotLoading] = useState(false)
   const [snapshotSummaries, setSnapshotSummaries] = useState<TypingKeymapSnapshotSummary[]>([])
   const [summariesLoading, setSummariesLoading] = useState(false)
@@ -776,12 +812,13 @@ export function AnalyzePane({
     [selected],
   )
 
-  // Build the upload IPC input for a saved entry. Captures the
-  // thumbnail just-in-time so cancelled / never-clicked rows pay
-  // nothing for the canvas work. The title falls back to the entry's
-  // saved label so the user doesn't have to retype it. Returns null
-  // when prerequisites (selected keyboard / matching saved entry)
-  // aren't met so the modal callback can short-circuit.
+  useEffect(() => {
+    void layoutLookup.ensure(layoutComparisonFilter.sourceLayoutId)
+    if (layoutComparisonFilter.targetLayoutId !== null) {
+      void layoutLookup.ensure(layoutComparisonFilter.targetLayoutId)
+    }
+  }, [layoutLookup.ensure, layoutComparisonFilter.sourceLayoutId, layoutComparisonFilter.targetLayoutId])
+
   const buildHubUploadInput = useCallback((entryId: string) => {
     if (!selected || !hubKeyboard) return null
     const entry = filterStore.entries.find((e) => e.id === entryId)
@@ -791,9 +828,6 @@ export function AnalyzePane({
     const thumbnailBase64 = generateAnalyzeThumbnail({
       keyboardName: selected.productName,
       rangeLabel,
-      // The thumb is text-only today; the Hub-side post grid still
-      // surfaces the real keystroke total from the JSON. Skip the
-      // extra preview round-trip just for colouring the card.
       totalKeystrokes: 0,
       deviceLabel: exportCtx?.conditions.device,
     })
@@ -803,12 +837,15 @@ export function AnalyzePane({
       thumbnailBase64,
       keyboard: hubKeyboard,
       fingerOverrides: fingerAssignments,
-      // Layout Comparison upload remains a follow-up — see
-      // .claude/plans/done/Plan-hub-analytics-upload.md "Known
-      // Follow-up" notes. The Hub renders the empty-state for the tab.
-      layoutComparisonInputs: null,
+      layoutComparisonInputs: layoutComparisonFilter.targetLayoutId !== null
+        ? resolveLayoutComparisonInputs(
+            layoutComparisonFilter, layoutLookup, keymapSnapshot,
+            [layoutComparisonFilter.targetLayoutId],
+          )
+        : null,
     }
-  }, [selected, hubKeyboard, filterStore.entries, exportCtx, range, fingerAssignments])
+  }, [selected, hubKeyboard, filterStore.entries, exportCtx, range, fingerAssignments,
+    layoutComparisonFilter, layoutLookup, keymapSnapshot])
 
   // Open the export modal in upload mode for the given entry. Loads
   // the saved snapshot first so the modal's exportCtx (device / app /
@@ -862,11 +899,20 @@ export function AnalyzePane({
         ? { kind: filterStore.hubUploadResult.kind, message: filterStore.hubUploadResult.message }
         : null,
       isExisting,
-      onConfirm: async (categories: ReadonlySet<string>) => {
+      onConfirm: async (categories: ReadonlySet<string>, options?: { targetLayoutIds?: string[] }) => {
         const baseInput = buildHubUploadInput(entry.id)
         if (!baseInput) return { ok: false }
+        const targetIds = options?.targetLayoutIds
+        let layoutComparisonInputs = baseInput.layoutComparisonInputs
+        if (targetIds && targetIds.length > 0) {
+          await Promise.all(targetIds.map((id) => layoutLookup.ensure(id)))
+          layoutComparisonInputs = resolveLayoutComparisonInputs(
+            layoutComparisonFilter, layoutLookup, keymapSnapshot, targetIds,
+          )
+        }
         const input = {
           ...baseInput,
+          layoutComparisonInputs,
           categories: Array.from(categories) as Parameters<typeof filterStore.uploadEntryToHub>[0]['categories'],
         }
         return isExisting
@@ -874,7 +920,8 @@ export function AnalyzePane({
           : filterStore.uploadEntryToHub(input)
       },
     }
-  }, [uploadEntryForModal, filterStore, buildHubUploadInput])
+  }, [uploadEntryForModal, filterStore, buildHubUploadInput,
+    layoutComparisonFilter, layoutLookup, keymapSnapshot])
 
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so

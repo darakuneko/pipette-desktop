@@ -205,7 +205,7 @@ describe('buildAnalyticsExport', () => {
       ...baseInput(),
       layoutComparisonInputs: {
         source: { id: 'qwerty', map: { 'KC_A': 'a' } },
-        target: { id: 'colemak', map: { 'KC_A': 'a' } },
+        targets: [{ id: 'colemak', map: { 'KC_A': 'a' } }],
         metrics: [],
         kleKeys: [],
       },

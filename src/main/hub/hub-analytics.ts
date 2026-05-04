@@ -95,7 +95,7 @@ export interface BuildAnalyticsExportInput {
    * comparison and ships `data.layoutComparison: null`. */
   layoutComparisonInputs: {
     source: LayoutComparisonInputLayout
-    target: LayoutComparisonInputLayout
+    targets: LayoutComparisonInputLayout[]
     metrics: LayoutComparisonMetric[]
     /** KleKey geometry parsed from `snapshot.layout`. The renderer is
      * better positioned to do this — it already does it for the live
@@ -331,15 +331,21 @@ async function computeLayoutComparisonForExport(
     machineHash,
     appScopes,
   )
-  return computeLayoutComparison({
+  const result = computeLayoutComparison({
     matrixCounts,
     snapshot,
     kleKeys: inputs.kleKeys,
     source: inputs.source,
-    targets: [inputs.target],
+    targets: inputs.targets,
     metrics: inputs.metrics,
     layer,
   })
+  const nameById = new Map(inputs.targets.map((t) => [t.id, t.name]))
+  for (const target of result.targets) {
+    const name = nameById.get(target.layoutId)
+    if (name) target.layoutName = name
+  }
+  return result
 }
 
 export type AnalyticsValidationResult =

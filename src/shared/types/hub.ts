@@ -216,7 +216,7 @@ export interface HubAnalyticsData {
  * geometry already in hand. `null` skips the comparison entirely. */
 export interface HubAnalyticsLayoutComparisonInputs {
   source: { id: string; map: Record<string, string> }
-  target: { id: string; map: Record<string, string> }
+  targets: Array<{ id: string; name?: string; map: Record<string, string> }>
   /** Subset of metrics the live chart computed; an empty array is fine
    * (Hub still gets totalEvents + skipRate). */
   metrics: string[]

@@ -159,7 +159,7 @@ async function prepareAnalyticsExport(
   const layoutComparisonInputs: BuildAnalyticsExportInput['layoutComparisonInputs'] = layoutInputs
     ? {
         source: layoutInputs.source,
-        target: layoutInputs.target,
+        targets: layoutInputs.targets,
         metrics: filterValidLayoutMetrics(layoutInputs.metrics),
         kleKeys: layoutInputs.kleKeys as KleKey[],
         layer: layoutInputs.layer,
