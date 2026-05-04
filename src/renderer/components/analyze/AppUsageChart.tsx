@@ -15,6 +15,7 @@ import {
 import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 import type { DeviceScope, RangeMs } from './analyze-types'
 import { chartSeriesColor } from '../../utils/chart-palette'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
 import { formatSharePercent } from './analyze-format'
 import { Stat, TooltipShell } from './analyze-tooltip'
 
@@ -100,6 +101,7 @@ function rollupForChart(rows: AppRow[], unknownLabel: string, otherLabel: string
 
 export function AppUsageChart({ uid, range, deviceScopes }: Props) {
   const { t } = useTranslation()
+  const theme = useEffectiveTheme()
   const [rows, setRows] = useState<AppRow[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -147,7 +149,7 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
   // the panel background and made the slice unreadable).
   const colorFor = (datum: PieDatum, index: number): string => {
     if (datum.isUnknown) return '#9ca3af'
-    return chartSeriesColor(index)
+    return chartSeriesColor(index, data.length, theme)
   }
 
   if (loading) {
