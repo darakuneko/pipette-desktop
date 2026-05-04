@@ -589,6 +589,7 @@ export function setupTypingAnalyticsIpc(): void {
           matrix: s.matrix ?? { rows: 0, cols: 0 },
           keymap: Array.isArray(s.keymap) ? s.keymap : [],
           layout: s.layout ?? null,
+          vialProtocol: typeof s.vialProtocol === 'number' ? s.vialProtocol : undefined,
         }
         return await saveKeymapSnapshotIfChanged(app.getPath('userData'), full)
       } catch (err) {

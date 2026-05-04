@@ -139,6 +139,7 @@ export interface HubAnalyticsSnapshot {
     matrix: { rows: number; cols: number }
     keymap: string[][][]
     layout: unknown
+    vialProtocol?: number
   }
   range: { fromMs: number; toMs: number }
   totalKeystrokes: number
