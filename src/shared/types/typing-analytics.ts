@@ -374,6 +374,7 @@ export interface LayoutComparisonOptions {
 
 export interface LayoutComparisonTargetResult {
   layoutId: string
+  layoutName?: string
   /** Events whose source-layout char resolved AND landed on a target
    * physical position. */
   totalEvents: number

@@ -331,7 +331,7 @@ async function computeLayoutComparisonForExport(
     machineHash,
     appScopes,
   )
-  return computeLayoutComparison({
+  const result = computeLayoutComparison({
     matrixCounts,
     snapshot,
     kleKeys: inputs.kleKeys,
@@ -340,6 +340,12 @@ async function computeLayoutComparisonForExport(
     metrics: inputs.metrics,
     layer,
   })
+  const nameById = new Map(inputs.targets.map((t) => [t.id, t.name]))
+  for (const target of result.targets) {
+    const name = nameById.get(target.layoutId)
+    if (name) target.layoutName = name
+  }
+  return result
 }
 
 export type AnalyticsValidationResult =

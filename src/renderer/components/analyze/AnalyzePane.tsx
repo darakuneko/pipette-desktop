@@ -98,12 +98,12 @@ function resolveLayoutComparisonInputs(
   if (targetIds.length === 0 || !snapshot) return null
   const sourceMap = lookup.getMap(filter.sourceLayoutId)
   if (!sourceMap) return null
-  const targets: Array<{ id: string; map: Record<string, string> }> = [
-    { id: filter.sourceLayoutId, map: sourceMap },
+  const targets: Array<{ id: string; name?: string; map: Record<string, string> }> = [
+    { id: filter.sourceLayoutId, name: lookup.getName(filter.sourceLayoutId), map: sourceMap },
   ]
   for (const tid of targetIds) {
     const map = lookup.getMap(tid)
-    if (map) targets.push({ id: tid, map })
+    if (map) targets.push({ id: tid, name: lookup.getName(tid), map })
   }
   if (targets.length < 2) return null
   return {

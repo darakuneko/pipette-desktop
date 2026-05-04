@@ -10,7 +10,7 @@
 // where the timestamps are local-time YYYYMMDDHHmm so the user can
 // see at a glance which range a file covers without reopening it.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
@@ -160,6 +160,10 @@ function categoryRowClass(active: boolean): string {
     ? `${base} border-accent bg-accent/10 text-content`
     : `${base} border-edge text-content-muted hover:bg-surface-dim`
 }
+
+const TARGET_POPOVER_MAX_H = 288 // matches Tailwind max-h-72 (18rem)
+const TARGET_POPOVER_MIN_H = 120
+const VIEWPORT_EDGE_GAP = 16
 
 const DAY_MS_LOCAL = 24 * 60 * 60 * 1000
 
@@ -362,6 +366,20 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
 
   const handleTargetClose = useCallback(() => setTargetPickerOpen(false), [])
 
+  const [targetPopoverMaxH, setTargetPopoverMaxH] = useState(TARGET_POPOVER_MAX_H)
+  useLayoutEffect(() => {
+    if (!targetPickerOpen || !targetTriggerRef.current) return
+    const update = () => {
+      const rect = targetTriggerRef.current?.getBoundingClientRect()
+      if (!rect) return
+      const available = window.innerHeight - rect.bottom - VIEWPORT_EDGE_GAP
+      setTargetPopoverMaxH(Math.max(TARGET_POPOVER_MIN_H, Math.min(TARGET_POPOVER_MAX_H, available)))
+    }
+    update()
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [targetPickerOpen])
+
   useEffect(() => {
     if (!isOpen) return
     setSelected(allOn())
@@ -379,7 +397,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
     if (!ctx) return false
     if (REQUIRES_SNAPSHOT[c] && snapshotMissing) return false
     if (c === 'layoutComparison') {
-      if (mode === 'upload') return true
+      if (mode === 'upload') return selectedTargetIds.length > 0
       return ctx.layoutComparison.targetLayoutId !== null
     }
     return true
@@ -484,12 +502,12 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
               const available = isCategoryAvailable(c)
               const active = available && selected[c]
               const specifics = ctx !== null ? specificsFor(c, ctx, t) : []
-              const showTargetPicker = c === 'layoutComparison' && mode === 'upload' && active
+              const showTargetPicker = c === 'layoutComparison' && mode === 'upload'
               return (
-                <div key={c} className="flex flex-col">
+                <div key={c} className={showTargetPicker ? categoryRowClass(active) : 'flex flex-col'}>
                   <button
                     type="button"
-                    className={categoryRowClass(active)}
+                    className={showTargetPicker ? 'text-left' : categoryRowClass(active)}
                     aria-pressed={active}
                     disabled={!available}
                     onClick={() => handleToggle(c)}
@@ -507,7 +525,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                     )}
                   </button>
                   {showTargetPicker && ctx !== null && (
-                    <div className="ml-3 mt-1 flex flex-col gap-1 text-[11px]">
+                    <div className="mt-1 flex flex-col gap-1 text-[11px]">
                       <div className="text-content-muted">
                         {t('analyze.layoutComparison.sourceLabel')}: {LAYOUT_BY_ID.get(ctx.layoutComparison.sourceLayoutId)?.name ?? ctx.layoutComparison.sourceLayoutId}
                       </div>
@@ -527,24 +545,26 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                           anchorRef={targetTriggerRef}
                           open={targetPickerOpen}
                           onClose={handleTargetClose}
-                          className="z-[60] max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+                          className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
                           role="listbox"
                           aria-multiselectable
                         >
-                          {layoutOptions.map((opt) => (
-                            <label
-                              key={opt.id}
-                              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
-                            >
-                              <input
-                                type="checkbox"
-                                className="cursor-pointer"
-                                checked={targetIdSet.has(opt.id)}
-                                onChange={() => handleTargetToggle(opt.id)}
-                              />
-                              <span className="flex-1 truncate">{opt.name}</span>
-                            </label>
-                          ))}
+                          <div className="overflow-y-auto" style={{ maxHeight: targetPopoverMaxH }}>
+                            {layoutOptions.map((opt) => (
+                              <label
+                                key={opt.id}
+                                className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="cursor-pointer"
+                                  checked={targetIdSet.has(opt.id)}
+                                  onChange={() => handleTargetToggle(opt.id)}
+                                />
+                                <span className="flex-1 truncate">{opt.name}</span>
+                              </label>
+                            ))}
+                          </div>
                         </AnchoredPopover>
                       </div>
                     </div>
