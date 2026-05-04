@@ -241,6 +241,32 @@ describe('HUB_UPLOAD_ANALYTICS_POST', () => {
     })
   })
 
+  it('pins the Hub initial-tab hint to summary even when the saved payload had a different tab', async () => {
+    // Saved condition was authored on the bigrams tab; the Hub hint
+    // should still come back as 'summary' so the post detail page
+    // lands on the at-a-glance Summary view (mirrors the local Load
+    // behaviour).
+    vi.mocked(readAnalyzeFilterEntry).mockResolvedValueOnce({
+      entry: {
+        id: 'entry-1',
+        label: 'My filter',
+        filename: 'entry-1.json',
+        savedAt: '2026-05-04T00:00:00.000Z',
+      },
+      data: JSON.stringify({
+        version: 1,
+        analysisTab: 'bigrams',
+        range: { fromMs: 1_700_000_000_000, toMs: 1_700_000_000_000 + 86_400_000 },
+        filters: { deviceScopes: ['all'], appScopes: [] },
+      }),
+    })
+    mockHubAuth()
+    const handler = getHandler(IpcChannels.HUB_UPLOAD_ANALYTICS_POST)
+    await handler({}, uploadParams())
+    const call = vi.mocked(buildAnalyticsExport).mock.calls[0][0]
+    expect(call.filters.analysisTab).toBe('summary')
+  })
+
   it('refuses to upload when the saved entry is missing', async () => {
     vi.mocked(readAnalyzeFilterEntry).mockResolvedValueOnce(null)
     const handler = getHandler(IpcChannels.HUB_UPLOAD_ANALYTICS_POST)

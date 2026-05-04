@@ -715,8 +715,10 @@ export function AnalyzePane({
       // Always land on Summary regardless of which tab was active when
       // the condition was saved — the user opened the panel to inspect
       // the loaded slice, and Summary is the at-a-glance entry point.
-      // The payload still carries `analysisTab` because the Hub upload
-      // uses it as an initial-tab hint on the post detail page.
+      // The Hub upload pipeline pins its `filters.analysisTab` to
+      // Summary too (see hub-ipc.projectFiltersForHub), so the saved
+      // `analysisTab` field is effectively unused today. We keep it on
+      // the payload for forward-compat in case per-tab Load comes back.
       setAnalysisTab('summary')
       setRange(payload.range)
       setDeviceScopes(payload.filters.deviceScopes)
