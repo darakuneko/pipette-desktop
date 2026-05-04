@@ -712,7 +712,12 @@ export function AnalyzePane({
     async (entryId: string): Promise<boolean> => {
       const payload = await filterStore.loadSnapshot(entryId)
       if (!payload) return false
-      setAnalysisTab(payload.analysisTab)
+      // Always land on Summary regardless of which tab was active when
+      // the condition was saved — the user opened the panel to inspect
+      // the loaded slice, and Summary is the at-a-glance entry point.
+      // The payload still carries `analysisTab` because the Hub upload
+      // uses it as an initial-tab hint on the post detail page.
+      setAnalysisTab('summary')
       setRange(payload.range)
       setDeviceScopes(payload.filters.deviceScopes)
       setAppScopes(payload.filters.appScopes)
