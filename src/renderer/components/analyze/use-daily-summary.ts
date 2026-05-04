@@ -7,8 +7,9 @@
 
 import { useEffect, useState } from 'react'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { toLocalDate } from './analyze-streak-goal'
+import { listDailyForScope } from './analyze-fetch'
 import type { DeviceScope } from './analyze-types'
 
 export interface DailySummaryState {
@@ -41,12 +42,7 @@ export function useDailySummary(
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    const dailyPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsListItemsForHash(uid, deviceScope.machineHash, appScopes)
-      : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsListItemsLocal(uid, appScopes)
-        : window.vialAPI.typingAnalyticsListItems(uid, appScopes)
-    void dailyPromise
+    void listDailyForScope(uid, deviceScope, appScopes)
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
       .finally(() => { if (!cancelled) setLoading(false) })

@@ -684,14 +684,16 @@
       "fingerOverridesDefault": "デフォルト",
       "fingerOverridesCustomized": "カスタム ({{count}})",
       "category": {
-        "heatmap": "ヒートマップ",
+        "summary": "サマリー",
         "wpm": "WPM",
         "interval": "間隔",
         "activity": "活動量",
+        "byApp": "アプリ別",
+        "heatmap": "ヒートマップ",
         "ergonomics": "エルゴノミクス",
         "bigrams": "バイグラム",
-        "layoutComparison": "レイアウト比較",
-        "layer": "レイヤー"
+        "layer": "レイヤー",
+        "layoutComparison": "レイアウト比較"
       }
     },
     "loading": {

@@ -22,11 +22,13 @@ import { FILTER_BUTTON } from './analyze-filter-styles'
 import {
   buildActivityCsv,
   buildBigramsCsv,
+  buildByAppCsv,
   buildErgonomicsCsv,
   buildHeatmapCsv,
   buildIntervalCsv,
   buildLayerCsv,
   buildLayoutComparisonCsv,
+  buildSummaryCsv,
   buildWpmCsv,
   type CsvBundleEntry,
 } from './analyze-csv-builders'
@@ -109,10 +111,10 @@ interface Props {
   upload?: AnalyzeUploadCallbacks
 }
 
-type Category = 'heatmap' | 'wpm' | 'interval' | 'activity' | 'ergonomics' | 'bigrams' | 'layoutComparison' | 'layer'
+type Category = 'summary' | 'wpm' | 'interval' | 'activity' | 'byApp' | 'heatmap' | 'ergonomics' | 'bigrams' | 'layer' | 'layoutComparison'
 
 const CATEGORIES: readonly Category[] = [
-  'heatmap', 'wpm', 'interval', 'activity', 'ergonomics', 'bigrams', 'layoutComparison', 'layer',
+  'summary', 'wpm', 'interval', 'activity', 'byApp', 'heatmap', 'ergonomics', 'bigrams', 'layer', 'layoutComparison',
 ]
 export type AnalyzeExportCategory = Category
 
@@ -121,14 +123,16 @@ export type AnalyzeExportCategory = Category
 // keymap); the rest read raw minute / session / bigram counters and
 // are always available once the keyboard has any analytics rows.
 const REQUIRES_SNAPSHOT: Record<Category, boolean> = {
-  heatmap: true,
+  summary: false,
   wpm: false,
   interval: false,
   activity: false,
+  byApp: false,
+  heatmap: true,
   ergonomics: true,
   bigrams: false,
-  layoutComparison: true,
   layer: false,
+  layoutComparison: true,
 }
 
 const allOn = (): Record<Category, boolean> =>
@@ -186,6 +190,9 @@ function granularityLabel(value: GranularityChoice, t: TFunction): string {
 // (device / keymap / range) live in the modal header.
 function specificsFor(c: Category, ctx: AnalyzeExportContext, t: TFunction): string[] {
   switch (c) {
+    case 'summary':
+    case 'byApp':
+      return []
     case 'heatmap': {
       const h = ctx.heatmap
       return [
@@ -259,6 +266,9 @@ function pickBuilders(
     deviceScope: ctx.deviceScope,
     appScopes: ctx.appScopes,
   }
+  if (selected.summary) {
+    out.push(buildSummaryCsv(scope))
+  }
   if (selected.heatmap && ctx.snapshot !== null) {
     out.push(buildHeatmapCsv({ ...scope, snapshot: ctx.snapshot, heatmap: ctx.heatmap, t }))
   }
@@ -291,6 +301,9 @@ function pickBuilders(
       ...scope,
       snapshot: ctx.snapshot, baseLayer: ctx.layer.baseLayer, t,
     }))
+  }
+  if (selected.byApp) {
+    out.push(buildByAppCsv(scope))
   }
   if (selected.bigrams) {
     out.push(buildBigramsCsv(scope))
