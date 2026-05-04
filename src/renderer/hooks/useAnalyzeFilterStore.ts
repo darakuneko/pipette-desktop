@@ -227,14 +227,20 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
     if (!uid) return false
     setError(null)
     try {
-      const result = await window.vialAPI.analyzeFilterStoreDelete(uid, entryId)
+      const entry = entries.find((e) => e.id === entryId)
+      const [, result] = await Promise.all([
+        entry?.hubPostId
+          ? window.vialAPI.hubDeletePost(entry.hubPostId).catch(() => {})
+          : Promise.resolve(),
+        window.vialAPI.analyzeFilterStoreDelete(uid, entryId),
+      ])
       if (!result.success) return false
       await refreshEntries()
       return true
     } catch {
       return false
     }
-  }, [uid, refreshEntries])
+  }, [uid, entries, refreshEntries])
 
   const uploadEntryToHub = useCallback(async (input: UploadAnalyticsToHubInput): Promise<{ ok: boolean }> => {
     if (!uid || hubInflightRef.current) return { ok: false }
@@ -323,27 +329,28 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
     return { ok }
   }, [uid, entries, refreshEntries, t, flashHubResult])
 
-  // Local-only "remove from Hub" — clears the saved entry's hubPostId
-  // metadata so the row reverts to the upload state. We don't issue a
-  // Hub DELETE here today (the Hub-side delete endpoint is the user's
-  // responsibility on the Hub site); this matches the analyze panel's
-  // narrower scope vs. the keymap save panel.
+  // Remove from Hub — deletes the post on the Hub server, then clears
+  // the local hubPostId so the row reverts to the upload state.
   const removeEntryFromHub = useCallback(async (entryId: string): Promise<void> => {
     if (!uid || hubInflightRef.current) return
+    const entry = entries.find((e) => e.id === entryId)
+    const postId = entry?.hubPostId
+    if (!entry || !postId) return
     hubInflightRef.current = true
     setHubUploading(entryId)
     try {
-      const result = await window.vialAPI.analyzeFilterStoreSetHubPostId(uid, entryId, null)
-      if (result.success) {
-        flashHubResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
-        await refreshEntries()
-      } else {
+      const deleteResult = await window.vialAPI.hubDeletePost(postId)
+      if (!deleteResult.success) {
         flashHubResult({
           kind: 'error',
-          message: localizeHubError(result.error, 'hub.removeFailed', t),
+          message: localizeHubError(deleteResult.error, 'hub.removeFailed', t),
           entryId,
         })
+        return
       }
+      await window.vialAPI.analyzeFilterStoreSetHubPostId(uid, entryId, null).catch(() => {})
+      flashHubResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
+      await refreshEntries()
     } catch (err) {
       flashHubResult({
         kind: 'error',
@@ -354,7 +361,7 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
       hubInflightRef.current = false
       setHubUploading(null)
     }
-  }, [uid, refreshEntries, t, flashHubResult])
+  }, [uid, entries, refreshEntries, t, flashHubResult])
 
   return {
     entries,
