@@ -84,26 +84,33 @@ import { useKeyLabelLookup, type UseKeyLabelLookupReturn } from '../../hooks/use
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HubAnalyticsLayoutComparisonInputs } from '../../../shared/types/hub'
 
+function resolveKleKeys(snapshot: TypingKeymapSnapshot | null): unknown[] {
+  const layout = snapshot?.layout as KeyboardLayout | null
+  return layout && Array.isArray(layout.keys) ? layout.keys : []
+}
+
 function resolveLayoutComparisonInputs(
   filter: Required<LayoutComparisonFilters>,
   lookup: UseKeyLabelLookupReturn,
   snapshot: TypingKeymapSnapshot | null,
+  targetIds: string[],
 ): HubAnalyticsLayoutComparisonInputs | null {
-  const targetId = filter.targetLayoutId
-  if (targetId === null || !snapshot) return null
+  if (targetIds.length === 0 || !snapshot) return null
   const sourceMap = lookup.getMap(filter.sourceLayoutId)
-  const targetMap = lookup.getMap(targetId)
-  if (!sourceMap || !targetMap) return null
-  const layout = snapshot.layout as KeyboardLayout | null
-  const kleKeys: unknown[] = layout && Array.isArray(layout.keys) ? layout.keys : []
+  if (!sourceMap) return null
+  const targets: Array<{ id: string; map: Record<string, string> }> = [
+    { id: filter.sourceLayoutId, map: sourceMap },
+  ]
+  for (const tid of targetIds) {
+    const map = lookup.getMap(tid)
+    if (map) targets.push({ id: tid, map })
+  }
+  if (targets.length < 2) return null
   return {
     source: { id: filter.sourceLayoutId, map: sourceMap },
-    targets: [
-      { id: filter.sourceLayoutId, map: sourceMap },
-      { id: targetId, map: targetMap },
-    ],
+    targets,
     metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
-    kleKeys,
+    kleKeys: resolveKleKeys(snapshot),
   }
 }
 
@@ -830,9 +837,12 @@ export function AnalyzePane({
       thumbnailBase64,
       keyboard: hubKeyboard,
       fingerOverrides: fingerAssignments,
-      layoutComparisonInputs: resolveLayoutComparisonInputs(
-        layoutComparisonFilter, layoutLookup, keymapSnapshot,
-      ),
+      layoutComparisonInputs: layoutComparisonFilter.targetLayoutId !== null
+        ? resolveLayoutComparisonInputs(
+            layoutComparisonFilter, layoutLookup, keymapSnapshot,
+            [layoutComparisonFilter.targetLayoutId],
+          )
+        : null,
     }
   }, [selected, hubKeyboard, filterStore.entries, exportCtx, range, fingerAssignments,
     layoutComparisonFilter, layoutLookup, keymapSnapshot])
@@ -889,11 +899,20 @@ export function AnalyzePane({
         ? { kind: filterStore.hubUploadResult.kind, message: filterStore.hubUploadResult.message }
         : null,
       isExisting,
-      onConfirm: async (categories: ReadonlySet<string>) => {
+      onConfirm: async (categories: ReadonlySet<string>, options?: { targetLayoutIds?: string[] }) => {
         const baseInput = buildHubUploadInput(entry.id)
         if (!baseInput) return { ok: false }
+        const targetIds = options?.targetLayoutIds
+        let layoutComparisonInputs = baseInput.layoutComparisonInputs
+        if (targetIds && targetIds.length > 0) {
+          await Promise.all(targetIds.map((id) => layoutLookup.ensure(id)))
+          layoutComparisonInputs = resolveLayoutComparisonInputs(
+            layoutComparisonFilter, layoutLookup, keymapSnapshot, targetIds,
+          )
+        }
         const input = {
           ...baseInput,
+          layoutComparisonInputs,
           categories: Array.from(categories) as Parameters<typeof filterStore.uploadEntryToHub>[0]['categories'],
         }
         return isExisting
@@ -901,7 +920,8 @@ export function AnalyzePane({
           : filterStore.uploadEntryToHub(input)
       },
     }
-  }, [uploadEntryForModal, filterStore, buildHubUploadInput])
+  }, [uploadEntryForModal, filterStore, buildHubUploadInput,
+    layoutComparisonFilter, layoutLookup, keymapSnapshot])
 
   // Activity's per-tab filters render in two places: alongside Period
   // on Row 2 in split mode, or on Row 3 in single mode. Extracted so

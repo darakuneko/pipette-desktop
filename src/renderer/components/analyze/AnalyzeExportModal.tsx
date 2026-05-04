@@ -10,12 +10,14 @@
 // where the timestamps are local-time YYYYMMDDHHmm so the user can
 // see at a glance which range a file covers without reopening it.
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { HeatmapFilters, LayoutComparisonFilters } from '../../../shared/types/analyze-filters'
-import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
+import { KEYBOARD_LAYOUTS, LAYOUT_BY_ID } from '../../data/keyboard-layouts'
+import { useKeyLabels } from '../../hooks/useKeyLabels'
+import { AnchoredPopover } from '../ui/AnchoredPopover'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { FILTER_BUTTON } from './analyze-filter-styles'
@@ -94,7 +96,7 @@ export interface AnalyzeUploadCallbacks {
   /** Confirm handler invoked with the user's category selection. The
    * parent runs the actual upload IPC and resolves with `{ ok }` so
    * the modal can decide whether to close itself. */
-  onConfirm: (categories: ReadonlySet<Category>) => Promise<{ ok: boolean }>
+  onConfirm: (categories: ReadonlySet<Category>, options?: { targetLayoutIds?: string[] }) => Promise<{ ok: boolean }>
   /** Whether the active entry already lives on Hub. Switches the
    * confirm button label between "Upload" and "Update". */
   isExisting: boolean
@@ -324,14 +326,50 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   const [selected, setSelected] = useState<Record<Category, boolean>>(allOn)
   const [exporting, setExporting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [selectedTargetIds, setSelectedTargetIds] = useState<string[]>([])
+  const [targetPickerOpen, setTargetPickerOpen] = useState(false)
+  const targetTriggerRef = useRef<HTMLButtonElement>(null)
+  const keyLabels = useKeyLabels()
 
-  // Reset toggles + error each time the modal reopens so a previous
-  // partial selection (or a stale error) doesn't carry across runs.
+  const layoutOptions = useMemo(() => {
+    const sourceId = ctx?.layoutComparison.sourceLayoutId
+    const seen = new Set<string>()
+    const out: { id: string; name: string }[] = []
+    for (const meta of keyLabels.metas) {
+      if (seen.has(meta.id) || meta.id === sourceId) continue
+      seen.add(meta.id)
+      out.push({ id: meta.id, name: meta.name })
+    }
+    for (const def of KEYBOARD_LAYOUTS) {
+      if (seen.has(def.id) || def.id === sourceId) continue
+      seen.add(def.id)
+      out.push({ id: def.id, name: def.name })
+    }
+    return out
+  }, [keyLabels.metas, ctx?.layoutComparison.sourceLayoutId])
+
+  const targetIdSet = useMemo(() => new Set(selectedTargetIds), [selectedTargetIds])
+
+  const targetButtonLabel = useMemo(() => {
+    if (selectedTargetIds.length === 0) return t('analyze.layoutComparison.noTargetOption')
+    if (selectedTargetIds.length === 1) {
+      const opt = layoutOptions.find((o) => o.id === selectedTargetIds[0])
+      return opt?.name ?? selectedTargetIds[0]
+    }
+    const first = layoutOptions.find((o) => o.id === selectedTargetIds[0])?.name ?? selectedTargetIds[0]
+    return `${first} +${selectedTargetIds.length - 1}`
+  }, [selectedTargetIds, layoutOptions, t])
+
+  const handleTargetClose = useCallback(() => setTargetPickerOpen(false), [])
+
   useEffect(() => {
     if (!isOpen) return
     setSelected(allOn())
     setError(null)
-  }, [isOpen])
+    setTargetPickerOpen(false)
+    const targetId = ctx?.layoutComparison.targetLayoutId
+    setSelectedTargetIds(targetId ? [targetId] : [])
+  }, [isOpen, ctx?.layoutComparison.targetLayoutId])
 
   useEscapeClose(onClose, isOpen)
 
@@ -340,7 +378,10 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   const isCategoryAvailable = (c: Category): boolean => {
     if (!ctx) return false
     if (REQUIRES_SNAPSHOT[c] && snapshotMissing) return false
-    if (c === 'layoutComparison' && ctx.layoutComparison.targetLayoutId === null) return false
+    if (c === 'layoutComparison') {
+      if (mode === 'upload') return true
+      return ctx.layoutComparison.targetLayoutId !== null
+    }
     return true
   }
 
@@ -349,6 +390,12 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   const handleToggle = (c: Category) => {
     if (!isCategoryAvailable(c)) return
     setSelected((prev) => ({ ...prev, [c]: !prev[c] }))
+  }
+
+  const handleTargetToggle = (id: string) => {
+    setSelectedTargetIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    )
   }
 
   const handleExport = async () => {
@@ -378,10 +425,13 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
     setError(null)
     const picked = new Set<Category>()
     for (const c of CATEGORIES) {
-      if (selected[c] && isCategoryAvailable(c)) picked.add(c)
+      if (selected[c] && isCategoryAvailable(c)) {
+        if (c === 'layoutComparison' && selectedTargetIds.length === 0) continue
+        picked.add(c)
+      }
     }
     try {
-      const result = await upload.onConfirm(picked)
+      const result = await upload.onConfirm(picked, { targetLayoutIds: selectedTargetIds })
       if (result.ok) onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : t('analyze.export.failed'))
@@ -434,27 +484,72 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
               const available = isCategoryAvailable(c)
               const active = available && selected[c]
               const specifics = ctx !== null ? specificsFor(c, ctx, t) : []
+              const showTargetPicker = c === 'layoutComparison' && mode === 'upload' && active
               return (
-                <button
-                  key={c}
-                  type="button"
-                  className={categoryRowClass(active)}
-                  aria-pressed={active}
-                  disabled={!available}
-                  onClick={() => handleToggle(c)}
-                  data-testid={`analyze-export-toggle-${c}`}
-                >
-                  <span className="text-[13px] font-semibold">
-                    {t(`analyze.export.category.${c}`)}
-                  </span>
-                  {specifics.length > 0 && (
-                    <span className="text-[11px] text-content-muted">
-                      {specifics.map((s, i) => (
-                        <span key={i} className={i === 0 ? '' : 'ml-3'}>{s}</span>
-                      ))}
+                <div key={c} className="flex flex-col">
+                  <button
+                    type="button"
+                    className={categoryRowClass(active)}
+                    aria-pressed={active}
+                    disabled={!available}
+                    onClick={() => handleToggle(c)}
+                    data-testid={`analyze-export-toggle-${c}`}
+                  >
+                    <span className="text-[13px] font-semibold">
+                      {t(`analyze.export.category.${c}`)}
                     </span>
+                    {specifics.length > 0 && !showTargetPicker && (
+                      <span className="text-[11px] text-content-muted">
+                        {specifics.map((s, i) => (
+                          <span key={i} className={i === 0 ? '' : 'ml-3'}>{s}</span>
+                        ))}
+                      </span>
+                    )}
+                  </button>
+                  {showTargetPicker && ctx !== null && (
+                    <div className="ml-3 mt-1 flex flex-col gap-1 text-[11px]">
+                      <div className="text-content-muted">
+                        {t('analyze.layoutComparison.sourceLabel')}: {LAYOUT_BY_ID.get(ctx.layoutComparison.sourceLayoutId)?.name ?? ctx.layoutComparison.sourceLayoutId}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-content-muted">{t('analyze.layoutComparison.targetLabel')}:</span>
+                        <button
+                          ref={targetTriggerRef}
+                          type="button"
+                          className="rounded border border-edge bg-surface px-2 py-0.5 text-left text-content-secondary transition-colors hover:bg-surface-dim"
+                          onClick={() => setTargetPickerOpen((prev) => !prev)}
+                          aria-haspopup="listbox"
+                          aria-expanded={targetPickerOpen}
+                        >
+                          {targetButtonLabel}
+                        </button>
+                        <AnchoredPopover
+                          anchorRef={targetTriggerRef}
+                          open={targetPickerOpen}
+                          onClose={handleTargetClose}
+                          className="z-[60] max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+                          role="listbox"
+                          aria-multiselectable
+                        >
+                          {layoutOptions.map((opt) => (
+                            <label
+                              key={opt.id}
+                              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+                            >
+                              <input
+                                type="checkbox"
+                                className="cursor-pointer"
+                                checked={targetIdSet.has(opt.id)}
+                                onChange={() => handleTargetToggle(opt.id)}
+                              />
+                              <span className="flex-1 truncate">{opt.name}</span>
+                            </label>
+                          ))}
+                        </AnchoredPopover>
+                      </div>
+                    </div>
                   )}
-                </button>
+                </div>
               )
             })}
           </div>
