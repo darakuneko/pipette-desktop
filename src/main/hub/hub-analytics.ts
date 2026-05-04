@@ -177,7 +177,7 @@ async function collectData(
   // - matrixCellsByDay only Ergonomics learning curve
   // - layerUsage only Layer keystrokes
   // - sessions only Activity (sessions metric) + Summary
-  // - bksMinute only Activity Backspace overlay
+  // - bksMinute Activity Backspace overlay + WPM Bksp % line
   // - bigrams only Bigrams tab
   // - layoutComparison only Layout Comparison tab
   // PeakRecords + appUsage + wpmByApp aren't surfaced as modal
@@ -193,7 +193,7 @@ async function collectData(
   const needsMatrixCellsByDay = isSectionEnabled(cats, 'ergonomics')
   const needsLayerUsage = isSectionEnabled(cats, 'layer')
   const needsSessions = isSectionEnabled(cats, 'activity')
-  const needsBksMinute = isSectionEnabled(cats, 'activity')
+  const needsBksMinute = isSectionEnabled(cats, 'activity') || isSectionEnabled(cats, 'wpm')
   const needsBigrams = isSectionEnabled(cats, 'bigrams')
   const needsLayoutComparison = isSectionEnabled(cats, 'layoutComparison')
 
