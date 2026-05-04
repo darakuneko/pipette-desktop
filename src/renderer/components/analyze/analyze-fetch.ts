@@ -14,6 +14,7 @@ import type {
   TypingBigramAggregateResult,
   TypingBigramAggregateView,
   TypingBksMinuteRow,
+  TypingDailySummary,
   TypingHeatmapByCell,
   TypingKeymapSnapshot,
   TypingLayerUsageRow,
@@ -23,6 +24,16 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import type { DeviceScope } from '../../../shared/types/analyze-filters'
 import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
+
+export function listDailyForScope(
+  uid: string,
+  scope: DeviceScope,
+  appScopes: string[] = [],
+): Promise<TypingDailySummary[]> {
+  if (isHashScope(scope)) return window.vialAPI.typingAnalyticsListItemsForHash(uid, scope.machineHash, appScopes)
+  if (isOwnScope(scope)) return window.vialAPI.typingAnalyticsListItemsLocal(uid, appScopes)
+  return window.vialAPI.typingAnalyticsListItems(uid, appScopes)
+}
 
 export function listMinuteStatsForScope(
   uid: string,

@@ -20,7 +20,7 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
-import { isHashScope, isOwnScope } from '../../../shared/types/analyze-filters'
+import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { buildCsv } from '../../../shared/csv-export'
 import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
 
@@ -54,11 +54,13 @@ async function resolveLayoutLabel(id: string): Promise<string> {
   }
   return id
 }
+import { toLocalDate } from './analyze-streak-goal'
 import {
   fetchBigramAggregateForRange,
   fetchLayoutComparisonForRange,
   fetchMatrixHeatmapAllLayers,
   listBksMinuteForScope,
+  listDailyForScope,
   listLayerUsageForScope,
   listMatrixCellsForScope,
   listMinuteStatsForScope,
@@ -102,6 +104,7 @@ export interface CsvBundleEntry {
 // apart at a glance and the slug also acts as the only place a typo
 // can drift from the rest of the codebase.
 const SLUG = {
+  summary: 'analyze-summary',
   heatmapRanking: 'analyze-heatmap-ranking',
   wpm: 'analyze-wpm',
   wpmTimeOfDay: 'analyze-wpm-time-of-day',
@@ -110,6 +113,7 @@ const SLUG = {
   activityKeystrokes: 'analyze-activity-keystrokes',
   activityWpm: 'analyze-activity-wpm',
   activitySessions: 'analyze-activity-sessions',
+  byApp: 'analyze-by-app',
   layer: 'analyze-layer',
   ergonomics: 'analyze-ergonomics',
   bigrams: 'analyze-bigrams',
@@ -475,4 +479,56 @@ export async function buildLayoutComparisonCsv(args: ScopeArgs & {
   }
 
   return { slug: SLUG.layoutComparison, content: buildCsv(header, rows) }
+}
+
+// --- Summary (daily summary within range) --------------------------
+
+export async function buildSummaryCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
+  const { uid, range, deviceScope, appScopes = [] } = args
+  const allDaily = await listDailyForScope(uid, deviceScope, appScopes).catch(() => [])
+
+  const fromDate = toLocalDate(range.fromMs)
+  const toDate = toLocalDate(range.toMs)
+  const filtered = allDaily.filter((d) => d.date >= fromDate && d.date <= toDate)
+
+  const csvRows = filtered.map((d) => [
+    d.date,
+    d.keystrokes,
+    d.activeMs,
+    Math.round(computeWpm(d.keystrokes, d.activeMs) * 10) / 10,
+  ])
+  return {
+    slug: SLUG.summary,
+    content: buildCsv(['date', 'keystrokes', 'active_ms', 'wpm'], csvRows),
+  }
+}
+
+// --- By App (app usage + WPM per app) ------------------------------
+
+export async function buildByAppCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
+  const { uid, range, deviceScope } = args
+  const scope = scopeToSelectValue(deviceScope)
+  const [usage, wpmRows] = await Promise.all([
+    window.vialAPI.typingAnalyticsGetAppUsageForRange(uid, range.fromMs, range.toMs, scope).catch(() => []),
+    window.vialAPI.typingAnalyticsGetWpmByAppForRange(uid, range.fromMs, range.toMs, scope).catch(() => []),
+  ])
+
+  const wpmMap = new Map(wpmRows.map((r) => [r.name, computeWpm(r.keystrokes, r.activeMs)]))
+  const totalKeystrokes = usage.reduce((sum, r) => sum + r.keystrokes, 0)
+  const csvRows = usage
+    .toSorted((a, b) => b.keystrokes - a.keystrokes)
+    .map((r) => {
+      const wpm = wpmMap.get(r.name)
+      return [
+        r.name,
+        r.keystrokes,
+        r.activeMs,
+        totalKeystrokes > 0 ? Math.round(r.keystrokes / totalKeystrokes * 1000) / 10 : 0,
+        wpm !== undefined ? Math.round(wpm * 10) / 10 : '',
+      ]
+    })
+  return {
+    slug: SLUG.byApp,
+    content: buildCsv(['app_name', 'keystrokes', 'active_ms', 'share_percent', 'wpm'], csvRows),
+  }
 }

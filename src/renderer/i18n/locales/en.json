@@ -686,14 +686,16 @@
       "fingerOverridesDefault": "Default",
       "fingerOverridesCustomized": "Customized ({{count}})",
       "category": {
-        "heatmap": "Heatmap",
+        "summary": "Summary",
         "wpm": "WPM",
         "interval": "Interval",
         "activity": "Activity",
+        "byApp": "By App",
+        "heatmap": "Heatmap",
         "ergonomics": "Ergonomics",
         "bigrams": "Bigrams",
-        "layoutComparison": "Layout Comparison",
-        "layer": "Layer"
+        "layer": "Layer",
+        "layoutComparison": "Layout Comparison"
       }
     },
     "loading": {
