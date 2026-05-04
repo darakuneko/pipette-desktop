@@ -340,16 +340,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   const isCategoryAvailable = (c: Category): boolean => {
     if (!ctx) return false
     if (REQUIRES_SNAPSHOT[c] && snapshotMissing) return false
-    // Layout Comparison also needs an explicit target — without one
-    // there is no "candidate vs current" diff to write to CSV.
-    // Upload mode currently never ships a layout comparison (the
-    // resolver pipeline lives in the renderer's LayoutComparisonView)
-    // so disable the toggle entirely for upload to make the limitation
-    // visible to the user.
-    if (c === 'layoutComparison') {
-      if (mode === 'upload') return false
-      if (ctx.layoutComparison.targetLayoutId === null) return false
-    }
+    if (c === 'layoutComparison' && ctx.layoutComparison.targetLayoutId === null) return false
     return true
   }
 

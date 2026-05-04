@@ -95,7 +95,7 @@ export interface BuildAnalyticsExportInput {
    * comparison and ships `data.layoutComparison: null`. */
   layoutComparisonInputs: {
     source: LayoutComparisonInputLayout
-    target: LayoutComparisonInputLayout
+    targets: LayoutComparisonInputLayout[]
     metrics: LayoutComparisonMetric[]
     /** KleKey geometry parsed from `snapshot.layout`. The renderer is
      * better positioned to do this — it already does it for the live
@@ -336,7 +336,7 @@ async function computeLayoutComparisonForExport(
     snapshot,
     kleKeys: inputs.kleKeys,
     source: inputs.source,
-    targets: [inputs.target],
+    targets: inputs.targets,
     metrics: inputs.metrics,
     layer,
   })
