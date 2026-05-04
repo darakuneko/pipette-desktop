@@ -518,7 +518,8 @@
     "maxEntriesReached": "保存可能な上限 ({{max}}件) に達しました。古い条件を削除してください。",
     "csv": ".csv",
     "syncedCount": "同期データ: {{count}}",
-    "empty": "保存された検索条件はありません"
+    "empty": "保存された検索条件はありません",
+    "confirmOverwrite": "上書きしますか？"
   },
   "sync": {
     "title": "設定",
