@@ -520,7 +520,8 @@
     "maxEntriesReached": "Maximum saved conditions reached ({{max}}). Delete an existing entry to save a new one.",
     "csv": ".csv",
     "syncedCount": "Synced: {{count}}",
-    "empty": "No saved conditions yet."
+    "empty": "No saved conditions yet.",
+    "confirmOverwrite": "Overwrite?"
   },
   "sync": {
     "title": "Settings",

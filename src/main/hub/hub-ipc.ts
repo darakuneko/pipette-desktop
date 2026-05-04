@@ -245,7 +245,12 @@ function projectFiltersForHub(
     ? f.bigrams.pairIntervalThresholdMs
     : undefined
   return {
-    analysisTab: typeof payload.analysisTab === 'string' ? payload.analysisTab : 'summary',
+    // Always pin the Hub initial-tab hint to Summary so the post
+    // detail page lands on the at-a-glance view regardless of which
+    // tab was open when the saved condition was uploaded. Mirrors the
+    // local Load behaviour (handleLoadFilterSnapshot) which also
+    // forces Summary.
+    analysisTab: 'summary',
     heatmap: f.heatmap,
     wpm: f.wpm,
     interval: f.interval,
