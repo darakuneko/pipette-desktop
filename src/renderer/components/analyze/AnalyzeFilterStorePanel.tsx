@@ -38,6 +38,12 @@ interface Props {
    * success, null on failure (so the caller can keep the input visible
    * for retry). */
   onSave: (label: string) => Promise<string | null>
+  /** Overwrite an existing entry that already has the same label. The
+   * panel asks the user to confirm before invoking this — same flow
+   * as the keymap save panel (`LayoutStoreContent`). When omitted the
+   * duplicate-label submit falls back to delete + onSave so the panel
+   * still works without a dedicated overwrite path. */
+  onOverwriteSave?: (entryId: string, label: string) => Promise<string | null>
   onLoad: (entryId: string) => Promise<boolean>
   onRename: (entryId: string, newLabel: string) => Promise<boolean>
   onDelete: (entryId: string) => Promise<boolean>
@@ -70,6 +76,7 @@ export function AnalyzeFilterStorePanel({
   saving,
   loading,
   onSave,
+  onOverwriteSave,
   onLoad,
   onRename,
   onDelete,
@@ -82,22 +89,61 @@ export function AnalyzeFilterStorePanel({
   const rename = useInlineRename<string>()
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [confirmHubRemoveId, setConfirmHubRemoveId] = useState<string | null>(null)
+  // Mirrors LayoutStoreContent's overwrite flow — first submit with a
+  // duplicate label sets this to the existing id and the submit button
+  // swaps to "Overwrite?" + Cancel; second submit calls onOverwriteSave
+  // (or falls back to delete + save when the parent didn't supply
+  // one). The id is cleared on input change so a retypeit re-runs the
+  // duplicate detection from scratch.
+  const [confirmOverwriteId, setConfirmOverwriteId] = useState<string | null>(null)
   const [showSaved, setShowSaved] = useState(false)
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => () => clearTimeout(savedTimerRef.current), [])
 
+  const flashSaved = (): void => {
+    setSaveLabel('')
+    setShowSaved(true)
+    clearTimeout(savedTimerRef.current)
+    savedTimerRef.current = setTimeout(() => setShowSaved(false), 2000)
+  }
+
   const handleSaveSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault()
     const trimmed = saveLabel.trim()
     if (saving || !trimmed) return
-    const id = await onSave(trimmed)
-    if (id) {
-      setSaveLabel('')
-      setShowSaved(true)
-      clearTimeout(savedTimerRef.current)
-      savedTimerRef.current = setTimeout(() => setShowSaved(false), 2000)
+
+    // First submit with a duplicate label — ask for confirmation.
+    const existing = entries.find((entry) => entry.label === trimmed)
+    if (existing && !confirmOverwriteId) {
+      setConfirmOverwriteId(existing.id)
+      return
     }
+
+    // Second submit (confirmed overwrite).
+    if (confirmOverwriteId) {
+      const overwriteId = confirmOverwriteId
+      setConfirmOverwriteId(null)
+      if (onOverwriteSave) {
+        const id = await onOverwriteSave(overwriteId, trimmed)
+        if (id) flashSaved()
+        return
+      }
+      // No dedicated overwrite path — delete + save so the panel still
+      // works, accepting that hubPostId association would be lost.
+      await onDelete(overwriteId)
+    }
+
+    const id = await onSave(trimmed)
+    if (id) flashSaved()
+  }
+
+  const handleSaveLabelChange = (value: string): void => {
+    setSaveLabel(value)
+    // Editing the input invalidates a pending overwrite confirmation
+    // so the user doesn't accidentally overwrite a different entry by
+    // tweaking the label after triggering the prompt.
+    if (confirmOverwriteId) setConfirmOverwriteId(null)
   }
 
   const commitRename = async (entryId: string): Promise<void> => {
@@ -137,20 +183,41 @@ export function AnalyzeFilterStorePanel({
                 <input
                   type="text"
                   value={saveLabel}
-                  onChange={(e) => setSaveLabel(e.target.value)}
+                  onChange={(e) => handleSaveLabelChange(e.target.value)}
                   placeholder={t('common.labelPlaceholder')}
                   maxLength={200}
                   className="flex-1 rounded-lg border border-edge bg-surface px-3 py-1.5 text-xs text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
                   data-testid="analyze-filter-store-save-input"
                 />
-                <button
-                  type="submit"
-                  disabled={saving || !saveLabel.trim()}
-                  className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
-                  data-testid="analyze-filter-store-save-submit"
-                >
-                  {t('common.save')}
-                </button>
+                {confirmOverwriteId ? (
+                  <>
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+                      data-testid="analyze-filter-store-overwrite-confirm"
+                    >
+                      {t('analyzeFilterStore.confirmOverwrite')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmOverwriteId(null)}
+                      className="shrink-0 rounded-lg border border-edge px-3 py-1.5 text-xs font-medium text-content-muted hover:text-content"
+                      data-testid="analyze-filter-store-overwrite-cancel"
+                    >
+                      {t('common.cancel')}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="submit"
+                    disabled={saving || !saveLabel.trim()}
+                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+                    data-testid="analyze-filter-store-save-submit"
+                  >
+                    {t('common.save')}
+                  </button>
+                )}
               </form>
               <div className="mt-2 flex items-center gap-1">
                 {showSaved && (

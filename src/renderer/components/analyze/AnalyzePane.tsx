@@ -643,47 +643,69 @@ export function AnalyzePane({
     void refreshFilterEntries()
   }, [refreshFilterEntries])
 
+  // Shared payload + summary build for both the save and overwrite
+  // entry points so the two stay byte-for-byte identical (the saved
+  // entry shape is what `useAnalyzeFilters` reads back on Load — any
+  // drift between the two writers would silently corrupt the loaded
+  // state).
+  const buildFilterSnapshotPayload = useCallback((): {
+    payload: AnalyzeFilterSnapshotPayload
+    summary: string | undefined
+  } => {
+    const payload: AnalyzeFilterSnapshotPayload = {
+      version: 1,
+      analysisTab,
+      range,
+      filters: {
+        deviceScopes,
+        appScopes,
+        heatmap: heatmapFilter,
+        wpm: wpmFilter,
+        interval: intervalFilter,
+        activity: activityFilter,
+        layer: layerFilter,
+        ergonomics: ergonomicsFilter,
+        bigrams: bigramsFilter,
+        layoutComparison: layoutComparisonFilter,
+      },
+    }
+    // Comma-separated condition values shown under the saved entry's
+    // label so the user can recognise it without loading the full
+    // snapshot. Built from `exportCtx` which already memoises the same
+    // user-visible labels the filter row renders. Keyboard name is
+    // omitted because the store is already scoped per keyboard.
+    const summary = exportCtx
+      ? [
+          exportCtx.conditions.device,
+          exportCtx.conditions.app,
+          exportCtx.conditions.keymap,
+          exportCtx.conditions.range,
+        ].filter(Boolean).join(', ')
+      : undefined
+    return { payload, summary }
+  }, [
+    analysisTab, range,
+    deviceScopes, appScopes, heatmapFilter, wpmFilter, intervalFilter,
+    activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
+    layoutComparisonFilter, exportCtx,
+  ])
+
   const handleSaveFilterSnapshot = useCallback(
     async (label: string): Promise<string | null> => {
       if (!selectedUid) return null
-      const payload: AnalyzeFilterSnapshotPayload = {
-        version: 1,
-        analysisTab,
-        range,
-        filters: {
-          deviceScopes,
-          appScopes,
-          heatmap: heatmapFilter,
-          wpm: wpmFilter,
-          interval: intervalFilter,
-          activity: activityFilter,
-          layer: layerFilter,
-          ergonomics: ergonomicsFilter,
-          bigrams: bigramsFilter,
-          layoutComparison: layoutComparisonFilter,
-        },
-      }
-      // Comma-separated condition values shown under the saved entry's
-      // label so the user can recognise it without loading the full
-      // snapshot. Built from `exportCtx` which already memoises the same
-      // user-visible labels the filter row renders. Keyboard name is
-      // omitted because the store is already scoped per keyboard.
-      const summary = exportCtx
-        ? [
-            exportCtx.conditions.device,
-            exportCtx.conditions.app,
-            exportCtx.conditions.keymap,
-            exportCtx.conditions.range,
-          ].filter(Boolean).join(', ')
-        : undefined
+      const { payload, summary } = buildFilterSnapshotPayload()
       return filterStore.saveSnapshot(label, payload, summary)
     },
-    [
-      selectedUid, analysisTab, range,
-      deviceScopes, appScopes, heatmapFilter, wpmFilter, intervalFilter,
-      activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
-      layoutComparisonFilter, filterStore, exportCtx,
-    ],
+    [selectedUid, buildFilterSnapshotPayload, filterStore],
+  )
+
+  const handleOverwriteFilterSnapshot = useCallback(
+    async (entryId: string, label: string): Promise<string | null> => {
+      if (!selectedUid) return null
+      const { payload, summary } = buildFilterSnapshotPayload()
+      return filterStore.overwriteSnapshot(entryId, label, payload, summary)
+    },
+    [selectedUid, buildFilterSnapshotPayload, filterStore],
   )
 
   const handleLoadFilterSnapshot = useCallback(
@@ -1455,6 +1477,7 @@ export function AnalyzePane({
               saving={filterStore.saving}
               loading={filterStore.loading}
               onSave={handleSaveFilterSnapshot}
+              onOverwriteSave={handleOverwriteFilterSnapshot}
               onLoad={handleLoadFilterSnapshot}
               onRename={filterStore.renameEntry}
               onDelete={filterStore.deleteEntry}
