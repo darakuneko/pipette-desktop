@@ -111,6 +111,9 @@ export interface BuildAnalyticsExportInput {
    * validator still accepts the payload. Undefined / empty fetches
    * everything (back-compat with the pre-modal pipeline). */
   categories?: ReadonlySet<AnalyticsCategoryId>
+  /** Which apps to include in `appData`. Undefined ships every app
+   * (back-compat). Empty array ships no per-app slices. */
+  appDataApps?: string[]
 }
 
 /** Helper: should a category's data section be included in the
@@ -167,7 +170,11 @@ async function buildAppData(
   aggregateData: HubAnalyticsData,
   input: BuildAnalyticsExportInput,
 ): Promise<Record<string, HubAnalyticsData> | undefined> {
-  const apps = aggregateData.appUsage.filter((a) => a.name !== TYPING_APP_UNKNOWN_NAME)
+  const appFilter = input.appDataApps
+  if (appFilter !== undefined && appFilter.length === 0) return undefined
+  const allApps = aggregateData.appUsage.filter((a) => a.name !== TYPING_APP_UNKNOWN_NAME)
+  const allowed = appFilter !== undefined ? new Set(appFilter) : undefined
+  const apps = allowed !== undefined ? allApps.filter((a) => allowed.has(a.name)) : allApps
   if (apps.length < 2) return undefined
 
   const usageByName = new Map(aggregateData.appUsage.map((a) => [a.name, a]))

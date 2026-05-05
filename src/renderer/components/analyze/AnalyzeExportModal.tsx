@@ -43,6 +43,8 @@ import type {
   WpmViewMode,
 } from './analyze-types'
 import type { FingerType } from '../../../shared/kle/kle-ergonomics'
+import { scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 
 export interface AnalyzeExportContext {
   uid: string
@@ -96,7 +98,7 @@ export interface AnalyzeUploadCallbacks {
   /** Confirm handler invoked with the user's category selection. The
    * parent runs the actual upload IPC and resolves with `{ ok }` so
    * the modal can decide whether to close itself. */
-  onConfirm: (categories: ReadonlySet<Category>, options?: { targetLayoutIds?: string[] }) => Promise<{ ok: boolean }>
+  onConfirm: (categories: ReadonlySet<Category>, options?: { targetLayoutIds?: string[]; appDataApps?: string[] }) => Promise<{ ok: boolean }>
   /** Whether the active entry already lives on Hub. Switches the
    * confirm button label between "Upload" and "Update". */
   isExisting: boolean
@@ -334,6 +336,10 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   const [targetPickerOpen, setTargetPickerOpen] = useState(false)
   const targetTriggerRef = useRef<HTMLButtonElement>(null)
   const keyLabels = useKeyLabels()
+  const [appDataApps, setAppDataApps] = useState<string[]>([])
+  const [appDataOptions, setAppDataOptions] = useState<string[]>([])
+  const [appPickerOpen, setAppPickerOpen] = useState(false)
+  const appTriggerRef = useRef<HTMLButtonElement>(null)
 
   const layoutOptions = useMemo(() => {
     const sourceId = ctx?.layoutComparison.sourceLayoutId
@@ -365,6 +371,26 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
   }, [selectedTargetIds, layoutOptions, t])
 
   const handleTargetClose = useCallback(() => setTargetPickerOpen(false), [])
+  const handleAppClose = useCallback(() => setAppPickerOpen(false), [])
+
+  const appDataSet = useMemo(() => new Set(appDataApps), [appDataApps])
+
+  const appButtonLabel = useMemo(() => {
+    if (appDataApps.length === 0) return t('analyze.export.appDataApps.none')
+    if (appDataApps.length === appDataOptions.length) return t('analyze.export.appDataApps.all')
+    if (appDataApps.length === 1) return appDataApps[0]
+    const first = appDataApps[0]
+    return `${first} +${appDataApps.length - 1}`
+  }, [appDataApps, appDataOptions.length, t])
+
+  const handleAppToggle = (name: string) => {
+    setAppDataApps((prev) =>
+      prev.includes(name) ? prev.filter((x) => x !== name) : [...prev, name],
+    )
+  }
+
+  const handleAppSelectAll = () => setAppDataApps([...appDataOptions])
+  const handleAppDeselectAll = () => setAppDataApps([])
 
   const [targetPopoverMaxH, setTargetPopoverMaxH] = useState(TARGET_POPOVER_MAX_H)
   useLayoutEffect(() => {
@@ -372,7 +398,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
     const update = () => {
       const rect = targetTriggerRef.current?.getBoundingClientRect()
       if (!rect) return
-      const available = window.innerHeight - rect.bottom - VIEWPORT_EDGE_GAP
+      const available = rect.top - VIEWPORT_EDGE_GAP
       setTargetPopoverMaxH(Math.max(TARGET_POPOVER_MIN_H, Math.min(TARGET_POPOVER_MAX_H, available)))
     }
     update()
@@ -385,9 +411,37 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
     setSelected(allOn())
     setError(null)
     setTargetPickerOpen(false)
+    setAppPickerOpen(false)
     const targetId = ctx?.layoutComparison.targetLayoutId
     setSelectedTargetIds(targetId ? [targetId] : [])
   }, [isOpen, ctx?.layoutComparison.targetLayoutId])
+
+  useEffect(() => {
+    if (!isOpen || mode !== 'upload' || !ctx) {
+      setAppDataOptions([])
+      setAppDataApps([])
+      return
+    }
+    let cancelled = false
+    const scope = scopeToSelectValue(ctx.deviceScope)
+    window.vialAPI
+      .typingAnalyticsListAppsForRange(ctx.uid, ctx.range.fromMs, ctx.range.toMs, scope)
+      .then((rows) => {
+        if (cancelled) return
+        const names = rows
+          .filter((r) => r.name !== TYPING_APP_UNKNOWN_NAME)
+          .map((r) => r.name)
+        setAppDataOptions(names)
+        setAppDataApps(names)
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAppDataOptions([])
+          setAppDataApps([])
+        }
+      })
+    return () => { cancelled = true }
+  }, [isOpen, mode, ctx?.uid, ctx?.range.fromMs, ctx?.range.toMs, ctx?.deviceScope])
 
   useEscapeClose(onClose, isOpen)
 
@@ -449,7 +503,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
       }
     }
     try {
-      const result = await upload.onConfirm(picked, { targetLayoutIds: selectedTargetIds })
+      const result = await upload.onConfirm(picked, { targetLayoutIds: selectedTargetIds, appDataApps })
       if (result.ok) onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : t('analyze.export.failed'))
@@ -492,8 +546,12 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
               data-testid="analyze-export-common"
             >
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.device')}: </span>{ctx.conditions.device}</div>
-              <div><span className="text-content-muted">{t('analyze.export.conditionLabel.app')}: </span>{ctx.conditions.app}</div>
-              <div><span className="text-content-muted">{t('analyze.export.conditionLabel.keymap')}: </span>{ctx.conditions.keymap}</div>
+              {mode !== 'upload' && (
+                <div><span className="text-content-muted">{t('analyze.export.conditionLabel.app')}: </span>{ctx.conditions.app}</div>
+              )}
+              {mode !== 'upload' && (
+                <div><span className="text-content-muted">{t('analyze.export.conditionLabel.keymap')}: </span>{ctx.conditions.keymap}</div>
+              )}
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.range')}: </span>{ctx.conditions.range}</div>
             </div>
           )}
@@ -545,6 +603,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                           anchorRef={targetTriggerRef}
                           open={targetPickerOpen}
                           onClose={handleTargetClose}
+                          placement="top"
                           className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
                           role="listbox"
                           aria-multiselectable
@@ -573,6 +632,68 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
               )
             })}
           </div>
+          {mode === 'upload' && appDataOptions.length >= 2 && (
+            <div className="flex flex-col gap-1 rounded-md border border-edge px-3 py-2">
+              <div className="flex items-center gap-2 text-[12px]">
+                <span className="text-[13px] font-semibold text-content">{t('analyze.export.appDataApps.label')}</span>
+                <button
+                  ref={appTriggerRef}
+                  type="button"
+                  className="rounded border border-edge bg-surface px-2 py-0.5 text-left text-[12px] text-content-secondary transition-colors hover:bg-surface-dim"
+                  onClick={() => setAppPickerOpen((prev) => !prev)}
+                  aria-haspopup="listbox"
+                  aria-expanded={appPickerOpen}
+                >
+                  {appButtonLabel}
+                </button>
+                <AnchoredPopover
+                  anchorRef={appTriggerRef}
+                  open={appPickerOpen}
+                  onClose={handleAppClose}
+                  placement="top"
+                  className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+                  role="listbox"
+                  aria-multiselectable
+                >
+                  <div className="flex gap-1 px-2 py-1">
+                    <button
+                      type="button"
+                      className="text-accent text-[11px] hover:underline"
+                      onClick={handleAppSelectAll}
+                    >
+                      {t('analyze.export.appDataApps.selectAll')}
+                    </button>
+                    <span className="text-content-muted">/</span>
+                    <button
+                      type="button"
+                      className="text-accent text-[11px] hover:underline"
+                      onClick={handleAppDeselectAll}
+                    >
+                      {t('analyze.export.appDataApps.deselectAll')}
+                    </button>
+                  </div>
+                  <div className="my-0.5 border-t border-edge" />
+                  <div className="max-h-72 overflow-y-auto">
+                    {appDataOptions.map((name) => (
+                      <label
+                        key={name}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+                      >
+                        <input
+                          type="checkbox"
+                          className="cursor-pointer"
+                          checked={appDataSet.has(name)}
+                          onChange={() => handleAppToggle(name)}
+                        />
+                        <span className="flex-1 truncate">{name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </AnchoredPopover>
+              </div>
+              <p className="text-[11px] text-content-muted">{t('analyze.export.appDataApps.hint')}</p>
+            </div>
+          )}
           {snapshotMissing && (
             <p className="text-[11px] text-content-muted" data-testid="analyze-export-snapshot-warning">
               {t('analyze.export.snapshotMissing')}

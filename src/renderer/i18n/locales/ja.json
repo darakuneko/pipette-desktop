@@ -694,6 +694,14 @@
         "bigrams": "バイグラム",
         "layer": "レイヤー",
         "layoutComparison": "レイアウト比較"
+      },
+      "appDataApps": {
+        "label": "アプリ別データ",
+        "all": "すべてのアプリ",
+        "none": "なし",
+        "selectAll": "すべて",
+        "deselectAll": "なし",
+        "hint": "Hub にアプリ別の内訳データとして含めるアプリを選択します。"
       }
     },
     "loading": {
@@ -812,10 +820,6 @@
       "legendLow": "0",
       "legendHigh": "{{count}} $t(analyze.unit.keys)",
       "legendHighWpm": "{{wpm}} WPM",
-      "legendLowDesc": "このセルで打鍵がなかった状態",
-      "legendHighDesc": "ピーク値 ({{count}} $t(analyze.unit.keys))\nセルの濃度は 0 からこの値まで線形にスケール",
-      "legendHighDescWpm": "ピーク WPM ({{wpm}} WPM)\nセルの濃度はこの値まで線形にスケール\n薄く表示されるセルは Min sample 閾値を満たしていない",
-      "legendScaleDesc": "0 (空) からピーク値までの線形スケール",
       "summary": {
         "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
         "wpmContext": "{{wpm}} WPM"
