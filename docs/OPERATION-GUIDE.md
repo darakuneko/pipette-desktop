@@ -53,7 +53,8 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
   - [7.3 Uploading Favorite Entries](#73-uploading-favorite-entries)
-  - [7.4 Hub Website](#74-hub-website)
+  - [7.4 Uploading Analytics](#74-uploading-analytics)
+  - [7.5 Hub Website](#75-hub-website)
 - [8. Modal Interactions](#8-modal-interactions)
   - [Escape to Close](#escape-to-close)
   - [Unlock Dialog Protection](#unlock-dialog-protection)
@@ -190,6 +191,9 @@ The bookmark icon in the panel header opens the **Saved search conditions** side
 - Up to **50 entries per keyboard** — the panel surfaces a cap warning when you reach the limit; delete an existing entry to make room
 - Synced via Cloud Sync (when enabled) so the same set is available on other signed-in machines
 - Loading an entry written by a newer Pipette release shows an unsupported-version error rather than guessing at unknown fields
+- **Overwrite**: typing a label that already exists swaps the Save button to a danger-styled **Overwrite?** + Cancel pair. Editing the label clears the pending confirmation so you cannot overwrite a different entry by accident
+- **Load behavior**: loading a saved entry always opens on the **Summary** tab regardless of which tab was active when the condition was saved
+- **Hub actions**: when Pipette Hub is connected, each saved entry shows an additional Hub row with **Upload to Hub** / **Update on Hub** / **Remove from Hub** + **Open in Browser** — the same pattern as the keymap and favorites save panels (see §7.4)
 
 #### Summary
 
@@ -296,7 +300,7 @@ The Activity tab groups typing by day-of-week × hour so you can see when you ac
 **View**
 
 - **Hour** — the historical 24 × 7 hour-of-day × day-of-week grid (or sessions histogram when Metric = Sessions). Driven by the top-level Period picker
-- **Day** — sliding-window day calendar. Adds a **Range** selector (3 / 6 / 12 months) plus prev / next month cursor buttons so you can browse the month-by-month heatmap; the current month stops at today so future days stay blank
+- **Day** — sliding-window day calendar. Adds a **Range** selector (1 / 3 / 6 / 12 months) plus prev / next month cursor buttons so you can browse the month-by-month heatmap. For 3 / 6 / 12-month ranges the current month stops at today so future days stay blank; the 1-month range shows the full calendar month including future empty days
 
 **Metric**
 
@@ -310,10 +314,12 @@ The Activity tab groups typing by day-of-week × hour so you can see when you ac
 **Day-only controls** (View = Day)
 
 - **Normalize** — `Absolute` colors by the peak day in the rendered window, `Share of week` divides each cell by the column's weekly total, `Share of total` divides by the grand total of the rendered range
-- **Range** — `3 months`, `6 months`, `12 months`. Sets the visible window relative to the cursor month
-- **Prev / Next month buttons** — slide the visible window one month earlier or later. The current month is the right-most column; future days stay blank
+- **Range** — `1 month`, `3 months`, `6 months`, `12 months`. Sets the visible window relative to the cursor month
+- **Prev / Next month buttons** — slide the visible window one month earlier or later. The current month is the right-most column; future days stay blank (except in the 1-month view which shows the full month)
 
   ![Analyze — Activity Calendar](screenshots/analyze-activity-calendar.png)
+
+A gradient legend bar below the calendar shows the color scale from low to peak value, so the intensity mapping is always visible at a glance.
 
 Clicking a populated cell jumps the rest of the Analyze pane to that single day. The snapshot picker auto-selects the snapshot that contains the date so dependent tabs (Heatmap, Ergonomics, Layer activations) stay aligned with the keymap that was active.
 
@@ -494,20 +500,31 @@ If you have named layers in the layer panel (see §2.3), the name is appended to
 - **Activations, no activity** — no layer-op keys pressed in range
 - **Activations, no snapshot** — "Layer activations need a keymap snapshot. Start a record session in this range to capture one." Keystrokes mode keeps working without a snapshot
 
-#### CSV Export
+#### Export / Upload
 
-The **Export** button on the panel header opens a category-pick modal that writes the chart data for the active filters as a `.csv` file. Eight categories can be ticked independently:
+The **Export** button on the panel header opens a category-pick modal that writes the chart data for the active filters as a `.csv` file. Ten categories can be ticked independently:
 
-- **Heatmap** — per-cell press counts (snapshot-bound)
+- **Summary** — today / last-7-days overview cards
 - **WPM** — per-bucket WPM time series
 - **Interval** — per-bucket interval percentiles
 - **Activity** — hour × day-of-week or day-cell counts depending on the View setting
+- **By App** — per-application breakdown
+- **Heatmap** — per-cell press counts (snapshot-bound)
 - **Ergonomics** — per-finger / per-hand / per-row totals (snapshot-bound)
 - **Bigrams** — Top pairs / Pair interval / Finger IKI rows
-- **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound)
 - **Layer** — per-layer keystroke or activation counts
+- **Layout Comparison** — per-finger / row / hand deltas (snapshot-bound)
 
 The modal lists the active conditions (Device, App, Keymap, Period) above the category list so the file you save is unambiguous about which slice it captures. Heatmap, Ergonomics, and Layout Comparison entries are unavailable when the range has no overlapping snapshot — the modal shows a "snapshot missing" notice for those categories. Manual finger overrides are noted next to the Ergonomics row.
+
+**Upload mode**
+
+The same modal opens in **upload mode** when triggered from a saved entry's Hub action row (Upload to Hub / Update on Hub). In this mode the confirm button reads **Upload** or **Update** and the data is sent to Pipette Hub instead of written to a CSV file. Upload mode adds two additional selectors:
+
+- **Layout Comparison targets** — a multi-select popover listing all installed key-label sets and built-in layouts. Pick one or more target layouts to include in the Hub post; the Layout Comparison toggle is disabled when no targets are selected
+- **Per-app data** — a multi-select popover listing every app observed in the range. Select which apps to include as per-app breakdowns on Hub
+
+See §7.4 for the full analytics upload flow and validation rules.
 
 ---
 
@@ -1446,7 +1463,45 @@ Individual favorite entries (Tap Dance, Macro, Combo, Key Override, Alt Repeat K
 
 > **Note**: A Display Name must be set before uploading. If no Display Name is configured, a warning is shown instead of the Upload button.
 
-### 7.4 Hub Website
+### 7.4 Uploading Analytics
+
+Saved Analyze conditions can be uploaded to Hub, sharing your typing analytics charts with the community.
+
+**Flow**
+
+1. Open the Analyze page and set up the filters you want to share (keyboard, device, app, date range, keymap snapshot)
+2. Save the condition with a label using the **Saved search conditions** panel (bookmark icon)
+3. When Hub is connected, a **Hub** action row appears under each saved entry with an **Upload to Hub** button
+4. Click **Upload to Hub** — the category-picker modal opens in upload mode (see §1.4 Export / Upload)
+5. Select which chart categories to include, pick Layout Comparison targets and Per-app data if desired, then click **Upload**
+6. After uploading, the entry shows **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons
+
+**Validation rules**
+
+The Hub enforces two guards before accepting an analytics upload:
+
+- **Minimum 100 keystrokes** in the saved range — sub-100-keystroke charts are too sparse to be useful
+- **Maximum 30-day range** — longer ranges produce payloads that exceed the Hub size budget
+
+If either rule is violated, a localized error message explains what to fix (e.g., shorten the range or record more typing).
+
+**Upload-mode options**
+
+- **Layout Comparison targets** — pick one or more alternative layouts to include. The Hub post will show how your typing would redistribute across each target. The toggle is disabled when no targets are selected
+- **Per-app data** — choose which apps to include as per-app breakdowns. The Hub post renders per-app charts for the selected apps
+
+**Update and Remove**
+
+- **Update on Hub** re-uploads the latest chart data for the same saved condition (useful after more typing has been recorded)
+- **Remove from Hub** deletes the analytics post from the Hub server (two-step confirmation)
+
+**Error handling**
+
+Upload errors are localized. Common cases: authentication failure (sign out and back in), payload too large (reduce categories or shorten range), rate limit (wait and retry).
+
+> **Note**: A Display Name must be set before uploading. If no Display Name is configured, a warning is shown instead of the Upload button.
+
+### 7.5 Hub Website
 
 The [Pipette Hub website](https://pipette-hub-worker.keymaps.workers.dev/) displays uploaded keymaps in a gallery format.
 

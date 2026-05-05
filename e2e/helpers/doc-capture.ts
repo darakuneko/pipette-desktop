@@ -673,28 +673,34 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     // via its data-testid root rather than flipping a sub-view toggle.
     const targetSelect = page.locator('[data-testid="analyze-layout-comparison-target-select"]')
     if (await isAvailable(targetSelect)) {
-      await targetSelect.selectOption('colemak')
-      await page.waitForTimeout(800)
-
-      const heatmapPanel = page.locator('[data-testid="analyze-layout-comparison-heatmap-diff"]')
-      if (await isAvailable(heatmapPanel)) {
-        await captureNamed(page, 'analyze-layout-comparison-heatmap-diff', { element: heatmapPanel })
+      const targetOptions = await targetSelect.locator('option:not([value="__none__"])').all()
+      if (targetOptions.length === 0) {
+        console.log('  [warn] layout-comparison no target options available — capture skipped')
       } else {
-        console.log('  [warn] layout-comparison heatmap panel not visible — capture skipped')
-      }
+        const firstTarget = await targetOptions[0].getAttribute('value')
+        await targetSelect.selectOption(firstTarget)
+        await page.waitForTimeout(800)
 
-      const fingerPanel = page.locator('[data-testid="analyze-layout-comparison-finger-diff"]')
-      if (await isAvailable(fingerPanel)) {
-        await captureNamed(page, 'analyze-layout-comparison-finger-diff', { element: fingerPanel })
-      } else {
-        console.log('  [warn] layout-comparison finger panel not visible — capture skipped')
-      }
+        const heatmapPanel = page.locator('[data-testid="analyze-layout-comparison-heatmap-diff"]')
+        if (await isAvailable(heatmapPanel)) {
+          await captureNamed(page, 'analyze-layout-comparison-heatmap-diff', { element: heatmapPanel })
+        } else {
+          console.log('  [warn] layout-comparison heatmap panel not visible — capture skipped')
+        }
 
-      const metricPanel = page.locator('[data-testid="analyze-layout-comparison-metric-table"]')
-      if (await isAvailable(metricPanel)) {
-        await captureNamed(page, 'analyze-layout-comparison-metric', { element: metricPanel })
-      } else {
-        console.log('  [warn] layout-comparison metric panel not visible — capture skipped')
+        const fingerPanel = page.locator('[data-testid="analyze-layout-comparison-finger-diff"]')
+        if (await isAvailable(fingerPanel)) {
+          await captureNamed(page, 'analyze-layout-comparison-finger-diff', { element: fingerPanel })
+        } else {
+          console.log('  [warn] layout-comparison finger panel not visible — capture skipped')
+        }
+
+        const metricPanel = page.locator('[data-testid="analyze-layout-comparison-metric-table"]')
+        if (await isAvailable(metricPanel)) {
+          await captureNamed(page, 'analyze-layout-comparison-metric', { element: metricPanel })
+        } else {
+          console.log('  [warn] layout-comparison metric panel not visible — capture skipped')
+        }
       }
     } else {
       console.log('  [warn] layout-comparison target select not found — capture skipped')
