@@ -160,7 +160,7 @@ export type ActivityCalendarNormalization = typeof ACTIVITY_CALENDAR_NORMALIZATI
 /** Calendar visible-range size, in months. The user picks the size and
  * scrolls month-by-month with prev/next; the visible window always ends
  * at `endMonthIso` and spans `monthsToShow` calendar months back. */
-export const ACTIVITY_CALENDAR_MONTHS_TO_SHOW = [3, 6, 12] as const
+export const ACTIVITY_CALENDAR_MONTHS_TO_SHOW = [1, 3, 6, 12] as const
 export type ActivityCalendarMonthsToShow = typeof ACTIVITY_CALENDAR_MONTHS_TO_SHOW[number]
 
 export const LAYER_VIEW_MODES = ['keystrokes', 'activations'] as const
