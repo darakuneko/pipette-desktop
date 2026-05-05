@@ -445,7 +445,9 @@ function resolveWindow({
   const lastDayOfEndMonth = new Date(endYear, endMonth, 0)
   const todayIso = toLocalDate(nowMs)
   const startOfTodayMs = parseLocalDate(todayIso)?.getTime() ?? nowMs
-  const visibleEndMs = Math.min(lastDayOfEndMonth.getTime(), startOfTodayMs)
+  const visibleEndMs = monthsToShow === 1
+    ? lastDayOfEndMonth.getTime()
+    : Math.min(lastDayOfEndMonth.getTime(), startOfTodayMs)
   return {
     dateFromIso: toLocalDate(startDate.getTime()),
     dateToIso: toLocalDate(visibleEndMs >= startDate.getTime() ? visibleEndMs : startDate.getTime()),
