@@ -117,6 +117,7 @@ export interface HubAnalyticsExportV1 {
   snapshot: HubAnalyticsSnapshot
   filters: HubAnalyticsFilters
   data: HubAnalyticsData
+  appData?: Record<string, HubAnalyticsData>
 }
 
 export interface HubAnalyticsSnapshot {

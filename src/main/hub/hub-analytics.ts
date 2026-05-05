@@ -16,6 +16,7 @@ import type {
   HubAnalyticsFilters,
   HubAnalyticsSnapshot,
 } from '../../shared/types/hub'
+import { TYPING_APP_UNKNOWN_NAME } from '../../shared/types/typing-analytics'
 import type {
   LayoutComparisonInputLayout,
   LayoutComparisonMetric,
@@ -145,7 +146,9 @@ export async function buildAnalyticsExport(
     appScopes,
   }
 
-  return {
+  const appData = await buildAppData(uid, range, machineHash, data, input)
+
+  const result: HubAnalyticsExportV1 = {
     version: 1,
     kind: 'analytics',
     exportedAt: new Date().toISOString(),
@@ -153,6 +156,39 @@ export async function buildAnalyticsExport(
     filters: input.filters,
     data,
   }
+  if (appData !== undefined) result.appData = appData
+  return result
+}
+
+async function buildAppData(
+  uid: string,
+  range: { fromMs: number; toMs: number },
+  machineHash: string | undefined,
+  aggregateData: HubAnalyticsData,
+  input: BuildAnalyticsExportInput,
+): Promise<Record<string, HubAnalyticsData> | undefined> {
+  const apps = aggregateData.appUsage.filter((a) => a.name !== TYPING_APP_UNKNOWN_NAME)
+  if (apps.length < 2) return undefined
+
+  const usageByName = new Map(aggregateData.appUsage.map((a) => [a.name, a]))
+  const wpmByName = new Map(aggregateData.wpmByApp.map((a) => [a.name, a]))
+
+  const collected = await Promise.all(
+    apps.map((app) => collectData(uid, range, [app.name], machineHash, input)),
+  )
+
+  const result: Record<string, HubAnalyticsData> = {}
+  for (let i = 0; i < apps.length; i++) {
+    const { totalKeystrokes: _tk, ...appData } = collected[i]!
+    appData.sessions = []
+    appData.peakRecords = { ...appData.peakRecords, longestSession: null }
+    const usage = usageByName.get(apps[i]!.name)
+    appData.appUsage = usage ? [usage] : []
+    const wpm = wpmByName.get(apps[i]!.name)
+    appData.wpmByApp = wpm ? [wpm] : []
+    result[apps[i]!.name] = appData
+  }
+  return result
 }
 
 async function resolveMachineHash(scope: DeviceScope): Promise<string | undefined> {
