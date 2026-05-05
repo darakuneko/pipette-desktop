@@ -225,31 +225,17 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 pt-1 text-content-muted">
-        <UITooltip content={t('analyze.activity.legendLowDesc')} wrapperAs="span">
-          <span>{t('analyze.activity.legendLow')}</span>
-        </UITooltip>
-        <UITooltip
-          content={t('analyze.activity.legendScaleDesc')}
-          wrapperClassName="h-2 flex-1 rounded-sm"
-          wrapperProps={{
-            style: { background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))' },
-          }}
-        >
-          <div className="h-full w-full" aria-hidden="true" />
-        </UITooltip>
-        <UITooltip
-          content={metric === 'wpm'
-            ? t('analyze.activity.legendHighDescWpm', { wpm: formatWpm(peak) })
-            : t('analyze.activity.legendHighDesc', { count: peak.toLocaleString() })}
-          wrapperAs="span"
-        >
-          <span>
-            {metric === 'wpm'
-              ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(peak) })
-              : t('analyze.activity.legendHigh', { count: peak.toLocaleString() })}
-          </span>
-        </UITooltip>
+      <div className="flex items-center gap-2 pt-1 text-[11px] text-content-muted">
+        <span>{t('analyze.activity.legendLow')}</span>
+        <div
+          className="h-2 flex-1 rounded-sm"
+          style={{ background: 'linear-gradient(to right, var(--color-surface-dim), var(--color-accent))' }}
+        />
+        <span>
+          {metric === 'wpm'
+            ? t('analyze.activity.legendHighWpm', { wpm: formatWpm(peak) })
+            : t('analyze.activity.legendHigh', { count: peak.toLocaleString() })}
+        </span>
       </div>
       {summaryItems !== null && (
         <AnalyzeStatGrid

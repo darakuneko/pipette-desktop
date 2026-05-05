@@ -26,9 +26,10 @@ export interface AnchoredPopoverProps
   anchorRef: RefObject<HTMLElement | null>
   open: boolean
   onClose: () => void
-  /** Vertical gap between the anchor's bottom edge and the popover's
-   * top edge, in CSS pixels. */
+  /** Vertical gap between the anchor edge and the popover edge. */
   offset?: number
+  /** `'bottom'` (default) opens below the anchor; `'top'` opens above. */
+  placement?: 'bottom' | 'top'
   children: ReactNode
 }
 
@@ -37,11 +38,12 @@ export function AnchoredPopover({
   open,
   onClose,
   offset = DEFAULT_OFFSET_PX,
+  placement = 'bottom',
   children,
   ...rest
 }: AnchoredPopoverProps) {
   const popoverRef = useRef<HTMLDivElement | null>(null)
-  const [position, setPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const [position, setPosition] = useState<{ top: number; left: number; bottom?: number }>({ top: 0, left: 0 })
   const [mounted, setMounted] = useState(false)
 
   // Defer the createPortal call until after first commit so SSR /
@@ -62,8 +64,12 @@ export function AnchoredPopover({
       const anchor = anchorRef.current
       if (!anchor) return
       const rect = anchor.getBoundingClientRect()
-      const next = { top: rect.bottom + offset, left: rect.left }
-      setPosition((prev) => (prev.top === next.top && prev.left === next.left ? prev : next))
+      const next = placement === 'top'
+        ? { top: 0, bottom: window.innerHeight - rect.top + offset, left: rect.left }
+        : { top: rect.bottom + offset, left: rect.left }
+      setPosition((prev) =>
+        prev.top === next.top && prev.left === next.left && prev.bottom === next.bottom ? prev : next,
+      )
     }
     updatePosition()
     window.addEventListener('scroll', updatePosition, true)
@@ -72,7 +78,7 @@ export function AnchoredPopover({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [open, anchorRef, offset])
+  }, [open, anchorRef, offset, placement])
 
   useEffect(() => {
     if (!open) return
@@ -96,11 +102,9 @@ export function AnchoredPopover({
 
   if (!open || !mounted || typeof document === 'undefined') return null
 
-  const style: CSSProperties = {
-    position: 'fixed',
-    top: position.top,
-    left: position.left,
-  }
+  const style: CSSProperties = position.bottom !== undefined
+    ? { position: 'fixed', bottom: position.bottom, left: position.left }
+    : { position: 'fixed', top: position.top, left: position.left }
 
   return createPortal(
     <div ref={popoverRef} style={style} {...rest}>

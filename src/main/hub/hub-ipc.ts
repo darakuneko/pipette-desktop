@@ -173,6 +173,10 @@ async function prepareAnalyticsExport(
     ? new Set(params.categories.filter((c): c is HubAnalyticsCategoryId => typeof c === 'string'))
     : undefined
 
+  const appDataApps = Array.isArray(params.appDataApps)
+    ? params.appDataApps.filter((v): v is string => typeof v === 'string')
+    : undefined
+
   const exportData = await buildAnalyticsExport({
     uid: params.uid,
     productName: params.keyboard.productName,
@@ -185,6 +189,7 @@ async function prepareAnalyticsExport(
     filters,
     layoutComparisonInputs,
     categories,
+    appDataApps,
   })
 
   return { ok: true, exportData }

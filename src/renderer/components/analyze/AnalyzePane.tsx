@@ -899,7 +899,7 @@ export function AnalyzePane({
         ? { kind: filterStore.hubUploadResult.kind, message: filterStore.hubUploadResult.message }
         : null,
       isExisting,
-      onConfirm: async (categories: ReadonlySet<string>, options?: { targetLayoutIds?: string[] }) => {
+      onConfirm: async (categories: ReadonlySet<string>, options?: { targetLayoutIds?: string[]; appDataApps?: string[] }) => {
         const baseInput = buildHubUploadInput(entry.id)
         if (!baseInput) return { ok: false }
         const targetIds = options?.targetLayoutIds
@@ -914,6 +914,7 @@ export function AnalyzePane({
           ...baseInput,
           layoutComparisonInputs,
           categories: Array.from(categories) as Parameters<typeof filterStore.uploadEntryToHub>[0]['categories'],
+          appDataApps: options?.appDataApps,
         }
         return isExisting
           ? filterStore.updateEntryOnHub(input)

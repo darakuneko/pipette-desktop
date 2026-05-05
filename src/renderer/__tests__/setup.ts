@@ -53,6 +53,7 @@ if (typeof window !== 'undefined') {
     keyLabelHubUpload: noopOk,
     keyLabelHubUpdate: noopOk,
     keyLabelHubDelete: noopOk,
+    typingAnalyticsListAppsForRange: async () => [],
   }
   Object.defineProperty(window, 'vialAPI', {
     value: { ...stub, ...existing },

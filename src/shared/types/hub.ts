@@ -117,6 +117,7 @@ export interface HubAnalyticsExportV1 {
   snapshot: HubAnalyticsSnapshot
   filters: HubAnalyticsFilters
   data: HubAnalyticsData
+  appData?: Record<string, HubAnalyticsData>
 }
 
 export interface HubAnalyticsSnapshot {
@@ -266,6 +267,10 @@ export interface HubUploadAnalyticsPostParams {
    * ships every category (back-compat with the early build that did
    * not surface the picker). */
   categories?: HubAnalyticsCategoryId[]
+  /** Which apps to include in `appData`. Absent / undefined ships
+   * every app with ≥2 entries (back-compat). Empty array ships no
+   * per-app slices at all. */
+  appDataApps?: string[]
 }
 
 export interface HubUpdateAnalyticsPostParams extends HubUploadAnalyticsPostParams {

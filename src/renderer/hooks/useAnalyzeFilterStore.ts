@@ -63,6 +63,8 @@ export interface UploadAnalyticsToHubInput {
   /** User's category selection from the upload modal. Empty / absent
    * ships everything (back-compat with the early build). */
   categories?: HubAnalyticsCategoryId[]
+  /** Which apps to include in `appData`. Undefined ships every app. */
+  appDataApps?: string[]
 }
 
 const HUB_RESULT_FLASH_MS = 4_000
@@ -257,6 +259,7 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
         fingerOverrides: input.fingerOverrides,
         layoutComparisonInputs: input.layoutComparisonInputs,
         categories: input.categories,
+        appDataApps: input.appDataApps,
       })
       if (result.success && result.postId) {
         ok = true
@@ -303,6 +306,7 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
         fingerOverrides: input.fingerOverrides,
         layoutComparisonInputs: input.layoutComparisonInputs,
         categories: input.categories,
+        appDataApps: input.appDataApps,
         postId,
       })
       if (result.success) {

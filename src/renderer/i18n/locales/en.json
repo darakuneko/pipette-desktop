@@ -696,6 +696,14 @@
         "bigrams": "Bigrams",
         "layer": "Layer",
         "layoutComparison": "Layout Comparison"
+      },
+      "appDataApps": {
+        "label": "Per-app data",
+        "all": "All apps",
+        "none": "None",
+        "selectAll": "All",
+        "deselectAll": "None",
+        "hint": "Select which apps to include as per-app breakdowns on Hub."
       }
     },
     "loading": {
@@ -814,10 +822,6 @@
       "legendLow": "0",
       "legendHigh": "{{count}} $t(analyze.unit.keys)",
       "legendHighWpm": "{{wpm}} WPM",
-      "legendLowDesc": "No keystrokes recorded in this cell.",
-      "legendHighDesc": "Peak ({{count}} $t(analyze.unit.keys)).\nCell opacity scales linearly from 0 to this value.",
-      "legendHighDescWpm": "Peak WPM ({{wpm}} WPM).\nCell opacity scales linearly to this value.\nDesaturated cells did not meet the Min sample threshold.",
-      "legendScaleDesc": "Linear opacity scale from 0 (empty) to the peak.",
       "summary": {
         "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
         "wpmContext": "{{wpm}} WPM"
