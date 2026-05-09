@@ -484,7 +484,7 @@ export async function exportToDialog(
     const safeName = safeFilename(meta.name, 'key-label')
     const result = await dialog.showSaveDialog(win, {
       title: 'Export Key Label',
-      defaultPath: `${safeName}.json`,
+      defaultPath: `key-labels-${safeName}.json`,
       filters: [
         { name: 'JSON', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },

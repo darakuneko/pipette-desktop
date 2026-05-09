@@ -375,7 +375,7 @@ export function LanguagePacksModal({
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'English.json'
+        a.download = 'i18n-packs-English.json'
         a.click()
         URL.revokeObjectURL(url)
       } catch (err) {

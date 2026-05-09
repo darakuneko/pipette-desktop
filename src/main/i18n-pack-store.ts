@@ -347,7 +347,7 @@ export async function exportPackToDialog(
   try {
     const result = await dialog.showSaveDialog(win, {
       title: 'Export Language Pack',
-      defaultPath: `${safeName}.json`,
+      defaultPath: `i18n-packs-${safeName}.json`,
       filters: [
         { name: 'JSON', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },
