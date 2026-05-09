@@ -28,6 +28,7 @@ export default defineConfig({
   renderer: {
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
+      __BUILD_TIME__: JSON.stringify(new Date().toISOString()),
     },
     plugins: [react(), tailwindcss()],
     build: {

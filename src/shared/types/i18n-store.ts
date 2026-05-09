@@ -29,6 +29,20 @@ export interface I18nPackMeta {
   deletedAt?: string
   /** App version captured at import. Mismatch triggers coverage recompute. */
   appVersionAtImport?: string
+  /** English-baseline version this pack last matched against. Stamped
+   * only when the import covered every key in `english.json`; cleared
+   * (undefined) when coverage is partial. The UI shows this — not the
+   * pack's own semver — so a visible version doubles as proof that
+   * the pack satisfies the bundled English at that revision. */
+  matchedBaseVersion?: string
+  /** Coverage snapshot at last import / sync. Cached so the row can
+   * render `Coverage 93% (1166 / 1253)` without re-running the
+   * flatten + diff each render. */
+  coverage?: { totalKeys: number; coveredKeys: number }
+  /** Number of `__proto__` / `constructor` / `prototype` keys the
+   * importer detected. Always 0 in practice (the importer rejects any
+   * pack with dangerous keys), surfaced for transparency in the row. */
+  dangerousKeyCount?: number
 }
 
 export interface I18nPackIndex {
@@ -102,4 +116,16 @@ export interface I18nPackImportApplyOptions {
   hubPostId?: string
   appVersionAtImport?: string
   id?: string
+  /** English version the renderer measured the pack against. Set
+   * only when coverage is 100%; the meta uses it as the row's
+   * displayed version. `null` explicitly clears any inherited value
+   * (used when re-importing a partial pack). */
+  matchedBaseVersion?: string | null
+  /** Coverage measured by the renderer before save. Persisted on the
+   * meta so the row's status line can read it without an IPC round
+   * trip. `null` explicitly clears the inherited snapshot. */
+  coverage?: { totalKeys: number; coveredKeys: number } | null
+  /** Number of dangerous keys the renderer's validator flagged.
+   * `null` explicitly clears the inherited count. */
+  dangerousKeyCount?: number | null
 }

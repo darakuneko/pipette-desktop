@@ -184,12 +184,29 @@ export function setupI18nPackStore(): void {
       options: unknown,
     ): Promise<I18nPackStoreResult<I18nPackMeta>> => {
       const opts = (options && typeof options === 'object') ? options as Record<string, unknown> : {}
+      let matchedBaseVersion: string | null | undefined
+      if (opts.matchedBaseVersion === null) matchedBaseVersion = null
+      else if (typeof opts.matchedBaseVersion === 'string') matchedBaseVersion = opts.matchedBaseVersion
+      let coverage: { totalKeys: number; coveredKeys: number } | null | undefined
+      if (opts.coverage === null) coverage = null
+      else if (opts.coverage && typeof opts.coverage === 'object') {
+        const c = opts.coverage as Record<string, unknown>
+        if (typeof c.totalKeys === 'number' && typeof c.coveredKeys === 'number') {
+          coverage = { totalKeys: c.totalKeys, coveredKeys: c.coveredKeys }
+        }
+      }
+      let dangerousKeyCount: number | null | undefined
+      if (opts.dangerousKeyCount === null) dangerousKeyCount = null
+      else if (typeof opts.dangerousKeyCount === 'number') dangerousKeyCount = opts.dangerousKeyCount
       return savePack({
         pack: raw,
         enabled: typeof opts.enabled === 'boolean' ? opts.enabled : true,
         hubPostId: typeof opts.hubPostId === 'string' ? opts.hubPostId : undefined,
         appVersionAtImport: typeof opts.appVersionAtImport === 'string' ? opts.appVersionAtImport : undefined,
         id: typeof opts.id === 'string' ? opts.id : undefined,
+        matchedBaseVersion,
+        coverage,
+        dangerousKeyCount,
       })
     },
   )

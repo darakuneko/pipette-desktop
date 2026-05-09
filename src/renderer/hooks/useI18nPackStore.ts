@@ -42,7 +42,7 @@ export interface UseI18nPackStoreReturn {
   loading: boolean
   refresh: () => Promise<void>
   setEnabled: (id: string, enabled: boolean) => Promise<{ success: boolean; error?: string }>
-  rename: (id: string, newName: string) => Promise<{ success: boolean; error?: string }>
+  rename: (id: string, newName: string) => Promise<{ success: boolean; meta?: I18nPackMeta; error?: string }>
   remove: (id: string) => Promise<{ success: boolean; error?: string }>
   importFromDialog: () => Promise<I18nPackImportDialogResult>
   applyImport: (raw: unknown, options?: I18nPackImportApplyOptions) => Promise<{ success: boolean; meta?: I18nPackMeta; error?: string }>
@@ -143,7 +143,7 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
     const result = await window.vialAPI.i18nPackRename(id, newName)
     if (result.success) {
       emitChanged()
-      return { success: true }
+      return { success: true, meta: result.data }
     }
     return { success: false, error: result.error }
   }, [])

@@ -6,7 +6,7 @@ import { THEME_OPTIONS, TIME_STEPS } from './settings-modal-shared'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import { useAppConfig } from '../../hooks/useAppConfig'
-import i18n, { SUPPORTED_LANGUAGES } from '../../i18n'
+import { SUPPORTED_LANGUAGES } from '../../i18n'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { useI18nPackStore } from '../../hooks/useI18nPackStore'
 import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
@@ -145,26 +145,19 @@ export function SettingsToolsTab({
       <section>
         <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-language-row">
-            <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
+            <span className="text-sm font-medium text-content-secondary">
               {t('i18n.manageRow')}
-            </label>
+            </span>
             <div className="flex items-center gap-2">
-              <select
-                id="settings-language-selector"
-                value={appConfig.config.language ?? 'builtin:en'}
-                onChange={(e) => {
-                  appConfig.set('language', e.target.value)
-                  void i18n.changeLanguage(e.target.value)
-                }}
-                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-                data-testid="settings-language-selector"
+              <span
+                className="text-[13px] text-content"
+                data-testid="settings-language-active-name"
               >
-                {languageOptions.map((lang) => (
-                  <option key={lang.id} value={lang.id}>
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
+                {(() => {
+                  const activeId = appConfig.config.language ?? 'builtin:en'
+                  return languageOptions.find((l) => l.id === activeId)?.name ?? activeId
+                })()}
+              </span>
               <button
                 type="button"
                 onClick={() => setLanguagePacksOpen(true)}

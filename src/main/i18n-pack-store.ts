@@ -167,6 +167,13 @@ export interface SavePackInput {
   enabled?: boolean
   hubPostId?: string | null
   appVersionAtImport?: string
+  /** English baseline version this pack covered at save time, or null
+   * when coverage was partial. Persisted on the meta and surfaced in
+   * the language pack list. */
+  matchedBaseVersion?: string | null
+  /** Coverage snapshot for the row's status line. */
+  coverage?: { totalKeys: number; coveredKeys: number } | null
+  dangerousKeyCount?: number | null
 }
 
 interface PackHeader {
@@ -188,11 +195,20 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
 
   try {
     const index = await readIndex()
-    if (findActiveByName(index.metas, header.name, input.id)) {
+    // Auto-overwrite path: if the caller did not specify an id but
+    // an active entry already shares this name (case-insensitive),
+    // adopt that entry's id so the import replaces the existing pack
+    // instead of failing with DUPLICATE_NAME. Mirrors KeyLabels.
+    let resolvedId = input.id
+    if (!resolvedId) {
+      const existingByName = findActiveByName(index.metas, header.name)
+      if (existingByName) resolvedId = existingByName.id
+    }
+    if (findActiveByName(index.metas, header.name, resolvedId)) {
       return fail('DUPLICATE_NAME', 'A language pack with the same name already exists')
     }
 
-    const id = input.id ?? randomUUID()
+    const id = resolvedId ?? randomUUID()
     if (!isSafePackId(id)) return fail('INVALID_FILE', 'Generated pack id is unsafe')
 
     await mkdir(getPacksDir(), { recursive: true })
@@ -206,6 +222,18 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
     if (input.hubPostId === null) nextHubPostId = undefined
     else if (typeof input.hubPostId === 'string') nextHubPostId = input.hubPostId
     else nextHubPostId = existing?.hubPostId
+    let nextMatchedBaseVersion: string | undefined
+    if (input.matchedBaseVersion === null) nextMatchedBaseVersion = undefined
+    else if (typeof input.matchedBaseVersion === 'string') nextMatchedBaseVersion = input.matchedBaseVersion
+    else nextMatchedBaseVersion = existing?.matchedBaseVersion
+    let nextCoverage: { totalKeys: number; coveredKeys: number } | undefined
+    if (input.coverage === null) nextCoverage = undefined
+    else if (input.coverage) nextCoverage = input.coverage
+    else nextCoverage = existing?.coverage
+    let nextDangerousKeyCount: number | undefined
+    if (input.dangerousKeyCount === null) nextDangerousKeyCount = undefined
+    else if (typeof input.dangerousKeyCount === 'number') nextDangerousKeyCount = input.dangerousKeyCount
+    else nextDangerousKeyCount = existing?.dangerousKeyCount
     const meta: I18nPackMeta = {
       id,
       filename: `${PACKS_DIRNAME}/${id}.json`,
@@ -216,6 +244,9 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       savedAt: existing?.savedAt ?? now,
       updatedAt: now,
       ...(input.appVersionAtImport ? { appVersionAtImport: input.appVersionAtImport } : {}),
+      ...(nextMatchedBaseVersion ? { matchedBaseVersion: nextMatchedBaseVersion } : {}),
+      ...(nextCoverage ? { coverage: nextCoverage } : {}),
+      ...(typeof nextDangerousKeyCount === 'number' ? { dangerousKeyCount: nextDangerousKeyCount } : {}),
     }
 
     const existingIndex = index.metas.findIndex((m) => m.id === id)

@@ -1,18 +1,15 @@
 {
-  "version": "0.1.0",
+  "version": "0.1.2",
   "name": "English",
   "common": {
     "save": "Save",
     "saved": "Saved",
-    "select": "Select",
-    "clickToSelect": "Click to select",
     "cancel": "Cancel",
     "delete": "Delete",
     "confirmDelete": "Delete?",
     "close": "Close",
     "reset": "Reset",
     "confirmReset": "Reset?",
-    "undo": "Undo",
     "revert": "Revert",
     "confirmRevert": "Revert?",
     "clear": "Clear",
@@ -22,7 +19,6 @@
     "disconnect": "Disconnect",
     "loading": "Loading...",
     "apply": "Apply",
-    "noEntries": "No entries configured on this device",
     "notConfigured": "N/C",
     "settingsLabel": "Settings:",
     "configuration": "Configuration",
@@ -37,7 +33,7 @@
     "installed": "Installed",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
-    "findOnHubHint": "Type 2 or more characters and press Search on <hub>Pipette Hub</hub>."
+    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."
   },
   "app": {
     "title": "Pipette",
@@ -64,8 +60,7 @@
     "dynamicEntries": "Loading features",
     "settings": "Loading settings",
     "migrating": "Migrating snapshots",
-    "migratingEntry": "Migrating snapshots ({{current}}/{{total}})",
-    "migrationSync": "Syncing migrated data"
+    "migratingEntry": "Migrating snapshots ({{current}}/{{total}})"
   },
   "editor": {
     "autoAdvance": "Auto Move",
@@ -97,7 +92,6 @@
       "redo": "Redo",
       "zoomIn": "Zoom In",
       "zoomOut": "Zoom Out",
-
       "copySelected": "Paste Selected ({{count}})",
       "clickToPaste": "Click a key to paste",
       "pickerHint": "Ctrl+click: multi-select / Shift+click: range select → click a key to paste",
@@ -353,12 +347,10 @@
     "dummyMode": "Dummy mode",
     "pipetteFileMode": "File Mode",
     "unsavedChanges": "Unsaved changes",
-    "noSavedFiles": "No saved files",
     "vilV1NotSupported": "Legacy data format. Connect the keyboard and open the keymap to migrate.",
     "protocolVersion": "This keyboard's VIA protocol version is not supported. Please update your firmware.",
     "exportKeymapCFailed": "Failed to export keymap.c file",
     "exportPdfFailed": "Failed to export Keymap PDF",
-    "exportLayoutPdfFailed": "Failed to export Layout PDF",
     "sideloadFailed": "Failed to load JSON definition file",
     "sideloadInvalidDefinition": "Invalid keyboard definition: missing required fields (matrix, layouts)",
     "notVialCompatible": "This device may not be a Vial-compatible keyboard."
@@ -388,8 +380,6 @@
     "midi": "MIDI",
     "group": {
       "characters": "Characters",
-      "alphabet": "Alphabet",
-      "numbersSymbols": "Numbers & Symbols",
       "editing": "Editing",
       "modifiers": "Modifiers",
       "navigation": "Navigation",
@@ -404,12 +394,9 @@
       "haptic": "Haptic",
       "mode": "Mode",
       "autoShift": "Auto Shift",
-      "combo": "Combo",
       "comboKeys": "Key",
       "keyOverrideKeys": "Key",
       "altRepeatKeyKeys": "Key",
-      "keyOverride": "Key Override",
-      "repeat": "Repeat",
       "capsWord": "Caps Word",
       "boot": "Boot",
       "osm": "One-Shot Modifiers",
@@ -419,7 +406,6 @@
       "backlight": "Backlight",
       "rgbLighting": "RGB Lighting",
       "rgbMatrix": "RGB Matrix",
-      "fKeys": "F13–F24",
       "systemControl": "System",
       "appBrowser": "App & Browser",
       "mediaPlayback": "Media",
@@ -456,16 +442,11 @@
     "cancel": "Cancel"
   },
   "fileIO": {
-    "saveLayout": "Export .vil file",
     "loadLayout": ".vil",
     "sideloadJson": "Sideload JSON",
-    "exportKeymapC": "Export keymap.c file",
-    "exportPdf": "Export keymap PDF",
-    "saving": "Saving...",
     "importing": "Importing...",
     "exporting": "Exporting...",
     "importSuccess": "Import complete",
-    "exportSuccess": "Export complete",
     "uidMismatchConfirm": "The layout file was created for a different keyboard. Load anyway?"
   },
   "statusBar": {
@@ -482,7 +463,6 @@
     }
   },
   "security": {
-    "unlock": "Unlock",
     "lock": "Lock"
   },
   "theme": {
@@ -503,13 +483,9 @@
     "saveFailed": "Failed to save layout",
     "maxEntriesReached": "Maximum saved layouts reached (30). Delete an existing entry to save a new one.",
     "loadFailed": "Failed to load layout",
-    "rename": "Rename",
     "delete": "Delete",
-    "current": "Current",
     "import": "Import",
-    "saveCurrentState": "Save Current State",
     "export": "Export",
-    "exportCurrent": "Export Current State",
     "confirmOverwrite": "Overwrite?",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
@@ -525,12 +501,10 @@
     "unsupportedVersion": "This saved condition was written by a newer version of Pipette and cannot be loaded.",
     "maxEntriesReached": "Maximum saved conditions reached ({{max}}). Delete an existing entry to save a new one.",
     "csv": ".csv",
-    "syncedCount": "Synced: {{count}}",
     "empty": "No saved conditions yet.",
     "confirmOverwrite": "Overwrite?"
   },
   "sync": {
-    "title": "Settings",
     "googleAccount": "Google Account",
     "connected": "Connected",
     "signOut": "Disconnect",
@@ -556,15 +530,11 @@
     "disable": "Disable",
     "manualSync": "Manual Sync",
     "sync": "Sync",
-    "resetSyncData": "Sync Data",
-    "resetConfirm": "This will delete all synced data from Google Drive appDataFolder. This action cannot be undone.",
     "resetTarget": {
-      "keyboards": "All Keyboards",
       "keyboardData": "Keyboard",
       "favorites": "Favorite",
       "appSettings": "Application",
-      "i18nPacks": "Language Packs",
-      "undecryptable": "Undecryptable Files"
+      "i18nPacks": "Language Packs"
     },
     "deleteSelected": "Delete Selected",
     "resetTargetsConfirm": "The selected data will be permanently deleted. This action cannot be undone.",
@@ -572,46 +542,21 @@
     "resettingData": "Deleting data...",
     "syncing": "Syncing...",
     "continueOffline": "Continue offline",
-    "syncStatus": "Sync Status",
-    "statusSuccess": "Success",
-    "statusError": "Error",
     "noSyncYet": "Not synced yet",
-    "readiness": {
-      "unauthenticated": "Sign in to Google to sync.",
-      "noPasswordFile": "Set a sync password to start syncing.",
-      "decryptFailed": "Stored password could not be read (the OS keychain may have changed).",
-      "keystoreUnavailable": "OS keychain is not available on this system.",
-      "remoteCheckFailed": "Couldn't reach Google Drive — sync is paused."
-    },
     "changePasswordError": {
-      "unauthenticated": "Please sign in to Google before changing the password.",
-      "noPasswordFile": "No saved password to change. Set a password first.",
-      "decryptFailed": "Couldn't read the existing password (OS keychain rejected it).",
-      "keystoreUnavailable": "OS keychain is not available; password cannot be changed here.",
-      "remoteCheckFailed": "Couldn't reach Google Drive to verify the current password."
+      "unauthenticated": "Please sign in to Google before changing the password."
     },
     "changePasswordInProgress": "Cannot change password while sync is in progress.",
-    "troubleshooting": "Troubleshooting",
-    "localData": "Local Data",
     "import": "Import",
     "export": "Export",
     "importComplete": "Import complete",
     "importFailed": "Import failed",
-    "resetLocalData": "Reset Local Data",
-    "resetLocalConfirm": "This will delete all saved layouts and favorites on this device. This action cannot be undone.",
     "passwordMismatch": "Sync password does not match. Please check your encryption password.",
-    "undecryptable": "Undecryptable Files",
     "scanRemote": "Scan",
-    "scanRemoteDesc": "Scan remote data to see what is stored in Google Drive.",
-    "scanUndecryptable": "Scan",
     "scanning": "Scanning...",
     "downloading": "Downloading...",
     "noRemoteData": "No remote data found",
-    "noUndecryptable": "No undecryptable files found",
     "undecryptableCount": "{{count}} undecryptable file(s)",
-    "undecryptableFound": "{{count}} undecryptable file(s) found",
-    "deleteUndecryptable": "Delete Selected",
-    "deleteUndecryptableConfirm": "The selected files will be permanently deleted from Google Drive. This action cannot be undone.",
     "selectAll": "Select All",
     "deselectAll": "Deselect All",
     "checkingRemotePassword": "Checking sync status...",
@@ -623,7 +568,6 @@
     "title": "Settings",
     "tabData": "Connect",
     "tabTools": "Tools",
-    "appearance": "Appearance",
     "dataSync": "Data Sync",
     "defaults": "Defaults for New Keyboards",
     "defaultLayout": "Key Labels",
@@ -641,9 +585,7 @@
     "autoLockDescription": "Lock after inactivity.",
     "autoLockMinutes": "{{minutes}} min",
     "maxKeymapHistory": "Max Keymap History",
-    "language": "Language",
     "tabNotification": "Notification",
-    "tabTroubleshooting": "Troubleshooting",
     "tabAbout": "About",
     "about": {
       "version": "Version {{version}}",
@@ -652,7 +594,6 @@
     }
   },
   "analyze": {
-    "placeholder": "Analysis charts coming soon.",
     "noKeyboards": "No typing data yet.",
     "noData": "No data for the selected period.",
     "selectKeyboard": "Select a keyboard from the list.",
@@ -678,7 +619,6 @@
       "narrowWindow": "Window too narrow for split view — resize wider to enable."
     },
     "export": {
-      "csv": "Export",
       "categoriesLabel": "Categories to export",
       "confirm": ".csv",
       "failed": "Export failed.",
@@ -715,9 +655,7 @@
     },
     "loading": {
       "keyboards": "Loading keyboards…",
-      "settings": "Loading settings…",
       "syncing": "Syncing analytics…",
-      "snapshot": "Loading keymap snapshot…",
       "preparing": "Preparing charts…"
     },
     "unit": {
@@ -795,7 +733,6 @@
         "tooltipLabel": "Estimated keystrokes",
         "summary": {
           "label": "Typing rhythm summary",
-          "totalKeystrokes": "Total keystrokes",
           "medianP50": "Median interval",
           "fast": "Fast (<200ms)",
           "fastDesc": "Share of intervals shorter than 200ms.",
@@ -811,8 +748,6 @@
       "timeSeries": {
         "summary": {
           "label": "Interval summary",
-          "totalKeystrokes": "Total keystrokes",
-          "activeDuration": "Active typing time",
           "medianP50": "Weighted median interval",
           "shortest": "Shortest interval (per min)",
           "longestPause": "Longest interval (per min)"
@@ -836,8 +771,6 @@
       "keystrokes": {
         "summary": {
           "label": "Activity summary",
-          "totalKeystrokes": "Total keystrokes",
-          "activeDuration": "Active typing time",
           "mostFrequentDow": "Busiest day",
           "mostFrequentDowDesc": "Day of week with the most keystrokes.",
           "mostFrequentHour": "Busiest hour",
@@ -851,8 +784,6 @@
       "wpm": {
         "summary": {
           "label": "Activity WPM summary",
-          "totalKeystrokes": "Total keystrokes",
-          "activeDuration": "Active typing time",
           "overallWpm": "Overall WPM",
           "peakCell": "Peak cell",
           "peakCellDesc": "Cell (hour × day-of-week) with the highest WPM.",
@@ -1180,12 +1111,7 @@
       "peakKeystrokesPerMin": "Peak K/min",
       "peakKeystrokesPerDay": "Peak K/day",
       "longestSession": "Longest session (min)",
-      "longestSessionDesc": "Longest continuous typing run, separated by 5+ minutes of idle.",
-      "unit": {
-        "kpm": "K/min",
-        "kpd": "K/day",
-        "minutes": "min"
-      }
+      "longestSessionDesc": "Longest continuous typing run, separated by 5+ minutes of idle."
     },
     "streakGoal": {
       "sectionTitle": "Goal streak records",
@@ -1216,14 +1142,11 @@
     },
     "filters": {
       "keyboard": "Keyboards",
-      "from": "Start",
-      "to": "End",
       "period": "Period",
       "device": "Device",
       "deviceOption": {
         "own": "This device",
-        "all": "All devices",
-        "hashShort": "{{hash}}…"
+        "all": "All devices"
       },
       "app": "App",
       "appOption": {
@@ -1288,11 +1211,6 @@
       },
       "calendarRangePrev": "Previous month",
       "calendarRangeNext": "Next month",
-      "layerViewMode": "View",
-      "layerViewModeOption": {
-        "keystrokes": "Keystrokes",
-        "activations": "Activations"
-      },
       "layerBaseLayer": "Base",
       "normalization": "Normalize",
       "normalizationOption": {
@@ -1321,27 +1239,14 @@
   },
   "dataModal": {
     "title": "Data",
-    "tabLocal": "Local",
-    "tabSync": "Sync",
     "local": "Local",
-    "cloud": "Cloud",
     "keyboards": "Keyboards",
     "favorites": "Favorites",
     "application": "Application",
-    "settings": "Settings",
-    "saves": "Saves",
     "sync": "Sync - Not available locally",
     "hub": "Hub - Not available locally",
     "noKeyboards": "No stored keyboards",
-    "noSettings": "No settings found",
     "noSaves": "No saves found",
-    "settingsLayout": "Layout",
-    "settingsAutoAdvance": "Auto Advance",
-    "settingsLayers": "Layers",
-    "settingsTypingTests": "Typing Tests",
-    "settingsTypingTestCount": "{{count}} results",
-    "deleteKeyboard": "Delete",
-    "deleteKeyboardConfirm": "Delete all data for this keyboard?",
     "importExportDesc": "Import/Export all local data (keyboards, favorites, settings)",
     "deleteAll": "Delete All Data",
     "deleteAllConfirm": "This will delete all data including synced data.",
@@ -1403,7 +1308,6 @@
     "syncSuccess": "Synced",
     "syncFailed": "Sync failed",
     "removeFromHub": "Remove",
-    "removing": "Removing...",
     "removeSuccess": "Removed",
     "removeFailed": "Remove failed",
     "confirmRemove": "Remove?",
@@ -1416,9 +1320,6 @@
     "enable": "Connect",
     "disable": "Disconnect",
     "confirmDisconnect": "Disconnect?",
-    "myPosts": "My Posts",
-    "hub": "Hub",
-    "hubPosts": "Hub Posts",
     "noPosts": "No posts yet",
     "requiresAuth": "Connect your Google account in the Data tab to use Hub features.",
     "renameFailed": "Rename failed",
@@ -1430,9 +1331,6 @@
     "displayNameSaveFailed": "Failed to save display name",
     "displayNameTaken": "This display name is already taken",
     "openInBrowser": "Open",
-    "pagePrev": "Prev",
-    "pageNext": "Next",
-    "pageInfo": "{{current}} / {{total}}",
     "needsDisplayName": "Set a display name in Settings to upload",
     "displayNameRequired": "Required to upload to Hub",
     "authDisplayNameConflict": "Your Google account name conflicts with an existing display name. Please choose a different display name to continue.",
@@ -1468,13 +1366,9 @@
   },
   "favoriteStore": {
     "title": "Favorites",
-    "button": "Fav",
-    "save": "Save Fav",
-    "loadFav": "Load Fav",
     "noSaved": "No saved favorites",
     "saveFailed": "Failed to save favorite",
     "loadFailed": "Failed to load favorite",
-    "rename": "Rename",
     "delete": "Delete",
     "saveCurrentState": "Save Current State",
     "export": "Export",
@@ -1492,12 +1386,7 @@
     "title": "Key Labels",
     "manageRow": "Key Labels Manage",
     "edit": "Edit",
-    "tabInstalled": "Installed",
-    "tabHub": "Find on Hub",
-    "alreadyInstalled": "Installed",
-    "hubInitial": "Type 2 or more characters and press Search to find labels on <hub>Pipette Hub</hub>.",
     "hubEmpty": "No matching labels on the Hub",
-    "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
     "search": "Search",
     "searching": "Searching...",
     "import": "Import",
@@ -1522,41 +1411,21 @@
   },
   "i18n": {
     "modalTitle": "Language",
-    "manage": "Manage Language Packs",
     "manageRow": "Language Manage",
     "edit": "Edit",
-    "renamePrompt": "Enter a new name for this language pack:",
-    "hubTitle": "Find Language Packs on Hub",
-    "hubInitial": "Type 2 or more characters and press Search to find language packs on Pipette Hub.",
     "hubEmpty": "No matching language packs on the Hub",
-    "searchPlaceholder": "Search Pipette Hub for language packs...",
     "search": "Search",
     "import": "Import",
-    "empty": "No language packs imported yet.",
-    "confirmDelete": "Delete \"{{name}}\"?",
     "errorGeneric": "Action failed",
     "errorInvalidJson": "The selected file is not valid JSON",
-    "statusActive": "Active",
-    "statusEnabled": "Enabled",
-    "actionActivate": "Activate",
-    "actionEnable": "Enable",
-    "actionDisable": "Disable",
-    "actionDelete": "Delete",
-    "actionDownload": "Download",
-    "actionRename": "Rename",
+    "notSetKeys": "not set keys",
+    "missingKeys": {
+      "title": "Not set keys",
+      "empty": "All keys are set",
+      "description": "Download a JSON template containing only the keys that need translation. Edit the file and re-import."
+    },
     "preview": {
-      "title": "Import Language Pack",
-      "name": "Name",
-      "version": "Version",
-      "coverage": "Coverage",
-      "missingKeys": "Missing keys",
-      "missingKeysHint": "fall back to English",
-      "dangerousKeys": "Dangerous keys",
-      "dangerousKeysNone": "None",
-      "dangerousKeysFound": "{{count}} detected",
-      "dangerousWarning": "Pack contains forbidden keys (__proto__, constructor, prototype) and cannot be imported.",
-      "applyAndEnable": "Apply & Enable",
-      "moreErrors": "+{{count}} more"
+      "dangerousWarning": "Pack contains forbidden keys (__proto__, constructor, prototype) and cannot be imported."
     },
     "jaRemoved": {
       "title": "Japanese pack moved to Hub",

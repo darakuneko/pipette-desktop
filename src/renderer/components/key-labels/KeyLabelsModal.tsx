@@ -19,7 +19,7 @@ import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { formatDateTime } from '../editors/store-modal-shared'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { HUB_ERROR_KEY_LABEL_DUPLICATE } from '../../../shared/types/hub-key-label'
-import { buildHubKeyLabelUrl } from '../../../shared/hub-urls'
+import { buildHubKeyLabelUrl, buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
 import type {
   HubKeyLabelItem,
   HubKeyLabelListResponse,
@@ -243,6 +243,17 @@ export function KeyLabelsModal({
       // disk so a re-import of the same name lights up the existing
       // row instead of orphaning the message.
       setLastResult({ id: res.data.id, kind: 'success', message: t('common.saved') })
+      // Auto-sync overwrites of an already-uploaded entry so the Hub
+      // post stays consistent with the user's local edit. Promote the
+      // inline badge from "Saved" to "Synced" on success.
+      if (res.data.hubPostId) {
+        const upd = await labels.hubUpdate(res.data.id)
+        if (upd.success) {
+          setLastResult({ id: res.data.id, kind: 'success', message: t('common.synced') })
+        } else {
+          setActionError(translateError(t, upd.errorCode, upd.error))
+        }
+      }
     } else if (res.error && res.error !== 'cancelled') {
       setActionError(translateError(t, res.errorCode, res.error))
     }
@@ -282,7 +293,22 @@ export function KeyLabelsModal({
     setPendingId(id)
     try {
       const res = await labels.rename(id, newName)
-      if (!res.success) setActionError(translateError(t, res.errorCode, res.error))
+      if (!res.success) {
+        setActionError(translateError(t, res.errorCode, res.error))
+        return
+      }
+      // Auto-sync to Hub when this entry is already uploaded — a rename
+      // is an overwrite, so the user's expectation is "what's on Hub
+      // matches what I see locally." Surface "Synced" so the second
+      // step is visible; failure stays inline (local already saved).
+      if (res.data?.hubPostId) {
+        const upd = await labels.hubUpdate(id)
+        if (upd.success) {
+          setLastResult({ id, kind: 'success', message: t('common.synced') })
+        } else {
+          setActionError(translateError(t, upd.errorCode, upd.error))
+        }
+      }
     } finally {
       setPendingId(null)
     }
@@ -606,10 +632,12 @@ function InstalledRowView({
     if (canRename) {
       // Click-to-edit pattern matches FavoriteStoreContent: clicking
       // the label name itself opens the inline editor; no extra
-      // Rename button is needed.
+      // Rename button is needed. The span fills the parent column so
+      // the click target also covers the empty space to the right of
+      // short names.
       return (
         <span
-          className="text-content cursor-pointer"
+          className="block w-full truncate text-content cursor-pointer"
           onClick={() => rename.startRename(row.localId, row.name)}
           data-testid={`key-labels-name-${row.localId}`}
         >
@@ -1024,10 +1052,10 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
               components={{
                 hub: hubOrigin ? (
                   <a
-                    href={hubOrigin}
+                    href={buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.KEY_LABELS)}
                     onClick={(e) => {
                       e.preventDefault()
-                      void window.vialAPI.openExternal(hubOrigin)
+                      void window.vialAPI.openExternal(buildHubCategoryUrl(hubOrigin, HUB_CATEGORY.KEY_LABELS))
                     }}
                     className="text-accent hover:underline"
                     data-testid="key-labels-hub-initial-link"

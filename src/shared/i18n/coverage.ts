@@ -109,6 +109,50 @@ export function computeCoverage(
   }
 }
 
+/** Build a nested JSON subset of `base` containing only the keys in
+ * `keyPaths` (dot-separated). Used to export a "missing keys" template
+ * the user can edit and re-import. Reserved meta keys (`name`,
+ * `version`) and `DANGEROUS_KEYS` are dropped from the output. */
+export function buildSubsetFromKeys(
+  base: unknown,
+  keyPaths: readonly string[],
+  separator = '.',
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  if (!base || typeof base !== 'object' || Array.isArray(base)) return out
+  for (const path of keyPaths) {
+    const segments = path.split(separator)
+    if (segments.length === 0) continue
+    // Reserved meta keys (name / version) only collide at the root —
+    // a nested `i18n.preview.version` is a real translation key.
+    if (RESERVED_TOP_LEVEL_KEYS.has(segments[0])) continue
+    if (segments.some((s) => DANGEROUS_KEYS.has(s))) continue
+    let srcNode: unknown = base
+    for (const seg of segments) {
+      if (!srcNode || typeof srcNode !== 'object' || Array.isArray(srcNode)) {
+        srcNode = undefined
+        break
+      }
+      srcNode = (srcNode as Record<string, unknown>)[seg]
+    }
+    if (srcNode === undefined) continue
+    let dstNode = out
+    for (let i = 0; i < segments.length - 1; i++) {
+      const seg = segments[i]
+      const existing = dstNode[seg]
+      if (!existing || typeof existing !== 'object' || Array.isArray(existing)) {
+        const next: Record<string, unknown> = {}
+        dstNode[seg] = next
+        dstNode = next
+      } else {
+        dstNode = existing as Record<string, unknown>
+      }
+    }
+    dstNode[segments[segments.length - 1]] = srcNode
+  }
+  return out
+}
+
 /** Strip the meta keys from a pack body, returning only the
  * translation tree. Used by the renderer before calling
  * `i18next.addResourceBundle`. */
