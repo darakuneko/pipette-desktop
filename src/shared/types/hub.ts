@@ -3,6 +3,62 @@
 
 import type { FavoriteType } from './favorite-store'
 
+// --- i18n language pack posts -------------------------------------------------
+
+/** Wire-format wrapper sent to / received from Pipette Hub for an i18n
+ * post. Mirrors `analytics-export-v1` in spirit but carries the entire
+ * pack JSON verbatim (no thumbnail, no separate metadata layer). */
+export interface HubI18nExportV1 {
+  version: 1
+  kind: 'i18n'
+  exportedAt: string
+  pack: HubI18nPackBody
+}
+
+/** The in-payload pack body. Contains pack metadata at the top level
+ * (`version`, `name`) plus the nested translations. Type is kept loose
+ * so unknown future keys round-trip. */
+export interface HubI18nPackBody {
+  version: string
+  name: string
+  [k: string]: unknown
+}
+
+export interface HubUploadI18nPostParams {
+  /** Local pack id used to set hubPostId on the meta after upload. */
+  entryId: string
+  pack: HubI18nPackBody
+}
+
+export interface HubUpdateI18nPostParams extends HubUploadI18nPostParams {
+  postId: string
+}
+
+export interface HubI18nPostListItem {
+  id: string
+  name: string
+  version: string
+  uploadedBy?: string | null
+  uploaderName?: string | null
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface HubI18nListParams {
+  q?: string
+  /** Optional exact-name match; used to fetch every version of a single pack. */
+  name?: string
+  page?: number
+  perPage?: number
+}
+
+export interface HubI18nListResponse {
+  items: HubI18nPostListItem[]
+  total: number
+  page: number
+  perPage: number
+}
+
 export interface HubUploadPostParams {
   title: string
   keyboardName: string

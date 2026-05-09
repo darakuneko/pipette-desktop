@@ -184,6 +184,15 @@ export function syncUnitFromFileName(fileName: string): string | null {
   const favMatch = fileName.match(/^favorites_(.+)\.enc$/)
   if (favMatch) return `favorites/${favMatch[1]}`
 
+  // "i18n_index.enc" → "i18n/index"
+  if (fileName === 'i18n_index.enc') return 'i18n/index'
+
+  // "i18n_packs_{packId}.enc" → "i18n/packs/{packId}"
+  // Pack ids are restricted to safe filename characters (UUID-like) so
+  // a single greedy capture is enough — no nested separators to split.
+  const i18nPackMatch = fileName.match(/^i18n_packs_(.+)\.enc$/)
+  if (i18nPackMatch) return `i18n/packs/${i18nPackMatch[1]}`
+
   if (fileName === driveFileName(KEYBOARD_META_SYNC_UNIT)) return KEYBOARD_META_SYNC_UNIT
 
   return null

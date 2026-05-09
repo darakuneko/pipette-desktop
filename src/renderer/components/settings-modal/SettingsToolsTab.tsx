@@ -8,7 +8,9 @@ import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import i18n, { SUPPORTED_LANGUAGES } from '../../i18n'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
+import { useI18nPackStore } from '../../hooks/useI18nPackStore'
 import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
+import { LanguagePacksModal } from '../i18n-packs/LanguagePacksModal'
 import type { ThemeMode } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
@@ -63,7 +65,18 @@ export function SettingsToolsTab({
   const { t } = useTranslation()
   const appConfig = useAppConfig()
   const [keyLabelsOpen, setKeyLabelsOpen] = useState(false)
+  const [languagePacksOpen, setLanguagePacksOpen] = useState(false)
   const keyLabels = useKeyLabels()
+  const i18nPacks = useI18nPackStore()
+
+  const languageOptions = useMemo(() => {
+    const opts: { id: string; name: string }[] = SUPPORTED_LANGUAGES.map((l) => ({ id: l.id, name: l.name }))
+    for (const meta of i18nPacks.metas) {
+      if (meta.deletedAt || !meta.enabled) continue
+      opts.push({ id: `pack:${meta.id}`, name: meta.name })
+    }
+    return opts
+  }, [i18nPacks.metas])
 
   /**
    * Default-layout dropdown options. QWERTY is materialised as a Key
@@ -133,24 +146,34 @@ export function SettingsToolsTab({
         <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-language-row">
             <label htmlFor="settings-language-selector" className="text-sm font-medium text-content-secondary">
-              {t('settings.language')}
+              {t('i18n.manageRow')}
             </label>
-            <select
-              id="settings-language-selector"
-              value={appConfig.config.language ?? 'en'}
-              onChange={(e) => {
-                appConfig.set('language', e.target.value)
-                void i18n.changeLanguage(e.target.value)
-              }}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-              data-testid="settings-language-selector"
-            >
-              {SUPPORTED_LANGUAGES.map((lang) => (
-                <option key={lang.id} value={lang.id}>
-                  {lang.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <select
+                id="settings-language-selector"
+                value={appConfig.config.language ?? 'builtin:en'}
+                onChange={(e) => {
+                  appConfig.set('language', e.target.value)
+                  void i18n.changeLanguage(e.target.value)
+                }}
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                data-testid="settings-language-selector"
+              >
+                {languageOptions.map((lang) => (
+                  <option key={lang.id} value={lang.id}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setLanguagePacksOpen(true)}
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+                data-testid="settings-language-packs-button"
+              >
+                {t('i18n.edit')}
+              </button>
+            </div>
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-key-labels-row">
@@ -332,6 +355,12 @@ export function SettingsToolsTab({
     <KeyLabelsModal
       open={keyLabelsOpen}
       onClose={() => setKeyLabelsOpen(false)}
+      currentDisplayName={hubDisplayName}
+      hubCanWrite={hubCanWrite}
+    />
+    <LanguagePacksModal
+      open={languagePacksOpen}
+      onClose={() => setLanguagePacksOpen(false)}
       currentDisplayName={hubDisplayName}
       hubCanWrite={hubCanWrite}
     />

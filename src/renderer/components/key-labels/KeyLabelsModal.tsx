@@ -363,13 +363,13 @@ export function KeyLabelsModal({
         <div className="flex border-b border-edge" data-testid="key-labels-tabs">
           <TabButton
             id="installed"
-            label={t('keyLabels.tabInstalled')}
+            label={t('common.installed')}
             active={activeTab === 'installed'}
             onClick={() => setActiveTab('installed')}
           />
           <TabButton
             id="hub"
-            label={t('keyLabels.tabHub')}
+            label={t('common.findOnHub')}
             active={activeTab === 'hub'}
             onClick={() => setActiveTab('hub')}
           />
@@ -380,7 +380,7 @@ export function KeyLabelsModal({
             <input
               type="text"
               value={search}
-              placeholder={t('keyLabels.searchPlaceholder')}
+              placeholder={t('common.searchPlaceholder')}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={handleSearchKeyDown}
               className="flex-1 rounded border border-edge bg-surface px-3 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
@@ -997,7 +997,7 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
               )}
               {row.alreadyInstalled ? (
                 <span className="text-xs text-content-muted">
-                  {t('keyLabels.alreadyInstalled')}
+                  {t('common.installed')}
                 </span>
               ) : (
                 <button
@@ -1020,7 +1020,7 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
             t('keyLabels.hubEmpty')
           ) : (
             <Trans
-              i18nKey="keyLabels.hubInitial"
+              i18nKey="common.findOnHubHint"
               components={{
                 hub: hubOrigin ? (
                   <a

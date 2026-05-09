@@ -18,8 +18,7 @@ vi.mock('react-i18next', () => ({
 vi.mock('../../i18n', () => ({
   default: { changeLanguage: vi.fn() },
   SUPPORTED_LANGUAGES: [
-    { id: 'en', name: 'English' },
-    { id: 'ja', name: '日本語' },
+    { id: 'builtin:en', name: 'English' },
   ],
 }))
 

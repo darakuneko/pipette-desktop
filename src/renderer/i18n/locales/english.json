@@ -1,4 +1,6 @@
 {
+  "version": "0.1.0",
+  "name": "English",
   "common": {
     "save": "Save",
     "saved": "Saved",
@@ -31,7 +33,11 @@
     "load": "Load",
     "labelPlaceholder": "Label",
     "noLabel": "(No label)",
-    "synced": "Synced"
+    "synced": "Synced",
+    "installed": "Installed",
+    "findOnHub": "Find on Hub",
+    "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
+    "findOnHubHint": "Type 2 or more characters and press Search on <hub>Pipette Hub</hub>."
   },
   "app": {
     "title": "Pipette",
@@ -557,6 +563,7 @@
       "keyboardData": "Keyboard",
       "favorites": "Favorite",
       "appSettings": "Application",
+      "i18nPacks": "Language Packs",
       "undecryptable": "Undecryptable Files"
     },
     "deleteSelected": "Delete Selected",
@@ -1512,5 +1519,49 @@
     "missingMessage": "The key label \"{{name}}\" is not installed. Showing keymap with QWERTY labels.",
     "missingHint": "You can download \"{{name}}\" from {{settings}} > {{tools}} > {{keyLabels}}, or from the keypicker overlay's Edit button.",
     "missingClose": "Close"
+  },
+  "i18n": {
+    "modalTitle": "Language",
+    "manage": "Manage Language Packs",
+    "manageRow": "Language Manage",
+    "edit": "Edit",
+    "renamePrompt": "Enter a new name for this language pack:",
+    "hubTitle": "Find Language Packs on Hub",
+    "hubInitial": "Type 2 or more characters and press Search to find language packs on Pipette Hub.",
+    "hubEmpty": "No matching language packs on the Hub",
+    "searchPlaceholder": "Search Pipette Hub for language packs...",
+    "search": "Search",
+    "import": "Import",
+    "empty": "No language packs imported yet.",
+    "confirmDelete": "Delete \"{{name}}\"?",
+    "errorGeneric": "Action failed",
+    "errorInvalidJson": "The selected file is not valid JSON",
+    "statusActive": "Active",
+    "statusEnabled": "Enabled",
+    "actionActivate": "Activate",
+    "actionEnable": "Enable",
+    "actionDisable": "Disable",
+    "actionDelete": "Delete",
+    "actionDownload": "Download",
+    "actionRename": "Rename",
+    "preview": {
+      "title": "Import Language Pack",
+      "name": "Name",
+      "version": "Version",
+      "coverage": "Coverage",
+      "missingKeys": "Missing keys",
+      "missingKeysHint": "fall back to English",
+      "dangerousKeys": "Dangerous keys",
+      "dangerousKeysNone": "None",
+      "dangerousKeysFound": "{{count}} detected",
+      "dangerousWarning": "Pack contains forbidden keys (__proto__, constructor, prototype) and cannot be imported.",
+      "applyAndEnable": "Apply & Enable",
+      "moreErrors": "+{{count}} more"
+    },
+    "jaRemoved": {
+      "title": "Japanese pack moved to Hub",
+      "message": "The bundled Japanese language is now distributed as a downloadable pack. Get it from Pipette Hub or import a .json from Settings → Tools → Manage Language Packs.",
+      "dismiss": "Dismiss"
+    }
   }
 }

@@ -198,6 +198,26 @@ export const IpcChannels = {
   HUB_UPDATE_ANALYTICS_POST: 'hub:update-analytics-post',
   HUB_PREVIEW_ANALYTICS_POST: 'hub:preview-analytics-post',
 
+  // i18n language pack store (renderer ↔ main)
+  I18N_PACK_STORE_LIST: 'i18n-pack-store:list',
+  I18N_PACK_STORE_GET: 'i18n-pack-store:get',
+  I18N_PACK_STORE_RENAME: 'i18n-pack-store:rename',
+  I18N_PACK_STORE_SET_ENABLED: 'i18n-pack-store:set-enabled',
+  I18N_PACK_STORE_DELETE: 'i18n-pack-store:delete',
+  I18N_PACK_STORE_SET_HUB_POST_ID: 'i18n-pack-store:set-hub-post-id',
+  I18N_PACK_STORE_HAS_NAME: 'i18n-pack-store:has-name',
+  I18N_PACK_IMPORT: 'i18n-pack:import',
+  I18N_PACK_IMPORT_APPLY: 'i18n-pack:import-apply',
+  I18N_PACK_EXPORT: 'i18n-pack:export',
+  I18N_PACK_CHANGED: 'i18n-pack:changed',
+
+  // Hub i18n posts (renderer → main → renderer)
+  HUB_LIST_I18N_POSTS: 'hub:list-i18n-posts',
+  HUB_DOWNLOAD_I18N_POST: 'hub:download-i18n-post',
+  HUB_UPLOAD_I18N_POST: 'hub:upload-i18n-post',
+  HUB_UPDATE_I18N_POST: 'hub:update-i18n-post',
+  HUB_DELETE_I18N_POST: 'hub:delete-i18n-post',
+
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
 

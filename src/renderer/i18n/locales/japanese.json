@@ -1,4 +1,6 @@
 {
+  "version": "0.1.0",
+  "name": "日本語",
   "common": {
     "save": "保存",
     "saved": "保存しました",

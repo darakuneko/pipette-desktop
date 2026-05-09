@@ -34,7 +34,7 @@ export function LocalDataResetGroup({
   confirmDisabled,
 }: LocalDataResetGroupProps) {
   const { t } = useTranslation()
-  const anySelected = selectedKeyboardUids.size > 0 || localTargets.favorites || localTargets.appSettings
+  const anySelected = selectedKeyboardUids.size > 0 || localTargets.favorites || localTargets.appSettings || Boolean(localTargets.i18nPacks)
 
   return (
     <div className="space-y-2">
@@ -78,6 +78,16 @@ export function LocalDataResetGroup({
           className="accent-danger"
         />
         {t('sync.resetTarget.appSettings')}
+      </label>
+      <label className="flex items-center gap-2 text-sm text-content" data-testid="local-target-i18nPacks">
+        <input
+          type="checkbox"
+          checked={Boolean(localTargets.i18nPacks)}
+          onChange={(e) => onToggleTarget('i18nPacks', e.target.checked)}
+          disabled={disabled}
+          className="accent-danger"
+        />
+        {t('sync.resetTarget.i18nPacks')}
       </label>
       {/* Delete button */}
       <div className="flex items-center justify-end">

@@ -7,6 +7,7 @@ import { setupSnapshotStore } from './snapshot-store'
 import { setupAnalyzeFilterStore } from './analyze-filter-store'
 import { setupFavoriteStore } from './favorite-store'
 import { setupKeyLabelStore } from './key-label-ipc'
+import { setupI18nPackStore } from './i18n-pack-ipc'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
 import { setupLanguageStore } from './language-store'
@@ -293,6 +294,7 @@ app.whenReady().then(() => {
   setupAnalyzeFilterStore()
   setupFavoriteStore()
   setupKeyLabelStore()
+  setupI18nPackStore()
   setupPipetteSettingsStore()
   setupLanguageStore()
   setupAppConfigIpc()
