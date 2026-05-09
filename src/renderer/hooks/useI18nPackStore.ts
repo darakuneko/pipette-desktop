@@ -63,7 +63,15 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await window.vialAPI.i18nPackList()
+      // Older renderer test fixtures stub a partial vialAPI; guard so a
+      // missing IPC method degrades to an empty list rather than
+      // tearing down React inside a useEffect.
+      const list = window.vialAPI.i18nPackList
+      if (!list) {
+        setMetas([])
+        return
+      }
+      const result = await list()
       if (result.success && result.data) {
         setMetas(result.data)
         await syncBundlesWithStore()
@@ -80,7 +88,18 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
     void refresh()
     const handler = (): void => { void refresh() }
     window.addEventListener(I18N_CHANGED_EVENT, handler)
-    return () => window.removeEventListener(I18N_CHANGED_EVENT, handler)
+    // Main process broadcasts I18N_PACK_CHANGED after the startup
+    // auto-update applies a Hub-side update so this hook re-renders
+    // without waiting for the user to interact with the Language Pack
+    // modal.
+    // Guard for partial vialAPI mocks (older renderer test fixtures
+    // pre-date `i18nPackOnChanged`). Production preload always exposes
+    // it, so the optional chain is a test-only concession.
+    const unsubscribeIpc = window.vialAPI.i18nPackOnChanged?.(() => { void refresh() })
+    return () => {
+      window.removeEventListener(I18N_CHANGED_EVENT, handler)
+      unsubscribeIpc?.()
+    }
   }, [refresh])
 
   // Coverage recompute trigger. Whenever the meta list changes we

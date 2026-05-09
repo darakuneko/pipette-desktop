@@ -21,6 +21,11 @@ export interface I18nPackMeta {
   enabled: boolean
   /** When set, the pack is mirrored to a Pipette Hub post. */
   hubPostId?: string
+  /** Hub-side `updated_at` cached locally so the startup auto-update
+   *  can detect remote changes by comparing this against
+   *  `POST /api/i18n-packs/timestamps`. Absent for never-uploaded
+   *  local entries and legacy rows that predate this field. */
+  hubUpdatedAt?: string
   /** ISO 8601 timestamp of the first import. */
   savedAt: string
   /** ISO 8601 timestamp of the most recent enable / rename / overwrite. */

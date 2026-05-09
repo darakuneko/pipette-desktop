@@ -116,7 +116,7 @@ const RESERVED_TOP_LEVEL_KEYS = new Set(['name', 'version'])
  * imported (or a Hub post body) — it carries `name`, `version`,
  * plus the nested translation tree at the top
  * level. */
-export function validatePack(raw: unknown, options: ValidatePackOptions = {}): ValidatePackResult {
+export function validatePack(raw: unknown, _options: ValidatePackOptions = {}): ValidatePackResult {
   const errors: string[] = []
   const warnings: string[] = []
   const dangerousKeys: string[] = []

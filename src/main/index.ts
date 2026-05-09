@@ -13,6 +13,7 @@ import { setupPipetteSettingsStore } from './pipette-settings-store'
 import { setupLanguageStore } from './language-store'
 import { setupSyncIpc } from './sync/sync-ipc'
 import { setupHubIpc } from './hub/hub-ipc'
+import { syncHubI18nPacksOnStartup } from './hub/i18n-startup-sync'
 import { setupLzmaIpc } from './lzma'
 import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
@@ -316,6 +317,27 @@ app.whenReady().then(() => {
     log('error', `Failed to initialize typing analytics: ${detail}`)
   })
   createWindow()
+
+  // Best-effort: refresh Hub-linked i18n packs in the background. This
+  // never blocks startup — if Hub is unreachable or a single pack fails
+  // to validate, the function logs and returns. Renderer windows are
+  // notified via I18N_PACK_CHANGED so the language picker reflects any
+  // applied updates without a manual reload.
+  void syncHubI18nPacksOnStartup().then((result) => {
+    if (result.checked === 0) return
+    log('info', `i18n startup sync: checked=${String(result.checked)} updated=${String(result.updated)} missingOnHub=${String(result.missingOnHub)} errors=${String(result.errors.length)}`)
+    for (const err of result.errors) {
+      log('warn', `i18n startup sync error pack=${err.packId} hub=${err.hubPostId}: ${err.reason}`)
+    }
+    if (result.updated > 0) {
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send(IpcChannels.I18N_PACK_CHANGED)
+      }
+    }
+  }).catch((err: unknown) => {
+    const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+    log('warn', `i18n startup sync threw unexpectedly: ${detail}`)
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -337,6 +337,12 @@ export interface VialAPI {
   i18nPackImport(): Promise<I18nPackImportDialogResult>
   i18nPackImportApply(raw: unknown, options?: I18nPackImportApplyOptions): Promise<I18nPackStoreResult<I18nPackMeta>>
   i18nPackExport(id: string): Promise<I18nPackStoreResult<{ filePath: string }>>
+  /** Subscribe to main-process pack-store change broadcasts (e.g.
+   *  startup auto-update applied a Hub-side update). The callback is
+   *  invoked with no arguments — consumers should call
+   *  `i18nPackList()` to read the fresh state. Returns an unsubscribe
+   *  function. */
+  i18nPackOnChanged(callback: () => void): () => void
 
   // Hub i18n posts
   hubListI18nPosts(params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }>

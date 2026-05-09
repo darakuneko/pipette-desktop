@@ -166,6 +166,11 @@ export interface SavePackInput {
   /** Defaults to true on first import. */
   enabled?: boolean
   hubPostId?: string | null
+  /** Hub-side `updated_at` for the just-downloaded pack. Pass on
+   *  hub-download / hub-sync paths so the startup auto-update can
+   *  compare against `POST /api/i18n-packs/timestamps` later. `null`
+   *  explicitly clears any inherited value (e.g. detach from Hub). */
+  hubUpdatedAt?: string | null
   appVersionAtImport?: string
   /** English baseline version this pack covered at save time, or null
    * when coverage was partial. Persisted on the meta and surfaced in
@@ -222,6 +227,12 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
     if (input.hubPostId === null) nextHubPostId = undefined
     else if (typeof input.hubPostId === 'string') nextHubPostId = input.hubPostId
     else nextHubPostId = existing?.hubPostId
+    let nextHubUpdatedAt: string | undefined
+    if (input.hubUpdatedAt === null) nextHubUpdatedAt = undefined
+    else if (typeof input.hubUpdatedAt === 'string') {
+      const trimmed = input.hubUpdatedAt.trim()
+      nextHubUpdatedAt = trimmed.length > 0 ? trimmed : undefined
+    } else nextHubUpdatedAt = existing?.hubUpdatedAt
     let nextMatchedBaseVersion: string | undefined
     if (input.matchedBaseVersion === null) nextMatchedBaseVersion = undefined
     else if (typeof input.matchedBaseVersion === 'string') nextMatchedBaseVersion = input.matchedBaseVersion
@@ -241,6 +252,7 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
       version: header.version,
       enabled: input.enabled ?? existing?.enabled ?? true,
       hubPostId: nextHubPostId,
+      ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
       savedAt: existing?.savedAt ?? now,
       updatedAt: now,
       ...(input.appVersionAtImport ? { appVersionAtImport: input.appVersionAtImport } : {}),
@@ -345,6 +357,10 @@ export async function setHubPostId(
     const normalized = hubPostId?.trim() || null
     if (normalized === null) {
       delete meta.hubPostId
+      // hubUpdatedAt is meaningless once detached from Hub; drop it so a
+      // future re-link gets a fresh round-trip rather than comparing
+      // against a stale cached timestamp.
+      delete meta.hubUpdatedAt
     } else {
       meta.hubPostId = normalized
     }

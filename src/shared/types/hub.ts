@@ -59,6 +59,23 @@ export interface HubI18nListResponse {
   perPage: number
 }
 
+/** Single id → updated_at pair from `POST /api/i18n-packs/timestamps`. */
+export interface HubI18nPackTimestamp {
+  id: string
+  updated_at: string
+}
+
+/** Body of `POST /api/i18n-packs/timestamps`. Deleted / missing ids are
+ *  silently dropped from `items`, so callers should treat their absence
+ *  as a tombstone signal. Mirrors `HubKeyLabelTimestampsResponse`. */
+export interface HubI18nPackTimestampsResponse {
+  items: HubI18nPackTimestamp[]
+}
+
+/** Per-request hard limit defined by `POST /api/i18n-packs/timestamps`.
+ *  Callers must split larger id arrays themselves. */
+export const HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT = 100
+
 export interface HubUploadPostParams {
   title: string
   keyboardName: string

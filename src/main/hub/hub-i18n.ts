@@ -19,6 +19,7 @@ import { validatePack } from '../../shared/i18n/validate'
 import type {
   HubI18nExportV1,
   HubI18nPackBody,
+  HubI18nPackTimestampsResponse,
   HubI18nPostListItem,
 } from '../../shared/types/hub'
 
@@ -197,6 +198,27 @@ export async function downloadI18nPostBody(postId: string): Promise<HubI18nExpor
     throw new Error(`Hub i18n download failed: ${String(response.status)} ${text}`)
   }
   return (await response.json()) as HubI18nExportV1
+}
+
+/**
+ * Bulk freshness check: send up to 100 ids, get back `{ id, updated_at }`
+ * pairs in input order with deleted/missing ids dropped. Anonymous
+ * endpoint, no JWT. Mirrors `fetchKeyLabelTimestamps` in `hub-key-labels.ts`.
+ * Caller is responsible for splitting larger arrays (the server enforces
+ * the 100 cap with a 400).
+ */
+export async function fetchI18nPackTimestamps(
+  ids: string[],
+): Promise<HubI18nPackTimestampsResponse> {
+  return hubFetchJson<HubI18nPackTimestampsResponse>(
+    `${HUB_API_BASE}${I18N_PACKS_ROUTE}/timestamps`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids }),
+    },
+    'Hub i18n timestamps fetch failed',
+  )
 }
 
 // --- Upload / Update / Delete (auth required) -------------------------------

@@ -306,6 +306,11 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.I18N_PACK_IMPORT_APPLY, raw, options ?? {}),
   i18nPackExport: (id: string): Promise<I18nPackStoreResult<{ filePath: string }>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_EXPORT, id),
+  i18nPackOnChanged: (callback: () => void): (() => void) => {
+    const handler = (): void => { callback() }
+    ipcRenderer.on(IpcChannels.I18N_PACK_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.I18N_PACK_CHANGED, handler)
+  },
 
   // --- Hub i18n posts ---
   hubListI18nPosts: (params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }> =>
