@@ -49,6 +49,7 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
 - [6. Editor Settings Panel](#6-editor-settings-panel)
   - [6.1 Cloud Sync (Google Drive appDataFolder)](#61-cloud-sync-google-drive-appdatafolder)
   - [6.2 Key Labels Manage](#62-key-labels-manage)
+  - [6.3 Language Packs Manage](#63-language-packs-manage)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -1332,7 +1333,7 @@ The Tools tab in the Settings modal includes a **Defaults** section for setting 
 
 ### 6.2 Key Labels Manage
 
-The Tools tab also exposes a **Key Labels Manage** row (next to the Language picker). Click **Edit** to open the Key Labels modal, which manages every label set the app uses to render keycaps in the editor, the Analyze view, and the Layout Comparison.
+The Tools tab also exposes a **Key Labels Manage** row (next to the Language Packs row). Click **Edit** to open the Key Labels modal, which manages every label set the app uses to render keycaps in the editor, the Analyze view, and the Layout Comparison.
 
 QWERTY is built-in; every other label set (Dvorak, Colemak, French, Brazilian, …) is downloaded from Pipette Hub or imported from a local `.json` file. Installed entries sync across devices via Cloud Sync, so the same drag order and selection appear on every machine signed into the same account.
 
@@ -1412,6 +1413,64 @@ An empty string between separators leaves the corresponding slot blank, so `"1\n
 Composite keycodes (LT, MT, modifier+key, …) render the inner key inside an inset rectangle that occupies the lower half of the cap, so only the first two `\n` parts of the outer label are honoured. Parts 3 and 4 are silently dropped to avoid colliding with the inner rect.
 
 `name` is also the uniqueness key inside the local store: importing a `.json` whose name already exists overwrites the matching entry in place (the Hub post link, if any, is preserved). To start a brand-new entry, change the `name` before importing.
+
+### 6.3 Language Packs Manage
+
+The Tools tab shows a **Language Packs** row displaying the currently active UI language. Click **Edit** to open the Language Packs modal.
+
+English is built-in; every other language is imported from a local `.json` file or downloaded from Pipette Hub. Installed packs sync across devices via Cloud Sync. Hub-linked packs are automatically checked for updates at app startup and refreshed silently when newer versions are available.
+
+**Installed tab**
+
+![Language Packs — Installed](screenshots/language-packs-installed.png)
+
+Lists every language pack on this device. Each row has a **check circle** on the left — click it to switch the active UI language immediately. The active row is highlighted with an accent border.
+
+Each row shows:
+
+- **Name** (click to rename inline)
+- **Updated timestamp** (`YYYY-MM-DD HH:mm`)
+- **Version** chip when the pack covers every key of the current English baseline, or a **not set keys** button that opens a modal listing the missing translation keys
+- **Export** / **Delete** actions on the first line
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2)
+
+A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
+
+The **Import** button in the toolbar opens a file dialog to import a `.json` language pack. Re-importing a pack with the same `name` overwrites the existing entry.
+
+**Find on Hub tab**
+
+![Language Packs — Find on Hub](screenshots/language-packs-hub.png)
+
+Searches Pipette Hub for language packs. Type 2 or more characters to start an automatic search (debounced). Results show the pack name, version, uploader, and either a **Download** action or an **Installed** marker.
+
+**Authoring a Language Pack**
+
+A language pack `.json` mirrors the structure of the built-in English pack. Export the English pack (built-in row → Export) to get a template with every key, then translate the values:
+
+```json
+{
+  "name": "Japanese",
+  "version": "0.1.0",
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル"
+  },
+  "editor": {
+    "keymap": {
+      "title": "キーマップ"
+    }
+  }
+}
+```
+
+| Field | Required | Purpose |
+|------|:--:|---------|
+| `name` | Yes | Display name and uniqueness key for overwrite-on-import |
+| `version` | Yes | Semver string (e.g. `0.1.0`) |
+| (other keys) | Yes | Nested translation tree matching the English structure |
+
+Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains.
 
 ---
 
@@ -1528,7 +1587,7 @@ See the [Data Guide](Data.md) for details on how Hub authentication works.
 
 ## 8. Modal Interactions
 
-Pipette applies a uniform set of keyboard and dismissal rules to every top-level modal (Settings, Data, Macro, QMK Settings, Tap Dance, Combo, Key Override, Alt Repeat Key, Notification, Language Selector, Layout Store, Editor Settings, Favorite Store, and the History Toggle dialog).
+Pipette applies a uniform set of keyboard and dismissal rules to every top-level modal (Settings, Data, Macro, QMK Settings, Tap Dance, Combo, Key Override, Alt Repeat Key, Notification, Language Packs, Language Selector, Layout Store, Editor Settings, Favorite Store, and the History Toggle dialog).
 
 ### Escape to Close
 
