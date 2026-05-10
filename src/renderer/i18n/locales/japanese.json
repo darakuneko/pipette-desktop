@@ -1428,6 +1428,7 @@
     },
     "modalTitle": "言語",
     "notSetKeys": "未設定のキー",
+    "selectLanguage": "{{name}}を選択",
     "preview": {
       "dangerousWarning": "パックに禁止キー (__proto__、constructor、prototype) が含まれているためインポートできません。"
     },

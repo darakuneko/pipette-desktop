@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
+import { Circle, CheckCircle2 } from 'lucide-react'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -163,7 +164,11 @@ export function LanguagePacksModal({
     return rows
   }, [store.metas, builtinName, builtinVersion, activeLanguageId])
 
-  const languageOptions = useMemo(() => installedRows.map((r) => ({ id: r.internalId, name: r.name })), [installedRows])
+  const handleSelectLanguage = useCallback((internalId: string) => {
+    if (internalId === activeLanguageId) return
+    appConfig.set('language', internalId)
+    void i18n.changeLanguage(internalId)
+  }, [appConfig, activeLanguageId])
 
   const installedHubPostIds = useMemo(
     () => new Set(store.metas.filter((m) => !m.deletedAt && m.hubPostId).map((m) => m.hubPostId as string)),
@@ -600,20 +605,7 @@ export function LanguagePacksModal({
         )}
 
         {activeTab === 'installed' && (
-          <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-edge">
-            <select
-              value={activeLanguageId}
-              onChange={(e) => {
-                appConfig.set('language', e.target.value)
-                void i18n.changeLanguage(e.target.value)
-              }}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-              data-testid="language-packs-active-select"
-            >
-              {languageOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>{opt.name}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-end px-4 py-3 border-b border-edge">
             <button
               type="button"
               onClick={() => void handleImportFile()}
@@ -648,6 +640,7 @@ export function LanguagePacksModal({
               rename={rename}
               onRenameKey={handleRenameKey}
               onRenameCommit={handleRenameCommit}
+              onSelectLanguage={handleSelectLanguage}
               onOpen={handleOpen}
               onUpload={handleUpload}
               onUpdate={handleUpdate}
@@ -718,6 +711,7 @@ interface InstalledTableProps {
   rename: ReturnType<typeof useInlineRename<string>>
   onRenameKey: (event: React.KeyboardEvent<HTMLInputElement>, id: string) => void
   onRenameCommit: (id: string) => void | Promise<void>
+  onSelectLanguage: (internalId: string) => void
   onOpen: (row: InstalledRow) => void
   onUpload: (row: InstalledRow) => void
   onUpdate: (row: InstalledRow) => void
@@ -756,6 +750,7 @@ function InstalledRowView({
   rename,
   onRenameKey,
   onRenameCommit,
+  onSelectLanguage,
   onOpen,
   onUpload,
   onUpdate,
@@ -817,6 +812,19 @@ function InstalledRowView({
       data-testid={`language-packs-row-${row.reactKey}`}
     >
       <div className="flex items-center gap-3 px-3 py-2">
+        <button
+          type="button"
+          aria-label={t('i18n.selectLanguage', { name: row.name })}
+          className="shrink-0 text-content-muted hover:text-accent transition-colors"
+          onClick={() => onSelectLanguage(row.internalId)}
+          data-testid={`language-packs-select-${row.reactKey}`}
+        >
+          {row.active ? (
+            <CheckCircle2 size={18} className="text-accent" aria-hidden="true" />
+          ) : (
+            <Circle size={18} aria-hidden="true" />
+          )}
+        </button>
         <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
         <div
           className={`shrink-0 whitespace-nowrap text-xs ${hubRemoved ? 'text-rose-600' : 'text-content-muted'}`}

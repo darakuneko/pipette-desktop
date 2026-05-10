@@ -1419,6 +1419,7 @@
     "errorGeneric": "Action failed",
     "errorInvalidJson": "The selected file is not valid JSON",
     "notSetKeys": "not set keys",
+    "selectLanguage": "Select {{name}}",
     "missingKeys": {
       "title": "Not set keys",
       "empty": "All keys are set",
