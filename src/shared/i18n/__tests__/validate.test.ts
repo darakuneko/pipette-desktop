@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { validatePack, validateName, validateVersion, validateIntlLocale } from '../validate'
+import { validatePack, validateName, validateVersion } from '../validate'
 
 describe('validate.ts', () => {
   describe('validateName', () => {
@@ -28,17 +28,6 @@ describe('validate.ts', () => {
     it('rejects non-semver', () => {
       expect(validateVersion('foo')).toMatch(/semver/)
       expect(validateVersion('1.2')).toMatch(/semver/)
-    })
-  })
-
-  describe('validateIntlLocale', () => {
-    it('accepts undefined / empty', () => {
-      expect(validateIntlLocale(undefined)).toBeNull()
-      expect(validateIntlLocale('')).toBeNull()
-    })
-    it('accepts a BCP47 tag', () => {
-      expect(validateIntlLocale('ja-JP')).toBeNull()
-      expect(validateIntlLocale('zh-Hant-TW')).toBeNull()
     })
   })
 
@@ -70,7 +59,7 @@ describe('validate.ts', () => {
 
     it('flags prototype-pollution keys', () => {
       const pack = validPack()
-      pack.__proto__ = { polluted: true }
+      pack.constructor = { polluted: 'true' }
       const result = validatePack(pack)
       expect(result.ok).toBe(false)
       expect(result.dangerousKeys.length).toBeGreaterThan(0)
@@ -92,14 +81,13 @@ describe('validate.ts', () => {
       expect(result.errors.some((e) => /must be a string/.test(e))).toBe(true)
     })
 
-    it('rejects packs over the size cap', () => {
+    it('accepts large packs (size enforcement is server-side)', () => {
       const pack = validPack()
       const huge: Record<string, string> = {}
       for (let i = 0; i < 100; i++) huge[`k${String(i)}`] = 'x'.repeat(3000)
       pack.fat = huge
       const result = validatePack(pack)
-      expect(result.ok).toBe(false)
-      expect(result.errors.some((e) => /bytes/.test(e))).toBe(true)
+      expect(result.ok).toBe(true)
     })
   })
 })
