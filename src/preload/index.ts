@@ -59,7 +59,7 @@ import type {
   TypingBigramAggregateView,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview } from '../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubI18nPackTimestampsResponse } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
 
 /**
@@ -306,6 +306,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.I18N_PACK_IMPORT_APPLY, raw, options ?? {}),
   i18nPackExport: (id: string): Promise<I18nPackStoreResult<{ filePath: string }>> =>
     ipcRenderer.invoke(IpcChannels.I18N_PACK_EXPORT, id),
+  i18nPackHubTimestamps: (ids: string[]): Promise<I18nPackStoreResult<HubI18nPackTimestampsResponse>> =>
+    ipcRenderer.invoke(IpcChannels.HUB_I18N_PACK_TIMESTAMPS, ids),
   i18nPackOnChanged: (callback: () => void): (() => void) => {
     const handler = (): void => { callback() }
     ipcRenderer.on(IpcChannels.I18N_PACK_CHANGED, handler)

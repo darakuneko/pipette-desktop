@@ -52,7 +52,7 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1 } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse } from './hub'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -342,6 +342,7 @@ export interface VialAPI {
    *  invoked with no arguments — consumers should call
    *  `i18nPackList()` to read the fresh state. Returns an unsubscribe
    *  function. */
+  i18nPackHubTimestamps(ids: string[]): Promise<I18nPackStoreResult<HubI18nPackTimestampsResponse>>
   i18nPackOnChanged(callback: () => void): () => void
 
   // Hub i18n posts

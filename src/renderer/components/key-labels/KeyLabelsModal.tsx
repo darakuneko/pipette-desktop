@@ -25,13 +25,9 @@ import type {
   HubKeyLabelListResponse,
 } from '../../../shared/types/hub-key-label'
 import type { KeyLabelMeta } from '../../../shared/types/key-label-store'
+import { useHubFreshness, hasUpdate, type HubFreshnessEntry } from '../../hooks/useHubFreshness'
 
 const QWERTY_ID = 'qwerty'
-
-/** Throttle for `POST /api/key-labels/timestamps`. Mirrors the
- *  AnalyzePane analytics-sync limiter — same 5-min window so users
- *  perceive the same "checks happen on entry, not on every flick". */
-const HUB_TIMESTAMPS_RATE_LIMIT_MS = 5 * 60 * 1000
 
 type TabId = 'installed' | 'hub'
 
@@ -104,21 +100,23 @@ export function KeyLabelsModal({
   const dragIdRef = useRef<string | null>(null)
   const [hubOrigin, setHubOrigin] = useState('')
 
-  /**
-   * Per-row Hub freshness signal collected from
-   * `POST /api/key-labels/timestamps` when the Installed tab opens.
-   * - `serverUpdatedAt > meta.hubUpdatedAt` → "update available" dot
-   *   next to Sync.
-   * - id missing from the response → the Hub post was deleted; the
-   *   row reads "(removed)" in the Updated column instead of a time.
-   */
-  const [hubFreshness, setHubFreshness] = useState<Map<string, { serverUpdatedAt?: string; removed: boolean }>>(new Map())
-  /**
-   * Wall-clock at the most recent successful timestamps fetch. Used as
-   * a 5-minute rate limit so flipping back to the Installed tab in the
-   * same session does not spam the Hub.
-   */
-  const lastTimestampsCheckAtRef = useRef<number>(0)
+  const freshnessCandidates = useMemo(
+    () => labels.metas
+      .filter((m) => !!m.hubPostId && m.id !== QWERTY_ID)
+      .map((m) => ({ localId: m.id, hubPostId: m.hubPostId as string })),
+    [labels.metas],
+  )
+
+  const fetchTimestamps = useCallback(
+    (ids: string[]) => labels.hubTimestamps(ids),
+    [labels.hubTimestamps],
+  )
+
+  const hubFreshness = useHubFreshness({
+    enabled: open && activeTab === 'installed',
+    candidates: freshnessCandidates,
+    fetchTimestamps,
+  })
 
   // The Hub origin powers the "Open in browser" links; fetched once on
   // mount and reused across all rows.
@@ -156,39 +154,6 @@ export function KeyLabelsModal({
   const tRef = useRef(t)
   useEffect(() => { labelsRef.current = labels }, [labels])
   useEffect(() => { tRef.current = t }, [t])
-
-  // Bulk freshness check via POST /api/key-labels/timestamps. Runs
-  // when the Installed tab is shown, rate-limited so tab churn does
-  // not hammer the Hub. Failures leave the limiter untouched so the
-  // next modal entry retries (mirrors AnalyzePane's success-only
-  // bookkeeping).
-  useEffect(() => {
-    if (!open || activeTab !== 'installed') return
-    if (Date.now() - lastTimestampsCheckAtRef.current < HUB_TIMESTAMPS_RATE_LIMIT_MS) return
-    const candidates = labelsRef.current.metas.filter((m) => !!m.hubPostId && m.id !== QWERTY_ID)
-    if (candidates.length === 0) return
-    let cancelled = false
-    void (async () => {
-      const ids = candidates.map((m) => m.hubPostId).filter((x): x is string => !!x)
-      const res = await labelsRef.current.hubTimestamps(ids)
-      if (cancelled || !res.success || !res.data) return
-      lastTimestampsCheckAtRef.current = Date.now()
-      const serverMap = new Map(res.data.items.map((x) => [x.id, x.updated_at]))
-      const next = new Map<string, { serverUpdatedAt?: string; removed: boolean }>()
-      for (const meta of candidates) {
-        const hubPostId = meta.hubPostId
-        if (!hubPostId) continue
-        const serverUpdatedAt = serverMap.get(hubPostId)
-        if (serverUpdatedAt) {
-          next.set(meta.id, { serverUpdatedAt, removed: false })
-        } else {
-          next.set(meta.id, { removed: true })
-        }
-      }
-      setHubFreshness(next)
-    })()
-    return () => { cancelled = true }
-  }, [open, activeTab, labels.metas])
 
   const runSearch = useCallback(async (query: string): Promise<void> => {
     if (query.length < 2) return
@@ -537,7 +502,7 @@ interface InstalledTableProps {
   currentDisplayName: string | null
   hubCanWrite: boolean
   hubOrigin: string
-  hubFreshness: Map<string, { serverUpdatedAt?: string; removed: boolean }>
+  hubFreshness: Map<string, HubFreshnessEntry>
   onRenameKey: (e: React.KeyboardEvent<HTMLInputElement>, id: string) => void
   onRenameCommit: (id: string) => void | Promise<void>
   onUpload: (id: string) => void | Promise<void>
@@ -605,11 +570,7 @@ function InstalledRowView({
   const editing = rename.editingId === row.localId
   const busy = pendingId !== null && pendingId === row.localId
   const freshness = hubFreshness.get(row.localId)
-  // ISO 8601 strings sort lexicographically, so a string compare gives
-  // chronological ordering.
-  const hasUpdateAvailable = !!freshness && !freshness.removed
-    && !!freshness.serverUpdatedAt
-    && (!row.meta?.hubUpdatedAt || freshness.serverUpdatedAt > row.meta.hubUpdatedAt)
+  const hasUpdateAvailable = hasUpdate(freshness, row.meta?.hubUpdatedAt)
   const hubRemoved = !!freshness && freshness.removed
 
   const canRename = isMine && !row.isQwerty

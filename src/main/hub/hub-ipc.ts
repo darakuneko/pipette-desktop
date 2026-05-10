@@ -27,6 +27,7 @@ import {
   fetchI18nPostList,
   downloadI18nPostBody,
   validateI18nExport,
+  fetchI18nPackTimestamps,
   type HubI18nListParams,
   type HubI18nListResponse,
 } from './hub-i18n'
@@ -35,7 +36,10 @@ import type {
   HubUploadI18nPostParams,
   HubUpdateI18nPostParams,
   HubI18nExportV1,
+  HubI18nPackTimestamp,
+  HubI18nPackTimestampsResponse,
 } from '../../shared/types/hub'
+import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
 import { readAnalyzeFilterEntry, setAnalyzeFilterHubPostId } from '../analyze-filter-store'
 import { getKeymapSnapshotForRange } from '../typing-analytics/keymap-snapshots'
 import { getMachineHash } from '../typing-analytics/machine-hash'
@@ -860,6 +864,36 @@ export function setupHubIpc(): void {
         return { success: true, data: exportData }
       } catch (err) {
         return { success: false, error: extractError(err, 'i18n download failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_I18N_PACK_TIMESTAMPS,
+    async (_event, ids: unknown): Promise<{ success: boolean; data?: HubI18nPackTimestampsResponse; error?: string }> => {
+      if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) {
+        return { success: false, error: 'ids must be an array of strings' }
+      }
+      const unique = Array.from(new Set(ids as string[]))
+      if (unique.length === 0) return { success: true, data: { items: [] } }
+      try {
+        const chunks: string[][] = []
+        for (let i = 0; i < unique.length; i += HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT) {
+          chunks.push(unique.slice(i, i + HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT))
+        }
+        const responses = await Promise.all(chunks.map((chunk) => fetchI18nPackTimestamps(chunk)))
+        const byId = new Map<string, HubI18nPackTimestamp>()
+        for (const r of responses) {
+          for (const item of r.items) byId.set(item.id, item)
+        }
+        const items: HubI18nPackTimestamp[] = []
+        for (const id of unique) {
+          const found = byId.get(id)
+          if (found) items.push(found)
+        }
+        return { success: true, data: { items } }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Hub i18n timestamps failed') }
       }
     },
   )

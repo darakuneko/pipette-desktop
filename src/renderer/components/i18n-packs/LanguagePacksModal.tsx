@@ -26,6 +26,7 @@ import type { HubI18nPostListItem } from '../../../shared/types/hub'
 import { MissingKeysModal } from './MissingKeysModal'
 import { downloadJson } from '../../utils/download-json'
 import { buildHubI18nPackUrl, buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
+import { useHubFreshness, hasUpdate, type HubFreshnessEntry } from '../../hooks/useHubFreshness'
 
 const APP_VERSION = (import.meta.env?.VITE_APP_VERSION as string | undefined) ?? '0.0.0'
 
@@ -177,6 +178,24 @@ export function LanguagePacksModal({
     uploaderName: item.uploaderName ?? '',
     alreadyInstalled: installedHubPostIds.has(item.id),
   })), [hubResults, installedHubPostIds])
+
+  const freshnessCandidates = useMemo(
+    () => store.metas
+      .filter((m) => !m.deletedAt && !!m.hubPostId)
+      .map((m) => ({ localId: m.id, hubPostId: m.hubPostId as string })),
+    [store.metas],
+  )
+
+  const fetchTimestamps = useCallback(
+    (ids: string[]) => window.vialAPI.i18nPackHubTimestamps(ids),
+    [],
+  )
+
+  const hubFreshness = useHubFreshness({
+    enabled: open && activeTab === 'installed',
+    candidates: freshnessCandidates,
+    fetchTimestamps,
+  })
 
   const runSearch = useCallback(async (query: string): Promise<void> => {
     setHubSearching(true)
@@ -625,6 +644,7 @@ export function LanguagePacksModal({
               currentDisplayName={currentDisplayName ?? null}
               hubCanWrite={hubCanWrite ?? false}
               hubOrigin={hubOrigin}
+              hubFreshness={hubFreshness}
               rename={rename}
               onRenameKey={handleRenameKey}
               onRenameCommit={handleRenameCommit}
@@ -694,6 +714,7 @@ interface InstalledTableProps {
   currentDisplayName: string | null
   hubCanWrite: boolean
   hubOrigin: string
+  hubFreshness: Map<string, HubFreshnessEntry>
   rename: ReturnType<typeof useInlineRename<string>>
   onRenameKey: (event: React.KeyboardEvent<HTMLInputElement>, id: string) => void
   onRenameCommit: (id: string) => void | Promise<void>
@@ -731,6 +752,7 @@ function InstalledRowView({
   setConfirmRemoveId,
   lastResult,
   hubCanWrite,
+  hubFreshness,
   rename,
   onRenameKey,
   onRenameCommit,
@@ -744,11 +766,10 @@ function InstalledRowView({
   onNotSetKeys,
 }: InstalledRowViewProps): JSX.Element {
   const { t } = useTranslation()
-  // `pendingId === row.hubPostId` was matching when both sides were
-  // null (a row without a Hub post + no pending operation), which
-  // disabled every button. Gate the comparison on a non-null
-  // pendingId so idle rows stay clickable.
   const busy = pendingId !== null && (pendingId === row.packId || pendingId === row.hubPostId)
+  const freshness = row.packId ? hubFreshness.get(row.packId) : undefined
+  const hasUpdateAvailable = hasUpdate(freshness, row.meta?.hubUpdatedAt)
+  const hubRemoved = !!freshness && freshness.removed
   const editing = !!row.packId && rename.editingId === row.packId
   const renderName = (): JSX.Element => {
     if (editing && row.packId) {
@@ -797,8 +818,11 @@ function InstalledRowView({
     >
       <div className="flex items-center gap-3 px-3 py-2">
         <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
-        <div className="shrink-0 whitespace-nowrap text-xs text-content-muted" data-testid={`language-packs-timestamp-${row.reactKey}`}>
-          {updatedAt}
+        <div
+          className={`shrink-0 whitespace-nowrap text-xs ${hubRemoved ? 'text-rose-600' : 'text-content-muted'}`}
+          data-testid={`language-packs-timestamp-${row.reactKey}`}
+        >
+          {hubRemoved ? t('keyLabels.hubRemoved') : updatedAt}
         </div>
         <div className="shrink-0 whitespace-nowrap text-xs">
           {row.isComplete ? (
@@ -932,11 +956,18 @@ function InstalledRowView({
         {showHubPair && !showUpdateRemove && (
           <button
             type="button"
-            className={`${linkClass} text-accent`}
+            className={`${linkClass} text-accent inline-flex items-center gap-1`}
             onClick={() => onSync(row)}
             disabled={busy}
             data-testid={`language-packs-sync-${row.reactKey}`}
           >
+            {hasUpdateAvailable && (
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                data-testid={`language-packs-update-available-${row.reactKey}`}
+              />
+            )}
             {t('keyLabels.actionSync')}
           </button>
         )}

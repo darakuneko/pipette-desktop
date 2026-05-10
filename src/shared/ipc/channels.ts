@@ -217,6 +217,7 @@ export const IpcChannels = {
   HUB_UPLOAD_I18N_POST: 'hub:upload-i18n-post',
   HUB_UPDATE_I18N_POST: 'hub:update-i18n-post',
   HUB_DELETE_I18N_POST: 'hub:delete-i18n-post',
+  HUB_I18N_PACK_TIMESTAMPS: 'hub:i18n-pack-timestamps',
 
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
