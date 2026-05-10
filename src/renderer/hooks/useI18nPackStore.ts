@@ -83,7 +83,6 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
     }
   }, [])
 
-  // Initial load + cross-instance sync via CustomEvent
   useEffect(() => {
     void refresh()
     const handler = (): void => { void refresh() }
@@ -91,10 +90,7 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
     // Main process broadcasts I18N_PACK_CHANGED after the startup
     // auto-update applies a Hub-side update so this hook re-renders
     // without waiting for the user to interact with the Language Pack
-    // modal.
-    // Guard for partial vialAPI mocks (older renderer test fixtures
-    // pre-date `i18nPackOnChanged`). Production preload always exposes
-    // it, so the optional chain is a test-only concession.
+    // modal. Optional chain tolerates partial vialAPI mocks in tests.
     const unsubscribeIpc = window.vialAPI.i18nPackOnChanged?.(() => { void refresh() })
     return () => {
       window.removeEventListener(I18N_CHANGED_EVENT, handler)

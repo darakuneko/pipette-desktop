@@ -25,9 +25,11 @@
 // available, runs in the background, and notifies the renderer when
 // done so any open language picker reflects the refreshed packs.
 
+import { BrowserWindow } from 'electron'
 import { downloadI18nPostBody, fetchI18nPackTimestamps, validateI18nExport } from './hub-i18n'
 import { listMetas, savePack } from '../i18n-pack-store'
 import { log } from '../logger'
+import { IpcChannels } from '../../shared/ipc/channels'
 import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
 import type { I18nPackMeta } from '../../shared/types/i18n-store'
 
@@ -56,14 +58,19 @@ interface HubLinkedPack {
 }
 
 function pickHubLinked(metas: I18nPackMeta[]): HubLinkedPack[] {
+  // `listMetas()` already filters tombstoned entries, so we only need
+  // to drop packs that have never been linked to a Hub post.
   const out: HubLinkedPack[] = []
   for (const meta of metas) {
-    if (meta.deletedAt) continue
     const hubPostId = meta.hubPostId?.trim()
     if (!hubPostId) continue
     out.push({ meta, hubPostId })
   }
   return out
+}
+
+function describeError(err: unknown): string {
+  return err instanceof Error ? (err.stack ?? err.message) : String(err)
 }
 
 function chunk<T>(items: T[], size: number): T[][] {
@@ -98,7 +105,7 @@ export async function syncHubI18nPacksOnStartup(): Promise<I18nStartupSyncResult
   try {
     metas = await listMetas()
   } catch (err) {
-    log('warn', `i18n startup sync: failed to read pack index: ${String(err)}`)
+    log('warn', `i18n startup sync: failed to read pack index: ${describeError(err)}`)
     return EMPTY_RESULT
   }
 
@@ -109,7 +116,7 @@ export async function syncHubI18nPacksOnStartup(): Promise<I18nStartupSyncResult
   try {
     hubTimestamps = await fetchTimestampsByPostId(linked.map((p) => p.hubPostId))
   } catch (err) {
-    log('warn', `i18n startup sync: timestamps fetch failed: ${String(err)}`)
+    log('warn', `i18n startup sync: timestamps fetch failed: ${describeError(err)}`)
     return { ...EMPTY_RESULT, checked: linked.length, errors: [] }
   }
 
@@ -122,7 +129,7 @@ export async function syncHubI18nPacksOnStartup(): Promise<I18nStartupSyncResult
 
   // Run downloads in parallel — each pack is independent and the Hub
   // download endpoint is anonymous + cached server-side.
-  await Promise.all(linked.map(async ({ meta, hubPostId }) => {
+  await Promise.all(linked.map(async ({ meta, hubPostId }): Promise<void> => {
     const remote = hubTimestamps.get(hubPostId)
     if (!remote) {
       result.missingOnHub += 1
@@ -160,9 +167,39 @@ export async function syncHubI18nPacksOnStartup(): Promise<I18nStartupSyncResult
       }
       result.updated += 1
     } catch (err) {
-      result.errors.push({ packId: meta.id, hubPostId, reason: String(err) })
+      result.errors.push({ packId: meta.id, hubPostId, reason: describeError(err) })
     }
   }))
 
   return result
+}
+
+function reportSyncResult(result: I18nStartupSyncResult): void {
+  if (result.checked === 0) return
+  log(
+    'info',
+    `i18n startup sync: checked=${String(result.checked)} updated=${String(result.updated)} missingOnHub=${String(result.missingOnHub)} errors=${String(result.errors.length)}`,
+  )
+  for (const err of result.errors) {
+    log('warn', `i18n startup sync error pack=${err.packId} hub=${err.hubPostId}: ${err.reason}`)
+  }
+  if (result.updated > 0) {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(IpcChannels.I18N_PACK_CHANGED)
+    }
+  }
+}
+
+/**
+ * Fire-and-forget wrapper for `app.whenReady()`. Runs the sync,
+ * reports the outcome, and broadcasts `I18N_PACK_CHANGED` when any
+ * pack was refreshed. Never throws — unexpected errors land on the
+ * `.catch` and are logged.
+ */
+export function startI18nStartupSync(): void {
+  void syncHubI18nPacksOnStartup()
+    .then(reportSyncResult)
+    .catch((err: unknown) => {
+      log('warn', `i18n startup sync threw unexpectedly: ${describeError(err)}`)
+    })
 }

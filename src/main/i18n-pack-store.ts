@@ -102,6 +102,19 @@ function findActiveByName(metas: I18nPackMeta[], name: string, excludeId?: strin
   return metas.find((m) => !m.deletedAt && m.id !== excludeId && m.name.trim().toLowerCase() === target)
 }
 
+/** Three-state precedence used by `savePack` for every optional meta field
+ *  the caller can either set, clear, or inherit:
+ *    - `null`        → explicit clear (drop the existing value)
+ *    - other value   → adopt the new value
+ *    - `undefined`   → inherit `existing` (no change)
+ *  Pulling this out keeps the savePack body declarative and prevents the
+ *  three-branch pattern from being re-derived per field. */
+function resolveOptionalField<T>(input: T | null | undefined, existing: T | undefined): T | undefined {
+  if (input === null) return undefined
+  if (input !== undefined) return input
+  return existing
+}
+
 // --- GC: purge tombstones older than the TTL --------------------------------
 
 async function purgeExpiredTombstonesInPlace(index: I18nPackIndex): Promise<{ removed: number; touched: boolean }> {
@@ -221,30 +234,16 @@ export async function savePack(input: SavePackInput): Promise<I18nPackStoreResul
 
     const now = nowIso()
     const existing = index.metas.find((m) => m.id === id)
-    // hubPostId precedence: caller's null = explicit detach, caller's
-    // string = adopt, omitted = inherit existing entry.
-    let nextHubPostId: string | undefined
-    if (input.hubPostId === null) nextHubPostId = undefined
-    else if (typeof input.hubPostId === 'string') nextHubPostId = input.hubPostId
-    else nextHubPostId = existing?.hubPostId
-    let nextHubUpdatedAt: string | undefined
-    if (input.hubUpdatedAt === null) nextHubUpdatedAt = undefined
-    else if (typeof input.hubUpdatedAt === 'string') {
-      const trimmed = input.hubUpdatedAt.trim()
-      nextHubUpdatedAt = trimmed.length > 0 ? trimmed : undefined
-    } else nextHubUpdatedAt = existing?.hubUpdatedAt
-    let nextMatchedBaseVersion: string | undefined
-    if (input.matchedBaseVersion === null) nextMatchedBaseVersion = undefined
-    else if (typeof input.matchedBaseVersion === 'string') nextMatchedBaseVersion = input.matchedBaseVersion
-    else nextMatchedBaseVersion = existing?.matchedBaseVersion
-    let nextCoverage: { totalKeys: number; coveredKeys: number } | undefined
-    if (input.coverage === null) nextCoverage = undefined
-    else if (input.coverage) nextCoverage = input.coverage
-    else nextCoverage = existing?.coverage
-    let nextDangerousKeyCount: number | undefined
-    if (input.dangerousKeyCount === null) nextDangerousKeyCount = undefined
-    else if (typeof input.dangerousKeyCount === 'number') nextDangerousKeyCount = input.dangerousKeyCount
-    else nextDangerousKeyCount = existing?.dangerousKeyCount
+    // hubUpdatedAt: empty/whitespace string is treated the same as null
+    // (explicit clear) so a stray '' from a Hub response never persists.
+    const hubUpdatedAtInput = typeof input.hubUpdatedAt === 'string'
+      ? (input.hubUpdatedAt.trim() || null)
+      : input.hubUpdatedAt
+    const nextHubPostId = resolveOptionalField(input.hubPostId, existing?.hubPostId)
+    const nextHubUpdatedAt = resolveOptionalField(hubUpdatedAtInput, existing?.hubUpdatedAt)
+    const nextMatchedBaseVersion = resolveOptionalField(input.matchedBaseVersion, existing?.matchedBaseVersion)
+    const nextCoverage = resolveOptionalField(input.coverage, existing?.coverage)
+    const nextDangerousKeyCount = resolveOptionalField(input.dangerousKeyCount, existing?.dangerousKeyCount)
     const meta: I18nPackMeta = {
       id,
       filename: `${PACKS_DIRNAME}/${id}.json`,

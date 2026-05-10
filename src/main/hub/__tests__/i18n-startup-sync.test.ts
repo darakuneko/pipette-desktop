@@ -56,10 +56,12 @@ describe('syncHubI18nPacksOnStartup', () => {
     vi.clearAllMocks()
   })
 
-  it('skips packs without hubPostId or with deletedAt', async () => {
+  it('skips packs without hubPostId', async () => {
+    // Tombstoned entries are filtered by listMetas() upstream, so the
+    // sync function never sees them — the only filter it performs is
+    // dropping packs that were never linked to a Hub post.
     mockedListMetas.mockResolvedValue([
       makeMeta({ id: 'pack-local', hubPostId: undefined }),
-      makeMeta({ id: 'pack-deleted', deletedAt: '2026-04-01T00:00:00.000Z' }),
     ])
 
     const result = await syncHubI18nPacksOnStartup()
