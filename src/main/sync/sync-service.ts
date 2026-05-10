@@ -36,7 +36,7 @@ import {
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
-import { I18N_INDEX_SYNC_UNIT } from '../../shared/types/i18n-store'
+import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -141,7 +141,7 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (syncUnit === null) return false
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
   if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
-  if (syncUnit === I18N_INDEX_SYNC_UNIT || syncUnit.startsWith('i18n/packs/')) return true // i18n is global
+  if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX)) return false // i18n checked once at startup via i18n-startup-sync
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
     return syncUnit.startsWith('favorites/') || syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
