@@ -175,7 +175,7 @@ See [Data Guide](docs/Data.md) for details on how Hub authentication works.
 
 - **Typing Test** — Built-in typing test with WPM/accuracy tracking, downloadable language packs, and per-keyboard history
 - **Typing View** — View-only mode displaying only the keyboard layout in a compact, resizable window with always-on-top support — ideal for overlaying on other applications
-- **Multilingual UI** — Multiple languages supported; selectable in Settings
+- **Multilingual UI** — Multiple languages supported via importable language packs; manage, import, and download packs from Pipette Hub in Settings → Tools → Language Packs
 - **Light / Dark / System theme**
 - **Keyboard layout override** (QWERTY, Dvorak, etc.) for correct label display
 - **Configurable panel side** (left / right)
@@ -233,8 +233,8 @@ A cup of coffee keeps the commits coming ☕
 
 Contributions are welcome! In particular:
 
-- **Translations** — Add a locale JSON file to `src/renderer/i18n/locales/` and register it in `src/renderer/i18n/index.ts`.
-  PRs for new languages or corrections to existing translations are appreciated.
+- **Translations** — Create a language pack `.json` (use the built-in English pack as a template — export it from Settings → Tools → Language Packs) and share it on [Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev) or submit a PR.
+  See `docs/OPERATION-GUIDE.md` §6.3 for the pack format and management workflow.
 - **Keyboard layout composite labels** — `KeyboardLayoutDef.compositeLabels` in `src/renderer/data/keyboard-layouts.ts`
   lets a layout override the label of an individual composite keycode (e.g. `LALT(KC_L)` → "Cmd L" on macOS).
   Add the full qmkId → display string mapping to the relevant layout. Reviewers must check that the

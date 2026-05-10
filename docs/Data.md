@@ -13,6 +13,7 @@ This document describes what data Pipette stores, where it lives, and how extern
   - [Snapshots](#snapshots)
   - [Favorites](#favorites)
   - [Key Labels](#key-labels)
+  - [UI Language Packs](#ui-language-packs)
   - [Typing Test Language Packs](#typing-test-language-packs)
   - [Logs](#logs)
   - [Authentication Credentials](#authentication-credentials)
@@ -49,7 +50,7 @@ General preferences that apply across all keyboards.
 | Item | Description |
 |------|-------------|
 | Theme | Light, Dark, or System |
-| Language | UI language (English / Japanese) |
+| Language | Active UI language pack (built-in English or any imported pack) |
 | Auto-lock timer | 10 - 60 minutes |
 | Default keyboard layout | QWERTY, Dvorak, etc. |
 | Default auto-advance | Move to next key after assignment |
@@ -181,6 +182,12 @@ Values may also be plain QMK keycode ids (e.g. `"LALT(KC_L)": "KC_LALT"`). The e
 
 See `docs/OPERATION-GUIDE.md` §6.2 for the full authoring guide and the modal walkthrough.
 
+### UI Language Packs
+
+Translation packs that localise the entire Pipette UI. English is built-in; additional languages (e.g. Japanese) are imported from a `.json` file or downloaded from Pipette Hub. Managed in Settings → Tools → Language Packs (see `OPERATION-GUIDE.md` §6.3).
+
+Installed packs sync across devices via Cloud Sync. The active language selection is stored in App Settings (not synced).
+
 ### Typing Test Language Packs
 
 Word lists downloaded from the server for the typing test. Can be managed (download / delete) from the typing test language selector.
@@ -232,6 +239,7 @@ Pipette uses [Google Drive **appDataFolder**](https://developers.google.com/work
 | Snapshots | Per keyboard |
 | Per-keyboard settings | Per keyboard |
 | Favorites | Per type (tap dance, macro, etc.) |
+| UI Language Packs | Per pack (index + body) |
 | Keyboard name index (UID → name) | Single shared index |
 
 App settings (theme, language, window state, etc.) are **not** synced.
