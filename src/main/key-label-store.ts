@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { notifyChange } from './sync/sync-service'
+import { safeFilename } from './utils/safe-filename'
 import type {
   KeyLabelMeta,
   KeyLabelIndex,
@@ -480,10 +481,10 @@ export async function exportToDialog(
     if (!record.success || !record.data) return record as KeyLabelStoreResult<{ filePath: string }>
 
     const { meta, data } = record.data
-    const safeName = meta.name.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'key-label'
+    const safeName = safeFilename(meta.name, 'key-label')
     const result = await dialog.showSaveDialog(win, {
       title: 'Export Key Label',
-      defaultPath: `${safeName}.json`,
+      defaultPath: `key-labels-${safeName}.json`,
       filters: [
         { name: 'JSON', extensions: ['json'] },
         { name: 'All Files', extensions: ['*'] },

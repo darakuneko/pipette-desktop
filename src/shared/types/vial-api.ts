@@ -18,6 +18,13 @@ import type { AnalyzeFilterSnapshotMeta } from './analyze-filter-store'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteImportResult } from './favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from './key-label-store'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from './hub-key-label'
+import type {
+  I18nPackMeta,
+  I18nPackRecord,
+  I18nPackStoreResult,
+  I18nPackImportDialogResult,
+  I18nPackImportApplyOptions,
+} from './i18n-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
@@ -45,7 +52,7 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse } from './hub'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -318,6 +325,32 @@ export interface VialAPI {
   hubUploadAnalyticsPost(params: HubUploadAnalyticsPostParams): Promise<HubUploadResult>
   hubUpdateAnalyticsPost(params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult>
   hubPreviewAnalyticsPost(params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }>
+
+  // i18n language pack store
+  i18nPackList(): Promise<I18nPackStoreResult<I18nPackMeta[]>>
+  i18nPackGet(id: string): Promise<I18nPackStoreResult<I18nPackRecord>>
+  i18nPackRename(id: string, newName: string): Promise<I18nPackStoreResult<I18nPackMeta>>
+  i18nPackSetEnabled(id: string, enabled: boolean): Promise<I18nPackStoreResult<I18nPackMeta>>
+  i18nPackDelete(id: string): Promise<I18nPackStoreResult<void>>
+  i18nPackSetHubPostId(id: string, hubPostId: string | null): Promise<I18nPackStoreResult<I18nPackMeta>>
+  i18nPackHasName(name: string, excludeId?: string): Promise<I18nPackStoreResult<boolean>>
+  i18nPackImport(): Promise<I18nPackImportDialogResult>
+  i18nPackImportApply(raw: unknown, options?: I18nPackImportApplyOptions): Promise<I18nPackStoreResult<I18nPackMeta>>
+  i18nPackExport(id: string): Promise<I18nPackStoreResult<{ filePath: string }>>
+  /** Subscribe to main-process pack-store change broadcasts (e.g.
+   *  startup auto-update applied a Hub-side update). The callback is
+   *  invoked with no arguments — consumers should call
+   *  `i18nPackList()` to read the fresh state. Returns an unsubscribe
+   *  function. */
+  i18nPackHubTimestamps(ids: string[]): Promise<I18nPackStoreResult<HubI18nPackTimestampsResponse>>
+  i18nPackOnChanged(callback: () => void): () => void
+
+  // Hub i18n posts
+  hubListI18nPosts(params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }>
+  hubDownloadI18nPost(postId: string): Promise<{ success: boolean; data?: HubI18nExportV1; error?: string }>
+  hubUploadI18nPost(params: HubUploadI18nPostParams): Promise<HubUploadResult>
+  hubUpdateI18nPost(params: HubUpdateI18nPostParams): Promise<HubUploadResult>
+  hubDeleteI18nPost(postId: string, localPackId?: string): Promise<HubDeleteResult>
 
   // Favorite Store extensions
   favoriteStoreSetHubPostId(type: FavoriteType, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>

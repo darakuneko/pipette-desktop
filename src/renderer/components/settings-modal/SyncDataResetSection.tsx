@@ -26,13 +26,16 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     if (!rawScanResult || !excludeLocalData) return rawScanResult
     return {
       keyboards: rawScanResult.keyboards.filter((uid) => !localKeyboardUids.has(uid)),
+      keyboardNames: rawScanResult.keyboardNames,
       favorites: [], // All favorites exist locally, so cloud-only = none
+      i18nPacks: rawScanResult.i18nPacks,
       undecryptable: rawScanResult.undecryptable,
     }
   }, [rawScanResult, excludeLocalData, localKeyboardUids])
   const [scanning, setScanning] = useState(false)
   const [selectedKeyboardUids, setSelectedKeyboardUids] = useState<Set<string>>(new Set())
   const [favoritesSelected, setFavoritesSelected] = useState(false)
+  const [i18nPacksSelected, setI18nPacksSelected] = useState(false)
   const [selectedUndecryptable, setSelectedUndecryptable] = useState<Set<string>>(new Set())
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -44,6 +47,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setConfirming(false)
     setSelectedKeyboardUids(new Set())
     setFavoritesSelected(false)
+    setI18nPacksSelected(false)
     setSelectedUndecryptable(new Set())
   }, [])
 
@@ -85,7 +89,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setConfirming(false)
   }, [scanResult, selectedUndecryptable.size])
 
-  const anySelected = selectedKeyboardUids.size > 0 || favoritesSelected || selectedUndecryptable.size > 0
+  const anySelected = selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected || selectedUndecryptable.size > 0
   const allUndecryptableSelected = scanResult !== null && scanResult.undecryptable.length > 0 && selectedUndecryptable.size === scanResult.undecryptable.length
 
   const handleDelete = useCallback(async () => {
@@ -94,10 +98,11 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
     setError(null)
     onResetStart?.()
     try {
-      if (selectedKeyboardUids.size > 0 || favoritesSelected) {
+      if (selectedKeyboardUids.size > 0 || favoritesSelected || i18nPacksSelected) {
         const targets = {
           keyboards: selectedKeyboardUids.size > 0 ? [...selectedKeyboardUids] : false as const,
           favorites: favoritesSelected,
+          i18nPacks: i18nPacksSelected,
         }
         const result = await sync.resetSyncTargets(targets)
         if (!result.success) {
@@ -126,9 +131,13 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
       setDeleting(false)
       onResetEnd?.()
     }
-  }, [sync, selectedKeyboardUids, favoritesSelected, selectedUndecryptable, resetSelections, onResetStart, onResetEnd, t])
+  }, [sync, selectedKeyboardUids, favoritesSelected, i18nPacksSelected, selectedUndecryptable, resetSelections, onResetStart, onResetEnd, t])
 
-  const hasNoData = scanResult !== null && scanResult.keyboards.length === 0 && scanResult.favorites.length === 0 && scanResult.undecryptable.length === 0
+  const hasNoData = scanResult !== null
+    && scanResult.keyboards.length === 0
+    && scanResult.favorites.length === 0
+    && (scanResult.i18nPacks?.length ?? 0) === 0
+    && scanResult.undecryptable.length === 0
 
   return (
     <section className="mb-6">
@@ -190,6 +199,21 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
                 className="accent-danger"
               />
               {t('sync.resetTarget.favorites')}
+            </label>
+          )}
+          {(scanResult.i18nPacks?.length ?? 0) > 0 && (
+            <label className="flex items-center gap-2 text-sm text-content" data-testid="sync-target-i18nPacks">
+              <input
+                type="checkbox"
+                checked={i18nPacksSelected}
+                onChange={(e) => {
+                  setI18nPacksSelected(e.target.checked)
+                  setConfirming(false)
+                }}
+                disabled={disabled || deleting}
+                className="accent-danger"
+              />
+              {t('sync.resetTarget.i18nPacks')}
             </label>
           )}
           {scanResult.undecryptable.length > 0 && (

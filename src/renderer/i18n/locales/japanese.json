@@ -1,16 +1,15 @@
 {
+  "version": "0.1.2",
+  "name": "Japanese",
   "common": {
     "save": "保存",
     "saved": "保存しました",
-    "select": "選択",
-    "clickToSelect": "クリックして選択",
     "cancel": "キャンセル",
     "delete": "削除",
     "confirmDelete": "削除しますか？",
     "close": "閉じる",
     "reset": "リセット",
     "confirmReset": "リセットする？",
-    "undo": "元に戻す",
     "revert": "復元",
     "confirmRevert": "復元？",
     "clear": "クリア",
@@ -20,7 +19,6 @@
     "disconnect": "切断",
     "loading": "読み込み中...",
     "apply": "適用",
-    "noEntries": "このデバイスにはエントリが設定されていません",
     "notConfigured": "未設定",
     "settingsLabel": "設定:",
     "configuration": "Configuration",
@@ -31,7 +29,11 @@
     "load": "読み込み",
     "labelPlaceholder": "ラベル",
     "noLabel": "（ラベルなし）",
-    "synced": "同期データ"
+    "synced": "同期しました",
+    "findOnHub": "Hub で探す",
+    "findOnHubHint": "アップロードされたファイルを <hub>Pipette Hub</hub> で確認できます。",
+    "installed": "インストール済み",
+    "searchPlaceholder": "Pipette Hub を検索 (2 文字以上で入力)…"
   },
   "app": {
     "title": "Pipette",
@@ -47,7 +49,8 @@
     "loadPipetteFile": ".pipetteファイルを読み込み…",
     "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できます。ライティングとマトリクステスター以外の全機能が利用可能です。",
     "selectKeyboard": "ローカル保存ファイルを選択",
-    "fileCount": "{{count}} 件"
+    "fileCount": "{{count}} 件",
+    "noSavedFiles": "保存ファイルなし"
   },
   "loading": {
     "protocol": "デバイス情報を読み取り中",
@@ -57,8 +60,7 @@
     "dynamicEntries": "機能を読み込み中",
     "settings": "設定を読み込み中",
     "migrating": "スナップショットを移行中",
-    "migratingEntry": "スナップショットを移行中 ({{current}}/{{total}})",
-    "migrationSync": "移行データを同期中"
+    "migratingEntry": "スナップショットを移行中 ({{current}}/{{total}})"
   },
   "editor": {
     "autoAdvance": "自動移動",
@@ -346,11 +348,9 @@
     "pipetteFileMode": "ファイルモード",
     "unsavedChanges": "未保存の変更があります",
     "vilV1NotSupported": "古いデータフォーマットです。キーボードを接続し、キーマップを開くとマイグレーションされます。",
-    "noSavedFiles": "保存済みファイルはありません",
     "protocolVersion": "このキーボードのVIAプロトコルバージョンはサポートされていません。ファームウェアを更新してください。",
     "exportKeymapCFailed": "keymap.c ファイルのエクスポートに失敗しました",
     "exportPdfFailed": "キーマップPDFのエクスポートに失敗しました",
-    "exportLayoutPdfFailed": "レイアウトPDFのエクスポートに失敗しました",
     "sideloadFailed": "JSON定義ファイルの読み込みに失敗しました",
     "sideloadInvalidDefinition": "無効なキーボード定義: 必須フィールド（matrix, layouts）がありません",
     "notVialCompatible": "Vial対応キーボードではない可能性があります"
@@ -380,8 +380,6 @@
     "midi": "MIDI",
     "group": {
       "characters": "Characters",
-      "alphabet": "Alphabet",
-      "numbersSymbols": "Numbers & Symbols",
       "editing": "Editing",
       "modifiers": "Modifiers",
       "navigation": "Navigation",
@@ -396,12 +394,9 @@
       "haptic": "Haptic",
       "mode": "Mode",
       "autoShift": "Auto Shift",
-      "combo": "Combo",
       "comboKeys": "Key",
       "keyOverrideKeys": "Key",
       "altRepeatKeyKeys": "Key",
-      "keyOverride": "Key Override",
-      "repeat": "Repeat",
       "capsWord": "Caps Word",
       "boot": "Boot",
       "osm": "One-Shot Modifiers",
@@ -411,7 +406,6 @@
       "backlight": "Backlight",
       "rgbLighting": "RGB Lighting",
       "rgbMatrix": "RGB Matrix",
-      "fKeys": "F13–F24",
       "systemControl": "System",
       "appBrowser": "App & Browser",
       "mediaPlayback": "Media",
@@ -448,16 +442,11 @@
     "cancel": "キャンセル"
   },
   "fileIO": {
-    "saveLayout": ".vilファイルをエクスポート",
     "loadLayout": ".vil",
     "sideloadJson": "JSONサイドロード",
-    "exportKeymapC": "keymap.c をエクスポート",
-    "exportPdf": "キーマップPDFをエクスポート",
-    "saving": "保存中...",
     "importing": "インポート中...",
     "exporting": "エクスポート中...",
     "importSuccess": "インポート完了",
-    "exportSuccess": "エクスポート完了",
     "uidMismatchConfirm": "このレイアウトファイルは別のキーボード用に作成されました。読み込みますか？"
   },
   "statusBar": {
@@ -474,7 +463,6 @@
     }
   },
   "security": {
-    "unlock": "アンロック",
     "lock": "ロック"
   },
   "theme": {
@@ -495,13 +483,9 @@
     "saveFailed": "レイアウトの保存に失敗しました",
     "maxEntriesReached": "保存数の上限（30件）に達しました。新しく保存するには既存のエントリを削除してください。",
     "loadFailed": "レイアウトの読み込みに失敗しました",
-    "rename": "名前変更",
     "delete": "削除",
-    "current": "現在の状態",
     "import": "インポート",
-    "saveCurrentState": "現在の状態を保存",
     "export": "エクスポート",
-    "exportCurrent": "現在の状態をエクスポート",
     "confirmOverwrite": "上書きしますか？",
     "exportVil": ".vil",
     "exportKeymapC": ".c",
@@ -517,12 +501,10 @@
     "unsupportedVersion": "新しいバージョンの Pipette で作成された検索条件のため読み込めません。",
     "maxEntriesReached": "保存可能な上限 ({{max}}件) に達しました。古い条件を削除してください。",
     "csv": ".csv",
-    "syncedCount": "同期データ: {{count}}",
     "empty": "保存された検索条件はありません",
     "confirmOverwrite": "上書きしますか？"
   },
   "sync": {
-    "title": "設定",
     "googleAccount": "Googleアカウント",
     "connected": "接続済み",
     "signOut": "接続解除",
@@ -548,14 +530,11 @@
     "disable": "停止",
     "manualSync": "手動同期",
     "sync": "同期",
-    "resetSyncData": "同期データ",
-    "resetConfirm": "Google Drive appDataFolder上の同期データがすべて削除されます。この操作は取り消せません。",
     "resetTarget": {
-      "keyboards": "すべてのキーボード",
       "keyboardData": "キーボード",
       "favorites": "お気に入り",
       "appSettings": "アプリケーション",
-      "undecryptable": "復号できないファイル"
+      "i18nPacks": "言語パック"
     },
     "deleteSelected": "選択を削除",
     "resetTargetsConfirm": "選択したデータが完全に削除されます。この操作は取り消せません。",
@@ -563,46 +542,21 @@
     "resettingData": "データを削除中...",
     "syncing": "同期中...",
     "continueOffline": "オフラインで続行",
-    "syncStatus": "同期ステータス",
-    "statusSuccess": "成功",
-    "statusError": "エラー",
     "noSyncYet": "未同期",
-    "readiness": {
-      "unauthenticated": "Google にサインインして同期を開始してください",
-      "noPasswordFile": "同期パスワードを設定してください",
-      "decryptFailed": "保存済みパスワードを読み出せませんでした (OS キーチェーンが変わった可能性)",
-      "keystoreUnavailable": "この端末では OS キーチェーンが利用できません",
-      "remoteCheckFailed": "Google Drive に接続できません — 同期を一時停止しています"
-    },
     "changePasswordError": {
-      "unauthenticated": "パスワードを変更する前に Google にサインインしてください",
-      "noPasswordFile": "保存済みパスワードがありません。先にパスワードを設定してください。",
-      "decryptFailed": "既存パスワードを読み出せませんでした (OS キーチェーンに拒否されました)",
-      "keystoreUnavailable": "OS キーチェーンが利用できないため、ここではパスワードを変更できません",
-      "remoteCheckFailed": "現在のパスワードを検証するための Google Drive 接続に失敗しました"
+      "unauthenticated": "パスワードを変更する前に Google にサインインしてください"
     },
     "changePasswordInProgress": "同期実行中のためパスワードを変更できません",
-    "troubleshooting": "トラブルシューティング",
-    "localData": "ローカルデータ",
     "import": "インポート",
     "export": "エクスポート",
     "importComplete": "インポート完了",
     "importFailed": "インポートに失敗しました",
-    "resetLocalData": "ローカルデータリセット",
-    "resetLocalConfirm": "この端末に保存されたすべてのレイアウトとお気に入りが削除されます。この操作は取り消せません。",
     "passwordMismatch": "同期パスワードが一致しません。暗号化パスワードを確認してください。",
-    "undecryptable": "復号できないファイル",
     "scanRemote": "スキャン",
-    "scanRemoteDesc": "Google Drive に保存されているデータをスキャンします",
-    "scanUndecryptable": "スキャン",
     "scanning": "スキャン中...",
     "downloading": "ダウンロード中...",
     "noRemoteData": "リモートデータはありません",
-    "noUndecryptable": "復号できないファイルはありません",
     "undecryptableCount": "{{count}} 件の復号できないファイル",
-    "undecryptableFound": "{{count}} 件の復号できないファイルが見つかりました",
-    "deleteUndecryptable": "選択を削除",
-    "deleteUndecryptableConfirm": "選択したファイルが Google Drive から完全に削除されます。この操作は取り消せません。",
     "selectAll": "すべて選択",
     "deselectAll": "すべて解除",
     "checkingRemotePassword": "同期状態を確認中...",
@@ -614,7 +568,6 @@
     "title": "設定",
     "tabData": "接続",
     "tabTools": "ツール",
-    "appearance": "外観",
     "dataSync": "データ同期",
     "defaults": "新しいキーボードのデフォルト設定",
     "defaultLayout": "キーラベル",
@@ -632,9 +585,7 @@
     "autoLockDescription": "無操作時に自動ロック",
     "autoLockMinutes": "{{minutes}}分",
     "maxKeymapHistory": "キーマップ履歴の上限",
-    "language": "言語",
     "tabNotification": "お知らせ",
-    "tabTroubleshooting": "トラブルシューティング",
     "tabAbout": "情報",
     "about": {
       "version": "バージョン {{version}}",
@@ -643,7 +594,6 @@
     }
   },
   "analyze": {
-    "placeholder": "分析チャートを準備中です",
     "noKeyboards": "まだ打鍵データがありません",
     "noData": "選択した期間にデータがありません",
     "selectKeyboard": "一覧からキーボードを選択してください",
@@ -669,7 +619,6 @@
       "narrowWindow": "ウィンドウが狭すぎて分割表示できません — 幅を広げてください"
     },
     "export": {
-      "csv": "エクスポート",
       "categoriesLabel": "出力するカテゴリ",
       "confirm": ".csv",
       "failed": "出力に失敗しました",
@@ -706,9 +655,7 @@
     },
     "loading": {
       "keyboards": "キーボード一覧読み込み中…",
-      "settings": "設定読み込み中…",
       "syncing": "クラウド同期中…",
-      "snapshot": "キーマップ読み込み中…",
       "preparing": "チャート準備中…"
     },
     "unit": {
@@ -786,7 +733,6 @@
         "tooltipLabel": "推定打鍵数",
         "summary": {
           "label": "打鍵リズムサマリ",
-          "totalKeystrokes": "合計打鍵",
           "medianP50": "中央値インターバル",
           "fast": "高速 (<200ms)",
           "fastDesc": "インターバルが 200ms 未満の割合",
@@ -802,8 +748,6 @@
       "timeSeries": {
         "summary": {
           "label": "インターバルサマリ",
-          "totalKeystrokes": "合計打鍵",
-          "activeDuration": "実打鍵時間",
           "medianP50": "重み付き中央値",
           "shortest": "最短打鍵間隔（1分）",
           "longestPause": "最長打鍵間隔（1分）"
@@ -827,8 +771,6 @@
       "keystrokes": {
         "summary": {
           "label": "活動量サマリ",
-          "totalKeystrokes": "合計打鍵",
-          "activeDuration": "実打鍵時間",
           "mostFrequentDow": "最頻曜日",
           "mostFrequentDowDesc": "合計打鍵数が最大の曜日",
           "mostFrequentHour": "最頻時間帯",
@@ -842,8 +784,6 @@
       "wpm": {
         "summary": {
           "label": "活動量 WPM サマリ",
-          "totalKeystrokes": "合計打鍵",
-          "activeDuration": "実打鍵時間",
           "overallWpm": "平均WPM",
           "peakCell": "ピークセル",
           "peakCellDesc": "WPM が最大の (時間帯 × 曜日) セル",
@@ -1171,12 +1111,7 @@
       "peakKeystrokesPerMin": "1 分最大打鍵",
       "peakKeystrokesPerDay": "1 日最大打鍵",
       "longestSession": "最長セッション (分)",
-      "longestSessionDesc": "5 分以上の無入力で区切られた最長の連続タイピング",
-      "unit": {
-        "kpm": "回/分",
-        "kpd": "回/日",
-        "minutes": "分"
-      }
+      "longestSessionDesc": "5 分以上の無入力で区切られた最長の連続タイピング"
     },
     "streakGoal": {
       "sectionTitle": "打鍵記録連続日数",
@@ -1207,14 +1142,11 @@
     },
     "filters": {
       "keyboard": "キーボード",
-      "from": "開始",
-      "to": "終了",
       "period": "期間",
       "device": "デバイス",
       "deviceOption": {
         "own": "このデバイス",
-        "all": "全デバイス合算",
-        "hashShort": "{{hash}}…"
+        "all": "全デバイス合算"
       },
       "app": "アプリ",
       "appOption": {
@@ -1279,11 +1211,6 @@
       },
       "calendarRangePrev": "前の月",
       "calendarRangeNext": "次の月",
-      "layerViewMode": "表示",
-      "layerViewModeOption": {
-        "keystrokes": "打鍵数",
-        "activations": "起動回数"
-      },
       "layerBaseLayer": "ベース",
       "normalization": "正規化",
       "normalizationOption": {
@@ -1312,27 +1239,14 @@
   },
   "dataModal": {
     "title": "データ",
-    "tabLocal": "ローカル",
-    "tabSync": "同期",
     "local": "ローカル",
-    "cloud": "クラウド",
     "keyboards": "キーボード",
     "favorites": "お気に入り",
     "application": "アプリケーション",
-    "settings": "設定",
-    "saves": "セーブ",
     "sync": "Sync - ローカルにないデータ",
     "hub": "Hub - ローカルにないデータ",
     "noKeyboards": "保存済みキーボードなし",
-    "noSettings": "設定が見つかりません",
     "noSaves": "セーブが見つかりません",
-    "settingsLayout": "レイアウト",
-    "settingsAutoAdvance": "オートアドバンス",
-    "settingsLayers": "レイヤー",
-    "settingsTypingTests": "タイピングテスト",
-    "settingsTypingTestCount": "{{count}}件の結果",
-    "deleteKeyboard": "削除",
-    "deleteKeyboardConfirm": "このキーボードの全データを削除しますか？",
     "importExportDesc": "ローカルにある全てのデータをインポート/エクスポート（キーボード、お気に入り、設定）",
     "deleteAll": "全てのデータを削除",
     "deleteAllConfirm": "同期データを含む全てのデータが削除されます",
@@ -1394,7 +1308,6 @@
     "syncSuccess": "同期しました",
     "syncFailed": "同期に失敗しました",
     "removeFromHub": "削除",
-    "removing": "削除中...",
     "removeSuccess": "削除しました",
     "removeFailed": "削除に失敗しました",
     "confirmRemove": "削除しますか？",
@@ -1407,9 +1320,6 @@
     "enable": "接続",
     "disable": "切断",
     "confirmDisconnect": "切断しますか？",
-    "myPosts": "マイ投稿",
-    "hub": "Hub",
-    "hubPosts": "Hub 投稿",
     "noPosts": "投稿はまだありません",
     "requiresAuth": "Hub 機能を使うには、データタブで Google アカウントを接続してください",
     "renameFailed": "名前変更に失敗しました",
@@ -1421,9 +1331,6 @@
     "displayNameSaveFailed": "投稿者名の保存に失敗しました",
     "displayNameTaken": "この投稿者名は既に使用されています",
     "openInBrowser": "開く",
-    "pagePrev": "前へ",
-    "pageNext": "次へ",
-    "pageInfo": "{{current}} / {{total}}",
     "needsDisplayName": "アップロードするには設定で表示名を設定してください",
     "displayNameRequired": "Hub へのアップロードに必要です",
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",
@@ -1459,13 +1366,9 @@
   },
   "favoriteStore": {
     "title": "お気に入り",
-    "button": "お気に入り",
-    "save": "お気に入り保存",
-    "loadFav": "お気に入り読込",
     "noSaved": "保存済みのお気に入りはありません",
     "saveFailed": "お気に入りの保存に失敗しました",
     "loadFailed": "お気に入りの読み込みに失敗しました",
-    "rename": "名前変更",
     "delete": "削除",
     "saveCurrentState": "現在の状態を保存",
     "export": "エクスポート",
@@ -1483,12 +1386,7 @@
     "title": "Key Labels",
     "manageRow": "Key Labels 管理",
     "edit": "編集",
-    "tabInstalled": "インストール済み",
-    "tabHub": "Hub から探す",
-    "alreadyInstalled": "インストール済み",
-    "hubInitial": "2 文字以上を入力して「検索」を押すと <hub>Pipette Hub</hub> から探せます。",
     "hubEmpty": "ハブに該当するラベルが見つかりません",
-    "searchPlaceholder": "Pipette Hub を検索 (2 文字以上で入力)…",
     "search": "検索",
     "searching": "検索中…",
     "import": "インポート",
@@ -1510,5 +1408,30 @@
     "missingMessage": "Key Label「{{name}}」がインストールされていないため、QWERTY ラベルで表示します。",
     "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンからダウンロードできます。",
     "missingClose": "閉じる"
+  },
+  "i18n": {
+    "edit": "編集",
+    "errorGeneric": "操作に失敗しました",
+    "errorInvalidJson": "選択したファイルは有効な JSON ではありません",
+    "hubEmpty": "Hub に該当する言語パックはありません",
+    "import": "インポート",
+    "jaRemoved": {
+      "dismiss": "閉じる",
+      "message": "バンドル版の日本語はダウンロード可能な言語パックとして配布されています。Pipette Hub から入手するか、設定 → ツール → 言語パック管理 から .json をインポートしてください。",
+      "title": "日本語パックは Hub に移動しました"
+    },
+    "manageRow": "言語管理",
+    "missingKeys": {
+      "description": "翻訳が必要なキーだけを含む JSON テンプレートをダウンロードします。編集後に再インポートしてください。",
+      "empty": "すべてのキーが設定されています",
+      "title": "未設定のキー"
+    },
+    "modalTitle": "言語",
+    "notSetKeys": "未設定のキー",
+    "selectLanguage": "{{name}}を選択",
+    "preview": {
+      "dangerousWarning": "パックに禁止キー (__proto__、constructor、prototype) が含まれているためインポートできません。"
+    },
+    "search": "検索"
   }
 }

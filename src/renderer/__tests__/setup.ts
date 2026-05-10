@@ -54,6 +54,26 @@ if (typeof window !== 'undefined') {
     keyLabelHubUpdate: noopOk,
     keyLabelHubDelete: noopOk,
     typingAnalyticsListAppsForRange: async () => [],
+    // i18n pack store: every renderer that mounts SettingsModal pulls in
+    // LanguagePacksModal → useI18nPackStore, which calls i18nPackList on
+    // mount. Stub the read paths to an empty list and the change-notifier
+    // to a no-op so component tests do not need per-file IPC mocks.
+    i18nPackList: async () => ({ success: true, data: [] }),
+    i18nPackGet: async () => ({ success: false, errorCode: 'NOT_FOUND' }),
+    i18nPackHasName: async () => ({ success: true, data: false }),
+    i18nPackRename: noopOk,
+    i18nPackSetEnabled: noopOk,
+    i18nPackDelete: noopOk,
+    i18nPackSetHubPostId: noopOk,
+    i18nPackImport: async () => ({ canceled: true }),
+    i18nPackImportApply: noopOk,
+    i18nPackExport: noopOk,
+    i18nPackOnChanged: () => () => undefined,
+    hubListI18nPosts: async () => ({ success: true, data: { items: [], total: 0, page: 1, perPage: 20 } }),
+    hubDownloadI18nPost: noopOk,
+    hubUploadI18nPost: noopOk,
+    hubUpdateI18nPost: noopOk,
+    hubDeleteI18nPost: noopOk,
   }
   Object.defineProperty(window, 'vialAPI', {
     value: { ...stub, ...existing },

@@ -16,6 +16,11 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify('0.1.0'),
+    // Mirror electron.vite.config.ts: the renderer reads
+    // `__BUILD_TIME__` for the built-in English language pack row.
+    // Without this, every component that imports LanguagePacksModal
+    // throws at module-init time inside vitest.
+    __BUILD_TIME__: JSON.stringify('1970-01-01T00:00:00.000Z'),
   },
   resolve: {
     alias: {

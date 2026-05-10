@@ -14,6 +14,22 @@ import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-s
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../shared/types/key-label-store'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from '../shared/types/hub-key-label'
+import type {
+  I18nPackMeta,
+  I18nPackRecord,
+  I18nPackStoreResult,
+  I18nPackImportDialogResult,
+  I18nPackImportApplyOptions,
+} from '../shared/types/i18n-store'
+import type {
+  HubI18nListParams,
+  HubI18nListResponse,
+  HubI18nExportV1,
+  HubUploadI18nPostParams,
+  HubUpdateI18nPostParams,
+  HubUploadResult,
+  HubDeleteResult,
+} from '../shared/types/hub'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
@@ -43,7 +59,7 @@ import type {
   TypingBigramAggregateView,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview } from '../shared/types/hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubI18nPackTimestampsResponse } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
 
 /**
@@ -268,6 +284,47 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_TIMESTAMPS, ids),
   keyLabelHubDelete: (localId: string): Promise<KeyLabelStoreResult<void>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_HUB_DELETE, localId),
+
+  // --- i18n language pack store ---
+  i18nPackList: (): Promise<I18nPackStoreResult<I18nPackMeta[]>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_LIST),
+  i18nPackGet: (id: string): Promise<I18nPackStoreResult<I18nPackRecord>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_GET, id),
+  i18nPackRename: (id: string, newName: string): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_RENAME, id, newName),
+  i18nPackSetEnabled: (id: string, enabled: boolean): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_ENABLED, id, enabled),
+  i18nPackDelete: (id: string): Promise<I18nPackStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_DELETE, id),
+  i18nPackSetHubPostId: (id: string, hubPostId: string | null): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_SET_HUB_POST_ID, id, hubPostId),
+  i18nPackHasName: (name: string, excludeId?: string): Promise<I18nPackStoreResult<boolean>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_STORE_HAS_NAME, name, excludeId),
+  i18nPackImport: (): Promise<I18nPackImportDialogResult> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_IMPORT),
+  i18nPackImportApply: (raw: unknown, options?: I18nPackImportApplyOptions): Promise<I18nPackStoreResult<I18nPackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_IMPORT_APPLY, raw, options ?? {}),
+  i18nPackExport: (id: string): Promise<I18nPackStoreResult<{ filePath: string }>> =>
+    ipcRenderer.invoke(IpcChannels.I18N_PACK_EXPORT, id),
+  i18nPackHubTimestamps: (ids: string[]): Promise<I18nPackStoreResult<HubI18nPackTimestampsResponse>> =>
+    ipcRenderer.invoke(IpcChannels.HUB_I18N_PACK_TIMESTAMPS, ids),
+  i18nPackOnChanged: (callback: () => void): (() => void) => {
+    const handler = (): void => { callback() }
+    ipcRenderer.on(IpcChannels.I18N_PACK_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.I18N_PACK_CHANGED, handler)
+  },
+
+  // --- Hub i18n posts ---
+  hubListI18nPosts: (params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.HUB_LIST_I18N_POSTS, params),
+  hubDownloadI18nPost: (postId: string): Promise<{ success: boolean; data?: HubI18nExportV1; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.HUB_DOWNLOAD_I18N_POST, postId),
+  hubUploadI18nPost: (params: HubUploadI18nPostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_I18N_POST, params),
+  hubUpdateI18nPost: (params: HubUpdateI18nPostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPDATE_I18N_POST, params),
+  hubDeleteI18nPost: (postId: string, localPackId?: string): Promise<HubDeleteResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_DELETE_I18N_POST, postId, localPackId),
 
   // --- Pipette Settings Store (internal save/load via IPC) ---
   pipetteSettingsGet: (uid: string): Promise<PipetteSettings | null> =>

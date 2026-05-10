@@ -6,6 +6,7 @@ import type { AnalyzeFilterSnapshotIndex } from './analyze-filter-store'
 import type { AppConfig } from './app-config'
 import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 import type { KeyLabelIndex } from './key-label-store'
+import type { I18nPackIndex, I18nIndexSyncUnit, I18nPackSyncUnit } from './i18n-store'
 
 export type { AppConfig }
 export { DEFAULT_APP_CONFIG } from './app-config'
@@ -20,10 +21,10 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label'
-  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, or 'key-labels'
-  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex
-  files: Record<string, string> // filename -> content (empty for meta)
+  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'i18n-index' | 'i18n-pack'
+  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'i18n-index', or packId for i18n-pack
+  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | I18nPackIndex
+  files: Record<string, string> // filename -> content (empty for meta / i18n-index)
 }
 
 export type SyncDirection = 'upload' | 'download'
@@ -70,6 +71,8 @@ export type SyncUnit =
   | KeyboardMetaSyncUnit
   | KeyboardTypingAnalyticsDeviceSyncUnit
   | KeyLabelSyncUnit
+  | I18nIndexSyncUnit
+  | I18nPackSyncUnit
 
 export interface PasswordStrength {
   score: number // 0-4
@@ -88,12 +91,14 @@ export type SyncStatusType = 'pending' | 'syncing' | 'synced' | 'error' | 'parti
 export interface SyncResetTargets {
   keyboards: boolean | string[] // true = all, string[] = specific UIDs
   favorites: boolean
+  i18nPacks?: boolean
 }
 
 export interface LocalResetTargets {
   keyboards: boolean
   favorites: boolean
   appSettings: boolean
+  i18nPacks?: boolean
 }
 
 export interface UndecryptableFile {
@@ -107,6 +112,8 @@ export interface SyncDataScanResult {
   /** uid -> deviceName from synced meta (when available) */
   keyboardNames: Record<string, string>
   favorites: string[]
+  /** Pack ids of i18n language packs found on the remote. */
+  i18nPacks: string[]
   undecryptable: UndecryptableFile[]
 }
 

@@ -7,11 +7,13 @@ import { setupSnapshotStore } from './snapshot-store'
 import { setupAnalyzeFilterStore } from './analyze-filter-store'
 import { setupFavoriteStore } from './favorite-store'
 import { setupKeyLabelStore } from './key-label-ipc'
+import { setupI18nPackStore } from './i18n-pack-ipc'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
 import { setupLanguageStore } from './language-store'
 import { setupSyncIpc } from './sync/sync-ipc'
 import { setupHubIpc } from './hub/hub-ipc'
+import { startI18nStartupSync } from './hub/i18n-startup-sync'
 import { setupLzmaIpc } from './lzma'
 import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
@@ -293,6 +295,7 @@ app.whenReady().then(() => {
   setupAnalyzeFilterStore()
   setupFavoriteStore()
   setupKeyLabelStore()
+  setupI18nPackStore()
   setupPipetteSettingsStore()
   setupLanguageStore()
   setupAppConfigIpc()
@@ -314,6 +317,13 @@ app.whenReady().then(() => {
     log('error', `Failed to initialize typing analytics: ${detail}`)
   })
   createWindow()
+
+  // Best-effort: refresh Hub-linked i18n packs in the background. This
+  // never blocks startup — if Hub is unreachable or a single pack fails
+  // to validate, the function logs and returns. Renderer windows are
+  // notified via I18N_PACK_CHANGED so the language picker reflects any
+  // applied updates without a manual reload.
+  startI18nStartupSync()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

@@ -59,6 +59,7 @@ import {
   upsertKeyboardMeta,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
+import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 
 interface IpcResult {
   success: boolean
@@ -201,7 +202,10 @@ export function setupSyncIpc(): void {
       if (typeof targets.favorites !== 'boolean') {
         throw new Error('Invalid targets: favorites must be boolean')
       }
-      if (!hasKeyboards && !targets.favorites) throw new Error('No targets selected')
+      if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
+        throw new Error('Invalid targets: i18nPacks must be boolean')
+      }
+      if (!hasKeyboards && !targets.favorites && !targets.i18nPacks) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       let metaChanged = false
       if (targets.keyboards === true) {
@@ -221,6 +225,10 @@ export function setupSyncIpc(): void {
       if (targets.favorites) {
         cancelPendingChanges('favorites/')
         await deleteFilesByPrefix('favorites_')
+      }
+      if (targets.i18nPacks) {
+        cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
+        await deleteFilesByPrefix('i18n_')
       }
       if (metaChanged) notifyChange(KEYBOARD_META_SYNC_UNIT)
     }),
@@ -315,16 +323,20 @@ export function setupSyncIpc(): void {
       if (typeof targets.keyboards !== 'boolean' || typeof targets.favorites !== 'boolean' || typeof targets.appSettings !== 'boolean') {
         throw new Error('Invalid targets: expected boolean fields')
       }
-      if (!targets.keyboards && !targets.favorites && !targets.appSettings) throw new Error('No targets selected')
+      if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
+        throw new Error('Invalid targets: i18nPacks must be boolean')
+      }
+      if (!targets.keyboards && !targets.favorites && !targets.appSettings && !targets.i18nPacks) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       const userData = app.getPath('userData')
-      const allSelected = targets.keyboards && targets.favorites && targets.appSettings
+      const allSelected = targets.keyboards && targets.favorites && targets.appSettings && targets.i18nPacks
       if (allSelected) {
         cancelPendingChanges()
         stopPolling()
       } else {
         if (targets.keyboards) cancelPendingChanges('keyboards/')
         if (targets.favorites) cancelPendingChanges('favorites/')
+        if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
         // Clearing appSettings resets autoSync config, so stop polling to match
         if (targets.appSettings) stopPolling()
       }
@@ -333,6 +345,9 @@ export function setupSyncIpc(): void {
       }
       if (targets.favorites) {
         await rm(join(userData, 'sync', 'favorites'), { recursive: true, force: true })
+      }
+      if (targets.i18nPacks) {
+        await rm(join(userData, 'sync', 'i18n'), { recursive: true, force: true })
       }
       if (targets.appSettings) {
         getAppConfigStore().clear()
