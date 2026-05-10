@@ -14,6 +14,7 @@ import type { KeyLabelIndex } from '../../shared/types/key-label-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
+import { I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
@@ -43,6 +44,39 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
 
   const parts = syncUnit.split('/')
   const userData = app.getPath('userData')
+
+  // Handle "i18n/index" — the language pack roster (LWW + tombstone).
+  // Index-only bundle (no `files`) so the renderer can register packs
+  // before / independent of their bodies arriving.
+  if (syncUnit === I18N_INDEX_SYNC_UNIT) {
+    try {
+      const raw = await readFile(join(userData, 'sync', 'i18n', 'index.json'), 'utf-8')
+      const index = JSON.parse(raw) as I18nPackIndex
+      if (!Array.isArray(index?.metas)) return null
+      return { type: 'i18n-index', key: 'i18n-index', index, files: {} }
+    } catch {
+      return null
+    }
+  }
+
+  // Handle "i18n/packs/{packId}" — single-file bundle carrying one
+  // pack's translations. Each pack rides its own sync unit so editing
+  // one pack does not bump every other pack's LWW timestamp.
+  if (parts.length === 3 && parts[0] === 'i18n' && parts[1] === 'packs') {
+    const packId = parts[2]
+    const filePath = join(userData, 'sync', 'i18n', 'packs', `${packId}.json`)
+    try {
+      const content = await readFile(filePath, 'utf-8')
+      return {
+        type: 'i18n-pack',
+        key: packId,
+        index: { metas: [] } as I18nPackIndex,
+        files: { [`${packId}.json`]: content },
+      }
+    } catch {
+      return null
+    }
+  }
 
   // Handle "keyboards/{uid}/devices/{hash}/days/{YYYY-MM-DD}" — per-day
   // JSONL master. One bundle per (uid, hash, day), so cloud storage grows
@@ -165,6 +199,21 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     await access(join(userData, 'sync', KEY_LABEL_SYNC_UNIT, 'index.json'))
     units.push(KEY_LABEL_SYNC_UNIT)
   } catch { /* no key labels */ }
+
+  // i18n: emit "i18n/index" plus one "i18n/packs/{packId}" per known
+  // meta (including tombstones — the tombstone needs to propagate to
+  // remote machines until it expires from purge).
+  try {
+    const i18nIndexPath = join(userData, 'sync', 'i18n', 'index.json')
+    const raw = await readFile(i18nIndexPath, 'utf-8')
+    const index = JSON.parse(raw) as I18nPackIndex
+    if (Array.isArray(index?.metas)) {
+      units.push(I18N_INDEX_SYNC_UNIT)
+      for (const meta of index.metas) {
+        units.push(`i18n/packs/${meta.id}`)
+      }
+    }
+  } catch { /* no i18n */ }
 
   // Scan sync/keyboards/{uid}/ for settings and snapshots
   const keyboardsDir = join(userData, 'sync', 'keyboards')

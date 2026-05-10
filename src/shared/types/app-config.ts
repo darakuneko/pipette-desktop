@@ -33,7 +33,15 @@ export interface AppConfig {
   defaultAutoAdvance: boolean
   defaultLayerPanelOpen: boolean
   autoLockTime: AutoLockMinutes
+  /** Internal language id. `'builtin:en'` for the bundled English pack
+   * or `'pack:{packId}'` for a user-imported pack. Legacy values
+   * (`'en'`, `'ja'`) are migrated on first load. */
   language?: string
+  /** One-shot UX notice key. Surface a banner once, then the renderer
+   * calls APP_CONFIG_SET with `null` to dismiss it. Currently only
+   * `'ja-removed'` is emitted (during the bundled-ja → pack-only
+   * migration) but the field stays open-ended for future migrations. */
+  oneShotNotice?: 'ja-removed' | null
   hubEnabled: boolean
   lastNotificationSeen?: string
   defaultBasicViewType: BasicViewType
@@ -63,6 +71,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'defaultLayerPanelOpen',
   'autoLockTime',
   'language',
+  'oneShotNotice',
   'hubEnabled',
   'lastNotificationSeen',
   'defaultBasicViewType',
@@ -82,7 +91,7 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   defaultAutoAdvance: true,
   defaultLayerPanelOpen: true,
   autoLockTime: 10,
-  language: 'en',
+  language: 'builtin:en',
   hubEnabled: false,
   defaultBasicViewType: 'ansi',
   defaultSplitKeyMode: 'split',

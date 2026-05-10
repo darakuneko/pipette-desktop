@@ -20,6 +20,26 @@ import {
   type BuildAnalyticsExportInput,
   type DeviceScope,
 } from './hub-analytics'
+import {
+  uploadI18nPostToHub,
+  updateI18nPostOnHub,
+  deleteI18nPostFromHub,
+  fetchI18nPostList,
+  downloadI18nPostBody,
+  validateI18nExport,
+  fetchI18nPackTimestamps,
+  type HubI18nListParams,
+  type HubI18nListResponse,
+} from './hub-i18n'
+import { setHubPostId as setI18nPackHubPostId } from '../i18n-pack-store'
+import type {
+  HubUploadI18nPostParams,
+  HubUpdateI18nPostParams,
+  HubI18nExportV1,
+  HubI18nPackTimestamp,
+  HubI18nPackTimestampsResponse,
+} from '../../shared/types/hub'
+import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
 import { readAnalyzeFilterEntry, setAnalyzeFilterHubPostId } from '../analyze-filter-store'
 import { getKeymapSnapshotForRange } from '../typing-analytics/keymap-snapshots'
 import { getMachineHash } from '../typing-analytics/machine-hash'
@@ -752,6 +772,128 @@ export function setupHubIpc(): void {
         }
       } catch (err) {
         return { success: false, error: extractError(err, 'Analytics preview failed') }
+      }
+    },
+  )
+
+  // --- i18n language pack handlers ---
+  //
+  // Targets the standalone /api/i18n-packs endpoints. The pack body
+  // (HubI18nPackBody) carries name + version, so the multipart upload
+  // does not need a separate title field — the Hub derives identity
+  // from `pack.name` + `pack.version`. Listing / download stays
+  // anonymous; CRUD requires the JWT.
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_I18N_POST,
+    async (_event, params: HubUploadI18nPostParams): Promise<HubUploadResult> => {
+      try {
+        if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
+        const result = await withTokenRetry((jwt) => uploadI18nPostToHub(jwt, params.pack))
+        await setI18nPackHubPostId(params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'i18n upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPDATE_I18N_POST,
+    async (_event, params: HubUpdateI18nPostParams): Promise<HubUploadResult> => {
+      try {
+        if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
+        validatePostId(params.postId)
+        const result = await withTokenRetry((jwt) => updateI18nPostOnHub(jwt, params.postId, params.pack))
+        await setI18nPackHubPostId(params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'i18n update failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_DELETE_I18N_POST,
+    async (_event, postId: unknown, localPackId: unknown): Promise<HubDeleteResult> => {
+      try {
+        if (typeof postId !== 'string') return { success: false, error: 'Invalid post ID' }
+        validatePostId(postId)
+        await withTokenRetry((jwt) => deleteI18nPostFromHub(jwt, postId))
+        if (typeof localPackId === 'string' && localPackId) {
+          await setI18nPackHubPostId(localPackId, null)
+        }
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'i18n delete failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_LIST_I18N_POSTS,
+    async (_event, params: unknown): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }> => {
+      try {
+        const query: HubI18nListParams = {}
+        if (params && typeof params === 'object') {
+          const obj = params as Record<string, unknown>
+          if (typeof obj.q === 'string') query.q = obj.q
+          if (typeof obj.name === 'string') query.name = obj.name
+          if (typeof obj.page === 'number') query.page = obj.page
+          if (typeof obj.perPage === 'number') query.perPage = obj.perPage
+        }
+        const data = await fetchI18nPostList(query)
+        return { success: true, data }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'i18n list failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_DOWNLOAD_I18N_POST,
+    async (_event, postId: unknown): Promise<{ success: boolean; data?: HubI18nExportV1; error?: string }> => {
+      try {
+        if (typeof postId !== 'string') return { success: false, error: 'Invalid post ID' }
+        validatePostId(postId)
+        const exportData = await downloadI18nPostBody(postId)
+        const validation = validateI18nExport(exportData)
+        if (!validation.ok) {
+          return { success: false, error: `Hub returned an invalid pack: ${validation.reason ?? 'unknown reason'}` }
+        }
+        return { success: true, data: exportData }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'i18n download failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_I18N_PACK_TIMESTAMPS,
+    async (_event, ids: unknown): Promise<{ success: boolean; data?: HubI18nPackTimestampsResponse; error?: string }> => {
+      if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) {
+        return { success: false, error: 'ids must be an array of strings' }
+      }
+      const unique = Array.from(new Set(ids as string[]))
+      if (unique.length === 0) return { success: true, data: { items: [] } }
+      try {
+        const chunks: string[][] = []
+        for (let i = 0; i < unique.length; i += HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT) {
+          chunks.push(unique.slice(i, i + HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT))
+        }
+        const responses = await Promise.all(chunks.map((chunk) => fetchI18nPackTimestamps(chunk)))
+        const byId = new Map<string, HubI18nPackTimestamp>()
+        for (const r of responses) {
+          for (const item of r.items) byId.set(item.id, item)
+        }
+        const items: HubI18nPackTimestamp[] = []
+        for (const id of unique) {
+          const found = byId.get(id)
+          if (found) items.push(found)
+        }
+        return { success: true, data: { items } }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Hub i18n timestamps failed') }
       }
     },
   )
