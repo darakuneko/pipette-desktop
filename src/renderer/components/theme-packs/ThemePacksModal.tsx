@@ -5,7 +5,7 @@
 //   - Imported theme packs listed below with Select / Rename / Export / Delete
 //   - Import button in the Installed tab toolbar
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
@@ -13,6 +13,8 @@ import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
+import { applyPackColors, clearPackColors, isPackTheme, extractPackId } from '../../hooks/useTheme'
+import type { ThemePackColors } from '../../../shared/types/theme-store'
 import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
 import { buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
@@ -56,6 +58,8 @@ export function ThemePacksModal({
   const [hubSearched, setHubSearched] = useState(false)
   const [hubSearching, setHubSearching] = useState(false)
   const [hubOrigin, setHubOrigin] = useState('')
+  const [previewPostId, setPreviewPostId] = useState<string | null>(null)
+  const previewSeqRef = useRef(0)
 
   const activeTheme = appConfig.config.theme
 
@@ -123,14 +127,45 @@ export function ThemePacksModal({
     return () => { window.clearTimeout(handle) }
   }, [open, activeTab, search, runSearch])
 
+  const restoreActiveTheme = useCallback(() => {
+    clearPackColors()
+    if (isPackTheme(activeTheme)) {
+      const packId = extractPackId(activeTheme)
+      void window.vialAPI.themePackGet(packId).then((result) => {
+        if (result.success && result.data) {
+          applyPackColors(result.data.pack.colors)
+        }
+      })
+    }
+    setPreviewPostId(null)
+  }, [activeTheme])
+
+  const handlePreview = useCallback(async (postId: string): Promise<void> => {
+    if (previewPostId === postId) {
+      restoreActiveTheme()
+      return
+    }
+    const seq = ++previewSeqRef.current
+    setPendingId(postId)
+    try {
+      const result = await window.vialAPI.hubDownloadThemePost(postId)
+      if (!result.success || !result.data || previewSeqRef.current !== seq) return
+      applyPackColors(result.data.colors as ThemePackColors)
+      setPreviewPostId(postId)
+    } finally {
+      if (previewSeqRef.current === seq) setPendingId(null)
+    }
+  }, [previewPostId, restoreActiveTheme])
+
   useEffect(() => {
     if (!open) {
+      if (previewPostId) restoreActiveTheme()
       setActionError(null)
       setLastResult(null)
       setConfirmDeleteId(null)
       setConfirmRemoveId(null)
     }
-  }, [open])
+  }, [open, previewPostId, restoreActiveTheme])
 
   const pushPackToHub = useCallback(async (
     packId: string,
@@ -151,6 +186,11 @@ export function ThemePacksModal({
     }
     return { success: false, error: res.error ?? t('hub.updateFailed') }
   }, [store, t])
+
+  const handleTabInstalled = useCallback(() => {
+    if (previewPostId) restoreActiveTheme()
+    setActiveTab('installed')
+  }, [previewPostId, restoreActiveTheme])
 
   const handleSelectTheme = useCallback((selection: ThemeSelection) => {
     if (selection === activeTheme) return
@@ -359,7 +399,7 @@ export function ThemePacksModal({
         </div>
 
         <div className="flex border-b border-edge" data-testid="theme-packs-tabs">
-          <TabButton id="installed" label={t('common.installed')} active={activeTab === 'installed'} onClick={() => setActiveTab('installed')} />
+          <TabButton id="installed" label={t('common.installed')} active={activeTab === 'installed'} onClick={handleTabInstalled} />
           <TabButton id="hub" label={t('common.findOnHub')} active={activeTab === 'hub'} onClick={() => setActiveTab('hub')} />
         </div>
 
@@ -469,6 +509,8 @@ export function ThemePacksModal({
               hubSearched={hubSearched}
               pendingId={pendingId}
               hubOrigin={hubOrigin}
+              previewPostId={previewPostId}
+              onPreview={(postId) => void handlePreview(postId)}
               onDownload={(postId) => void handleHubDownload(postId)}
             />
           )}
@@ -519,10 +561,12 @@ interface HubTableProps {
   hubSearched: boolean
   pendingId: string | null
   hubOrigin: string
+  previewPostId: string | null
+  onPreview: (postId: string) => void
   onDownload: (postId: string) => void
 }
 
-function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTableProps): JSX.Element {
+function HubTable({ rows, hubSearched, pendingId, hubOrigin, previewPostId, onPreview, onDownload }: HubTableProps): JSX.Element {
   const { t } = useTranslation()
   if (rows.length === 0) {
     return (
@@ -566,7 +610,18 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
               v{row.version}{row.uploaderName ? ` · ${row.uploaderName}` : ''}
             </div>
           </div>
-          <div className="shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              className={`text-xs font-medium hover:underline disabled:opacity-50 ${
+                previewPostId === row.hubPostId ? 'text-success' : 'text-content-secondary'
+              }`}
+              onClick={() => onPreview(row.hubPostId)}
+              disabled={pendingId === row.hubPostId}
+              data-testid={`theme-packs-hub-preview-${row.hubPostId}`}
+            >
+              {previewPostId === row.hubPostId ? t('themePacks.previewing') : t('themePacks.preview')}
+            </button>
             {row.alreadyInstalled ? (
               <span className="text-xs text-content-muted">{t('common.installed')}</span>
             ) : (

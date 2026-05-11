@@ -1509,7 +1509,9 @@ The **Import** button in the toolbar opens a file dialog to import a `.json` the
 
 ![Theme Packs — Find on Hub](screenshots/theme-packs-hub.png)
 
-Searches Pipette Hub for theme packs. Type 2 or more characters to start an automatic search (debounced). Results show the pack name, version, uploader, and either a **Download** action or an **Installed** marker.
+Searches Pipette Hub for theme packs. Type 2 or more characters to start an automatic search (debounced). Each result shows the pack name, version, uploader, a **Preview** button, and either a **Download** action or an **Installed** marker.
+
+Click **Preview** to temporarily apply the theme's colours without installing. The preview resets when you close the modal, switch to the Installed tab, or click **Preview** again to toggle it off.
 
 **Authoring a Theme Pack**
 

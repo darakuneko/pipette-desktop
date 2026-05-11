@@ -477,7 +477,9 @@
     "import": "Import Theme Pack",
     "parseError": "Failed to parse file",
     "selectTheme": "Select {{name}}",
-    "hubEmpty": "No matching theme packs on the Hub"
+    "hubEmpty": "No matching theme packs on the Hub",
+    "preview": "Preview",
+    "previewing": "Previewing"
   },
   "layout": {
     "keyboardLayout": "Key Labels",

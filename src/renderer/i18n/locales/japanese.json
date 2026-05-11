@@ -477,7 +477,9 @@
     "import": "テーマパックをインポート",
     "parseError": "ファイルの解析に失敗しました",
     "selectTheme": "{{name}} を選択",
-    "hubEmpty": "Hub に一致するテーマパックがありません"
+    "hubEmpty": "Hub に一致するテーマパックがありません",
+    "preview": "プレビュー",
+    "previewing": "プレビュー中"
   },
   "layout": {
     "keyboardLayout": "キーラベル表示",
