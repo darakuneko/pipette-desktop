@@ -1485,6 +1485,8 @@ The Tools tab shows a **Theme Packs** row displaying the currently active theme 
 
 Theme packs override the application's colour palette. The built-in Light / Dark / System themes remain available; a theme pack layers its colours on top. Installed packs sync across devices via Cloud Sync.
 
+> **For theme pack authors:** See the [Theme Pack Authoring Guide](THEME-PACK-AUTHORING.html) for a complete colour token reference and design tips.
+
 **Installed section**
 
 ![Theme Packs — Installed](screenshots/theme-packs-installed.png)

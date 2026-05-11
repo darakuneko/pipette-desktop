@@ -1489,6 +1489,8 @@ Tools タブに **Theme Packs** 行があり、現在アクティブなテーマ
 
 テーマパックはアプリケーションのカラーパレットを上書きします。built-in の Light / Dark / System テーマはそのまま使用でき、テーマパックはその上にカラーを重ねます。インストール済みパックは Cloud Sync を経由して全デバイスで共有されます。
 
+> **テーマパック作成者向け:** カラートークンの全リファレンスとデザインのコツは [Theme Pack Authoring Guide](THEME-PACK-AUTHORING.html) を参照してください。
+
 **Installed セクション**
 
 ![Theme Packs — Installed](screenshots/theme-packs-installed.png)
