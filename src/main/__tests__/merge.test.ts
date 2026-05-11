@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mergeEntries, gcTombstones, effectiveTime, type MergeOptions } from '../sync/merge'
+import { mergeEntries, gcTombstones, effectiveTime } from '../sync/merge'
 import type { SavedFavoriteMeta } from '../../shared/types/favorite-store'
 
 type Entry = SavedFavoriteMeta
