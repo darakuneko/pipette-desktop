@@ -70,6 +70,22 @@ async function main(): Promise<void> {
 
     await dismissNotificationModal(page)
 
+    // Exit Typing Test view-only / typing test mode if persisted from prior run
+    const viewOnlyToggle = page.locator('[data-testid="view-only-toggle"]')
+    if (await isAvailable(viewOnlyToggle)) {
+      console.log('  [reset] Exiting Typing Test view-only mode')
+      await viewOnlyToggle.evaluate((el: HTMLElement) => el.click())
+      await page.waitForTimeout(2000)
+      await page.setViewportSize({ width: 1320, height: 960 })
+      await page.waitForTimeout(1000)
+    }
+    const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+    if (await isAvailable(typingTestBtn) && (await typingTestBtn.getAttribute('data-active')) === 'true') {
+      console.log('  [reset] Exiting Typing Test mode')
+      await typingTestBtn.click()
+      await page.waitForTimeout(500)
+    }
+
     // Ensure layer 0 and Basic tab
     const editorContent = page.locator('[data-testid="editor-content"]')
     const layer0Btn = editorContent.locator('button', { hasText: /^0$/ })
@@ -88,8 +104,12 @@ async function main(): Promise<void> {
     if (!(await isAvailable(keyLabel))) {
       throw new Error('No key label found in layout')
     }
+    await page.evaluate(() => window.scrollTo(0, 0))
+    await page.waitForTimeout(300)
 
-    await keyLabel.dblclick({ force: true })
+    await keyLabel.evaluate((el) => {
+      el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }))
+    })
     await page.waitForTimeout(500)
 
     const popover = page.locator('[data-testid="key-popover"]')
@@ -98,6 +118,9 @@ async function main(): Promise<void> {
     }
 
     console.log('\n--- Key Popover Screenshots ---')
+
+    // Layer sidebar (popover with layer buttons on the left)
+    await capture(page, 'key-popover-layer-sidebar')
 
     // 32: Key tab (default, shows all mode buttons)
     await capture(page, '32-key-popover-key')
