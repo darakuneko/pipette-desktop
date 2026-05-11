@@ -473,12 +473,8 @@
   },
   "themePacks": {
     "manageRow": "テーマパック",
-    "edit": "編集",
     "title": "テーマパック",
-    "importButton": "インポート",
     "import": "テーマパックをインポート",
-    "export": "エクスポート",
-    "delete": "削除",
     "parseError": "ファイルの解析に失敗しました",
     "selectTheme": "{{name}} を選択",
     "hubEmpty": "Hub に一致するテーマパックがありません"

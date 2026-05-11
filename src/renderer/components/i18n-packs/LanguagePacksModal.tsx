@@ -107,6 +107,33 @@ export function LanguagePacksModal({
     void window.vialAPI.hubGetOrigin().then((origin) => { if (origin) setHubOrigin(origin) }).catch(() => null)
   }, [open])
 
+  useEffect(() => {
+    if (!open) return
+    const stale = store.metas.filter((m) => !m.deletedAt && m.matchedBaseVersion !== BASE_REVISION)
+    if (stale.length === 0) return
+    let cancelled = false
+    void (async () => {
+      for (const meta of stale) {
+        if (cancelled) return
+        try {
+          const get = await window.vialAPI.i18nPackGet(meta.id)
+          if (cancelled || !get.success || !get.data) continue
+          const cov = computeCoverage(get.data.pack, ENGLISH_PACK_BODY)
+          if (cancelled || cov.coverageRatio !== 1) continue
+          await store.applyImport(get.data.pack, {
+            id: meta.id,
+            matchedBaseVersion: BASE_REVISION,
+            coverage: { totalKeys: cov.totalKeys, coveredKeys: cov.coveredKeys },
+          })
+        } catch {
+          continue
+        }
+      }
+      if (!cancelled) await store.refresh()
+    })()
+    return () => { cancelled = true }
+  }, [open, store.metas.length])
+
   const activeLanguageId = appConfig.config.language ?? 'builtin:en'
 
   const installedRows: InstalledRow[] = useMemo(() => {

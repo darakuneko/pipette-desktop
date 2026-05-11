@@ -473,12 +473,8 @@
   },
   "themePacks": {
     "manageRow": "Theme Packs",
-    "edit": "Edit",
     "title": "Theme Packs",
-    "importButton": "Import",
     "import": "Import Theme Pack",
-    "export": "Export",
-    "delete": "Delete",
     "parseError": "Failed to parse file",
     "selectTheme": "Select {{name}}",
     "hubEmpty": "No matching theme packs on the Hub"

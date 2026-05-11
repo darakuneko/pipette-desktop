@@ -189,7 +189,7 @@ export function SettingsToolsTab({
                 className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-theme-packs-button"
               >
-                {t('themePacks.edit')}
+                {t('i18n.edit')}
               </button>
             </div>
           </div>

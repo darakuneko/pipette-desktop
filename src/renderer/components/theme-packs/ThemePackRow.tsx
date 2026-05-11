@@ -155,7 +155,7 @@ export function PackRow({
                 disabled={busy}
                 data-testid={`theme-packs-export-${meta.id}`}
               >
-                {t('themePacks.export')}
+                {t('keyLabels.actionExport')}
               </button>
               <button
                 type="button"
@@ -164,7 +164,7 @@ export function PackRow({
                 disabled={busy}
                 data-testid={`theme-packs-delete-${meta.id}`}
               >
-                {t('themePacks.delete')}
+                {t('common.delete')}
               </button>
             </>
           )}

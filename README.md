@@ -176,7 +176,7 @@ See [Data Guide](docs/Data.md) for details on how Hub authentication works.
 - **Typing Test** — Built-in typing test with WPM/accuracy tracking, downloadable language packs, and per-keyboard history
 - **Typing View** — View-only mode displaying only the keyboard layout in a compact, resizable window with always-on-top support — ideal for overlaying on other applications
 - **Multilingual UI** — Multiple languages supported via importable language packs; manage, import, and download packs from Pipette Hub in Settings → Tools → Language Packs
-- **Light / Dark / System theme**
+- **Light / Dark / System theme** with importable **Theme Packs** — download community colour schemes from Pipette Hub or author your own `.json` pack
 - **Keyboard layout override** (QWERTY, Dvorak, etc.) for correct label display
 - **Configurable panel side** (left / right)
 - **Auto-lock timer**
