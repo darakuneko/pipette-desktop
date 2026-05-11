@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "English",
   "common": {
     "save": "Save",
@@ -33,8 +33,7 @@
     "installed": "Installed",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
-    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>.",
-    "comingSoon": "Coming soon"
+    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."
   },
   "app": {
     "title": "Pipette",
@@ -476,22 +475,10 @@
     "manageRow": "Theme Packs",
     "edit": "Edit",
     "title": "Theme Packs",
-    "installed": "Installed",
-    "empty": "No theme packs installed",
     "importButton": "Import",
     "import": "Import Theme Pack",
-    "importSuccess": "Theme pack imported successfully",
     "export": "Export",
-    "exportSuccess": "Theme pack exported successfully",
-    "apply": "Apply",
-    "applied": "Applied",
-    "rename": "Rename",
-    "renameTitle": "Rename Theme Pack",
     "delete": "Delete",
-    "deleteConfirm": "Delete \"{{name}}\"? This cannot be undone.",
-    "nameLabel": "Name",
-    "versionLabel": "Version",
-    "validationFailed": "Invalid theme pack: {{errors}}",
     "parseError": "Failed to parse file",
     "selectTheme": "Select {{name}}",
     "hubEmpty": "No matching theme packs on the Hub"
