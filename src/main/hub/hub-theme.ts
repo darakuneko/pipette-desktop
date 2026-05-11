@@ -83,7 +83,6 @@ interface HubThemePackSummaryRaw {
   id: string
   name: string
   version: string
-  base_theme: string
   uploaded_by?: string | null
   uploader_name?: string | null
   created_at: string
@@ -101,7 +100,6 @@ export async function fetchThemePostList(query: HubThemeListParams): Promise<Hub
   const qs = new URLSearchParams()
   if (query.q && query.q.trim()) qs.set('q', query.q.trim())
   if (query.name && query.name.trim()) qs.set('name', query.name.trim())
-  if (query.baseTheme) qs.set('base_theme', query.baseTheme)
   if (query.page != null) qs.set('page', String(query.page))
   if (query.perPage != null) qs.set('per_page', String(query.perPage))
   const search = qs.toString()
@@ -112,7 +110,6 @@ export async function fetchThemePostList(query: HubThemeListParams): Promise<Hub
       id: item.id,
       name: item.name,
       version: item.version,
-      baseTheme: item.base_theme,
       uploadedBy: item.uploaded_by ?? null,
       uploaderName: item.uploader_name ?? null,
       createdAt: item.created_at,

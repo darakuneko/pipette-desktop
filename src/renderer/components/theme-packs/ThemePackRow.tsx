@@ -5,6 +5,8 @@ import { Circle, CheckCircle2 } from 'lucide-react'
 import type { useInlineRename } from '../../hooks/useInlineRename'
 import type { ThemePackMeta } from '../../../shared/types/theme-store'
 import { formatTimestamp } from '../../utils/format-timestamp'
+import { buildHubThemePackUrl } from '../../../shared/hub-urls'
+import { hasUpdate, type HubFreshnessEntry } from '../../hooks/useHubFreshness'
 import type { ThemeSelection } from '../../../shared/types/app-config'
 
 export interface PackRowProps {
@@ -19,6 +21,16 @@ export interface PackRowProps {
   onSelect: (selection: ThemeSelection) => void
   onExport: (id: string) => void
   onDelete: (id: string) => void
+  hubOrigin: string
+  hubCanWrite: boolean
+  hubFreshness: Map<string, HubFreshnessEntry>
+  lastResult: { id: string; kind: 'success' | 'error'; message: string } | null
+  confirmRemoveId: string | null
+  setConfirmRemoveId: (id: string | null) => void
+  onUpload: (id: string) => void
+  onUpdate: (id: string) => void
+  onSync: (id: string) => void
+  onRemove: (id: string) => void
 }
 
 export function PackRow({
@@ -33,12 +45,29 @@ export function PackRow({
   onSelect,
   onExport,
   onDelete,
+  hubOrigin,
+  hubCanWrite,
+  hubFreshness,
+  lastResult,
+  confirmRemoveId,
+  setConfirmRemoveId,
+  onUpload,
+  onUpdate,
+  onSync,
+  onRemove,
 }: PackRowProps): JSX.Element {
   const { t } = useTranslation()
   const busy = pendingId === meta.id
   const editing = rename.editingId === meta.id
   const isConfirmingDelete = confirmDeleteId === meta.id
   const linkClass = 'text-xs font-medium hover:underline disabled:opacity-50'
+
+  const freshness = hubFreshness.get(meta.id)
+  const hasUpdateAvailable = hasUpdate(freshness, meta.hubUpdatedAt)
+  const hubRemoved = !!freshness && freshness.removed
+  const showUpload = !meta.hubPostId && hubCanWrite
+  const showHubPair = Boolean(meta.hubPostId)
+  const showUpdateRemove = showHubPair && hubCanWrite
 
   const renderName = (): JSX.Element => {
     if (editing) {
@@ -87,8 +116,11 @@ export function PackRow({
           )}
         </button>
         <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
-        <div className="shrink-0 whitespace-nowrap text-xs text-content-muted">
-          {formatTimestamp(meta.updatedAt)}
+        <div
+          className={`shrink-0 whitespace-nowrap text-xs ${hubRemoved ? 'text-rose-600' : 'text-content-muted'}`}
+          data-testid={`theme-packs-timestamp-${meta.id}`}
+        >
+          {hubRemoved ? t('keyLabels.hubRemoved') : formatTimestamp(meta.updatedAt)}
         </div>
         <div className="shrink-0 whitespace-nowrap text-xs text-content-muted">
           {meta.version ? `v${meta.version}` : ''}
@@ -139,10 +171,100 @@ export function PackRow({
         </div>
       </div>
       <div className="flex items-center gap-3 px-3 pb-2">
-        <span className="flex-1 min-w-0" />
-        <span className="shrink-0 rounded bg-surface-dim px-1.5 py-0.5 text-[11px] text-content-muted">
-          {meta.baseTheme === 'dark' ? t('themePacks.baseThemeDark') : t('themePacks.baseThemeLight')}
+        <span className="flex-1 min-w-0">
+          {lastResult && lastResult.id === meta.id && (
+            <span
+              className={`text-[11px] font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+              data-testid={`theme-packs-result-${meta.id}`}
+            >
+              {lastResult.message}
+            </span>
+          )}
         </span>
+        {meta.hubPostId && hubOrigin && (
+          <button
+            type="button"
+            className={`${linkClass} text-accent`}
+            onClick={() => void window.vialAPI.openExternal(buildHubThemePackUrl(hubOrigin.replace(/\/$/, ''), meta.hubPostId as string))}
+            disabled={busy}
+            data-testid={`theme-packs-open-${meta.id}`}
+          >
+            {t('hub.openInBrowser')}
+          </button>
+        )}
+        {showUpload && (
+          <button
+            type="button"
+            className={`${linkClass} text-accent`}
+            onClick={() => onUpload(meta.id)}
+            disabled={busy}
+            data-testid={`theme-packs-upload-${meta.id}`}
+          >
+            {t('keyLabels.actionUpload')}
+          </button>
+        )}
+        {showHubPair && !showUpdateRemove && (
+          <button
+            type="button"
+            className={`${linkClass} text-accent inline-flex items-center gap-1`}
+            onClick={() => onSync(meta.id)}
+            disabled={busy}
+            data-testid={`theme-packs-sync-${meta.id}`}
+          >
+            {hasUpdateAvailable && (
+              <span
+                aria-hidden="true"
+                className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                data-testid={`theme-packs-update-available-${meta.id}`}
+              />
+            )}
+            {t('keyLabels.actionSync')}
+          </button>
+        )}
+        {showUpdateRemove && (
+          confirmRemoveId === meta.id ? (
+            <>
+              <button
+                type="button"
+                className={`${linkClass} text-danger`}
+                onClick={() => onRemove(meta.id)}
+                disabled={busy}
+                data-testid={`theme-packs-confirm-remove-${meta.id}`}
+              >
+                {t('hub.confirmRemove')}
+              </button>
+              <button
+                type="button"
+                className={`${linkClass} text-content-muted`}
+                onClick={() => setConfirmRemoveId(null)}
+                data-testid={`theme-packs-cancel-remove-${meta.id}`}
+              >
+                {t('common.cancel')}
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className={`${linkClass} text-accent`}
+                onClick={() => onUpdate(meta.id)}
+                disabled={busy}
+                data-testid={`theme-packs-update-${meta.id}`}
+              >
+                {t('keyLabels.actionUpdate')}
+              </button>
+              <button
+                type="button"
+                className={`${linkClass} text-danger`}
+                onClick={() => setConfirmRemoveId(meta.id)}
+                disabled={busy}
+                data-testid={`theme-packs-remove-${meta.id}`}
+              >
+                {t('keyLabels.actionRemove')}
+              </button>
+            </>
+          )
+        )}
       </div>
     </div>
   )

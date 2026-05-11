@@ -13,8 +13,9 @@ import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
-import type { HubThemePostListItem } from '../../../shared/types/hub'
+import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
 import { buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
+import { useHubFreshness } from '../../hooks/useHubFreshness'
 import type { ThemeMode, ThemeSelection } from '../../../shared/types/app-config'
 import { PackRow } from './ThemePackRow'
 
@@ -24,6 +25,7 @@ export interface ThemePacksModalProps {
   open: boolean
   onClose: () => void
   onThemeChange: (mode: ThemeSelection) => void
+  hubCanWrite?: boolean
 }
 
 const BUILTIN_THEMES: { mode: ThemeMode; icon: typeof Monitor }[] = [
@@ -36,6 +38,7 @@ export function ThemePacksModal({
   open,
   onClose,
   onThemeChange,
+  hubCanWrite = false,
 }: ThemePacksModalProps): JSX.Element | null {
   const { t } = useTranslation()
   const store = useThemePackStore()
@@ -44,8 +47,10 @@ export function ThemePacksModal({
 
   const [activeTab, setActiveTab] = useState<TabId>('installed')
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
+  const [lastResult, setLastResult] = useState<{ id: string; kind: 'success' | 'error'; message: string } | null>(null)
   const [search, setSearch] = useState('')
   const [hubResults, setHubResults] = useState<HubThemePostListItem[]>([])
   const [hubSearched, setHubSearched] = useState(false)
@@ -64,11 +69,28 @@ export function ThemePacksModal({
     [store.metas],
   )
 
+  const freshnessCandidates = useMemo(
+    () => store.metas
+      .filter((m) => !m.deletedAt && !!m.hubPostId)
+      .map((m) => ({ localId: m.id, hubPostId: m.hubPostId as string })),
+    [store.metas],
+  )
+
+  const fetchTimestamps = useCallback(
+    (ids: string[]) => window.vialAPI.themePackHubTimestamps(ids),
+    [],
+  )
+
+  const hubFreshness = useHubFreshness({
+    enabled: open && activeTab === 'installed',
+    candidates: freshnessCandidates,
+    fetchTimestamps,
+  })
+
   const hubRows = useMemo(() => hubResults.map((item) => ({
     hubPostId: item.id,
     name: item.name,
     version: item.version,
-    baseTheme: item.baseTheme,
     uploaderName: item.uploaderName ?? '',
     alreadyInstalled: installedHubPostIds.has(item.id),
   })), [hubResults, installedHubPostIds])
@@ -104,9 +126,31 @@ export function ThemePacksModal({
   useEffect(() => {
     if (!open) {
       setActionError(null)
+      setLastResult(null)
       setConfirmDeleteId(null)
+      setConfirmRemoveId(null)
     }
   }, [open])
+
+  const pushPackToHub = useCallback(async (
+    packId: string,
+    hubPostId: string,
+  ): Promise<{ success: boolean; error?: string }> => {
+    const get = await window.vialAPI.themePackGet(packId)
+    if (!get.success || !get.data) {
+      return { success: false, error: get.error ?? t('themePacks.parseError') }
+    }
+    const res = await window.vialAPI.hubUpdateThemePost({
+      postId: hubPostId,
+      entryId: packId,
+      pack: get.data.pack as HubThemePackBody,
+    })
+    if (res.success) {
+      await store.refresh()
+      return { success: true }
+    }
+    return { success: false, error: res.error ?? t('hub.updateFailed') }
+  }, [store, t])
 
   const handleSelectTheme = useCallback((selection: ThemeSelection) => {
     if (selection === activeTheme) return
@@ -127,8 +171,13 @@ export function ThemePacksModal({
 
   const handleDelete = useCallback(async (id: string) => {
     setActionError(null)
+    setLastResult(null)
     setPendingId(id)
     try {
+      const meta = store.metas.find((m) => m.id === id)
+      if (meta?.hubPostId) {
+        await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id).catch(() => null)
+      }
       const result = await store.remove(id)
       if (!result.success && result.error) setActionError(result.error)
     } finally {
@@ -158,9 +207,113 @@ export function ThemePacksModal({
     const newName = rename.commitRename(id)
     if (!newName) return
     setActionError(null)
-    const result = await store.rename(id, newName)
-    if (!result.success && result.error) setActionError(result.error)
-  }, [rename, store])
+    setPendingId(id)
+    try {
+      const result = await store.rename(id, newName)
+      if (!result.success && result.error) {
+        setActionError(result.error)
+        return
+      }
+      const meta = store.metas.find((m) => m.id === id)
+      if (meta?.hubPostId) {
+        const upd = await pushPackToHub(id, meta.hubPostId)
+        if (upd.success) {
+          setLastResult({ id, kind: 'success', message: t('common.synced') })
+        } else {
+          setActionError(upd.error ?? t('hub.updateFailed'))
+        }
+      }
+    } finally {
+      setPendingId(null)
+    }
+  }, [rename, store, t, pushPackToHub])
+
+  const handleUpload = useCallback(async (id: string): Promise<void> => {
+    setPendingId(id)
+    setActionError(null)
+    setLastResult(null)
+    try {
+      const get = await window.vialAPI.themePackGet(id)
+      if (!get.success || !get.data) {
+        setLastResult({ id, kind: 'error', message: get.error ?? t('themePacks.parseError') })
+        return
+      }
+      const result = await window.vialAPI.hubUploadThemePost({
+        entryId: id,
+        pack: get.data.pack as HubThemePackBody,
+      })
+      if (result.success) {
+        setLastResult({ id, kind: 'success', message: t('hub.uploadSuccess') })
+        await store.refresh()
+      } else {
+        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.uploadFailed') })
+      }
+    } finally {
+      setPendingId(null)
+    }
+  }, [store, t])
+
+  const handleUpdate = useCallback(async (id: string): Promise<void> => {
+    const meta = store.metas.find((m) => m.id === id)
+    if (!meta?.hubPostId) return
+    setPendingId(id)
+    setActionError(null)
+    setLastResult(null)
+    try {
+      const result = await pushPackToHub(id, meta.hubPostId)
+      if (result.success) {
+        setLastResult({ id, kind: 'success', message: t('hub.updateSuccess') })
+      } else {
+        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.updateFailed') })
+      }
+    } finally {
+      setPendingId(null)
+    }
+  }, [store.metas, pushPackToHub, t])
+
+  const handleSync = useCallback(async (id: string): Promise<void> => {
+    const meta = store.metas.find((m) => m.id === id)
+    if (!meta?.hubPostId) return
+    setPendingId(id)
+    setActionError(null)
+    setLastResult(null)
+    try {
+      const result = await window.vialAPI.hubDownloadThemePost(meta.hubPostId)
+      if (!result.success || !result.data) {
+        setLastResult({ id, kind: 'error', message: result.error ?? t('themePacks.parseError') })
+        return
+      }
+      const apply = await store.applyImport(result.data, { id, hubPostId: meta.hubPostId })
+      if (apply.success) {
+        setLastResult({ id, kind: 'success', message: t('common.synced') })
+        await store.refresh()
+      } else {
+        setLastResult({ id, kind: 'error', message: apply.error ?? t('themePacks.parseError') })
+      }
+    } finally {
+      setPendingId(null)
+    }
+  }, [store, t])
+
+  const handleRemove = useCallback(async (id: string): Promise<void> => {
+    const meta = store.metas.find((m) => m.id === id)
+    if (!meta?.hubPostId) return
+    setPendingId(id)
+    setActionError(null)
+    setLastResult(null)
+    try {
+      const result = await window.vialAPI.hubDeleteThemePost(meta.hubPostId, id)
+      if (result.success) {
+        setLastResult({ id, kind: 'success', message: t('hub.removeSuccess') })
+        await store.refresh()
+      } else {
+        setLastResult({ id, kind: 'error', message: result.error ?? t('hub.removeFailed') })
+      }
+    } finally {
+      setPendingId(null)
+      setConfirmRemoveId(null)
+    }
+  }, [store, t])
 
   const handleHubDownload = useCallback(async (postId: string): Promise<void> => {
     setPendingId(postId)
@@ -297,6 +450,16 @@ export function ThemePacksModal({
                   onSelect={handleSelectTheme}
                   onExport={handleExport}
                   onDelete={handleDelete}
+                  hubOrigin={hubOrigin}
+                  hubCanWrite={hubCanWrite}
+                  hubFreshness={hubFreshness}
+                  lastResult={lastResult}
+                  confirmRemoveId={confirmRemoveId}
+                  setConfirmRemoveId={setConfirmRemoveId}
+                  onUpload={handleUpload}
+                  onUpdate={handleUpdate}
+                  onSync={handleSync}
+                  onRemove={handleRemove}
                 />
               ))}
             </div>
@@ -347,7 +510,6 @@ interface HubRow {
   hubPostId: string
   name: string
   version: string
-  baseTheme: string
   uploaderName: string
   alreadyInstalled: boolean
 }
@@ -402,10 +564,6 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
             <div className="truncate text-sm font-medium text-content">{row.name}</div>
             <div className="text-xs text-content-muted">
               v{row.version}{row.uploaderName ? ` · ${row.uploaderName}` : ''}
-              {' · '}
-              <span className="rounded bg-surface-dim px-1 py-0.5 text-[11px]">
-                {row.baseTheme === 'dark' ? t('themePacks.baseThemeDark') : t('themePacks.baseThemeLight')}
-              </span>
             </div>
           </div>
           <div className="shrink-0">

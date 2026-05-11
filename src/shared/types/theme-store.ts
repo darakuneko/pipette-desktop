@@ -5,7 +5,6 @@ export interface ThemePackMeta {
   filename: string
   name: string
   version: string
-  baseTheme: 'light' | 'dark'
   hubPostId?: string
   hubUpdatedAt?: string
   savedAt: string
@@ -35,7 +34,6 @@ export type ThemePackColors = Record<ThemeColorKey, string>
 export interface ThemePackEntryFile {
   name: string
   version: string
-  baseTheme: 'light' | 'dark'
   colors: ThemePackColors
 }
 

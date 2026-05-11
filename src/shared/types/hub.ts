@@ -81,7 +81,6 @@ export const HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT = 100
 export interface HubThemePackBody {
   name: string
   version: string
-  baseTheme: 'light' | 'dark'
   colors: Record<string, string>
 }
 
@@ -98,7 +97,6 @@ export interface HubThemePostListItem {
   id: string
   name: string
   version: string
-  baseTheme: string
   uploadedBy?: string | null
   uploaderName?: string | null
   createdAt: string
@@ -108,7 +106,6 @@ export interface HubThemePostListItem {
 export interface HubThemeListParams {
   q?: string
   name?: string
-  baseTheme?: string
   page?: number
   perPage?: number
 }

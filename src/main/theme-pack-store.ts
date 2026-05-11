@@ -181,7 +181,7 @@ export async function savePack(input: {
   if (!validation.ok || !validation.header) {
     return fail('INVALID_FILE', validation.errors.join('; '))
   }
-  const { name, version, baseTheme } = validation.header
+  const { name, version } = validation.header
 
   try {
     const index = await readIndex()
@@ -218,7 +218,6 @@ export async function savePack(input: {
       filename: `${PACKS_DIRNAME}/${id}.json`,
       name,
       version,
-      baseTheme,
       ...(nextHubPostId ? { hubPostId: nextHubPostId } : {}),
       ...(nextHubUpdatedAt ? { hubUpdatedAt: nextHubUpdatedAt } : {}),
       savedAt: existing?.savedAt ?? now,

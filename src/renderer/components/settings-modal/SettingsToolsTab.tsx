@@ -372,6 +372,7 @@ export function SettingsToolsTab({
       open={themePacksOpen}
       onClose={() => setThemePacksOpen(false)}
       onThemeChange={onThemeChange}
+      hubCanWrite={hubCanWrite}
     />
     </>
   )

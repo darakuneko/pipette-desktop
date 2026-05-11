@@ -53,7 +53,7 @@ function applyPackTheme(
   pack: ThemePackEntryFile,
   setEffectiveTheme: (t: EffectiveTheme) => void,
 ): void {
-  const effective: EffectiveTheme = pack.baseTheme === 'dark' ? 'dark' : 'light'
+  const effective = resolveEffectiveTheme('system')
   setEffectiveTheme(effective)
   applyPackColors(pack.colors)
   document.documentElement.style.setProperty('color-scheme', effective)

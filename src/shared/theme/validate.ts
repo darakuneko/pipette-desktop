@@ -13,7 +13,7 @@ export interface ValidateThemePackResult {
   ok: boolean
   errors: string[]
   warnings: string[]
-  header?: { name: string; version: string; baseTheme: 'light' | 'dark' }
+  header?: { name: string; version: string }
 }
 
 export function validateName(value: unknown): string | null {
@@ -53,10 +53,6 @@ export function validateThemePack(raw: unknown): ValidateThemePackResult {
   if (nameError) errors.push(nameError)
   const versionError = validateVersion(obj.version)
   if (versionError) errors.push(versionError)
-
-  if (obj.baseTheme !== 'light' && obj.baseTheme !== 'dark') {
-    errors.push('baseTheme must be "light" or "dark"')
-  }
 
   if (!obj.colors || typeof obj.colors !== 'object' || Array.isArray(obj.colors)) {
     errors.push('colors must be an object')
@@ -107,7 +103,6 @@ export function validateThemePack(raw: unknown): ValidateThemePackResult {
     header: {
       name: (obj.name as string).trim(),
       version: (obj.version as string).trim(),
-      baseTheme: obj.baseTheme as 'light' | 'dark',
     },
   }
 }

@@ -972,7 +972,6 @@ export function setupHubIpc(): void {
           const obj = params as Record<string, unknown>
           if (typeof obj.q === 'string') query.q = obj.q
           if (typeof obj.name === 'string') query.name = obj.name
-          if (typeof obj.baseTheme === 'string') query.baseTheme = obj.baseTheme
           if (typeof obj.page === 'number') query.page = obj.page
           if (typeof obj.perPage === 'number') query.perPage = obj.perPage
         }
