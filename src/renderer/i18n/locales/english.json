@@ -33,7 +33,8 @@
     "installed": "Installed",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
-    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."
+    "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>.",
+    "comingSoon": "Coming soon"
   },
   "app": {
     "title": "Pipette",
@@ -470,6 +471,33 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "themePacks": {
+    "manageRow": "Theme Packs",
+    "edit": "Edit",
+    "title": "Theme Packs",
+    "installed": "Installed",
+    "empty": "No theme packs installed",
+    "importButton": "Import",
+    "import": "Import Theme Pack",
+    "importSuccess": "Theme pack imported successfully",
+    "export": "Export",
+    "exportSuccess": "Theme pack exported successfully",
+    "apply": "Apply",
+    "applied": "Applied",
+    "rename": "Rename",
+    "renameTitle": "Rename Theme Pack",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{name}}\"? This cannot be undone.",
+    "nameLabel": "Name",
+    "versionLabel": "Version",
+    "baseThemeLabel": "Base Theme",
+    "baseThemeLight": "Light",
+    "baseThemeDark": "Dark",
+    "validationFailed": "Invalid theme pack: {{errors}}",
+    "parseError": "Failed to parse file",
+    "selectTheme": "Select {{name}}",
+    "hubEmpty": "No matching theme packs on the Hub"
   },
   "layout": {
     "keyboardLayout": "Key Labels",

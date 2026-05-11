@@ -33,7 +33,8 @@
     "findOnHub": "Hub で探す",
     "findOnHubHint": "アップロードされたファイルを <hub>Pipette Hub</hub> で確認できます。",
     "installed": "インストール済み",
-    "searchPlaceholder": "Pipette Hub を検索 (2 文字以上で入力)…"
+    "searchPlaceholder": "Pipette Hub を検索 (2 文字以上で入力)…",
+    "comingSoon": "近日公開"
   },
   "app": {
     "title": "Pipette",
@@ -470,6 +471,33 @@
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム"
+  },
+  "themePacks": {
+    "manageRow": "テーマパック",
+    "edit": "編集",
+    "title": "テーマパック",
+    "installed": "インストール済み",
+    "empty": "テーマパックがインストールされていません",
+    "importButton": "インポート",
+    "import": "テーマパックをインポート",
+    "importSuccess": "テーマパックのインポートに成功しました",
+    "export": "エクスポート",
+    "exportSuccess": "テーマパックのエクスポートに成功しました",
+    "apply": "適用",
+    "applied": "適用中",
+    "rename": "名前を変更",
+    "renameTitle": "テーマパックの名前を変更",
+    "delete": "削除",
+    "deleteConfirm": "\"{{name}}\" を削除しますか？この操作は元に戻せません。",
+    "nameLabel": "名前",
+    "versionLabel": "バージョン",
+    "baseThemeLabel": "ベーステーマ",
+    "baseThemeLight": "ライト",
+    "baseThemeDark": "ダーク",
+    "validationFailed": "無効なテーマパック: {{errors}}",
+    "parseError": "ファイルの解析に失敗しました",
+    "selectTheme": "{{name}} を選択",
+    "hubEmpty": "Hub に一致するテーマパックがありません"
   },
   "layout": {
     "keyboardLayout": "キーラベル表示",

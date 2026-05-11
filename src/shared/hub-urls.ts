@@ -11,6 +11,7 @@
 export const HUB_CATEGORY = {
   KEY_LABELS: 'keyLabels',
   I18N_PACKS: 'i18nPacks',
+  THEME_PACKS: 'themePacks',
   FAVORITES: 'favorites',
 } as const
 
@@ -39,4 +40,9 @@ export function buildHubKeyLabelUrl(origin: string, hubPostId: string): string {
 /** `https://{origin}/i18n-packs/{id}` — Pipette Hub language pack resource. */
 export function buildHubI18nPackUrl(origin: string, hubPostId: string): string {
   return `${origin}/i18n-packs/${ensureHubPostId(hubPostId)}`
+}
+
+/** `https://{origin}/theme-packs/{id}` — Pipette Hub theme pack resource. */
+export function buildHubThemePackUrl(origin: string, hubPostId: string): string {
+  return `${origin}/theme-packs/${ensureHubPostId(hubPostId)}`
 }

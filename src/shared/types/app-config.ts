@@ -8,6 +8,7 @@ export interface WindowState {
 }
 
 export type ThemeMode = 'light' | 'dark' | 'system'
+export type ThemeSelection = ThemeMode | `pack:${string}`
 export type AutoLockMinutes = 10 | 20 | 30 | 40 | 50 | 60
 export type BasicViewType = 'ansi' | 'iso' | 'jis' | 'list'
 export type SplitKeyMode = 'split' | 'flat'
@@ -27,7 +28,7 @@ export type TypingHeatmapWindowMin = typeof TYPING_HEATMAP_WINDOW_OPTIONS[number
 export interface AppConfig {
   autoSync: boolean
   windowState?: WindowState
-  theme: ThemeMode
+  theme: ThemeSelection
   currentKeyboardLayout: string
   defaultKeyboardLayout: string
   defaultAutoAdvance: boolean

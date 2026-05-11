@@ -22,6 +22,7 @@ import { validatePack } from '../../../shared/i18n/validate'
 import { computeCoverage } from '../../../shared/i18n/coverage'
 import { BASE_REVISION, ENGLISH_PACK_BODY } from '../../i18n/coverage-cache'
 import english from '../../i18n/locales/english.json'
+import { formatTimestamp } from '../../utils/format-timestamp'
 import type { I18nPackMeta } from '../../../shared/types/i18n-store'
 import type { HubI18nPostListItem } from '../../../shared/types/hub'
 import { MissingKeysModal } from './MissingKeysModal'
@@ -72,17 +73,6 @@ interface HubRow {
   version: string
   uploaderName: string
   alreadyInstalled: boolean
-}
-
-function formatTimestamp(iso: string): string {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    const pad = (n: number): string => n.toString().padStart(2, '0')
-    return `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } catch {
-    return iso
-  }
 }
 
 export function LanguagePacksModal({

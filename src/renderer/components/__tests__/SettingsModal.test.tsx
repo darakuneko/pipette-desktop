@@ -613,7 +613,7 @@ describe('SettingsModal', () => {
     it('shows Tools tab content by default', () => {
       render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onClose={onClose} />)
 
-      expect(screen.getByTestId('theme-option-system')).toBeInTheDocument()
+      expect(screen.getByTestId('settings-theme-packs-row')).toBeInTheDocument()
       expect(screen.queryByTestId('sync-sign-in')).not.toBeInTheDocument()
     })
 
@@ -623,7 +623,7 @@ describe('SettingsModal', () => {
       fireEvent.click(screen.getByTestId('settings-tab-data'))
 
       expect(screen.getByTestId('sync-sign-in')).toBeInTheDocument()
-      expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('settings-theme-packs-row')).not.toBeInTheDocument()
     })
 
   })
@@ -662,33 +662,12 @@ describe('SettingsModal', () => {
     })
   })
 
-  describe('Appearance section (Tools tab)', () => {
-    it('renders theme option buttons', () => {
+  describe('Theme packs section (Tools tab)', () => {
+    it('renders theme packs manage row with edit button', () => {
       renderAndSwitchToTools()
 
-      expect(screen.getByTestId('theme-option-system')).toBeInTheDocument()
-      expect(screen.getByTestId('theme-option-light')).toBeInTheDocument()
-      expect(screen.getByTestId('theme-option-dark')).toBeInTheDocument()
-    })
-
-    it('highlights the active theme', () => {
-      renderAndSwitchToTools({ theme: 'dark' })
-
-      expect(screen.getByTestId('theme-option-dark').className).toContain('bg-accent/15')
-      expect(screen.getByTestId('theme-option-light').className).not.toContain('bg-accent/15')
-      expect(screen.getByTestId('theme-option-system').className).not.toContain('bg-accent/15')
-    })
-
-    it('calls onThemeChange when a theme option is clicked', () => {
-      const onThemeChange = vi.fn()
-      render(<SettingsModal sync={makeSyncMock()} {...defaultProps} onThemeChange={onThemeChange} onClose={onClose} />)
-      fireEvent.click(screen.getByTestId('settings-tab-tools'))
-
-      fireEvent.click(screen.getByTestId('theme-option-dark'))
-      expect(onThemeChange).toHaveBeenCalledWith('dark')
-
-      fireEvent.click(screen.getByTestId('theme-option-light'))
-      expect(onThemeChange).toHaveBeenCalledWith('light')
+      expect(screen.getByTestId('settings-theme-packs-row')).toBeInTheDocument()
+      expect(screen.getByTestId('settings-theme-packs-button')).toBeInTheDocument()
     })
   })
 
@@ -735,7 +714,7 @@ describe('SettingsModal', () => {
       renderAndSwitchToData()
 
       expect(screen.getByTestId('hub-enable-toggle')).toBeInTheDocument()
-      expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('settings-theme-packs-row')).not.toBeInTheDocument()
     })
 
     it('shows enabled status when hub is enabled', () => {
@@ -1144,7 +1123,7 @@ describe('SettingsModal', () => {
     it('does not show other tab content when About is active', () => {
       renderAndSwitchToAbout()
 
-      expect(screen.queryByTestId('theme-option-system')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('settings-theme-packs-row')).not.toBeInTheDocument()
       expect(screen.queryByTestId('sync-sign-in')).not.toBeInTheDocument()
       expect(screen.queryByTestId('hub-enable-toggle')).not.toBeInTheDocument()
     })

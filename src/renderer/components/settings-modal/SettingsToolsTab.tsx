@@ -2,22 +2,24 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { THEME_OPTIONS, TIME_STEPS } from './settings-modal-shared'
+import { TIME_STEPS } from './settings-modal-shared'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
 import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { SUPPORTED_LANGUAGES } from '../../i18n'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { useI18nPackStore } from '../../hooks/useI18nPackStore'
+import { useThemePackStore } from '../../hooks/useThemePackStore'
 import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
 import { LanguagePacksModal } from '../i18n-packs/LanguagePacksModal'
-import type { ThemeMode } from '../../hooks/useTheme'
+import { ThemePacksModal } from '../theme-packs/ThemePacksModal'
+import { isPackTheme, extractPackId, type ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
 export interface SettingsToolsTabProps {
-  theme: ThemeMode
-  onThemeChange: (mode: ThemeMode) => void
+  theme: ThemeSelection
+  onThemeChange: (mode: ThemeSelection) => void
   defaultLayout: KeyboardLayoutId
   onDefaultLayoutChange: (layout: KeyboardLayoutId) => void
   defaultAutoAdvance: boolean
@@ -66,8 +68,19 @@ export function SettingsToolsTab({
   const appConfig = useAppConfig()
   const [keyLabelsOpen, setKeyLabelsOpen] = useState(false)
   const [languagePacksOpen, setLanguagePacksOpen] = useState(false)
+  const [themePacksOpen, setThemePacksOpen] = useState(false)
   const keyLabels = useKeyLabels()
   const i18nPacks = useI18nPackStore()
+  const themePacks = useThemePackStore()
+
+  const activeThemeName = useMemo(() => {
+    if (isPackTheme(theme)) {
+      const packId = extractPackId(theme)
+      const meta = themePacks.metas.find((m) => m.id === packId)
+      return meta?.name ?? packId
+    }
+    return t(`theme.${theme}`)
+  }, [theme, themePacks.metas, t])
 
   const languageOptions = useMemo(() => {
     const opts: { id: string; name: string }[] = SUPPORTED_LANGUAGES.map((l) => ({ id: l.id, name: l.name }))
@@ -119,30 +132,6 @@ export function SettingsToolsTab({
     <>
     <div className="pt-4 space-y-6">
       <section>
-        <h4 className="mb-2 text-sm font-medium text-content-secondary">
-          {t('theme.label')}
-        </h4>
-        <div className="flex rounded-lg border border-edge bg-surface p-1 gap-0.5">
-          {THEME_OPTIONS.map(({ mode, icon: Icon }) => (
-            <button
-              key={mode}
-              type="button"
-              className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
-                theme === mode
-                  ? 'bg-accent/15 text-accent'
-                  : 'text-content-secondary hover:text-content'
-              }`}
-              onClick={() => onThemeChange(mode)}
-              data-testid={`theme-option-${mode}`}
-            >
-              <Icon size={16} aria-hidden="true" />
-              {t(`theme.${mode}`)}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section>
         <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-language-row">
             <span className="text-sm font-medium text-content-secondary">
@@ -181,6 +170,28 @@ export function SettingsToolsTab({
             >
               {t('keyLabels.edit')}
             </button>
+          </div>
+
+          <div className={ROW_CLASS} data-testid="settings-theme-packs-row">
+            <span className="text-sm font-medium text-content-secondary">
+              {t('themePacks.manageRow')}
+            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-[13px] text-content"
+                data-testid="settings-theme-pack-active-name"
+              >
+                {activeThemeName}
+              </span>
+              <button
+                type="button"
+                onClick={() => setThemePacksOpen(true)}
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+                data-testid="settings-theme-packs-button"
+              >
+                {t('themePacks.edit')}
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -356,6 +367,11 @@ export function SettingsToolsTab({
       onClose={() => setLanguagePacksOpen(false)}
       currentDisplayName={hubDisplayName}
       hubCanWrite={hubCanWrite}
+    />
+    <ThemePacksModal
+      open={themePacksOpen}
+      onClose={() => setThemePacksOpen(false)}
+      onThemeChange={onThemeChange}
     />
     </>
   )

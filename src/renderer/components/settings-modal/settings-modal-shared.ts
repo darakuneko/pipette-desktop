@@ -3,7 +3,7 @@
 import type { LucideIcon } from 'lucide-react'
 import { Monitor, Sun, Moon } from 'lucide-react'
 import type { UseSyncReturn } from '../../hooks/useSync'
-import type { ThemeMode } from '../../hooks/useTheme'
+import type { ThemeMode, ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
 
@@ -48,8 +48,8 @@ export const TABS = [
 export interface SettingsModalProps {
   sync: UseSyncReturn
   connectedKeyboardUid?: string
-  theme: ThemeMode
-  onThemeChange: (mode: ThemeMode) => void
+  theme: ThemeSelection
+  onThemeChange: (mode: ThemeSelection) => void
   defaultLayout: KeyboardLayoutId
   onDefaultLayoutChange: (layout: KeyboardLayoutId) => void
   defaultAutoAdvance: boolean
