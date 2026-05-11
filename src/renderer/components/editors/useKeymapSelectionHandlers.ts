@@ -129,7 +129,6 @@ export function useKeymapSelectionHandlers({
   useEffect(() => {
     const layerChanged = prevLayerRef.current !== currentLayer
     prevLayerRef.current = currentLayer
-    setPopoverState(null)
     if (layerChanged) { clearMultiSelection(); clearPickerSelection() }
   }, [currentLayer, clearMultiSelection, clearPickerSelection])
 

@@ -49,6 +49,8 @@ interface PopoverForStateProps {
   encoderLayout: Map<string, number>
   currentLayer: number
   layers: number
+  onLayerChange?: (layer: number) => void
+  layerNames?: string[]
   onKeycodeSelect: (kc: Keycode) => void
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
@@ -62,6 +64,7 @@ interface PopoverForStateProps {
 
 function PopoverForState({
   popoverState, keymap, encoderLayout, currentLayer, layers,
+  onLayerChange, layerNames,
   onKeycodeSelect, onRawKeycodeSelect, onModMaskChange, onClose,
   quickSelect, previousKeycode, onUndo, nextKeycode, onRedo,
 }: PopoverForStateProps) {
@@ -72,6 +75,7 @@ function PopoverForState({
   return (
     <KeyPopover
       anchorRect={popoverState.anchorRect} currentKeycode={currentKeycode} maskOnly={maskOnly} layers={layers}
+      currentLayer={currentLayer} onLayerChange={onLayerChange} layerNames={layerNames}
       onKeycodeSelect={onKeycodeSelect} onRawKeycodeSelect={onRawKeycodeSelect} onModMaskChange={onModMaskChange}
       onClose={onClose} quickSelect={quickSelect} previousKeycode={previousKeycode} onUndo={onUndo}
       nextKeycode={nextKeycode} onRedo={onRedo}
@@ -977,6 +981,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <PopoverForState
           popoverState={popoverState} keymap={keymap} encoderLayout={encoderLayout}
           currentLayer={currentLayer} layers={layers}
+          onLayerChange={onLayerChange} layerNames={layerNames}
           onKeycodeSelect={handlePopoverKeycodeSelect} onRawKeycodeSelect={handlePopoverRawKeycodeSelect}
           onModMaskChange={handlePopoverModMaskChange}
           onClose={() => setPopoverState(null)} quickSelect={quickSelect}
