@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mergeEntries, gcTombstones, effectiveTime } from '../sync/merge'
+import { mergeEntries, gcTombstones, effectiveTime, type MergeOptions } from '../sync/merge'
 import type { SavedFavoriteMeta } from '../../shared/types/favorite-store'
 
 type Entry = SavedFavoriteMeta
@@ -192,7 +192,7 @@ describe('mergeEntries', () => {
       expect(result.remoteFilesToCopy).toContain(remote[1].filename) // remote-only 'c'
     })
 
-    it('sorts merged entries newest-first by effective time', () => {
+    it('sorts merged active entries newest-first by effective time', () => {
       const local = [
         makeEntry({ id: 'old', savedAt: '2025-01-01T00:00:00.000Z' }),
       ]
@@ -204,6 +204,73 @@ describe('mergeEntries', () => {
 
       expect(result.entries[0].id).toBe('new')
       expect(result.entries[1].id).toBe('old')
+    })
+
+    it('places tombstones after active entries', () => {
+      const local = [
+        makeEntry({ id: 'alive', savedAt: '2025-01-01T00:00:00.000Z' }),
+        makeEntry({
+          id: 'dead',
+          savedAt: '2025-06-01T00:00:00.000Z',
+          updatedAt: '2025-06-01T00:00:00.000Z',
+          deletedAt: '2025-06-01T00:00:00.000Z',
+        }),
+      ]
+      const remote: Entry[] = []
+
+      const result = mergeEntries(local, remote)
+
+      expect(result.entries).toHaveLength(2)
+      expect(result.entries[0].id).toBe('alive')
+      expect(result.entries[1].id).toBe('dead')
+      expect(result.entries[1].deletedAt).toBeTruthy()
+    })
+  })
+
+  describe('preserveLocalOrder', () => {
+    it('keeps local array order when preserveLocalOrder is true', () => {
+      const local = [
+        makeEntry({ id: 'c', savedAt: '2025-01-01T00:00:00.000Z' }),
+        makeEntry({ id: 'a', savedAt: '2025-06-01T00:00:00.000Z' }),
+        makeEntry({ id: 'b', savedAt: '2025-03-01T00:00:00.000Z' }),
+      ]
+      const remote: Entry[] = []
+
+      const result = mergeEntries(local, remote, { preserveLocalOrder: true })
+
+      expect(result.entries.map((e) => e.id)).toEqual(['c', 'a', 'b'])
+    })
+
+    it('appends remote-only entries at the end when preserveLocalOrder is true', () => {
+      const local = [
+        makeEntry({ id: 'b', savedAt: '2025-03-01T00:00:00.000Z' }),
+        makeEntry({ id: 'a', savedAt: '2025-01-01T00:00:00.000Z' }),
+      ]
+      const remote = [
+        makeEntry({ id: 'a', savedAt: '2025-01-01T00:00:00.000Z' }),
+        makeEntry({ id: 'c', savedAt: '2025-06-01T00:00:00.000Z' }),
+      ]
+
+      const result = mergeEntries(local, remote, { preserveLocalOrder: true })
+
+      expect(result.entries.map((e) => e.id)).toEqual(['b', 'a', 'c'])
+    })
+
+    it('separates tombstones to end even with preserveLocalOrder', () => {
+      const local = [
+        makeEntry({
+          id: 'dead',
+          savedAt: '2025-06-01T00:00:00.000Z',
+          updatedAt: '2025-06-01T00:00:00.000Z',
+          deletedAt: '2025-06-01T00:00:00.000Z',
+        }),
+        makeEntry({ id: 'alive', savedAt: '2025-01-01T00:00:00.000Z' }),
+      ]
+      const remote: Entry[] = []
+
+      const result = mergeEntries(local, remote, { preserveLocalOrder: true })
+
+      expect(result.entries.map((e) => e.id)).toEqual(['alive', 'dead'])
     })
   })
 

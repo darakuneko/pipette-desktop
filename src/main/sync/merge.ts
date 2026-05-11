@@ -9,6 +9,10 @@ type EntryMeta = SavedFavoriteMeta | SnapshotMeta | AnalyzeFilterSnapshotMeta
 
 const TOMBSTONE_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 
+export interface MergeOptions {
+  preserveLocalOrder?: boolean
+}
+
 export interface MergeResult<T extends EntryMeta> {
   entries: T[]
   remoteFilesToCopy: string[]
@@ -20,7 +24,7 @@ export function effectiveTime(entry: EntryMeta): number {
   return Number.isNaN(t) ? 0 : t
 }
 
-export function mergeEntries<T extends EntryMeta>(local: T[], remote: T[]): MergeResult<T> {
+export function mergeEntries<T extends EntryMeta>(local: T[], remote: T[], options?: MergeOptions): MergeResult<T> {
   const localMap = new Map<string, T>()
   for (const entry of local) {
     localMap.set(entry.id, entry)
@@ -72,10 +76,22 @@ export function mergeEntries<T extends EntryMeta>(local: T[], remote: T[]): Merg
     }
   }
 
-  // Sort newest-first to preserve UI order after merge
-  entries.sort((a, b) => effectiveTime(b) - effectiveTime(a))
+  const active: T[] = []
+  const tombstones: T[] = []
+  for (const entry of entries) {
+    if (entry.deletedAt) {
+      tombstones.push(entry)
+    } else {
+      active.push(entry)
+    }
+  }
 
-  return { entries, remoteFilesToCopy, remoteNeedsUpdate }
+  if (!options?.preserveLocalOrder) {
+    active.sort((a, b) => effectiveTime(b) - effectiveTime(a))
+  }
+
+  active.push(...tombstones)
+  return { entries: active, remoteFilesToCopy, remoteNeedsUpdate }
 }
 
 export function gcTombstones<T extends EntryMeta>(entries: T[]): T[] {

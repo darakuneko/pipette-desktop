@@ -557,7 +557,8 @@ async function mergeSyncUnit(
   const remoteEntries = gcTombstones(remoteBundle.index.entries)
 
   // Merge entries (both sides GC'd to prevent expired-tombstone upload loops)
-  const result = mergeEntries(localEntries, remoteEntries)
+  const preserveLocalOrder = syncUnit === KEY_LABEL_SYNC_UNIT
+  const result = mergeEntries(localEntries, remoteEntries, { preserveLocalOrder })
 
   // Copy files from remote bundle for entries that remote won
   for (const filename of result.remoteFilesToCopy) {
