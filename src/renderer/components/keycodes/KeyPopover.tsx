@@ -38,6 +38,9 @@ interface KeyPopoverProps {
   emptyInitial?: boolean   // When true, start with empty search (no current keycode)
   maskOnly?: boolean
   layers?: number
+  currentLayer?: number
+  onLayerChange?: (layer: number) => void
+  layerNames?: string[]
   onKeycodeSelect: (kc: Keycode) => void
   onRawKeycodeSelect: (code: number) => void
   onModMaskChange?: (newMask: number) => void
@@ -50,7 +53,18 @@ interface KeyPopoverProps {
   onRedo?: () => void      // Re-apply nextKeycode and close
 }
 
+function detectWrapperMode(keycode: number, maskOnly?: boolean): WrapperMode {
+  if (maskOnly) return 'none'
+  if (isLTKeycode(keycode)) return 'lt'
+  if (isSHTKeycode(keycode)) return 'shT'
+  if (isLMKeycode(keycode)) return 'lm'
+  if (isModTapKeycode(keycode)) return 'modTap'
+  if (isModMaskKeycode(keycode)) return 'modMask'
+  return 'none'
+}
+
 const POPOVER_WIDTH = 320
+const LAYER_SIDEBAR_WIDTH = 56
 const POPOVER_GAP = 6
 
 export function KeyPopover({
@@ -59,6 +73,9 @@ export function KeyPopover({
   emptyInitial,
   maskOnly,
   layers = 16,
+  currentLayer,
+  onLayerChange,
+  layerNames,
   onKeycodeSelect,
   onRawKeycodeSelect,
   onModMaskChange,
@@ -81,15 +98,7 @@ export function KeyPopover({
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
 
   // Wrapper mode: determines how modifier + basic key are combined
-  const [wrapperMode, setWrapperMode] = useState<WrapperMode>(() => {
-    if (maskOnly) return 'none'
-    if (isLTKeycode(currentKeycode)) return 'lt'
-    if (isSHTKeycode(currentKeycode)) return 'shT'
-    if (isLMKeycode(currentKeycode)) return 'lm'
-    if (isModTapKeycode(currentKeycode)) return 'modTap'
-    if (isModMaskKeycode(currentKeycode)) return 'modMask'
-    return 'none'
-  })
+  const [wrapperMode, setWrapperMode] = useState<WrapperMode>(() => detectWrapperMode(currentKeycode, maskOnly))
 
   // Layer selection for LT / LM modes
   const [selectedLayer, setSelectedLayer] = useState<number>(() => {
@@ -107,6 +116,29 @@ export function KeyPopover({
     return 0
   })()
 
+  const showLayerSidebar = currentLayer != null && onLayerChange != null && layers > 1
+  const popoverWidth = showLayerSidebar ? POPOVER_WIDTH + LAYER_SIDEBAR_WIDTH : POPOVER_WIDTH
+
+  const handleLayerSidebarClick = useCallback(
+    (layer: number) => {
+      if (!onLayerChange || layer === currentLayer) return
+      onLayerChange(layer)
+    },
+    [onLayerChange, currentLayer],
+  )
+
+  const prevCurrentLayerRef = useRef(currentLayer)
+  useEffect(() => {
+    if (currentLayer == null || currentLayer === prevCurrentLayerRef.current) return
+    prevCurrentLayerRef.current = currentLayer
+    setWrapperMode(detectWrapperMode(currentKeycode, maskOnly))
+    if (isLTKeycode(currentKeycode)) setSelectedLayer(extractLTLayer(currentKeycode))
+    else if (isLMKeycode(currentKeycode)) setSelectedLayer(extractLMLayer(currentKeycode))
+    else setSelectedLayer(0)
+    setSearchResetKey((k) => k + 1)
+    setPendingAction(null)
+  }, [currentLayer, currentKeycode, maskOnly])
+
   useLayoutEffect(() => {
     const el = popoverRef.current
     if (!el) return
@@ -123,11 +155,11 @@ export function KeyPopover({
     top = Math.max(4, Math.min(top, vh - popH - 4))
 
     // Horizontal: center on the key, clamp to viewport
-    let left = anchorRect.left + anchorRect.width / 2 - POPOVER_WIDTH / 2
-    left = Math.max(4, Math.min(left, vw - POPOVER_WIDTH - 4))
+    let left = anchorRect.left + anchorRect.width / 2 - popoverWidth / 2
+    left = Math.max(4, Math.min(left, vw - popoverWidth - 4))
 
     setPosition({ top, left })
-  }, [anchorRect, activeTab, wrapperMode])
+  }, [anchorRect, activeTab, wrapperMode, popoverWidth])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -316,14 +348,40 @@ export function KeyPopover({
     <div
       ref={popoverRef}
       data-popover="key"
-      className="fixed z-50 rounded-lg border border-edge bg-surface-alt shadow-xl"
+      className="fixed z-50 flex flex-col rounded-lg border border-edge bg-surface-alt shadow-xl"
       style={{
         top: position.top,
         left: position.left,
-        width: POPOVER_WIDTH,
+        width: popoverWidth,
+        height: showLayerSidebar ? 500 : undefined,
+        paddingLeft: showLayerSidebar ? LAYER_SIDEBAR_WIDTH : undefined,
       }}
       data-testid="key-popover"
     >
+      {showLayerSidebar && (
+        <div
+          className="absolute bottom-0 left-0 top-0 flex flex-col gap-1 overflow-y-auto border-r border-edge-subtle p-2"
+          style={{ width: LAYER_SIDEBAR_WIDTH, scrollbarWidth: 'thin', scrollbarGutter: 'stable' }}
+          data-testid="popover-layer-sidebar"
+        >
+          {Array.from({ length: layers }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => handleLayerSidebarClick(i)}
+              className={`w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 text-[12px] font-semibold tabular-nums transition-colors ${
+                currentLayer === i
+                  ? 'border-accent bg-accent text-content-inverse'
+                  : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
+              }`}
+              title={layerNames?.[i] || undefined}
+              data-testid={`popover-layer-${i}`}
+            >
+              {i}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex border-b border-edge-subtle px-2 pt-1">
         <button type="button" className={tabClass('key')} onClick={() => setActiveTab('key')} data-testid="popover-tab-key">
           {t('editor.keymap.keyPopover.keyTab')}
@@ -409,7 +467,7 @@ export function KeyPopover({
         </div>
       )}
 
-      <div className="p-3">
+      <div className="flex min-h-0 flex-1 flex-col px-3 py-2">
         {activeTab === 'key' && wrapperMode !== 'lm' && (
           <PopoverTabKey
             key={searchResetKey}
