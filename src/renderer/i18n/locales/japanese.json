@@ -601,7 +601,9 @@
       "version": "バージョン {{version}}",
       "license": "ライセンス: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
-    }
+    },
+    "zoomLevel": "ズーム",
+    "zoomLevelWarning": "表示が崩れる場合があります。自己責任で変更してください。"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",

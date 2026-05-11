@@ -601,7 +601,9 @@
       "version": "Version {{version}}",
       "license": "License: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
-    }
+    },
+    "zoomLevel": "Zoom",
+    "zoomLevelWarning": "Changing this may cause layout issues. Use at your own risk."
   },
   "analyze": {
     "noKeyboards": "No typing data yet.",
