@@ -60,6 +60,7 @@ import {
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
+import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
 
 interface IpcResult {
   success: boolean
@@ -205,7 +206,10 @@ export function setupSyncIpc(): void {
       if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
         throw new Error('Invalid targets: i18nPacks must be boolean')
       }
-      if (!hasKeyboards && !targets.favorites && !targets.i18nPacks) throw new Error('No targets selected')
+      if (targets.themePacks !== undefined && typeof targets.themePacks !== 'boolean') {
+        throw new Error('Invalid targets: themePacks must be boolean')
+      }
+      if (!hasKeyboards && !targets.favorites && !targets.i18nPacks && !targets.themePacks) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       let metaChanged = false
       if (targets.keyboards === true) {
@@ -229,6 +233,10 @@ export function setupSyncIpc(): void {
       if (targets.i18nPacks) {
         cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
         await deleteFilesByPrefix('i18n_')
+      }
+      if (targets.themePacks) {
+        cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
+        await deleteFilesByPrefix('themes_')
       }
       if (metaChanged) notifyChange(KEYBOARD_META_SYNC_UNIT)
     }),
@@ -326,10 +334,13 @@ export function setupSyncIpc(): void {
       if (targets.i18nPacks !== undefined && typeof targets.i18nPacks !== 'boolean') {
         throw new Error('Invalid targets: i18nPacks must be boolean')
       }
-      if (!targets.keyboards && !targets.favorites && !targets.appSettings && !targets.i18nPacks) throw new Error('No targets selected')
+      if (targets.themePacks !== undefined && typeof targets.themePacks !== 'boolean') {
+        throw new Error('Invalid targets: themePacks must be boolean')
+      }
+      if (!targets.keyboards && !targets.favorites && !targets.appSettings && !targets.i18nPacks && !targets.themePacks) throw new Error('No targets selected')
       if (isSyncInProgress()) throw new Error('Cannot reset while sync is in progress')
       const userData = app.getPath('userData')
-      const allSelected = targets.keyboards && targets.favorites && targets.appSettings && targets.i18nPacks
+      const allSelected = targets.keyboards && targets.favorites && targets.appSettings && targets.i18nPacks && targets.themePacks
       if (allSelected) {
         cancelPendingChanges()
         stopPolling()
@@ -337,6 +348,7 @@ export function setupSyncIpc(): void {
         if (targets.keyboards) cancelPendingChanges('keyboards/')
         if (targets.favorites) cancelPendingChanges('favorites/')
         if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
+        if (targets.themePacks) cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
         // Clearing appSettings resets autoSync config, so stop polling to match
         if (targets.appSettings) stopPolling()
       }
@@ -348,6 +360,9 @@ export function setupSyncIpc(): void {
       }
       if (targets.i18nPacks) {
         await rm(join(userData, 'sync', 'i18n'), { recursive: true, force: true })
+      }
+      if (targets.themePacks) {
+        await rm(join(userData, 'sync', 'themes'), { recursive: true, force: true })
       }
       if (targets.appSettings) {
         getAppConfigStore().clear()

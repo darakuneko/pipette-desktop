@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -470,6 +470,14 @@
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム"
+  },
+  "themePacks": {
+    "manageRow": "テーマパック",
+    "title": "テーマパック",
+    "import": "テーマパックをインポート",
+    "parseError": "ファイルの解析に失敗しました",
+    "selectTheme": "{{name}} を選択",
+    "hubEmpty": "Hub に一致するテーマパックがありません"
   },
   "layout": {
     "keyboardLayout": "キーラベル表示",

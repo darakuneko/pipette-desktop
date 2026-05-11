@@ -340,8 +340,8 @@ export function KeyPopover({
 
   const modeButtonClass = (mode: WrapperMode) => {
     const base = 'rounded px-2 py-0.5 text-xs font-medium transition-colors'
-    if (wrapperMode === mode) return `${base} bg-blue-600 text-white`
-    return `${base} bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600`
+    if (wrapperMode === mode) return `${base} bg-accent text-content-inverse`
+    return `${base} bg-surface-dim text-content-secondary hover:bg-edge`
   }
 
   return (

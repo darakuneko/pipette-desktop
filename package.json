@@ -1,5 +1,6 @@
 {
   "name": "pipette-desktop",
+  "productName": "Pipette",
   "version": "0.4.3",
   "description": "Pipette — Vial-compatible keyboard configurator built with Electron and TypeScript",
   "license": "GPL-3.0-or-later",

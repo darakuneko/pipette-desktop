@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pipette — Theme Pack Authoring Guide</title>
+<style>
+  :root {
+    --doc-bg: #f5f6f8;
+    --doc-card: #ffffff;
+    --doc-text: #1a1d27;
+    --doc-text2: #5c6478;
+    --doc-text3: #8b94a8;
+    --doc-border: #d8dce6;
+    --doc-accent: #2563eb;
+    --doc-code-bg: #f0f2f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--doc-bg);
+    color: var(--doc-text);
+    line-height: 1.6;
+    padding: 32px 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 28px; margin-bottom: 8px; }
+  h1 small { font-size: 14px; color: var(--doc-text3); font-weight: normal; }
+  h2 { font-size: 20px; margin: 40px 0 16px; color: var(--doc-accent); border-bottom: 2px solid var(--doc-accent); padding-bottom: 6px; }
+  h3 { font-size: 16px; margin: 24px 0 12px; color: var(--doc-text2); }
+  p { margin-bottom: 12px; color: var(--doc-text2); font-size: 14px; }
+  .subtitle { color: var(--doc-text3); font-size: 14px; margin-bottom: 32px; }
+
+  /* Cards */
+  .card {
+    background: var(--doc-card);
+    border: 1px solid var(--doc-border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+
+  /* Color table */
+  .color-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .color-table th {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--doc-code-bg);
+    color: var(--doc-accent);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid var(--doc-border);
+  }
+  .color-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--doc-border);
+    vertical-align: middle;
+  }
+  .color-table tr:last-child td { border-bottom: none; }
+  .color-table tr:hover td { background: #f9fafb; }
+
+  .token-name {
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--doc-text);
+  }
+  .token-desc { color: var(--doc-text2); font-size: 12px; line-height: 1.5; }
+  .token-usage { color: var(--doc-text3); font-size: 11px; font-style: italic; }
+
+  .swatch-cell { white-space: nowrap; }
+  .swatch {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.12);
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  .swatch-value {
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 12px;
+    color: var(--doc-text2);
+    vertical-align: middle;
+  }
+
+  .category-label {
+    background: var(--doc-accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .category-row td {
+    padding: 14px 12px 8px !important;
+    border-bottom: none !important;
+    background: transparent !important;
+  }
+
+  /* Preview mockups */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 768px) { .preview-grid { grid-template-columns: 1fr; } }
+
+  .preview-box {
+    border-radius: 10px;
+    padding: 24px;
+    border: 1px solid;
+  }
+  .preview-box h4 {
+    font-size: 13px;
+    margin-bottom: 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+  }
+
+  .preview-light {
+    background: #f5f6f8;
+    border-color: #d8dce6;
+    color: #1a1d27;
+  }
+  .preview-dark {
+    background: #0f1117;
+    border-color: #333a4d;
+    color: #e8eaf0;
+  }
+
+  /* Mock buttons */
+  .mock-btn {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-right: 8px;
+    margin-bottom: 8px;
+    border: 1px solid transparent;
+  }
+
+  /* Mock keys */
+  .mock-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 38px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    margin: 3px;
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  /* Mock tabs */
+  .mock-tab {
+    display: inline-block;
+    padding: 6px 16px;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+    margin-right: 4px;
+  }
+
+  /* Mock picker */
+  .mock-picker {
+    border-radius: 8px;
+    padding: 8px;
+    display: inline-block;
+  }
+  .mock-picker-item {
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-size: 12px;
+    margin-bottom: 4px;
+    border-width: 1px;
+    border-style: solid;
+  }
+
+  /* Mock status dots */
+  .mock-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Annotation callouts */
+  .anno {
+    font-size: 10px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    white-space: nowrap;
+  }
+  .preview-dark .anno {
+    background: rgba(76, 141, 255, 0.15);
+    color: #6ba1ff;
+  }
+
+  .anno-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  /* JSON template */
+  .json-block {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: "SF Mono", "Fira Code", "Consolas", monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    position: relative;
+  }
+  .json-block .jk { color: #89b4fa; }
+  .json-block .jv { color: #a6e3a1; }
+  .json-block .jc { color: #6c7086; font-style: italic; }
+
+  .copy-btn {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: #45475a;
+    color: #cdd6f4;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .copy-btn:hover { background: #585b70; }
+
+  /* Tips */
+  .tip {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #1e40af;
+    margin: 16px 0;
+  }
+  .tip strong { color: #1e3a8a; }
+
+  .warn {
+    background: #fef3c7;
+    border-left: 4px solid #f59e0b;
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #92400e;
+    margin: 16px 0;
+  }
+
+  /* Section labels */
+  .section-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  .section-chip {
+    font-size: 11px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    border: 1px solid;
+  }
+</style>
+</head>
+<body>
+
+<h1>Theme Pack Authoring Guide <small>Pipette Desktop</small></h1>
+<p class="subtitle">A complete reference for creating custom colour themes. All 34 colour tokens explained with visual examples, default values, and design tips.</p>
+
+<!-- ======================================== -->
+<h2>1. Token Categories</h2>
+<p>Theme packs define 34 colour tokens grouped into 7 categories. Every token is required.</p>
+
+<div class="section-grid">
+  <span class="section-chip" style="background:#e0e7ff;border-color:#a5b4fc;color:#3730a3;">Surface (4)</span>
+  <span class="section-chip" style="background:#fce7f3;border-color:#f9a8d4;color:#9d174d;">Content (4)</span>
+  <span class="section-chip" style="background:#d1fae5;border-color:#6ee7b7;color:#065f46;">Edge (3)</span>
+  <span class="section-chip" style="background:#fef3c7;border-color:#fcd34d;color:#92400e;">Semantic (6)</span>
+  <span class="section-chip" style="background:#e0f2fe;border-color:#7dd3fc;color:#0c4a6e;">Key (9)</span>
+  <span class="section-chip" style="background:#f3e8ff;border-color:#c4b5fd;color:#5b21b6;">Tab (3)</span>
+  <span class="section-chip" style="background:#ecfdf5;border-color:#86efac;color:#14532d;">Picker (5)</span>
+</div>
+
+<!-- ======================================== -->
+<h2>2. Visual Reference</h2>
+<p>See how tokens map to actual UI elements. Annotations show the token name used for each part.</p>
+
+<div class="preview-grid">
+  <!-- Light preview -->
+  <div class="preview-box preview-light">
+    <h4>Light Theme (built-in default)</h4>
+
+    <div style="margin-bottom:16px;">
+      <div class="anno-line"><span class="anno">surface</span> Background</div>
+      <div style="background:#ffffff;border:1px solid #d8dce6;border-radius:8px;padding:16px;">
+        <div class="anno-line"><span class="anno">surface-alt</span> Card / raised panel</div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Buttons</div>
+          <span class="mock-btn" style="background:#2563eb;color:#fff;">Save <span class="anno">accent</span></span>
+          <span class="mock-btn" style="background:#fff;color:#1a1d27;border-color:#d8dce6;">Cancel <span class="anno">edge</span></span>
+          <span class="mock-btn" style="background:#ef4444;color:#fff;">Delete <span class="anno">danger</span></span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Status</div>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#10b981;"></span><span style="color:#10b981;font-weight:500;">Success</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#2563eb;"></span><span style="color:#2563eb;font-weight:500;">Synced</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#ea580c;"></span><span style="color:#ea580c;font-weight:500;">Pending</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#f59e0b;"></span><span style="color:#f59e0b;font-weight:500;">Warning</span></span>
+          <span style="font-size:13px;"><span class="mock-dot" style="background:#ef4444;"></span><span style="color:#ef4444;font-weight:500;">Error</span></span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Tabs</div>
+          <span class="mock-tab" style="background:#2563eb;color:#fff;border-radius:6px;">Active <span class="anno">tab-bg-active</span></span>
+          <span class="mock-tab" style="color:#6b7280;">Inactive <span class="anno">tab-text</span></span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Text</div>
+          <div style="color:#1a1d27;font-size:14px;font-weight:500;margin-bottom:2px;">Primary text <span class="anno">content</span></div>
+          <div style="color:#5c6478;font-size:13px;margin-bottom:2px;">Secondary text <span class="anno">content-secondary</span></div>
+          <div style="color:#8b94a8;font-size:13px;">Muted text <span class="anno">content-muted</span></div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Keys</div>
+          <span class="mock-key" style="background:#ffffff;border-color:#c8cdd8;color:#1f2937;box-shadow:0 2px 0 #b0b8c8;">A</span>
+          <span class="mock-key" style="background:#f0f2f7;border-color:#c8cdd8;color:#1f2937;box-shadow:0 2px 0 #b0b8c8;">B <span style="font-size:8px;color:#7c8598;">hover</span></span>
+          <span class="mock-key" style="background:#2563eb;border-color:#2563eb;color:#fff;">C <span style="font-size:8px;">active</span></span>
+          <span class="mock-key" style="background:#93bbfd;border-color:#c8cdd8;color:#1f2937;">D <span style="font-size:8px;">multi</span></span>
+          <div style="margin-top:4px;">
+            <span class="anno">key-bg</span> <span class="anno">key-border</span> <span class="anno">key-shadow</span> <span class="anno">key-label</span>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:#8b94a8;margin-bottom:6px;">Picker</div>
+          <div class="mock-picker" style="background:#f8f9fb;">
+            <div class="mock-picker-item" style="background:#ffffff;border-color:#dfe3eb;color:#374151;">Item 1 <span class="anno">picker-item-bg</span></div>
+            <div class="mock-picker-item" style="background:#eef0f5;border-color:#dfe3eb;color:#374151;">Item 2 (hover) <span class="anno">picker-item-hover</span></div>
+            <div class="mock-picker-item" style="background:#ffffff;border-color:#dfe3eb;color:#374151;">Item 3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dark preview -->
+  <div class="preview-box preview-dark">
+    <h4>Dark Theme (built-in default)</h4>
+
+    <div style="margin-bottom:16px;">
+      <div class="anno-line"><span class="anno">surface</span> Background</div>
+      <div style="background:#1a1d27;border:1px solid #333a4d;border-radius:8px;padding:16px;">
+        <div class="anno-line"><span class="anno">surface-alt</span> Card / raised panel</div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Buttons</div>
+          <span class="mock-btn" style="background:#4c8dff;color:#fff;">Save</span>
+          <span class="mock-btn" style="background:#1a1d27;color:#e8eaf0;border-color:#333a4d;">Cancel</span>
+          <span class="mock-btn" style="background:#f87171;color:#fff;">Delete</span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Status</div>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#34d399;"></span><span style="color:#34d399;font-weight:500;">Success</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#4c8dff;"></span><span style="color:#4c8dff;font-weight:500;">Synced</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#fb923c;"></span><span style="color:#fb923c;font-weight:500;">Pending</span></span>
+          <span style="margin-right:12px;font-size:13px;"><span class="mock-dot" style="background:#fbbf24;"></span><span style="color:#fbbf24;font-weight:500;">Warning</span></span>
+          <span style="font-size:13px;"><span class="mock-dot" style="background:#f87171;"></span><span style="color:#f87171;font-weight:500;">Error</span></span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Tabs</div>
+          <span class="mock-tab" style="background:#4c8dff;color:#fff;border-radius:6px;">Active</span>
+          <span class="mock-tab" style="color:#8892a8;">Inactive</span>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Text</div>
+          <div style="color:#e8eaf0;font-size:14px;font-weight:500;margin-bottom:2px;">Primary text</div>
+          <div style="color:#9ba3b5;font-size:13px;margin-bottom:2px;">Secondary text</div>
+          <div style="color:#636d83;font-size:13px;">Muted text</div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Keys</div>
+          <span class="mock-key" style="background:#262b3a;border-color:#3d4560;color:#d4d8e3;box-shadow:0 2px 0 #0a0c12;">A</span>
+          <span class="mock-key" style="background:#323850;border-color:#3d4560;color:#d4d8e3;box-shadow:0 2px 0 #0a0c12;">B</span>
+          <span class="mock-key" style="background:#4c8dff;border-color:#4c8dff;color:#fff;">C</span>
+          <span class="mock-key" style="background:#3a6fcf;border-color:#3d4560;color:#d4d8e3;">D</span>
+        </div>
+
+        <div>
+          <div style="font-size:11px;color:#636d83;margin-bottom:6px;">Picker</div>
+          <div class="mock-picker" style="background:#1e2233;">
+            <div class="mock-picker-item" style="background:#282e40;border-color:#363e54;color:#c5cbd8;">Item 1</div>
+            <div class="mock-picker-item" style="background:#353d55;border-color:#363e54;color:#c5cbd8;">Item 2 (hover)</div>
+            <div class="mock-picker-item" style="background:#282e40;border-color:#363e54;color:#c5cbd8;">Item 3</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>3. Complete Token Reference</h2>
+<p>All 34 tokens with their default values in the built-in Light and Dark themes. When a theme pack is active, your single set of values replaces both columns — there is no per-mode split.</p>
+
+<div class="card" style="padding:0;overflow:hidden;">
+<table class="color-table">
+  <thead>
+    <tr>
+      <th style="width:30%;">Token</th>
+      <th style="width:30%;">Description</th>
+      <th style="width:20%;">Light Default</th>
+      <th style="width:20%;">Dark Default</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- Surface -->
+    <tr class="category-row"><td colspan="4"><span class="category-label">Surface</span> — Background layers and panels</td></tr>
+    <tr>
+      <td><span class="token-name">surface</span><br><span class="token-usage">Main application background</span></td>
+      <td class="token-desc">The base background colour for the entire app window. Everything sits on top of this.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f5f6f8;"></span><span class="swatch-value">#f5f6f8</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#0f1117;"></span><span class="swatch-value">#0f1117</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">surface-alt</span><br><span class="token-usage">Cards, modals, raised panels</span></td>
+      <td class="token-desc">Elevated containers that sit above <code>surface</code>. Cards, modals, sidebar panels, and dropdown menus use this.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#1a1d27;"></span><span class="swatch-value">#1a1d27</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">surface-dim</span><br><span class="token-usage">Recessed areas, code blocks</span></td>
+      <td class="token-desc">Slightly darker than <code>surface</code>. Used for recessed backgrounds, code blocks, and inset areas that should visually recede.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ebedf2;"></span><span class="swatch-value">#ebedf2</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#242836;"></span><span class="swatch-value">#242836</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">surface-raised</span><br><span class="token-usage">Tooltips, popovers, floating elements</span></td>
+      <td class="token-desc">The highest-elevation surface. Used for tooltips, popovers, and floating elements that stack above modals.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#2e3347;"></span><span class="swatch-value">#2e3347</span></td>
+    </tr>
+
+    <!-- Content -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#9d174d;">Content</span> — Text and foreground colours</td></tr>
+    <tr>
+      <td><span class="token-name">content</span><br><span class="token-usage">Primary text, headings</span></td>
+      <td class="token-desc">Main text colour. Used for headings, body text, labels, and any primary foreground content.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#1a1d27;"></span><span class="swatch-value">#1a1d27</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#e8eaf0;"></span><span class="swatch-value">#e8eaf0</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">content-secondary</span><br><span class="token-usage">Descriptions, metadata</span></td>
+      <td class="token-desc">Secondary text. Used for descriptions, metadata, timestamps, and less prominent labels.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#5c6478;"></span><span class="swatch-value">#5c6478</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#9ba3b5;"></span><span class="swatch-value">#9ba3b5</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">content-muted</span><br><span class="token-usage">Placeholders, disabled text</span></td>
+      <td class="token-desc">Low-emphasis text. Placeholders, disabled labels, and decorative text that should not draw attention.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#8b94a8;"></span><span class="swatch-value">#8b94a8</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#636d83;"></span><span class="swatch-value">#636d83</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">content-inverse</span><br><span class="token-usage">Text on accent/coloured backgrounds</span></td>
+      <td class="token-desc">Text placed on top of <code>accent</code>, <code>danger</code>, or other vivid backgrounds. Should contrast well against all semantic colours in your palette.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#0f1117;"></span><span class="swatch-value">#0f1117</span></td>
+    </tr>
+
+    <!-- Edge -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#065f46;">Edge</span> — Borders and dividers</td></tr>
+    <tr>
+      <td><span class="token-name">edge</span><br><span class="token-usage">Standard borders, dividers</span></td>
+      <td class="token-desc">Default border colour for cards, inputs, table rows, and horizontal dividers.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#d8dce6;"></span><span class="swatch-value">#d8dce6</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#333a4d;"></span><span class="swatch-value">#333a4d</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">edge-subtle</span><br><span class="token-usage">Light separators</span></td>
+      <td class="token-desc">Very light border for subtle separators and inner dividers that should barely be visible.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#e8ebf0;"></span><span class="swatch-value">#e8ebf0</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#272d3d;"></span><span class="swatch-value">#272d3d</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">edge-strong</span><br><span class="token-usage">Emphasised borders, focus rings</span></td>
+      <td class="token-desc">Stronger border for emphasis. Used for focused inputs, active selections, and borders that need more contrast.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#b8bfcf;"></span><span class="swatch-value">#b8bfcf</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#4a5270;"></span><span class="swatch-value">#4a5270</span></td>
+    </tr>
+
+    <!-- Semantic -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#92400e;">Semantic</span> — Accent and status colours</td></tr>
+    <tr>
+      <td><span class="token-name">accent</span><br><span class="token-usage">Primary action buttons, links, focus</span></td>
+      <td class="token-desc">The primary brand/action colour. "Save" buttons, active tabs, links, focus rings, and selection highlights.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#2563eb;"></span><span class="swatch-value">#2563eb</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#4c8dff;"></span><span class="swatch-value">#4c8dff</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">accent-hover</span><br><span class="token-usage">Accent button hover state</span></td>
+      <td class="token-desc">Hover/pressed state of accent-coloured elements. Slightly lighter or shifted variant of <code>accent</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#3b82f6;"></span><span class="swatch-value">#3b82f6</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#6ba1ff;"></span><span class="swatch-value">#6ba1ff</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">accent-alt</span><br><span class="token-usage">Secondary accent, info badges</span></td>
+      <td class="token-desc">An alternative accent for secondary calls-to-action or informational highlights that should differ from the primary accent.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#0ea5e9;"></span><span class="swatch-value">#0ea5e9</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#38bdf8;"></span><span class="swatch-value">#38bdf8</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">success</span><br><span class="token-usage">Success state, "synced" indicator</span></td>
+      <td class="token-desc">Positive status: successful operations, synced indicators, checkmarks, and confirmation messages.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#10b981;"></span><span class="swatch-value">#10b981</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#34d399;"></span><span class="swatch-value">#34d399</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">warning</span><br><span class="token-usage">Warning state, "syncing" indicator</span></td>
+      <td class="token-desc">Caution status: syncing in progress, version mismatches, and attention-required notices.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f59e0b;"></span><span class="swatch-value">#f59e0b</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#fbbf24;"></span><span class="swatch-value">#fbbf24</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">danger</span><br><span class="token-usage">Error state, delete buttons</span></td>
+      <td class="token-desc">Destructive/error status: delete buttons, error messages, failed operations, and critical alerts.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ef4444;"></span><span class="swatch-value">#ef4444</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f87171;"></span><span class="swatch-value">#f87171</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">pending</span><br><span class="token-usage">Pending state, in-progress</span></td>
+      <td class="token-desc">Pending/in-progress status: operations waiting to complete, upload progress, and queued actions.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ea580c;"></span><span class="swatch-value">#ea580c</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#fb923c;"></span><span class="swatch-value">#fb923c</span></td>
+    </tr>
+
+    <!-- Key -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#0c4a6e;">Key</span> — Keyboard key widgets</td></tr>
+    <tr>
+      <td><span class="token-name">key-bg</span><br><span class="token-usage">Default key background</span></td>
+      <td class="token-desc">Background of keyboard key caps in the keymap editor at rest.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#262b3a;"></span><span class="swatch-value">#262b3a</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-bg-hover</span><br><span class="token-usage">Hovered key</span></td>
+      <td class="token-desc">Background when the cursor hovers over a key cap.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f0f2f7;"></span><span class="swatch-value">#f0f2f7</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#323850;"></span><span class="swatch-value">#323850</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-bg-active</span><br><span class="token-usage">Selected / focused key</span></td>
+      <td class="token-desc">Background of the currently selected (clicked) key. Typically matches <code>accent</code> — labels on this key use <code>content-inverse</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#2563eb;"></span><span class="swatch-value">#2563eb</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#4c8dff;"></span><span class="swatch-value">#4c8dff</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-border</span><br><span class="token-usage">Key cap outline</span></td>
+      <td class="token-desc">Border around each key cap. Creates the 3D keycap effect together with <code>key-shadow</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#c8cdd8;"></span><span class="swatch-value">#c8cdd8</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#3d4560;"></span><span class="swatch-value">#3d4560</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-shadow</span><br><span class="token-usage">Key cap bottom shadow</span></td>
+      <td class="token-desc">The bottom shadow that gives key caps their 3D depth. Darker than <code>key-border</code>. Can be a colour value or <code>rgba()</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#b0b8c8;"></span><span class="swatch-value">#b0b8c8</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#0a0c12;"></span><span class="swatch-value">#0a0c12</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-label</span><br><span class="token-usage">Primary key legend</span></td>
+      <td class="token-desc">The main text label printed on each key cap (e.g. "A", "Ctrl", "Enter").</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#1f2937;"></span><span class="swatch-value">#1f2937</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#d4d8e3;"></span><span class="swatch-value">#d4d8e3</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-sublabel</span><br><span class="token-usage">Secondary key legend (shifted)</span></td>
+      <td class="token-desc">Secondary label on keys (e.g. shifted symbol, layer indicator). Dimmer than <code>key-label</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#7c8598;"></span><span class="swatch-value">#7c8598</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#7a839a;"></span><span class="swatch-value">#7a839a</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-label-remap</span><br><span class="token-usage">Remapped key label highlight</span></td>
+      <td class="token-desc">Label colour for keys that have been remapped from their default assignment. Draws attention to customised keys.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#0000ff;"></span><span class="swatch-value">#0000ff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f7a948;"></span><span class="swatch-value">#f7a948</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">key-bg-multi-selected</span><br><span class="token-usage">Multi-select / batch selection</span></td>
+      <td class="token-desc">Background for keys included in a multi-selection (e.g. combo key selection, batch reassignment).</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#93bbfd;"></span><span class="swatch-value">#93bbfd</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#3a6fcf;"></span><span class="swatch-value">#3a6fcf</span></td>
+    </tr>
+
+    <!-- Tab -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#5b21b6;">Tab</span> — Tab bar / navigation tabs</td></tr>
+    <tr>
+      <td><span class="token-name">tab-bg-active</span><br><span class="token-usage">Active tab background</span></td>
+      <td class="token-desc">Background fill for the currently active tab in editor tab bars (keymap, macro, tap dance, etc.).</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#2563eb;"></span><span class="swatch-value">#2563eb</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#4c8dff;"></span><span class="swatch-value">#4c8dff</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">tab-text</span><br><span class="token-usage">Inactive tab text</span></td>
+      <td class="token-desc">Text colour for inactive (unselected) tabs.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#6b7280;"></span><span class="swatch-value">#6b7280</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#8892a8;"></span><span class="swatch-value">#8892a8</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">tab-text-active</span><br><span class="token-usage">Active tab text</span></td>
+      <td class="token-desc">Text colour for the active tab. Should be readable on <code>tab-bg-active</code>.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+    </tr>
+
+    <!-- Picker -->
+    <tr class="category-row"><td colspan="4"><span class="category-label" style="background:#14532d;">Picker</span> — Keycode picker / palette</td></tr>
+    <tr>
+      <td><span class="token-name">picker-bg</span><br><span class="token-usage">Picker panel background</span></td>
+      <td class="token-desc">Background of the keycode picker panel (the searchable palette where you browse available keycodes).</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#f8f9fb;"></span><span class="swatch-value">#f8f9fb</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#1e2233;"></span><span class="swatch-value">#1e2233</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">picker-item-bg</span><br><span class="token-usage">Individual picker item</span></td>
+      <td class="token-desc">Background of each keycode item chip/card within the picker at rest.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#ffffff;"></span><span class="swatch-value">#ffffff</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#282e40;"></span><span class="swatch-value">#282e40</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">picker-item-hover</span><br><span class="token-usage">Hovered picker item</span></td>
+      <td class="token-desc">Background when hovering over a keycode item in the picker.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#eef0f5;"></span><span class="swatch-value">#eef0f5</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#353d55;"></span><span class="swatch-value">#353d55</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">picker-item-text</span><br><span class="token-usage">Picker item label</span></td>
+      <td class="token-desc">Text colour for keycode labels inside picker items.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#374151;"></span><span class="swatch-value">#374151</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#c5cbd8;"></span><span class="swatch-value">#c5cbd8</span></td>
+    </tr>
+    <tr>
+      <td><span class="token-name">picker-item-border</span><br><span class="token-usage">Picker item outline</span></td>
+      <td class="token-desc">Border around each keycode item in the picker.</td>
+      <td class="swatch-cell"><span class="swatch" style="background:#dfe3eb;"></span><span class="swatch-value">#dfe3eb</span></td>
+      <td class="swatch-cell"><span class="swatch" style="background:#363e54;"></span><span class="swatch-value">#363e54</span></td>
+    </tr>
+  </tbody>
+</table>
+</div>
+
+<!-- ======================================== -->
+<h2>4. Design Guidelines</h2>
+
+<div class="tip">
+  <strong>Contrast matters.</strong> Ensure at least 4.5:1 contrast ratio between text tokens (<code>content</code>, <code>key-label</code>, <code>picker-item-text</code>) and their backgrounds (<code>surface</code>, <code>key-bg</code>, <code>picker-item-bg</code>).
+</div>
+
+<div class="tip">
+  <strong>One palette for everything.</strong> A theme pack overrides both light and dark built-in colours with a single set of 34 values — there is no separate light/dark split. Your palette is always applied as-is regardless of the system appearance setting.
+</div>
+
+<div class="warn">
+  <strong>key-shadow accepts <code>rgba()</code>.</strong> Unlike other tokens that typically use hex, <code>key-shadow</code> often benefits from semi-transparent values like <code>rgba(0,0,0,0.3)</code> to blend naturally with any <code>surface</code> colour beneath.
+</div>
+
+<h3>Token Relationships</h3>
+<div class="card">
+  <table style="width:100%;font-size:13px;border-collapse:collapse;">
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;font-weight:600;width:40%;">Foreground → Background</td>
+      <td style="padding:8px 12px;">Ensure readable contrast between these pairs</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;"><code>content</code> → <code>surface</code></td>
+      <td style="padding:8px 12px;">Primary text on app background</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;"><code>content-inverse</code> → <code>accent</code></td>
+      <td style="padding:8px 12px;">Button label on primary button</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;"><code>content-inverse</code> → <code>danger</code></td>
+      <td style="padding:8px 12px;">Button label on delete button</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;"><code>key-label</code> → <code>key-bg</code></td>
+      <td style="padding:8px 12px;">Key legend on key cap</td>
+    </tr>
+    <tr style="border-bottom:1px solid var(--doc-border);">
+      <td style="padding:8px 12px;"><code>tab-text-active</code> → <code>tab-bg-active</code></td>
+      <td style="padding:8px 12px;">Active tab text on active tab fill</td>
+    </tr>
+    <tr>
+      <td style="padding:8px 12px;"><code>picker-item-text</code> → <code>picker-item-bg</code></td>
+      <td style="padding:8px 12px;">Keycode label inside picker card</td>
+    </tr>
+  </table>
+</div>
+
+<h3>Elevation Hierarchy</h3>
+<div class="card">
+  <div style="display:flex;align-items:center;gap:12px;font-size:13px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="swatch" style="width:20px;height:20px;background:#ebedf2;"></span>
+      <code>surface-dim</code>
+    </div>
+    <span style="color:var(--doc-text3);">→</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="swatch" style="width:20px;height:20px;background:#f5f6f8;"></span>
+      <code>surface</code>
+    </div>
+    <span style="color:var(--doc-text3);">→</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="swatch" style="width:20px;height:20px;background:#ffffff;"></span>
+      <code>surface-alt</code>
+    </div>
+    <span style="color:var(--doc-text3);">→</span>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <span class="swatch" style="width:20px;height:20px;background:#ffffff;border-color:#b8bfcf;"></span>
+      <code>surface-raised</code>
+    </div>
+    <span style="color:var(--doc-text3);font-size:12px;">(lowest → highest)</span>
+  </div>
+</div>
+
+<!-- ======================================== -->
+<h2>5. JSON Template</h2>
+<p>Copy this template and replace the colour values with your own. All 34 tokens are required.</p>
+
+<div class="json-block" id="json-template">
+<button class="copy-btn" onclick="copyTemplate()">Copy</button>
+<pre>{
+  <span class="jk">"name"</span>: <span class="jv">"My Theme"</span>,
+  <span class="jk">"version"</span>: <span class="jv">"1.0.0"</span>,
+  <span class="jk">"colors"</span>: {
+    <span class="jc">// Surface — background layers</span>
+    <span class="jk">"surface"</span>:          <span class="jv">"#f5f6f8"</span>,
+    <span class="jk">"surface-alt"</span>:      <span class="jv">"#ffffff"</span>,
+    <span class="jk">"surface-dim"</span>:      <span class="jv">"#ebedf2"</span>,
+    <span class="jk">"surface-raised"</span>:   <span class="jv">"#ffffff"</span>,
+
+    <span class="jc">// Content — text colours</span>
+    <span class="jk">"content"</span>:           <span class="jv">"#1a1d27"</span>,
+    <span class="jk">"content-secondary"</span>: <span class="jv">"#5c6478"</span>,
+    <span class="jk">"content-muted"</span>:     <span class="jv">"#8b94a8"</span>,
+    <span class="jk">"content-inverse"</span>:   <span class="jv">"#ffffff"</span>,
+
+    <span class="jc">// Edge — borders</span>
+    <span class="jk">"edge"</span>:              <span class="jv">"#d8dce6"</span>,
+    <span class="jk">"edge-subtle"</span>:       <span class="jv">"#e8ebf0"</span>,
+    <span class="jk">"edge-strong"</span>:       <span class="jv">"#b8bfcf"</span>,
+
+    <span class="jc">// Semantic — accent &amp; status</span>
+    <span class="jk">"accent"</span>:            <span class="jv">"#2563eb"</span>,
+    <span class="jk">"accent-hover"</span>:      <span class="jv">"#3b82f6"</span>,
+    <span class="jk">"accent-alt"</span>:        <span class="jv">"#0ea5e9"</span>,
+    <span class="jk">"success"</span>:           <span class="jv">"#10b981"</span>,
+    <span class="jk">"warning"</span>:           <span class="jv">"#f59e0b"</span>,
+    <span class="jk">"danger"</span>:            <span class="jv">"#ef4444"</span>,
+    <span class="jk">"pending"</span>:           <span class="jv">"#ea580c"</span>,
+
+    <span class="jc">// Key — keyboard key caps</span>
+    <span class="jk">"key-bg"</span>:            <span class="jv">"#ffffff"</span>,
+    <span class="jk">"key-bg-hover"</span>:      <span class="jv">"#f0f2f7"</span>,
+    <span class="jk">"key-bg-active"</span>:     <span class="jv">"#2563eb"</span>,
+    <span class="jk">"key-border"</span>:        <span class="jv">"#c8cdd8"</span>,
+    <span class="jk">"key-shadow"</span>:        <span class="jv">"#b0b8c8"</span>,
+    <span class="jk">"key-label"</span>:         <span class="jv">"#1f2937"</span>,
+    <span class="jk">"key-sublabel"</span>:      <span class="jv">"#7c8598"</span>,
+    <span class="jk">"key-label-remap"</span>:   <span class="jv">"#0000ff"</span>,
+    <span class="jk">"key-bg-multi-selected"</span>: <span class="jv">"#93bbfd"</span>,
+
+    <span class="jc">// Tab — navigation tabs</span>
+    <span class="jk">"tab-bg-active"</span>:     <span class="jv">"#2563eb"</span>,
+    <span class="jk">"tab-text"</span>:          <span class="jv">"#6b7280"</span>,
+    <span class="jk">"tab-text-active"</span>:   <span class="jv">"#ffffff"</span>,
+
+    <span class="jc">// Picker — keycode palette</span>
+    <span class="jk">"picker-bg"</span>:         <span class="jv">"#f8f9fb"</span>,
+    <span class="jk">"picker-item-bg"</span>:    <span class="jv">"#ffffff"</span>,
+    <span class="jk">"picker-item-hover"</span>: <span class="jv">"#eef0f5"</span>,
+    <span class="jk">"picker-item-text"</span>:  <span class="jv">"#374151"</span>,
+    <span class="jk">"picker-item-border"</span>:<span class="jv">"#dfe3eb"</span>
+  }
+}</pre>
+</div>
+
+<script>
+function copyTemplate() {
+  const json = `{
+  "name": "My Theme",
+  "version": "1.0.0",
+  "colors": {
+    "surface": "#f5f6f8",
+    "surface-alt": "#ffffff",
+    "surface-dim": "#ebedf2",
+    "surface-raised": "#ffffff",
+    "content": "#1a1d27",
+    "content-secondary": "#5c6478",
+    "content-muted": "#8b94a8",
+    "content-inverse": "#ffffff",
+    "edge": "#d8dce6",
+    "edge-subtle": "#e8ebf0",
+    "edge-strong": "#b8bfcf",
+    "accent": "#2563eb",
+    "accent-hover": "#3b82f6",
+    "accent-alt": "#0ea5e9",
+    "success": "#10b981",
+    "warning": "#f59e0b",
+    "danger": "#ef4444",
+    "pending": "#ea580c",
+    "key-bg": "#ffffff",
+    "key-bg-hover": "#f0f2f7",
+    "key-bg-active": "#2563eb",
+    "key-border": "#c8cdd8",
+    "key-shadow": "#b0b8c8",
+    "key-label": "#1f2937",
+    "key-sublabel": "#7c8598",
+    "key-label-remap": "#0000ff",
+    "key-bg-multi-selected": "#93bbfd",
+    "tab-bg-active": "#2563eb",
+    "tab-text": "#6b7280",
+    "tab-text-active": "#ffffff",
+    "picker-bg": "#f8f9fb",
+    "picker-item-bg": "#ffffff",
+    "picker-item-hover": "#eef0f5",
+    "picker-item-text": "#374151",
+    "picker-item-border": "#dfe3eb"
+  }
+}`;
+  navigator.clipboard.writeText(json).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = 'Copy'; }, 2000);
+  });
+}
+</script>
+
+<!-- ======================================== -->
+<h2>6. Quick Start Workflow</h2>
+<div class="card">
+  <ol style="font-size:14px;color:var(--doc-text2);padding-left:20px;line-height:2;">
+    <li>Export any installed theme pack from Pipette (row → <strong>.json</strong>) as a starting template</li>
+    <li>Open the exported <code>.json</code> in your editor</li>
+    <li>Change <code>"name"</code> to your theme name and <code>"version"</code> to <code>"1.0.0"</code></li>
+    <li>Replace colour values — use this guide's token table and visual reference</li>
+    <li>Import in Pipette: <strong>Settings → Tools → Theme Packs → Edit → Import</strong></li>
+    <li>Apply and preview — click the radio circle next to your pack</li>
+    <li>Iterate: re-import with the same <code>"name"</code> to overwrite in place</li>
+    <li>Share on Pipette Hub via the <strong>Upload</strong> action</li>
+  </ol>
+</div>
+
+<p style="text-align:center;color:var(--doc-text3);font-size:12px;margin-top:40px;">
+  Pipette Desktop — Theme Pack Authoring Guide<br>
+  Accepted colour formats: <code>#hex</code>, <code>rgb()</code>, <code>hsl()</code>, <code>rgba()</code>
+</p>
+
+</body>
+</html>

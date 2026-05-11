@@ -50,6 +50,7 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
   - [6.1 Cloud Sync (Google Drive appDataFolder)](#61-cloud-sync-google-drive-appdatafolder)
   - [6.2 Key Labels Manage](#62-key-labels-manage)
   - [6.3 Language Packs Manage](#63-language-packs-manage)
+  - [6.4 Theme Packs Manage](#64-theme-packs-manage)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -1478,6 +1479,94 @@ A language pack `.json` mirrors the structure of the built-in English pack. Expo
 
 Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains.
 
+### 6.4 Theme Packs Manage
+
+The Tools tab shows a **Theme Packs** row displaying the currently active theme pack (if any). Click **Edit** to open the Theme Packs modal.
+
+Theme packs override the application's colour palette. The built-in Light / Dark / System themes remain available; a theme pack layers its colours on top. Installed packs sync across devices via Cloud Sync.
+
+> **For theme pack authors:** See the [Theme Pack Authoring Guide](THEME-PACK-AUTHORING.html) for a complete colour token reference and design tips.
+
+**Installed section**
+
+![Theme Packs — Installed](screenshots/theme-packs-installed.png)
+
+Lists every theme pack on this device. Each row has a **radio circle** on the left — click it to apply that theme pack immediately. Click the active row again to deselect it and revert to the built-in theme. The three built-in options (Light / Dark / System) appear at the top.
+
+Each row shows:
+
+- **Name** (click to rename inline)
+- **Updated timestamp** (`YYYY-MM-DD HH:mm`)
+- **Version** chip
+- **.json** export shortcut and **Delete** button on the first line
+- **Open** / **Upload** / **Update** / **Sync** / **Remove** Hub actions on the second line (same pattern as Key Labels §6.2)
+
+A **pulsing green dot** next to the Sync button indicates that the Hub-side post is newer than the local copy (freshness check runs once per 5 minutes when the modal is open).
+
+The **Import** button in the toolbar opens a file dialog to import a `.json` theme pack. Re-importing a pack with the same `name` overwrites the existing entry.
+
+**Find on Hub tab**
+
+![Theme Packs — Find on Hub](screenshots/theme-packs-hub.png)
+
+Searches Pipette Hub for theme packs. Type 2 or more characters to start an automatic search (debounced). Results show the pack name, version, uploader, and either a **Download** action or an **Installed** marker.
+
+**Authoring a Theme Pack**
+
+A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping every colour token to a CSS colour value:
+
+```json
+{
+  "name": "Nord",
+  "version": "1.0.0",
+  "colors": {
+    "surface": "#2e3440",
+    "surface-alt": "#3b4252",
+    "surface-dim": "#272c36",
+    "surface-raised": "#434c5e",
+    "content": "#eceff4",
+    "content-secondary": "#d8dee9",
+    "content-muted": "#7b88a1",
+    "content-inverse": "#2e3440",
+    "edge": "#4c566a",
+    "edge-subtle": "#3b4252",
+    "edge-strong": "#d8dee9",
+    "accent": "#88c0d0",
+    "accent-hover": "#81a1c1",
+    "accent-alt": "#5e81ac",
+    "success": "#a3be8c",
+    "warning": "#ebcb8b",
+    "danger": "#bf616a",
+    "pending": "#b48ead",
+    "key-bg": "#3b4252",
+    "key-bg-hover": "#434c5e",
+    "key-bg-active": "#4c566a",
+    "key-border": "#4c566a",
+    "key-shadow": "rgba(0,0,0,0.3)",
+    "key-label": "#eceff4",
+    "key-sublabel": "#d8dee9",
+    "key-label-remap": "#88c0d0",
+    "key-bg-multi-selected": "#434c5e",
+    "tab-bg-active": "#3b4252",
+    "tab-text": "#7b88a1",
+    "tab-text-active": "#eceff4",
+    "picker-bg": "#2e3440",
+    "picker-item-bg": "#3b4252",
+    "picker-item-hover": "#434c5e",
+    "picker-item-text": "#eceff4",
+    "picker-item-border": "#4c566a"
+  }
+}
+```
+
+| Field | Required | Purpose |
+|------|:--:|---------|
+| `name` | Yes | Display name and uniqueness key for overwrite-on-import |
+| `version` | Yes | Semver string (e.g. `1.0.0`) |
+| `colors` | Yes | Object mapping all 34 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
+
+All 34 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template.
+
 ---
 
 ## 7. Pipette Hub
@@ -1593,7 +1682,7 @@ See the [Data Guide](Data.md) for details on how Hub authentication works.
 
 ## 8. Modal Interactions
 
-Pipette applies a uniform set of keyboard and dismissal rules to every top-level modal (Settings, Data, Macro, QMK Settings, Tap Dance, Combo, Key Override, Alt Repeat Key, Notification, Language Packs, Language Selector, Layout Store, Editor Settings, Favorite Store, and the History Toggle dialog).
+Pipette applies a uniform set of keyboard and dismissal rules to every top-level modal (Settings, Data, Macro, QMK Settings, Tap Dance, Combo, Key Override, Alt Repeat Key, Notification, Language Packs, Theme Packs, Language Selector, Layout Store, Editor Settings, Favorite Store, and the History Toggle dialog).
 
 ### Escape to Close
 

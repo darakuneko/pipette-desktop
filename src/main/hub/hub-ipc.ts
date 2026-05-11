@@ -32,14 +32,31 @@ import {
   type HubI18nListResponse,
 } from './hub-i18n'
 import { setHubPostId as setI18nPackHubPostId } from '../i18n-pack-store'
+import {
+  uploadThemePostToHub,
+  updateThemePostOnHub,
+  deleteThemePostFromHub,
+  fetchThemePostList,
+  downloadThemePostBody,
+  fetchThemePackTimestamps,
+} from './hub-theme'
+import { setHubPostId as setThemePackHubPostId } from '../theme-pack-store'
+import { validateThemePack } from '../../shared/theme/validate'
 import type {
   HubUploadI18nPostParams,
   HubUpdateI18nPostParams,
   HubI18nExportV1,
   HubI18nPackTimestamp,
   HubI18nPackTimestampsResponse,
+  HubUploadThemePostParams,
+  HubUpdateThemePostParams,
+  HubThemePackBody,
+  HubThemePackTimestamp,
+  HubThemePackTimestampsResponse,
+  HubThemeListParams,
+  HubThemeListResponse,
 } from '../../shared/types/hub'
-import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
+import { HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT, HUB_THEME_PACK_TIMESTAMPS_BATCH_LIMIT } from '../../shared/types/hub'
 import { readAnalyzeFilterEntry, setAnalyzeFilterHubPostId } from '../analyze-filter-store'
 import { getKeymapSnapshotForRange } from '../typing-analytics/keymap-snapshots'
 import { getMachineHash } from '../typing-analytics/machine-hash'
@@ -894,6 +911,122 @@ export function setupHubIpc(): void {
         return { success: true, data: { items } }
       } catch (err) {
         return { success: false, error: extractError(err, 'Hub i18n timestamps failed') }
+      }
+    },
+  )
+
+  // --- Hub theme pack handlers ---
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_THEME_POST,
+    async (_event, params: HubUploadThemePostParams): Promise<HubUploadResult> => {
+      try {
+        if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
+        const result = await withTokenRetry((jwt) => uploadThemePostToHub(jwt, params.pack))
+        await setThemePackHubPostId(params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'theme upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPDATE_THEME_POST,
+    async (_event, params: HubUpdateThemePostParams): Promise<HubUploadResult> => {
+      try {
+        if (!params || typeof params !== 'object') return { success: false, error: 'Invalid params' }
+        validatePostId(params.postId)
+        const result = await withTokenRetry((jwt) => updateThemePostOnHub(jwt, params.postId, params.pack))
+        await setThemePackHubPostId(params.entryId, result.id)
+        return { success: true, postId: result.id }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'theme update failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_DELETE_THEME_POST,
+    async (_event, postId: unknown, localPackId: unknown): Promise<HubDeleteResult> => {
+      try {
+        if (typeof postId !== 'string') return { success: false, error: 'Invalid post ID' }
+        validatePostId(postId)
+        await withTokenRetry((jwt) => deleteThemePostFromHub(jwt, postId))
+        if (typeof localPackId === 'string' && localPackId) {
+          await setThemePackHubPostId(localPackId, null)
+        }
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'theme delete failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_LIST_THEME_POSTS,
+    async (_event, params: unknown): Promise<{ success: boolean; data?: HubThemeListResponse; error?: string }> => {
+      try {
+        const query: HubThemeListParams = {}
+        if (params && typeof params === 'object') {
+          const obj = params as Record<string, unknown>
+          if (typeof obj.q === 'string') query.q = obj.q
+          if (typeof obj.name === 'string') query.name = obj.name
+          if (typeof obj.page === 'number') query.page = obj.page
+          if (typeof obj.perPage === 'number') query.perPage = obj.perPage
+        }
+        const data = await fetchThemePostList(query)
+        return { success: true, data }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'theme list failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_DOWNLOAD_THEME_POST,
+    async (_event, postId: unknown): Promise<{ success: boolean; data?: HubThemePackBody; error?: string }> => {
+      try {
+        if (typeof postId !== 'string') return { success: false, error: 'Invalid post ID' }
+        validatePostId(postId)
+        const packBody = await downloadThemePostBody(postId)
+        const validation = validateThemePack(packBody)
+        if (!validation.ok) {
+          return { success: false, error: `Hub returned an invalid theme pack: ${validation.errors[0] ?? 'unknown reason'}` }
+        }
+        return { success: true, data: packBody }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'theme download failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_THEME_PACK_TIMESTAMPS,
+    async (_event, ids: unknown): Promise<{ success: boolean; data?: HubThemePackTimestampsResponse; error?: string }> => {
+      if (!Array.isArray(ids) || !ids.every((id) => typeof id === 'string')) {
+        return { success: false, error: 'ids must be an array of strings' }
+      }
+      const unique = Array.from(new Set(ids as string[]))
+      if (unique.length === 0) return { success: true, data: { items: [] } }
+      try {
+        const chunks: string[][] = []
+        for (let i = 0; i < unique.length; i += HUB_THEME_PACK_TIMESTAMPS_BATCH_LIMIT) {
+          chunks.push(unique.slice(i, i + HUB_THEME_PACK_TIMESTAMPS_BATCH_LIMIT))
+        }
+        const responses = await Promise.all(chunks.map((chunk) => fetchThemePackTimestamps(chunk)))
+        const byId = new Map<string, HubThemePackTimestamp>()
+        for (const r of responses) {
+          for (const item of r.items) byId.set(item.id, item)
+        }
+        const items: HubThemePackTimestamp[] = []
+        for (const id of unique) {
+          const found = byId.get(id)
+          if (found) items.push(found)
+        }
+        return { success: true, data: { items } }
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Hub theme timestamps failed') }
       }
     },
   )

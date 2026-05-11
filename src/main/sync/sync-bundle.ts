@@ -15,6 +15,7 @@ import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
+import { THEME_INDEX_SYNC_UNIT, type ThemePackIndex } from '../../shared/types/theme-store'
 import {
   deviceDayJsonlPath,
   listDeviceDays,
@@ -71,6 +72,36 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
         type: 'i18n-pack',
         key: packId,
         index: { metas: [] } as I18nPackIndex,
+        files: { [`${packId}.json`]: content },
+      }
+    } catch {
+      return null
+    }
+  }
+
+  // Handle "themes/index" — the theme pack roster (LWW + tombstone).
+  if (syncUnit === THEME_INDEX_SYNC_UNIT) {
+    try {
+      const raw = await readFile(join(userData, 'sync', 'themes', 'index.json'), 'utf-8')
+      const index = JSON.parse(raw) as ThemePackIndex
+      if (!Array.isArray(index?.metas)) return null
+      return { type: 'theme-index', key: 'theme-index', index, files: {} }
+    } catch {
+      return null
+    }
+  }
+
+  // Handle "themes/packs/{packId}" — single-file bundle carrying one
+  // theme pack's color definitions.
+  if (parts.length === 3 && parts[0] === 'themes' && parts[1] === 'packs') {
+    const packId = parts[2]
+    const filePath = join(userData, 'sync', 'themes', 'packs', `${packId}.json`)
+    try {
+      const content = await readFile(filePath, 'utf-8')
+      return {
+        type: 'theme-pack',
+        key: packId,
+        index: { metas: [] } as ThemePackIndex,
         files: { [`${packId}.json`]: content },
       }
     } catch {
@@ -214,6 +245,19 @@ export async function collectAllSyncUnits(): Promise<string[]> {
       }
     }
   } catch { /* no i18n */ }
+
+  // themes: emit "themes/index" plus one "themes/packs/{packId}" per known meta
+  try {
+    const themeIndexPath = join(userData, 'sync', 'themes', 'index.json')
+    const raw = await readFile(themeIndexPath, 'utf-8')
+    const index = JSON.parse(raw) as ThemePackIndex
+    if (Array.isArray(index?.metas)) {
+      units.push(THEME_INDEX_SYNC_UNIT)
+      for (const meta of index.metas) {
+        units.push(`themes/packs/${meta.id}`)
+      }
+    }
+  } catch { /* no themes */ }
 
   // Scan sync/keyboards/{uid}/ for settings and snapshots
   const keyboardsDir = join(userData, 'sync', 'keyboards')
