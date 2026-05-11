@@ -126,6 +126,7 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
   // that no longer exists in the index (or is disabled / tombstoned),
   // flip back to builtin:en and stamp a notice.
   useEffect(() => {
+    if (loading) return
     const active = appConfig.config.language ?? 'builtin:en'
     if (!active.startsWith('pack:')) return
     const packId = active.slice('pack:'.length)
@@ -138,7 +139,7 @@ export function useI18nPackStore(): UseI18nPackStoreReturn {
     })
     appConfig.set('language', 'builtin:en')
     void i18n.changeLanguage('builtin:en')
-  }, [appConfig, metas])
+  }, [appConfig, loading, metas])
 
   const setEnabled = useCallback(async (id: string, enabled: boolean) => {
     const result = await window.vialAPI.i18nPackSetEnabled(id, enabled)
