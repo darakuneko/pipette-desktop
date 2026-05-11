@@ -587,6 +587,12 @@ Click the collapse button (chevron) to minimize the layer panel to just numbers.
 
 Double-click a key on the keyboard layout to open the Key Popover — a quick way to search and assign keycodes without scrolling through the palette.
 
+**Layer Sidebar**
+
+![Key Popover — Layer Sidebar](screenshots/key-popover-layer-sidebar.png)
+
+A vertical layer sidebar appears on the left side of the popover, matching the layer panel buttons. Click a layer number to switch layers without closing the popover. If the number of layers exceeds the popover height, the sidebar scrolls independently.
+
 **Key Tab**
 
 ![Key Popover — Key Tab](screenshots/key-popover-key.png)

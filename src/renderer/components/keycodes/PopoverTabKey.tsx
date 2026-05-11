@@ -170,7 +170,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
   const handleDetailMouseLeave = useCallback(() => setTooltip(null), [])
 
   return (
-    <div ref={containerRef} className="relative flex flex-col gap-2">
+    <div ref={containerRef} className="relative flex min-h-0 flex-1 flex-col gap-2">
       <input
         type="text"
         value={query}
@@ -180,7 +180,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
         autoFocus
         data-testid="popover-search-input"
       />
-      <div className="max-h-[240px] overflow-y-auto" onScroll={handleDetailMouseLeave}>
+      <div className="min-h-0 flex-1 overflow-y-auto" onScroll={handleDetailMouseLeave}>
         {query.trim() && results.length === 0 && (
           suppressResults && onClose ? (
             <button
