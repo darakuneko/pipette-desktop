@@ -24,8 +24,8 @@ export function LayerSelector({ layers, selectedLayer, onChange }: Props) {
             onClick={() => onChange(i)}
             className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
               selectedLayer === i
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                ? 'bg-accent text-content-inverse'
+                : 'bg-surface-dim text-content-secondary hover:bg-edge'
             }`}
             data-testid={`layer-btn-${i}`}
           >
