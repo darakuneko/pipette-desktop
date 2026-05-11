@@ -21,7 +21,7 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'i18n-index' | 'i18n-pack'
+  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
   key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'i18n-index', or packId for i18n-pack
   index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | I18nPackIndex
   files: Record<string, string> // filename -> content (empty for meta / i18n-index)
@@ -92,6 +92,7 @@ export interface SyncResetTargets {
   keyboards: boolean | string[] // true = all, string[] = specific UIDs
   favorites: boolean
   i18nPacks?: boolean
+  themePacks?: boolean
 }
 
 export interface LocalResetTargets {
@@ -99,6 +100,7 @@ export interface LocalResetTargets {
   favorites: boolean
   appSettings: boolean
   i18nPacks?: boolean
+  themePacks?: boolean
 }
 
 export interface UndecryptableFile {
@@ -114,6 +116,8 @@ export interface SyncDataScanResult {
   favorites: string[]
   /** Pack ids of i18n language packs found on the remote. */
   i18nPacks: string[]
+  /** Pack ids of theme packs found on the remote. */
+  themePacks: string[]
   undecryptable: UndecryptableFile[]
 }
 

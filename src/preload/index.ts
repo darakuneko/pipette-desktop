@@ -22,11 +22,24 @@ import type {
   I18nPackImportApplyOptions,
 } from '../shared/types/i18n-store'
 import type {
+  ThemePackMeta,
+  ThemePackRecord,
+  ThemePackStoreResult,
+  ThemePackImportDialogResult,
+  ThemePackImportApplyOptions,
+} from '../shared/types/theme-store'
+import type {
   HubI18nListParams,
   HubI18nListResponse,
   HubI18nExportV1,
   HubUploadI18nPostParams,
   HubUpdateI18nPostParams,
+  HubThemeListParams,
+  HubThemeListResponse,
+  HubThemePackBody,
+  HubUploadThemePostParams,
+  HubUpdateThemePostParams,
+  HubThemePackTimestampsResponse,
   HubUploadResult,
   HubDeleteResult,
 } from '../shared/types/hub'
@@ -313,6 +326,45 @@ const vialAPI = {
     ipcRenderer.on(IpcChannels.I18N_PACK_CHANGED, handler)
     return () => ipcRenderer.removeListener(IpcChannels.I18N_PACK_CHANGED, handler)
   },
+
+  // --- Theme pack store ---
+  themePackList: (): Promise<ThemePackStoreResult<ThemePackMeta[]>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_LIST),
+  themePackGet: (id: string): Promise<ThemePackStoreResult<ThemePackRecord>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_GET, id),
+  themePackRename: (id: string, newName: string): Promise<ThemePackStoreResult<ThemePackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_RENAME, id, newName),
+  themePackDelete: (id: string): Promise<ThemePackStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_DELETE, id),
+  themePackSetHubPostId: (id: string, hubPostId: string | null): Promise<ThemePackStoreResult<ThemePackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_SET_HUB_POST_ID, id, hubPostId),
+  themePackHasName: (name: string, excludeId?: string): Promise<ThemePackStoreResult<boolean>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_STORE_HAS_NAME, name, excludeId),
+  themePackImport: (): Promise<ThemePackImportDialogResult> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_IMPORT),
+  themePackImportApply: (raw: unknown, options?: ThemePackImportApplyOptions): Promise<ThemePackStoreResult<ThemePackMeta>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_IMPORT_APPLY, raw, options ?? {}),
+  themePackExport: (id: string): Promise<ThemePackStoreResult<{ filePath: string }>> =>
+    ipcRenderer.invoke(IpcChannels.THEME_PACK_EXPORT, id),
+  themePackHubTimestamps: (ids: string[]): Promise<ThemePackStoreResult<HubThemePackTimestampsResponse>> =>
+    ipcRenderer.invoke(IpcChannels.HUB_THEME_PACK_TIMESTAMPS, ids),
+  themePackOnChanged: (callback: () => void): (() => void) => {
+    const handler = (): void => { callback() }
+    ipcRenderer.on(IpcChannels.THEME_PACK_CHANGED, handler)
+    return () => ipcRenderer.removeListener(IpcChannels.THEME_PACK_CHANGED, handler)
+  },
+
+  // --- Hub theme posts ---
+  hubListThemePosts: (params?: HubThemeListParams): Promise<{ success: boolean; data?: HubThemeListResponse; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.HUB_LIST_THEME_POSTS, params),
+  hubDownloadThemePost: (postId: string): Promise<{ success: boolean; data?: HubThemePackBody; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.HUB_DOWNLOAD_THEME_POST, postId),
+  hubUploadThemePost: (params: HubUploadThemePostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_THEME_POST, params),
+  hubUpdateThemePost: (params: HubUpdateThemePostParams): Promise<HubUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPDATE_THEME_POST, params),
+  hubDeleteThemePost: (postId: string, localPackId?: string): Promise<HubDeleteResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_DELETE_THEME_POST, postId, localPackId),
 
   // --- Hub i18n posts ---
   hubListI18nPosts: (params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }> =>

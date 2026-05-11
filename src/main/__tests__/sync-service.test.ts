@@ -1000,7 +1000,7 @@ describe('sync-service', () => {
       mockGetAuthStatus.mockResolvedValueOnce({ authenticated: false })
 
       const result = await scanRemoteData()
-      expect(result).toEqual({ keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], undecryptable: [] })
+      expect(result).toEqual({ keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], themePacks: [], undecryptable: [] })
     })
 
     it('deduplicates keyboard UIDs', async () => {

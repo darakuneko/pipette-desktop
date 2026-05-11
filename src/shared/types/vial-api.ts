@@ -25,6 +25,13 @@ import type {
   I18nPackImportDialogResult,
   I18nPackImportApplyOptions,
 } from './i18n-store'
+import type {
+  ThemePackMeta,
+  ThemePackRecord,
+  ThemePackStoreResult,
+  ThemePackImportDialogResult,
+  ThemePackImportApplyOptions,
+} from './theme-store'
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
@@ -52,7 +59,7 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse, HubUploadThemePostParams, HubUpdateThemePostParams, HubThemeListParams, HubThemeListResponse, HubThemePackBody, HubThemePackTimestampsResponse } from './hub'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -344,6 +351,26 @@ export interface VialAPI {
    *  function. */
   i18nPackHubTimestamps(ids: string[]): Promise<I18nPackStoreResult<HubI18nPackTimestampsResponse>>
   i18nPackOnChanged(callback: () => void): () => void
+
+  // Theme pack store
+  themePackList(): Promise<ThemePackStoreResult<ThemePackMeta[]>>
+  themePackGet(id: string): Promise<ThemePackStoreResult<ThemePackRecord>>
+  themePackRename(id: string, newName: string): Promise<ThemePackStoreResult<ThemePackMeta>>
+  themePackDelete(id: string): Promise<ThemePackStoreResult<void>>
+  themePackSetHubPostId(id: string, hubPostId: string | null): Promise<ThemePackStoreResult<ThemePackMeta>>
+  themePackHasName(name: string, excludeId?: string): Promise<ThemePackStoreResult<boolean>>
+  themePackImport(): Promise<ThemePackImportDialogResult>
+  themePackImportApply(raw: unknown, options?: ThemePackImportApplyOptions): Promise<ThemePackStoreResult<ThemePackMeta>>
+  themePackExport(id: string): Promise<ThemePackStoreResult<{ filePath: string }>>
+  themePackHubTimestamps(ids: string[]): Promise<ThemePackStoreResult<HubThemePackTimestampsResponse>>
+  themePackOnChanged(callback: () => void): () => void
+
+  // Hub theme posts
+  hubListThemePosts(params?: HubThemeListParams): Promise<{ success: boolean; data?: HubThemeListResponse; error?: string }>
+  hubDownloadThemePost(postId: string): Promise<{ success: boolean; data?: HubThemePackBody; error?: string }>
+  hubUploadThemePost(params: HubUploadThemePostParams): Promise<HubUploadResult>
+  hubUpdateThemePost(params: HubUpdateThemePostParams): Promise<HubUploadResult>
+  hubDeleteThemePost(postId: string, localPackId?: string): Promise<HubDeleteResult>
 
   // Hub i18n posts
   hubListI18nPosts(params?: HubI18nListParams): Promise<{ success: boolean; data?: HubI18nListResponse; error?: string }>

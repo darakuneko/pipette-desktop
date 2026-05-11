@@ -15,9 +15,9 @@ interface CoverageBadgeProps {
 }
 
 function bandClass(ratio: number): string {
-  if (ratio >= 1) return 'bg-green-500/20 text-green-700 dark:text-green-300'
-  if (ratio >= 0.8) return 'bg-yellow-500/20 text-yellow-700 dark:text-yellow-300'
-  return 'bg-red-500/20 text-red-700 dark:text-red-300'
+  if (ratio >= 1) return 'bg-success/20 text-success'
+  if (ratio >= 0.8) return 'bg-warning/20 text-warning'
+  return 'bg-danger/20 text-danger'
 }
 
 export function CoverageBadge({ packId, packVersion }: CoverageBadgeProps): JSX.Element {

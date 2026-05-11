@@ -45,10 +45,10 @@ export function ModifierCheckboxStrip({ modMask, onChange }: Props) {
               onClick={() => toggle(bit, right)}
               className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
                 active
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-accent text-content-inverse'
                   : disabled
-                    ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-600'
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                    ? 'cursor-not-allowed bg-surface-dim text-content-muted'
+                    : 'bg-surface-dim text-content-secondary hover:bg-edge'
               }`}
               data-testid={`mod-${label}`}
             >

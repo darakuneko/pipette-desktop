@@ -50,6 +50,7 @@
   - [6.1 クラウド同期 (Google Drive appDataFolder)](#61-クラウド同期-google-drive-appdatafolder)
   - [6.2 Key Labels Manage](#62-key-labels-manage)
   - [6.3 Language Packs Manage](#63-language-packs-manage)
+  - [6.4 Theme Packs Manage](#64-theme-packs-manage)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub のセットアップ](#71-hub-のセットアップ)
   - [7.2 キーマップのアップロード](#72-キーマップのアップロード)
@@ -1482,6 +1483,94 @@ Pipette Hub から言語パックを検索します。2 文字以上入力する
 
 キーはドット区切りの名前空間 (例: `editor.keymap.title`) を使います。English ベースラインの全キーをカバーするパックにはバージョンチップが表示され、部分的なパックには「未設定のキー」リンクが表示されるため、翻訳者は何が残っているかを確認できます。
 
+### 6.4 Theme Packs Manage
+
+Tools タブに **Theme Packs** 行があり、現在アクティブなテーマパック名が表示されます (未設定の場合は空)。**Edit** をクリックすると Theme Packs モーダルが開きます。
+
+テーマパックはアプリケーションのカラーパレットを上書きします。built-in の Light / Dark / System テーマはそのまま使用でき、テーマパックはその上にカラーを重ねます。インストール済みパックは Cloud Sync を経由して全デバイスで共有されます。
+
+> **テーマパック作成者向け:** カラートークンの全リファレンスとデザインのコツは [Theme Pack Authoring Guide](THEME-PACK-AUTHORING.html) を参照してください。
+
+**Installed セクション**
+
+![Theme Packs — Installed](screenshots/theme-packs-installed.png)
+
+このマシンにあるテーマパックの一覧。各行の左側に **ラジオサークル** があり、クリックするとそのテーマパックが即座に適用されます。アクティブな行をもう一度クリックすると選択が解除され、built-in テーマに戻ります。先頭に Light / Dark / System の 3 つの built-in オプションが表示されます。
+
+各行に表示される内容:
+
+- **名前** (クリックでインラインリネーム)
+- **更新日時** (`YYYY-MM-DD HH:mm`)
+- **バージョン** チップ
+- 上段に **.json** エクスポートショートカットと **Delete** ボタン
+- 下段に **Open** / **Upload** / **Update** / **Sync** / **Remove** の Hub アクション (Key Labels §6.2 と同じパターン)
+
+Hub 側の投稿がローカルキャッシュより新しいときは Sync ボタン横に **緑の点滅ドット** が出ます (モーダル表示中に 5 分に 1 回鮮度チェック実行)。
+
+ツールバーの **Import** ボタンでファイルダイアログを開き、`.json` テーマパックを import できます。同じ `name` のパックを再 import すると既存エントリが上書きされます。
+
+**Find on Hub タブ**
+
+![Theme Packs — Find on Hub](screenshots/theme-packs-hub.png)
+
+Pipette Hub からテーマパックを検索します。2 文字以上入力すると自動で検索が走ります (debounce 付き)。結果にはパック名、バージョン、アップローダー、**Download** または **Installed** が表示されます。
+
+**テーマパックの書き方**
+
+テーマパック `.json` は `name`、`version`、およびすべてのカラートークンを CSS カラー値にマッピングする `colors` オブジェクトで構成されます:
+
+```json
+{
+  "name": "Nord",
+  "version": "1.0.0",
+  "colors": {
+    "surface": "#2e3440",
+    "surface-alt": "#3b4252",
+    "surface-dim": "#272c36",
+    "surface-raised": "#434c5e",
+    "content": "#eceff4",
+    "content-secondary": "#d8dee9",
+    "content-muted": "#7b88a1",
+    "content-inverse": "#2e3440",
+    "edge": "#4c566a",
+    "edge-subtle": "#3b4252",
+    "edge-strong": "#d8dee9",
+    "accent": "#88c0d0",
+    "accent-hover": "#81a1c1",
+    "accent-alt": "#5e81ac",
+    "success": "#a3be8c",
+    "warning": "#ebcb8b",
+    "danger": "#bf616a",
+    "pending": "#b48ead",
+    "key-bg": "#3b4252",
+    "key-bg-hover": "#434c5e",
+    "key-bg-active": "#4c566a",
+    "key-border": "#4c566a",
+    "key-shadow": "rgba(0,0,0,0.3)",
+    "key-label": "#eceff4",
+    "key-sublabel": "#d8dee9",
+    "key-label-remap": "#88c0d0",
+    "key-bg-multi-selected": "#434c5e",
+    "tab-bg-active": "#3b4252",
+    "tab-text": "#7b88a1",
+    "tab-text-active": "#eceff4",
+    "picker-bg": "#2e3440",
+    "picker-item-bg": "#3b4252",
+    "picker-item-hover": "#434c5e",
+    "picker-item-text": "#eceff4",
+    "picker-item-border": "#4c566a"
+  }
+}
+```
+
+| フィールド | 必須 | 用途 |
+|----------|:--:|------|
+| `name` | はい | 表示名および import 時の上書き判定キー |
+| `version` | はい | セマンティックバージョニング文字列 (例: `1.0.0`) |
+| `colors` | はい | 全 34 カラートークンを CSS カラー値 (`#hex`、`rgb()`、`hsl()`) にマッピングするオブジェクト |
+
+34 個すべてのカラートークンが必須です。インストール済みパックを export (行 → `.json`) すると完全なテンプレートが取得できます。
+
 ---
 
 ## 7. Pipette Hub
@@ -1597,7 +1686,7 @@ Hub 認証の詳細は [Data Guide](Data.md) を参照してください。
 
 ## 8. モーダルの操作
 
-Pipette はすべての top-level モーダル (Settings、Data、Macro、QMK Settings、Tap Dance、Combo、Key Override、Alt Repeat Key、Notification、Language Packs、Language Selector、Layout Store、Editor Settings、Favorite Store、および History Toggle ダイアログ) に共通のキーボード操作・閉じ方ルールを適用します。
+Pipette はすべての top-level モーダル (Settings、Data、Macro、QMK Settings、Tap Dance、Combo、Key Override、Alt Repeat Key、Notification、Language Packs、Theme Packs、Language Selector、Layout Store、Editor Settings、Favorite Store、および History Toggle ダイアログ) に共通のキーボード操作・閉じ方ルールを適用します。
 
 ### Escape で閉じる
 

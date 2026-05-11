@@ -37,6 +37,7 @@ import {
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
+import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
 import {
   parseTypingAnalyticsDeviceDaySyncUnit,
   typingAnalyticsDeviceDaySyncUnit,
@@ -142,6 +143,7 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
   if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
   if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX)) return false // i18n checked once at startup via i18n-startup-sync
+  if (syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)) return false // themes follow i18n pattern — not in periodic polls
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')
   if (typeof scope === 'object' && 'favorites' in scope) {
     return syncUnit.startsWith('favorites/') || syncUnit.startsWith(`keyboards/${scope.keyboard}/`)
@@ -240,13 +242,14 @@ export async function listUndecryptableFiles(): Promise<UndecryptableFile[]> {
 
 export async function scanRemoteData(): Promise<SyncDataScanResult> {
   const result = await fetchValidatedDataFiles()
-  if (!result) return { keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], undecryptable: [] }
+  if (!result) return { keyboards: [], keyboardNames: {}, favorites: [], i18nPacks: [], themePacks: [], undecryptable: [] }
   const { password, dataFiles } = result
 
   // Categorize from filenames (no download needed)
   const keyboardUids = new Set<string>()
   const favoriteTypes = new Set<string>()
   const i18nPackIds = new Set<string>()
+  const themePackIds = new Set<string>()
   for (const file of dataFiles) {
     const syncUnit = syncUnitFromFileName(file.name)
     if (!syncUnit) continue
@@ -259,10 +262,13 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
     } else if (syncUnit.startsWith('i18n/packs/')) {
       const packId = syncUnit.slice('i18n/packs/'.length)
       if (packId) i18nPackIds.add(packId)
+    } else if (syncUnit.startsWith('themes/packs/')) {
+      const packId = syncUnit.slice('themes/packs/'.length)
+      if (packId) themePackIds.add(packId)
     }
-    // i18n/index is also returned by syncUnitFromFileName but we only
-    // surface per-pack ids here — the index is implicitly covered when
-    // the user resets any i18n pack.
+    // i18n/index and themes/index are also returned by syncUnitFromFileName
+    // but we only surface per-pack ids here — the index is implicitly
+    // covered when the user resets any pack.
   }
 
   // Use whatever names are already in the local meta index (populated by executeSync/backfill
@@ -283,6 +289,7 @@ export async function scanRemoteData(): Promise<SyncDataScanResult> {
     keyboardNames,
     favorites: [...favoriteTypes],
     i18nPacks: [...i18nPackIds],
+    themePacks: [...themePackIds],
     undecryptable,
   }
 }

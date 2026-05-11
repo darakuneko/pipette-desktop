@@ -247,6 +247,26 @@ export const IpcChannels = {
   KEY_LABEL_HUB_TIMESTAMPS: 'key-label-hub:timestamps',
   KEY_LABEL_HUB_DELETE: 'key-label-hub:delete',
 
+  // Theme Pack Store (renderer ↔ main)
+  THEME_PACK_STORE_LIST: 'theme-pack-store:list',
+  THEME_PACK_STORE_GET: 'theme-pack-store:get',
+  THEME_PACK_STORE_RENAME: 'theme-pack-store:rename',
+  THEME_PACK_STORE_DELETE: 'theme-pack-store:delete',
+  THEME_PACK_STORE_SET_HUB_POST_ID: 'theme-pack-store:set-hub-post-id',
+  THEME_PACK_STORE_HAS_NAME: 'theme-pack-store:has-name',
+  THEME_PACK_IMPORT: 'theme-pack:import',
+  THEME_PACK_IMPORT_APPLY: 'theme-pack:import-apply',
+  THEME_PACK_EXPORT: 'theme-pack:export',
+  THEME_PACK_CHANGED: 'theme-pack:changed',
+
+  // Hub theme posts (renderer → main → renderer)
+  HUB_LIST_THEME_POSTS: 'hub:list-theme-posts',
+  HUB_DOWNLOAD_THEME_POST: 'hub:download-theme-post',
+  HUB_UPLOAD_THEME_POST: 'hub:upload-theme-post',
+  HUB_UPDATE_THEME_POST: 'hub:update-theme-post',
+  HUB_DELETE_THEME_POST: 'hub:delete-theme-post',
+  HUB_THEME_PACK_TIMESTAMPS: 'hub:theme-pack-timestamps',
+
   // Window management (renderer → main)
   WINDOW_SET_COMPACT_MODE: 'window:set-compact-mode',
   WINDOW_SET_ASPECT_RATIO: 'window:set-aspect-ratio',

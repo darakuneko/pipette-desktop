@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.1.3",
   "name": "English",
   "common": {
     "save": "Save",
@@ -470,6 +470,14 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "themePacks": {
+    "manageRow": "Theme Packs",
+    "title": "Theme Packs",
+    "import": "Import Theme Pack",
+    "parseError": "Failed to parse file",
+    "selectTheme": "Select {{name}}",
+    "hubEmpty": "No matching theme packs on the Hub"
   },
   "layout": {
     "keyboardLayout": "Key Labels",

@@ -22,6 +22,7 @@ import { validatePack } from '../../../shared/i18n/validate'
 import { computeCoverage } from '../../../shared/i18n/coverage'
 import { BASE_REVISION, ENGLISH_PACK_BODY } from '../../i18n/coverage-cache'
 import english from '../../i18n/locales/english.json'
+import { formatTimestamp } from '../../utils/format-timestamp'
 import type { I18nPackMeta } from '../../../shared/types/i18n-store'
 import type { HubI18nPostListItem } from '../../../shared/types/hub'
 import { MissingKeysModal } from './MissingKeysModal'
@@ -74,17 +75,6 @@ interface HubRow {
   alreadyInstalled: boolean
 }
 
-function formatTimestamp(iso: string): string {
-  try {
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return iso
-    const pad = (n: number): string => n.toString().padStart(2, '0')
-    return `${String(d.getFullYear())}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
-  } catch {
-    return iso
-  }
-}
-
 export function LanguagePacksModal({
   open,
   onClose,
@@ -116,6 +106,33 @@ export function LanguagePacksModal({
     if (!open) return
     void window.vialAPI.hubGetOrigin().then((origin) => { if (origin) setHubOrigin(origin) }).catch(() => null)
   }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const stale = store.metas.filter((m) => !m.deletedAt && m.matchedBaseVersion !== BASE_REVISION)
+    if (stale.length === 0) return
+    let cancelled = false
+    void (async () => {
+      for (const meta of stale) {
+        if (cancelled) return
+        try {
+          const get = await window.vialAPI.i18nPackGet(meta.id)
+          if (cancelled || !get.success || !get.data) continue
+          const cov = computeCoverage(get.data.pack, ENGLISH_PACK_BODY)
+          if (cancelled || cov.coverageRatio !== 1) continue
+          await store.applyImport(get.data.pack, {
+            id: meta.id,
+            matchedBaseVersion: BASE_REVISION,
+            coverage: { totalKeys: cov.totalKeys, coveredKeys: cov.coveredKeys },
+          })
+        } catch {
+          continue
+        }
+      }
+      if (!cancelled) await store.refresh()
+    })()
+    return () => { cancelled = true }
+  }, [open, store.metas.length])
 
   const activeLanguageId = appConfig.config.language ?? 'builtin:en'
 
