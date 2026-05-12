@@ -902,6 +902,7 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
+- **Key Editor Zoom**: Set the UI zoom level (50–200%) applied while in key editor mode. Defaults to the global UI zoom (§6.5) when not configured. Saved and synced per keyboard
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
@@ -1580,7 +1581,7 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 - The zoom level takes effect immediately across all windows
 - This is a machine-local setting — it is not synced to other devices via Cloud Sync
 
-> **Note**: This is separate from the per-keyboard zoom in the toolbar (§4.1), which only scales the keymap editor. The UI zoom here affects the entire application window.
+> **Note**: This is separate from the per-keyboard zoom in the toolbar (§4.1), which only scales the keymap editor display, and from the **Key Editor Zoom** in the Keycodes Overlay Panel (§3.14), which overrides the window zoom level while in key editor mode. The UI zoom here is the baseline applied on all other screens.
 
 > **Warning**: Changing the zoom level may cause layout issues at extreme values. Use at your own risk.
 
