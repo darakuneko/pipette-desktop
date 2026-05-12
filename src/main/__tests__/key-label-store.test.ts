@@ -274,7 +274,7 @@ describe('key-label-store', () => {
 
     it('appends unlisted active IDs at the end', async () => {
       const a = await saveRecord({ name: 'Listed', uploaderName: 'me', map: {} })
-      const b = await saveRecord({ name: 'Unlisted', uploaderName: 'me', map: {} })
+      await saveRecord({ name: 'Unlisted', uploaderName: 'me', map: {} })
 
       await reorderActive([a.data!.id])
 
@@ -370,7 +370,7 @@ describe('key-label-store', () => {
     })
 
     it('includes entries that listMetas excludes', async () => {
-      const a = await saveRecord({ name: 'Visible', uploaderName: 'me', map: {} })
+      await saveRecord({ name: 'Visible', uploaderName: 'me', map: {} })
       const b = await saveRecord({ name: 'Hidden', uploaderName: 'me', map: {} })
       await deleteRecord(b.data!.id)
 
