@@ -1,0 +1,13 @@
+{
+  "name": "My Language",
+  "version": "0.1.0",
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "editor": {
+    "keymap": {
+      "title": "Keymap"
+    }
+  }
+}
