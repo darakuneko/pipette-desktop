@@ -2,6 +2,7 @@
 // Shared types for Hub upload operations
 
 import type { FavoriteType } from './favorite-store'
+import type { ThemeColorScheme } from './theme-store'
 
 // --- i18n language pack posts -------------------------------------------------
 
@@ -81,6 +82,7 @@ export const HUB_I18N_PACK_TIMESTAMPS_BATCH_LIMIT = 100
 export interface HubThemePackBody {
   name: string
   version: string
+  colorScheme: ThemeColorScheme
   colors: Record<string, string>
 }
 

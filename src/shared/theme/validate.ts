@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { THEME_COLOR_KEYS, THEME_PACK_LIMITS, type ThemeColorKey } from '../types/theme-store'
+import { THEME_COLOR_KEYS, THEME_COLOR_SCHEMES, THEME_PACK_LIMITS, type ThemeColorKey } from '../types/theme-store'
 
 const MAX_NAME_LENGTH = THEME_PACK_LIMITS.MAX_NAME_LENGTH
 const SEMVER_REGEX = /^\d+\.\d+\.\d+(-[\w.]+)?$/
@@ -53,6 +53,10 @@ export function validateThemePack(raw: unknown): ValidateThemePackResult {
   if (nameError) errors.push(nameError)
   const versionError = validateVersion(obj.version)
   if (versionError) errors.push(versionError)
+
+  if (typeof obj.colorScheme !== 'string' || !THEME_COLOR_SCHEMES.includes(obj.colorScheme as 'light' | 'dark')) {
+    errors.push(`colorScheme must be exactly "light" or "dark"`)
+  }
 
   if (!obj.colors || typeof obj.colors !== 'object' || Array.isArray(obj.colors)) {
     errors.push('colors must be an object')

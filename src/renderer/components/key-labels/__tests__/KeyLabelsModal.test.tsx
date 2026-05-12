@@ -302,4 +302,34 @@ describe('KeyLabelsModal', () => {
     const upload = screen.getByTestId('key-labels-upload-mine') as HTMLButtonElement
     expect(upload.disabled).toBe(true)
   })
+
+  it('Delete on a hub-linked entry calls remove(id)', async () => {
+    metas = [meta({ id: 'hubbed', name: 'Hubbed', uploaderName: 'me', hubPostId: 'hub-99' })]
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-delete-hubbed'))
+    const confirm = await screen.findByTestId('key-labels-confirm-delete-hubbed')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(remove).toHaveBeenCalledWith('hubbed'))
+  })
+
+  it('auto-pushes to Hub when importing over an entry with hubPostId', async () => {
+    const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
+    importFromFile.mockResolvedValueOnce({ success: true, data: importedMeta })
+    hubUpdate.mockResolvedValueOnce({ success: true, data: importedMeta })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
+  })
+
+  it('shows error when hub auto-sync fails after import', async () => {
+    const importedMeta = meta({ id: 'existing', name: 'Existing', hubPostId: 'hub-55' })
+    importFromFile.mockResolvedValueOnce({ success: true, data: importedMeta })
+    hubUpdate.mockResolvedValueOnce({ success: false, error: 'network error' })
+    render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
+    fireEvent.click(screen.getByTestId('key-labels-import-button'))
+    await waitFor(() => expect(hubUpdate).toHaveBeenCalledWith('existing'))
+    await waitFor(() => {
+      expect(screen.getByText('network error')).toBeTruthy()
+    })
+  })
 })
