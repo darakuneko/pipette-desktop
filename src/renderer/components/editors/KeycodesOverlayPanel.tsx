@@ -75,7 +75,9 @@ export function KeycodesOverlayPanel({
 }: Props) {
   const { t } = useTranslation()
   const [zoomInput, setZoomInput] = useState(String(keyEditorZoom ?? ''))
-  useEffect(() => { setZoomInput(String(keyEditorZoom ?? '')) }, [keyEditorZoom])
+  useEffect(() => {
+    setZoomInput(String(keyEditorZoom ?? ''))
+  }, [keyEditorZoom])
   const commitZoom = (val = zoomInput): void => {
     const raw = Number(val)
     if (!Number.isNaN(raw) && onKeyEditorZoomChange) {
@@ -188,11 +190,7 @@ export function KeycodesOverlayPanel({
                     min={ZOOM_FACTOR_MIN}
                     max={ZOOM_FACTOR_MAX}
                     value={zoomInput}
-                    onChange={(e) => {
-                      const val = e.target.value
-                      setZoomInput(val)
-                      if (!(e.nativeEvent as InputEvent).inputType) commitZoom(val)
-                    }}
+                    onChange={(e) => { setZoomInput(e.target.value) }}
                     onBlur={() => commitZoom()}
                     onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
                     className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right"

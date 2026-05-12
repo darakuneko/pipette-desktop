@@ -462,10 +462,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingViewMenuTab: 'window',
       viewMode: 'editor',
     }
-    if (resolved.keyEditorZoom === undefined) {
-      resolved.keyEditorZoom = clampZoomFactor(config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)
-    }
-
     updateLayout(resolved.keyboardLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)
