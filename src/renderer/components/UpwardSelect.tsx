@@ -43,6 +43,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
         onClose={handleClose}
         placement="top"
         align="right"
+        matchAnchorWidth
         className="z-50 max-h-60 overflow-y-auto rounded border border-edge bg-surface py-0.5 shadow-lg"
         role="listbox"
         aria-label={ariaLabel}
