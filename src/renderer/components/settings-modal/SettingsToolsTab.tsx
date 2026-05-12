@@ -232,7 +232,7 @@ export function SettingsToolsTab({
                 onChange={(e) => setZoomInput(e.target.value)}
                 onBlur={commitZoom}
                 onKeyDown={(e) => { if (e.key === 'Enter') commitZoom() }}
-                className="w-20 rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="w-20 rounded border border-edge bg-surface pl-2.5 pr-5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-zoom-factor-input"
               />
               <span className="text-[13px] text-content-muted">%</span>

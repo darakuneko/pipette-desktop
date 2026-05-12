@@ -51,6 +51,7 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
   - [6.2 Key Labels Manage](#62-key-labels-manage)
   - [6.3 Language Packs Manage](#63-language-packs-manage)
   - [6.4 Theme Packs Manage](#64-theme-packs-manage)
+  - [6.5 Zoom (UI Scale)](#65-zoom-ui-scale)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -1568,6 +1569,20 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 | `colors` | Yes | Object mapping all 34 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
 
 All 34 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template.
+
+### 6.5 Zoom (UI Scale)
+
+The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the entire application UI (50–200%).
+
+![Zoom Setting](screenshots/settings-zoom.png)
+
+- Enter a percentage value in the input field (50–200) and press **Enter** or click away to apply
+- The zoom level takes effect immediately across all windows
+- This is a machine-local setting — it is not synced to other devices via Cloud Sync
+
+> **Note**: This is separate from the per-keyboard zoom in the toolbar (§4.1), which only scales the keymap editor. The UI zoom here affects the entire application window.
+
+> **Warning**: Changing the zoom level may cause layout issues at extreme values. Use at your own risk.
 
 ---
 
