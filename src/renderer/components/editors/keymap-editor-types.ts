@@ -113,6 +113,8 @@ export interface KeymapEditorProps {
   onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
+  keyEditorZoom?: number
+  onKeyEditorZoomChange?: (zoom: number) => void
   typingTestMode?: boolean
   onTypingTestModeChange?: (enabled: boolean) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
@@ -162,13 +164,6 @@ export interface KeymapEditorProps {
   isDummy?: boolean
   onExportLayoutPdfAll?: () => void
   onExportLayoutPdfCurrent?: () => void
-  /** Hub display name for the signed-in user. Forwarded to the
-   *  KeyLabelsModal that opens from the keypicker overlay's Edit
-   *  button (mirrors the SettingsModal entry point). */
-  hubDisplayName?: string | null
-  /** True when the signed-in user can write to Hub (Upload / Update /
-   *  Remove). Used to gate the Edit-modal Hub buttons. */
-  hubCanWrite?: boolean
   // Hub favorite props (forwarded to TapDanceModal / MacroModal)
   favHubOrigin?: string
   favHubNeedsDisplayName?: boolean

@@ -134,6 +134,7 @@ export interface PipetteSettings {
   splitKeyMode?: 'split' | 'flat'
   quickSelect?: boolean
   keymapScale?: number
+  keyEditorZoom?: number
   viewMode?: ViewMode
   analyze?: AnalyzeSettings
   _updatedAt?: string // ISO 8601 — last update time

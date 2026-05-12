@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -30,6 +30,8 @@
     "labelPlaceholder": "ラベル",
     "noLabel": "（ラベルなし）",
     "synced": "同期しました",
+    "edit": "編集",
+    "done": "完了",
     "findOnHub": "Hub で探す",
     "findOnHubHint": "アップロードされたファイルを <hub>Pipette Hub</hub> で確認できます。",
     "installed": "インストール済み",
@@ -1306,7 +1308,8 @@
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
     "splitKeyMode": "キーピッカーでShiftキーを分離",
-    "quickSelect": "キーの即時選択"
+    "quickSelect": "キーの即時選択",
+    "keyEditorZoom": "キーエディタ ズーム"
   },
   "hub": {
     "uploadToHub": "アップロード",

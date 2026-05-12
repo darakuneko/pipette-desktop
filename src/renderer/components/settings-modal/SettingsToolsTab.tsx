@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIME_STEPS } from './settings-modal-shared'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
-import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
 import { useAppConfig } from '../../hooks/useAppConfig'
-import { SUPPORTED_LANGUAGES } from '../../i18n'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { useI18nPackStore } from '../../hooks/useI18nPackStore'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
+import { useLayoutOptions } from '../../hooks/useLayoutOptions'
+import { useLanguageOptions } from '../../hooks/useLanguageOptions'
 import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
 import { LanguagePacksModal } from '../i18n-packs/LanguagePacksModal'
 import { ThemePacksModal } from '../theme-packs/ThemePacksModal'
@@ -105,14 +105,7 @@ export function SettingsToolsTab({
     return t(`theme.${theme}`)
   }, [theme, themePacks.metas, t])
 
-  const languageOptions = useMemo(() => {
-    const opts: { id: string; name: string }[] = SUPPORTED_LANGUAGES.map((l) => ({ id: l.id, name: l.name }))
-    for (const meta of i18nPacks.metas) {
-      if (meta.deletedAt || !meta.enabled) continue
-      opts.push({ id: `pack:${meta.id}`, name: meta.name })
-    }
-    return opts
-  }, [i18nPacks.metas])
+  const languageOptions = useLanguageOptions(i18nPacks.metas)
 
   /**
    * Default-layout dropdown options. QWERTY is materialised as a Key
@@ -121,21 +114,7 @@ export function SettingsToolsTab({
    * Labels modal. `KEYBOARD_LAYOUTS` only serves as a safety net for
    * the brief window before `metas` has loaded.
    */
-  const layoutOptions = useMemo(() => {
-    const seen = new Set<string>()
-    const out: { id: string; name: string }[] = []
-    for (const meta of keyLabels.metas) {
-      if (seen.has(meta.id)) continue
-      seen.add(meta.id)
-      out.push({ id: meta.id, name: meta.name })
-    }
-    for (const def of KEYBOARD_LAYOUTS) {
-      if (seen.has(def.id)) continue
-      seen.add(def.id)
-      out.push({ id: def.id, name: def.name })
-    }
-    return out
-  }, [keyLabels.metas])
+  const layoutOptions = useLayoutOptions(keyLabels.metas)
 
   // Auto-heal an orphaned saved default layout. If the entry was
   // deleted from the Key Label store (locally or via sync) the saved

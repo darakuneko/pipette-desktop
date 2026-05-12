@@ -273,4 +273,5 @@ export const IpcChannels = {
   WINDOW_SET_ALWAYS_ON_TOP: 'window:set-always-on-top',
   WINDOW_SET_MIN_SIZE: 'window:set-min-size',
   WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED: 'window:is-always-on-top-supported',
+  WINDOW_SET_ZOOM: 'window:set-zoom',
 } as const

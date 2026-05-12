@@ -30,6 +30,10 @@ export interface AnchoredPopoverProps
   offset?: number
   /** `'bottom'` (default) opens below the anchor; `'top'` opens above. */
   placement?: 'bottom' | 'top'
+  /** `'left'` (default) aligns popover left edge to anchor left; `'right'` aligns right edges. */
+  align?: 'left' | 'right'
+  /** If true, popover min-width matches the anchor's width. */
+  matchAnchorWidth?: boolean
   children: ReactNode
 }
 
@@ -39,11 +43,13 @@ export function AnchoredPopover({
   onClose,
   offset = DEFAULT_OFFSET_PX,
   placement = 'bottom',
+  align = 'left',
+  matchAnchorWidth = false,
   children,
   ...rest
 }: AnchoredPopoverProps) {
   const popoverRef = useRef<HTMLDivElement | null>(null)
-  const [position, setPosition] = useState<{ top: number; left: number; bottom?: number }>({ top: 0, left: 0 })
+  const [position, setPosition] = useState<{ top: number; left?: number; right?: number; bottom?: number; minWidth?: number }>({ top: 0, left: 0 })
   const [mounted, setMounted] = useState(false)
 
   // Defer the createPortal call until after first commit so SSR /
@@ -64,11 +70,15 @@ export function AnchoredPopover({
       const anchor = anchorRef.current
       if (!anchor) return
       const rect = anchor.getBoundingClientRect()
+      const x = align === 'right'
+        ? { right: window.innerWidth - rect.right }
+        : { left: rect.left }
+      const widthHint = matchAnchorWidth ? { minWidth: rect.width } : {}
       const next = placement === 'top'
-        ? { top: 0, bottom: window.innerHeight - rect.top + offset, left: rect.left }
-        : { top: rect.bottom + offset, left: rect.left }
+        ? { top: 0, bottom: window.innerHeight - rect.top + offset, ...x, ...widthHint }
+        : { top: rect.bottom + offset, ...x, ...widthHint }
       setPosition((prev) =>
-        prev.top === next.top && prev.left === next.left && prev.bottom === next.bottom ? prev : next,
+        prev.top === next.top && prev.left === next.left && prev.right === next.right && prev.bottom === next.bottom && prev.minWidth === next.minWidth ? prev : next,
       )
     }
     updatePosition()
@@ -78,7 +88,7 @@ export function AnchoredPopover({
       window.removeEventListener('scroll', updatePosition, true)
       window.removeEventListener('resize', updatePosition)
     }
-  }, [open, anchorRef, offset, placement])
+  }, [open, anchorRef, offset, placement, align])
 
   useEffect(() => {
     if (!open) return
@@ -102,9 +112,13 @@ export function AnchoredPopover({
 
   if (!open || !mounted || typeof document === 'undefined') return null
 
-  const style: CSSProperties = position.bottom !== undefined
-    ? { position: 'fixed', bottom: position.bottom, left: position.left }
-    : { position: 'fixed', top: position.top, left: position.left }
+  const style: CSSProperties = {
+    position: 'fixed',
+    left: position.left,
+    right: position.right,
+    minWidth: position.minWidth,
+    ...(position.bottom !== undefined ? { bottom: position.bottom } : { top: position.top }),
+  }
 
   return createPortal(
     <div ref={popoverRef} style={style} {...rest}>

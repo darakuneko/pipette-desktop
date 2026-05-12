@@ -76,6 +76,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('splitKeyMode' in obj && obj.splitKeyMode != null && obj.splitKeyMode !== 'split' && obj.splitKeyMode !== 'flat') return false
   if ('quickSelect' in obj && obj.quickSelect != null && typeof obj.quickSelect !== 'boolean') return false
   if ('keymapScale' in obj && obj.keymapScale != null && (typeof obj.keymapScale !== 'number' || obj.keymapScale < 0.3 || obj.keymapScale > 2.0)) return false
+  if ('keyEditorZoom' in obj && obj.keyEditorZoom != null && (typeof obj.keyEditorZoom !== 'number' || obj.keyEditorZoom < 50 || obj.keyEditorZoom > 200)) return false
   if ('typingTestViewOnly' in obj && obj.typingTestViewOnly != null && typeof obj.typingTestViewOnly !== 'boolean') return false
   if ('typingTestViewOnlyWindowSize' in obj && obj.typingTestViewOnlyWindowSize != null) {
     if (typeof obj.typingTestViewOnlyWindowSize !== 'object' || Array.isArray(obj.typingTestViewOnlyWindowSize)) return false
@@ -121,6 +122,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       splitKeyMode: parsed.splitKeyMode,
       quickSelect: parsed.quickSelect,
       keymapScale: parsed.keymapScale,
+      keyEditorZoom: parsed.keyEditorZoom,
       layerNames: parsed.layerNames ?? [],
       typingTestResults: parsed.typingTestResults,
       typingTestConfig: parsed.typingTestConfig,
