@@ -10,7 +10,7 @@ import { VIEW_MODES, isTypingViewMenuTab } from '../../shared/types/pipette-sett
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
-import { ZOOM_FACTOR_DEFAULT, clampZoomFactor } from '../../shared/types/app-config'
+import { clampZoomFactor } from '../../shared/types/app-config'
 
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
@@ -462,10 +462,6 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingViewMenuTab: 'window',
       viewMode: 'editor',
     }
-    if (resolved.keyEditorZoom === undefined) {
-      resolved.keyEditorZoom = clampZoomFactor(config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)
-    }
-
     updateLayout(resolved.keyboardLayout)
     updateAutoAdvance(resolved.autoAdvance)
     updateLayerPanelOpen(resolved.layerPanelOpen)

@@ -793,7 +793,7 @@ export function App() {
             onLayerPanelOpenChange={devicePrefs.setLayerPanelOpen}
             scale={editorUI.keymapScale}
             onScaleChange={editorUI.adjustKeymapScale}
-            keyEditorZoom={devicePrefs.keyEditorZoom}
+            keyEditorZoom={devicePrefs.keyEditorZoom ?? (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)}
             onKeyEditorZoomChange={devicePrefs.setKeyEditorZoom}
             typingTestMode={editorUI.typingTestMode}
             onTypingTestModeChange={editorUI.handleTypingTestModeChange}
