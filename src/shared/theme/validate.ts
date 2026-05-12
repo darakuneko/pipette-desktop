@@ -5,7 +5,7 @@ import { THEME_COLOR_KEYS, THEME_COLOR_SCHEMES, THEME_PACK_LIMITS, type ThemeCol
 const MAX_NAME_LENGTH = THEME_PACK_LIMITS.MAX_NAME_LENGTH
 const SEMVER_REGEX = /^\d+\.\d+\.\d+(-[\w.]+)?$/
 const HEX_COLOR_REGEX = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
-const CSS_FN_COLOR_REGEX = /^(?:rgb|hsl)a?\(.+\)$/i
+const CSS_FN_COLOR_REGEX = /^(?:rgb|hsl)a?\([^)]+\)$/i
 const DANGEROUS_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype'])
 const REQUIRED_KEYS = new Set<ThemeColorKey>(THEME_COLOR_KEYS)
 

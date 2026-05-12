@@ -86,9 +86,12 @@ function validateName(value: unknown): KeyLabelStoreResult<string> {
   return ok(trimmed)
 }
 
+const DANGEROUS_KEYS: ReadonlySet<string> = new Set(['__proto__', 'constructor', 'prototype'])
+
 function isLabelMap(value: unknown): value is Record<string, string> {
   if (!value || typeof value !== 'object') return false
-  for (const v of Object.values(value as Record<string, unknown>)) {
+  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+    if (DANGEROUS_KEYS.has(k)) return false
     if (typeof v !== 'string') return false
   }
   return true
