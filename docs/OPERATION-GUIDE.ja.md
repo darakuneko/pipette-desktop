@@ -1482,7 +1482,7 @@ Pipette Hub から言語パックを検索します。2 文字以上入力する
 | `version` | はい | セマンティックバージョニング文字列 (例: `0.1.0`) |
 | (その他のキー) | はい | English の構造に合わせたネスト翻訳ツリー |
 
-キーはドット区切りの名前空間 (例: `editor.keymap.title`) を使います。English ベースラインの全キーをカバーするパックにはバージョンチップが表示され、部分的なパックには「未設定のキー」リンクが表示されるため、翻訳者は何が残っているかを確認できます。最小限のスターターファイルもリポジトリの [`sample-packs/language/my-language.json`](../sample-packs/language/my-language.json) にあります。
+キーはドット区切りの名前空間 (例: `editor.keymap.title`) を使います。English ベースラインの全キーをカバーするパックにはバージョンチップが表示され、部分的なパックには「未設定のキー」リンクが表示されるため、翻訳者は何が残っているかを確認できます。日本語バリアントを含むサンプル言語パックもリポジトリの [`sample-packs/i18n/`](../sample-packs/i18n/) ディレクトリにあります。
 
 ### 6.4 Theme Packs Manage
 
@@ -1574,7 +1574,7 @@ Pipette Hub からテーマパックを検索します。2 文字以上入力す
 | `colorScheme` | はい | `"light"` または `"dark"` — パックが想定する明暗を宣言する |
 | `colors` | はい | 全 35 カラートークンを CSS カラー値 (`#hex`、`rgb()`、`hsl()`) にマッピングするオブジェクト |
 
-35 個すべてのカラートークンが必須です。インストール済みパックを export (行 → `.json`) すると完全なテンプレートが取得できます。すぐ編集できるスターターファイルもリポジトリの [`sample-packs/theme/my-theme.json`](../sample-packs/theme/my-theme.json) にあります。
+35 個すべてのカラートークンが必須です。インストール済みパックを export (行 → `.json`) すると完全なテンプレートが取得できます。すぐに使える Kanagawa Wave / Dragon / Lotus・Solarized Light / Dark などのサンプルテーマパックもリポジトリの [`sample-packs/themes/`](../sample-packs/themes/) ディレクトリにあります。
 
 ### 6.5 ズーム（UI 全体）
 

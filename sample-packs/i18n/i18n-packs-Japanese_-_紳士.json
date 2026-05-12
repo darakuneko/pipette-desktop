@@ -1,0 +1,1453 @@
+{
+  "version": "0.1.3",
+  "name": "Japanese - 紳士",
+  "common": {
+    "save": "保存を承る",
+    "saved": "保存が完了いたしました、旦那様。",
+    "cancel": "お取りやめ",
+    "delete": "抹消",
+    "confirmDelete": "こちらを抹消してもよろしいでしょうか？",
+    "close": "お閉じする",
+    "reset": "初期化",
+    "confirmReset": "元通りにいたしましょうか？",
+    "revert": "復元",
+    "confirmRevert": "以前の状態にお戻しいたしますか？",
+    "clear": "清掃",
+    "confirmClear": "すべて掃き清めてよろしいでしょうか？",
+    "refresh": "再点検",
+    "refreshing": "ただいま再点検中でございます…",
+    "disconnect": "お別れ",
+    "loading": "ただいま準備を整えております…",
+    "apply": "反映",
+    "notConfigured": "未設定でございます",
+    "settingsLabel": "設定項目:",
+    "configuration": "構成案",
+    "saving": "お納めしております…",
+    "back": "戻る",
+    "exported": "お届けいたしました",
+    "imported": "お受け取りいたしました",
+    "load": "拝読",
+    "labelPlaceholder": "名札",
+    "noLabel": "（名札がございません）",
+    "synced": "足並みが揃いました",
+    "findOnHub": "Hubにて探索",
+    "findOnHubHint": "皆様の傑作を <hub>Pipette Hub</hub> にてご確認いただけます。",
+    "installed": "御用意済み",
+    "searchPlaceholder": "Pipette Hub を探索いたします（2文字以上にて）…"
+  },
+  "app": {
+    "title": "Pipette",
+    "deviceNotConnected": "キーボードの接続が確認できません",
+    "connecting": "接続を試みております{{dots}}",
+    "selectDevices": "機材をお選びください",
+    "connectedTo": "{{name}} に接続中でございます",
+    "udevHelp": "Linuxにて機材が見当たらぬ場合は、udevルールのご確認を。詳細はVialの指南書をご覧くださいませ。",
+    "loadDummy": "JSONファイルより拝読…",
+    "keyboardTab": "機材",
+    "fileTab": "書物",
+    "analyzeTab": "吟味",
+    "loadPipetteFile": ".pipetteファイルを拝読…",
+    "loadPipetteFileDescription": "オフラインにてお直しいただけます。一部を除き、すべての機能が貴方様をお待ちしております。",
+    "selectKeyboard": "保存された書物を選択",
+    "fileCount": "{{count}} 冊",
+    "noSavedFiles": "保存された書物はございません"
+  },
+  "loading": {
+    "protocol": "機材の言葉を解読中…",
+    "definition": "定義を読み解いております…",
+    "keymap": "地図を広げております…",
+    "macros": "呪文を確認中…",
+    "dynamicEntries": "仕掛けを準備中…",
+    "settings": "趣向を伺っております…",
+    "migrating": "写しを整理中…",
+    "migratingEntry": "写しを整理中 ({{current}}/{{total}})"
+  },
+  "editor": {
+    "autoAdvance": "自動巡回",
+    "keymap": {
+      "title": "地図",
+      "layer": "階層 {{number}}",
+      "layerLabel": "階層",
+      "collapseLayers": "階層を畳む",
+      "expandLayers": "階層を広げる",
+      "selectKey": "鍵をお選びください",
+      "tapHoldSettings": "長押しの妙 設定",
+      "tapHoldLabel": "長押しの妙",
+      "mouseKeysSettings": "鼠鍵 設定",
+      "mouseKeysLabel": "鼠鍵",
+      "magicSettings": "魔法 設定",
+      "magicLabel": "魔法",
+      "graveEscapeSettings": "避難鍵 設定",
+      "graveEscapeLabel": "避難鍵",
+      "autoShiftSettings": "自動Shift 設定",
+      "autoShiftLabel": "自動Shift",
+      "oneShotKeysSettings": "一撃鍵 設定",
+      "oneShotKeysLabel": "一撃鍵",
+      "comboSettings": "組手",
+      "comboLabel": "組手",
+      "previousLayers": "前の階層",
+      "nextLayers": "次の階層",
+      "layerN": "階層 {{n}}",
+      "undo": "時を戻す",
+      "redo": "やはり進める",
+      "zoomIn": "拡大して拝見",
+      "zoomOut": "遠目に拝見",
+      "copySelected": "選ばれし鍵を写す ({{count}})",
+      "clickToPaste": "鍵に写しを貼り付ける",
+      "pickerHint": "Ctrl+クリック: 複数選択 / Shift+クリック: 範囲選択 → 鍵をクリックで反映いたします",
+      "pickerDoubleClickHint": "再び叩くか、Enterを賜れば閉じます",
+      "keyboardTab": "Keyboard",
+      "pickerSourceCurrent": "現在",
+      "pickerSourceFile": "書物",
+      "pickerLoadFile": ".pipetteより拝読…",
+      "pickerNoSavedFiles": "保存された機材はございません",
+      "pickerNoEntries": "地図の写しはございません",
+      "pickerBackToFiles": "← 書物へ",
+      "pickerSourceDevice": "機材",
+      "pickerNoDevices": "他にお繋ぎした機材はございません",
+      "pickerProbing": "機材の様子を伺っております...",
+      "pickerProbeError": "機材との対話に失敗いたしました",
+      "pickerBackToDevices": "← 機材へ",
+      "pickerCurrentState": "現在の有様",
+      "pickerSavedFiles": "大切に保管された書物",
+      "keyPopover": {
+        "keyTab": "鍵",
+        "codeTab": "記号",
+        "searchPlaceholder": "呪文を探します...",
+        "noResults": "そのような呪文は見当たりません",
+        "hexLabel": "16進符号",
+        "hexManual": "手ずから符号を割り当てることも可能でございます",
+        "qmkLabel": "鍵符号: {{value}}",
+        "modMask": "修飾の覆い",
+        "modTap": "長押しの妙",
+        "lt": "階層の移ろい",
+        "shT": "Shiftの妙",
+        "lm": "階層の修飾",
+        "layerLabel": "階層",
+        "keySelected": "選ばれし鍵: {{key}}",
+        "clickToClose": "反映して閉じます。あるいはEnterを。",
+        "undo": "時を戻す",
+        "redo": "やはり進める"
+      }
+    },
+    "layout": {
+      "title": "レイアウト",
+      "options": "レイアウトの選択肢",
+      "preview": "下見"
+    },
+    "macro": {
+      "title": "呪文 (Macro)",
+      "memoryUsage": "容量: {{used}} / {{total}} 文字",
+      "addAction": "仕掛けを追加",
+      "text": "言葉",
+      "tap": "叩く",
+      "down": "沈める",
+      "up": "浮かせる",
+      "delay": "一休み",
+      "record": "記憶",
+      "stopRecording": "停止",
+      "editTitle": "呪文 {{index}}",
+      "textEditor": "筆記帳",
+      "textEditorTitle": "呪文の推敲 (言葉)",
+      "invalidJson": "形式が乱れております",
+      "addKeycode": "符号を追加",
+      "deleteKeycode": "符号を抹消",
+      "editAction": "仕掛けを調整",
+      "asciiOnly": "西欧の文字のみお受けいたします",
+      "unlockClickAgain": "封印を解いた後、再び鍵を叩いて筆記帳をお開きください",
+      "unlockWarning": "合言葉などの機密を呪文に含めてはなりませぬ。漏洩の恐れがございます。",
+      "invalidMacroEntry": "第 {{index}} 番の呪文に乱れがございます"
+    },
+    "lighting": {
+      "title": "灯火 (Lighting)",
+      "backlight": "背面灯",
+      "rgblight": "彩飾灯",
+      "brightness": "輝き",
+      "effect": "振る舞い",
+      "speed": "速さ",
+      "breathing": "鼓動",
+      "hue": "色合い",
+      "saturation": "鮮やかさ",
+      "value": "明るさ",
+      "hex": "符号",
+      "noLighting": "この機材は灯火を操る術を持ち合わせておりません",
+      "colorPicker": {
+        "label": "彩飾の選択",
+        "palette": "絵の具皿",
+        "hsv": "HSV"
+      }
+    },
+    "tapDance": {
+      "title": "連打の舞 (Tap Dance)",
+      "onTap": "一度叩けば",
+      "onHold": "長押しすれば",
+      "onDoubleTap": "二度叩けば",
+      "onTapHold": "叩いて押せば",
+      "tappingTerm": "舞の猶予 (ms)",
+      "hint": "地図にてこの舞を披露するには TD({{index}}) をお使いください",
+      "editTitle": "舞の型 ({{index}})",
+      "editJson": "書付を直す",
+      "jsonEditorTitle": "書付の推敲",
+      "invalidJson": "書付が乱れております",
+      "unknownKeycode": "存じ上げぬ符号でございます: {{keycode}}",
+      "invalidTappingTerm": "猶予は 0〜10000 の間にて賜ります",
+      "applyFailed": "反映に失敗いたしました、申し訳ございません"
+    },
+    "combo": {
+      "title": "組手 (Combo)",
+      "key": "鍵 {{number}}",
+      "output": "成果",
+      "editTitle": "組手 - {{index}}",
+      "timeout": "期限 (ms)",
+      "selectEntry": "型をお選びください",
+      "settings": "組手の設定",
+      "invalidJson": "形式が乱れております",
+      "unknownKeycode": "存じ上げぬ符号でございます: {{keycode}}",
+      "invalidEntry": "第 {{index}} 番の組手に乱れがございます"
+    },
+    "keyOverride": {
+      "title": "上書きの妙 (Key Override)",
+      "triggerKey": "きっかけの鍵",
+      "replacementKey": "代わりの鍵",
+      "layers": "階層",
+      "triggerMods": "きっかけの修飾",
+      "negativeMods": "打ち消しの修飾",
+      "suppressedMods": "封じの修飾",
+      "options": "選択肢",
+      "enabled": "有効",
+      "enableAll": "すべて有効",
+      "disableAll": "すべて停止",
+      "editTitle": "上書きの妙 - {{index}}",
+      "modsOnly": "修飾鍵",
+      "settings": "上書きの設定",
+      "selectEntry": "調整する型をお選びください",
+      "invalidJson": "形式が乱れております",
+      "unknownKeycode": "存じ上げぬ符号でございます: {{keycode}}",
+      "invalidEntry": "第 {{index}} 番の型に乱れがございます"
+    },
+    "altRepeatKey": {
+      "title": "繰り返しの妙 (Alt Repeat Key)",
+      "lastKey": "直前の鍵",
+      "altKey": "代わりの鍵",
+      "allowedMods": "許されし修飾",
+      "options": "選択肢",
+      "enabled": "有効",
+      "editTitle": "繰り返しの妙 - {{index}}",
+      "settings": "繰り返しの設定",
+      "selectEntry": "調整する型をお選びください",
+      "invalidJson": "形式が乱れております",
+      "unknownKeycode": "存じ上げぬ符号でございます: {{keycode}}",
+      "invalidEntry": "第 {{index}} 番の型に乱れがございます"
+    },
+    "keyTester": {
+      "title": "鍵の試打室"
+    },
+    "typingTest": {
+      "title": "打鍵の試練",
+      "switchToTypingMode": "試練に挑む",
+      "exitTypingMode": "試練を終える",
+      "restart": "初めから",
+      "wpm": "打鍵速 (WPM)",
+      "accuracy": "正確さ",
+      "time": "時間",
+      "words": "単語",
+      "correct": "正解",
+      "incorrect": "過ち",
+      "finished": "万事完了",
+      "loading": "支度中...",
+      "wordCount": "{{current}} / {{total}}",
+      "mode": {
+        "words": "単語数",
+        "time": "時間制限",
+        "quote": "名句"
+      },
+      "punctuation": "句読点",
+      "numbers": "数字",
+      "quoteLength": {
+        "short": "短め",
+        "medium": "中くらい",
+        "long": "長め",
+        "all": "すべて"
+      },
+      "quoteSource": "-- {{source}} 殿",
+      "viewOnly": "打鍵の観賞",
+      "exitViewOnly": "観賞を終える",
+      "alwaysOnTop": "最前面に",
+      "recordStart": "記録開始",
+      "recordStop": "記録停止",
+      "viewAnalytics": "吟味の結果",
+      "tab": {
+        "window": "小窓",
+        "rec": "録画"
+      },
+      "monitorApp": {
+        "label": "見守りアプリ"
+      },
+      "heatmap": {
+        "legend": "熱分布: この一刻"
+      },
+      "closeHint": "触れて献立を開く",
+      "recordingIndicator": "記録しております",
+      "resetSize": "元の大きさに",
+      "fitSize": "丁度よく",
+      "baseLayer": "Base Layer",
+      "baseLayerShort": "Base",
+      "heatmapWindow": "熱分布の期間（分）",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} 分間",
+      "consent": {
+        "title": "打鍵の記録を許しいただけますか？",
+        "collectedHeading": "お預かりする事柄",
+        "collectedItems": [
+          "1 分単位の文字の振る舞い",
+          "鍵を叩いた回数（階層や様式を問いませぬ）",
+          "打鍵の速さの移ろい",
+          "お使いのアプリの名（見守りが有効な折のみ）"
+        ],
+        "notCollectedHeading": "お預かりせぬ事柄",
+        "notCollectedItems": [
+          "個別の打鍵の刻み",
+          "綴られた言葉や合言葉",
+          "窓の題名や所在 (URL)"
+        ],
+        "accept": "承知いたしました"
+      },
+      "paused": "注意が他へ向かわれたようです",
+      "layerNote": "階層の移ろいは一部の術のみ対応しております。他は反映されぬやもしれませぬ、ご容赦を。",
+      "language": {
+        "title": "お言葉",
+        "searchPlaceholder": "言葉を探します...",
+        "downloaded": "お手元にございます",
+        "available": "入手可能",
+        "noResults": "そのような言葉は見当たりません",
+        "words": "{{count}} 語",
+        "loadingLanguage": "言葉を紐解いております...",
+        "downloadFailed": "お取り寄せに失敗いたしました"
+      },
+      "history": {
+        "title": "過去の足跡",
+        "bestWpm": "最速",
+        "avgWpm": "平均",
+        "last10Avg": "直近十回",
+        "totalTests": "試練の数",
+        "avgAccuracy": "平均正確さ",
+        "date": "日時",
+        "mode": "形式",
+        "noResults": "記録はございません",
+        "pb": "自己最高",
+        "allModes": "すべて",
+        "exportCsv": "書付を出す (CSV)"
+      }
+    }
+  },
+  "error": {
+    "loadFailed": "書物の拝読に失敗いたしました",
+    "saveFailed": "書物のお納めに失敗いたしました",
+    "exampleUid": "唯一の識別子をお決めください",
+    "dummyMode": "仮初の姿",
+    "pipetteFileMode": "書物閲覧",
+    "unsavedChanges": "まだお納めしていない変更がございます、旦那様。",
+    "vilV1NotSupported": "古き形式でございます。繋ぎ直して地図を開けば、私が整理しておきましょう。",
+    "protocolVersion": "この機材の言葉は解しかねます。新しい心（ファームウェア）を授けてあげてください。",
+    "exportKeymapCFailed": "keymap.c の作成に失敗いたしました",
+    "exportPdfFailed": "PDFの作成に失敗いたしました",
+    "sideloadFailed": "JSON定義の読み取りに失敗いたしました",
+    "sideloadInvalidDefinition": "機材の定義が不完全でございます",
+    "notVialCompatible": "Vialに対応していないやもしれませぬ"
+  },
+  "warning": {
+    "echoDetected": "お声がうまく届きませぬ。紐（ケーブル）を確認し、繋ぎ直していただけますか？"
+  },
+  "keycodes": {
+    "basic": "基本",
+    "iso": "ISO",
+    "jis": "JIS",
+    "international": "万国共通",
+    "language": "言語",
+    "layers": "階層",
+    "behavior": "振る舞い",
+    "modifiers": "修飾",
+    "lighting": "灯火",
+    "system": "御用達",
+    "tapDance": "連打の舞",
+    "macro": "呪文",
+    "combo": "組手",
+    "keyOverride": "上書き",
+    "altRepeatKey": "繰り返し",
+    "settingsNote": "この仕掛けは機材全体に及びます",
+    "macroMoreActions": "残り {{count}} 段",
+    "user": "利用者",
+    "midi": "MIDI演奏",
+    "group": {
+      "characters": "文字",
+      "editing": "推敲",
+      "modifiers": "修飾",
+      "navigation": "巡回",
+      "function": "機能",
+      "lock": "封印",
+      "numpad": "数字盤",
+      "system": "制度",
+      "shifted": "Shiftの産物",
+      "internal": "内情",
+      "magic": "魔法",
+      "audio": "音と調べ",
+      "haptic": "感触",
+      "mode": "様式",
+      "autoShift": "自動Shift",
+      "comboKeys": "組手の鍵",
+      "keyOverrideKeys": "上書きの鍵",
+      "altRepeatKeyKeys": "繰り返しの鍵",
+      "capsWord": "大文字語",
+      "boot": "門出",
+      "osm": "一度限りの修飾",
+      "modMask": "修飾の覆い",
+      "modTap": "長押しの妙",
+      "modSpecial": "格別",
+      "backlight": "背面灯",
+      "rgbLighting": "彩飾灯",
+      "rgbMatrix": "彩飾の陣",
+      "systemControl": "統治",
+      "appBrowser": "巡回と閲覧",
+      "mediaPlayback": "奏でる",
+      "mouse": "鼠 (Mouse)",
+      "lockingKeys": "封印の鍵",
+      "layerSpecial": "格別",
+      "layerMO": "MO – 一時的に",
+      "layerDF": "DF – 基底の変更",
+      "layerPDF": "PDF – 永劫の基底",
+      "layerTG": "TG – 切り替え",
+      "layerTT": "TT – 叩いて替え",
+      "layerOSL": "OSL – 一度きり",
+      "layerTO": "TO – その階層へ",
+      "layerLT": "LT – 階層と妙",
+      "layerLM": "LM – 階層と修飾",
+      "macroDM": "移ろう呪文",
+      "midiNotes": "音階",
+      "midiOctave": "八度音程",
+      "midiTranspose": "移調",
+      "midiVelocity": "強弱",
+      "midiChannel": "回線",
+      "midiControl": "制御",
+      "swapHands": "左右の入れ替え",
+      "sequencer": "順序立て",
+      "joystick": "操縦桿",
+      "ledMatrix": "LEDの陣"
+    }
+  },
+  "unlock": {
+    "title": "機材の封印を解く",
+    "instructions": "光り輝く鍵を長押しして、封印をお解きください",
+    "hint": "おやめになるなら、紐を抜き差ししてくださいませ",
+    "progress": "進捗: {{current}} / {{total}}",
+    "cancel": "お取りやめ"
+  },
+  "fileIO": {
+    "loadLayout": ".vil 拝読",
+    "sideloadJson": "JSON の横入れ",
+    "importing": "受け入れ中...",
+    "exporting": "送り出し中...",
+    "importSuccess": "受け入れ完了いたしました",
+    "uidMismatchConfirm": "この書物は別の機材のためのもののようですが…拝見してもよろしいですか？"
+  },
+  "statusBar": {
+    "autoAdvance": "自動巡回",
+    "locked": "封印中",
+    "unlocked": "開放済み",
+    "keyTester": "試打室",
+    "sync": {
+      "pending": "足並みの待ち",
+      "syncing": "足並みを揃えております...",
+      "synced": "足並みが揃いました",
+      "error": "不具合",
+      "partial": "一部不備"
+    }
+  },
+  "security": {
+    "lock": "封印"
+  },
+  "theme": {
+    "label": "意匠",
+    "light": "朝の光",
+    "dark": "夜の帳",
+    "system": "世の習い"
+  },
+  "layout": {
+    "keyboardLayout": "名札の表示",
+    "exportAllPdf": "すべてをPDFに",
+    "exportCurrentPdf": "現在をPDFに",
+    "pdfFooterLabel": ".pdf"
+  },
+  "layoutStore": {
+    "title": "蔵",
+    "noSavedLayouts": "蔵に地図はございません",
+    "saveFailed": "蔵にお納めするのに失敗いたしました",
+    "maxEntriesReached": "蔵がいっぱいでございます（三十件）。新しきを入れるなら、古きを処分なさいませ。",
+    "loadFailed": "蔵から出すのに失敗いたしました",
+    "delete": "処分",
+    "import": "入れる",
+    "export": "出す",
+    "confirmOverwrite": "上書きしてもよろしいですか？",
+    "exportVil": ".vil",
+    "exportKeymapC": ".c",
+    "exportPdf": ".pdf",
+    "versionPrefix": "v{{version}} - "
+  },
+  "analyzeFilterStore": {
+    "title": "探索条件の保管",
+    "tabSave": "条件の保存",
+    "selectKeyboard": "保管を管理するには、機材をお選びください。",
+    "saveFailed": "条件の保存に失敗いたしました",
+    "loadFailed": "条件の読み込みに失敗いたしました",
+    "unsupportedVersion": "新しきPipetteの条件ゆえ、私には読み解けませぬ。",
+    "maxEntriesReached": "保管の上限 ({{max}}件) でございます。古いものを処分してくださいませ。",
+    "csv": ".csv",
+    "empty": "保管された条件はございません",
+    "confirmOverwrite": "上書きいたしますか？"
+  },
+  "sync": {
+    "googleAccount": "Google のお席",
+    "connected": "御着席",
+    "signOut": "お席を立つ",
+    "confirmDisconnect": "お席を外されますか？",
+    "disconnectHubWarning": "Pipette Hub からも離れることになります",
+    "signIn": "御着席",
+    "authenticating": "ご本人か確認しております...",
+    "authFailed": "確認に失敗いたしました。もう一度お試しを。",
+    "encryptionPassword": "内緒の合言葉",
+    "passwordSet": "合言葉は設定済みでございます",
+    "passwordPlaceholder": "合言葉を入力",
+    "setPassword": "合言葉を定める",
+    "passwordTooWeak": "少々心許ない合言葉のようです",
+    "passwordSetFailed": "合言葉の設定に失敗いたしました",
+    "changePassword": "合言葉の変更",
+    "changePasswordInfo": "すべての記録が新しい合言葉で包み直されます",
+    "changingPassword": "合言葉を書き換えております...",
+    "settingPassword": "合言葉を定めております...",
+    "samePassword": "以前と同じ合言葉では意味がございません",
+    "changePasswordUndecryptable": "開けぬ書物がございます。先にそれらを整理してくださいませ。",
+    "autoSync": "自動で揃える",
+    "enable": "有効",
+    "disable": "停止",
+    "manualSync": "手動で揃える",
+    "sync": "揃える",
+    "resetTarget": {
+      "keyboardData": "機材",
+      "favorites": "お気に入り",
+      "appSettings": "御用達設定",
+      "i18nPacks": "言葉の包み"
+    },
+    "deleteSelected": "選ばれしものを抹消",
+    "resetTargetsConfirm": "選ばれた記録は永遠に失われます。よろしいのですね？",
+    "resetLocalTargetsConfirm": "手元の記録が永遠に失われます。よろしいのですね？",
+    "resettingData": "記録を抹消しております...",
+    "syncing": "同期中...",
+    "continueOffline": "独りで続行",
+    "noSyncYet": "まだ揃っておりません",
+    "changePasswordError": {
+      "unauthenticated": "合言葉を変える前に Google へ御挨拶を"
+    },
+    "changePasswordInProgress": "作業中のため合言葉は変えられませぬ",
+    "import": "入れる",
+    "export": "出す",
+    "importComplete": "完了いたしました",
+    "importFailed": "失敗いたしました",
+    "passwordMismatch": "合言葉が違います。今一度ご確認くださいませ。",
+    "scanRemote": "見渡す",
+    "scanning": "見渡しております...",
+    "downloading": "お取り寄せ中...",
+    "noRemoteData": "あちらに記録はございません",
+    "undecryptableCount": "{{count}} 件の開けぬ書物",
+    "selectAll": "すべて選ぶ",
+    "deselectAll": "すべて外す",
+    "checkingRemotePassword": "あちらの様子を伺っております...",
+    "existingPasswordHint": "合言葉が既にございます。他で使ったものを教えていただけますか？",
+    "unavailable": "繋がりが芳しくありません。同期は叶わぬようです。",
+    "retry": "再試行"
+  },
+  "settings": {
+    "title": "御用設定",
+    "tabData": "繋がり",
+    "tabTools": "道具箱",
+    "dataSync": "足並み揃え",
+    "defaults": "新しき機材への計らい",
+    "defaultLayout": "名札",
+    "defaultAutoAdvance": "自動巡回",
+    "defaultLayerPanelOpen": "階層一覧の展開",
+    "defaultBasicViewType": "Basic の見栄え",
+    "defaultSplitKeyMode": "Shift を別々に",
+    "defaultQuickSelect": "即座の選択",
+    "basicViewTypeList": "一覧",
+    "basicViewTypeAnsi": "ANSI",
+    "basicViewTypeIso": "ISO",
+    "basicViewTypeJis": "JIS",
+    "security": "護衛",
+    "autoLockTime": "自動封印の時間",
+    "autoLockDescription": "お休みになれば封印いたします",
+    "autoLockMinutes": "{{minutes}}分",
+    "maxKeymapHistory": "地図の履歴の上限",
+    "tabNotification": "お知らせ",
+    "tabAbout": "この Pipette について",
+    "about": {
+      "version": "版 {{version}}",
+      "license": "認可: {{license}}",
+      "licenseValue": "GPL-3.0-or-later"
+    },
+    "zoomLevel": "拡大縮小",
+    "zoomLevelWarning": "表示が乱れることがございます。ご自身の責においてお変えくださいませ。"
+  },
+  "analyze": {
+    "noKeyboards": "まだ打鍵の記録がございません",
+    "noData": "その頃の記録は見当たりません",
+    "selectKeyboard": "一覧より機材をお選びください",
+    "appUsage": {
+      "title": "アプリごとの勤しみ",
+      "loading": "勤しみの記録を読み解いております…",
+      "empty": "記録がございません。見守りを有効にして記録を始めてください。",
+      "unknown": "不詳 / 混在",
+      "other": "その他",
+      "tooltipKeystrokesLabel": "打鍵",
+      "tooltipShareLabel": "比率"
+    },
+    "wpmByApp": {
+      "title": "アプリ別 WPM",
+      "loading": "アプリ別 WPM を読み解いております…",
+      "empty": "一分ごとの集計がまだございません。記録を始めていただけますか？",
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "打鍵"
+    },
+    "tablistLabel": "分析種別",
+    "splitView": {
+      "toggle": "分割表示",
+      "narrowWindow": "少々手狭でございます。幅を広げていただけますか？"
+    },
+    "export": {
+      "categoriesLabel": "出力するカテゴリ",
+      "confirm": ".csv",
+      "failed": "出力に失敗いたしました",
+      "snapshotMissing": "地図の写しがないため、一部の出力は叶いませぬ",
+      "conditionLabel": {
+        "device": "機材",
+        "app": "アプリ",
+        "keymap": "地図",
+        "range": "期間"
+      },
+      "fingerOverrides": "指割り当て",
+      "fingerOverridesDefault": "定石",
+      "fingerOverridesCustomized": "お好み ({{count}})",
+      "category": {
+        "summary": "要約",
+        "wpm": "WPM",
+        "interval": "間隔",
+        "activity": "活動量",
+        "byApp": "アプリ別",
+        "heatmap": "熱分布",
+        "ergonomics": "エルゴノミクス",
+        "bigrams": "二連打",
+        "layer": "階層",
+        "layoutComparison": "地図の比較"
+      },
+      "appDataApps": {
+        "label": "アプリ別データ",
+        "all": "すべてのアプリ",
+        "none": "なし",
+        "selectAll": "すべて",
+        "deselectAll": "なし",
+        "hint": "Hub に内訳として含めるアプリをお選びください。"
+      }
+    },
+    "loading": {
+      "keyboards": "機材一覧を読み解いております…",
+      "syncing": "雲（クラウド）と同期中…",
+      "preparing": "図表を準備しております…"
+    },
+    "unit": {
+      "keys": "回",
+      "activations": "回"
+    },
+    "snapshotTimeline": {
+      "title": "地図の変遷",
+      "current": "現在の地図"
+    },
+    "wpm": {
+      "legend": "WPM",
+      "description": "WPM — Words per minute\n一分間の打鍵を五で割ったものでございます",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM 要約",
+          "totalKeystrokes": "総打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakWpm": "最高 WPM",
+          "lowestWpm": "最低WPM",
+          "weightedMedianWpm": "重み付き中央値WPM",
+          "totalBackspaces": "Bksp 合計",
+          "overallBksPercent": "平均 Bksp %",
+          "overallBksPercentDesc": "打鍵に占める Backspace の割合でございます"
+        }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "Bksp % — 打鍵に占める Backspace の割合でございます"
+      },
+      "timeOfDay": {
+        "tooltipLabel": "時間帯",
+        "summary": {
+          "label": "時間帯別 WPM 要約",
+          "totalKeystrokes": "総打鍵",
+          "activeDuration": "実打鍵時間",
+          "overallWpm": "平均WPM",
+          "peakHour": "ピーク時間帯",
+          "peakHourDesc": "最も打鍵が速い時間帯",
+          "lowestHour": "最遅時間帯",
+          "lowestHourDesc": "最も打鍵が緩やかな時間帯",
+          "activeHours": "活動時間帯数",
+          "activeHoursDesc": "一度でも打鍵のあった時間（24時間中）"
+        }
+      }
+    },
+    "interval": {
+      "legend": {
+        "min": "最小",
+        "p25": "p25",
+        "p50": "中央値",
+        "p75": "p75",
+        "max": "最大"
+      },
+      "description": {
+        "min": "最短の間隔、すなわち最速の瞬間にございます",
+        "p25": "p25 — 四分の一の打鍵がこれより短い間隔でございます",
+        "p50": "中央値 — 打鍵の半数がこれより短い間隔でございます",
+        "p75": "p75 — 四分の三の打鍵がこれより短い間隔でございます",
+        "max": "最大の間隔、すなわち最長の停止にございます"
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "推定打鍵数",
+        "summary": {
+          "label": "打鍵リズム要約",
+          "medianP50": "中央値間隔",
+          "fast": "高速 (<200ms)",
+          "fastDesc": "間隔が 200ms 未満の割合",
+          "normal": "標準 (200-500ms)",
+          "normalDesc": "間隔が 200ms〜500ms の割合",
+          "slow": "緩慢 (500ms-2s)",
+          "slowDesc": "間隔が 500ms〜2s の割合",
+          "pause": "ポーズ (>=2s)",
+          "pauseDesc": "間隔が 2s 以上の割合",
+          "longestPause": "最長間隔（1分内）"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "間隔要約",
+          "medianP50": "重み付き中央値",
+          "shortest": "最短間隔（1分内）",
+          "longestPause": "最長間隔（1分内）"
+        }
+      }
+    },
+    "activity": {
+      "tableLabel": "時間帯 × 曜日の活動量",
+      "tableLabelWpm": "時間帯 × 曜日の WPM",
+      "hourHeader": "{{hour}}時",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWithShare": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys) (全体の {{share}}%)",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
+      "legendLow": "0",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
+      "legendHighWpm": "{{wpm}} WPM",
+      "summary": {
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
+        "wpmContext": "{{wpm}} WPM"
+      },
+      "keystrokes": {
+        "summary": {
+          "label": "活動量要約",
+          "mostFrequentDow": "最頻曜日",
+          "mostFrequentDowDesc": "最も多く打鍵された曜日",
+          "mostFrequentHour": "最頻時間帯",
+          "mostFrequentHourDesc": "最も多く打鍵された時間帯",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "最大の打鍵を記録した枠",
+          "activeCells": "活動枠数",
+          "activeCellsDesc": "一度でも打鍵のあった枠（168中）"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "活動量 WPM 要約",
+          "overallWpm": "平均WPM",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "最高速を記録した枠",
+          "lowestCell": "最遅セル",
+          "lowestCellDesc": "最も緩やかな枠",
+          "activeCells": "活動枠数",
+          "activeCellsDesc": "一度でも打鍵のあった枠（168中）"
+        }
+      },
+      "sessions": {
+        "tooltipLabel": "セッション",
+        "tooltipValue": "{{count}} 件 ({{share}}%)",
+        "bin": {
+          "lt5Min": "5分未満",
+          "5to15Min": "5-15分",
+          "15to30Min": "15-30分",
+          "30to60Min": "30-60分",
+          "1to2Hours": "1-2時間",
+          "2to4Hours": "2-4時間",
+          "gtFourHours": "4時間以上"
+        },
+        "summary": {
+          "label": "セッション分布要約",
+          "sessionCount": "セッション数",
+          "totalDuration": "合計時間",
+          "meanDuration": "平均長",
+          "medianDuration": "中央値長",
+          "longestDuration": "最長",
+          "shortestDuration": "最短"
+        }
+      },
+      "dow": {
+        "0": "日",
+        "1": "月",
+        "2": "火",
+        "3": "水",
+        "4": "木",
+        "5": "金",
+        "6": "土"
+      },
+      "calendar": {
+        "gridLabel": "年間アクティビティカレンダー",
+        "monthShortYear": "{{year}}-{{monthShort}}",
+        "monthShort": {
+          "1": "1月",
+          "2": "2月",
+          "3": "3月",
+          "4": "4月",
+          "5": "5月",
+          "6": "6月",
+          "7": "7月",
+          "8": "8月",
+          "9": "9月",
+          "10": "10月",
+          "11": "11月",
+          "12": "12月"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys)（{{activeDuration}}）",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM（{{activeDuration}}）",
+        "cellTooltipSessions": "{{date}} — 開始セッション {{count}}",
+        "cellTooltipEmpty": "{{date}} — 活動なし",
+        "summary": {
+          "label": "カレンダー要約",
+          "total": "合計打鍵",
+          "avgWpm": "平均 WPM",
+          "activeDays": "活動日数",
+          "activeDaysValue": "{{active}} / {{total}}（{{share}}%）",
+          "peak": "ピーク日",
+          "avg": "活動日平均"
+        }
+      }
+    },
+    "analysisTab": {
+      "summary": "要約",
+      "wpm": "WPM",
+      "interval": "間隔",
+      "activity": "活動量",
+      "keyHeatmap": "熱分布",
+      "ergonomics": "エルゴノミクス",
+      "bigrams": "二連打",
+      "layoutComparison": "地図の比較",
+      "layer": "階層",
+      "byApp": "アプリ別"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "今日の歩み",
+        "ariaLabel": "今日の要約",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間"
+      },
+      "weeklyReport": {
+        "sectionTitle": "直近 7 日",
+        "ariaLabel": "週次レポート",
+        "delta": "{{glyph}} {{sign}}{{pct}}%（前 7 日比）",
+        "deltaInsufficient": "{{glyph}} —（前 7 日比）",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間",
+        "activeDurationContext": "{{previous}}（前 7 日）",
+        "activeDaysLabel": "アクティブ日数",
+        "activeDaysUnit": "日"
+      },
+      "profile": {
+        "sectionTitle": "タイピングプロファイル（直近 {{days}} 日）",
+        "ariaLabel": "タイピングプロファイル",
+        "insufficient": "データ不足",
+        "speedLabel": "スピード",
+        "speedDesc": "期間全体の WPM を Slow（30 未満）/ Medium（30–50）/ Fast（50 以上）に分類いたしました。安定するまで数日かかります",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "ゆっくり",
+          "medium": "標準",
+          "fast": "速い"
+        },
+        "handBalanceLabel": "左右バランス",
+        "handBalanceDesc": "左右どちらの手で打鍵されたかの比率でございます。均衡が取れているか確認いたします",
+        "handBalanceContext": "左 {{leftPct}}% / 右 {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "左寄り",
+          "balanced": "均衡",
+          "rightBias": "右寄り"
+        },
+        "sfbLabel": "SFB 率",
+        "sfbDesc": "同じ指で連続して打鍵した割合でございます。低いほど打鍵が滑らかになります",
+        "sfbContext": "同指 {{pct}}%",
+        "sfb": {
+          "low": "低い",
+          "medium": "中くらい",
+          "high": "高い"
+        },
+        "fatigueLabel": "疲労リスク",
+        "fatigueDesc": "打鍵速の落ち込みから疲労の兆しを読み取ります",
+        "fatigueContext": "ピーク→最低 {{pct}}% 低下",
+        "fatigue": {
+          "low": "低",
+          "medium": "中",
+          "high": "高"
+        }
+      }
+    },
+    "bigrams": {
+      "loading": "二連打の記録を読み解いております…",
+      "empty": "この期間の記録は見当たりません。記録を始めていただけますか？",
+      "error": "データの取得に失敗いたしました",
+      "quadrant": {
+        "top": "頻出ペア",
+        "slow": "ペア間隔",
+        "fingerIki": "指間隔"
+      },
+      "column": {
+        "pair": "ペア",
+        "count": "回数",
+        "avgIki": "平均間隔",
+        "p95": "p95 間隔"
+      },
+      "fingerIki": {
+        "noSnapshot": "指間隔には地図の写しが必要でございます",
+        "sortLabel": "並び順",
+        "sort": {
+          "desc": "遅い順",
+          "asc": "早い順"
+        }
+      },
+      "pairIntervalThreshold": {
+        "label": "平均間隔",
+        "suffix": "ms 以上",
+        "ariaLabel": "平均間隔の最小値 (ms)"
+      },
+      "cellTooltipOccurrencesLabel": "出現",
+      "cellTooltipAvgIkiLabel": "平均間隔"
+    },
+    "keyHeatmap": {
+      "layer": "階層",
+      "layerOption": "階層 {{i}}",
+      "layerOptionMulti": "階層 {{layers}}",
+      "bondToggle": "階層 {{i}} を別グループと結合",
+      "noLayout": "地図の写しにレイアウトデータがございません",
+      "noSnapshot": "地図の写しが記録されておりません。記録を開始すれば取得されます。",
+      "ranking": {
+        "frequentUsedN": "上位",
+        "frequentUsed": "よく使うキー",
+        "colKey": "キー",
+        "colLayer": "階層",
+        "colMatrix": "マトリクス",
+        "colCount": "回数",
+        "aggregate": "集計",
+        "aggregateOption": {
+          "cell": "物理",
+          "char": "文字"
+        },
+        "keyGroup": "グループ",
+        "keyGroupOption": {
+          "all": "すべて",
+          "char": "文字",
+          "modifier": "修飾",
+          "layerOp": "階層操作"
+        },
+        "emptyFrequentUsed": "この期間に叩かれたキーはございません"
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "指別打鍵量",
+      "handBalance": "左右バランス",
+      "rowUsage": "段別バランス",
+      "rowLoad": "段別打鍵量",
+      "noSnapshot": "地図の写しがございません。記録を開始して取得してください。",
+      "noLayout": "地図にレイアウト情報がございません",
+      "noData": "この期間の打鍵データがございません",
+      "finger": {
+        "left-pinky": "左の小指殿",
+        "left-ring": "左の薬指殿",
+        "left-middle": "左の中指殿",
+        "left-index": "左の人差し指殿",
+        "left-thumb": "左の親指殿",
+        "right-thumb": "右の親指殿",
+        "right-index": "右の人差し指殿",
+        "right-middle": "右の中指殿",
+        "right-ring": "右の薬指殿",
+        "right-pinky": "右の小指殿"
+      },
+      "fingerKind": {
+        "thumb": "親指",
+        "index": "人差し指",
+        "middle": "中指",
+        "ring": "薬指",
+        "pinky": "小指"
+      },
+      "hand": {
+        "left": "左手",
+        "right": "右手"
+      },
+      "rowCategory": {
+        "function": "F 行",
+        "number": "数字行",
+        "top": "上段",
+        "home": "ホーム行",
+        "bottom": "下段",
+        "thumb": "親指段"
+      },
+      "learning": {
+        "noData": "活動が十分にございません。打鍵を増やすか、期間を広げてくださいませ。",
+        "belowMinSample": "下限未満",
+        "totalKeystrokes": "{{count}} 打鍵",
+        "relativeTrendNote": "数値そのものではなく、時間とともにどう動くかにご注目ください。",
+        "score": {
+          "overall": "総合",
+          "fingerLoad": "指の偏り",
+          "handBalance": "左右バランス",
+          "homeRowStay": "ホーム行率"
+        },
+        "summary": {
+          "latestOverall": "最新スコア",
+          "delta_one": "前区間との差",
+          "delta_other": "過去 {{count}} 区間との差",
+          "baselineMean": "基準 {{value}}",
+          "bucketCount": "区間数",
+          "qualifiedCount": "有効区間"
+        }
+      }
+    },
+    "layoutComparison": {
+      "sourceLabel": "現在",
+      "targetLabel": "比較",
+      "noTargetOption": "—",
+      "noTarget": "比較する地図を選んでください。",
+      "noSnapshot": "地図の写しがございません。記録を開始すると保存されます。",
+      "noData": "この期間に打鍵データがございません。",
+      "loading": "地図の比較を計算しております…",
+      "fetchError": "比較に失敗いたしました。",
+      "skipWarning": "一部の出来事がこの地図に対応できませんでした。参考値としてご覧ください。",
+      "fingerDiffTitle": "{{target}} との指負担差分",
+      "heatmapDiffTitle": "{{target}} との位置別負担差分",
+      "heatmapDiffLegend": {
+        "decrease": "比較先で減少",
+        "increase": "比較先で増加"
+      },
+      "headers": {
+        "metric": "指標",
+        "current": "現在"
+      },
+      "metrics": {
+        "fingerLoad": "指の負担",
+        "handBalance": "左右バランス",
+        "rowDist": "行分布",
+        "homeRow": "ホーム行率"
+      }
+    },
+    "layer": {
+      "title": "階層別打鍵数",
+      "activationsTitle": "階層起動回数",
+      "layerLabel": "階層 {{layer}}",
+      "noData": "階層別の打鍵記録がございません",
+      "noActivations": "階層操作キーの記録がございません",
+      "requiresSnapshot": "起動回数の表示には地図の写しが必要でございます。"
+    },
+    "finger": {
+      "short": {
+        "left-pinky": "左小",
+        "left-ring": "左薬",
+        "left-middle": "左中",
+        "left-index": "左人",
+        "left-thumb": "左親",
+        "right-thumb": "右親",
+        "right-index": "右人",
+        "right-middle": "右中",
+        "right-ring": "右薬",
+        "right-pinky": "右小"
+      }
+    },
+    "fingerAssignment": {
+      "button": "指割り当て",
+      "title": "指割り当て設定",
+      "subtitle": "鍵をクリックして推定値を上書きいただけます",
+      "save": "保存",
+      "reset": "推定に戻す",
+      "resetAll": "全てリセット",
+      "noSnapshot": "地図の写しがございません",
+      "popoverLabel": "指の選択",
+      "leftHand": "左手",
+      "rightHand": "右手"
+    },
+    "peak": {
+      "peakKeystrokesPerMin": "1 分最大打鍵",
+      "peakKeystrokesPerDay": "1 日最大打鍵",
+      "longestSession": "最長セッション (分)",
+      "longestSessionDesc": "5 分以上の無入力で区切られた最長のタイピング"
+    },
+    "streakGoal": {
+      "sectionTitle": "打鍵記録連続日数",
+      "ariaLabel": "連続記録日数と目標設定の要約",
+      "currentStreakLabel": "現在",
+      "currentStreakDesc": "現在の連続達成日数でございます",
+      "currentValue": "{{current}}/{{goalDays}} 日",
+      "longestStreakLabel": "過去最長",
+      "goalLabel": "目標設定",
+      "goalDaysAria": "目標連続日数",
+      "goalKeystrokesAria": "1 日あたりの目標打鍵数",
+      "changeWarning": "目標を変えるとカウントが初期化されます",
+      "confirm": "確定",
+      "daysUnit": "日",
+      "keystrokesUnit": "回/日",
+      "historyButton": "達成履歴",
+      "historyTitle": "達成履歴",
+      "historyEmpty": "履歴はまだございません",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} 日 / {{keystrokes}} 回",
+      "historyColumn": {
+        "period": "期間",
+        "goal": "目標",
+        "days": "日数",
+        "total": "合計打鍵数",
+        "average": "平均 / 日"
+      }
+    },
+    "filters": {
+      "keyboard": "機材",
+      "period": "期間",
+      "device": "デバイス",
+      "deviceOption": {
+        "own": "このデバイス",
+        "all": "全デバイス合算"
+      },
+      "app": "アプリ",
+      "appOption": {
+        "none": "全アプリ合算",
+        "multi": "{{first}} 他{{rest}}件"
+      },
+      "unit": "表示",
+      "unitOption": {
+        "sec": "秒",
+        "ms": "ミリ秒"
+      },
+      "intervalViewMode": "見栄え",
+      "intervalViewModeOption": {
+        "timeSeries": "時系列",
+        "distribution": "分布"
+      },
+      "wpmViewMode": "見栄え",
+      "wpmViewModeOption": {
+        "timeSeries": "時系列",
+        "timeOfDay": "時間帯別"
+      },
+      "wpmMinSample": "最小サンプル",
+      "wpmMinSampleOption": {
+        "sec30": "30秒",
+        "min1": "1分",
+        "min2": "2分",
+        "min5": "5分"
+      },
+      "ergonomicsViewMode": "見栄え",
+      "ergonomicsViewModeOption": {
+        "snapshot": "スナップショット",
+        "learning": "学習曲線"
+      },
+      "ergonomicsPeriod": "区間",
+      "ergonomicsPeriodOption": {
+        "week": "週",
+        "month": "月"
+      },
+      "activityMetric": "指標",
+      "activityMetricOption": {
+        "keystrokes": "打鍵数",
+        "wpm": "WPM",
+        "sessions": "セッション"
+      },
+      "activityView": "見栄え",
+      "activityViewOption": {
+        "grid": "時間",
+        "calendar": "日"
+      },
+      "calendarNormalization": "正規化",
+      "calendarNormalizationOption": {
+        "absolute": "絶対値",
+        "shareOfWeekly": "週内シェア",
+        "shareOfTotal": "期間シェア"
+      },
+      "calendarRange": "表示期間",
+      "calendarRangeOption": {
+        "1": "1ヶ月",
+        "3": "3ヶ月",
+        "6": "6ヶ月",
+        "12": "12ヶ月"
+      },
+      "calendarRangePrev": "前の月",
+      "calendarRangeNext": "次の月",
+      "layerBaseLayer": "ベース",
+      "normalization": "正規化",
+      "normalizationOption": {
+        "absolute": "絶対数",
+        "perHour": "1 時間あたり",
+        "shareOfTotal": "総打鍵比 (%)"
+      },
+      "granularity": "粒度",
+      "granularityOption": {
+        "auto": "自動",
+        "min1": "1分",
+        "min5": "5分",
+        "min10": "10分",
+        "min15": "15分",
+        "min30": "30分",
+        "hour1": "1時間",
+        "hour3": "3時間",
+        "hour6": "6時間",
+        "hour12": "12時間",
+        "day1": "1日",
+        "day3": "3日",
+        "week1": "1週間",
+        "month1": "1ヶ月"
+      }
+    }
+  },
+  "dataModal": {
+    "title": "データ",
+    "local": "手元",
+    "keyboards": "機材",
+    "favorites": "お気に入り",
+    "application": "アプリケーション",
+    "sync": "Sync - 雲の上のデータ",
+    "hub": "Hub - 雲の上のデータ",
+    "noKeyboards": "保存された機材はございません",
+    "noSaves": "記録が見当たりません",
+    "importExportDesc": "手元の全データを出し入れいたします",
+    "deleteAll": "全てのデータを消去",
+    "deleteAllConfirm": "雲の上も含め、全てのデータが消え去ります。よろしいのですね？",
+    "syncNoOrphans": "全てのデータが手元にございます",
+    "resetAppSettings": "設定を初期化",
+    "typing": {
+      "title": "タイピング",
+      "noKeyboards": "記録がございません",
+      "noItems": "この機材の記録はございません",
+      "summaryLine": "{{days}} 日分 / 合計 {{keystrokes}} 打",
+      "colDate": "日付",
+      "colKeystrokes": "打鍵数",
+      "colActiveMs": "活動時間",
+      "selectAll": "全ての日を選択",
+      "selectRow": "{{date}} を選択",
+      "deleteSelected": "選択した日を抹消 ({{count}})",
+      "deleteAll": "この機材の全データを抹消",
+      "confirmDeleteSelected": "選ばれた {{count}} 日分を抹消してもよろしいですか？ 雲の上からも消え去ります。必要なら先に出力しておいてくださいませ。",
+      "confirmDeleteAll": "この機材の全ての記録を抹消してもよろしいですか？ 雲の上からも消え去ります。必要なら先に出力しておいてくださいませ。",
+      "exportLabel": "出力…",
+      "importLabel": "読み込み…",
+      "importStatus": {
+        "importing": "取り込み中…",
+        "exporting": "書き出し中…",
+        "imported": "{{count}} 日分を取り込みました",
+        "exported": "{{count}} 日分を書き出しました",
+        "reason": {
+          "invalid-filename": "ファイル名が規則に合いませぬ",
+          "live-day-locked": "現在記録中のため封印されております — {{unlock}} に解除",
+          "duplicate-in-batch": "同じ日のファイルが混ざっております",
+          "no-matching-target": "どこにも記録が見当たりません",
+          "empty-or-invalid-content": "中身が空か、不正なようでございます",
+          "rows-outside-day-window": "記録の時刻が範囲外でございます",
+          "read-error": "読み込めませんでした"
+        }
+      },
+      "noRemoteDevices": "他の機材の記録はございません"
+    }
+  },
+  "editorSettings": {
+    "title": "献立",
+    "tabData": "データ",
+    "tabSave": "保存",
+    "tabTools": "設定",
+    "tabLayout": "レイアウト",
+    "basicViewType": "Basic の見栄え",
+    "splitKeyMode": "Shift を分離",
+    "quickSelect": "即座の選択"
+  },
+  "hub": {
+    "uploadToHub": "披露する",
+    "uploading": "披露しております...",
+    "uploadSuccess": "披露いたしました",
+    "uploadFailed": "披露に失敗いたしました",
+    "updateOnHub": "更新",
+    "updating": "更新中...",
+    "updateSuccess": "更新いたしました",
+    "updateFailed": "更新に失敗いたしました",
+    "syncSuccess": "揃いました",
+    "syncFailed": "揃えられませんでした",
+    "removeFromHub": "抹消",
+    "removeSuccess": "抹消いたしました",
+    "removeFailed": "抹消に失敗いたしました",
+    "confirmRemove": "抹消いたしますか？",
+    "pipetteHub": "Hub",
+    "uploadQuestion": "お披露目いたしますか？",
+    "deleteFromHub": "抹消",
+    "hubConnected": "Hub 接続済み",
+    "hubDisconnected": "Hub 未接続",
+    "enabled": "有効",
+    "enable": "接続",
+    "disable": "切断",
+    "confirmDisconnect": "お別れいたしますか？",
+    "noPosts": "お披露目されたものはございません",
+    "requiresAuth": "Hub をお使いになるには、Google アカウントとお繋ぎください",
+    "renameFailed": "お名前の変更に失敗いたしました",
+    "deleteFailed": "抹消に失敗いたしました",
+    "hubSynced": "同期いたしました",
+    "displayName": "お名前",
+    "displayNameDescription": "Hub でのお名前をお決めください",
+    "displayNameSaved": "お名前を伺いました",
+    "displayNameSaveFailed": "お名前の保存に失敗いたしました",
+    "displayNameTaken": "そのお名前は既に使われております",
+    "openInBrowser": "開く",
+    "needsDisplayName": "お披露目するにはお名前をお決めください",
+    "displayNameRequired": "お披露目に必要でございます",
+    "authDisplayNameConflict": "既存のお名前と重複しております。別のお名前をお決めください。",
+    "accountDeactivated": "お席が無効になっております。お問い合わせください。",
+    "rateLimited": "少々お急ぎすぎのようです。一息ついてからお試しください。",
+    "error": {
+      "keystrokesBelow": "打鍵が少なすぎます（百回以上は必要かと）。",
+      "rangeExceeds": "期間が長すぎます。三十日以内におさめてくださいませ。",
+      "unsupportedVersion": "新しき Pipette の記録ゆえ、Hub が読み解けませぬ。刷新をお願いいたします。",
+      "kindMismatch": "内容が分析用ではございません。",
+      "invalidPayload": "不正な内容ゆえ、お披露目できませんでした。",
+      "malformedPayload": "形式が乱れております。",
+      "entryNotFound": "保存された条件が見当たりません。刷新してお試しください。",
+      "malformedSavedPayload": "ファイルが壊れているようでございます。",
+      "unsupportedSavedVersion": "新しき Pipette の条件ゆえ、お披露目できませんでした。",
+      "noRange": "期間の情報がございません。分析画面より保存し直してくださいませ。",
+      "noSnapshot": "地図の写しがございません。少々お使いになってからお試しください。",
+      "invalidId": "条件を特定できませんでした。刷新してお試しください。",
+      "titleEmpty": "題名は必須でございます。",
+      "titleTooLong": "題名が長すぎます（二百文字以内にて）。",
+      "authFailed": "確認に失敗いたしました。一度退出して入り直してくださいませ。",
+      "payloadTooLarge": "内容が大きすぎます。期間を短くしてはいかがでしょうか。"
+    }
+  },
+  "notification": {
+    "title": "お知らせ",
+    "empty": "特にお知らせはございません",
+    "type": {
+      "Info": "情報",
+      "Warning": "警告",
+      "Update": "更新"
+    }
+  },
+  "favoriteStore": {
+    "title": "お気に入り",
+    "noSaved": "お気に入りはございません",
+    "saveFailed": "保存に失敗いたしました",
+    "loadFailed": "読み込みに失敗いたしました",
+    "delete": "抹消",
+    "saveCurrentState": "現在の有様を保存",
+    "export": "出力",
+    "exportAll": "すべて出力",
+    "import": "取り込み",
+    "exportFailed": "出力に失敗いたしました",
+    "importFailed": "取り込みに失敗いたしました",
+    "importSuccess": "{{imported}} 件取り込みました",
+    "importPartial": "{{imported}} 件取り込みました（{{skipped}} 件は重複ゆえ控えました）",
+    "importEmpty": "取り込まれたものはございません",
+    "exportCurrent": "出力",
+    "importCurrent": "取り込み"
+  },
+  "keyLabels": {
+    "title": "鍵の銘",
+    "manageRow": "銘の管理",
+    "edit": "推敲",
+    "hubEmpty": "Hub に該当する銘は見当たりません",
+    "search": "探索",
+    "searching": "探索中…",
+    "import": "取り込み",
+    "empty": "銘がまだございません。探索か取り込みで追加してくださいませ。",
+    "actionUpload": "披露",
+    "actionUpdate": "更新",
+    "actionSync": "同期",
+    "actionRemove": "抹消",
+    "actionDownload": "取り寄せ",
+    "actionDelete": "抹消",
+    "actionExport": ".json",
+    "hubRemoved": "(抹消済み)",
+    "errorDuplicate": "同じお名前の銘が既にございます",
+    "errorImportFailed": "取り込みに失敗いたしました",
+    "errorInvalidName": "お名前が不正でございます",
+    "errorSearchFailed": "探索に失敗いたしました",
+    "errorGeneric": "操作に失敗いたしました",
+    "missingTitle": "銘が見当たりません",
+    "missingMessage": "銘「{{name}}」が見当たらないため、標準の銘で表示いたします。",
+    "missingHint": "「{{name}}」は設定からお取り寄せいただけます。",
+    "missingClose": "閉じる"
+  },
+  "i18n": {
+    "edit": "推敲",
+    "errorGeneric": "操作に失敗いたしました",
+    "errorInvalidJson": "有効な書物ではございません",
+    "hubEmpty": "Hub に該当する包みは見当たりません",
+    "import": "取り込み",
+    "jaRemoved": {
+      "dismiss": "閉じる",
+      "message": "日本語の包みは Hub へ移動いたしました。あちらより入手してくださいませ。",
+      "title": "日本語パックは Hub に移動しました"
+    },
+    "manageRow": "言葉の管理",
+    "missingKeys": {
+      "description": "足りない言葉の雛形を用意いたしました。推敲の後に取り込んでくださいませ。",
+      "empty": "全ての言葉が揃っております",
+      "title": "未設定の言葉"
+    },
+    "modalTitle": "お言葉",
+    "notSetKeys": "未設定の言葉",
+    "selectLanguage": "{{name}}を選択",
+    "preview": {
+      "dangerousWarning": "禁忌の言葉が含まれているため、取り込めませぬ。"
+    },
+    "search": "探索"
+  },
+  "themePacks": {
+    "title": "意匠の包み",
+    "importButton": "取り込み",
+    "import": "意匠の包みを取り込む",
+    "export": "送り出し",
+    "delete": "抹消",
+    "edit": "推敲",
+    "manageRow": "意匠の包み",
+    "parseError": "書物を読み解けませんでした",
+    "selectTheme": "{{name}} を選択",
+    "hubEmpty": "Hub に該当する意匠の包みは見当たりません",
+    "preview": "下見",
+    "previewing": "下見中"
+  }
+}

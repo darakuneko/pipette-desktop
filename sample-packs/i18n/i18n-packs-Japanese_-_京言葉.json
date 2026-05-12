@@ -1,0 +1,1449 @@
+{
+  "version": "0.1.1",
+  "name": "Japanese - 京言葉",
+  "common": {
+    "save": "保存しますえ",
+    "saved": "保存しましたえ",
+    "cancel": "やめときますわ",
+    "delete": "消しますえ",
+    "confirmDelete": "消してもよろしおすか？",
+    "close": "閉じますえ",
+    "reset": "戻しますえ",
+    "confirmReset": "元に戻してもよろしおすか？",
+    "revert": "復元しますえ",
+    "confirmRevert": "復元してもよろしおすか？",
+    "clear": "全部消しますえ",
+    "confirmClear": "消してもかましまへんか？",
+    "refresh": "更新しますえ",
+    "refreshing": "更新してますえ…",
+    "disconnect": "切りますえ",
+    "loading": "読み込んでますえ…",
+    "apply": "適用しますえ",
+    "notConfigured": "まだどすえ",
+    "settingsLabel": "設定:",
+    "configuration": "Configuration",
+    "saving": "保存してますえ…",
+    "back": "戻りますえ",
+    "exported": "書き出しましたえ",
+    "imported": "入れましたえ",
+    "load": "読み込みますえ",
+    "labelPlaceholder": "ラベル",
+    "noLabel": "（ラベルおへん）",
+    "synced": "同期しましたえ",
+    "findOnHub": "Hub で探しますえ",
+    "findOnHubHint": "アップされたもんは <hub>Pipette Hub</hub> で確認できますえ。",
+    "installed": "入れてありますえ",
+    "searchPlaceholder": "Pipette Hub を検索しますえ（2文字以上で）…"
+  },
+  "app": {
+    "title": "Pipette",
+    "deviceNotConnected": "キーボードがつながってまへんえ",
+    "connecting": "つないでますえ{{dots}}",
+    "selectDevices": "デバイスを選んでおくれやす",
+    "connectedTo": "{{name}} につないでますえ",
+    "udevHelp": "Linuxでデバイスが見つからはらへん時は、udevルールが入ってるか確認しておくれやす。詳しゅうはVialのマニュアルを見ておくれやす。",
+    "loadDummy": "JSONファイルから読み込みますえ…",
+    "keyboardTab": "デバイス",
+    "fileTab": "ファイル",
+    "analyzeTab": "分析",
+    "loadPipetteFile": ".pipetteファイルを読み込みますえ…",
+    "loadPipetteFileDescription": ".pipetteファイルをオフラインで編集できますえ。ライティングとマトリクステスター以外は全部使えますえ。",
+    "selectKeyboard": "ローカル保存ファイルを選んでおくれやす",
+    "fileCount": "{{count}} 件どすえ",
+    "noSavedFiles": "保存したもんがおへんなぁ"
+  },
+  "loading": {
+    "protocol": "デバイス情報を読み取ってますえ",
+    "definition": "定義を読み込んでますえ",
+    "keymap": "キーマップを読み込んでますえ",
+    "macros": "マクロを読み込んでますえ",
+    "dynamicEntries": "機能を読み込んでますえ",
+    "settings": "設定を読み込んでますえ",
+    "migrating": "スナップショットをお引っ越しさせてますえ",
+    "migratingEntry": "スナップショットをお引っ越し中どすえ ({{current}}/{{total}})"
+  },
+  "editor": {
+    "autoAdvance": "自動移動",
+    "keymap": {
+      "title": "キーマップ",
+      "layer": "Layer {{number}}",
+      "layerLabel": "Layer",
+      "collapseLayers": "レイヤーをたたみますえ",
+      "expandLayers": "レイヤーを広げますえ",
+      "selectKey": "キーをクリックして編集しておくれやす",
+      "tapHoldSettings": "Tap-Hold 設定どすえ",
+      "tapHoldLabel": "Tap-Hold",
+      "mouseKeysSettings": "Mouse Keys 設定どすえ",
+      "mouseKeysLabel": "Mouse Keys",
+      "magicSettings": "Magic 設定どすえ",
+      "magicLabel": "Magic",
+      "graveEscapeSettings": "Grave Escape 設定どすえ",
+      "graveEscapeLabel": "Grave Escape",
+      "autoShiftSettings": "Auto Shift 設定どすえ",
+      "autoShiftLabel": "Auto Shift",
+      "oneShotKeysSettings": "One Shot Keys 設定どすえ",
+      "oneShotKeysLabel": "One Shot Keys",
+      "comboSettings": "Combo",
+      "comboLabel": "Combo",
+      "previousLayers": "前のレイヤーどすえ",
+      "nextLayers": "次のレイヤーどすえ",
+      "layerN": "Layer {{n}}",
+      "undo": "元に戻しますえ",
+      "redo": "やり直しますえ",
+      "zoomIn": "大きゅうしますえ",
+      "zoomOut": "小さぁしますえ",
+      "copySelected": "選んだキーを貼り付けますえ ({{count}})",
+      "clickToPaste": "キーをクリックして貼り付けておくれやす",
+      "pickerHint": "Ctrl+クリックで複数選択、Shift+クリックで範囲選択どすえ。ほんでキーをクリックして貼り付けておくれやす",
+      "pickerDoubleClickHint": "もういっぺんダブルクリックするか、Enterを押したら閉じますえ",
+      "keyboardTab": "Keyboard",
+      "pickerSourceCurrent": "いまの",
+      "pickerSourceFile": "ファイル",
+      "pickerLoadFile": ".pipetteから読み込みますえ…",
+      "pickerNoSavedFiles": "保存済みキーボードがおへんなぁ",
+      "pickerNoEntries": "保存済みキーマップがおへんなぁ",
+      "pickerBackToFiles": "← ファイル",
+      "pickerSourceDevice": "デバイス",
+      "pickerNoDevices": "他のキーボードがつながってまへんえ",
+      "pickerProbing": "キーボードを読み取ってますえ...",
+      "pickerProbeError": "キーボードの読み取りがあきまへんでしたえ",
+      "pickerBackToDevices": "← デバイス",
+      "pickerCurrentState": "いまの状態どすえ",
+      "pickerSavedFiles": "ローカルに保存されたセーブファイルどすえ",
+      "keyPopover": {
+        "keyTab": "キー",
+        "codeTab": "コード",
+        "searchPlaceholder": "キーコードを検索しますえ...",
+        "noResults": "キーコードが見つかりまへんなぁ",
+        "hexLabel": "HexCode",
+        "hexManual": "16進数でキーコードを割り当てられますえ",
+        "qmkLabel": "KeyCode: {{value}}",
+        "modMask": "Mod Mask",
+        "modTap": "Mod-Tap",
+        "lt": "LT",
+        "shT": "SH_T",
+        "lm": "LM",
+        "layerLabel": "レイヤー",
+        "keySelected": "選びましたえ: {{key}}",
+        "clickToClose": "クリックして適用して閉じるか、Enterで確定しておくれやす",
+        "undo": "元に戻しますえ",
+        "redo": "やり直しますえ"
+      }
+    },
+    "layout": {
+      "title": "レイアウト",
+      "options": "レイアウトオプション",
+      "preview": "プレビューどすえ"
+    },
+    "macro": {
+      "title": "Macro",
+      "memoryUsage": "メモリ: {{used}} / {{total}} バイトどすえ",
+      "addAction": "アクション追加しますえ",
+      "text": "テキスト",
+      "tap": "タップ",
+      "down": "押す",
+      "up": "離す",
+      "delay": "待ち",
+      "record": "記録しますえ",
+      "stopRecording": "止めますえ",
+      "editTitle": "M{{index}}",
+      "textEditor": "テキストエディタ",
+      "textEditorTitle": "マクロ編集（テキスト）",
+      "invalidJson": "JSONの形式がちゃいますえ",
+      "addKeycode": "キーコード追加しますえ",
+      "deleteKeycode": "キーコード消しますえ",
+      "editAction": "アクション編集しますえ",
+      "asciiOnly": "英数字・記号だけどすえ",
+      "unlockClickAgain": "アンロックしはったら、もういっぺんクリックして開いておくれやす",
+      "unlockWarning": "パスワードや大事なもんはマクロに入れんといておくれやす。漏れるかもしれまへんえ。",
+      "invalidMacroEntry": "インデックス{{index}}のマクロがちゃいますえ"
+    },
+    "lighting": {
+      "title": "Lighting",
+      "backlight": "Backlight",
+      "rgblight": "RGB Lighting",
+      "brightness": "明るさどすえ",
+      "effect": "エフェクト",
+      "speed": "速さどすえ",
+      "breathing": "ブリージング",
+      "hue": "色合いどすえ",
+      "saturation": "鮮やかさどすえ",
+      "value": "明度どすえ",
+      "hex": "HEX",
+      "noLighting": "このキーボードはライティングに対応してまへんえ",
+      "colorPicker": {
+        "label": "カラーピッカー",
+        "palette": "パレット",
+        "hsv": "HSV"
+      }
+    },
+    "tapDance": {
+      "title": "Tap Dance",
+      "onTap": "タップした時",
+      "onHold": "長押しの時",
+      "onDoubleTap": "2回タップの時",
+      "onTapHold": "タップ長押しの時",
+      "tappingTerm": "Tapping Term (ms)",
+      "hint": "キーマップで TD({{index}}) を使ておくれやす",
+      "editTitle": "TD({{index}})",
+      "editJson": "JSON編集どすえ",
+      "jsonEditorTitle": "JSON編集",
+      "invalidJson": "JSONの形式がちゃいますえ",
+      "unknownKeycode": "知らんキーコードどすえ: {{keycode}}",
+      "invalidTappingTerm": "0〜10000の数字でお願いしますえ",
+      "applyFailed": "適用があきまへんでしたえ"
+    },
+    "combo": {
+      "title": "Combo",
+      "key": "Key {{number}}",
+      "output": "Output",
+      "editTitle": "Combo - {{index}}",
+      "timeout": "Timeout (ms)",
+      "selectEntry": "エントリを選んでおくれやす",
+      "settings": "Combo 設定どすえ",
+      "invalidJson": "JSONの形式がちゃいますえ",
+      "unknownKeycode": "知らんキーコードどすえ: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリがちゃいますえ"
+    },
+    "keyOverride": {
+      "title": "Key Override",
+      "triggerKey": "Trigger Key",
+      "replacementKey": "Replacement Key",
+      "layers": "Layers",
+      "triggerMods": "Trigger Mods",
+      "negativeMods": "Negative Mods",
+      "suppressedMods": "Suppressed Mods",
+      "options": "Options",
+      "enabled": "Enabled",
+      "enableAll": "全部有効にしますえ",
+      "disableAll": "全部無効にしますえ",
+      "editTitle": "Key Override - {{index}}",
+      "modsOnly": "Mods",
+      "settings": "Key Override 設定どすえ",
+      "selectEntry": "編集するもんを選んでおくれやす",
+      "invalidJson": "JSONの形式がちゃいますえ",
+      "unknownKeycode": "知らんキーコードどすえ: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリがちゃいますえ"
+    },
+    "altRepeatKey": {
+      "title": "Alt Repeat Key",
+      "lastKey": "Last Key",
+      "altKey": "Alt Key",
+      "allowedMods": "Allowed Mods",
+      "options": "Options",
+      "enabled": "Enabled",
+      "editTitle": "Alt Repeat Key - {{index}}",
+      "settings": "Alt Repeat Key 設定どすえ",
+      "selectEntry": "編集するもんを選んでおくれやす",
+      "invalidJson": "JSONの形式がちゃいますえ",
+      "unknownKeycode": "知らんキーコードどすえ: {{keycode}}",
+      "invalidEntry": "インデックス{{index}}のエントリがちゃいますえ"
+    },
+    "keyTester": {
+      "title": "キーテスター"
+    },
+    "typingTest": {
+      "title": "タイピングテスト",
+      "switchToTypingMode": "タイピングテストどすえ",
+      "exitTypingMode": "テスト終わりどすえ",
+      "restart": "もういっぺんどすえ",
+      "wpm": "WPM",
+      "accuracy": "正確さどすえ",
+      "time": "時間",
+      "words": "単語",
+      "correct": "正解どすえ",
+      "incorrect": "ミスどすなぁ",
+      "finished": "お疲れさんどすえ",
+      "loading": "読み込んでますえ…",
+      "wordCount": "{{current}} / {{total}}",
+      "mode": {
+        "words": "単語",
+        "time": "時間",
+        "quote": "引用"
+      },
+      "punctuation": "句読点",
+      "numbers": "数字",
+      "quoteLength": {
+        "short": "短いのん",
+        "medium": "普通のん",
+        "long": "長いのん",
+        "all": "全部どすえ"
+      },
+      "quoteSource": "-- {{source}}",
+      "viewOnly": "タイピングビュー",
+      "exitViewOnly": "ビュー終わりどすえ",
+      "alwaysOnTop": "最前面どすえ",
+      "recordStart": "始めますえ",
+      "recordStop": "止めますえ",
+      "viewAnalytics": "分析ビュー",
+      "tab": {
+        "window": "ウィンドウ",
+        "rec": "REC"
+      },
+      "monitorApp": {
+        "label": "Monitor App"
+      },
+      "heatmap": {
+        "legend": "ヒートマップ: ここ1時間どすえ"
+      },
+      "closeHint": "クリックしたらメニューが開きますえ",
+      "recordingIndicator": "記録中どすえ",
+      "resetSize": "初期サイズ",
+      "fitSize": "フィット",
+      "baseLayer": "Base Layer",
+      "baseLayerShort": "Base",
+      "heatmapWindow": "ヒートマップの表示期間（分）",
+      "heatmapWindowShort": "HeatMap",
+      "heatmapWindowOption": "{{minutes}} 分どすえ",
+      "consent": {
+        "title": "タイピング分析の記録を有効にしはりますか？",
+        "collectedHeading": "集めるもんどすえ",
+        "collectedItems": [
+          "1分ごとの文字頻度どすえ",
+          "キー押した回数（row/col/layer/keycode、tap / hold 別）",
+          "タイピング速度の分布（間隔のパーセンタイル）",
+          "アクティブなアプリ名（Monitor App ON の時だけどすえ。1分内に複数やと不明扱いになりますえ）"
+        ],
+        "notCollectedHeading": "集めへんもんどすえ",
+        "notCollectedItems": [
+          "細かい打鍵タイミングは見まへんえ",
+          "入力した文字やパスワードは絶対に見まへんえ",
+          "ウィンドウタイトルやURLも見まへんえ"
+        ],
+        "accept": "有効にしますえ"
+      },
+      "paused": "ウィンドウからフォーカスが離れましたえ",
+      "layerNote": "レイヤー切替は MO / LT / LM だけ追随しますえ。他のんは反映されへんこともありますえ。",
+      "language": {
+        "title": "言語",
+        "searchPlaceholder": "言語を検索しますえ...",
+        "downloaded": "入れてありますえ",
+        "available": "使えますえ",
+        "noResults": "合うのんがおへんなぁ",
+        "words": "{{count}} 単語どすえ",
+        "loadingLanguage": "言語を読み込んでますえ…",
+        "downloadFailed": "ダウンロードがあきまへんでしたえ"
+      },
+      "history": {
+        "title": "履歴どすえ",
+        "bestWpm": "最高どすえ",
+        "avgWpm": "平均どすえ",
+        "last10Avg": "直近10回",
+        "totalTests": "テスト数",
+        "avgAccuracy": "平均正確さ",
+        "date": "日時",
+        "mode": "モード",
+        "noResults": "結果がおへんなぁ",
+        "pb": "PB",
+        "allModes": "全部",
+        "exportCsv": "CSV出しますえ"
+      }
+    }
+  },
+  "error": {
+    "loadFailed": "レイアウトの読み込みがあきまへんでしたえ",
+    "saveFailed": "保存があきまへんでしたえ",
+    "exampleUid": "固有のUIDにしておくれやす",
+    "dummyMode": "ダミーモード",
+    "pipetteFileMode": "ファイルモード",
+    "unsavedChanges": "保存してへんのんがありますえ",
+    "vilV1NotSupported": "古いデータどすなぁ。キーボードをつないでキーマップを開いたら直りますえ。",
+    "protocolVersion": "このVIAプロトコルには対応してまへんえ。ファームウェアを更新しておくれやす。",
+    "exportKeymapCFailed": "keymap.c の書き出しがあきまへんでしたえ",
+    "exportPdfFailed": "PDFの書き出しがあきまへんでしたえ",
+    "sideloadFailed": "JSONの読み込みがあきまへんでしたえ",
+    "sideloadInvalidDefinition": "キーボード定義がちゃいますえ。必須のもんが足りまへん。",
+    "notVialCompatible": "Vial対応やないかもしれまへんなぁ"
+  },
+  "warning": {
+    "echoDetected": "通信がおかしゅうなりましたえ。USBケーブルを確認して差し直しておくれやす。"
+  },
+  "keycodes": {
+    "basic": "Basic",
+    "iso": "ISO",
+    "jis": "JIS",
+    "international": "International",
+    "language": "Language",
+    "layers": "Layers",
+    "behavior": "Behavior",
+    "modifiers": "Modifiers",
+    "lighting": "Lighting",
+    "system": "System",
+    "tapDance": "Tap-Hold / Tap Dance",
+    "macro": "Macro",
+    "combo": "Combo",
+    "keyOverride": "Key Override",
+    "altRepeatKey": "Alt Repeat Key",
+    "settingsNote": "これはキーボード全体に効きますえ。個別のキーには割り当てられまへんえ。",
+    "macroMoreActions": "あと {{count}} 行ありますえ",
+    "user": "User",
+    "midi": "MIDI",
+    "group": {
+      "characters": "Characters",
+      "editing": "Editing",
+      "modifiers": "Modifiers",
+      "navigation": "Navigation",
+      "function": "Function",
+      "lock": "Lock",
+      "numpad": "Numpad",
+      "system": "System",
+      "shifted": "Shifted Symbols",
+      "internal": "Internal",
+      "magic": "Magic",
+      "audio": "Audio & Music",
+      "haptic": "Haptic",
+      "mode": "Mode",
+      "autoShift": "Auto Shift",
+      "comboKeys": "Key",
+      "keyOverrideKeys": "Key",
+      "altRepeatKeyKeys": "Key",
+      "capsWord": "Caps Word",
+      "boot": "Boot",
+      "osm": "One-Shot Modifiers",
+      "modMask": "Modifier Masks",
+      "modTap": "Mod-Tap",
+      "modSpecial": "Special",
+      "backlight": "Backlight",
+      "rgbLighting": "RGB Lighting",
+      "rgbMatrix": "RGB Matrix",
+      "systemControl": "System",
+      "appBrowser": "App & Browser",
+      "mediaPlayback": "Media",
+      "mouse": "Mouse",
+      "lockingKeys": "Locking Keys",
+      "layerSpecial": "Special",
+      "layerMO": "MO – Momentary",
+      "layerDF": "DF – Default Layer",
+      "layerPDF": "PDF – Persistent Default",
+      "layerTG": "TG – Toggle",
+      "layerTT": "TT – Tap Toggle",
+      "layerOSL": "OSL – One Shot Layer",
+      "layerTO": "TO – Turn On Layer",
+      "layerLT": "LT – Layer Tap",
+      "layerLM": "LM – Layer Mod",
+      "macroDM": "Dynamic Macro",
+      "midiNotes": "Notes",
+      "midiOctave": "Octave",
+      "midiTranspose": "Transpose",
+      "midiVelocity": "Velocity",
+      "midiChannel": "Channel",
+      "midiControl": "Control",
+      "swapHands": "Swap Hands",
+      "sequencer": "Sequencer",
+      "joystick": "Joystick",
+      "ledMatrix": "LED Matrix"
+    }
+  },
+  "unlock": {
+    "title": "キーボードのロック解除どすえ",
+    "instructions": "光ってるキーを押し続けてロックを解除しておくれやす",
+    "hint": "やめはるならキーボードを抜き差ししておくれやす",
+    "progress": "進捗: {{current}} / {{total}}",
+    "cancel": "やめときますえ"
+  },
+  "fileIO": {
+    "loadLayout": ".vil",
+    "sideloadJson": "JSONサイドロード",
+    "importing": "入れてますえ…",
+    "exporting": "出してますえ…",
+    "importSuccess": "インポートしましたえ",
+    "uidMismatchConfirm": "これは別のキーボード用みたいどすなぁ。読み込んでもよろしおすか？"
+  },
+  "statusBar": {
+    "autoAdvance": "自動移動",
+    "locked": "ロック中どすえ",
+    "unlocked": "アンロックどすえ",
+    "keyTester": "キーテスター",
+    "sync": {
+      "pending": "同期待ちどすえ",
+      "syncing": "同期してますえ…",
+      "synced": "同期済みどすえ",
+      "error": "あきまへんでしたえ",
+      "partial": "一部あきまへんでしたえ"
+    }
+  },
+  "security": {
+    "lock": "ロック"
+  },
+  "theme": {
+    "label": "テーマ",
+    "light": "明るいのん",
+    "dark": "暗いのん",
+    "system": "システム"
+  },
+  "layout": {
+    "keyboardLayout": "キーラベル表示",
+    "exportAllPdf": "全部どすえ",
+    "exportCurrentPdf": "いまのどすえ",
+    "pdfFooterLabel": ".pdf"
+  },
+  "layoutStore": {
+    "title": "データ",
+    "noSavedLayouts": "保存したもんがおへんなぁ",
+    "saveFailed": "保存があきまへんでしたえ",
+    "maxEntriesReached": "保存が上限（30件）どすえ。新しゅう保存するには消しておくれやす。",
+    "loadFailed": "読み込みがあきまへんでしたえ",
+    "delete": "消しますえ",
+    "import": "インポート",
+    "export": "エクスポート",
+    "confirmOverwrite": "上書きしてもよろしおすか？",
+    "exportVil": ".vil",
+    "exportKeymapC": ".c",
+    "exportPdf": ".pdf",
+    "versionPrefix": "v{{version}} - "
+  },
+  "analyzeFilterStore": {
+    "title": "検索条件の保存",
+    "tabSave": "条件保存どすえ",
+    "selectKeyboard": "管理するにはキーボードを選んでおくれやす。",
+    "saveFailed": "保存があきまへんでしたえ",
+    "loadFailed": "読み込みがあきまへんでしたえ",
+    "unsupportedVersion": "新しいバージョンのPipetteで作られたもんで、読み込めまへんえ。",
+    "maxEntriesReached": "保存が上限 ({{max}}件) どすえ。古いのんを消しておくれやす。",
+    "csv": ".csv",
+    "empty": "保存された条件がおへんなぁ",
+    "confirmOverwrite": "上書きしてもよろしおすか？"
+  },
+  "sync": {
+    "googleAccount": "Googleアカウント",
+    "connected": "つながってますえ",
+    "signOut": "切りますえ",
+    "confirmDisconnect": "切ってもよろしおすか？",
+    "disconnectHubWarning": "Pipette Hub も切れますえ",
+    "signIn": "つなぎますえ",
+    "authenticating": "認証を待ってますえ...",
+    "authFailed": "認証があきまへんでしたえ。もういっぺんやっておくれやす。",
+    "encryptionPassword": "同期暗号化パスワード",
+    "passwordSet": "パスワード設定済みどすえ",
+    "passwordPlaceholder": "暗号化パスワードを入れておくれやす",
+    "setPassword": "パスワードを設定しますえ",
+    "passwordTooWeak": "パスワードが弱すぎますえ",
+    "passwordSetFailed": "パスワードの設定があきまへんでしたえ",
+    "changePassword": "パスワード変更しますえ",
+    "changePasswordInfo": "全部のデータを新しいパスワードで暗号化し直しますえ",
+    "changingPassword": "パスワードを変えてますえ…",
+    "settingPassword": "パスワードを設定してますえ…",
+    "samePassword": "いまと同じパスワードには変えられまへんえ",
+    "changePasswordUndecryptable": "開けへんファイルがありますえ。先にスキャンして消しておくれやす。",
+    "autoSync": "自動同期",
+    "enable": "有効どすえ",
+    "disable": "止めますえ",
+    "manualSync": "手動同期",
+    "sync": "同期しますえ",
+    "resetTarget": {
+      "keyboardData": "キーボード",
+      "favorites": "お気に入り",
+      "appSettings": "アプリケーション",
+      "i18nPacks": "言語パック"
+    },
+    "deleteSelected": "選んだもんを消しますえ",
+    "resetTargetsConfirm": "選んだデータが完全に消えますえ。元には戻せまへんえ。",
+    "resetLocalTargetsConfirm": "選んだローカルデータが完全に消えますえ。元には戻せまへんえ。",
+    "resettingData": "データを消してますえ…",
+    "syncing": "同期してますえ…",
+    "continueOffline": "オフラインで続けますえ",
+    "noSyncYet": "まだ同期してまへんえ",
+    "changePasswordError": {
+      "unauthenticated": "パスワードを変える前にGoogleにつないでおくれやす"
+    },
+    "changePasswordInProgress": "同期中やさかいパスワードを変えられまへんえ",
+    "import": "インポート",
+    "export": "エクスポート",
+    "importComplete": "インポートしましたえ",
+    "importFailed": "インポートがあきまへんでしたえ",
+    "passwordMismatch": "同期パスワードが合いまへんなぁ。暗号化パスワードを確認しておくれやす。",
+    "scanRemote": "スキャンしますえ",
+    "scanning": "スキャンしてますえ…",
+    "downloading": "ダウンロードしてますえ…",
+    "noRemoteData": "リモートにデータがおへんなぁ",
+    "undecryptableCount": "{{count}} 件開けへんファイルがありますえ",
+    "selectAll": "全部選びますえ",
+    "deselectAll": "全部はずしますえ",
+    "checkingRemotePassword": "同期状態を確認してますえ…",
+    "existingPasswordHint": "同期パスワードがもう設定されてますえ。他のデバイスで使うてたパスワードを入れておくれやす。",
+    "unavailable": "接続先かネットワークに問題がありますえ。同期できまへんなぁ。",
+    "retry": "もういっぺんやりますえ"
+  },
+  "settings": {
+    "title": "設定",
+    "tabData": "接続",
+    "tabTools": "ツール",
+    "dataSync": "データ同期",
+    "defaults": "新しいキーボードの初期設定どすえ",
+    "defaultLayout": "キーラベル",
+    "defaultAutoAdvance": "自動移動",
+    "defaultLayerPanelOpen": "レイヤーリスト展開",
+    "defaultBasicViewType": "Basic タブ表示",
+    "defaultSplitKeyMode": "キーピッカーでShiftキーを分離",
+    "defaultQuickSelect": "キーの即時選択",
+    "basicViewTypeList": "LIST",
+    "basicViewTypeAnsi": "ANSI",
+    "basicViewTypeIso": "ISO",
+    "basicViewTypeJis": "JIS",
+    "security": "セキュリティ",
+    "autoLockTime": "自動ロック時間",
+    "autoLockDescription": "しばらく触らはらへんかったら自動でロックしますえ",
+    "autoLockMinutes": "{{minutes}}分どすえ",
+    "maxKeymapHistory": "キーマップ履歴の上限",
+    "tabNotification": "お知らせ",
+    "tabAbout": "情報",
+    "about": {
+      "version": "バージョン {{version}}",
+      "license": "ライセンス: {{license}}",
+      "licenseValue": "GPL-3.0-or-later"
+    },
+    "zoomLevel": "ズーム",
+    "zoomLevelWarning": "表示が崩れることがありますえ。自己責任でお願いしますえ。"
+  },
+  "analyze": {
+    "noKeyboards": "まだ打鍵データがおへんなぁ",
+    "noData": "選んだ期間にデータがおへんなぁ",
+    "selectKeyboard": "一覧からキーボードを選んでおくれやす",
+    "appUsage": {
+      "title": "アプリ別利用配分",
+      "loading": "アプリ利用データを読み込んでますえ…",
+      "empty": "アプリのデータがおへんなぁ。Monitor App を有効にして REC を始めておくれやす。",
+      "unknown": "不明 / 混在",
+      "other": "その他",
+      "tooltipKeystrokesLabel": "打鍵",
+      "tooltipShareLabel": "比率"
+    },
+    "wpmByApp": {
+      "title": "アプリ別 WPM",
+      "loading": "アプリ別 WPM を読み込んでますえ…",
+      "empty": "アプリの1分集約がまだおへんなぁ。Monitor App を有効にして REC を始めておくれやす。",
+      "tooltipWpmLabel": "WPM",
+      "tooltipKeystrokesLabel": "打鍵"
+    },
+    "tablistLabel": "分析の種類どすえ",
+    "splitView": {
+      "toggle": "分割表示どすえ",
+      "narrowWindow": "ウィンドウが狭すぎますえ。もうちょっと広げておくれやす。"
+    },
+    "export": {
+      "categoriesLabel": "出すカテゴリどすえ",
+      "confirm": ".csv",
+      "failed": "出せまへんでしたえ",
+      "snapshotMissing": "ヒートマップ・エルゴノミクス・レイアウト比較はスナップショットが要りますえ。この期間では出せまへんなぁ。",
+      "conditionLabel": {
+        "device": "デバイス",
+        "app": "アプリ",
+        "keymap": "キーマップ",
+        "range": "期間"
+      },
+      "fingerOverrides": "指割り当て",
+      "fingerOverridesDefault": "初期値どすえ",
+      "fingerOverridesCustomized": "カスタム ({{count}})",
+      "category": {
+        "summary": "サマリー",
+        "wpm": "WPM",
+        "interval": "間隔",
+        "activity": "活動量",
+        "byApp": "アプリ別",
+        "heatmap": "ヒートマップ",
+        "ergonomics": "エルゴノミクス",
+        "bigrams": "バイグラム",
+        "layer": "レイヤー",
+        "layoutComparison": "レイアウト比較"
+      },
+      "appDataApps": {
+        "label": "アプリ別データ",
+        "all": "全部のアプリどすえ",
+        "none": "なしどすえ",
+        "selectAll": "全部",
+        "deselectAll": "なし",
+        "hint": "Hub に入れるアプリを選んでおくれやす。"
+      }
+    },
+    "loading": {
+      "keyboards": "キーボード一覧を読み込んでますえ…",
+      "syncing": "クラウド同期してますえ…",
+      "preparing": "チャートを用意してますえ…"
+    },
+    "unit": {
+      "keys": "回",
+      "activations": "回"
+    },
+    "snapshotTimeline": {
+      "title": "キーマップ履歴",
+      "current": "いまのキーマップどすえ"
+    },
+    "wpm": {
+      "legend": "WPM",
+      "description": "WPM — Words per minute\n1分あたりの打鍵数を5で割った値どすえ（英語1語 = 5文字換算）",
+      "timeSeries": {
+        "summary": {
+          "label": "WPM サマリー",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "打鍵してはった時間",
+          "overallWpm": "平均WPM",
+          "peakWpm": "最高WPM",
+          "lowestWpm": "最低WPM",
+          "weightedMedianWpm": "重み付き中央値WPM",
+          "totalBackspaces": "Bksp 合計",
+          "overallBksPercent": "平均 Bksp %",
+          "overallBksPercentDesc": "打鍵のうちBackspaceの割合どすえ"
+        }
+      },
+      "errorProxy": {
+        "legend": "Bksp %",
+        "description": "Bksp % — 打鍵のうちBackspaceの割合どすえ\nタイピングテスト以外の普段の打鍵も含みますえ"
+      },
+      "timeOfDay": {
+        "tooltipLabel": "時間帯",
+        "summary": {
+          "label": "時間帯別 WPM サマリー",
+          "totalKeystrokes": "合計打鍵",
+          "activeDuration": "打鍵してはった時間",
+          "overallWpm": "平均WPM",
+          "peakHour": "一番速かった時間帯",
+          "peakHourDesc": "WPMが一番高かった時間どすえ",
+          "lowestHour": "一番遅かった時間帯",
+          "lowestHourDesc": "WPMが一番低かった時間どすえ（打ってへん時間は除いてますえ）",
+          "activeHours": "活動した時間帯の数",
+          "activeHoursDesc": "1回以上打鍵があった時間帯の数どすえ（24中）"
+        }
+      }
+    },
+    "interval": {
+      "legend": {
+        "min": "最小",
+        "p25": "p25",
+        "p50": "中央値",
+        "p75": "p75",
+        "max": "最大"
+      },
+      "description": {
+        "min": "最小 — 一番速かった瞬間どすえ",
+        "p25": "p25 — 下側四分位\n各分のp25の日次平均、4分の1がこれより短いどすえ",
+        "p50": "中央値 — 各分の中央値の日次平均\n半分がこれより短いどすえ",
+        "p75": "p75 — 上側四分位\n各分のp75の日次平均、4分の3がこれより短いどすえ",
+        "max": "最大 — 一番長い間隔どすえ（途中の最長停止）"
+      },
+      "bin": {
+        "lt50": "<50ms",
+        "50to100": "50-100ms",
+        "100to200": "100-200ms",
+        "200to500": "200-500ms",
+        "500to1000": "500ms-1s",
+        "1000to2000": "1-2s",
+        "2000to5000": "2-5s",
+        "5000to10000": "5-10s",
+        "gt10000": ">10s"
+      },
+      "distribution": {
+        "tooltipLabel": "推定打鍵数",
+        "summary": {
+          "label": "打鍵リズムサマリー",
+          "medianP50": "中央値インターバル",
+          "fast": "速い (<200ms)",
+          "fastDesc": "200ms未満の割合どすえ",
+          "normal": "普通 (200-500ms)",
+          "normalDesc": "200ms〜500msの割合どすえ",
+          "slow": "ゆっくり (500ms-2s)",
+          "slowDesc": "500ms〜2sの割合どすえ",
+          "pause": "お休み (>=2s)",
+          "pauseDesc": "2s以上の割合どすえ",
+          "longestPause": "最長打鍵間隔（1分）"
+        }
+      },
+      "timeSeries": {
+        "summary": {
+          "label": "インターバルサマリー",
+          "medianP50": "重み付き中央値",
+          "shortest": "最短打鍵間隔（1分）",
+          "longestPause": "最長打鍵間隔（1分）"
+        }
+      }
+    },
+    "activity": {
+      "tableLabel": "時間帯 × 曜日の活動量",
+      "tableLabelWpm": "時間帯 × 曜日の WPM",
+      "hourHeader": "{{hour}}時",
+      "cellTitle": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys)",
+      "cellTitleWithShare": "{{dow}} {{hour}}時 — {{keystrokes}} $t(analyze.unit.keys) (全体の {{share}}%)",
+      "cellTitleWpm": "{{dow}} {{hour}}時 — {{wpm}} WPM ({{keystrokes}} $t(analyze.unit.keys) / {{activeDuration}})",
+      "legendLow": "0",
+      "legendHigh": "{{count}} $t(analyze.unit.keys)",
+      "legendHighWpm": "{{wpm}} WPM",
+      "summary": {
+        "keysContext": "{{count}} $t(analyze.unit.keys) ({{share}}%)",
+        "wpmContext": "{{wpm}} WPM"
+      },
+      "keystrokes": {
+        "summary": {
+          "label": "活動量サマリー",
+          "mostFrequentDow": "一番打った曜日",
+          "mostFrequentDowDesc": "合計打鍵が一番多かった曜日どすえ",
+          "mostFrequentHour": "一番打った時間帯",
+          "mostFrequentHourDesc": "合計打鍵が一番多かった時間帯どすえ",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "一番打鍵が多かった（時間帯 × 曜日）どすえ",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1回以上打鍵があったセルの数どすえ（168中）"
+        }
+      },
+      "wpm": {
+        "summary": {
+          "label": "活動量 WPM サマリー",
+          "overallWpm": "平均WPM",
+          "peakCell": "ピークセル",
+          "peakCellDesc": "WPMが一番高かった（時間帯 × 曜日）どすえ",
+          "lowestCell": "最遅セル",
+          "lowestCellDesc": "WPMが一番低かった（時間帯 × 曜日）どすえ（打鍵ありのみ）",
+          "activeCells": "活動セル数",
+          "activeCellsDesc": "1回以上打鍵があったセルの数どすえ（168中）"
+        }
+      },
+      "sessions": {
+        "tooltipLabel": "セッション",
+        "tooltipValue": "{{count}} 件 ({{share}}%)",
+        "bin": {
+          "lt5Min": "5分未満",
+          "5to15Min": "5-15分",
+          "15to30Min": "15-30分",
+          "30to60Min": "30-60分",
+          "1to2Hours": "1-2時間",
+          "2to4Hours": "2-4時間",
+          "gtFourHours": "4時間以上"
+        },
+        "summary": {
+          "label": "セッション分布サマリー",
+          "sessionCount": "セッション数",
+          "totalDuration": "合計時間",
+          "meanDuration": "平均の長さ",
+          "medianDuration": "中央値の長さ",
+          "longestDuration": "最長セッション",
+          "shortestDuration": "最短セッション"
+        }
+      },
+      "dow": {
+        "0": "日",
+        "1": "月",
+        "2": "火",
+        "3": "水",
+        "4": "木",
+        "5": "金",
+        "6": "土"
+      },
+      "calendar": {
+        "gridLabel": "年間アクティビティカレンダー",
+        "monthShortYear": "{{year}}-{{monthShort}}",
+        "monthShort": {
+          "1": "1月",
+          "2": "2月",
+          "3": "3月",
+          "4": "4月",
+          "5": "5月",
+          "6": "6月",
+          "7": "7月",
+          "8": "8月",
+          "9": "9月",
+          "10": "10月",
+          "11": "11月",
+          "12": "12月"
+        },
+        "cellTooltipKeystrokes": "{{date}} — {{keystrokes}} $t(analyze.unit.keys)（{{activeDuration}}）",
+        "cellTooltipWpm": "{{date}} — {{wpm}} WPM（{{activeDuration}}）",
+        "cellTooltipSessions": "{{date}} — 開始セッション {{count}}",
+        "cellTooltipEmpty": "{{date}} — 活動なしどすえ",
+        "summary": {
+          "label": "カレンダーサマリー",
+          "total": "合計打鍵",
+          "avgWpm": "平均 WPM",
+          "activeDays": "活動日数",
+          "activeDaysValue": "{{active}} / {{total}}（{{share}}%）",
+          "peak": "ピーク日",
+          "avg": "活動日平均"
+        }
+      }
+    },
+    "analysisTab": {
+      "summary": "サマリー",
+      "wpm": "WPM",
+      "interval": "間隔",
+      "activity": "活動量",
+      "keyHeatmap": "ヒートマップ",
+      "ergonomics": "エルゴノミクス",
+      "bigrams": "バイグラム",
+      "layoutComparison": "レイアウト比較",
+      "layer": "レイヤー",
+      "byApp": "アプリ別"
+    },
+    "summary": {
+      "today": {
+        "sectionTitle": "今日のサマリー",
+        "ariaLabel": "今日のサマリー",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間"
+      },
+      "weeklyReport": {
+        "sectionTitle": "ここ7日間どすえ",
+        "ariaLabel": "週のまとめ",
+        "delta": "{{glyph}} {{sign}}{{pct}}%（前の7日と比べて）",
+        "deltaInsufficient": "{{glyph}} —（前の7日と比べて）",
+        "keystrokesLabel": "打鍵数",
+        "wpmLabel": "WPM",
+        "activeDurationLabel": "打鍵時間",
+        "activeDurationContext": "{{previous}}（前の7日）",
+        "activeDaysLabel": "アクティブ日数",
+        "activeDaysUnit": "日"
+      },
+      "profile": {
+        "sectionTitle": "タイピングプロファイル（ここ {{days}} 日）",
+        "ariaLabel": "タイピングプロファイル",
+        "insufficient": "データが足りまへんなぁ",
+        "speedLabel": "速さ",
+        "speedDesc": "全体のWPMを Slow（30未満）/ Medium（30–50）/ Fast（50以上）に分けてますえ",
+        "speedContext": "{{wpm}} WPM",
+        "speed": {
+          "slow": "ゆっくりどすなぁ",
+          "medium": "普通どすえ",
+          "fast": "速おすなぁ"
+        },
+        "handBalanceLabel": "左右バランス",
+        "handBalanceDesc": "バイグラムキーが左右どちらの手で打たれたかの比率どすえ。50/50から±5%以内なら均衡どすえ",
+        "handBalanceContext": "左 {{leftPct}}% / 右 {{rightPct}}%",
+        "handBalance": {
+          "leftBias": "左寄りどすなぁ",
+          "balanced": "均衡どすえ",
+          "rightBias": "右寄りどすなぁ"
+        },
+        "sfbLabel": "SFB 率",
+        "sfbDesc": "同じ指で続けて打った割合どすえ。低いほど滑らかどすなぁ",
+        "sfbContext": "同指 {{pct}}%",
+        "sfb": {
+          "low": "低いどすえ",
+          "medium": "中くらいどすなぁ",
+          "high": "高おすなぁ"
+        },
+        "fatigueLabel": "疲労リスク",
+        "fatigueDesc": "ピーク時間帯と最低時間帯のWPMの差どすえ。差が大きいと疲れてはるかもしれまへんなぁ",
+        "fatigueContext": "ピーク→最低 {{pct}}% 低下",
+        "fatigue": {
+          "low": "低いどすえ",
+          "medium": "中くらいどすなぁ",
+          "high": "高おすなぁ"
+        }
+      }
+    },
+    "bigrams": {
+      "loading": "バイグラムデータを読み込んでますえ…",
+      "empty": "この期間のバイグラムデータがまだおへんなぁ。打鍵を記録してからもういっぺん来ておくれやす",
+      "error": "バイグラムデータの取得があきまへんでしたえ",
+      "quadrant": {
+        "top": "よう出るペア",
+        "slow": "ペア間隔",
+        "fingerIki": "指間隔"
+      },
+      "column": {
+        "pair": "ペア",
+        "count": "回数",
+        "avgIki": "平均間隔",
+        "p95": "p95 間隔"
+      },
+      "fingerIki": {
+        "noSnapshot": "指間隔にはスナップショットが要りますえ。Record を始めるかスナップショットのある期間を選んでおくれやす",
+        "sortLabel": "並び順",
+        "sort": {
+          "desc": "遅い順どすえ",
+          "asc": "速い順どすえ"
+        }
+      },
+      "pairIntervalThreshold": {
+        "label": "平均間隔",
+        "suffix": "ms 以上",
+        "ariaLabel": "平均間隔の最小値 (ms)"
+      },
+      "cellTooltipOccurrencesLabel": "出現",
+      "cellTooltipAvgIkiLabel": "平均間隔"
+    },
+    "keyHeatmap": {
+      "layer": "レイヤー",
+      "layerOption": "レイヤー {{i}}",
+      "layerOptionMulti": "レイヤー {{layers}}",
+      "bondToggle": "レイヤー {{i}} を結合しますえ",
+      "noLayout": "このスナップショットにレイアウトデータがおへんなぁ",
+      "noSnapshot": "この期間のスナップショットがおへんなぁ。Record を始めたら取れますえ。",
+      "ranking": {
+        "frequentUsedN": "上位",
+        "frequentUsed": "よう使うキー",
+        "colKey": "キー",
+        "colLayer": "レイヤー",
+        "colMatrix": "マトリクス",
+        "colCount": "回数",
+        "aggregate": "集計",
+        "aggregateOption": {
+          "cell": "物理",
+          "char": "文字"
+        },
+        "keyGroup": "グループ",
+        "keyGroupOption": {
+          "all": "全部",
+          "char": "文字",
+          "modifier": "修飾",
+          "layerOp": "レイヤー操作"
+        },
+        "emptyFrequentUsed": "この期間に押されたキーがおへんなぁ"
+      }
+    },
+    "ergonomics": {
+      "fingerLoad": "指別打鍵量",
+      "handBalance": "左右バランス",
+      "rowUsage": "段別バランス",
+      "rowLoad": "段別打鍵量",
+      "noSnapshot": "この期間のスナップショットがおへんなぁ。レコーディングを始めておくれやす。",
+      "noLayout": "このスナップショットにレイアウト情報がおへんなぁ",
+      "noData": "この期間の打鍵データがおへんなぁ",
+      "finger": {
+        "left-pinky": "左小指",
+        "left-ring": "左薬指",
+        "left-middle": "左中指",
+        "left-index": "左人差し指",
+        "left-thumb": "左親指",
+        "right-thumb": "右親指",
+        "right-index": "右人差し指",
+        "right-middle": "右中指",
+        "right-ring": "右薬指",
+        "right-pinky": "右小指"
+      },
+      "fingerKind": {
+        "thumb": "親指",
+        "index": "人差し指",
+        "middle": "中指",
+        "ring": "薬指",
+        "pinky": "小指"
+      },
+      "hand": {
+        "left": "左手",
+        "right": "右手"
+      },
+      "rowCategory": {
+        "function": "F 行",
+        "number": "数字行",
+        "top": "上段",
+        "home": "ホーム行",
+        "bottom": "下段",
+        "thumb": "親指段"
+      },
+      "learning": {
+        "noData": "この期間にはデータが足りまへんなぁ。もうちょっと打つか期間を広げておくれやす。",
+        "belowMinSample": "足りまへんなぁ",
+        "totalKeystrokes": "{{count}} 打鍵",
+        "relativeTrendNote": "絶対評価やのうて相対トレンドどすえ。線がどう動くか見ておくれやす。",
+        "score": {
+          "overall": "総合",
+          "fingerLoad": "指の偏り",
+          "handBalance": "左右バランス",
+          "homeRowStay": "ホーム行率"
+        },
+        "summary": {
+          "latestOverall": "最新スコア",
+          "delta_one": "前の1区間との差",
+          "delta_other": "過去 {{count}} 区間との差",
+          "baselineMean": "基準 {{value}}",
+          "bucketCount": "区間数",
+          "qualifiedCount": "有効区間"
+        }
+      }
+    },
+    "layoutComparison": {
+      "sourceLabel": "いまの",
+      "targetLabel": "比較",
+      "noTargetOption": "—",
+      "noTarget": "比較するレイアウトを選んでおくれやす。",
+      "noSnapshot": "この期間のスナップショットがおへんなぁ。Record を始めたら保存されますえ。",
+      "noData": "この期間に打鍵データが記録されてまへんなぁ。",
+      "loading": "レイアウト比較を計算してますえ…",
+      "fetchError": "レイアウト比較の計算があきまへんでしたえ。",
+      "skipWarning": "{{percent}}% のイベントがこのレイアウトに対応できまへんでしたえ。数値は参考程度にしておくれやす。",
+      "fingerDiffTitle": "{{target}} との指負担差分",
+      "heatmapDiffTitle": "{{target}} との位置別負担差分",
+      "heatmapDiffLegend": {
+        "decrease": "比較先で減少",
+        "increase": "比較先で増加"
+      },
+      "headers": {
+        "metric": "指標",
+        "current": "いまの"
+      },
+      "metrics": {
+        "fingerLoad": "指の負担",
+        "handBalance": "左右バランス",
+        "rowDist": "行分布",
+        "homeRow": "ホーム行率"
+      }
+    },
+    "layer": {
+      "title": "レイヤー別打鍵数",
+      "activationsTitle": "レイヤー起動回数",
+      "layerLabel": "レイヤー {{layer}}",
+      "noData": "この期間にレイヤー別の打鍵記録がおへんなぁ",
+      "noActivations": "この期間にレイヤー操作キーの押下記録がおへんなぁ",
+      "requiresSnapshot": "レイヤー起動回数の表示にはスナップショットが要りますえ。この期間にRecord を始めたら取れますえ。"
+    },
+    "finger": {
+      "short": {
+        "left-pinky": "左小",
+        "left-ring": "左薬",
+        "left-middle": "左中",
+        "left-index": "左人",
+        "left-thumb": "左親",
+        "right-thumb": "右親",
+        "right-index": "右人",
+        "right-middle": "右中",
+        "right-ring": "右薬",
+        "right-pinky": "右小"
+      }
+    },
+    "fingerAssignment": {
+      "button": "指割り当て",
+      "title": "指割り当て設定どすえ",
+      "subtitle": "キーをクリックして上書きできますえ",
+      "save": "保存しますえ",
+      "reset": "推定に戻しますえ",
+      "resetAll": "全部戻しますえ",
+      "noSnapshot": "この期間のスナップショットがおへんなぁ",
+      "popoverLabel": "指を選んでおくれやす",
+      "leftHand": "左手",
+      "rightHand": "右手"
+    },
+    "peak": {
+      "peakKeystrokesPerMin": "1分最大打鍵",
+      "peakKeystrokesPerDay": "1日最大打鍵",
+      "longestSession": "最長セッション（分）",
+      "longestSessionDesc": "5分以上の無入力で区切った最長の連続タイピングどすえ"
+    },
+    "streakGoal": {
+      "sectionTitle": "打鍵記録連続日数",
+      "ariaLabel": "連続記録日数と目標のまとめ",
+      "currentStreakLabel": "いまの",
+      "currentStreakDesc": "いまのサイクルで連続達成した日数どすえ\n目標に達したら履歴に記録してリセットしますえ",
+      "currentValue": "{{current}}/{{goalDays}} 日",
+      "longestStreakLabel": "履歴中の最長",
+      "goalLabel": "目標設定",
+      "goalDaysAria": "目標連続日数",
+      "goalKeystrokesAria": "1日あたりの目標打鍵数",
+      "changeWarning": "目標を変えるといまのカウントが消えますえ",
+      "confirm": "確定しますえ",
+      "daysUnit": "日",
+      "keystrokesUnit": "回/日",
+      "historyButton": "達成履歴",
+      "historyTitle": "達成履歴どすえ",
+      "historyEmpty": "達成履歴がまだおへんなぁ",
+      "historyPeriod": "{{start}} – {{end}}",
+      "historyGoal": "{{days}} 日 / {{keystrokes}} 回",
+      "historyColumn": {
+        "period": "期間",
+        "goal": "目標",
+        "days": "日数",
+        "total": "合計打鍵数",
+        "average": "平均 / 日"
+      }
+    },
+    "filters": {
+      "keyboard": "キーボード",
+      "period": "期間",
+      "device": "デバイス",
+      "deviceOption": {
+        "own": "このデバイスどすえ",
+        "all": "全デバイス合わせて"
+      },
+      "app": "アプリ",
+      "appOption": {
+        "none": "全アプリ合わせて",
+        "multi": "{{first}} 他{{rest}}件"
+      },
+      "unit": "表示",
+      "unitOption": {
+        "sec": "秒",
+        "ms": "ミリ秒"
+      },
+      "intervalViewMode": "ビュー",
+      "intervalViewModeOption": {
+        "timeSeries": "時系列",
+        "distribution": "分布"
+      },
+      "wpmViewMode": "ビュー",
+      "wpmViewModeOption": {
+        "timeSeries": "時系列",
+        "timeOfDay": "時間帯別"
+      },
+      "wpmMinSample": "最小サンプル",
+      "wpmMinSampleOption": {
+        "sec30": "30秒",
+        "min1": "1分",
+        "min2": "2分",
+        "min5": "5分"
+      },
+      "ergonomicsViewMode": "ビュー",
+      "ergonomicsViewModeOption": {
+        "snapshot": "スナップショット",
+        "learning": "学習曲線"
+      },
+      "ergonomicsPeriod": "区間",
+      "ergonomicsPeriodOption": {
+        "week": "週",
+        "month": "月"
+      },
+      "activityMetric": "指標",
+      "activityMetricOption": {
+        "keystrokes": "打鍵数",
+        "wpm": "WPM",
+        "sessions": "セッション"
+      },
+      "activityView": "ビュー",
+      "activityViewOption": {
+        "grid": "時間",
+        "calendar": "日"
+      },
+      "calendarNormalization": "正規化",
+      "calendarNormalizationOption": {
+        "absolute": "絶対値",
+        "shareOfWeekly": "週内シェア",
+        "shareOfTotal": "期間シェア"
+      },
+      "calendarRange": "表示期間",
+      "calendarRangeOption": {
+        "1": "1ヶ月",
+        "3": "3ヶ月",
+        "6": "6ヶ月",
+        "12": "12ヶ月"
+      },
+      "calendarRangePrev": "前の月どすえ",
+      "calendarRangeNext": "次の月どすえ",
+      "layerBaseLayer": "ベース",
+      "normalization": "正規化",
+      "normalizationOption": {
+        "absolute": "絶対数",
+        "perHour": "1時間あたり",
+        "shareOfTotal": "総打鍵比 (%)"
+      },
+      "granularity": "粒度",
+      "granularityOption": {
+        "auto": "自動",
+        "min1": "1分",
+        "min5": "5分",
+        "min10": "10分",
+        "min15": "15分",
+        "min30": "30分",
+        "hour1": "1時間",
+        "hour3": "3時間",
+        "hour6": "6時間",
+        "hour12": "12時間",
+        "day1": "1日",
+        "day3": "3日",
+        "week1": "1週間",
+        "month1": "1ヶ月"
+      }
+    }
+  },
+  "dataModal": {
+    "title": "データ",
+    "local": "ローカル",
+    "keyboards": "キーボード",
+    "favorites": "お気に入り",
+    "application": "アプリケーション",
+    "sync": "Sync - ローカルにないデータ",
+    "hub": "Hub - ローカルにないデータ",
+    "noKeyboards": "保存したキーボードがおへんなぁ",
+    "noSaves": "セーブが見つかりまへんなぁ",
+    "importExportDesc": "ローカルにある全部のデータをインポート/エクスポートできますえ（キーボード、お気に入り、設定）",
+    "deleteAll": "全部のデータを消しますえ",
+    "deleteAllConfirm": "同期データも全部消えますえ",
+    "syncNoOrphans": "同期データは全部ここにありますえ",
+    "resetAppSettings": "アプリケーション設定をリセットしますえ",
+    "typing": {
+      "title": "タイピング",
+      "noKeyboards": "タイピングデータがおへんなぁ",
+      "noItems": "このキーボードのデータがおへんなぁ",
+      "summaryLine": "{{days}} 日分 / 合計 {{keystrokes}} 打",
+      "colDate": "日付",
+      "colKeystrokes": "打鍵数",
+      "colActiveMs": "アクティブ時間",
+      "selectAll": "全部の日を選びますえ",
+      "selectRow": "{{date}} を選びますえ",
+      "deleteSelected": "選んだ日を消しますえ ({{count}})",
+      "deleteAll": "このキーボードの全データを消しますえ",
+      "confirmDeleteSelected": "このデバイスで記録された {{count}} 日分を消しますえ。同期先からも消えますけど、他のデバイスで記録された分は残りますえ。消した日のデータは再インポートできまへんさかい、先にExportしておくれやす。",
+      "confirmDeleteAll": "このデバイスで記録したこのキーボードの全部の日を消しますえ。同期先からも消えますけど、他のデバイスで記録された分は残りますえ。消した日のデータは再インポートできまへんさかい、先にExportしておくれやす。",
+      "exportLabel": "Export…",
+      "importLabel": "Import…",
+      "importStatus": {
+        "importing": "取り込んでますえ…",
+        "exporting": "書き出してますえ…",
+        "imported": "{{count}} 日分取り込みましたえ",
+        "exported": "{{count}} 日分書き出しましたえ",
+        "reason": {
+          "invalid-filename": "ファイル名がちゃいますえ",
+          "live-day-locked": "このファイルはいま記録中やさかいロックされてますえ — {{unlock}} に解除",
+          "duplicate-in-batch": "同じ日を指すファイルが同じバッチにありますえ",
+          "no-matching-target": "ローカルにもクラウドにもこの日のデータがおへんなぁ",
+          "empty-or-invalid-content": "ファイルが空か、中身がちゃいますえ",
+          "rows-outside-day-window": "行のtimestampがファイル名の日付範囲外どすえ",
+          "read-error": "ファイルを読み込めまへんでしたえ"
+        }
+      },
+      "noRemoteDevices": "このキーボードを他のデバイスで打ったデータがおへんなぁ"
+    }
+  },
+  "editorSettings": {
+    "title": "メニュー",
+    "tabData": "データ",
+    "tabSave": "保存",
+    "tabTools": "設定",
+    "tabLayout": "レイアウト",
+    "basicViewType": "Basic タブ表示",
+    "splitKeyMode": "キーピッカーでShiftキーを分離",
+    "quickSelect": "キーの即時選択"
+  },
+  "hub": {
+    "uploadToHub": "アップロードしますえ",
+    "uploading": "アップロードしてますえ…",
+    "uploadSuccess": "アップロードしましたえ",
+    "uploadFailed": "アップロードがあきまへんでしたえ",
+    "updateOnHub": "更新しますえ",
+    "updating": "更新してますえ…",
+    "updateSuccess": "更新しましたえ",
+    "updateFailed": "更新があきまへんでしたえ",
+    "syncSuccess": "同期しましたえ",
+    "syncFailed": "同期があきまへんでしたえ",
+    "removeFromHub": "消しますえ",
+    "removeSuccess": "消しましたえ",
+    "removeFailed": "消すのがあきまへんでしたえ",
+    "confirmRemove": "消してもよろしおすか？",
+    "pipetteHub": "Hub",
+    "uploadQuestion": "アップロードしてもよろしおすか？",
+    "deleteFromHub": "消しますえ",
+    "hubConnected": "Hub 接続済み",
+    "hubDisconnected": "Hub 未接続どすえ",
+    "enabled": "つながってますえ",
+    "enable": "つなぎますえ",
+    "disable": "切りますえ",
+    "confirmDisconnect": "切ってもよろしおすか？",
+    "noPosts": "投稿がまだおへんなぁ",
+    "requiresAuth": "Hub を使うには、データタブで Google アカウントをつないでおくれやす",
+    "renameFailed": "名前の変更があきまへんでしたえ",
+    "deleteFailed": "消すのがあきまへんでしたえ",
+    "hubSynced": "同期しましたえ",
+    "displayName": "投稿者名",
+    "displayNameDescription": "Hub での表示名を決めておくれやす",
+    "displayNameSaved": "投稿者名を保存しましたえ",
+    "displayNameSaveFailed": "投稿者名の保存があきまへんでしたえ",
+    "displayNameTaken": "この投稿者名はもう使われてますえ",
+    "openInBrowser": "開きますえ",
+    "needsDisplayName": "アップロードするには設定で表示名を決めておくれやす",
+    "displayNameRequired": "Hub へのアップロードに要りますえ",
+    "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名とかぶってますえ。別の名前にしておくれやす。",
+    "accountDeactivated": "アカウントが無効になってますえ。サポートに問い合わせておくれやす。",
+    "rateLimited": "リクエストが多すぎますえ。ちょっと待ってからもういっぺんやっておくれやす。",
+    "error": {
+      "keystrokesBelow": "この期間の打鍵数が足りまへんなぁ（100打鍵以上が要りますえ）。",
+      "rangeExceeds": "選んだ期間が30日を超えてますえ。短こうしておくれやす。",
+      "unsupportedVersion": "新しいバージョンのPipetteで書き出されたもんで、Hubが読み込めまへんえ。Hubをアップデートしておくれやす。",
+      "kindMismatch": "analytics投稿やないみたいどすなぁ。",
+      "invalidPayload": "中身がおかしゅうてアップロードできまへんでしたえ。",
+      "malformedPayload": "チャートデータの一部がおかしゅうてアップロードできまへんでしたえ。",
+      "entryNotFound": "保存された条件が見つかりまへんなぁ。パネルを更新してからやっておくれやす。",
+      "malformedSavedPayload": "保存された条件ファイルが壊れてるみたいどすえ。",
+      "unsupportedSavedVersion": "新しいバージョンのPipetteで保存された条件やさかいアップロードできまへんえ。",
+      "noRange": "保存された条件に期間情報がおへんなぁ。Analyze画面から保存し直しておくれやす。",
+      "noSnapshot": "この期間に対応するスナップショットがおへんなぁ。ちょっとキーボードを使てからやっておくれやす。",
+      "invalidId": "保存された条件を特定できまへんでしたえ。パネルを更新してからやっておくれやす。",
+      "titleEmpty": "タイトルは入れておくれやす。",
+      "titleTooLong": "タイトルが長すぎますえ（200文字以内で）。",
+      "authFailed": "Hubの認証があきまへんでしたえ。いっぺんサインアウトしてからサインインし直しておくれやす。",
+      "payloadTooLarge": "大きすぎてアップロードできまへんえ。チャートを減らすか期間を短こうしておくれやす。"
+    }
+  },
+  "notification": {
+    "title": "お知らせ",
+    "empty": "お知らせがおへんなぁ",
+    "type": {
+      "Info": "情報どすえ",
+      "Warning": "気ぃつけておくれやす",
+      "Update": "更新どすえ"
+    }
+  },
+  "favoriteStore": {
+    "title": "お気に入り",
+    "noSaved": "保存したお気に入りがおへんなぁ",
+    "saveFailed": "お気に入りの保存があきまへんでしたえ",
+    "loadFailed": "お気に入りの読み込みがあきまへんでしたえ",
+    "delete": "消しますえ",
+    "saveCurrentState": "いまの状態を保存しますえ",
+    "export": "エクスポート",
+    "exportAll": "全部出しますえ",
+    "import": "インポート",
+    "exportFailed": "エクスポートがあきまへんでしたえ",
+    "importFailed": "インポートがあきまへんでしたえ",
+    "importSuccess": "{{imported}} 件入れましたえ",
+    "importPartial": "{{imported}} 件入れましたえ（{{skipped}} 件は飛ばしましたえ）",
+    "importEmpty": "入ったもんがおへんなぁ",
+    "exportCurrent": "エクスポート",
+    "importCurrent": "インポート"
+  },
+  "keyLabels": {
+    "title": "Key Labels",
+    "manageRow": "Key Labels 管理",
+    "edit": "編集しますえ",
+    "hubEmpty": "ハブに合うラベルがおへんなぁ",
+    "search": "検索しますえ",
+    "searching": "検索してますえ…",
+    "import": "インポート",
+    "empty": "Key Label がまだおへんなぁ。検索か Import で追加しておくれやす。",
+    "actionUpload": "アップロード",
+    "actionUpdate": "更新",
+    "actionSync": "同期",
+    "actionRemove": "消しますえ",
+    "actionDownload": "ダウンロード",
+    "actionDelete": "消しますえ",
+    "actionExport": ".json",
+    "hubRemoved": "（消されましたえ）",
+    "errorDuplicate": "同じ名前のラベルがもうありますえ",
+    "errorImportFailed": "Key Label のインポートがあきまへんでしたえ",
+    "errorInvalidName": "ラベル名がおかしゅうございますえ",
+    "errorSearchFailed": "Pipette Hub の検索があきまへんでしたえ",
+    "errorGeneric": "あきまへんでしたえ",
+    "missingTitle": "Key Label が見つかりまへんなぁ",
+    "missingMessage": "Key Label「{{name}}」が入ってまへんさかい、QWERTY ラベルで表示しますえ。",
+    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}}、またはキーピッカー右上の Edit ボタンから入れられますえ。",
+    "missingClose": "閉じますえ"
+  },
+  "i18n": {
+    "edit": "編集しますえ",
+    "errorGeneric": "あきまへんでしたえ",
+    "errorInvalidJson": "選んだファイルは正しいJSONやないみたいどすなぁ",
+    "hubEmpty": "Hub に合う言語パックがおへんなぁ",
+    "import": "インポート",
+    "jaRemoved": {
+      "dismiss": "閉じますえ",
+      "message": "バンドル版の日本語はダウンロードできる言語パックとして配布してますえ。Pipette Hub から入れるか、設定 → ツール → 言語パック管理 から .json をインポートしておくれやす。",
+      "title": "日本語パックは Hub にお引っ越ししましたえ"
+    },
+    "manageRow": "言語管理",
+    "missingKeys": {
+      "description": "翻訳が要るキーだけのJSONテンプレートをダウンロードしますえ。編集して再インポートしておくれやす。",
+      "empty": "全部のキーが設定されてますえ",
+      "title": "未設定のキー"
+    },
+    "modalTitle": "言語",
+    "notSetKeys": "未設定のキー",
+    "selectLanguage": "{{name}}を選びますえ",
+    "preview": {
+      "dangerousWarning": "パックに禁止キー（__proto__、constructor、prototype）が入ってますさかいインポートできまへんえ。"
+    },
+    "search": "検索しますえ"
+  },
+  "themePacks": {
+    "title": "テーマパック",
+    "import": "テーマパックを入れますえ",
+    "manageRow": "テーマパック管理",
+    "parseError": "ファイルが読めまへんでしたえ",
+    "selectTheme": "{{name}} にしますえ",
+    "hubEmpty": "Hub に合うテーマパックがおへんなぁ",
+    "preview": "お試しどすえ",
+    "previewing": "お試し中どすえ"
+  }
+}
