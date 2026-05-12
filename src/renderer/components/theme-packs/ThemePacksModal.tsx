@@ -228,6 +228,7 @@ export function ThemePacksModal({
 
   const handleImportFile = useCallback(async () => {
     setActionError(null)
+    setLastResult(null)
     try {
       const dialogResult = await store.importFromDialog()
       if (dialogResult.canceled) return
@@ -237,11 +238,23 @@ export function ThemePacksModal({
       }
       if (!dialogResult.raw) return
       const result = await store.applyImport(dialogResult.raw)
-      if (!result.success && result.error) setActionError(result.error)
+      if (!result.success || !result.meta) {
+        if (result.error) setActionError(result.error)
+        return
+      }
+      setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
+      if (result.meta.hubPostId) {
+        const upd = await pushPackToHub(result.meta.id, result.meta.hubPostId)
+        if (upd.success) {
+          setLastResult({ id: result.meta.id, kind: 'success', message: t('common.synced') })
+        } else {
+          setActionError(upd.error ?? t('hub.updateFailed'))
+        }
+      }
     } catch {
       setActionError(t('themePacks.parseError'))
     }
-  }, [store, t])
+  }, [store, t, pushPackToHub])
 
   const handleRenameCommit = useCallback(async (id: string) => {
     const newName = rename.commitRename(id)
