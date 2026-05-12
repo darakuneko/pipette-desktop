@@ -43,6 +43,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test
+      - run: pnpm run doc:guide
 
   build:
     needs: test
