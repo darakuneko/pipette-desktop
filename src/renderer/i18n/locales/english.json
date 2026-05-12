@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "name": "English",
   "common": {
     "save": "Save",
@@ -31,6 +31,8 @@
     "noLabel": "(No label)",
     "synced": "Synced",
     "installed": "Installed",
+    "edit": "Edit",
+    "done": "Done",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
     "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."
@@ -1306,7 +1308,8 @@
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
     "splitKeyMode": "Separate Shift in Key Picker",
-    "quickSelect": "Instant Key Selection"
+    "quickSelect": "Instant Key Selection",
+    "keyEditorZoom": "Key Editor Zoom"
   },
   "hub": {
     "uploadToHub": "Upload",

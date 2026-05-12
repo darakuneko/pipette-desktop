@@ -530,6 +530,7 @@ export function LanguagePacksModal({
       return
     }
     setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
+    handleSelectLanguage(`pack:${result.meta.id}`)
     if (extra.hubPostId) {
       void window.vialAPI.i18nPackSetHubPostId(result.meta.id, extra.hubPostId)
       return
@@ -546,7 +547,7 @@ export function LanguagePacksModal({
         setActionError(upd.error ?? t('hub.updateFailed'))
       }
     }
-  }, [store, t, pushPackToHub])
+  }, [store, t, pushPackToHub, handleSelectLanguage])
 
   const handleImportFile = useCallback(async (): Promise<void> => {
     setActionError(null)

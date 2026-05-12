@@ -33,7 +33,9 @@
     "findOnHub": "Hub で探そ？☆",
     "findOnHubHint": "アップされたやつ <hub>Pipette Hub</hub> でチェックできるよん☆",
     "installed": "入れたよん！",
-    "searchPlaceholder": "Pipette Hub で検索っしょ（2文字以上で♡）…"
+    "searchPlaceholder": "Pipette Hub で検索っしょ（2文字以上で♡）…",
+    "done": "完了っしょ☆",
+    "edit": "編集っしょ"
   },
   "app": {
     "title": "Pipette☆",
@@ -1296,7 +1298,8 @@
     "tabLayout": "レイアウトっしょ",
     "basicViewType": "Basic タブ表示☆",
     "splitKeyMode": "Shiftキー分離っしょ",
-    "quickSelect": "爆速選択☆"
+    "quickSelect": "爆速選択☆",
+    "keyEditorZoom": "エディタズーム☆"
   },
   "hub": {
     "uploadToHub": "アップっしょ☆",

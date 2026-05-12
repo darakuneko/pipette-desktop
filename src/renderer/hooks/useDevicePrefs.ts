@@ -10,6 +10,7 @@ import { VIEW_MODES, isTypingViewMenuTab } from '../../shared/types/pipette-sett
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
+import { ZOOM_FACTOR_DEFAULT, clampZoomFactor } from '../../shared/types/app-config'
 
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
@@ -75,10 +76,11 @@ interface ValidatedPrefs {
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
+  keyEditorZoom?: number
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -153,6 +155,7 @@ function validateIpcPrefs(
     typingRecordEnabled: typeof data.typingRecordEnabled === 'boolean' ? data.typingRecordEnabled : false,
     typingViewMenuTab: isTypingViewMenuTab(data.typingViewMenuTab) ? data.typingViewMenuTab : 'window',
     viewMode,
+    keyEditorZoom: typeof data.keyEditorZoom === 'number' ? clampZoomFactor(data.keyEditorZoom) : undefined,
   }
 }
 
@@ -266,6 +269,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
   const [typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef] = useStateRef<TypingViewMenuTab>('window')
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
+  const [keyEditorZoom, updateKeyEditorZoom, keyEditorZoomRef] = useStateRef<number | undefined>(undefined)
   const [appliedUid, setAppliedUid] = useState<string | null>(null)
 
   const uidRef = useRef('')
@@ -283,6 +287,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       splitKeyMode: splitKeyModeRef.current,
       quickSelect: quickSelectRef.current,
       keymapScale: keymapScaleRef.current,
+      keyEditorZoom: keyEditorZoomRef.current,
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
@@ -391,6 +396,13 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateViewMode])
 
+  const setKeyEditorZoom = useCallback((zoom: number) => {
+    const clamped = clampZoomFactor(zoom)
+    if (keyEditorZoomRef.current === clamped) return
+    updateKeyEditorZoom(clamped)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateKeyEditorZoom])
+
   const setDefaultLayout = useCallback((id: KeyboardLayoutId) => {
     set('defaultKeyboardLayout', id)
   }, [set])
@@ -450,6 +462,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingViewMenuTab: 'window',
       viewMode: 'editor',
     }
+    if (resolved.keyEditorZoom === undefined) {
+      resolved.keyEditorZoom = clampZoomFactor(config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)
+    }
 
     updateLayout(resolved.keyboardLayout)
     updateAutoAdvance(resolved.autoAdvance)
@@ -468,6 +483,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingRecordEnabled(resolved.typingRecordEnabled)
     updateTypingViewMenuTab(resolved.typingViewMenuTab)
     updateViewMode(resolved.viewMode)
+    updateKeyEditorZoom(resolved.keyEditorZoom)
     setAppliedUid(uid)
 
     if (!prefs) {
@@ -522,6 +538,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingRecordEnabled,
     typingViewMenuTab,
     viewMode,
+    keyEditorZoom,
     appliedUid,
     setLayout,
     setAutoAdvance,
@@ -540,6 +557,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingRecordEnabled,
     setTypingViewMenuTab,
     setViewMode,
+    setKeyEditorZoom,
     defaultLayout,
     defaultAutoAdvance,
     defaultLayerPanelOpen,

@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { SYNC_STATUS_CLASS } from './sync-ui'
+import { QuickSettingsSelects, type QuickSettingsSelectsProps } from './QuickSettingsSelects'
 import type { SyncStatusType } from '../../shared/types/sync'
 
 const TYPING_TEST_BASE = 'flex items-center justify-center gap-1 rounded border px-2.5 py-1 text-xs leading-none transition-colors'
@@ -25,6 +26,7 @@ interface Props {
   onViewOnlyChange?: () => void
   onTypingTestModeChange?: () => void
   onDisconnect?: () => void
+  quickSettings?: QuickSettingsSelectsProps
 }
 
 export function StatusBar({
@@ -44,6 +46,7 @@ export function StatusBar({
   onViewOnlyChange,
   onTypingTestModeChange,
   onDisconnect,
+  quickSettings,
 }: Props) {
   const { t } = useTranslation()
 
@@ -113,12 +116,17 @@ export function StatusBar({
         )}
       </div>
       <div className="flex items-center gap-3">
+        {quickSettings && <QuickSettingsSelects {...quickSettings} />}
+        {quickSettings && hasMatrixTester &&
+          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+          <span className="text-edge">|</span>
+        )}
         {onViewOnlyChange && hasMatrixTester && !typingTestMode && (
           <button
             type="button"
             data-testid="view-only-button"
             aria-label={t('editor.typingTest.viewOnly')}
-            className={viewOnly && typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            className={viewOnly ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onViewOnlyChange}
           >
             {t('editor.typingTest.viewOnly')}
@@ -135,6 +143,10 @@ export function StatusBar({
           >
             {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
           </button>
+        )}
+        {onDisconnect && hasMatrixTester &&
+          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+          <span className="text-edge">|</span>
         )}
         {onDisconnect && (
           <button

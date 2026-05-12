@@ -688,6 +688,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_MIN_SIZE, width, height),
   isAlwaysOnTopSupported: (): Promise<boolean> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED),
+  setWindowZoom: (zoom: number): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SET_ZOOM, zoom),
 }
 
 contextBridge.exposeInMainWorld('vialAPI', vialAPI)

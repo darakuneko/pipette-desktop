@@ -33,7 +33,9 @@
     "findOnHub": "Hubにて探索",
     "findOnHubHint": "皆様の傑作を <hub>Pipette Hub</hub> にてご確認いただけます。",
     "installed": "御用意済み",
-    "searchPlaceholder": "Pipette Hub を探索いたします（2文字以上にて）…"
+    "searchPlaceholder": "Pipette Hub を探索いたします（2文字以上にて）…",
+    "done": "完了",
+    "edit": "推敲"
   },
   "app": {
     "title": "Pipette",
@@ -1296,7 +1298,8 @@
     "tabLayout": "レイアウト",
     "basicViewType": "Basic の見栄え",
     "splitKeyMode": "Shift を分離",
-    "quickSelect": "即座の選択"
+    "quickSelect": "即座の選択",
+    "keyEditorZoom": "エディタ表示倍率"
   },
   "hub": {
     "uploadToHub": "披露する",

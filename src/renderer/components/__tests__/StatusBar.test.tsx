@@ -27,6 +27,10 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+vi.mock('../QuickSettingsSelects', () => ({
+  QuickSettingsSelects: () => null,
+}))
+
 describe('StatusBar', () => {
   const defaultProps = {
     deviceName: 'My Keyboard',
