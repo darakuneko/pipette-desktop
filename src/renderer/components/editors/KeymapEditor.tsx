@@ -95,7 +95,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   supportedQsids, qmkSettingsGet, qmkSettingsSet, qmkSettingsReset, onSettingsUpdate,
   autoAdvance = true, onAutoAdvanceChange,
   basicViewType, onBasicViewTypeChange, splitKeyMode, onSplitKeyModeChange,
-  quickSelect, onQuickSelectChange, keyboardLayout = 'qwerty', onKeyboardLayoutChange,
+  quickSelect, onQuickSelectChange, keyboardLayout: _keyboardLayout = 'qwerty', onKeyboardLayoutChange: _onKeyboardLayoutChange,
   onLock, onMatrixModeChange, onOpenLighting,
   comboEntries, onOpenCombo, onSetComboEntry,
   keyOverrideEntries, onOpenKeyOverride, onSetKeyOverrideEntry,
