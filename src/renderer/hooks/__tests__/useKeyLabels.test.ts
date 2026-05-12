@@ -16,6 +16,8 @@ const mockHubDownload = vi.fn()
 const mockHubUpload = vi.fn()
 const mockHubUpdate = vi.fn()
 const mockHubDelete = vi.fn()
+const mockHubSync = vi.fn()
+const mockHubTimestamps = vi.fn()
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
@@ -30,6 +32,8 @@ Object.defineProperty(window, 'vialAPI', {
     keyLabelHubUpload: mockHubUpload,
     keyLabelHubUpdate: mockHubUpdate,
     keyLabelHubDelete: mockHubDelete,
+    keyLabelHubSync: mockHubSync,
+    keyLabelHubTimestamps: mockHubTimestamps,
   },
   writable: true,
 })
@@ -59,6 +63,8 @@ describe('useKeyLabels', () => {
     mockHubUpload.mockResolvedValue({ success: true, data: meta() })
     mockHubUpdate.mockResolvedValue({ success: true, data: meta() })
     mockHubDelete.mockResolvedValue({ success: true })
+    mockHubSync.mockResolvedValue({ success: true, data: meta() })
+    mockHubTimestamps.mockResolvedValue({ success: true, data: { items: [] } })
   })
 
   it('preserves store order on mount (no client-side sort)', async () => {
@@ -154,5 +160,135 @@ describe('useKeyLabels', () => {
     })
 
     expect(mockList).not.toHaveBeenCalled()
+  })
+
+  it('refreshes after hubSync succeeds', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      await result.current.hubSync('a')
+    })
+
+    expect(mockHubSync).toHaveBeenCalledWith('a')
+    expect(mockList).toHaveBeenCalled()
+  })
+
+  it('does not refresh when hubSync fails', async () => {
+    mockHubSync.mockResolvedValueOnce({ success: false, error: 'sync failed' })
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      const res = await result.current.hubSync('a')
+      expect(res.success).toBe(false)
+    })
+
+    expect(mockList).not.toHaveBeenCalled()
+  })
+
+  it('hubTimestamps calls with correct parameters', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+
+    await act(async () => {
+      await result.current.hubTimestamps(['a', 'b'])
+    })
+
+    expect(mockHubTimestamps).toHaveBeenCalledWith(['a', 'b'])
+  })
+
+  it('hubTimestamps does not trigger a refresh', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      await result.current.hubTimestamps(['a'])
+    })
+
+    expect(mockList).not.toHaveBeenCalled()
+  })
+
+  it('refreshes after hubDelete succeeds', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      await result.current.hubDelete('a')
+    })
+
+    expect(mockHubDelete).toHaveBeenCalledWith('a')
+    expect(mockList).toHaveBeenCalled()
+  })
+
+  it('does not refresh when hubDelete fails', async () => {
+    mockHubDelete.mockResolvedValueOnce({ success: false, error: 'delete failed' })
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      const res = await result.current.hubDelete('a')
+      expect(res.success).toBe(false)
+    })
+
+    expect(mockList).not.toHaveBeenCalled()
+  })
+
+  it('refreshes after reorder succeeds', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      await result.current.reorder(['a', 'b'])
+    })
+
+    expect(mockReorder).toHaveBeenCalledWith(['a', 'b'])
+    expect(mockList).toHaveBeenCalled()
+  })
+
+  it('does not refresh when reorder fails', async () => {
+    mockReorder.mockResolvedValueOnce({ success: false, error: 'reorder failed' })
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      const res = await result.current.reorder(['a', 'b'])
+      expect(res.success).toBe(false)
+    })
+
+    expect(mockList).not.toHaveBeenCalled()
+  })
+
+  it('refreshes after importFromFile succeeds', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+    mockList.mockClear()
+
+    await act(async () => {
+      await result.current.importFromFile()
+    })
+
+    expect(mockImport).toHaveBeenCalled()
+    expect(mockList).toHaveBeenCalled()
+  })
+
+  it('importFromFile returns the import result data', async () => {
+    const { result } = renderHook(() => useKeyLabels())
+    await waitFor(() => expect(result.current.metas).toHaveLength(2))
+
+    let res: Awaited<ReturnType<typeof result.current.importFromFile>>
+    await act(async () => {
+      res = await result.current.importFromFile()
+    })
+
+    expect(res!.success).toBe(true)
+    expect(res!.data).toEqual(expect.objectContaining({ id: 'c', name: 'C' }))
   })
 })

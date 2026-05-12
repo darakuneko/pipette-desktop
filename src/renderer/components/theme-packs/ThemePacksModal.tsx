@@ -14,7 +14,7 @@ import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useThemePackStore } from '../../hooks/useThemePackStore'
 import { applyPackColors, clearPackColors, isPackTheme, extractPackId } from '../../hooks/useTheme'
-import type { ThemePackColors } from '../../../shared/types/theme-store'
+import type { ThemeColorScheme, ThemePackColors } from '../../../shared/types/theme-store'
 import type { HubThemePostListItem, HubThemePackBody } from '../../../shared/types/hub'
 import { buildHubCategoryUrl, HUB_CATEGORY } from '../../../shared/hub-urls'
 import { useHubFreshness } from '../../hooks/useHubFreshness'
@@ -60,6 +60,8 @@ export function ThemePacksModal({
   const [hubOrigin, setHubOrigin] = useState('')
   const [previewPostId, setPreviewPostId] = useState<string | null>(null)
   const previewSeqRef = useRef(0)
+  const hubPreviewCacheRef = useRef(new Map<string, HubThemePackBody>())
+  const activePackCacheRef = useRef<{ id: string; colors: ThemePackColors; colorScheme: ThemeColorScheme } | null>(null)
 
   const activeTheme = appConfig.config.theme
 
@@ -131,11 +133,17 @@ export function ThemePacksModal({
     clearPackColors()
     if (isPackTheme(activeTheme)) {
       const packId = extractPackId(activeTheme)
-      void window.vialAPI.themePackGet(packId).then((result) => {
-        if (result.success && result.data) {
-          applyPackColors(result.data.pack.colors)
-        }
-      })
+      const cached = activePackCacheRef.current
+      if (cached && cached.id === packId) {
+        applyPackColors(cached.colors, cached.colorScheme)
+      } else {
+        void window.vialAPI.themePackGet(packId).then((result) => {
+          if (result.success && result.data) {
+            activePackCacheRef.current = { id: packId, colors: result.data.pack.colors, colorScheme: result.data.pack.colorScheme }
+            applyPackColors(result.data.pack.colors, result.data.pack.colorScheme)
+          }
+        })
+      }
     }
     setPreviewPostId(null)
   }, [activeTheme])
@@ -145,12 +153,19 @@ export function ThemePacksModal({
       restoreActiveTheme()
       return
     }
+    const cached = hubPreviewCacheRef.current.get(postId)
+    if (cached) {
+      applyPackColors(cached.colors as ThemePackColors, cached.colorScheme)
+      setPreviewPostId(postId)
+      return
+    }
     const seq = ++previewSeqRef.current
     setPendingId(postId)
     try {
       const result = await window.vialAPI.hubDownloadThemePost(postId)
       if (!result.success || !result.data || previewSeqRef.current !== seq) return
-      applyPackColors(result.data.colors as ThemePackColors)
+      hubPreviewCacheRef.current.set(postId, result.data)
+      applyPackColors(result.data.colors as ThemePackColors, result.data.colorScheme)
       setPreviewPostId(postId)
     } finally {
       if (previewSeqRef.current === seq) setPendingId(null)
@@ -164,8 +179,14 @@ export function ThemePacksModal({
       setLastResult(null)
       setConfirmDeleteId(null)
       setConfirmRemoveId(null)
+      hubPreviewCacheRef.current.clear()
+      activePackCacheRef.current = null
     }
   }, [open, previewPostId, restoreActiveTheme])
+
+  useEffect(() => {
+    activePackCacheRef.current = null
+  }, [activeTheme])
 
   const pushPackToHub = useCallback(async (
     packId: string,
@@ -220,11 +241,14 @@ export function ThemePacksModal({
       }
       const result = await store.remove(id)
       if (!result.success && result.error) setActionError(result.error)
+      if (result.success && isPackTheme(activeTheme) && extractPackId(activeTheme) === id) {
+        onThemeChange('system')
+      }
     } finally {
       setPendingId(null)
       setConfirmDeleteId(null)
     }
-  }, [store])
+  }, [store, activeTheme, onThemeChange])
 
   const handleImportFile = useCallback(async () => {
     setActionError(null)
