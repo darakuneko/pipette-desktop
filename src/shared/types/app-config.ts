@@ -25,6 +25,15 @@ export const TYPING_HEATMAP_WINDOW_OPTIONS = [
 ] as const
 export type TypingHeatmapWindowMin = typeof TYPING_HEATMAP_WINDOW_OPTIONS[number]
 
+export const ZOOM_FACTOR_MIN = 50
+export const ZOOM_FACTOR_MAX = 200
+export const ZOOM_FACTOR_DEFAULT = 100
+
+export function clampZoomFactor(raw: unknown): number {
+  const n = typeof raw === 'number' && !Number.isNaN(raw) ? raw : ZOOM_FACTOR_DEFAULT
+  return Math.max(ZOOM_FACTOR_MIN, Math.min(ZOOM_FACTOR_MAX, Math.round(n)))
+}
+
 export interface AppConfig {
   autoSync: boolean
   windowState?: WindowState
@@ -61,6 +70,9 @@ export interface AppConfig {
    * App tab in the typing view exposes the toggle; UI only enables
    * the toggle while REC is running. */
   typingMonitorAppEnabled: boolean
+  /** UI zoom level as a percentage (50–200). Applied to the renderer
+   * via webContents.setZoomFactor(zoomFactor / 100). */
+  zoomFactor: number
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -82,6 +94,7 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'typingHeatmapWindowMin',
   'typingRecordingConsentAccepted',
   'typingMonitorAppEnabled',
+  'zoomFactor',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -101,4 +114,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   typingHeatmapWindowMin: 5,
   typingRecordingConsentAccepted: false,
   typingMonitorAppEnabled: true,
+  zoomFactor: ZOOM_FACTOR_DEFAULT,
 }

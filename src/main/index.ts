@@ -20,7 +20,8 @@ import { setupNotificationStore } from './notification-store'
 import { buildCsp, securityHeaders } from './csp'
 import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
-import { loadWindowState, saveWindowState, setupAppConfigIpc, MIN_WIDTH, MIN_HEIGHT } from './app-config'
+import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, MIN_WIDTH, MIN_HEIGHT } from './app-config'
+import { clampZoomFactor } from '../shared/types/app-config'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
@@ -129,6 +130,9 @@ function createWindow(): void {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   if (isDev) win.webContents.openDevTools()
+
+  const cfg = loadAppConfig()
+  win.webContents.setZoomFactor(clampZoomFactor(cfg.zoomFactor) / 100)
 }
 
 interface WindowSize { width: number; height: number }
@@ -314,6 +318,14 @@ app.whenReady().then(() => {
     hasWork: hasTypingAnalyticsPendingWork,
     run: flushTypingAnalyticsBeforeQuit,
   })
+  onAppConfigChange((key, value) => {
+    if (key !== 'zoomFactor') return
+    const pct = clampZoomFactor(value)
+    for (const w of BrowserWindow.getAllWindows()) {
+      if (!w.isDestroyed()) w.webContents.setZoomFactor(pct / 100)
+    }
+  })
+
   setupTypingAnalytics().catch((err: unknown) => {
     const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
     log('error', `Failed to initialize typing analytics: ${detail}`)

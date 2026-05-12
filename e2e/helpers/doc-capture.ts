@@ -380,6 +380,15 @@ async function captureSettingsModal(page: Page): Promise<void> {
       await page.waitForTimeout(200)
     }
     await captureNamed(page, 'settings-defaults', { fullPage: true })
+
+    const zoomRow = page.locator('[data-testid="settings-zoom-factor-row"]')
+    if (await isAvailable(zoomRow)) {
+      await zoomRow.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(200)
+      await captureNamed(page, 'settings-zoom', { fullPage: true })
+    } else {
+      console.log('  [skip] zoom factor row not found')
+    }
   } else {
     console.log('  [skip] tools tab not found')
   }

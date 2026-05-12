@@ -477,7 +477,9 @@
     "import": "テーマパックをインポート",
     "parseError": "ファイルの解析に失敗しました",
     "selectTheme": "{{name}} を選択",
-    "hubEmpty": "Hub に一致するテーマパックがありません"
+    "hubEmpty": "Hub に一致するテーマパックがありません",
+    "preview": "プレビュー",
+    "previewing": "プレビュー中"
   },
   "layout": {
     "keyboardLayout": "キーラベル表示",
@@ -599,7 +601,9 @@
       "version": "バージョン {{version}}",
       "license": "ライセンス: {{license}}",
       "licenseValue": "GPL-3.0-or-later"
-    }
+    },
+    "zoomLevel": "ズーム",
+    "zoomLevelWarning": "表示が崩れる場合があります。自己責任で変更してください。"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",

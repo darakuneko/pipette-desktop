@@ -34,14 +34,14 @@ function applyThemeClass(effective: EffectiveTheme): void {
   }
 }
 
-function applyPackColors(colors: ThemePackColors): void {
+export function applyPackColors(colors: ThemePackColors): void {
   const root = document.documentElement
   for (const key of THEME_COLOR_KEYS) {
     root.style.setProperty(`--${key}`, colors[key])
   }
 }
 
-function clearPackColors(): void {
+export function clearPackColors(): void {
   const root = document.documentElement
   for (const key of THEME_COLOR_KEYS) {
     root.style.removeProperty(`--${key}`)

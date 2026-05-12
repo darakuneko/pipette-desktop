@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIME_STEPS } from './settings-modal-shared'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
@@ -15,7 +15,7 @@ import { LanguagePacksModal } from '../i18n-packs/LanguagePacksModal'
 import { ThemePacksModal } from '../theme-packs/ThemePacksModal'
 import { isPackTheme, extractPackId, type ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
-import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
+import { ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX, ZOOM_FACTOR_DEFAULT, clampZoomFactor, type BasicViewType, type SplitKeyMode } from '../../../shared/types/app-config'
 
 export interface SettingsToolsTabProps {
   theme: ThemeSelection
@@ -72,6 +72,29 @@ export function SettingsToolsTab({
   const keyLabels = useKeyLabels()
   const i18nPacks = useI18nPackStore()
   const themePacks = useThemePackStore()
+
+  const [zoomInput, setZoomInput] = useState(String(appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT))
+
+  useEffect(() => {
+    setZoomInput(String(appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT))
+  }, [appConfig.config.zoomFactor])
+
+  const commitZoomValue = useCallback((val: string) => {
+    const raw = Number(val)
+    if (Number.isNaN(raw)) {
+      setZoomInput(String(appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT))
+      return
+    }
+    const clamped = clampZoomFactor(raw)
+    setZoomInput(String(clamped))
+    if (clamped !== (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)) {
+      appConfig.set('zoomFactor', clamped)
+    }
+  }, [appConfig])
+
+  const commitZoom = useCallback(() => {
+    commitZoomValue(zoomInput)
+  }, [zoomInput, commitZoomValue])
 
   const activeThemeName = useMemo(() => {
     if (isPackTheme(theme)) {
@@ -191,6 +214,37 @@ export function SettingsToolsTab({
               >
                 {t('i18n.edit')}
               </button>
+            </div>
+          </div>
+
+          <div className={ROW_CLASS} data-testid="settings-zoom-factor-row">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-content-secondary">
+                {t('settings.zoomLevel')}
+              </span>
+              <span className="text-xs text-content-muted">
+                {t('settings.zoomLevelWarning')}
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <input
+                id="settings-zoom-factor-input"
+                type="number"
+                min={ZOOM_FACTOR_MIN}
+                max={ZOOM_FACTOR_MAX}
+                value={zoomInput}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setZoomInput(val)
+                  // Spin-button clicks have empty inputType in Chromium
+                  if (!(e.nativeEvent as InputEvent).inputType) commitZoomValue(val)
+                }}
+                onBlur={commitZoom}
+                onKeyDown={(e) => { if (e.key === 'Enter') commitZoom() }}
+                className="zoom-factor-input w-20 rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
+                data-testid="settings-zoom-factor-input"
+              />
+              <span className="text-[13px] text-content-muted">%</span>
             </div>
           </div>
         </div>
