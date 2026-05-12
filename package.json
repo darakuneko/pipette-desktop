@@ -29,7 +29,8 @@
     "test:e2e": "playwright test",
     "test:e2e:dev": "E2E_MODE=dev playwright test",
     "generate:language-manifest": "tsx scripts/generate-language-manifest.ts",
-    "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts"
+    "doc:screenshots": "npx tsx e2e/helpers/doc-capture.ts",
+    "doc:guide": "node docs/build-guide.mjs"
   },
   "dependencies": {
     "@paymoapp/active-window": "^2.1.4",
