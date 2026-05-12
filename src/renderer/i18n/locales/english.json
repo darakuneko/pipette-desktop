@@ -1422,8 +1422,8 @@
     "missingClose": "Close"
   },
   "i18n": {
-    "modalTitle": "Language",
-    "manageRow": "Language Manage",
+    "modalTitle": "Language Packs",
+    "manageRow": "Language Packs Manage",
     "edit": "Edit",
     "hubEmpty": "No matching language packs on the Hub",
     "search": "Search",

@@ -1432,13 +1432,13 @@
       "message": "バンドル版の日本語はダウンロード可能な言語パックとして配布されています。Pipette Hub から入手するか、設定 → ツール → 言語パック管理 から .json をインポートしてください。",
       "title": "日本語パックは Hub に移動しました"
     },
-    "manageRow": "言語管理",
+    "manageRow": "言語パック管理",
     "missingKeys": {
       "description": "翻訳が必要なキーだけを含む JSON テンプレートをダウンロードします。編集後に再インポートしてください。",
       "empty": "すべてのキーが設定されています",
       "title": "未設定のキー"
     },
-    "modalTitle": "言語",
+    "modalTitle": "言語パック",
     "notSetKeys": "未設定のキー",
     "selectLanguage": "{{name}}を選択",
     "preview": {
