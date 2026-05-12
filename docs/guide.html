@@ -2708,6 +2708,8 @@ function switchDoc(id, hash) {
   docEls.forEach(d => d.classList.toggle('active', d.id === 'doc-' + id));
   tocPanels.forEach(p => p.classList.toggle('active', p.id === 'toc-' + id));
 
+  history.replaceState(null, '', '#' + tabId);
+
   if (hash) {
     setTimeout(() => scrollToHash(id, hash), 60);
   } else {
@@ -2769,6 +2771,12 @@ function highlightToc(docId, headingId) {
       found.scrollIntoView({ block: 'nearest' });
     }
   }
+}
+
+// Activate tab from URL hash on load (e.g. guide.html#data)
+const initTabId = location.hash.slice(1);
+if (initTabId && tabs.some(t => t.dataset.doc === initTabId)) {
+  switchDoc(initTabId);
 }
 
 docEls.forEach(docEl => {
