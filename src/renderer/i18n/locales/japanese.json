@@ -472,7 +472,7 @@
     "system": "システム"
   },
   "themePacks": {
-    "manageRow": "テーマパック",
+    "manageRow": "テーマパック管理",
     "title": "テーマパック",
     "import": "テーマパックをインポート",
     "parseError": "ファイルの解析に失敗しました",

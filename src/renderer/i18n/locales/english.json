@@ -472,7 +472,7 @@
     "system": "System"
   },
   "themePacks": {
-    "manageRow": "Theme Packs",
+    "manageRow": "Theme Packs Manage",
     "title": "Theme Packs",
     "import": "Import Theme Pack",
     "parseError": "Failed to parse file",
