@@ -1478,7 +1478,7 @@ A language pack `.json` mirrors the structure of the built-in English pack. Expo
 | `version` | Yes | Semver string (e.g. `0.1.0`) |
 | (other keys) | Yes | Nested translation tree matching the English structure |
 
-Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains.
+Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains. A minimal starter file is also available at [`sample-packs/language/my-language.json`](../sample-packs/language/my-language.json) in the repository.
 
 ### 6.4 Theme Packs Manage
 
@@ -1570,7 +1570,7 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 | `colorScheme` | Yes | `"light"` or `"dark"` — declares the intended brightness of the pack |
 | `colors` | Yes | Object mapping all 35 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
 
-All 35 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template.
+All 35 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template. A ready-to-edit starter file is also available at [`sample-packs/theme/my-theme.json`](../sample-packs/theme/my-theme.json) in the repository.
 
 ### 6.5 Zoom (UI Scale)
 
