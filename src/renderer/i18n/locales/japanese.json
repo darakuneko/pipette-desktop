@@ -30,6 +30,8 @@
     "labelPlaceholder": "ラベル",
     "noLabel": "（ラベルなし）",
     "synced": "同期しました",
+    "edit": "編集",
+    "done": "完了",
     "findOnHub": "Hub で探す",
     "findOnHubHint": "アップロードされたファイルを <hub>Pipette Hub</hub> で確認できます。",
     "installed": "インストール済み",

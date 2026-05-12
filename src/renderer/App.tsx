@@ -814,8 +814,6 @@ export function App() {
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
             onExportLayoutPdfCurrent={fileHandlers.handleExportLayoutPdfCurrent}
-            hubDisplayName={hub.hubDisplayName}
-            hubCanWrite={hub.hubCanUpload}
             favHubOrigin={hub.hubReady ? hub.hubOrigin : undefined}
             favHubNeedsDisplayName={hub.hubReady && !hub.hubCanUpload}
             favHubUploading={hub.favHubUploading}
@@ -879,6 +877,13 @@ export function App() {
             keymapEditorRef.current?.toggleTypingTest()
           }}
           onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
+          quickSettings={{
+            onThemeChange: themeCtx.setTheme,
+            hubDisplayName: hub.hubDisplayName,
+            hubCanWrite: hub.hubCanUpload,
+            keyboardLayout: devicePrefs.layout,
+            onKeyboardLayoutChange: devicePrefs.setLayout,
+          }}
         />
       )}
 

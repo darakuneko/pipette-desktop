@@ -31,6 +31,8 @@
     "noLabel": "(No label)",
     "synced": "Synced",
     "installed": "Installed",
+    "edit": "Edit",
+    "done": "Done",
     "findOnHub": "Find on Hub",
     "searchPlaceholder": "Search Pipette Hub (type 2 or more characters)...",
     "findOnHubHint": "Browse uploaded files on <hub>Pipette Hub</hub>."

@@ -9,6 +9,7 @@ import { useAppConfig } from '../../hooks/useAppConfig'
 import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { getLayoutsForViewType } from './display-keyboard-defs'
 import { X } from 'lucide-react'
+import { UpwardSelect } from '../UpwardSelect'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
 import { isShiftedKeycode, getShiftedKeycode } from './SplitKey'
@@ -120,6 +121,7 @@ interface Props {
   keyboardPickerContent?: React.ReactNode // Keyboard layout picker shown in a "Keyboard" tab
   tabContentOverride?: Record<string, React.ReactNode> // Custom content that replaces the keycode grid for specific tabs
   basicViewType?: BasicViewType // View type for the basic tab
+  onBasicViewTypeChange?: (v: BasicViewType) => void
   splitKeyMode?: SplitKeyMode // 'split' (default) or 'flat' for individual buttons
   remapLabel?: (qmkId: string) => string
 }
@@ -144,6 +146,7 @@ export function TabbedKeycodes({
   keyboardPickerContent,
   tabContentOverride,
   basicViewType,
+  onBasicViewTypeChange,
   splitKeyMode,
   remapLabel,
 }: Props) {
@@ -151,6 +154,12 @@ export function TabbedKeycodes({
   const { config } = useAppConfig()
   const resolvedBasicViewType = basicViewType ?? config.defaultBasicViewType
   const resolvedSplitKeyMode = splitKeyMode ?? config.defaultSplitKeyMode
+  const basicViewOptions = useMemo(() => [
+    { id: 'ansi', name: t('settings.basicViewTypeAnsi') },
+    { id: 'iso', name: t('settings.basicViewTypeIso') },
+    { id: 'jis', name: t('settings.basicViewTypeJis') },
+    { id: 'list', name: t('settings.basicViewTypeList') },
+  ], [t])
   const [activeTab, setActiveTab] = useState('basic')
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -522,10 +531,20 @@ export function TabbedKeycodes({
           </div>
         )}
 
-        {showHint && (
-          <p className="px-3 pb-1.5 text-[11px] text-content-muted">
-            {t('editor.keymap.pickerHint')}
-          </p>
+        {(showHint || (activeTab === 'basic' && onBasicViewTypeChange)) && (
+          <div className="flex items-center justify-between px-3 pb-1.5">
+            {showHint && (
+              <p className="text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
+            )}
+            {activeTab === 'basic' && onBasicViewTypeChange && (
+              <UpwardSelect
+                aria-label={t('editorSettings.basicViewType')}
+                value={resolvedBasicViewType}
+                options={basicViewOptions}
+                onChange={(v) => onBasicViewTypeChange(v as BasicViewType)}
+              />
+            )}
+          </div>
         )}
 
         {panelOverlay}

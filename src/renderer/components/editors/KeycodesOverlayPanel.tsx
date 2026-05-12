@@ -2,14 +2,10 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KEYBOARD_LAYOUTS } from '../../data/keyboard-layouts'
-import { useKeyLabels } from '../../hooks/useKeyLabels'
-import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
+import type { SplitKeyMode } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
-import { KeyLabelsModal } from '../key-labels/KeyLabelsModal'
 
 type OverlayTab = 'layout' | 'tools' | 'data'
 
@@ -29,12 +25,8 @@ interface Props {
   layoutValues?: Map<number, number>
   onLayoutOptionChange?: (index: number, value: number) => void
   // Tools
-  keyboardLayout: KeyboardLayoutId
-  onKeyboardLayoutChange?: (layout: KeyboardLayoutId) => void
   autoAdvance: boolean
   onAutoAdvanceChange?: (enabled: boolean) => void
-  basicViewType?: BasicViewType
-  onBasicViewTypeChange?: (type: BasicViewType) => void
   splitKeyMode?: SplitKeyMode
   onSplitKeyModeChange?: (mode: SplitKeyMode) => void
   quickSelect?: boolean
@@ -45,10 +37,6 @@ interface Props {
   unlocked: boolean
   onLock?: () => void
   isDummy?: boolean
-  /** Forwarded to KeyLabelsModal when the Key Labels Edit button opens
-   *  it from the keypicker overlay (mirrors the SettingsModal entry). */
-  hubDisplayName?: string | null
-  hubCanWrite?: boolean
   // Extra content appended to Tools tab (e.g. Import, Reset)
   toolsExtra?: React.ReactNode
   // Save tab (formerly Data)
@@ -63,12 +51,8 @@ export function KeycodesOverlayPanel({
   layoutOptions,
   layoutValues,
   onLayoutOptionChange,
-  keyboardLayout,
-  onKeyboardLayoutChange,
   autoAdvance,
   onAutoAdvanceChange,
-  basicViewType,
-  onBasicViewTypeChange,
   splitKeyMode,
   onSplitKeyModeChange,
   quickSelect,
@@ -79,8 +63,6 @@ export function KeycodesOverlayPanel({
   unlocked,
   onLock,
   isDummy,
-  hubDisplayName = null,
-  hubCanWrite = false,
   toolsExtra,
   dataPanel,
   onExportLayoutPdfAll,
@@ -89,32 +71,6 @@ export function KeycodesOverlayPanel({
   const { t } = useTranslation()
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
-  const [keyLabelsModalOpen, setKeyLabelsModalOpen] = useState(false)
-  const keyLabels = useKeyLabels()
-  /**
-   * Layout dropdown options. QWERTY is materialised as a Key Label
-   * store entry by `ensureQwertyEntry`, so iterating `metas` first
-   * preserves the user-controlled drag order from the Key Labels
-   * modal. `KEYBOARD_LAYOUTS` only serves as a safety net for the
-   * brief window before `metas` has loaded. The `layoutOptions` prop
-   * above is unrelated; it carries the keyboard's own KLE
-   * `layout_options` (matrix variants).
-   */
-  const layoutSelectorOptions = useMemo(() => {
-    const seen = new Set<string>()
-    const out: { id: string; name: string }[] = []
-    for (const meta of keyLabels.metas) {
-      if (seen.has(meta.id)) continue
-      seen.add(meta.id)
-      out.push({ id: meta.id, name: meta.name })
-    }
-    for (const def of KEYBOARD_LAYOUTS) {
-      if (seen.has(def.id)) continue
-      seen.add(def.id)
-      out.push({ id: def.id, name: def.name })
-    }
-    return out
-  }, [keyLabels.metas])
 
   // Reset to next leftmost tab if current tab disappears at runtime
   useEffect(() => {
@@ -134,7 +90,6 @@ export function KeycodesOverlayPanel({
   const showTabs = tabs.length > 1
 
   return (
-    <>
     <div className="flex h-full flex-col" data-testid="keycodes-overlay-panel">
       {/* Top tab bar */}
       {showTabs && (
@@ -204,57 +159,6 @@ export function KeycodesOverlayPanel({
           inert={activeTab !== 'tools' || undefined}
         >
           <div className="flex flex-col gap-2 px-4 py-3">
-            {/* Basic tab view type */}
-            {basicViewType != null && onBasicViewTypeChange && (
-              <div className={ROW_CLASS} data-testid="overlay-basic-view-type-row">
-                <label htmlFor="overlay-basic-view-type-selector" className="text-[13px] font-medium text-content">
-                  {t('editorSettings.basicViewType')}
-                </label>
-                <select
-                  id="overlay-basic-view-type-selector"
-                  value={basicViewType}
-                  onChange={(e) => onBasicViewTypeChange(e.target.value as BasicViewType)}
-                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-                  data-testid="overlay-basic-view-type-selector"
-                >
-                  <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
-                  <option value="iso">{t('settings.basicViewTypeIso')}</option>
-                  <option value="jis">{t('settings.basicViewTypeJis')}</option>
-                  <option value="list">{t('settings.basicViewTypeList')}</option>
-                </select>
-              </div>
-            )}
-
-            {/* Keyboard layout selector */}
-            <div className={ROW_CLASS} data-testid="overlay-layout-row">
-              <label htmlFor="overlay-layout-selector" className="text-[13px] font-medium text-content">
-                {t('layout.keyboardLayout')}
-              </label>
-              <div className="flex items-center gap-2">
-                <select
-                  id="overlay-layout-selector"
-                  value={keyboardLayout}
-                  onChange={(e) => onKeyboardLayoutChange?.(e.target.value as KeyboardLayoutId)}
-                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
-                  data-testid="overlay-layout-selector"
-                >
-                  {layoutSelectorOptions.map((layoutDef) => (
-                    <option key={layoutDef.id} value={layoutDef.id}>
-                      {layoutDef.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  onClick={() => setKeyLabelsModalOpen(true)}
-                  className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] font-medium text-content hover:bg-surface-dim"
-                  data-testid="overlay-key-labels-edit-button"
-                >
-                  {t('keyLabels.edit')}
-                </button>
-              </div>
-            </div>
-
             {/* Auto-advance toggle */}
             <div className={ROW_CLASS} data-testid="overlay-auto-advance-row">
               <span className="text-[13px] font-medium text-content">
@@ -374,12 +278,5 @@ export function KeycodesOverlayPanel({
         )}
       </div>
     </div>
-    <KeyLabelsModal
-      open={keyLabelsModalOpen}
-      onClose={() => setKeyLabelsModalOpen(false)}
-      currentDisplayName={hubDisplayName}
-      hubCanWrite={hubCanWrite}
-    />
-    </>
   )
 }
