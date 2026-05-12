@@ -181,9 +181,14 @@ export function KeycodesOverlayPanel({
             {/* Key editor zoom */}
             {onKeyEditorZoomChange && (
               <div className={ROW_CLASS} data-testid="overlay-key-editor-zoom-row">
-                <span className="text-[13px] font-medium text-content">
-                  {t('editorSettings.keyEditorZoom')}
-                </span>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('editorSettings.keyEditorZoom')}
+                  </span>
+                  <span className="text-xs text-content-muted">
+                    {t('settings.zoomLevelWarning')}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <input
                     type="number"
