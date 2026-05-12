@@ -205,7 +205,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
             key={`${entry.categoryId}-${entry.keycode.qmkId}`}
             type="button"
             className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm hover:bg-surface-dim"
-            onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label) }}
+            onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label || stripPrefix(entry.keycode.qmkId)) }}
             data-testid={`popover-result-${entry.keycode.qmkId}`}
           >
             <span className="min-w-[60px] font-mono text-xs font-medium">
