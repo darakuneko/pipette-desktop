@@ -117,12 +117,16 @@ export function StatusBar({
       </div>
       <div className="flex items-center gap-3">
         {quickSettings && <QuickSettingsSelects {...quickSettings} />}
+        {quickSettings && hasMatrixTester &&
+          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+          <span className="text-edge">|</span>
+        )}
         {onViewOnlyChange && hasMatrixTester && !typingTestMode && (
           <button
             type="button"
             data-testid="view-only-button"
             aria-label={t('editor.typingTest.viewOnly')}
-            className={viewOnly && typingTestMode ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
+            className={viewOnly ? TYPING_TEST_ACTIVE : TYPING_TEST_INACTIVE}
             onClick={onViewOnlyChange}
           >
             {t('editor.typingTest.viewOnly')}
@@ -139,6 +143,10 @@ export function StatusBar({
           >
             {typingTestMode ? t('editor.typingTest.exitTypingMode') : t('editor.typingTest.switchToTypingMode')}
           </button>
+        )}
+        {onDisconnect && hasMatrixTester &&
+          (onTypingTestModeChange || (onViewOnlyChange && !typingTestMode)) && (
+          <span className="text-edge">|</span>
         )}
         {onDisconnect && (
           <button

@@ -81,18 +81,6 @@ export function QuickSettingsSelects({
   return (
     <>
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          className={`flex items-center justify-center rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
-            editMode
-              ? 'border-accent text-accent'
-              : 'border-edge text-content-secondary hover:text-content'
-          }`}
-          onClick={() => setEditMode((v) => !v)}
-        >
-          {editMode ? t('common.done') : t('common.edit')}
-        </button>
-
         {editMode ? (
           <>
             <button type="button" className={BUTTON_CLASS} onClick={() => setActiveModal('language')}>
@@ -129,6 +117,17 @@ export function QuickSettingsSelects({
             )}
           </>
         )}
+        <button
+          type="button"
+          className={`flex items-center justify-center rounded border px-2.5 py-1 text-xs leading-none transition-colors focus:outline-none ${
+            editMode
+              ? 'border-accent text-accent'
+              : 'border-edge text-content-secondary hover:text-content'
+          }`}
+          onClick={() => setEditMode((v) => !v)}
+        >
+          {editMode ? t('common.done') : t('common.edit')}
+        </button>
       </div>
       <LanguagePacksModal open={activeModal === 'language'} onClose={closeModal} />
       <ThemePacksModal
