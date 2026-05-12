@@ -104,6 +104,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   layerNames, onSetLayerName,
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
+  keyEditorZoom, onKeyEditorZoomChange,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
@@ -1029,6 +1030,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                   matrixMode={matrixMode} hasMatrixTester={hasMatrixTester} onToggleMatrix={handleMatrixToggle}
                   unlocked={unlocked ?? false} onLock={onLock} isDummy={isDummy}
                   toolsExtra={toolsExtra} dataPanel={dataPanel}
+                  keyEditorZoom={keyEditorZoom} onKeyEditorZoomChange={onKeyEditorZoomChange}
                   onExportLayoutPdfAll={onExportLayoutPdfAll} onExportLayoutPdfCurrent={onExportLayoutPdfCurrent}
                 />
               </div>

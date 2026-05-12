@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SplitKeyMode } from '../../../shared/types/app-config'
+import { ZOOM_FACTOR_MIN, ZOOM_FACTOR_MAX, clampZoomFactor } from '../../../shared/types/app-config'
 import type { LayoutOption } from '../../../shared/layout-options'
 import { LayoutOptionsPanel } from './LayoutOptionsPanel'
 import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
@@ -37,6 +38,8 @@ interface Props {
   unlocked: boolean
   onLock?: () => void
   isDummy?: boolean
+  keyEditorZoom?: number
+  onKeyEditorZoomChange?: (zoom: number) => void
   // Extra content appended to Tools tab (e.g. Import, Reset)
   toolsExtra?: React.ReactNode
   // Save tab (formerly Data)
@@ -63,12 +66,26 @@ export function KeycodesOverlayPanel({
   unlocked,
   onLock,
   isDummy,
+  keyEditorZoom,
+  onKeyEditorZoomChange,
   toolsExtra,
   dataPanel,
   onExportLayoutPdfAll,
   onExportLayoutPdfCurrent,
 }: Props) {
   const { t } = useTranslation()
+  const [zoomInput, setZoomInput] = useState(String(keyEditorZoom ?? ''))
+  useEffect(() => { setZoomInput(String(keyEditorZoom ?? '')) }, [keyEditorZoom])
+  const commitZoom = (val = zoomInput): void => {
+    const raw = Number(val)
+    if (!Number.isNaN(raw) && onKeyEditorZoomChange) {
+      const clamped = clampZoomFactor(raw)
+      setZoomInput(String(clamped))
+      onKeyEditorZoomChange(clamped)
+    } else {
+      setZoomInput(String(keyEditorZoom ?? ''))
+    }
+  }
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
 
@@ -159,6 +176,34 @@ export function KeycodesOverlayPanel({
           inert={activeTab !== 'tools' || undefined}
         >
           <div className="flex flex-col gap-2 px-4 py-3">
+            {/* Key editor zoom */}
+            {onKeyEditorZoomChange && (
+              <div className={ROW_CLASS} data-testid="overlay-key-editor-zoom-row">
+                <span className="text-[13px] font-medium text-content">
+                  {t('editorSettings.keyEditorZoom')}
+                </span>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={ZOOM_FACTOR_MIN}
+                    max={ZOOM_FACTOR_MAX}
+                    value={zoomInput}
+                    onChange={(e) => {
+                      const val = e.target.value
+                      setZoomInput(val)
+                      if (!(e.nativeEvent as InputEvent).inputType) commitZoom(val)
+                    }}
+                    onBlur={() => commitZoom()}
+                    onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
+                    className="w-16 rounded border border-edge bg-surface px-1.5 py-0.5 text-xs text-content text-right"
+                    aria-label={t('editorSettings.keyEditorZoom')}
+                    data-testid="overlay-key-editor-zoom-input"
+                  />
+                  <span className="text-xs text-content-muted">%</span>
+                </div>
+              </div>
+            )}
+
             {/* Auto-advance toggle */}
             <div className={ROW_CLASS} data-testid="overlay-auto-advance-row">
               <span className="text-[13px] font-medium text-content">

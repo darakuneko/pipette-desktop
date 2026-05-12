@@ -1308,7 +1308,8 @@
     "tabLayout": "Layout",
     "basicViewType": "Basic Tab View",
     "splitKeyMode": "Separate Shift in Key Picker",
-    "quickSelect": "Instant Key Selection"
+    "quickSelect": "Instant Key Selection",
+    "keyEditorZoom": "Key Editor Zoom"
   },
   "hub": {
     "uploadToHub": "Upload",

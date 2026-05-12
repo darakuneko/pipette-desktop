@@ -268,6 +268,15 @@ function setupWindowIpc(): void {
       return !process.env.WAYLAND_DISPLAY && !process.env.XDG_SESSION_TYPE?.includes('wayland')
     },
   )
+
+  secureHandle(
+    IpcChannels.WINDOW_SET_ZOOM,
+    (event, zoom: number) => {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      if (!win) return
+      win.webContents.setZoomFactor(clampZoomFactor(zoom) / 100)
+    },
+  )
 }
 
 function setupShellIpc(): void {

@@ -1308,7 +1308,8 @@
     "tabLayout": "レイアウト",
     "basicViewType": "Basic タブ表示",
     "splitKeyMode": "キーピッカーでShiftキーを分離",
-    "quickSelect": "キーの即時選択"
+    "quickSelect": "キーの即時選択",
+    "keyEditorZoom": "キーエディタ ズーム"
   },
   "hub": {
     "uploadToHub": "アップロード",

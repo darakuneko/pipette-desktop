@@ -113,6 +113,8 @@ export interface KeymapEditorProps {
   onLayerPanelOpenChange?: (open: boolean) => void
   scale?: number
   onScaleChange?: (delta: number) => void
+  keyEditorZoom?: number
+  onKeyEditorZoomChange?: (zoom: number) => void
   typingTestMode?: boolean
   onTypingTestModeChange?: (enabled: boolean) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
