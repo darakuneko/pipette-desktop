@@ -96,6 +96,34 @@ describe('key-label-store', () => {
     })
   })
 
+  describe('dangerous keys in map / compositeLabels', () => {
+    it('rejects __proto__ in map', async () => {
+      const map = Object.create(null) as Record<string, string>
+      map['KC_A'] = 'A'
+      map['__proto__'] = 'malicious'
+      const result = await saveRecord({ name: 'Proto', uploaderName: 'me', map })
+      expect(result.success).toBe(false)
+      expect(result.errorCode).toBe('INVALID_FILE')
+    })
+
+    it('rejects constructor in map', async () => {
+      const result = await saveRecord({ name: 'Ctor', uploaderName: 'me', map: { constructor: 'x' } })
+      expect(result.success).toBe(false)
+      expect(result.errorCode).toBe('INVALID_FILE')
+    })
+
+    it('rejects prototype in compositeLabels', async () => {
+      const result = await saveRecord({
+        name: 'CompositeProto',
+        uploaderName: 'me',
+        map: { KC_A: 'A' },
+        compositeLabels: { prototype: 'evil' },
+      })
+      expect(result.success).toBe(false)
+      expect(result.errorCode).toBe('INVALID_FILE')
+    })
+  })
+
   describe('listMetas / getRecord', () => {
     it('returns active entries only and resolves payload', async () => {
       const a = await saveRecord({ name: 'A', uploaderName: 'me', map: { KC_A: 'A' } })

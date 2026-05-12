@@ -300,6 +300,30 @@ describe('validateThemePack', () => {
     })
   })
 
+  describe('CSS injection via function colors', () => {
+    it('rejects hsl() with embedded closing paren and injected CSS', () => {
+      const colors = validColors()
+      colors['surface'] = 'hsl(0); --injected: evil)'
+      const result = validateThemePack(validPack({ colors }))
+      expect(result.ok).toBe(false)
+      expect(result.errors).toContain('Color "surface" has invalid CSS color value: "hsl(0); --injected: evil)"')
+    })
+
+    it('rejects rgb() with embedded closing paren', () => {
+      const colors = validColors()
+      colors['surface'] = 'rgb(0,0,0); pointer-events: none)'
+      const result = validateThemePack(validPack({ colors }))
+      expect(result.ok).toBe(false)
+    })
+
+    it('still accepts valid nested modern CSS color syntax', () => {
+      const colors = validColors()
+      colors['surface'] = 'hsl(200 50% 50%)'
+      const result = validateThemePack(validPack({ colors }))
+      expect(result.ok).toBe(true)
+    })
+  })
+
   describe('dangerous keys', () => {
     it.each(['constructor', 'prototype'])('rejects dangerous top-level key "%s"', (key) => {
       const pack = validPack()
