@@ -138,6 +138,7 @@ async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean>
 }
 
 async function connectDevice(page: Page): Promise<boolean> {
+
   const deviceList = page.locator('[data-testid="device-list"]')
   const noDeviceMsg = page.locator('[data-testid="no-device-message"]')
 
@@ -781,10 +782,12 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-filter-store-toggle not found for export modal')
   }
 
-  // Return to the Keyboard tab so subsequent phases can connect as usual.
-  const kbTab = page.locator('[data-testid="tab-keyboard"]')
-  if (await isAvailable(kbTab)) {
-    await kbTab.click()
+  // Return to the Keyboard tab. When Analyze is active the DeviceSelector
+  // replaces its entire render with AnalyzePage, so tab-keyboard is not in
+  // the DOM — use the Back button instead.
+  const backBtn = page.locator('[data-testid="analyze-back"]')
+  if (await isAvailable(backBtn)) {
+    await backBtn.click()
     await page.waitForTimeout(300)
   }
 }
@@ -1303,43 +1306,33 @@ async function captureBasicViewVariants(page: Page): Promise<void> {
     await page.waitForTimeout(300)
   }
 
-  if (!(await ensureOverlayOpen(page))) {
-    console.log('  [skip] overlay toggle not found')
+  const viewTypeTrigger = page.getByRole('button', { name: 'Basic Tab View' })
+  if (!(await isAvailable(viewTypeTrigger))) {
+    console.log('  [skip] basic view type selector not found')
     return
   }
 
-  await switchOverlayTab(page, 'overlay-tab-tools')
-
-  const viewTypeSelector = page.locator('[data-testid="overlay-basic-view-type-selector"]')
-  if (!(await isAvailable(viewTypeSelector))) {
-    console.log('  [skip] view type selector not found')
-    await closeOverlay(page)
-    return
-  }
-
-  // Capture each view type: select option in overlay, close for clean screenshot, capture
+  const viewListbox = page.getByRole('listbox', { name: 'Basic Tab View' })
   const viewTypes = [
-    { value: 'ansi', name: 'basic-ansi-view' },
-    { value: 'iso', name: 'basic-iso-view' },
-    { value: 'jis', name: 'basic-jis-view' },
-    { value: 'list', name: 'basic-list-view' },
+    { value: 'ANSI', name: 'basic-ansi-view' },
+    { value: 'ISO', name: 'basic-iso-view' },
+    { value: 'JIS', name: 'basic-jis-view' },
+    { value: 'LIST', name: 'basic-list-view' },
   ]
 
   for (const view of viewTypes) {
-    await ensureOverlayOpen(page)
-    await switchOverlayTab(page, 'overlay-tab-tools')
-    await viewTypeSelector.selectOption(view.value)
+    await viewTypeTrigger.click()
+    await page.waitForTimeout(200)
+    await viewListbox.getByRole('option', { name: view.value, exact: true }).click()
     await page.waitForTimeout(500)
-    await closeOverlay(page)
     await captureNamed(page, view.name, { fullPage: true })
   }
 
   // Restore ANSI view
-  await ensureOverlayOpen(page)
-  await switchOverlayTab(page, 'overlay-tab-tools')
-  await viewTypeSelector.selectOption('ansi')
+  await viewTypeTrigger.click()
+  await page.waitForTimeout(200)
+  await viewListbox.getByRole('option', { name: 'ANSI', exact: true }).click()
   await page.waitForTimeout(300)
-  await closeOverlay(page)
 }
 
 // --- Phase 12: Layer Panel States ---

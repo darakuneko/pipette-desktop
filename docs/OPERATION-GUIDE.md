@@ -665,7 +665,7 @@ Select keycodes from different categories using the tabbed palette at the bottom
 
 ### 3.1 Basic
 
-Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports four view types, selectable from the Keycodes Overlay Panel (§3.14):
+Standard character keys, function keys, modifier keys, and navigation keys. The Basic tab supports four view types, selectable from the view selector at the bottom of the Basic tab:
 
 **ANSI Keyboard View** (default)
 
@@ -902,8 +902,6 @@ The Keycodes Overlay Panel provides quick access to editor tools and save functi
 
 ![Overlay Panel — Settings](screenshots/overlay-tools.png)
 
-- **Basic View Type**: Switch between ANSI keyboard, ISO keyboard, JIS keyboard, and List views for the Basic tab
-- **Keyboard Layout**: Select the display layout for key labels. The dropdown reflects the installed Key Labels store (see §6.2); the **Edit** button next to it opens the same Key Labels Manage modal as Settings → Tools (so you can install / sync / reorder labels without leaving the editor)
 - **Auto Advance**: Toggle automatic advancement to the next key after assigning a keycode
 - **Instant Key Selection**: Toggle instant key selection mode (see §2.2 for behavior details)
 - **Separate Shift in Key Picker**: Toggle split display for combined keycodes (e.g., show Mod-Tap as two halves)
@@ -1237,7 +1235,7 @@ The editor settings panel now provides a single **Save** panel with the followin
 - **Synced Data**: List of saved snapshots. Click to load, rename, or delete entries
 - **Reset Keyboard Data**: Reset keyboard to factory defaults (use with caution)
 
-> **Note**: Tool settings (keyboard layout, auto advance, key tester, security) have moved to the Keycodes Overlay Panel (§3.14). Zoom is available in the toolbar (§4.1). Layer settings are now managed directly via the layer panel on the left side of the editor.
+> **Note**: Tool settings (auto advance, key tester, security) are in the Keycodes Overlay Panel (§3.14). Keyboard layout is available in the status bar quick settings (§9); Basic tab view type is selectable at the bottom of the Basic tab. Zoom is available in the toolbar (§4.1). Layer settings are managed directly via the layer panel on the left side of the editor.
 
 ### 6.1 Cloud Sync (Google Drive appDataFolder)
 
@@ -1729,13 +1727,27 @@ The status bar at the bottom of the screen shows connection information and acti
 
 ![Status Bar](screenshots/status-bar.png)
 
+**Status indicators** (left side)
+
 - **Device name**: Shows the name of the connected keyboard
 - **Loaded label**: The label of the loaded snapshot (shown only when a snapshot is loaded)
 - **Auto Advance**: Status of automatic key advancement after assigning a keycode (shown only when enabled)
-- **Key Tester**: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)
-- **Typing View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active
-- **Typing Test**: Toggle button for Typing Test mode (requires matrix tester support)
 - **Locked / Unlocked**: Keyboard lock status (prevents accidental changes to dangerous keycodes)
 - **Sync status**: Cloud sync status (shown only when sync is configured)
 - **Hub connection**: Pipette Hub connection status (shown only when Hub is configured)
+
+**Quick Settings** (right side, shown when a keyboard is connected)
+
+Inline selectors for common per-session preferences. A `|` separator divides them from the mode buttons.
+
+- **Language**: Switch the UI language. Opens a dropdown of built-in languages and installed language packs (see §6.3)
+- **Theme**: Switch the color theme. Options include System, Light, Dark, and any installed theme packs (see §6.4)
+- **Key Labels**: Switch the key label set for the current keyboard. Options reflect the installed Key Labels store in drag order (see §6.2)
+- **Edit / Done**: Toggle edit mode. Replaces the selectors with **Language Packs**, **Theme Packs**, and **Key Labels** management modal buttons for installing, syncing, or reordering entries
+
+**Action buttons** (right side)
+
+- **Key Tester**: Toggle button for Matrix Tester mode (requires matrix tester support; hidden when Typing Test is active)
+- **Typing View**: Toggle button to enter view-only mode — a compact window showing only the keyboard layout (see §4.3). Requires matrix tester support; hidden when Typing Test is active
+- **Typing Test**: Toggle button for Typing Test mode (requires matrix tester support)
 - **Disconnect button**: Disconnects from the keyboard and returns to the device selection screen (hidden while Typing Test is active)
