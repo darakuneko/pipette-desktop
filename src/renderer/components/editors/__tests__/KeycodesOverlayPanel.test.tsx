@@ -4,34 +4,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { KeycodesOverlayPanel } from '../KeycodesOverlayPanel'
-import { KEYBOARD_LAYOUTS } from '../../../data/keyboard-layouts'
-
-// Stub useKeyLabels so the layout dropdown sees the legacy ids
-// synchronously (no async refresh wait needed in these unit tests).
-vi.mock('../../../hooks/useKeyLabels', () => ({
-  useKeyLabels: () => ({
-    metas: [
-      { id: 'dvorak', name: 'Dvorak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
-      { id: 'colemak', name: 'Colemak', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
-      { id: 'japanese', name: 'Japanese (QWERTY)', uploaderName: 'pipette', filename: '', savedAt: '', updatedAt: '' },
-    ],
-    loading: false,
-    error: null,
-    refresh: async () => {},
-    importFromFile: async () => ({ success: true }),
-    exportEntry: async () => ({ success: true }),
-    reorder: async () => ({ success: true }),
-    rename: async () => ({ success: true }),
-    remove: async () => ({ success: true }),
-    hubSearch: async () => ({ success: true, data: { items: [], total: 0, page: 1, per_page: 20 } }),
-    hubDownload: async () => ({ success: true }),
-    hubUpload: async () => ({ success: true }),
-    hubUpdate: async () => ({ success: true }),
-    hubSync: async () => ({ success: true }),
-    hubTimestamps: async () => ({ success: true, data: { items: [] } }),
-    hubDelete: async () => ({ success: true }),
-  }),
-}))
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -39,14 +11,14 @@ vi.mock('react-i18next', () => ({
       const map: Record<string, string> = {
         'editorSettings.tabTools': 'Tools',
         'editorSettings.tabLayout': 'Layout',
-        'layout.keyboardLayout': 'Layout',
+        'editorSettings.tabSave': 'Save',
+        'editorSettings.keyEditorZoom': 'Key Editor Zoom',
         'editor.autoAdvance': 'Auto Move',
         'editor.keyTester.title': 'Key Tester',
         'settings.security': 'Security',
         'security.lock': 'Lock',
         'statusBar.locked': 'Locked',
         'statusBar.unlocked': 'Unlocked',
-        'keyLabels.edit': 'Edit',
       }
       return map[key] ?? key
     },
@@ -55,8 +27,6 @@ vi.mock('react-i18next', () => ({
 
 const DEFAULT_PROPS = {
   hasLayoutOptions: false,
-  keyboardLayout: 'qwerty' as const,
-  onKeyboardLayoutChange: vi.fn(),
   autoAdvance: true,
   onAutoAdvanceChange: vi.fn(),
   matrixMode: false,
@@ -70,7 +40,6 @@ describe('KeycodesOverlayPanel', () => {
     render(<KeycodesOverlayPanel {...DEFAULT_PROPS} />)
 
     expect(screen.getByTestId('keycodes-overlay-panel')).toBeInTheDocument()
-    expect(screen.getByTestId('overlay-layout-row')).toBeInTheDocument()
     expect(screen.getByTestId('overlay-auto-advance-row')).toBeInTheDocument()
   })
 
@@ -132,36 +101,9 @@ describe('KeycodesOverlayPanel', () => {
 
     fireEvent.click(screen.getByTestId('overlay-tab-tools'))
 
-    expect(screen.getByTestId('overlay-layout-row')).toBeInTheDocument()
+    expect(screen.getByTestId('overlay-auto-advance-row')).toBeInTheDocument()
     // Layout content is still in DOM (for width stability) but invisible
     expect(screen.getByText('Split Backspace').closest('[inert]')).toBeTruthy()
-  })
-
-  it('shows keyboard layout selector with all layouts', () => {
-    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} />)
-
-    const selector = screen.getByTestId('overlay-layout-selector')
-    const options = selector.querySelectorAll('option')
-    // Built-in QWERTY + the three stub Key Label entries from the
-    // useKeyLabels mock above.
-    expect(options.length).toBe(KEYBOARD_LAYOUTS.length + 3)
-  })
-
-  it('calls onKeyboardLayoutChange when layout is changed', () => {
-    const onKeyboardLayoutChange = vi.fn()
-    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} onKeyboardLayoutChange={onKeyboardLayoutChange} />)
-
-    fireEvent.change(screen.getByTestId('overlay-layout-selector'), { target: { value: 'dvorak' } })
-    expect(onKeyboardLayoutChange).toHaveBeenCalledWith('dvorak')
-  })
-
-  it('opens KeyLabelsModal when the Edit button is clicked', () => {
-    render(<KeycodesOverlayPanel {...DEFAULT_PROPS} hubDisplayName="me" hubCanWrite />)
-
-    // Modal is closed by default — backdrop should not be in the DOM yet.
-    expect(screen.queryByTestId('key-labels-modal-backdrop')).toBeNull()
-    fireEvent.click(screen.getByTestId('overlay-key-labels-edit-button'))
-    expect(screen.getByTestId('key-labels-modal-backdrop')).toBeInTheDocument()
   })
 
   it('calls onAutoAdvanceChange when toggle is clicked', () => {
@@ -209,7 +151,7 @@ describe('KeycodesOverlayPanel', () => {
 
     // Should switch to tools tab
     expect(screen.queryByText('Split Backspace')).not.toBeInTheDocument()
-    expect(screen.getByTestId('overlay-layout-row')).toBeInTheDocument()
+    expect(screen.getByTestId('overlay-auto-advance-row')).toBeInTheDocument()
   })
 
   it('calls onLayoutOptionChange when checkbox toggled', () => {
