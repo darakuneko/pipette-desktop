@@ -61,7 +61,7 @@ Download the latest release for your platform:
 
 For complete instructions with screenshots:
 
--   [Operation Guide](docs/OPERATION-GUIDE.md)
+-   [Operation Guide](https://darakuneko.github.io/pipette-desktop/guide.html)
 
 ## Platform Setup
 
@@ -163,13 +163,13 @@ Without this permission, Monitor App silently records `null` for every minute on
 Sync your snapshots, favorites, and per-keyboard settings across devices via [Google Drive appDataFolder](https://developers.google.com/workspace/drive/api/guides/appdata).  \
 The appDataFolder is **not** regular Google Drive storage — it is a hidden, app-specific folder that only Pipette can access. Your personal Drive files are never touched.
 
-See [Data Guide](docs/Data.md) for details on what is synced and how your data is protected.
+See [Data Guide](https://darakuneko.github.io/pipette-desktop/guide.html) for details on what is synced and how your data is protected.
 
 ### Pipette Hub
 
 Upload and share your keymaps and favorite configurations on [Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev), a community keymap gallery. Keyboard snapshots, tap dance, macro, combo, key override, and alt repeat key configurations can all be shared.
 
-See [Data Guide](docs/Data.md) for details on how Hub authentication works.
+See [Data Guide](https://darakuneko.github.io/pipette-desktop/guide.html) for details on how Hub authentication works.
 
 ### Utilities
 
@@ -221,7 +221,7 @@ Shared              — Types, constants, IPC channels
 
 ## Data & Privacy
 
-See the [Data Guide](docs/Data.md) for a complete guide on what data Pipette stores, how cloud sync works, and the security measures in place for external services.
+See the [Data Guide](https://darakuneko.github.io/pipette-desktop/guide.html) for a complete guide on what data Pipette stores, how cloud sync works, and the security measures in place for external services.
 
 ## Donate
 
@@ -234,9 +234,9 @@ A cup of coffee keeps the commits coming ☕
 Contributions are welcome! In particular:
 
 - **Translations** — Create a language pack `.json` (use the built-in English pack as a template — export it from Settings → Tools → Language Packs) and share it on [Pipette Hub](https://pipette-hub-worker.keymaps.workers.dev) or submit a PR.
-  See `docs/OPERATION-GUIDE.md` §6.3 for the pack format and management workflow.
+  See the [Operation Guide](https://darakuneko.github.io/pipette-desktop/guide.html) §6.3 for the pack format and management workflow.
 - **Theme packs** — Design a colour theme `.json` and share it on Pipette Hub.
-  See the [Theme Pack Authoring Guide](docs/THEME-PACK-AUTHORING.html) for the full colour token reference and design tips.
+  See the [Theme Pack Authoring Guide](https://darakuneko.github.io/pipette-desktop/guide.html) for the full colour token reference and design tips.
 - **Keyboard layout composite labels** — `KeyboardLayoutDef.compositeLabels` in `src/renderer/data/keyboard-layouts.ts`
   lets a layout override the label of an individual composite keycode (e.g. `LALT(KC_L)` → "Cmd L" on macOS).
   Add the full qmkId → display string mapping to the relevant layout. Reviewers must check that the
