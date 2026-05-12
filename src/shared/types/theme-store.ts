@@ -31,9 +31,14 @@ export type ThemeColorKey = (typeof THEME_COLOR_KEYS)[number]
 
 export type ThemePackColors = Record<ThemeColorKey, string>
 
+export type ThemeColorScheme = 'light' | 'dark'
+
+export const THEME_COLOR_SCHEMES: readonly ThemeColorScheme[] = ['light', 'dark'] as const
+
 export interface ThemePackEntryFile {
   name: string
   version: string
+  colorScheme: ThemeColorScheme
   colors: ThemePackColors
 }
 

@@ -133,7 +133,7 @@ export function ThemePacksModal({
       const packId = extractPackId(activeTheme)
       void window.vialAPI.themePackGet(packId).then((result) => {
         if (result.success && result.data) {
-          applyPackColors(result.data.pack.colors)
+          applyPackColors(result.data.pack.colors, result.data.pack.colorScheme)
         }
       })
     }
@@ -150,7 +150,7 @@ export function ThemePacksModal({
     try {
       const result = await window.vialAPI.hubDownloadThemePost(postId)
       if (!result.success || !result.data || previewSeqRef.current !== seq) return
-      applyPackColors(result.data.colors as ThemePackColors)
+      applyPackColors(result.data.colors as ThemePackColors, result.data.colorScheme)
       setPreviewPostId(postId)
     } finally {
       if (previewSeqRef.current === seq) setPendingId(null)

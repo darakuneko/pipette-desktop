@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAppConfig } from './useAppConfig'
 import type { ThemeMode, ThemeSelection } from '../../shared/types/app-config'
 import { THEME_COLOR_KEYS } from '../../shared/types/theme-store'
-import type { ThemePackColors, ThemePackEntryFile } from '../../shared/types/theme-store'
+import type { ThemeColorScheme, ThemePackColors, ThemePackEntryFile } from '../../shared/types/theme-store'
 import { useEffectiveTheme, type EffectiveTheme } from './useEffectiveTheme'
 
 export type { ThemeMode, ThemeSelection }
@@ -34,11 +34,12 @@ function applyThemeClass(effective: EffectiveTheme): void {
   }
 }
 
-export function applyPackColors(colors: ThemePackColors): void {
+export function applyPackColors(colors: ThemePackColors, colorScheme: ThemeColorScheme): void {
   const root = document.documentElement
   for (const key of THEME_COLOR_KEYS) {
     root.style.setProperty(`--${key}`, colors[key])
   }
+  root.style.setProperty('color-scheme', colorScheme)
 }
 
 export function clearPackColors(): void {
@@ -53,10 +54,8 @@ function applyPackTheme(
   pack: ThemePackEntryFile,
   setEffectiveTheme: (t: EffectiveTheme) => void,
 ): void {
-  const effective = resolveEffectiveTheme('system')
-  setEffectiveTheme(effective)
-  applyPackColors(pack.colors)
-  document.documentElement.style.setProperty('color-scheme', effective)
+  setEffectiveTheme(pack.colorScheme)
+  applyPackColors(pack.colors, pack.colorScheme)
 }
 
 export function isPackTheme(theme: ThemeSelection): theme is `pack:${string}` {
