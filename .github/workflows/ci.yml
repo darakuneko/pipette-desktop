@@ -31,3 +31,6 @@ jobs:
       - run: npx tsx scripts/check-hook-deps-tdz.ts
       - run: pnpm test
       - run: pnpm build
+      - run: pnpm run doc:guide
+      - name: Verify docs/guide.html is up to date
+        run: git diff --exit-code docs/guide.html || (echo "docs/guide.html is stale — run 'pnpm run doc:guide' and commit the result." && exit 1)
