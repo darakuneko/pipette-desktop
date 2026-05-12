@@ -57,6 +57,9 @@
 .rdp-time-input::-webkit-clear-button {
   display: none;
 }
+.zoom-factor-input::-webkit-inner-spin-button {
+  margin-left: 6px;
+}
 
 /* Interactive elements use pointer cursor */
 button:not(:disabled),

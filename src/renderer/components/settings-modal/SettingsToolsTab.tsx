@@ -79,8 +79,8 @@ export function SettingsToolsTab({
     setZoomInput(String(appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT))
   }, [appConfig.config.zoomFactor])
 
-  const commitZoom = useCallback(() => {
-    const raw = Number(zoomInput)
+  const commitZoomValue = useCallback((val: string) => {
+    const raw = Number(val)
     if (Number.isNaN(raw)) {
       setZoomInput(String(appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT))
       return
@@ -90,7 +90,11 @@ export function SettingsToolsTab({
     if (clamped !== (appConfig.config.zoomFactor ?? ZOOM_FACTOR_DEFAULT)) {
       appConfig.set('zoomFactor', clamped)
     }
-  }, [zoomInput, appConfig])
+  }, [appConfig])
+
+  const commitZoom = useCallback(() => {
+    commitZoomValue(zoomInput)
+  }, [zoomInput, commitZoomValue])
 
   const activeThemeName = useMemo(() => {
     if (isPackTheme(theme)) {
@@ -229,10 +233,15 @@ export function SettingsToolsTab({
                 min={ZOOM_FACTOR_MIN}
                 max={ZOOM_FACTOR_MAX}
                 value={zoomInput}
-                onChange={(e) => setZoomInput(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setZoomInput(val)
+                  // Spin-button clicks have empty inputType in Chromium
+                  if (!(e.nativeEvent as InputEvent).inputType) commitZoomValue(val)
+                }}
                 onBlur={commitZoom}
                 onKeyDown={(e) => { if (e.key === 'Enter') commitZoom() }}
-                className="w-20 rounded border border-edge bg-surface pl-2.5 pr-5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="zoom-factor-input w-20 rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-zoom-factor-input"
               />
               <span className="text-[13px] text-content-muted">%</span>
