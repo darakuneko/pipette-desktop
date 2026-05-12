@@ -241,11 +241,14 @@ export function ThemePacksModal({
       }
       const result = await store.remove(id)
       if (!result.success && result.error) setActionError(result.error)
+      if (result.success && isPackTheme(activeTheme) && extractPackId(activeTheme) === id) {
+        onThemeChange('system')
+      }
     } finally {
       setPendingId(null)
       setConfirmDeleteId(null)
     }
-  }, [store])
+  }, [store, activeTheme, onThemeChange])
 
   const handleImportFile = useCallback(async () => {
     setActionError(null)

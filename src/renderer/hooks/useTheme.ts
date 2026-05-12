@@ -134,7 +134,12 @@ export function useTheme(): UseThemeReturn {
     const packId = extractPackId(config.theme)
     const unsubscribe = window.vialAPI.themePackOnChanged?.(() => {
       window.vialAPI.themePackGet(packId).then((result) => {
-        if (!result.success || !result.data) return
+        if (!result.success || !result.data) {
+          clearPackColors()
+          set('theme', 'system')
+          setEffectiveTheme(resolveEffectiveTheme('system'))
+          return
+        }
         const { pack } = result.data
         cachedPackRef.current = { id: packId, pack }
         applyPackTheme(pack, setEffectiveTheme)
