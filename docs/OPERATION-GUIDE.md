@@ -1522,6 +1522,7 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 {
   "name": "Nord",
   "version": "1.0.0",
+  "colorScheme": "dark",
   "colors": {
     "surface": "#2e3440",
     "surface-alt": "#3b4252",
@@ -1566,9 +1567,10 @@ A theme pack `.json` defines a `name`, `version`, and a `colors` object mapping 
 |------|:--:|---------|
 | `name` | Yes | Display name and uniqueness key for overwrite-on-import |
 | `version` | Yes | Semver string (e.g. `1.0.0`) |
-| `colors` | Yes | Object mapping all 34 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
+| `colorScheme` | Yes | `"light"` or `"dark"` — declares the intended brightness of the pack |
+| `colors` | Yes | Object mapping all 35 colour tokens to CSS colour values (`#hex`, `rgb()`, or `hsl()`) |
 
-All 34 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template.
+All 35 colour tokens are required. Export any installed pack (row → `.json`) to get a complete template.
 
 ### 6.5 Zoom (UI Scale)
 
