@@ -88,6 +88,13 @@ export function KeycodesOverlayPanel({
       setZoomInput(String(keyEditorZoom ?? ''))
     }
   }
+  const handleZoomChange = (val: string): void => {
+    setZoomInput(val)
+    const raw = Number(val)
+    if (!Number.isNaN(raw) && onKeyEditorZoomChange) {
+      onKeyEditorZoomChange(clampZoomFactor(raw))
+    }
+  }
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
 
@@ -195,7 +202,7 @@ export function KeycodesOverlayPanel({
                     min={ZOOM_FACTOR_MIN}
                     max={ZOOM_FACTOR_MAX}
                     value={zoomInput}
-                    onChange={(e) => { setZoomInput(e.target.value) }}
+                    onChange={(e) => handleZoomChange(e.target.value)}
                     onBlur={() => commitZoom()}
                     onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
                     className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right"
