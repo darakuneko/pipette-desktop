@@ -182,7 +182,7 @@ export function KeycodesOverlayPanel({
                 <span className="text-[13px] font-medium text-content">
                   {t('editorSettings.keyEditorZoom')}
                 </span>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1.5">
                   <input
                     type="number"
                     min={ZOOM_FACTOR_MIN}
@@ -195,7 +195,7 @@ export function KeycodesOverlayPanel({
                     }}
                     onBlur={() => commitZoom()}
                     onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
-                    className="w-16 rounded border border-edge bg-surface px-1.5 py-0.5 text-xs text-content text-right"
+                    className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right"
                     aria-label={t('editorSettings.keyEditorZoom')}
                     data-testid="overlay-key-editor-zoom-input"
                   />
