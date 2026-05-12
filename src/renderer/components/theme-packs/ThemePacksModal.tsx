@@ -267,6 +267,7 @@ export function ThemePacksModal({
         return
       }
       setLastResult({ id: result.meta.id, kind: 'success', message: t('common.saved') })
+      handleSelectTheme(`pack:${result.meta.id}`)
       if (result.meta.hubPostId) {
         const upd = await pushPackToHub(result.meta.id, result.meta.hubPostId)
         if (upd.success) {
@@ -278,7 +279,7 @@ export function ThemePacksModal({
     } catch {
       setActionError(t('themePacks.parseError'))
     }
-  }, [store, t, pushPackToHub])
+  }, [store, t, pushPackToHub, handleSelectTheme])
 
   const handleRenameCommit = useCallback(async (id: string) => {
     const newName = rename.commitRename(id)
