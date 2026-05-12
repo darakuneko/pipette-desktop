@@ -132,7 +132,7 @@ export function KeycodesOverlayPanel({
       )}
 
       {/* Content area — grid overlay keeps both tabs in DOM for stable width */}
-      <div className="flex-1 grid min-h-0">
+      <div className="flex-1 grid grid-cols-1 min-h-0">
         {hasLayoutOptions && layoutOptions && layoutValues && onLayoutOptionChange && (
           <div
             className={`col-start-1 row-start-1 flex flex-col min-h-0 ${activeTab !== 'layout' ? 'invisible' : ''}`}
@@ -181,7 +181,7 @@ export function KeycodesOverlayPanel({
             {/* Key editor zoom */}
             {onKeyEditorZoomChange && (
               <div className={ROW_CLASS} data-testid="overlay-key-editor-zoom-row">
-                <div className="flex flex-col gap-0.5">
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
                   <span className="text-[13px] font-medium text-content">
                     {t('editorSettings.keyEditorZoom')}
                   </span>
