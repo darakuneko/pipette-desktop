@@ -89,6 +89,7 @@ export function LanguagePacksModal({
   const [activeTab, setActiveTab] = useState<TabId>('installed')
   const [search, setSearch] = useState('')
   const [hubResults, setHubResults] = useState<HubI18nPostListItem[]>([])
+  const [hubDefaultResults, setHubDefaultResults] = useState<HubI18nPostListItem[]>([])
   const [hubSearched, setHubSearched] = useState(false)
   const [hubSearching, setHubSearching] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -227,6 +228,7 @@ export function LanguagePacksModal({
       if (result.success && result.data) {
         setHubResults(result.data.items)
         setHubSearched(true)
+        if (!query.trim()) setHubDefaultResults(result.data.items)
       } else {
         setActionError(result.error ?? t('i18n.errorGeneric'))
       }
@@ -235,22 +237,25 @@ export function LanguagePacksModal({
     }
   }, [t])
 
-  // Debounced auto-search: only fire once the user has typed 2+
-  // characters. Below the threshold we clear the previous results
-  // (and reset the "have searched" flag) so the empty hint comes back
-  // instead of leaving stale rows visible. Mirrors the KeyLabelsModal
-  // contract so the two manage modals stay predictable.
+  // Auto-fetch Hub list when the hub tab becomes active (no query = latest items).
+  // Re-fetches each time the modal is opened so results stay fresh.
+  useEffect(() => {
+    if (!open || activeTab !== 'hub' || hubSearched) return
+    void runSearch('')
+  }, [open, activeTab, hubSearched, runSearch])
+
+  // Debounced search: fire once the user has typed 2+ characters.
+  // Below the threshold restore the initial results instead of clearing.
   useEffect(() => {
     if (!open || activeTab !== 'hub') return
     const query = search.trim()
     if (query.length < 2) {
-      setHubResults((prev) => (prev.length === 0 ? prev : []))
-      setHubSearched((prev) => (prev ? false : prev))
+      if (hubDefaultResults.length > 0) setHubResults(hubDefaultResults)
       return
     }
     const handle = window.setTimeout(() => { void runSearch(query) }, 300)
     return () => { window.clearTimeout(handle) }
-  }, [open, activeTab, search, runSearch])
+  }, [open, activeTab, search, runSearch, hubDefaultResults])
 
   useEffect(() => {
     if (!open) {
@@ -258,6 +263,10 @@ export function LanguagePacksModal({
       setLastResult(null)
       setConfirmDeleteId(null)
       setConfirmRemoveId(null)
+      setHubSearched(false)
+      setHubResults([])
+      setHubDefaultResults([])
+      setSearch('')
     }
   }, [open])
 

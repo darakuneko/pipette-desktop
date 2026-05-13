@@ -55,6 +55,7 @@ export function ThemePacksModal({
   const [lastResult, setLastResult] = useState<{ id: string; kind: 'success' | 'error'; message: string } | null>(null)
   const [search, setSearch] = useState('')
   const [hubResults, setHubResults] = useState<HubThemePostListItem[]>([])
+  const [hubDefaultResults, setHubDefaultResults] = useState<HubThemePostListItem[]>([])
   const [hubSearched, setHubSearched] = useState(false)
   const [hubSearching, setHubSearching] = useState(false)
   const [hubOrigin, setHubOrigin] = useState('')
@@ -109,6 +110,7 @@ export function ThemePacksModal({
       if (result.success && result.data) {
         setHubResults(result.data.items)
         setHubSearched(true)
+        if (!query.trim()) setHubDefaultResults(result.data.items)
       } else {
         setActionError(result.error ?? t('themePacks.hubEmpty'))
       }
@@ -117,17 +119,25 @@ export function ThemePacksModal({
     }
   }, [t])
 
+  // Auto-fetch Hub list when the hub tab becomes active.
+  // Re-fetches each time the modal is opened so results stay fresh.
+  useEffect(() => {
+    if (!open || activeTab !== 'hub' || hubSearched) return
+    void runSearch('')
+  }, [open, activeTab, hubSearched, runSearch])
+
+  // Debounced search: fire once the user has typed 2+ characters.
+  // Below the threshold restore the initial results instead of clearing.
   useEffect(() => {
     if (!open || activeTab !== 'hub') return
     const query = search.trim()
     if (query.length < 2) {
-      setHubResults((prev) => (prev.length === 0 ? prev : []))
-      setHubSearched((prev) => (prev ? false : prev))
+      if (hubDefaultResults.length > 0) setHubResults(hubDefaultResults)
       return
     }
     const handle = window.setTimeout(() => { void runSearch(query) }, 300)
     return () => { window.clearTimeout(handle) }
-  }, [open, activeTab, search, runSearch])
+  }, [open, activeTab, search, runSearch, hubDefaultResults])
 
   const restoreActiveTheme = useCallback(() => {
     clearPackColors()
@@ -181,6 +191,10 @@ export function ThemePacksModal({
       setConfirmRemoveId(null)
       hubPreviewCacheRef.current.clear()
       activePackCacheRef.current = null
+      setHubSearched(false)
+      setHubResults([])
+      setHubDefaultResults([])
+      setSearch('')
     }
   }, [open, previewPostId, restoreActiveTheme])
 
