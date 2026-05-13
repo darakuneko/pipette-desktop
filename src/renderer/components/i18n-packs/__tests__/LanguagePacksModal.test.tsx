@@ -546,6 +546,7 @@ describe('LanguagePacksModal', () => {
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
     await act(async () => { fireEvent.click(screen.getByTestId('language-packs-tab-hub')) })
+    vialAPI.hubListI18nPosts.mockClear()
     await act(async () => {
       fireEvent.change(screen.getByTestId('language-packs-search-input'), { target: { value: 'french' } })
     })
@@ -654,13 +655,16 @@ describe('LanguagePacksModal', () => {
     })
   })
 
-  it('hub initial hint when no search has been performed', async () => {
+  it('hub initial hint: auto-fetches hub list on tab open', async () => {
     render(
       <LanguagePacksModal open onClose={vi.fn()} />,
     )
     await switchToHubTab()
-    expect(screen.getByTestId('language-packs-hub-empty')).toBeTruthy()
-    expect(screen.getByText('common.findOnHubHint')).toBeTruthy()
+    expect(vialAPI.hubListI18nPosts).toHaveBeenCalledWith({ q: '' })
+    await waitFor(() => {
+      expect(screen.getByTestId('language-packs-hub-empty')).toBeTruthy()
+      expect(screen.getByText('i18n.hubEmpty')).toBeTruthy()
+    })
   })
 
   it('hub search error is displayed', async () => {
