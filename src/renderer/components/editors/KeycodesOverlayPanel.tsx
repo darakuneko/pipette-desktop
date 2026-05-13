@@ -88,6 +88,13 @@ export function KeycodesOverlayPanel({
       setZoomInput(String(keyEditorZoom ?? ''))
     }
   }
+  const handleZoomChange = (val: string): void => {
+    setZoomInput(val)
+    const raw = Number(val)
+    if (!Number.isNaN(raw) && onKeyEditorZoomChange) {
+      onKeyEditorZoomChange(clampZoomFactor(raw))
+    }
+  }
   const hasData = dataPanel != null
   const [activeTab, setActiveTab] = useState<OverlayTab>(hasLayoutOptions ? 'layout' : hasData ? 'data' : 'tools')
 
@@ -132,7 +139,7 @@ export function KeycodesOverlayPanel({
       )}
 
       {/* Content area — grid overlay keeps both tabs in DOM for stable width */}
-      <div className="flex-1 grid min-h-0">
+      <div className="flex-1 grid grid-cols-1 min-h-0">
         {hasLayoutOptions && layoutOptions && layoutValues && onLayoutOptionChange && (
           <div
             className={`col-start-1 row-start-1 flex flex-col min-h-0 ${activeTab !== 'layout' ? 'invisible' : ''}`}
@@ -181,16 +188,21 @@ export function KeycodesOverlayPanel({
             {/* Key editor zoom */}
             {onKeyEditorZoomChange && (
               <div className={ROW_CLASS} data-testid="overlay-key-editor-zoom-row">
-                <span className="text-[13px] font-medium text-content">
-                  {t('editorSettings.keyEditorZoom')}
-                </span>
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <span className="text-[13px] font-medium text-content">
+                    {t('editorSettings.keyEditorZoom')}
+                  </span>
+                  <span className="text-xs text-content-muted">
+                    {t('settings.zoomLevelWarning')}
+                  </span>
+                </div>
                 <div className="flex items-center gap-1.5">
                   <input
                     type="number"
                     min={ZOOM_FACTOR_MIN}
                     max={ZOOM_FACTOR_MAX}
                     value={zoomInput}
-                    onChange={(e) => { setZoomInput(e.target.value) }}
+                    onChange={(e) => handleZoomChange(e.target.value)}
                     onBlur={() => commitZoom()}
                     onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
                     className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right"

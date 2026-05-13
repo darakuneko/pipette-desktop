@@ -1019,7 +1019,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             }
             panelOverlay={
               <div id="keycodes-overlay-panel" ref={layoutPanelRef}
-                className={`absolute inset-y-0 right-0 z-10 w-fit min-w-[360px] rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`absolute inset-y-0 right-0 z-10 w-fit min-w-[360px] max-w-[420px] rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
                 inert={!layoutPanelOpen || undefined}
               >
                 <KeycodesOverlayPanel
