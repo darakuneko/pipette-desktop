@@ -34,6 +34,8 @@ import { secureHandle, secureOn } from './ipc-guard'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
 
+app.setDesktopName('pipette')
+
 // Linux: disable GPU sandbox only when chrome-sandbox lacks SUID root.
 // Packaged builds with correct permissions keep the GPU sandbox enabled.
 if (process.platform === 'linux') {
@@ -78,6 +80,7 @@ function createWindow(): void {
     height: saved.height,
     minWidth: 1320,
     minHeight: 960,
+    icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
