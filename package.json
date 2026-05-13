@@ -83,7 +83,6 @@
   },
   "build": {
     "appId": "app.pipette.desktop",
-    "productName": "Pipette",
     "npmRebuild": false,
     "directories": {
       "output": "dist"
