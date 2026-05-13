@@ -351,8 +351,11 @@ describe('ThemePacksModal', () => {
     render(
       <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
     )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
-    fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'neon' } })
+    await act(async () => { fireEvent.click(screen.getByTestId('theme-packs-tab-hub')) })
+    vialAPI.hubListThemePosts.mockClear()
+    await act(async () => {
+      fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'neon' } })
+    })
     expect(vialAPI.hubListThemePosts).not.toHaveBeenCalled()
     await act(async () => { vi.advanceTimersByTime(300) })
     vi.useRealTimers()
@@ -360,6 +363,11 @@ describe('ThemePacksModal', () => {
   })
 
   it('shows hub results after search returns items', async () => {
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ q: '' }))
     vialAPI.hubListThemePosts.mockResolvedValueOnce({
       success: true,
       data: {
@@ -368,10 +376,6 @@ describe('ThemePacksModal', () => {
         ],
       },
     })
-    render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
-    )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
     fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'retro' } })
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => {
@@ -381,6 +385,11 @@ describe('ThemePacksModal', () => {
   })
 
   it('hub download action calls hubDownloadThemePost and applyImport', async () => {
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ q: '' }))
     vialAPI.hubListThemePosts.mockResolvedValueOnce({
       success: true,
       data: {
@@ -389,10 +398,6 @@ describe('ThemePacksModal', () => {
         ],
       },
     })
-    render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
-    )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
     fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'dark' } })
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => expect(screen.getByTestId('theme-packs-hub-download-hub-2')).toBeTruthy())
@@ -403,6 +408,11 @@ describe('ThemePacksModal', () => {
 
   it('hub row shows installed label when pack is already installed', async () => {
     metas = [meta({ id: 'local1', name: 'Existing', hubPostId: 'hub-3' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ q: '' }))
     vialAPI.hubListThemePosts.mockResolvedValueOnce({
       success: true,
       data: {
@@ -411,10 +421,6 @@ describe('ThemePacksModal', () => {
         ],
       },
     })
-    render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
-    )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
     fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'exist' } })
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => expect(screen.getByTestId('theme-packs-hub-row-hub-3')).toBeTruthy())
@@ -450,6 +456,11 @@ describe('ThemePacksModal', () => {
   })
 
   it('preview button calls hubDownloadThemePost', async () => {
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ q: '' }))
     vialAPI.hubListThemePosts.mockResolvedValueOnce({
       success: true,
       data: {
@@ -458,10 +469,6 @@ describe('ThemePacksModal', () => {
         ],
       },
     })
-    render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
-    )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
     fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'preview' } })
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => expect(screen.getByTestId('theme-packs-hub-preview-hub-p')).toBeTruthy())
@@ -643,6 +650,11 @@ describe('ThemePacksModal', () => {
 
   it('does not treat deleted (tombstoned) metas as installed in hub rows', async () => {
     metas = [meta({ id: 'del1', name: 'Deleted', hubPostId: 'hp-del1', deletedAt: '2026-01-01' })]
+    render(
+      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
+    )
+    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
+    await waitFor(() => expect(vialAPI.hubListThemePosts).toHaveBeenCalledWith({ q: '' }))
     vialAPI.hubListThemePosts.mockResolvedValueOnce({
       success: true,
       data: {
@@ -651,10 +663,6 @@ describe('ThemePacksModal', () => {
         ],
       },
     })
-    render(
-      <ThemePacksModal open onClose={vi.fn()} onThemeChange={vi.fn()} />,
-    )
-    fireEvent.click(screen.getByTestId('theme-packs-tab-hub'))
     fireEvent.change(screen.getByTestId('theme-packs-search-input'), { target: { value: 'deleted' } })
     fireEvent.click(screen.getByTestId('theme-packs-search-button'))
     await waitFor(() => expect(screen.getByTestId('theme-packs-hub-row-hp-del1')).toBeTruthy())
