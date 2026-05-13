@@ -223,11 +223,11 @@ describe('KeyLabelsModal', () => {
   it('triggers hub search when Search button clicked', async () => {
     render(<KeyLabelsModal open onClose={vi.fn()} currentDisplayName="me" hubCanWrite />)
     fireEvent.click(screen.getByTestId('key-labels-tab-hub'))
+    await waitFor(() => expect(hubSearch).toHaveBeenCalledWith({ q: '', perPage: 50 }))
+    hubSearch.mockClear()
     fireEvent.change(screen.getByTestId('key-labels-search-input'), { target: { value: 'french' } })
     fireEvent.click(screen.getByTestId('key-labels-search-button'))
-
-    await waitFor(() => expect(hubSearch).toHaveBeenCalled())
-    expect(hubSearch).toHaveBeenCalledWith({ q: 'french', perPage: 50 })
+    await waitFor(() => expect(hubSearch).toHaveBeenCalledWith({ q: 'french', perPage: 50 }))
   })
 
   it('shows hub-only rows after a search returns items', async () => {
