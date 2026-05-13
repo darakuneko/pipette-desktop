@@ -72,6 +72,7 @@ export function KeyLabelsModal({
   const [activeTab, setActiveTab] = useState<TabId>('installed')
   const [search, setSearch] = useState('')
   const [hubResults, setHubResults] = useState<HubKeyLabelItem[]>([])
+  const [hubDefaultResults, setHubDefaultResults] = useState<HubKeyLabelItem[]>([])
   const [hubSearched, setHubSearched] = useState(false)
   const [hubSearching, setHubSearching] = useState(false)
   const [pendingId, setPendingId] = useState<string | null>(null)
@@ -156,7 +157,6 @@ export function KeyLabelsModal({
   useEffect(() => { tRef.current = t }, [t])
 
   const runSearch = useCallback(async (query: string): Promise<void> => {
-    if (query.length < 2) return
     setHubSearching(true)
     setActionError(null)
     const res = await labelsRef.current.hubSearch({ q: query, perPage: 50 })
@@ -167,29 +167,44 @@ export function KeyLabelsModal({
       setHubResults([])
       return
     }
-    setHubResults((res.data as HubKeyLabelListResponse).items)
+    const items = (res.data as HubKeyLabelListResponse).items
+    setHubResults(items)
+    if (!query.trim()) setHubDefaultResults(items)
   }, [])
 
   const triggerSearch = useCallback((): void => {
     void runSearch(search.trim())
   }, [runSearch, search])
 
-  // Debounced auto-search: once the user has typed 2+ characters,
-  // queue a search 300ms after the last keystroke. Below the
-  // threshold we reset the result panel back to the initial hint
-  // (only when there is something to clear, to avoid setState ↔
-  // effect feedback loops).
+  // Auto-fetch Hub list when the hub tab becomes active.
+  // Re-fetches each time the modal is opened so results stay fresh.
+  useEffect(() => {
+    if (!open || activeTab !== 'hub' || hubSearched) return
+    void runSearch('')
+  }, [open, activeTab, hubSearched, runSearch])
+
+  // Reset hub state when modal closes so next open re-fetches fresh data.
+  useEffect(() => {
+    if (!open) {
+      setHubSearched(false)
+      setHubResults([])
+      setHubDefaultResults([])
+      setSearch('')
+    }
+  }, [open])
+
+  // Debounced search: fire once the user has typed 2+ characters.
+  // Below the threshold restore the initial results instead of clearing.
   useEffect(() => {
     if (activeTab !== 'hub') return
     const query = search.trim()
     if (query.length < 2) {
-      setHubResults((prev) => (prev.length === 0 ? prev : []))
-      setHubSearched((prev) => (prev ? false : prev))
+      if (hubDefaultResults.length > 0) setHubResults(hubDefaultResults)
       return
     }
     const handle = window.setTimeout(() => { void runSearch(query) }, 300)
     return () => { window.clearTimeout(handle) }
-  }, [activeTab, search, runSearch])
+  }, [activeTab, search, runSearch, hubDefaultResults])
 
   const handleSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>): void => {
     if (event.key === 'Enter') {
