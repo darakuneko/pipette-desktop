@@ -129,11 +129,17 @@ export function QuickSettingsSelects({
           {editMode ? t('common.done') : t('common.edit')}
         </button>
       </div>
-      <LanguagePacksModal open={activeModal === 'language'} onClose={closeModal} />
+      <LanguagePacksModal
+        open={activeModal === 'language'}
+        onClose={closeModal}
+        currentDisplayName={hubDisplayName}
+        hubCanWrite={hubCanWrite}
+      />
       <ThemePacksModal
         open={activeModal === 'theme'}
         onClose={closeModal}
         onThemeChange={onThemeChange}
+        hubCanWrite={hubCanWrite}
       />
       <KeyLabelsModal
         open={activeModal === 'keyLabels'}
