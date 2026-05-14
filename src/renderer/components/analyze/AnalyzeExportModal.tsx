@@ -608,6 +608,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                           role="listbox"
                           aria-multiselectable
                         >
+                          {/* Exception: maxHeight is a runtime value computed from layout measurements; no static Tailwind class can express this. */}
                           <div className="overflow-y-auto" style={{ maxHeight: targetPopoverMaxH }}>
                             {layoutOptions.map((opt) => (
                               <label

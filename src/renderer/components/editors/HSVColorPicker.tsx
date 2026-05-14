@@ -317,6 +317,9 @@ export function HSVColorPicker({
       ) : (
         <>
           {/* Saturation-Value picker area */}
+          {/* Exception: HSV gradient requires absolute #000/#fff as algorithm-level
+              canvas colors for the saturation/value axes; these are not theme
+              colors and must not be replaced with CSS variables. */}
           <div
             ref={svRef}
             data-testid="sv-picker"
@@ -329,6 +332,9 @@ export function HSVColorPicker({
             }}
             {...svHandlers}
           >
+            {/* Exception: border-white keeps the cursor thumb visible across the
+                full gradient (dark→light); border-content-inverse flips to near-black
+                in dark mode, making it invisible against dark gradient areas. */}
             <div
               className="pointer-events-none absolute h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
               style={{
@@ -346,6 +352,8 @@ export function HSVColorPicker({
             style={{ background: HUE_GRADIENT, touchAction: 'none' }}
             {...hueHandlers}
           >
+            {/* Exception: border-white keeps the hue thumb visible across all
+                hue colors; same rationale as the SV picker cursor above. */}
             <div
               className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow"
               style={{

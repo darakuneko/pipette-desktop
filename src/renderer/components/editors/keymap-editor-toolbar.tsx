@@ -24,7 +24,7 @@ export function ScaleInput({ scale, onScaleChange }: { scale: number; onScaleCha
       <button
         type="button"
         data-testid="scale-display"
-        className="size-[34px] rounded-md border border-edge text-xs leading-none tabular-nums text-content-secondary hover:text-content transition-colors flex items-center justify-center"
+        className="size-scale-btn rounded-md border border-edge text-xs leading-none tabular-nums text-content-secondary hover:text-content transition-colors flex items-center justify-center"
         onClick={() => { setDraft(String(Math.round(scale * 100))); setEditing(true) }}
       >
         {display}
@@ -36,7 +36,7 @@ export function ScaleInput({ scale, onScaleChange }: { scale: number; onScaleCha
     <input
       ref={inputRef}
       data-testid="scale-input"
-      className="size-[34px] rounded-md border border-accent bg-transparent text-xs leading-none tabular-nums text-content text-center outline-none"
+      className="size-scale-btn rounded-md border border-accent bg-transparent text-xs leading-none tabular-nums text-content text-center outline-none"
       value={draft}
       autoFocus
       onFocus={() => inputRef.current?.select()}

@@ -80,6 +80,8 @@ interface LeafProps {
 
 function Leaf({ label, depth, active, onClick, testId }: LeafProps) {
   return (
+    // Exception: paddingLeft is runtime-computed from `depth` using a 14px-per-level
+    // step (not on the 4px grid); Tailwind cannot express a prop-driven indentation.
     <button
       type="button"
       className={active ? LEAF_ACTIVE : LEAF_IDLE}
@@ -104,6 +106,7 @@ interface BranchProps {
 function Branch({ label, depth, open, onToggle, testId, children }: BranchProps) {
   return (
     <>
+      {/* Exception: same as Leaf — runtime depth-based indentation, off-grid 14px step */}
       <button
         type="button"
         className={`${BRANCH_BASE} text-content-secondary hover:text-content`}
