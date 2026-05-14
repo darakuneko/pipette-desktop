@@ -503,7 +503,7 @@ export function TypingTestPane({
                   type="button"
                   role="menuitem"
                   data-testid="reset-window-size"
-                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  className={`whitespace-nowrap ${BTN_TOGGLE_INACTIVE}`}
                   onClick={() => {
                     const size = getDefaultCompactSize()
                     window.vialAPI.setWindowCompactMode(true, size).catch(() => {})
@@ -517,7 +517,7 @@ export function TypingTestPane({
                   type="button"
                   role="menuitem"
                   data-testid="fit-window-size"
-                  className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                  className={`whitespace-nowrap ${BTN_TOGGLE_INACTIVE}`}
                   onClick={() => {
                     const defaultSize = getDefaultCompactSize()
                     const ratio = defaultSize.height / defaultSize.width
@@ -590,7 +590,7 @@ export function TypingTestPane({
                     type="button"
                     role="menuitem"
                     data-testid="view-analytics"
-                    className="whitespace-nowrap rounded border border-edge px-2 py-1 text-content-secondary transition-colors hover:text-content"
+                    className={`whitespace-nowrap ${BTN_TOGGLE_INACTIVE}`}
                     onClick={() => {
                       setViewOnlyControlsOpen(false)
                       onViewAnalytics()

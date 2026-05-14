@@ -40,6 +40,7 @@ import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/typ
 import type { ActivityCalendarFilters } from '../../../shared/types/analyze-filters'
 import type { ActivityMetric, ActivityView, DeviceScope, RangeMs } from './analyze-types'
 import { ActivityCalendarChart } from './ActivityCalendarChart'
+import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -320,12 +321,12 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+              tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
               stroke="var(--color-edge)"
               interval={0}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+              tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
               stroke="var(--color-edge)"
               allowDecimals={false}
             />
