@@ -177,6 +177,9 @@ function clampNormalized(value: number, origin: number, size: number): number {
   return clamp((value - origin) / size, 0, 1)
 }
 
+// Exception: uses rounded-md (not rounded) to match the picker panel's
+// larger radius tier, and hover:text-content instead of hover:bg-surface-dim.
+// Cannot use BTN_TOGGLE_ACTIVE/INACTIVE from ui-tokens (those use rounded + px-2 py-1).
 function toggleButtonClass(active: boolean): string {
   const base = 'rounded-md border px-3 py-1.5 text-sm transition-colors'
   if (active) return `${base} border-accent bg-accent/10 text-accent`
