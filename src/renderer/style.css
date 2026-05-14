@@ -27,7 +27,7 @@
 }
 .rdp-root .rdp-day_button {
   color: var(--content);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 400;
 }
 .rdp-root .rdp-selected .rdp-day_button {
