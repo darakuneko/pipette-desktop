@@ -1,0 +1,18 @@
+{
+  "name": "QWERTY (Mac)",
+  "map": {
+    "KC_LGUI": "⌘\ncmd",
+    "KC_RGUI": "⌘\ncmd",
+    "KC_LALT": "⌥\noption",
+    "KC_RALT": "⌥\noption",
+    "KC_LCTRL": "⌃\ncontrol",
+    "KC_RCTRL": "⌃\ncontrol",
+    "KC_LSHIFT": "⇧\nshift",
+    "KC_RSHIFT": "⇧\nshift",
+    "KC_ENTER": "return",
+    "KC_BSPACE": "⌫\ndelete",
+    "KC_DELETE": "⌦\ndelete",
+    "KC_SPACE": "␣",
+    "KC_KP_ENTER": "enter"
+  }
+}
