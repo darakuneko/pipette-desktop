@@ -12,11 +12,11 @@ export const INPUT_COMPACT =
   'focus:border-accent focus:outline-none'
 
 // Modal width tiers — use these instead of inline w-[*px] values.
-export const MODAL_SM  = 'w-[440px]  max-w-[90vw]'
-export const MODAL_MD  = 'w-[600px]  max-w-[90vw]'
-export const MODAL_LG  = 'w-[760px]  max-w-[90vw]'
-export const MODAL_XL  = 'w-[960px]  max-w-[95vw]'
-export const MODAL_2XL = 'w-[1200px] max-w-[95vw]'
+export const MODAL_SM  = 'w-modal-sm  max-w-[90vw]'
+export const MODAL_MD  = 'w-modal-md  max-w-[90vw]'
+export const MODAL_LG  = 'w-modal-lg  max-w-[90vw]'
+export const MODAL_XL  = 'w-modal-xl  max-w-[95vw]'
+export const MODAL_2XL = 'w-modal-2xl max-w-[95vw]'
 
 export const ACTION_BTN =
   'text-xs font-medium text-content hover:text-content cursor-pointer bg-transparent border-none px-2 py-1 rounded'

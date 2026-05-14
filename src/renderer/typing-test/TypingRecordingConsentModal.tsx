@@ -10,6 +10,7 @@ import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
+import { BTN_SECONDARY } from '../constants/ui-tokens'
 
 interface Props {
   /** Called when the user clicks "Enable" — caller is expected to
@@ -47,7 +48,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
       onClick={handleBackdropClick}
       data-testid="typing-consent-modal"
     >
-      <div className="flex w-modal-typing flex-col rounded-xl border border-edge bg-surface shadow-2xl">
+      <div className="flex w-modal-typing flex-col rounded-2xl border border-edge bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 id="typing-consent-title" className="text-lg font-semibold text-content">
             {t('editor.typingTest.consent.title')}
@@ -83,7 +84,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
             type="button"
             data-testid="typing-consent-cancel"
             onClick={onCancel}
-            className="rounded border border-edge px-3 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
+            className={BTN_SECONDARY}
           >
             {t('common.cancel')}
           </button>

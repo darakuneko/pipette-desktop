@@ -89,7 +89,7 @@ export function LanguageSelectorModal({ currentLanguage, onSelectLanguage, onClo
       role="dialog"
       onClick={handleBackdropClick}
     >
-      <div className="flex h-modal-80vh w-modal-typing flex-col rounded-xl border border-edge bg-surface shadow-2xl">
+      <div className="flex h-modal-80vh w-modal-typing flex-col rounded-2xl border border-edge bg-surface shadow-xl">
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 className="text-lg font-semibold text-content">{t('editor.typingTest.language.title')}</h2>
           <ModalCloseButton testid="language-modal-close" onClick={onClose} />
