@@ -317,7 +317,7 @@ function PairIntervalThresholdInput({
         }}
         aria-label={t('analyze.bigrams.pairIntervalThreshold.ariaLabel')}
         data-testid={testId}
-        className="w-14 rounded border border-edge bg-surface px-1 py-0.5 text-right tabular-nums text-content"
+        className="w-14 rounded border border-edge bg-surface px-1 py-0.5 text-right tabular-nums text-content focus:border-accent focus:outline-none"
       />
       <span>{t('analyze.bigrams.pairIntervalThreshold.suffix')}</span>
     </span>

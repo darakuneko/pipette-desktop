@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
+import { INPUT_BASE } from './store-modal-shared'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import type { MacroAction } from '../../../preload/macro'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
@@ -110,7 +111,7 @@ export function TapDanceModal({
             max={TAPPING_TERM_MAX}
             value={editedEntry?.tappingTerm ?? 0}
             onChange={(e) => handleTappingTermChange(e.target.value)}
-            className="flex-1 rounded border border-edge px-2 py-1 text-sm"
+            className={`flex-1 ${INPUT_BASE}`}
           />
         </div>
       )}
