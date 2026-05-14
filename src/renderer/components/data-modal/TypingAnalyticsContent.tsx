@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingDailySummary } from '../../../shared/types/typing-analytics'
+import { BTN_DANGER_OUTLINE, BTN_SECONDARY } from '../../constants/ui-tokens'
 
 interface Props {
   uid: string
@@ -17,9 +18,6 @@ interface Props {
    * days are being shown and acted on. */
   machineHash?: string
 }
-
-const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50 disabled:cursor-not-allowed'
-const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
 
 /** Local-time label for the next UTC midnight — used to tell the user
  * when a `live-day-locked` import target will stop being the live day.
@@ -313,7 +311,7 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
   const inProgress = importStatus?.phase === 'importing' || importStatus?.phase === 'exporting'
   const importBanner = importStatus ? (
     <div
-      className={`mb-2 flex items-start gap-2 rounded border px-3 py-2 text-[13px] shrink-0 ${bannerTone}`}
+      className={`mb-2 flex items-start gap-2 rounded border px-3 py-2 text-sm shrink-0 ${bannerTone}`}
       data-testid="typing-import-status"
     >
       <div className="flex-1 space-y-1 min-w-0">
@@ -362,14 +360,14 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
   ) : null
 
   if (loading) {
-    return <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
+    return <div className="py-4 text-center text-sm text-content-muted">{t('common.loading')}</div>
   }
 
   if (summaries.length === 0) {
     return (
       <div className="flex flex-col h-full" data-testid="typing-empty">
         {importBanner}
-        <div className="flex-1 py-4 text-center text-[13px] text-content-muted">
+        <div className="flex-1 py-4 text-center text-sm text-content-muted">
           {t('dataModal.typing.noItems')}
         </div>
         {footer}
@@ -380,14 +378,14 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
   return (
     <div className="flex flex-col h-full" data-testid="typing-list">
       {importBanner}
-      <div className="py-2 text-[13px] text-content-muted shrink-0">
+      <div className="py-2 text-sm text-content-muted shrink-0">
         {t('dataModal.typing.summaryLine', {
           days: summaries.length,
           keystrokes: totalKeystrokes.toLocaleString(),
         })}
       </div>
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <table className="w-full text-[13px]">
+        <table className="w-full text-sm">
           <thead className="sticky top-0 bg-surface">
             <tr className="border-b border-edge text-content-secondary">
               <th className="w-8 py-1.5 px-2 text-left">

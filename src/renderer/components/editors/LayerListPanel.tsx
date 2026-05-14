@@ -2,11 +2,12 @@
 
 import { useTranslation } from 'react-i18next'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ICON_SM } from '../../constants/ui-tokens'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 import { Tooltip } from '../ui/Tooltip'
 
-const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-[12px] font-semibold tabular-nums transition-colors'
+const LAYER_NUM_BASE = 'w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 cursor-pointer text-xs font-semibold tabular-nums transition-colors'
 const LAYER_NAME_BASE = 'flex-1 min-w-0 rounded-md border px-3 py-1.5 transition-colors'
 
 function layerNumClass(active: boolean): string {
@@ -76,7 +77,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
   // visible area so names slide out horizontally.
   return (
     <div
-      className="shrink-0 overflow-hidden rounded-[10px] border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
+      className="shrink-0 overflow-hidden rounded-xl border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
       style={{ width: collapsed ? PANEL_COLLAPSED_WIDTH : '11rem' }}
       data-testid={collapsed ? 'layer-list-panel-collapsed' : 'layer-list-panel'}
     >
@@ -104,7 +105,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
                     {isEditing && onSetLayerName ? (
                       <input
                         data-testid={`layer-panel-layer-name-input-${i}`}
-                        className="w-full border-b border-edge bg-transparent text-[12px] text-content outline-none focus:border-accent"
+                        className="w-full border-b border-edge bg-transparent text-xs text-content outline-none focus:border-accent"
                         value={layerRename.editLabel}
                         onChange={(e) => layerRename.setEditLabel(e.target.value)}
                         placeholder={defaultLabel}
@@ -115,7 +116,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
                       />
                     ) : (
                       <span
-                        className={`block truncate text-[12px] ${isActive ? 'text-content' : 'text-content-secondary'}`}
+                        className={`block truncate text-xs ${isActive ? 'text-content' : 'text-content-secondary'}`}
                         data-testid={`layer-panel-layer-name-${i}`}
                       >
                         {name || defaultLabel}
@@ -138,7 +139,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
                 aria-label={collapsed ? t('editor.keymap.expandLayers') : t('editor.keymap.collapseLayers')}
                 data-testid={collapsed ? 'layer-panel-expand-btn' : 'layer-panel-collapse-btn'}
               >
-                {collapsed ? <ChevronsRight size={14} aria-hidden="true" /> : <ChevronsLeft size={14} aria-hidden="true" />}
+                {collapsed ? <ChevronsRight size={ICON_SM} aria-hidden="true" /> : <ChevronsLeft size={ICON_SM} aria-hidden="true" />}
               </button>
             </Tooltip>
           </div>

@@ -8,9 +8,6 @@ import type { HubMyPost } from '../../shared/types/hub'
 
 export const DEFAULT_PER_PAGE = 10
 
-export const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
-export const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
-
 interface HubPostRowProps {
   post: HubMyPost
   onRename: (postId: string, newTitle: string) => Promise<void>
@@ -122,7 +119,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
               {post.title}
             </span>
           )}
-          <span className="text-[11px] text-content-muted truncate">
+          <span className="text-xs text-content-muted truncate">
             {post.keyboard_name} · {formatDate(post.created_at)}
           </span>
         </div>

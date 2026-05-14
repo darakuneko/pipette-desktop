@@ -155,13 +155,13 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-streak-goal-section">
       <div className="flex items-center gap-3">
-        <h3 className="text-[13px] font-semibold text-content">
+        <h3 className="text-sm font-semibold text-content">
           {t('analyze.streakGoal.sectionTitle')}
         </h3>
         <button
           type="button"
           onClick={() => setHistoryOpen(true)}
-          className="rounded border border-edge bg-surface px-3 py-1 text-[11px] text-content-secondary transition-colors hover:border-accent hover:text-content"
+          className="rounded border border-edge bg-surface px-3 py-1 text-xs text-content-secondary transition-colors hover:border-accent hover:text-content"
           data-testid="analyze-streak-goal-history-open"
         >
           {t('analyze.streakGoal.historyButton')}
@@ -230,7 +230,7 @@ function InlineGoalSettings({ goalDays, goalKeystrokes, onSave }: InlineGoalSett
             ariaLabel={t('analyze.streakGoal.goalKeystrokesAria')}
             testid="analyze-streak-goal-keystrokes"
           />
-          <span className="text-[11px] text-content-muted">{t('analyze.streakGoal.keystrokesUnit')}</span>
+          <span className="text-xs text-content-muted">{t('analyze.streakGoal.keystrokesUnit')}</span>
         </span>
         <span className="inline-flex items-baseline gap-1">
           <InlineNumberField
@@ -244,12 +244,12 @@ function InlineGoalSettings({ goalDays, goalKeystrokes, onSave }: InlineGoalSett
             ariaLabel={t('analyze.streakGoal.goalDaysAria')}
             testid="analyze-streak-goal-days"
           />
-          <span className="text-[11px] text-content-muted">{t('analyze.streakGoal.daysUnit')}</span>
+          <span className="text-xs text-content-muted">{t('analyze.streakGoal.daysUnit')}</span>
         </span>
       </div>
       {hasPending && (
         <div
-          className="mt-1 rounded border border-accent/40 bg-accent/5 px-1.5 py-1 text-[10px] leading-tight text-content-secondary"
+          className="mt-1 rounded border border-accent/40 bg-accent/5 px-1.5 py-1 text-2xs leading-tight text-content-secondary"
           data-testid="analyze-streak-goal-warning"
         >
           {t('analyze.streakGoal.changeWarning')}
@@ -345,7 +345,7 @@ function InlineNumberField({
         }}
         aria-label={ariaLabel}
         data-testid={testid}
-        className="w-20 border-b border-edge bg-transparent p-0 text-[18px] font-bold text-content outline-none focus:border-accent"
+        className="w-20 border-b border-edge bg-transparent p-0 text-lg font-bold text-content outline-none focus:border-accent"
       />
       {confirmPending && (
         <button
@@ -354,7 +354,7 @@ function InlineNumberField({
           // commit never triggers a stale stageChange that would
           // unmount this button mid-click.
           onMouseDown={(e) => { e.preventDefault(); handleConfirm() }}
-          className="rounded border border-accent bg-accent/10 px-1.5 py-0.5 text-[10px] text-content hover:bg-accent/20"
+          className="rounded border border-accent bg-accent/10 px-1.5 py-0.5 text-2xs text-content hover:bg-accent/20"
           data-testid={`${testid}-confirm`}
         >
           {t('analyze.streakGoal.confirm')}

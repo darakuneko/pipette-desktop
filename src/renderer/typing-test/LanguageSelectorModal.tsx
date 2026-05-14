@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { Check, Download, Trash2, Loader2 } from 'lucide-react'
+import { ICON_SM } from '../constants/ui-tokens'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 
 interface Props {
@@ -179,12 +180,12 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
       onClick={canSelect ? () => onSelect(lang.name) : undefined}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        {isCurrent && <Check size={14} className="shrink-0 text-accent" aria-hidden="true" />}
+        {isCurrent && <Check size={ICON_SM} className="shrink-0 text-accent" aria-hidden="true" />}
         <span className={`truncate ${isCurrent ? 'font-semibold text-accent' : 'text-content'}`}>
           {formatName(lang.name)}
         </span>
         {lang.rightToLeft && (
-          <span className="shrink-0 rounded bg-surface-alt px-1 py-0.5 text-[10px] text-content-muted">RTL</span>
+          <span className="shrink-0 rounded bg-surface-alt px-1 py-0.5 text-2xs text-content-muted">RTL</span>
         )}
       </div>
 
@@ -204,9 +205,9 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
           disabled={isDownloading}
         >
           {isDownloading ? (
-            <Loader2 size={14} className="animate-spin" aria-hidden="true" />
+            <Loader2 size={ICON_SM} className="animate-spin" aria-hidden="true" />
           ) : (
-            <Download size={14} aria-hidden="true" />
+            <Download size={ICON_SM} aria-hidden="true" />
           )}
         </button>
       )}
@@ -215,13 +216,13 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
         <button
           type="button"
           data-testid={`language-delete-${lang.name}`}
-          className="shrink-0 rounded p-1 text-content-muted hover:text-red-500"
+          className="shrink-0 rounded p-1 text-content-muted hover:text-danger"
           onClick={(e) => {
             e.stopPropagation()
             onDelete(lang.name)
           }}
         >
-          <Trash2 size={14} aria-hidden="true" />
+          <Trash2 size={ICON_SM} aria-hidden="true" />
         </button>
       )}
     </div>

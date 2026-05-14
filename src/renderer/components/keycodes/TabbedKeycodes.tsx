@@ -9,6 +9,7 @@ import { useAppConfig } from '../../hooks/useAppConfig'
 import { KEYCODE_CATEGORIES, groupByLayoutRow, type KeycodeCategory, type KeycodeGroup } from './categories'
 import { getLayoutsForViewType } from './display-keyboard-defs'
 import { X } from 'lucide-react'
+import { ICON_MD } from '../../constants/ui-tokens'
 import { UpwardSelect } from '../UpwardSelect'
 import { KeycodeGrid } from './KeycodeGrid'
 import { BasicKeyboardView } from './BasicKeyboardView'
@@ -447,7 +448,7 @@ export function TabbedKeycodes({
   return (
     <div
       ref={containerRef}
-      className="relative flex flex-col rounded-[10px] border border-edge bg-picker-bg min-h-0 flex-1"
+      className="relative flex flex-col rounded-xl border border-edge bg-picker-bg min-h-0 flex-1"
       data-testid="tabbed-keycodes-root"
       onClick={handleBackgroundClick}
     >
@@ -494,7 +495,7 @@ export function TabbedKeycodes({
                 onClick={onClose}
                 aria-label={t('common.close')}
               >
-                <X size={16} aria-hidden="true" />
+                <X size={ICON_MD} aria-hidden="true" />
               </button>
             )}
           </div>
@@ -534,7 +535,7 @@ export function TabbedKeycodes({
         {(showHint || (activeTab === 'basic' && onBasicViewTypeChange)) && (
           <div className="flex items-center justify-between px-3 pb-1.5">
             {showHint && (
-              <p className="text-[11px] text-content-muted">{t('editor.keymap.pickerHint')}</p>
+              <p className="text-xs text-content-muted">{t('editor.keymap.pickerHint')}</p>
             )}
             {activeTab === 'basic' && onBasicViewTypeChange && (
               <UpwardSelect
@@ -561,7 +562,7 @@ export function TabbedKeycodes({
             transform: 'translateY(-100%)',
           }}
         >
-          <div className="text-[10px] leading-snug text-content-muted whitespace-nowrap">
+          <div className="text-2xs leading-snug text-content-muted whitespace-nowrap">
             {tooltip.keycode.qmkId}
           </div>
           {tooltip.keycode.tooltip && (

@@ -17,6 +17,7 @@ import { JsonEditorModal } from './JsonEditorModal'
 import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeatKeyToJson, parseAltRepeatKey, macroToJson, parseMacro } from './json-entry-serializers'
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
+import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
 import { parseKle } from '../../../shared/kle/kle-parser'
 import { decodeLayoutOptions } from '../../../shared/kle/layout-options'
 import { posKey } from '../../../shared/kle/pos-key'
@@ -714,7 +715,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   const activPickerKeycodes = pickerFileData ? filePickerKeycodes : pickerKeycodes
 
   const layerBtnClass = (active: boolean) =>
-    `min-w-7 max-w-20 shrink-0 truncate rounded-md border px-1.5 py-1 text-center text-[12px] font-semibold tabular-nums transition-colors ${
+    `min-w-7 max-w-20 shrink-0 truncate rounded-md border px-1.5 py-1 text-center text-xs font-semibold tabular-nums transition-colors ${
       active ? 'border-accent bg-accent text-content-inverse' : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
     }`
   const sourceBtnClass = (active: boolean) =>
@@ -784,7 +785,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                   className="flex flex-col rounded-lg border border-edge px-3 py-2 text-left text-sm transition-colors hover:bg-surface-dim"
                   onClick={() => handleLoadSnapshotEntry(selectedFileUid!, entry.id)}>
                   <span className="font-medium text-content">{entry.label || entry.filename}</span>
-                  <span className="text-[11px] text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
+                  <span className="text-xs text-content-muted">{new Date(entry.savedAt).toLocaleString()}</span>
                 </button>
               )) : (
                 <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerNoEntries')}</p>
@@ -816,7 +817,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                 className="pointer-events-none absolute z-50 rounded-md border border-edge bg-surface-alt px-2.5 py-1.5 shadow-lg"
                 style={{ top: pickerTooltip.top - 4, left: pickerTooltip.left, transform: 'translate(-50%, -100%)' }}
               >
-                <div className="text-[10px] leading-snug text-content-muted whitespace-nowrap">{pickerTooltip.keycode}</div>
+                <div className="text-2xs leading-snug text-content-muted whitespace-nowrap">{pickerTooltip.keycode}</div>
               </div>
             )}
           </div>
@@ -843,7 +844,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
               disabled={pickerEffectiveScale <= MIN_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.max(MIN_SCALE, +(pickerEffectiveScale - 0.1).toFixed(1))); else onScaleChange?.(-0.1) }}>
-              <ZoomOut size={14} aria-hidden="true" />
+              <ZoomOut size={ICON_SM} aria-hidden="true" />
             </button>
           </Tooltip>
           <ScaleInput scale={pickerEffectiveScale} onScaleChange={(delta) => {
@@ -855,7 +856,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               className="rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-30 disabled:pointer-events-none"
               disabled={pickerEffectiveScale >= MAX_SCALE}
               onClick={() => { if (pickerFileData) setPickerScale(Math.min(MAX_SCALE, +(pickerEffectiveScale + 0.1).toFixed(1))); else onScaleChange?.(0.1) }}>
-              <ZoomIn size={14} aria-hidden="true" />
+              <ZoomIn size={ICON_SM} aria-hidden="true" />
             </button>
           </Tooltip>
         </div>
@@ -884,12 +885,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <>
           <Tooltip content={t('editor.keymap.undo')} side="right">
             <button type="button" data-testid="undo-button" aria-label={t('editor.keymap.undo')} className={zoomButtonClass} disabled={!history.canUndo} onClick={() => void handleUndo()}>
-              <Undo2 size={16} aria-hidden="true" />
+              <Undo2 size={ICON_MD} aria-hidden="true" />
             </button>
           </Tooltip>
           <Tooltip content={t('editor.keymap.redo')} side="right">
             <button type="button" data-testid="redo-button" aria-label={t('editor.keymap.redo')} className={zoomButtonClass} disabled={!history.canRedo} onClick={() => void handleRedo()}>
-              <Redo2 size={16} aria-hidden="true" />
+              <Redo2 size={ICON_MD} aria-hidden="true" />
             </button>
           </Tooltip>
         </>
@@ -899,13 +900,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         <>
           <Tooltip content={t('editor.keymap.zoomIn')} side="right">
             <button type="button" data-testid="zoom-in-button" aria-label={t('editor.keymap.zoomIn')} className={zoomButtonClass} disabled={scaleProp >= MAX_SCALE} onClick={() => onScaleChange(0.1)}>
-              <ZoomIn size={16} aria-hidden="true" />
+              <ZoomIn size={ICON_MD} aria-hidden="true" />
             </button>
           </Tooltip>
           <ScaleInput scale={scaleProp} onScaleChange={onScaleChange} />
           <Tooltip content={t('editor.keymap.zoomOut')} side="right">
             <button type="button" data-testid="zoom-out-button" aria-label={t('editor.keymap.zoomOut')} className={zoomButtonClass} disabled={scaleProp <= MIN_SCALE} onClick={() => onScaleChange(-0.1)}>
-              <ZoomOut size={16} aria-hidden="true" />
+              <ZoomOut size={ICON_MD} aria-hidden="true" />
             </button>
           </Tooltip>
         </>
@@ -1013,7 +1014,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
                   className={`rounded p-1 transition-colors ${layoutPanelOpen ? 'bg-surface-dim text-accent' : 'text-content-secondary hover:bg-surface-dim hover:text-content'}`}
                   onClick={() => { setLayoutPanelOpen((prev) => { if (!prev) onOverlayOpen?.(); return !prev }) }}
                 >
-                  <SlidersHorizontal size={16} aria-hidden="true" />
+                  <SlidersHorizontal size={ICON_MD} aria-hidden="true" />
                 </button>
               </Tooltip>
             }

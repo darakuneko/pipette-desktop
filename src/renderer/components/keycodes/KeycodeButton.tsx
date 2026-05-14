@@ -32,7 +32,7 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
     [keycode, onHover],
   )
 
-  const size = sizeClass ?? 'w-[44px] h-[44px]'
+  const size = sizeClass ?? 'w-key h-key'
   const hover = selected ? '' : 'hover:bg-picker-item-hover'
   // Switch to a 2 × 2 grid for 4-part labels so the picker matches
   // KeyWidget. 1/2/3 parts keep the existing flex-col stack.
@@ -61,7 +61,7 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
       onMouseLeave={onHoverEnd}
     >
       {lines.map((line, i) => (
-        <span key={i} className="leading-tight whitespace-nowrap text-[10px]">
+        <span key={i} className="leading-tight whitespace-nowrap text-2xs">
           {line}
         </span>
       ))}

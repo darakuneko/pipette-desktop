@@ -176,7 +176,7 @@ export function TypingProfileCard({
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-typing-profile-section">
-      <h3 className="text-[13px] font-semibold text-content">
+      <h3 className="text-sm font-semibold text-content">
         {t('analyze.summary.profile.sectionTitle', { days: PROFILE_WINDOW_DAYS })}
       </h3>
       <AnalyzeStatGrid

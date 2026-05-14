@@ -3,6 +3,7 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
+import { ICON_SM } from '../../constants/ui-tokens'
 import { serialize, keycodeTooltip, isMask } from '../../../shared/keycodes/keycodes'
 import { KeyWidget } from '../keyboard/KeyWidget'
 import type { KleKey } from '../../../shared/kle/types'
@@ -145,7 +146,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
         className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
         onClick={(e) => { e.stopPropagation(); onDelete() }}
       >
-        <X size={14} aria-hidden="true" />
+        <X size={ICON_SM} aria-hidden="true" />
       </button>
     </div>
   )

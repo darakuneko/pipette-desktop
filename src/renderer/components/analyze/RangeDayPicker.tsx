@@ -180,7 +180,7 @@ export function RangeDayPicker({
           navLayout="around"
           showOutsideDays
         />
-        <div className="mt-2 flex items-center gap-2 border-t border-edge pt-2 text-[12px] text-content-secondary">
+        <div className="mt-2 flex items-center gap-2 border-t border-edge pt-2 text-xs text-content-secondary">
           <span className="whitespace-nowrap">{format(range.fromMs, 'yyyy/MM/dd')}</span>
           <input
             type="time"

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
+import { ICON_MD } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -441,7 +442,7 @@ export function ThemePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-[760px] max-w-[90vw] h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="theme-packs-modal"
       >
@@ -517,11 +518,11 @@ export function ThemePacksModal({
                       data-testid={`theme-packs-builtin-${mode}`}
                     >
                       {isActive ? (
-                        <CheckCircle2 size={16} className="text-accent" aria-hidden="true" />
+                        <CheckCircle2 size={ICON_MD} className="text-accent" aria-hidden="true" />
                       ) : (
-                        <Circle size={16} aria-hidden="true" />
+                        <Circle size={ICON_MD} aria-hidden="true" />
                       )}
-                      <Icon size={16} aria-hidden="true" />
+                      <Icon size={ICON_MD} aria-hidden="true" />
                       {t(`theme.${mode}`)}
                     </button>
                   )

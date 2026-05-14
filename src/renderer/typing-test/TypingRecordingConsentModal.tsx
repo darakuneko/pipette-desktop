@@ -55,7 +55,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
           <ModalCloseButton testid="typing-consent-close" onClick={onCancel} />
         </div>
 
-        <div className="flex flex-col gap-4 px-5 py-4 text-[13px] text-content">
+        <div className="flex flex-col gap-4 px-5 py-4 text-sm text-content">
           <section>
             <h3 className="mb-2 text-sm font-semibold text-content">
               {t('editor.typingTest.consent.collectedHeading')}
@@ -83,7 +83,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
             type="button"
             data-testid="typing-consent-cancel"
             onClick={onCancel}
-            className="rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim"
+            className="rounded border border-edge px-3 py-1.5 text-sm text-content-secondary hover:bg-surface-dim"
           >
             {t('common.cancel')}
           </button>
@@ -91,7 +91,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
             type="button"
             data-testid="typing-consent-accept"
             onClick={onAccept}
-            className="rounded border border-accent bg-accent/10 px-3 py-1 text-sm text-accent hover:bg-accent/20"
+            className="rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20"
           >
             {t('editor.typingTest.consent.accept')}
           </button>

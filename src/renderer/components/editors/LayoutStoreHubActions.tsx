@@ -138,7 +138,7 @@ export function LayoutStoreHubRow({
   return (
     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="layout-store-hub-row">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+        <span className="text-xs font-medium text-accent">{t('hub.pipetteHub')}</span>
         <div className="flex gap-1">
           {entryHubPostId && hubOrigin && (
             <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entryHubPostId)}`} />
@@ -205,7 +205,7 @@ export function LayoutStoreHubRow({
       </div>
       {hubNeedsDisplayName && (entryHubPostId ? !onUpdateOnHub : !onUploadToHub) && (
         <div
-          className="mt-1 text-[11px] text-content-muted"
+          className="mt-1 text-xs text-content-muted"
           data-testid="layout-store-hub-needs-display-name"
         >
           {t('hub.needsDisplayName')}
@@ -213,7 +213,7 @@ export function LayoutStoreHubRow({
       )}
       {hubUploadResult && (hubUploadResult.entryId === entry.id || hubUploadResult.entryIds?.includes(entry.id)) && (
         <div
-          className={`mt-1 flex items-center text-[11px] font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+          className={`mt-1 flex items-center text-xs font-medium ${hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
           data-testid="layout-store-hub-result"
         >
           {hubUploadResult.message}

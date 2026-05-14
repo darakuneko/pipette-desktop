@@ -121,7 +121,7 @@ export function AppSelect({
         anchorRef={triggerRef}
         open={open}
         onClose={handleClose}
-        className="z-20 max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+        className="z-20 max-h-72 min-w-[200px] overflow-y-auto rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
         role="listbox"
         aria-multiselectable
       >

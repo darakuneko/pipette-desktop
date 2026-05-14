@@ -34,7 +34,7 @@ export function LayoutOptionsPanel({ options, values, onChange }: LayoutOptionsP
       {hasSelect && (
         <select
           ref={selectRef}
-          className="invisible absolute rounded border border-edge px-2.5 py-1.5 text-[13px]"
+          className="invisible absolute rounded border border-edge px-2.5 py-1.5 text-sm"
           tabIndex={-1}
           aria-hidden="true"
         >
@@ -48,7 +48,7 @@ export function LayoutOptionsPanel({ options, values, onChange }: LayoutOptionsP
         const isBoolean = opt.labels.length <= 2
         return (
           <label key={opt.index} className={`${ROW_CLASS} cursor-pointer`}>
-            <span className="text-[13px] font-medium text-content">{opt.labels[0]}</span>
+            <span className="text-sm font-medium text-content">{opt.labels[0]}</span>
             {isBoolean ? (
               <input
                 type="checkbox"
@@ -59,7 +59,7 @@ export function LayoutOptionsPanel({ options, values, onChange }: LayoutOptionsP
               <select
                 value={val}
                 onChange={(e) => onChange(opt.index, Number(e.target.value))}
-                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
                 style={selectWidth ? { width: selectWidth } : undefined}
               >
                 {opt.labels.slice(1).map((label, i) => (

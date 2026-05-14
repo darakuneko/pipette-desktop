@@ -24,7 +24,7 @@ export function LayoutComparisonMetricTable({ columnLabels, targets }: Props): J
   const columnCount = targets.length
   return (
     <table
-      className="w-full table-fixed border-collapse text-[12px]"
+      className="w-full table-fixed border-collapse text-xs"
       data-testid="analyze-layout-comparison-metric-table"
     >
       <thead>
@@ -88,7 +88,7 @@ function SectionHeader({ colSpan, label }: { colSpan: number; label: string }): 
       <th
         scope="row"
         colSpan={colSpan}
-        className="py-1 pr-3 text-left text-[11px] font-semibold uppercase tracking-wide text-content-secondary"
+        className="py-1 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-content-secondary"
       >
         {label}
       </th>

@@ -3,6 +3,7 @@
 import { useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RotateCcw } from 'lucide-react'
+import { ICON_XL } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
@@ -370,7 +371,7 @@ export function TypingTestView({
             onClick={onRestart}
             aria-label={t('editor.typingTest.restart')}
           >
-            <RotateCcw size={18} aria-hidden="true" />
+            <RotateCcw size={ICON_XL} aria-hidden="true" />
           </button>
         </Tooltip>
       </div>

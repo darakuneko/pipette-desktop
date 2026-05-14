@@ -124,21 +124,21 @@ export function BigramsChart({
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-bigrams-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-loading">
         {t('analyze.bigrams.loading')}
       </div>
     )
   }
   if (error) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-bigrams-error">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-error">
         {t('analyze.bigrams.error')}
       </div>
     )
   }
   if (entries.length === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-bigrams-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-empty">
         {t('analyze.bigrams.empty')}
       </div>
     )
@@ -234,7 +234,7 @@ function Quadrant({ title, controls, children }: QuadrantProps): JSX.Element {
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-2 rounded border border-edge p-2">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="text-[12px] font-medium text-content">{title}</div>
+        <div className="text-xs font-medium text-content">{title}</div>
         {controls}
       </div>
       <div className="min-h-0 flex-1 overflow-auto pr-1">{children}</div>
@@ -300,7 +300,7 @@ function PairIntervalThresholdInput({
   }
 
   return (
-    <span className="inline-flex items-center gap-1 text-[12px] text-content-muted">
+    <span className="inline-flex items-center gap-1 text-xs text-content-muted">
       <span>{t('analyze.bigrams.pairIntervalThreshold.label')}</span>
       <input
         type="number"
@@ -363,7 +363,7 @@ function TopRanking({ entries, listLimit }: TopRankingProps): JSX.Element {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
   return (
-    <table className="w-full text-[12px]">
+    <table className="w-full text-xs">
       <thead className="text-content-muted">
         <tr>
           <th className="px-1 py-1 text-right font-medium">#</th>
@@ -458,7 +458,7 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs }: SlowRankingProps): JSX
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
   return (
-    <table className="w-full text-[12px]" data-testid="analyze-bigrams-slow-ranking">
+    <table className="w-full text-xs" data-testid="analyze-bigrams-slow-ranking">
       <thead className="text-content-muted">
         <tr>
           <th className="px-1 py-1 text-right font-medium">#</th>
@@ -546,7 +546,7 @@ function SortHeader({ label, indicator, align, active, onClick }: SortHeaderProp
 }
 
 function EmptyQuadrant({ text }: { text: string }): JSX.Element {
-  return <div className="py-4 text-center text-[12px] text-content-muted">{text}</div>
+  return <div className="py-4 text-center text-xs text-content-muted">{text}</div>
 }
 
 interface FingerBarChartProps {
@@ -595,7 +595,7 @@ function BigramFingerBarChart({
 
   if (snapshot === null) {
     return (
-      <div className="py-4 text-center text-[12px] text-content-muted" data-testid="analyze-bigrams-finger-no-snapshot">
+      <div className="py-4 text-center text-xs text-content-muted" data-testid="analyze-bigrams-finger-no-snapshot">
         {t('analyze.bigrams.fingerIki.noSnapshot')}
       </div>
     )

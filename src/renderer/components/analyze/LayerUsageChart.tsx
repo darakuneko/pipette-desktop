@@ -201,7 +201,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
     snapshot !== null &&
     snapshot.layers > 1 &&
     onBaseLayerChange !== undefined ? (
-      <span className="ml-3 inline-flex items-center gap-1.5 text-[12px] font-normal text-content-muted">
+      <span className="ml-3 inline-flex items-center gap-1.5 text-xs font-normal text-content-muted">
         <span>{t('analyze.filters.layerBaseLayer')}</span>
         <select
           className={FILTER_SELECT}
@@ -218,7 +218,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
       </span>
     ) : null
   const titleRow = (
-    <h4 className="mb-1 flex items-center text-[13px] font-semibold text-content-secondary">
+    <h4 className="mb-1 flex items-center text-sm font-semibold text-content-secondary">
       <span>{title}</span>
       {inlineBaseLayerSelect}
     </h4>
@@ -233,7 +233,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
   if (viewMode === 'activations' && snapshot === null) {
     return sectionWrap(
       <div
-        className="py-4 text-center text-[13px] text-content-muted"
+        className="py-4 text-center text-sm text-content-muted"
         data-testid="analyze-layer-no-snapshot"
       >
         {t('analyze.layer.requiresSnapshot')}
@@ -243,7 +243,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
   if (loading) {
     return sectionWrap(
       <div
-        className="py-4 text-center text-[13px] text-content-muted"
+        className="py-4 text-center text-sm text-content-muted"
         data-testid="analyze-layer-loading"
       >
         {t('common.loading')}
@@ -254,7 +254,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
   if (bars.length === 0 || totalValue === 0) {
     return sectionWrap(
       <div
-        className="py-4 text-center text-[13px] text-content-muted"
+        className="py-4 text-center text-sm text-content-muted"
         data-testid="analyze-layer-empty"
       >
         {t(viewMode === 'activations' ? 'analyze.layer.noActivations' : 'analyze.layer.noData')}

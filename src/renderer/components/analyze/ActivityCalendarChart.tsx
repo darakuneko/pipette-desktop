@@ -148,7 +148,7 @@ export function ActivityCalendarChart({
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-calendar-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-activity-calendar-loading">
         {t('common.loading')}
       </div>
     )
@@ -189,7 +189,7 @@ export function ActivityCalendarChart({
         </button>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div
-          className="grid h-4 text-[10px] leading-none text-content-muted"
+          className="grid h-4 text-2xs leading-none text-content-muted"
           style={{ gridTemplateColumns, columnGap: CELL_GAP_PX }}
           aria-hidden="true"
         >
@@ -230,7 +230,7 @@ export function ActivityCalendarChart({
             <div key={`row-${dow}`} className="contents" role="row">
               <div
                 role="rowheader"
-                className="pr-1 text-right text-[10px] leading-none text-content-muted"
+                className="pr-1 text-right text-2xs leading-none text-content-muted"
                 style={{ alignSelf: 'center' }}
               >
                 {t(`analyze.activity.dow.${dow}`)}
@@ -265,7 +265,7 @@ export function ActivityCalendarChart({
           ›
         </button>
       </div>
-      <div className="flex items-center gap-2 pt-1 text-[11px] text-content-muted">
+      <div className="flex items-center gap-2 pt-1 text-xs text-content-muted">
         <span>{t('analyze.activity.legendLow')}</span>
         <div
           className="h-2 flex-1 rounded-sm"
@@ -320,7 +320,7 @@ function CalendarCellView({
       wrapperProps={{ role: 'gridcell', 'aria-label': tooltip }}
     >
       <div
-        className="h-full w-full rounded-[2px]"
+        className="h-full w-full rounded-sm"
         style={{
           backgroundColor: !cell.qualified ? 'var(--color-surface-dim)' : 'var(--color-accent)',
           opacity: !cell.qualified ? undefined : opacity,

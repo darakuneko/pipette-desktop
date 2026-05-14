@@ -53,11 +53,11 @@ function isActivePath(a: DataNavPath | null, b: DataNavPath): boolean {
   return true
 }
 
-const LEAF_BASE = 'w-full text-left text-[13px] py-1 rounded cursor-pointer truncate'
+const LEAF_BASE = 'w-full text-left text-sm py-1 rounded cursor-pointer truncate'
 const LEAF_ACTIVE = `${LEAF_BASE} bg-surface-dim text-content font-medium`
 const LEAF_IDLE = `${LEAF_BASE} text-content-secondary hover:text-content hover:bg-surface-dim/50`
 
-const BRANCH_BASE = 'w-full text-left text-[13px] py-1 flex items-center gap-1 cursor-pointer truncate'
+const BRANCH_BASE = 'w-full text-left text-sm py-1 flex items-center gap-1 cursor-pointer truncate'
 
 function Chevron({ open }: { open: boolean }) {
   return (
@@ -151,7 +151,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
         >
           {storedKeyboards.length === 0 ? (
             <div
-              className="text-[11px] text-content-muted py-1"
+              className="text-xs text-content-muted py-1"
               style={{ paddingLeft: '50px' }}
               data-testid="nav-no-keyboards"
             >
@@ -201,7 +201,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
         >
           {typingKeyboards.length === 0 ? (
             <div
-              className="text-[11px] text-content-muted py-1"
+              className="text-xs text-content-muted py-1"
               style={{ paddingLeft: '50px' }}
               data-testid="nav-no-typing"
             >
@@ -240,18 +240,18 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
         testId="nav-sync"
       >
         {syncScanning ? (
-          <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }}>
+          <div className="text-xs text-content-muted py-1" style={{ paddingLeft: '36px' }}>
             {t('sync.scanning')}
           </div>
         ) : (
           <>
             {!syncScanResult ? (
-              <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }}>
+              <div className="text-xs text-content-muted py-1" style={{ paddingLeft: '36px' }}>
                 {t('sync.noRemoteData')}
               </div>
             ) : syncScanResult.keyboards.length === 0 ? (
               <div
-                className="text-[11px] text-content-muted py-1"
+                className="text-xs text-content-muted py-1"
                 style={{ paddingLeft: '36px' }}
                 data-testid="nav-sync-empty"
               >
@@ -281,7 +281,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
                       />
                       {error && (
                         <div
-                          className="text-[11px] text-danger py-1"
+                          className="text-xs text-danger py-1"
                           style={{ paddingLeft: `${2 * 14 + 8}px` }}
                           data-testid={`nav-sync-kb-${uid}-error`}
                         >
@@ -307,7 +307,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
             >
               {typingKeyboards.length === 0 ? (
                 <div
-                  className="text-[11px] text-content-muted py-1"
+                  className="text-xs text-content-muted py-1"
                   style={{ paddingLeft: '50px' }}
                   data-testid="nav-sync-typing-empty"
                 >
@@ -332,7 +332,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
                     >
                       {hashes.length === 0 ? (
                         <div
-                          className="text-[11px] text-content-muted py-1"
+                          className="text-xs text-content-muted py-1"
                           style={{ paddingLeft: '64px' }}
                           data-testid={`nav-sync-typing-${kb.uid}-empty`}
                         >
@@ -387,7 +387,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
           testId="nav-cloud-hub"
         >
           {hubKeyboardNames.length === 0 ? (
-            <div className="text-[11px] text-content-muted py-1" style={{ paddingLeft: '36px' }} data-testid="nav-hub-empty">
+            <div className="text-xs text-content-muted py-1" style={{ paddingLeft: '36px' }} data-testid="nav-hub-empty">
               {t('hub.noPosts')}
             </div>
           ) : (

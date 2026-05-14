@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
 
-const HUB_BTN_BASE = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
+const HUB_BTN_BASE = 'text-xs font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
 const HUB_BTN = `${HUB_BTN_BASE} disabled:opacity-50`
 
 export interface FavHubEntryResult {
@@ -50,7 +50,7 @@ export function FavoriteHubActions({
   return (
     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="fav-hub-actions">
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-accent">{t('hub.pipetteHub')}</span>
+        <span className="text-xs font-medium text-accent">{t('hub.pipetteHub')}</span>
         <div className="flex gap-1">
           {!isUploading && hasHubPost && (
             <>
@@ -130,20 +130,20 @@ export function FavoriteHubActions({
       </div>
       {hubNeedsDisplayName && (hasHubPost ? !onUpdateOnHub : !onUploadToHub) && (
         <div
-          className="mt-1 text-[11px] text-content-muted"
+          className="mt-1 text-xs text-content-muted"
           data-testid="fav-hub-needs-display-name"
         >
           {t('hub.needsDisplayName')}
         </div>
       )}
       {isUploading && (
-        <div className="mt-1 text-[11px] text-accent" data-testid="fav-hub-uploading">
+        <div className="mt-1 text-xs text-accent" data-testid="fav-hub-uploading">
           {t('hub.uploading')}
         </div>
       )}
       {result && (
         <div
-          className={`mt-1 text-[11px] font-medium ${result.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+          className={`mt-1 text-xs font-medium ${result.kind === 'success' ? 'text-accent' : 'text-danger'}`}
           data-testid="fav-hub-result"
         >
           {result.message}

@@ -9,10 +9,10 @@
 // column and every control column line-aligned across rows even as
 // per-tab filters wrap onto new rows.
 
-export const FILTER_LABEL = 'contents text-[12px] text-content-muted'
+export const FILTER_LABEL = 'contents text-xs text-content-muted'
 
 export const FILTER_SELECT =
-  'rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none'
+  'rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none'
 
 // Buttons that sit alongside FILTER_SELECT (export CSV etc). Mirrors the
 // select frame so the row reads as a single visual group, with hover /

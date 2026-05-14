@@ -191,11 +191,11 @@ export function FingerAssignmentModal({
           <ModalCloseButton testid="finger-assignment-close" onClick={onClose} />
         </div>
         <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
-          <p className="mb-3 text-[12px] text-content-muted">
+          <p className="mb-3 text-xs text-content-muted">
             {t('analyze.fingerAssignment.subtitle')}
           </p>
           {keys.length === 0 ? (
-            <div className="py-4 text-center text-[13px] text-content-muted" data-testid="finger-assignment-empty">
+            <div className="py-4 text-center text-sm text-content-muted" data-testid="finger-assignment-empty">
               {t('analyze.fingerAssignment.noSnapshot')}
             </div>
           ) : (
@@ -215,7 +215,7 @@ export function FingerAssignmentModal({
         <div className="flex items-center justify-between gap-2 border-t border-edge px-5 py-3 shrink-0">
           <button
             type="button"
-            className="rounded-md border border-edge px-3 py-1.5 text-[13px] text-content-muted hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-muted"
+            className="rounded-md border border-edge px-3 py-1.5 text-sm text-content-muted hover:border-accent hover:text-content disabled:opacity-50 disabled:hover:border-edge disabled:hover:text-content-muted"
             onClick={handleResetAll}
             disabled={Object.keys(draft).length === 0}
             data-testid="finger-assignment-reset-all"
@@ -224,7 +224,7 @@ export function FingerAssignmentModal({
           </button>
           <button
             type="button"
-            className="rounded-md border border-accent bg-accent px-4 py-1.5 text-[13px] font-medium text-surface hover:bg-accent/90"
+            className="rounded-md border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-surface hover:bg-accent/90"
             onClick={handleSave}
             data-testid="finger-assignment-save"
           >

@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
+import { ICON_SM } from '../../constants/ui-tokens'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
@@ -357,7 +358,7 @@ export function KeyLabelsModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-[760px] max-w-[90vw] h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="key-labels-modal"
       >
@@ -657,7 +658,7 @@ function InstalledRowView({
         aria-hidden="true"
       >
         {isDraggable
-          ? <GripVertical className="text-content-muted" size={14} />
+          ? <GripVertical className="text-content-muted" size={ICON_SM} />
           : null}
       </span>
       <div className="flex-1 min-w-0 px-1 py-2">
@@ -753,7 +754,7 @@ function ResultBadge({ result, rowId }: ResultBadgeProps): JSX.Element | null {
   if (!result || result.id !== rowId) return null
   return (
     <span
-      className={`text-[11px] font-medium ${result.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+      className={`text-xs font-medium ${result.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
       data-testid={`key-labels-result-${rowId}`}
     >
       {result.message}

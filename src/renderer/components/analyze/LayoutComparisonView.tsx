@@ -229,7 +229,7 @@ export function LayoutComparisonView({
 function Empty({ message, testid }: { message: string; testid: string }): JSX.Element {
   return (
     <div
-      className="py-4 text-center text-[13px] text-content-muted"
+      className="py-4 text-center text-sm text-content-muted"
       data-testid={testid}
     >
       {message}

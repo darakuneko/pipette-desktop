@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
+import { ICON_LG } from '../../constants/ui-tokens'
 
 interface Props {
   testid: string
@@ -19,7 +20,7 @@ export function ModalCloseButton({ testid, onClick }: Props) {
       onClick={onClick}
       aria-label={t('common.close')}
     >
-      <X size={20} aria-hidden="true" />
+      <X size={ICON_LG} aria-hidden="true" />
     </button>
   )
 }

@@ -157,7 +157,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       </div>
       <footer className="flex shrink-0 items-center justify-between gap-2 border-t border-edge pt-2">
         <div
-          className="min-w-0 flex-1 truncate text-left text-[12px] text-content-muted"
+          className="min-w-0 flex-1 truncate text-left text-xs text-content-muted"
           data-testid="analyze-skip-warning"
         >
           {skipWarningMessage}
@@ -181,7 +181,7 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         {onBack && (
           <button
             type="button"
-            className={`${FOOTER_BUTTON_BASE} border-edge text-red-500 hover:text-red-600`}
+            className={`${FOOTER_BUTTON_BASE} border-edge text-danger hover:text-danger/80`}
             onClick={onBack}
             data-testid="analyze-back"
           >

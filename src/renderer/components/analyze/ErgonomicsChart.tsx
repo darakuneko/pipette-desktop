@@ -95,7 +95,7 @@ const Section = memo(function Section({
 }: SectionProps) {
   return (
     <div data-testid={testId}>
-      <h4 className="mb-1 text-[13px] font-semibold text-content-secondary">
+      <h4 className="mb-1 text-sm font-semibold text-content-secondary">
         {title}
       </h4>
       <div style={{ height }}>
@@ -177,7 +177,7 @@ const HandPyramidChart = memo(function HandPyramidChart({
   return (
     <div data-testid={testId}>
       <div className="mb-1 flex items-center justify-between gap-2">
-        <h4 className="text-[13px] font-semibold text-content-secondary">{title}</h4>
+        <h4 className="text-sm font-semibold text-content-secondary">{title}</h4>
         {titleAction}
       </div>
       <div style={{ height }}>
@@ -389,21 +389,21 @@ function ErgonomicsSnapshotView({
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-ergonomics-loading">
         {t('common.loading')}
       </div>
     )
   }
   if (!layout || keys.length === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-no-layout">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-ergonomics-no-layout">
         {t('analyze.ergonomics.noLayout')}
       </div>
     )
   }
   if (aggregation.total === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-ergonomics-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-ergonomics-empty">
         {t('analyze.ergonomics.noData')}
       </div>
     )
@@ -438,7 +438,7 @@ function ErgonomicsSnapshotView({
               onOpenFingerAssignment ? (
                 <button
                   type="button"
-                  className="rounded-md border border-edge bg-surface px-3 py-1 text-[12px] text-content-secondary transition-colors hover:border-accent hover:text-content"
+                  className="rounded-md border border-edge bg-surface px-3 py-1 text-xs text-content-secondary transition-colors hover:border-accent hover:text-content"
                   onClick={onOpenFingerAssignment}
                   data-testid="analyze-finger-assignment-open"
                 >

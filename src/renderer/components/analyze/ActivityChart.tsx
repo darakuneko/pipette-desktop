@@ -149,7 +149,7 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-activity-loading">
         {t('common.loading')}
       </div>
     )
@@ -158,14 +158,14 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
   const isEmpty = metric === 'wpm' ? grid.maxWpm <= 0 : grid.maxKeystrokes <= 0
   if (isEmpty || grid.cells.length !== ACTIVITY_CELL_COUNT) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-activity-empty">
         {t('analyze.noData')}
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col gap-2 text-[11px]" data-testid="analyze-activity-chart">
+    <div className="flex flex-col gap-2 text-xs" data-testid="analyze-activity-chart">
       <div
         className="grid gap-[2px]"
         style={{ gridTemplateColumns: 'auto repeat(24, minmax(0, 1fr))' }}
@@ -225,7 +225,7 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
           </div>
         ))}
       </div>
-      <div className="flex items-center gap-2 pt-1 text-[11px] text-content-muted">
+      <div className="flex items-center gap-2 pt-1 text-xs text-content-muted">
         <span>{t('analyze.activity.legendLow')}</span>
         <div
           className="h-2 flex-1 rounded-sm"
@@ -298,7 +298,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-activity-loading">
         {t('common.loading')}
       </div>
     )
@@ -306,7 +306,7 @@ function SessionDistributionChart({ uid, range, deviceScope }: SessionChartProps
 
   if (histogram.summary.sessionCount === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-activity-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-activity-empty">
         {t('analyze.noData')}
       </div>
     )

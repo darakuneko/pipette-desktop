@@ -578,7 +578,7 @@ export function App() {
     <>
       {(fileHandlers.handleImportVil || (!device.isDummy && sideload.sideloadJson)) && (
         <div className={ROW_CLASS} data-testid="overlay-import-row">
-          <span className="text-[13px] font-medium text-content">{t('layoutStore.import')}</span>
+          <span className="text-sm font-medium text-content">{t('layoutStore.import')}</span>
           <div className="flex gap-2">
             <button
               type="button"

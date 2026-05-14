@@ -49,6 +49,7 @@ import type {
 } from './analyze-types'
 import type { SyncProgress } from '../../../shared/types/sync'
 import { SlidersHorizontal } from 'lucide-react'
+import { ICON_MD } from '../../constants/ui-tokens'
 import { useAnalyzeFilters } from '../../hooks/useAnalyzeFilters'
 import { useAnalyzeFilterStore, type AnalyzeFilterSnapshotPayload } from '../../hooks/useAnalyzeFilterStore'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
@@ -115,7 +116,7 @@ function resolveLayoutComparisonInputs(
 }
 
 const TAB_BTN_BASE =
-  'rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
+  'rounded-md px-3 py-1.5 text-sm font-medium transition-colors'
 const TAB_BTN_IDLE = 'text-content-muted hover:text-content-secondary'
 const TAB_BTN_ACTIVE = 'bg-surface text-content shadow-sm'
 
@@ -1070,7 +1071,7 @@ export function AnalyzePane({
               onClick={handleToggleStorePanel}
               data-testid={tid("analyze-filter-store-toggle")}
             >
-              <SlidersHorizontal size={16} aria-hidden="true" />
+              <SlidersHorizontal size={ICON_MD} aria-hidden="true" />
             </button>
           </div>
         )}
@@ -1405,7 +1406,7 @@ export function AnalyzePane({
                     onHeatmapChange={setHeatmap}
                   />
                 ) : (
-                  <div className="py-4 text-center text-[13px] text-content-muted" data-testid={tid("analyze-keyheatmap-empty")}>
+                  <div className="py-4 text-center text-sm text-content-muted" data-testid={tid("analyze-keyheatmap-empty")}>
                     {t('analyze.keyHeatmap.noSnapshot')}
                   </div>
                 )
@@ -1424,7 +1425,7 @@ export function AnalyzePane({
                     onOpenFingerAssignment={() => setFingerModalOpen(true)}
                   />
                 ) : (
-                  <div className="py-4 text-center text-[13px] text-content-muted" data-testid={tid("analyze-ergonomics-no-snapshot")}>
+                  <div className="py-4 text-center text-sm text-content-muted" data-testid={tid("analyze-ergonomics-no-snapshot")}>
                     {t('analyze.ergonomics.noSnapshot')}
                   </div>
                 )

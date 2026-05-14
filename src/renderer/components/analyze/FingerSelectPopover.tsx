@@ -89,7 +89,7 @@ export function FingerSelectPopover({
       <button
         key={finger}
         type="button"
-        className={`flex w-full items-center justify-between px-3 py-1 text-left text-[12px] transition-colors ${
+        className={`flex w-full items-center justify-between px-3 py-1 text-left text-xs transition-colors ${
           isCurrent
             ? 'bg-accent/15 font-semibold text-content'
             : 'text-content-secondary hover:bg-surface-dim'
@@ -125,18 +125,18 @@ export function FingerSelectPopover({
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+      <div className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-widest text-content-muted">
         {t('analyze.fingerAssignment.leftHand')}
       </div>
       {LEFT_ORDER.map(renderOption)}
-      <div className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+      <div className="px-3 pb-1 pt-2 text-2xs font-semibold uppercase tracking-widest text-content-muted">
         {t('analyze.fingerAssignment.rightHand')}
       </div>
       {RIGHT_ORDER.map(renderOption)}
       <div className="border-t border-edge">
         <button
           type="button"
-          className="w-full px-3 py-1.5 text-left text-[12px] text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-content-muted"
+          className="w-full px-3 py-1.5 text-left text-xs text-content-muted transition-colors hover:bg-surface-dim hover:text-content disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-content-muted"
           onClick={onReset}
           disabled={!isOverride}
           data-testid="finger-select-reset"

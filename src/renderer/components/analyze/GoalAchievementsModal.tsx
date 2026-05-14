@@ -52,15 +52,15 @@ export function GoalAchievementsModal({ isOpen, onClose, achievements }: Props) 
         <div className="flex-1 min-h-0 overflow-auto px-5 py-3">
           {rows.length === 0 ? (
             <div
-              className="py-8 text-center text-[13px] text-content-muted"
+              className="py-8 text-center text-sm text-content-muted"
               data-testid="analyze-goal-achievements-empty"
             >
               {t('analyze.streakGoal.historyEmpty')}
             </div>
           ) : (
-            <table className="w-full text-left text-[12px]" data-testid="analyze-goal-achievements-table">
+            <table className="w-full text-left text-xs" data-testid="analyze-goal-achievements-table">
               <thead>
-                <tr className="border-b border-edge text-[11px] uppercase tracking-wider text-content-muted">
+                <tr className="border-b border-edge text-xs uppercase tracking-wider text-content-muted">
                   <th className="py-2 pr-3 font-semibold">{t('analyze.streakGoal.historyColumn.period')}</th>
                   <th className="py-2 pr-3 font-semibold">{t('analyze.streakGoal.historyColumn.goal')}</th>
                   <th className="py-2 pr-3 text-right font-semibold">{t('analyze.streakGoal.historyColumn.days')}</th>

@@ -68,7 +68,7 @@ export function ConnectingOverlay({
             </p>
           )}
           {deviceId && (
-            <p className="font-mono text-[11px] tracking-wide text-content-muted">
+            <p className="font-mono text-xs tracking-wide text-content-muted">
               {deviceId}
             </p>
           )}

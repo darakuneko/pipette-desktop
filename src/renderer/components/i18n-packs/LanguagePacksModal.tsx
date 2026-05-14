@@ -13,6 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2 } from 'lucide-react'
+import { ICON_XL } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -594,7 +595,7 @@ export function LanguagePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-[760px] max-w-[90vw] h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="language-packs-modal"
       >
@@ -847,9 +848,9 @@ function InstalledRowView({
           data-testid={`language-packs-select-${row.reactKey}`}
         >
           {row.active ? (
-            <CheckCircle2 size={18} className="text-accent" aria-hidden="true" />
+            <CheckCircle2 size={ICON_XL} className="text-accent" aria-hidden="true" />
           ) : (
-            <Circle size={18} aria-hidden="true" />
+            <Circle size={ICON_XL} aria-hidden="true" />
           )}
         </button>
         <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
@@ -959,7 +960,7 @@ function InstalledRowView({
         <span className="flex-1 min-w-0">
           {lastResult && (lastResult.id === row.packId || lastResult.id === row.hubPostId) && (
             <span
-              className={`text-[11px] font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+              className={`text-xs font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
               data-testid={`language-packs-result-${row.reactKey}`}
             >
               {lastResult.message}

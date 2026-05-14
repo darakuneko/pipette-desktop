@@ -55,8 +55,8 @@ export interface LayoutStoreContentProps {
   footer?: React.ReactNode
 }
 
-export const FORMAT_BTN = 'text-[11px] font-medium text-content-muted bg-surface/50 border border-edge px-2 py-0.5 rounded hover:text-content hover:border-content-muted disabled:opacity-50'
+export const FORMAT_BTN = 'text-xs font-medium text-content-muted bg-surface/50 border border-edge px-2 py-0.5 rounded hover:text-content hover:border-content-muted disabled:opacity-50'
 export const IMPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted'
 export const EXPORT_BTN = 'rounded-lg border border-edge bg-surface/30 px-3 py-1.5 text-xs font-semibold text-content-muted hover:text-content hover:border-content-muted disabled:opacity-50'
-export const HUB_BTN = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50 disabled:opacity-50'
-export const SHARE_LINK_BTN = 'text-[11px] font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
+export const HUB_BTN = 'text-xs font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50 disabled:opacity-50'
+export const SHARE_LINK_BTN = 'text-xs font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'

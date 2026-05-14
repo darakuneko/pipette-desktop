@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Globe } from 'lucide-react'
+import { ICON_SM } from '../../constants/ui-tokens'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
@@ -389,7 +390,7 @@ export function TypingTestPane({
                       <span>{t('editor.typingTest.language.loadingLanguage')}</span>
                     ) : (
                       <>
-                        <Globe size={14} aria-hidden="true" />
+                        <Globe size={ICON_SM} aria-hidden="true" />
                         <span>{typingTest.language.replace(/_/g, ' ')}</span>
                       </>
                     )}
@@ -436,7 +437,7 @@ export function TypingTestPane({
           {heatmapActive && (
             <p
               data-testid="typing-test-heatmap-legend"
-              className="mt-1 text-center text-[11px] text-content-muted"
+              className="mt-1 text-center text-xs text-content-muted"
             >
               {t('editor.typingTest.heatmap.legend')}
             </p>
@@ -449,7 +450,7 @@ export function TypingTestPane({
         <div
           className={`pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center py-1 transition-opacity duration-200 ${viewOnlyControlsOpen || (!mouseOver && !recordEnabled) ? 'opacity-0' : 'opacity-100'}`}
         >
-          <span className={`text-[10px] ${!mouseOver && recordEnabled ? 'text-accent' : 'text-content-muted'}`}>
+          <span className={`text-2xs ${!mouseOver && recordEnabled ? 'text-accent' : 'text-content-muted'}`}>
             {mouseOver
               ? t('editor.typingTest.closeHint')
               : t('editor.typingTest.recordingIndicator')}
@@ -645,7 +646,7 @@ export function TypingTestPane({
                 // a default-edge border so "exit" reads as the
                 // destructive / out-of-mode action rather than the
                 // accent-coloured primary path.
-                className="whitespace-nowrap rounded border border-edge px-2 py-1 text-red-500 transition-colors hover:text-red-600"
+                className="whitespace-nowrap rounded border border-edge px-2 py-1 text-danger transition-colors hover:text-danger/80"
                 onClick={handleViewOnlyToggle}
               >
                 {t('editor.typingTest.exitViewOnly')}

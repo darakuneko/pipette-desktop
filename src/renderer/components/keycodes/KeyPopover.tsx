@@ -369,7 +369,7 @@ export function KeyPopover({
               key={i}
               type="button"
               onClick={() => handleLayerSidebarClick(i)}
-              className={`w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 text-[12px] font-semibold tabular-nums transition-colors ${
+              className={`w-8 shrink-0 rounded-md border flex items-center justify-center py-1.5 text-xs font-semibold tabular-nums transition-colors ${
                 currentLayer === i
                   ? 'border-accent bg-accent text-content-inverse'
                   : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
