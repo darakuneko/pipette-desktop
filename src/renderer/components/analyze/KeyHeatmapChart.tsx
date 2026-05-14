@@ -133,7 +133,7 @@ const LayerKeyboard = memo(function LayerKeyboard({
         readOnly
         scale={scale}
       />
-      <span className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
+      <span className="text-xs font-semibold uppercase tracking-widest text-content-muted">
         {t('analyze.keyHeatmap.layerOption', { i: layer })}
       </span>
     </button>
@@ -191,7 +191,7 @@ const RankingTable = memo(function RankingTable({
       <div className="flex min-h-0 flex-1 flex-col overflow-auto">
         <div className="sticky top-0 z-10 bg-surface">
           <div
-            className="grid text-[11px] font-semibold text-content-muted"
+            className="grid text-xs font-semibold text-content-muted"
             style={outerGrid}
           >
             <div />
@@ -202,7 +202,7 @@ const RankingTable = memo(function RankingTable({
             ))}
           </div>
           <div
-            className="grid border-b border-edge text-[10px] font-semibold uppercase tracking-wider text-content-muted"
+            className="grid border-b border-edge text-2xs font-semibold uppercase tracking-wider text-content-muted"
             style={outerGrid}
           >
             <div />
@@ -217,14 +217,14 @@ const RankingTable = memo(function RankingTable({
           </div>
         </div>
         {!anyEntry ? (
-          <div className="py-2 text-[12px] text-content-muted">
+          <div className="py-2 text-xs text-content-muted">
             {t('analyze.keyHeatmap.ranking.emptyFrequentUsed')}
           </div>
         ) : (
           Array.from({ length: rows }, (_, rankIdx) => (
             <div
               key={rankIdx}
-              className={`grid text-[12px] ${rankIdx % 2 === 1 ? 'bg-surface-dim/40' : ''}`}
+              className={`grid text-xs ${rankIdx % 2 === 1 ? 'bg-surface-dim/40' : ''}`}
               style={outerGrid}
             >
               <span className="px-2 py-1 text-right text-content-muted">{rankIdx + 1}</span>
@@ -244,9 +244,9 @@ const RankingTable = memo(function RankingTable({
                   >
                     <span className="min-w-0 truncate font-mono text-content">{entry.keyLabel}</span>
                     {showLayerCol && (
-                      <span className="font-mono text-[11px] text-content-muted">{entry.layerLabel}</span>
+                      <span className="font-mono text-xs text-content-muted">{entry.layerLabel}</span>
                     )}
-                    <span className="font-mono text-[11px] text-content-muted">{entry.matrixLabel}</span>
+                    <span className="font-mono text-xs text-content-muted">{entry.matrixLabel}</span>
                     <span className="text-right font-mono text-content-secondary">{formatCount(entry.count)}</span>
                   </div>
                 )
@@ -426,7 +426,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
 
   if (!layout || !Array.isArray(layout.keys)) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-keyheatmap-nolayout">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-keyheatmap-nolayout">
         {t('analyze.keyHeatmap.noLayout')}
       </div>
     )
@@ -434,7 +434,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
 
   if (loading && layerCells.size === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-keyheatmap-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-keyheatmap-loading">
         {t('common.loading')}
       </div>
     )
@@ -481,7 +481,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
         </div>
       </div>
       <div
-        className="flex shrink-0 flex-wrap items-center justify-end gap-1 text-[12px]"
+        className="flex shrink-0 flex-wrap items-center justify-end gap-1 text-xs"
         role="group"
         aria-label={t('analyze.keyHeatmap.layer')}
         data-testid="analyze-keyheatmap-layers"
@@ -497,7 +497,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
               aria-label={t('analyze.keyHeatmap.layerOption', { i })}
               onClick={() => toggleLayer(i)}
               disabled={isDisabled}
-              className={`flex w-8 shrink-0 items-center justify-center rounded-md border py-1.5 text-[12px] font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`flex w-8 shrink-0 items-center justify-center rounded-md border py-1.5 text-xs font-semibold tabular-nums transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
                 isSelected
                   ? 'border-accent bg-accent text-content-inverse'
                   : 'border-edge bg-surface/20 text-content-muted hover:bg-surface-dim'
@@ -510,12 +510,12 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
         })}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-content-muted">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-content-muted">
           {t('analyze.keyHeatmap.ranking.frequentUsed')}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
           <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
             value={normalization}
             onChange={(e) => onHeatmapChange({ normalization: e.target.value as HeatmapNormalization })}
             aria-label={t('analyze.filters.normalization')}
@@ -526,7 +526,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
             ))}
           </select>
           <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
             value={aggregateMode}
             onChange={(e) => onHeatmapChange({ aggregateMode: e.target.value as AggregateMode })}
             aria-label={t('analyze.keyHeatmap.ranking.aggregate')}
@@ -537,7 +537,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
             ))}
           </select>
           <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
             value={keyGroupFilter}
             onChange={(e) => onHeatmapChange({ keyGroupFilter: e.target.value as KeyGroupFilter })}
             aria-label={t('analyze.keyHeatmap.ranking.keyGroup')}
@@ -548,7 +548,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, snapshot, 
             ))}
           </select>
           <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-[12px] text-content focus:border-accent focus:outline-none"
+            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
             value={frequentUsedN}
             onChange={(e) => onHeatmapChange({ frequentUsedN: Number.parseInt(e.target.value, 10) })}
             aria-label={t('analyze.keyHeatmap.ranking.frequentUsedN')}

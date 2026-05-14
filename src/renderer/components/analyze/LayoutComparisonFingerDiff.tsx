@@ -80,7 +80,7 @@ export function LayoutComparisonFingerDiff({ current, target, targetLabel }: Pro
 
   return (
     <div className="flex h-full w-full min-h-0 min-w-0 flex-col gap-1" data-testid="analyze-layout-comparison-finger-diff">
-      <h4 className="text-[13px] font-semibold text-content-secondary">
+      <h4 className="text-sm font-semibold text-content-secondary">
         {t('analyze.layoutComparison.fingerDiffTitle', { target: targetLabel })}
       </h4>
       {/* flex-1 + min-h-0 lets the chart absorb whatever vertical

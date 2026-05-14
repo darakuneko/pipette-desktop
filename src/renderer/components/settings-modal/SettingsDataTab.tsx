@@ -169,7 +169,7 @@ export function SettingsDataTab({
       {/* Sync Controls */}
       <div className="mb-2 grid grid-cols-2 gap-3">
         <div className={ROW_CLASS} data-testid="sync-auto-row">
-          <span className="text-[13px] font-medium text-content">
+          <span className="text-sm font-medium text-content">
             {t('sync.autoSync')}
           </span>
           <button
@@ -184,7 +184,7 @@ export function SettingsDataTab({
         </div>
 
         <div className={ROW_CLASS} data-testid="sync-manual-row">
-          <span className="text-[13px] font-medium text-content">
+          <span className="text-sm font-medium text-content">
             {t('sync.manualSync')}
           </span>
           <button

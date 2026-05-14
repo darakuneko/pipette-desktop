@@ -121,7 +121,7 @@ export function LocalDataResetGroup({
             </button>
             <button
               type="button"
-              className="rounded bg-danger px-3 py-1 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
+              className="rounded bg-danger px-3 py-1.5 text-sm font-medium text-white hover:bg-danger/90 disabled:opacity-50"
               onClick={onConfirm}
               disabled={confirmDisabled || !anySelected}
               data-testid="reset-local-data-confirm"

@@ -542,7 +542,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
         <div className="flex flex-col gap-3 px-5 pb-3">
           {ctx !== null && (
             <div
-              className="flex flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2 text-[11px] text-content-secondary"
+              className="flex flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2 text-xs text-content-secondary"
               data-testid="analyze-export-common"
             >
               <div><span className="text-content-muted">{t('analyze.export.conditionLabel.device')}: </span>{ctx.conditions.device}</div>
@@ -571,11 +571,11 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                     onClick={() => handleToggle(c)}
                     data-testid={`analyze-export-toggle-${c}`}
                   >
-                    <span className="text-[13px] font-semibold">
+                    <span className="text-sm font-semibold">
                       {t(`analyze.export.category.${c}`)}
                     </span>
                     {specifics.length > 0 && !showTargetPicker && (
-                      <span className="text-[11px] text-content-muted">
+                      <span className="text-xs text-content-muted">
                         {specifics.map((s, i) => (
                           <span key={i} className={i === 0 ? '' : 'ml-3'}>{s}</span>
                         ))}
@@ -583,7 +583,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                     )}
                   </button>
                   {showTargetPicker && ctx !== null && (
-                    <div className="mt-1 flex flex-col gap-1 text-[11px]">
+                    <div className="mt-1 flex flex-col gap-1 text-xs">
                       <div className="text-content-muted">
                         {t('analyze.layoutComparison.sourceLabel')}: {LAYOUT_BY_ID.get(ctx.layoutComparison.sourceLayoutId)?.name ?? ctx.layoutComparison.sourceLayoutId}
                       </div>
@@ -604,7 +604,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                           open={targetPickerOpen}
                           onClose={handleTargetClose}
                           placement="top"
-                          className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+                          className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
                           role="listbox"
                           aria-multiselectable
                         >
@@ -634,12 +634,12 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
           </div>
           {mode === 'upload' && appDataOptions.length >= 2 && (
             <div className="flex flex-col gap-1 rounded-md border border-edge px-3 py-2">
-              <div className="flex items-center gap-2 text-[12px]">
-                <span className="text-[13px] font-semibold text-content">{t('analyze.export.appDataApps.label')}</span>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-sm font-semibold text-content">{t('analyze.export.appDataApps.label')}</span>
                 <button
                   ref={appTriggerRef}
                   type="button"
-                  className="rounded border border-edge bg-surface px-2 py-0.5 text-left text-[12px] text-content-secondary transition-colors hover:bg-surface-dim"
+                  className="rounded border border-edge bg-surface px-2 py-0.5 text-left text-xs text-content-secondary transition-colors hover:bg-surface-dim"
                   onClick={() => setAppPickerOpen((prev) => !prev)}
                   aria-haspopup="listbox"
                   aria-expanded={appPickerOpen}
@@ -651,14 +651,14 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                   open={appPickerOpen}
                   onClose={handleAppClose}
                   placement="top"
-                  className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-[12px] shadow-lg"
+                  className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
                   role="listbox"
                   aria-multiselectable
                 >
                   <div className="flex gap-1 px-2 py-1">
                     <button
                       type="button"
-                      className="text-accent text-[11px] hover:underline"
+                      className="text-accent text-xs hover:underline"
                       onClick={handleAppSelectAll}
                     >
                       {t('analyze.export.appDataApps.selectAll')}
@@ -666,7 +666,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                     <span className="text-content-muted">/</span>
                     <button
                       type="button"
-                      className="text-accent text-[11px] hover:underline"
+                      className="text-accent text-xs hover:underline"
                       onClick={handleAppDeselectAll}
                     >
                       {t('analyze.export.appDataApps.deselectAll')}
@@ -691,22 +691,22 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                   </div>
                 </AnchoredPopover>
               </div>
-              <p className="text-[11px] text-content-muted">{t('analyze.export.appDataApps.hint')}</p>
+              <p className="text-xs text-content-muted">{t('analyze.export.appDataApps.hint')}</p>
             </div>
           )}
           {snapshotMissing && (
-            <p className="text-[11px] text-content-muted" data-testid="analyze-export-snapshot-warning">
+            <p className="text-xs text-content-muted" data-testid="analyze-export-snapshot-warning">
               {t('analyze.export.snapshotMissing')}
             </p>
           )}
           {error !== null && (
-            <p className="text-[12px] text-error" role="alert" data-testid="analyze-export-error">
+            <p className="text-xs text-error" role="alert" data-testid="analyze-export-error">
               {error}
             </p>
           )}
           {mode === 'upload' && upload?.uploadResult && (
             <p
-              className={`text-[12px] font-medium ${upload.uploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
+              className={`text-xs font-medium ${upload.uploadResult.kind === 'success' ? 'text-accent' : 'text-danger'}`}
               data-testid="analyze-export-upload-result"
               role={upload.uploadResult.kind === 'error' ? 'alert' : undefined}
             >

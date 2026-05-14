@@ -25,7 +25,7 @@ import { AnalyzeFilterStoreHubRow } from './AnalyzeFilterStoreHubRow'
 // Only one tab today — kept as a single-element tab bar for visual
 // parity with the keymap editor's overlay and so the structure is
 // ready when a Settings tab gets a real surface to render.
-const TAB_BASE = 'flex-1 py-1.5 text-[11px] font-medium transition-colors border-b-2 border-b-accent text-content'
+const TAB_BASE = 'flex-1 py-1.5 text-xs font-medium transition-colors border-b-2 border-b-accent text-content'
 
 interface Props {
   /** Render the save body only when the user has picked a keyboard.
@@ -221,7 +221,7 @@ export function AnalyzeFilterStorePanel({
               </form>
               <div className="mt-2 flex items-center gap-1">
                 {showSaved && (
-                  <span className="text-[11px] font-medium text-emerald-500" data-testid="analyze-filter-store-saved-flash">
+                  <span className="text-xs font-medium text-emerald-500" data-testid="analyze-filter-store-saved-flash">
                     {t('common.saved')}
                   </span>
                 )}
@@ -332,7 +332,7 @@ export function AnalyzeFilterStorePanel({
 
                         {entry.summary && (
                           <div
-                            className="mb-1 truncate text-[11px] text-content-muted"
+                            className="mb-1 truncate text-xs text-content-muted"
                             title={entry.summary}
                             data-testid={`analyze-filter-store-entry-summary-${entry.id}`}
                           >
@@ -342,7 +342,7 @@ export function AnalyzeFilterStorePanel({
 
                         {/* Row 2: date + .csv export */}
                         <div className="flex items-center justify-between">
-                          <span className="font-mono text-[11px] text-content-muted">
+                          <span className="font-mono text-xs text-content-muted">
                             {formatDate(entry.savedAt)}
                           </span>
                           {onExportEntryCsv && (

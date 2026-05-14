@@ -79,7 +79,7 @@ export function AnalyzeFilterStoreHubRow({
       data-testid={`analyze-filter-store-hub-row-${entry.id}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[11px] font-medium text-accent">
+        <span className="text-xs font-medium text-accent">
           {t('hub.pipetteHub')}
         </span>
         <div className="flex gap-1">
@@ -147,7 +147,7 @@ export function AnalyzeFilterStoreHubRow({
       </div>
       {hubNeedsDisplayName && (hubPostId ? !onUpdateOnHub : !onUploadToHub) && (
         <div
-          className="mt-1 text-[11px] text-content-muted"
+          className="mt-1 text-xs text-content-muted"
           data-testid={`analyze-filter-store-hub-needs-display-name-${entry.id}`}
         >
           {t('hub.needsDisplayName')}
@@ -155,7 +155,7 @@ export function AnalyzeFilterStoreHubRow({
       )}
       {resultMatches && hubUploadResult && (
         <div
-          className={`mt-1 flex items-center text-[11px] font-medium ${
+          className={`mt-1 flex items-center text-xs font-medium ${
             hubUploadResult.kind === 'success' ? 'text-accent' : 'text-danger'
           }`}
           data-testid={`analyze-filter-store-hub-result-${entry.id}`}

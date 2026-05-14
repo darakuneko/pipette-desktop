@@ -104,10 +104,10 @@ export function LayoutComparisonHeatmapDiff({
 
   return (
     <div className="flex w-full flex-col gap-1" data-testid="analyze-layout-comparison-heatmap-diff">
-      <h4 className="text-[13px] font-semibold text-content-secondary">
+      <h4 className="text-sm font-semibold text-content-secondary">
         {t('analyze.layoutComparison.heatmapDiffTitle', { target: targetLabel })}
       </h4>
-      <div className="flex items-center gap-3 text-[11px] text-content-muted" aria-hidden="true">
+      <div className="flex items-center gap-3 text-xs text-content-muted" aria-hidden="true">
         <Swatch color={`rgba(${DECREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutComparison.heatmapDiffLegend.decrease')} />
         <Swatch color={`rgba(${INCREASE_RGB}, ${LEGEND_ALPHA})`} label={t('analyze.layoutComparison.heatmapDiffLegend.increase')} />
       </div>

@@ -205,7 +205,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-wpm-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-wpm-loading">
         {t('common.loading')}
       </div>
     )
@@ -214,7 +214,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
   if (viewMode === 'timeOfDay') {
     if (hourOfDay === null || hourOfDay.summary.totalKeystrokes <= 0) {
       return (
-        <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-wpm-empty">
+        <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-wpm-empty">
           {t('analyze.noData')}
         </div>
       )
@@ -280,7 +280,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
 
   if (chartData.length === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-wpm-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-wpm-empty">
         {t('analyze.noData')}
       </div>
     )

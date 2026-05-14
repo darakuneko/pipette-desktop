@@ -42,15 +42,15 @@ export function StatCard({ label, value, unit, context, testid, description, too
       className="flex h-full flex-col gap-0.5 rounded-md border border-edge bg-surface px-3 py-2"
       data-testid={testid}
     >
-      <span className="text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+      <span className="text-2xs font-semibold uppercase tracking-widest text-content-muted">
         {label}
       </span>
       <div className="flex items-baseline gap-1">
-        <span className="text-[18px] font-bold text-content">{value}</span>
-        {unit && <span className="text-[11px] text-content-muted">{unit}</span>}
+        <span className="text-lg font-bold text-content">{value}</span>
+        {unit && <span className="text-xs text-content-muted">{unit}</span>}
       </div>
       {/* Non-breaking space keeps heights aligned when context is empty */}
-      <span className="text-[10px] text-content-muted">{context || ' '}</span>
+      <span className="text-2xs text-content-muted">{context || ' '}</span>
     </div>
   )
 

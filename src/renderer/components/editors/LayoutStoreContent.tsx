@@ -32,7 +32,7 @@ function FileStatusDisplay({ fileStatus }: { fileStatus: Exclude<FileStatus, 'id
 
   return (
     <div
-      className={`pt-3 text-[13px] font-medium ${fileStatusColorClass(fileStatus)}`}
+      className={`pt-3 text-sm font-medium ${fileStatusColorClass(fileStatus)}`}
       data-testid="layout-store-file-status"
     >
       {statusText()}
@@ -213,10 +213,10 @@ export function LayoutStoreContent({
               {(hasCurrentExport || showSaved || showExported) && (
                 <div className={`flex items-center gap-1${!isDummy ? ' mt-2' : ''}`}>
                   {showSaved && (
-                    <span className="text-[11px] font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                    <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
                   )}
                   {showExported && (
-                    <span className="text-[11px] font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
+                    <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
                   )}
                   <div className="ml-auto flex gap-1">
                     <FormatButtons
@@ -314,11 +314,11 @@ export function LayoutStoreContent({
           <SectionHeader label={t('common.synced')} count={entries.length} />
 
           {loading && (
-            <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
+            <div className="py-4 text-center text-sm text-content-muted">{t('common.loading')}</div>
           )}
 
           {!loading && entries.length === 0 && (
-            <div className="py-4 text-center text-[13px] text-content-muted" data-testid="layout-store-empty">
+            <div className="py-4 text-center text-sm text-content-muted" data-testid="layout-store-empty">
               {t('layoutStore.noSavedLayouts')}
             </div>
           )}
@@ -371,7 +371,7 @@ export function LayoutStoreContent({
         <div className={`${importGap}${fixedSection}`} data-testid="layout-store-import-section">
           {isPanel ? (
             <div className={ROW_CLASS}>
-              <span className="text-[13px] font-medium text-content">{t('layoutStore.import')}</span>
+              <span className="text-sm font-medium text-content">{t('layoutStore.import')}</span>
               <div className="flex gap-2">
                 {onImportVil && (
                   <button

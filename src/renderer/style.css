@@ -84,6 +84,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --surface: #f5f6f8;
   --surface-alt: #ffffff;
   --surface-dim: #ebedf2;
+  --surface-hover: #ebedf2;
   --surface-raised: #ffffff;
 
   --content: #1a1d27;
@@ -131,6 +132,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --surface: #0f1117;
   --surface-alt: #1a1d27;
   --surface-dim: #242836;
+  --surface-hover: #242836;
   --surface-raised: #2e3347;
 
   --content: #e8eaf0;
@@ -219,6 +221,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-surface: var(--surface);
   --color-surface-alt: var(--surface-alt);
   --color-surface-dim: var(--surface-dim);
+  --color-surface-hover: var(--surface-hover);
   --color-surface-raised: var(--surface-raised);
 
   /* Text */
@@ -263,6 +266,12 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-picker-item-hover: var(--picker-item-hover);
   --color-picker-item-text: var(--picker-item-text);
   --color-picker-item-border: var(--picker-item-border);
+
+  /* Typography */
+  --text-2xs: 10px; /* micro labels: badges, section headers */
+
+  /* Spacing */
+  --spacing-key: 44px; /* KeycodeButton / KeycodeGrid cell size */
 }
 
 @keyframes confirm-flash {

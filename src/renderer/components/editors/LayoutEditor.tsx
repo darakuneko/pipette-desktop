@@ -77,7 +77,7 @@ export function LayoutEditor({
                 onChange={(e) =>
                   handleChange(opt.index, Number(e.target.value))
                 }
-                className="rounded border border-edge bg-surface px-2 py-1 text-sm"
+                className="rounded border border-edge bg-surface px-2 py-1 text-sm focus:border-accent focus:outline-none"
               >
                 {opt.labels.slice(1).map((label, i) => (
                   <option key={i} value={i}>

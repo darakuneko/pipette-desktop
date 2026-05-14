@@ -10,8 +10,8 @@ import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
 
 type OverlayTab = 'layout' | 'tools' | 'data'
 
-const TAB_BASE = 'flex-1 py-1.5 text-[11px] font-medium transition-colors border-b-2'
-const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-[11px] text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
+const TAB_BASE = 'flex-1 py-1.5 text-xs font-medium transition-colors border-b-2'
+const FOOTER_BTN = 'rounded border border-edge px-2.5 py-1 text-xs text-content-secondary hover:text-content hover:bg-surface-dim transition-colors'
 
 function tabClass(active: boolean): string {
   if (active) return `${TAB_BASE} border-b-accent text-content`
@@ -154,7 +154,7 @@ export function KeycodesOverlayPanel({
             </div>
             {(onExportLayoutPdfAll || onExportLayoutPdfCurrent) && (
               <div className="shrink-0 border-t border-edge px-4 py-2 flex items-center gap-2" data-testid="layout-pdf-footer">
-                <span className="text-[11px] text-content-muted">{t('layout.pdfFooterLabel')}</span>
+                <span className="text-xs text-content-muted">{t('layout.pdfFooterLabel')}</span>
                 {onExportLayoutPdfAll && (
                   <button
                     type="button"
@@ -189,7 +189,7 @@ export function KeycodesOverlayPanel({
             {onKeyEditorZoomChange && (
               <div className={ROW_CLASS} data-testid="overlay-key-editor-zoom-row">
                 <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-                  <span className="text-[13px] font-medium text-content">
+                  <span className="text-sm font-medium text-content">
                     {t('editorSettings.keyEditorZoom')}
                   </span>
                   <span className="text-xs text-content-muted">
@@ -205,7 +205,7 @@ export function KeycodesOverlayPanel({
                     onChange={(e) => handleZoomChange(e.target.value)}
                     onBlur={() => commitZoom()}
                     onKeyDown={(e) => e.key === 'Enter' && commitZoom()}
-                    className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right"
+                    className="zoom-factor-input w-16 rounded border border-edge bg-surface pl-2 pr-1 py-0.5 text-xs text-content text-right focus:border-accent focus:outline-none"
                     aria-label={t('editorSettings.keyEditorZoom')}
                     data-testid="overlay-key-editor-zoom-input"
                   />
@@ -216,7 +216,7 @@ export function KeycodesOverlayPanel({
 
             {/* Auto-advance toggle */}
             <div className={ROW_CLASS} data-testid="overlay-auto-advance-row">
-              <span className="text-[13px] font-medium text-content">
+              <span className="text-sm font-medium text-content">
                 {t('editor.autoAdvance')}
               </span>
               <button
@@ -235,7 +235,7 @@ export function KeycodesOverlayPanel({
             {/* Split key toggle */}
             {splitKeyMode != null && onSplitKeyModeChange && (
               <div className={ROW_CLASS} data-testid="overlay-split-key-mode-row">
-                <span className="text-[13px] font-medium text-content">
+                <span className="text-sm font-medium text-content">
                   {t('editorSettings.splitKeyMode')}
                 </span>
                 <button
@@ -255,7 +255,7 @@ export function KeycodesOverlayPanel({
             {/* Quick select toggle */}
             {quickSelect != null && onQuickSelectChange && (
               <div className={ROW_CLASS} data-testid="overlay-quick-select-row">
-                <span className="text-[13px] font-medium text-content">
+                <span className="text-sm font-medium text-content">
                   {t('editorSettings.quickSelect')}
                 </span>
                 <button
@@ -275,7 +275,7 @@ export function KeycodesOverlayPanel({
             {/* Key tester toggle */}
             {(hasMatrixTester || matrixMode) && onToggleMatrix && (
               <div className={ROW_CLASS} data-testid="overlay-matrix-row">
-                <span className="text-[13px] font-medium text-content">
+                <span className="text-sm font-medium text-content">
                   {t('editor.keyTester.title')}
                 </span>
                 <button
@@ -296,7 +296,7 @@ export function KeycodesOverlayPanel({
             {!isDummy && (
               <div className={ROW_CLASS} data-testid="overlay-lock-row">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[13px] font-medium text-content">
+                  <span className="text-sm font-medium text-content">
                     {t('settings.security')}
                   </span>
                   <span
@@ -309,7 +309,7 @@ export function KeycodesOverlayPanel({
                 <button
                   type="button"
                   disabled={!unlocked}
-                  className={`rounded border border-edge px-3 py-1 text-sm ${unlocked ? 'text-content-secondary hover:bg-surface-dim' : 'text-content-muted opacity-50'}`}
+                  className={`rounded border border-edge px-3 py-1.5 text-sm ${unlocked ? 'text-content-secondary hover:bg-surface-dim' : 'text-content-muted opacity-50'}`}
                   onClick={onLock}
                   data-testid="overlay-lock-button"
                 >

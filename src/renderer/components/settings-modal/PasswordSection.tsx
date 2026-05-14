@@ -81,7 +81,7 @@ export function PasswordSection({
       )}
       <input
         type="password"
-        className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content disabled:opacity-50"
+        className="w-full rounded border border-edge bg-surface px-3 py-2 text-sm text-content focus:border-accent focus:outline-none disabled:opacity-50"
         placeholder={t('sync.passwordPlaceholder')}
         value={password}
         onChange={(e) => onPasswordChange(e.target.value)}

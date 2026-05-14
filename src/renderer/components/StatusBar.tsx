@@ -152,7 +152,7 @@ export function StatusBar({
           <button
             type="button"
             data-testid="disconnect-button"
-            className="flex items-center justify-center gap-1 rounded border border-edge px-2.5 py-1 text-xs leading-none text-red-500 transition-colors hover:text-red-600"
+            className="flex items-center justify-center gap-1 rounded border border-edge px-2.5 py-1 text-xs leading-none text-danger transition-colors hover:text-danger/80"
             onClick={onDisconnect}
           >
             {t('common.disconnect')}

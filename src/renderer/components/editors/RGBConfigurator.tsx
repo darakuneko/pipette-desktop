@@ -42,7 +42,7 @@ interface Props {
   onSave: () => Promise<void>
 }
 
-const INPUT_CLASS = 'rounded border border-edge bg-transparent px-1.5 py-0.5 font-mono text-xs'
+const INPUT_CLASS = 'rounded border border-edge bg-transparent px-1.5 py-0.5 font-mono text-xs focus:border-accent focus:outline-none'
 
 function ColorCodeFields({
   hue,
@@ -299,7 +299,7 @@ export function RGBConfigurator({
               onChange={async (e) => {
                 await onSetRgblightEffect(Number(e.target.value))
               }}
-              className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm"
+              className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm focus:border-accent focus:outline-none"
             >
               {QMK_RGBLIGHT_EFFECTS.map((fx) => (
                 <option key={fx.index} value={fx.index}>
@@ -389,7 +389,7 @@ export function RGBConfigurator({
               onChange={async (e) => {
                 await onSetVialRGBMode(Number(e.target.value))
               }}
-              className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm"
+              className="flex-1 rounded border border-edge bg-surface px-2 py-1 text-sm focus:border-accent focus:outline-none"
             >
               {filteredVialRGBEffects.map((fx) => (
                 <option key={fx.index} value={fx.index}>

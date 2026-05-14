@@ -141,7 +141,7 @@ export function SettingsToolsTab({
             </span>
             <div className="flex items-center gap-2">
               <span
-                className="text-[13px] text-content"
+                className="text-sm text-content"
                 data-testid="settings-language-active-name"
               >
                 {(() => {
@@ -152,7 +152,7 @@ export function SettingsToolsTab({
               <button
                 type="button"
                 onClick={() => setLanguagePacksOpen(true)}
-                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-language-packs-button"
               >
                 {t('i18n.edit')}
@@ -167,7 +167,7 @@ export function SettingsToolsTab({
             <button
               type="button"
               onClick={() => setKeyLabelsOpen(true)}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
               data-testid="settings-key-labels-button"
             >
               {t('keyLabels.edit')}
@@ -180,7 +180,7 @@ export function SettingsToolsTab({
             </span>
             <div className="flex items-center gap-2">
               <span
-                className="text-[13px] text-content"
+                className="text-sm text-content"
                 data-testid="settings-theme-pack-active-name"
               >
                 {activeThemeName}
@@ -188,7 +188,7 @@ export function SettingsToolsTab({
               <button
                 type="button"
                 onClick={() => setThemePacksOpen(true)}
-                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-theme-packs-button"
               >
                 {t('i18n.edit')}
@@ -220,10 +220,10 @@ export function SettingsToolsTab({
                 }}
                 onBlur={commitZoom}
                 onKeyDown={(e) => { if (e.key === 'Enter') commitZoom() }}
-                className="zoom-factor-input w-20 rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
+                className="zoom-factor-input w-20 rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content text-right tabular-nums hover:bg-surface-hover focus:border-accent focus:outline-none"
                 data-testid="settings-zoom-factor-input"
               />
-              <span className="text-[13px] text-content-muted">%</span>
+              <span className="text-sm text-content-muted">%</span>
             </div>
           </div>
         </div>
@@ -235,14 +235,14 @@ export function SettingsToolsTab({
         </h4>
         <div className="grid grid-cols-2 gap-3">
           <div className={ROW_CLASS} data-testid="settings-default-basic-view-type-row">
-            <label htmlFor="settings-default-basic-view-type-selector" className="text-[13px] font-medium text-content">
+            <label htmlFor="settings-default-basic-view-type-selector" className="text-sm font-medium text-content">
               {t('settings.defaultBasicViewType')}
             </label>
             <select
               id="settings-default-basic-view-type-selector"
               value={defaultBasicViewType}
               onChange={(e) => onDefaultBasicViewTypeChange(e.target.value as BasicViewType)}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
               data-testid="settings-default-basic-view-type-selector"
             >
               <option value="ansi">{t('settings.basicViewTypeAnsi')}</option>
@@ -253,14 +253,14 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-default-layout-row">
-            <label htmlFor="settings-default-layout-selector" className="text-[13px] font-medium text-content">
+            <label htmlFor="settings-default-layout-selector" className="text-sm font-medium text-content">
               {t('settings.defaultLayout')}
             </label>
             <select
               id="settings-default-layout-selector"
               value={defaultLayout}
               onChange={(e) => onDefaultLayoutChange(e.target.value as KeyboardLayoutId)}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
               data-testid="settings-default-layout-selector"
             >
               {layoutOptions.map((layoutDef) => (
@@ -272,7 +272,7 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-default-auto-advance-row">
-            <span className="text-[13px] font-medium text-content">
+            <span className="text-sm font-medium text-content">
               {t('settings.defaultAutoAdvance')}
             </span>
             <button
@@ -289,7 +289,7 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
-            <span className="text-[13px] font-medium text-content">
+            <span className="text-sm font-medium text-content">
               {t('settings.defaultSplitKeyMode')}
             </span>
             <button
@@ -306,7 +306,7 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-default-quick-select-row">
-            <span className="text-[13px] font-medium text-content">
+            <span className="text-sm font-medium text-content">
               {t('settings.defaultQuickSelect')}
             </span>
             <button
@@ -323,7 +323,7 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-default-layer-panel-open-row">
-            <span className="text-[13px] font-medium text-content">
+            <span className="text-sm font-medium text-content">
               {t('settings.defaultLayerPanelOpen')}
             </span>
             <button
@@ -340,14 +340,14 @@ export function SettingsToolsTab({
           </div>
 
           <div className={ROW_CLASS} data-testid="settings-max-keymap-history-row">
-            <label htmlFor="settings-max-keymap-history-selector" className="text-[13px] font-medium text-content">
+            <label htmlFor="settings-max-keymap-history-selector" className="text-sm font-medium text-content">
               {t('settings.maxKeymapHistory')}
             </label>
             <select
               id="settings-max-keymap-history-selector"
               value={maxKeymapHistory}
               onChange={(e) => onMaxKeymapHistoryChange(Number(e.target.value))}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
               data-testid="settings-max-keymap-history-selector"
             >
               {[10, 25, 50, 100, 200, 500].map((n) => (
@@ -365,7 +365,7 @@ export function SettingsToolsTab({
         <div className="flex flex-col gap-3">
           <div className={ROW_CLASS} data-testid="settings-auto-lock-time-row">
             <div className="flex flex-col gap-0.5">
-              <label htmlFor="settings-auto-lock-time-selector" className="text-[13px] font-medium text-content">
+              <label htmlFor="settings-auto-lock-time-selector" className="text-sm font-medium text-content">
                 {t('settings.autoLockTime')}
               </label>
               <span className="text-xs text-content-muted">
@@ -376,7 +376,7 @@ export function SettingsToolsTab({
               id="settings-auto-lock-time-selector"
               value={autoLockTime}
               onChange={(e) => onAutoLockTimeChange(Number(e.target.value) as AutoLockMinutes)}
-              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-[13px] text-content focus:border-accent focus:outline-none"
+              className="rounded border border-edge bg-surface px-2.5 py-1.5 text-sm text-content focus:border-accent focus:outline-none"
               data-testid="settings-auto-lock-time-selector"
             >
               {TIME_STEPS.map((m) => (

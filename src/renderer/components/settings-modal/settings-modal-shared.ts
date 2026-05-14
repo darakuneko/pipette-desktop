@@ -2,6 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react'
 import { Monitor, Sun, Moon } from 'lucide-react'
+export { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER_OUTLINE } from '../../constants/ui-tokens'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import type { ThemeMode, ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'
@@ -20,10 +21,6 @@ export function toggleSetItem<T>(prev: Set<T>, item: T, selected: boolean): Set<
   else next.delete(item)
   return next
 }
-
-export const BTN_PRIMARY = 'rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50'
-export const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
-export const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50'
 
 export interface ThemeOption {
   mode: ThemeMode

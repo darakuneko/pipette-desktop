@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Settings, Database, ChevronRight, ChevronLeft } from 'lucide-react'
+import { ICON_XS, ICON_SM, ICON_MD } from '../constants/ui-tokens'
 import { SYNC_STATUS_CLASS } from './sync-ui'
 import type { DeviceInfo } from '../../shared/types/protocol'
 import type { SyncStatusType } from '../../shared/types/sync'
@@ -13,10 +14,10 @@ const DEVICE_ENTRY_CLASS =
   'flex w-full items-center gap-3.5 rounded-lg border border-edge p-3.5 text-left transition-colors hover:border-accent hover:bg-accent/10 disabled:opacity-50'
 
 const HEADER_BTN =
-  'flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-[13px] font-medium text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content-secondary disabled:opacity-50'
+  'flex items-center gap-1.5 rounded-lg border border-transparent px-2.5 py-1.5 text-sm font-medium text-content-muted transition-colors hover:border-edge hover:bg-surface-dim hover:text-content-secondary disabled:opacity-50'
 
 const TAB_CLASS =
-  'flex-1 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors'
+  'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors'
 
 const TAB_ACTIVE =
   'bg-surface text-content shadow-sm'
@@ -123,7 +124,7 @@ export function DeviceSelector({
                 data-testid="data-button"
                 className={HEADER_BTN}
               >
-                <Database size={14} aria-hidden="true" />
+                <Database size={ICON_SM} aria-hidden="true" />
                 {t('dataModal.title')}
               </button>
             )}
@@ -135,7 +136,7 @@ export function DeviceSelector({
                 data-testid="settings-button"
                 className={HEADER_BTN}
               >
-                <Settings size={14} aria-hidden="true" />
+                <Settings size={ICON_SM} aria-hidden="true" />
                 {t('settings.title')}
               </button>
             )}
@@ -179,7 +180,7 @@ export function DeviceSelector({
         {tab === 'keyboard' && (
           <>
             <div className="mb-5">
-              <p className="mb-2.5 pl-0.5 text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+              <p className="mb-2.5 pl-0.5 text-2xs font-semibold uppercase tracking-widest text-content-muted">
                 {t('app.selectDevices')}
               </p>
 
@@ -197,13 +198,13 @@ export function DeviceSelector({
                       <div className="font-semibold text-content">
                         {device.productName || 'Unknown Device'}
                       </div>
-                      <div className="mt-0.5 font-mono text-[11px] tracking-wide text-content-muted" data-testid="device-id">
+                      <div className="mt-0.5 font-mono text-xs tracking-wide text-content-muted" data-testid="device-id">
                         {device.vendorId.toString(16).padStart(4, '0')}:
                         {device.productId.toString(16).padStart(4, '0')}
                         {device.type !== 'vial' && ` (${device.type})`}
                       </div>
                     </div>
-                    <ChevronRight size={16} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
+                    <ChevronRight size={ICON_MD} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
                   </button>
                 ))}
 
@@ -232,7 +233,7 @@ export function DeviceSelector({
         {tab === 'file' && !selectedFileUid && (
           <div data-testid="file-tab-content">
             <div className="mb-5">
-              <p className="mb-2.5 pl-0.5 text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+              <p className="mb-2.5 pl-0.5 text-2xs font-semibold uppercase tracking-widest text-content-muted">
                 {t('app.selectKeyboard')}
               </p>
 
@@ -249,11 +250,11 @@ export function DeviceSelector({
                       <div className="font-semibold text-content">
                         {kb.name}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-content-muted">
+                      <div className="mt-0.5 text-xs text-content-muted">
                         {t('app.fileCount', { count: kb.entryCount })}
                       </div>
                     </div>
-                    <ChevronRight size={16} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
+                    <ChevronRight size={ICON_MD} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
                   </button>
                 ))}
 
@@ -286,13 +287,13 @@ export function DeviceSelector({
                 <button
                   type="button"
                   data-testid="file-back-button"
-                  className="flex items-center gap-0.5 text-[10px] font-semibold uppercase tracking-widest text-content-muted transition-colors hover:text-content-secondary"
+                  className="flex items-center gap-0.5 text-2xs font-semibold uppercase tracking-widest text-content-muted transition-colors hover:text-content-secondary"
                   onClick={() => { setSelectedFileUid(null); onClearError?.() }}
                 >
-                  <ChevronLeft size={12} aria-hidden="true" />
+                  <ChevronLeft size={ICON_XS} aria-hidden="true" />
                   {t('common.back')}
                 </button>
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-content-muted">
+                <span className="text-2xs font-semibold uppercase tracking-widest text-content-muted">
                   {selectedKeyboardName}
                 </span>
               </div>
@@ -311,11 +312,11 @@ export function DeviceSelector({
                       <div className="font-semibold text-content">
                         {entry.label || entry.keyboardName}
                       </div>
-                      <div className="mt-0.5 font-mono text-[11px] tracking-wide text-content-muted">
+                      <div className="mt-0.5 font-mono text-xs tracking-wide text-content-muted">
                         {formatDate(entry.savedAt)}
                       </div>
                     </div>
-                    <ChevronRight size={16} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
+                    <ChevronRight size={ICON_MD} aria-hidden="true" className="text-content-muted opacity-20 transition-opacity group-hover:opacity-60" />
                   </button>
                 ))}
               </div>

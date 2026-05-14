@@ -209,7 +209,7 @@ export function LayoutStoreEntry({
 
       {/* Row 2: date + format tags */}
       <div className="flex items-center justify-between">
-        <span className="text-[11px] text-content-muted font-mono">
+        <span className="text-xs text-content-muted font-mono">
           {entry.vilVersion != null && t('layoutStore.versionPrefix', { version: entry.vilVersion })}{formatDate(entry.savedAt)}
         </span>
         {hasEntryExport && (

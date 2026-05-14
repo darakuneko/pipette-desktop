@@ -73,7 +73,7 @@ function splitHalfClass(highlighted?: boolean, selected?: boolean, remapped?: bo
   return `${text} ${bg}`
 }
 
-const SPLIT_HALF_BASE = 'flex-1 cursor-pointer flex items-center justify-center text-[10px] leading-tight whitespace-nowrap transition-colors hover:bg-picker-item-hover'
+const SPLIT_HALF_BASE = 'flex-1 cursor-pointer flex items-center justify-center text-2xs leading-tight whitespace-nowrap transition-colors hover:bg-picker-item-hover'
 
 function SplitKeyInner({
   base,

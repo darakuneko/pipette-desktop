@@ -68,7 +68,7 @@ export function WeeklyReportCard({ daily, today }: Props) {
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-weekly-report-section">
-      <h3 className="text-[13px] font-semibold text-content">
+      <h3 className="text-sm font-semibold text-content">
         {t('analyze.summary.weeklyReport.sectionTitle')}
       </h3>
       <AnalyzeStatGrid

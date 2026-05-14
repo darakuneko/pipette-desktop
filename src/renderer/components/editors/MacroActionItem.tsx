@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { GripVertical, X } from 'lucide-react'
+import { ICON_SM, ICON_LG } from '../../constants/ui-tokens'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
 import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 import { Tooltip } from '../ui/Tooltip'
@@ -200,7 +201,7 @@ export function MacroActionItem({
             disabled={disabled}
             aria-label={t('common.close')}
           >
-            <X size={20} aria-hidden="true" />
+            <X size={ICON_LG} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -220,7 +221,7 @@ export function MacroActionItem({
         onDragEnd={disabled ? undefined : onDragEnd}
         className={`flex items-center gap-1.5 border-r border-edge py-1 pl-1 pr-3 ${disabled ? '' : 'cursor-grab active:cursor-grabbing'}`}
       >
-        <GripVertical className="shrink-0 text-content-muted" size={14} />
+        <GripVertical className="shrink-0 text-content-muted" size={ICON_SM} />
         <span className="min-w-[36px] text-center text-sm text-content-secondary">
           {typeLabels[action.type]}
         </span>
@@ -236,7 +237,7 @@ export function MacroActionItem({
           className="rounded p-1 text-content-muted hover:text-danger disabled:opacity-50"
           aria-label={t('common.delete')}
         >
-          <X size={20} aria-hidden="true" />
+          <X size={ICON_LG} aria-hidden="true" />
         </button>
       </Tooltip>
     </div>

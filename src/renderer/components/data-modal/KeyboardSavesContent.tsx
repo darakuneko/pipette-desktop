@@ -7,6 +7,7 @@ import { LayoutStoreEntry } from '../editors/LayoutStoreEntry'
 import { useSnapshotActions } from './useSnapshotActions'
 import type { SnapshotMeta, SnapshotIndex } from '../../../shared/types/snapshot-store'
 import type { UseSyncReturn } from '../../hooks/useSync'
+import { BTN_DANGER_OUTLINE, BTN_SECONDARY } from '../../constants/ui-tokens'
 
 interface BaseProps {
   uid: string
@@ -28,9 +29,6 @@ interface SyncProps extends BaseProps {
 }
 
 type Props = LocalProps | SyncProps
-
-const BTN_DANGER_OUTLINE = 'rounded border border-danger px-3 py-1 text-sm text-danger hover:bg-danger/10 disabled:opacity-50'
-const BTN_SECONDARY = 'rounded border border-edge px-3 py-1 text-sm text-content-secondary hover:bg-surface-dim disabled:opacity-50'
 
 export function KeyboardSavesContent(props: Props) {
   const { uid, name, source } = props
@@ -152,13 +150,13 @@ export function KeyboardSavesContent(props: Props) {
   )
 
   if (loading) {
-    return <div className="py-4 text-center text-[13px] text-content-muted">{t('common.loading')}</div>
+    return <div className="py-4 text-center text-sm text-content-muted">{t('common.loading')}</div>
   }
 
   if (entries.length === 0) {
     return (
       <div className="flex flex-col h-full" data-testid="kb-saves-empty">
-        <div className="flex-1 py-4 text-center text-[13px] text-content-muted">
+        <div className="flex-1 py-4 text-center text-sm text-content-muted">
           {t('dataModal.noSaves')}
         </div>
         {deleteAllFooter}

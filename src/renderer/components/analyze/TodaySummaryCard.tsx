@@ -54,7 +54,7 @@ export function TodaySummaryCard({ daily, today }: Props) {
 
   return (
     <section className="flex flex-col gap-2" data-testid="analyze-today-summary-section">
-      <h3 className="text-[13px] font-semibold text-content">
+      <h3 className="text-sm font-semibold text-content">
         {t('analyze.summary.today.sectionTitle')}
       </h3>
       <AnalyzeStatGrid

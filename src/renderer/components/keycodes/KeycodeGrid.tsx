@@ -88,7 +88,7 @@ export function KeycodeGrid({
         if (shifted && shiftedIdx != null) {
           const splitRemap = getSplitRemapProps(kc.qmkId, remapLabel)
           return (
-            <div key={`${baseIdx}-${kc.qmkId}`} className="w-[44px] h-[44px]">
+            <div key={`${baseIdx}-${kc.qmkId}`} className="w-key h-key">
               <SplitKey
                 base={kc}
                 shifted={shifted}

@@ -200,7 +200,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
 
   if (loading) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-loading">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-interval-loading">
         {t('common.loading')}
       </div>
     )
@@ -209,7 +209,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
   if (viewMode === 'distribution') {
     if (histogram === null || histogram.totalWeight <= 0) {
       return (
-        <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-empty">
+        <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-interval-empty">
           {t('analyze.noData')}
         </div>
       )
@@ -262,7 +262,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
 
   if (chartData.length === 0) {
     return (
-      <div className="py-4 text-center text-[13px] text-content-muted" data-testid="analyze-interval-empty">
+      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-interval-empty">
         {t('analyze.noData')}
       </div>
     )

@@ -37,7 +37,7 @@ export function JaRemovedBanner(): JSX.Element | null {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded bg-accent px-3 py-1 text-sm font-medium text-white hover:bg-accent/90"
+            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
             onClick={dismiss}
             data-testid="ja-removed-dismiss"
           >

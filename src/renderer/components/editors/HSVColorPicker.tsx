@@ -178,7 +178,7 @@ function clampNormalized(value: number, origin: number, size: number): number {
 }
 
 function toggleButtonClass(active: boolean): string {
-  const base = 'rounded-md border px-3 py-1.5 text-[13px] transition-colors'
+  const base = 'rounded-md border px-3 py-1.5 text-sm transition-colors'
   if (active) return `${base} border-accent bg-accent/10 text-accent`
   return `${base} border-edge text-content-secondary hover:text-content`
 }

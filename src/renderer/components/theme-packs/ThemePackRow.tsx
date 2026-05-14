@@ -2,6 +2,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2 } from 'lucide-react'
+import { ICON_XL } from '../../constants/ui-tokens'
 import type { useInlineRename } from '../../hooks/useInlineRename'
 import type { ThemePackMeta } from '../../../shared/types/theme-store'
 import { formatTimestamp } from '../../utils/format-timestamp'
@@ -110,9 +111,9 @@ export function PackRow({
           data-testid={`theme-packs-select-${meta.id}`}
         >
           {isActive ? (
-            <CheckCircle2 size={18} className="text-accent" aria-hidden="true" />
+            <CheckCircle2 size={ICON_XL} className="text-accent" aria-hidden="true" />
           ) : (
-            <Circle size={18} aria-hidden="true" />
+            <Circle size={ICON_XL} aria-hidden="true" />
           )}
         </button>
         <div className="flex-1 min-w-0 text-sm font-medium">{renderName()}</div>
@@ -174,7 +175,7 @@ export function PackRow({
         <span className="flex-1 min-w-0">
           {lastResult && lastResult.id === meta.id && (
             <span
-              className={`text-[11px] font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
+              className={`text-xs font-medium ${lastResult.kind === 'success' ? 'text-accent' : 'text-rose-600'}`}
               data-testid={`theme-packs-result-${meta.id}`}
             >
               {lastResult.message}

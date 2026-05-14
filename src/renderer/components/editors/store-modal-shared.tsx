@@ -1,5 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+// Form element base classes — use these for input/select elements.
+export const INPUT_BASE =
+  'rounded border border-edge bg-surface px-2.5 py-1 text-sm text-content ' +
+  'focus:border-accent focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed'
+export const SELECT_BASE =
+  'rounded border border-edge bg-surface px-2 py-1 text-sm text-content ' +
+  'focus:border-accent focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed'
+export const INPUT_COMPACT =
+  'rounded border border-edge bg-transparent px-1.5 py-0.5 text-xs text-content ' +
+  'focus:border-accent focus:outline-none'
+
+// Modal width tiers — use these instead of inline w-[*px] values.
+export const MODAL_SM  = 'w-[440px]  max-w-[90vw]'
+export const MODAL_MD  = 'w-[600px]  max-w-[90vw]'
+export const MODAL_LG  = 'w-[760px]  max-w-[90vw]'
+export const MODAL_XL  = 'w-[960px]  max-w-[95vw]'
+export const MODAL_2XL = 'w-[1200px] max-w-[95vw]'
+
 export const ACTION_BTN =
   'text-xs font-medium text-content hover:text-content cursor-pointer bg-transparent border-none px-2 py-1 rounded'
 export const DELETE_BTN =
@@ -41,11 +59,11 @@ interface SectionHeaderProps {
 export function SectionHeader({ label, count }: SectionHeaderProps) {
   return (
     <div className="mb-2.5 flex items-center gap-2">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-content-muted">
+      <span className="text-2xs font-bold uppercase tracking-widest text-content-muted">
         {label}
       </span>
       {count !== undefined && (
-        <span className="text-[10px] font-semibold text-content-muted bg-surface-dim px-1.5 py-px rounded-full">
+        <span className="text-2xs font-semibold text-content-muted bg-surface-dim px-1.5 py-px rounded-full">
           {count}
         </span>
       )}

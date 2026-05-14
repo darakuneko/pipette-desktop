@@ -26,7 +26,7 @@ export function DataNavBreadcrumb({ path }: Props) {
           </span>
         ))}
       </div>
-      {uid && <span className="shrink-0 font-mono text-[11px]">{uid}</span>}
+      {uid && <span className="shrink-0 font-mono text-xs">{uid}</span>}
     </nav>
   )
 }
