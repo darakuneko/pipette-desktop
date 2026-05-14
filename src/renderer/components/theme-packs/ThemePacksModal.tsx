@@ -442,7 +442,7 @@ export function ThemePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="theme-packs-modal"
       >

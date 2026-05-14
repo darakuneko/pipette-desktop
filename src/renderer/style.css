@@ -315,6 +315,8 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --min-width-keyboard-pane: 280px;    /* KeyboardPane */
   --min-width-keycode-panel: 360px;    /* KeymapEditor layout overlay panel */
   --max-width-keycode-panel: 420px;    /* KeymapEditor layout overlay panel */
+  --max-width-modal-vw: 90vw;          /* SM/MD/LG modal viewport constraint */
+  --max-width-modal-xl-vw: 95vw;       /* XL/2XL modal viewport constraint */
   --min-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --max-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --min-height-word-list: 100px;       /* TypingTestPane word list */
@@ -322,6 +324,9 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --width-color-picker: 15rem;         /* HSVColorPicker container */
   --height-color-picker-sv: 180px;     /* HSVColorPicker saturation/value canvas */
   --spacing-scale-btn: 34px;           /* ScaleControl toolbar button (non-grid: between sm key and toolbar icon) */
+
+  /* Shadows - custom */
+  --shadow-color-swatch: 0 0 0 1px rgba(0,0,0,0.3); /* HSV/color swatch contrast ring */
 
   /* Border radius - custom */
   --radius-panel-connector: 10px; /* KeymapEditor layout panel right edge */

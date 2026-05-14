@@ -533,7 +533,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
         role="dialog"
         aria-modal="true"
         aria-label={t('analyze.export.categoriesLabel')}
-        className="w-modal-notify max-w-[95vw] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-notify max-w-modal-xl-vw flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end px-3 pt-3 shrink-0">

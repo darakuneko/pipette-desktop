@@ -345,7 +345,7 @@ export function MacroEditor({
             <div className="flex-1" />
             <select
               data-testid="macro-add-action"
-              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50"
+              className="rounded border border-transparent bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50 focus:border-accent focus:outline-none"
               value=""
               disabled={isRecording}
               onChange={(e) => {
@@ -364,7 +364,7 @@ export function MacroEditor({
             <button
               type="button"
               data-testid="macro-text-editor-btn"
-              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50"
+              className="rounded border border-transparent bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50 focus:border-accent focus:outline-none"
               disabled={isRecording}
               onClick={() => setShowTextEditor(true)}
             >

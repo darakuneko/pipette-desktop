@@ -105,7 +105,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
                     {isEditing && onSetLayerName ? (
                       <input
                         data-testid={`layer-panel-layer-name-input-${i}`}
-                        className="w-full border-b border-edge bg-transparent text-xs text-content outline-none focus:border-accent"
+                        className="w-full border-b border-edge bg-transparent text-xs text-content focus:outline-none focus:border-accent"
                         value={layerRename.editLabel}
                         onChange={(e) => layerRename.setEditLabel(e.target.value)}
                         placeholder={defaultLabel}

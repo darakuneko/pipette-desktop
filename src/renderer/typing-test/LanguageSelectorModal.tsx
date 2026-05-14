@@ -99,7 +99,7 @@ export function LanguageSelectorModal({ currentLanguage, onSelectLanguage, onClo
           <input
             ref={searchRef}
             type="text"
-            className="w-full rounded-md border border-edge bg-surface-alt px-3 py-1.5 text-sm text-content placeholder:text-content-muted"
+            className="w-full rounded-md border border-edge bg-surface-alt px-3 py-1.5 text-sm text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
             placeholder={t('editor.typingTest.language.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}

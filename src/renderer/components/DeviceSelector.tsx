@@ -110,7 +110,7 @@ export function DeviceSelector({
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-surface">
-      <div className="w-full max-w-sm rounded-2xl bg-surface-alt px-8 pb-7 pt-9 shadow-lg">
+      <div className="w-full max-w-sm rounded-2xl bg-surface-alt px-8 pb-7 pt-9 border border-edge">
         <div className="mb-7 flex items-center justify-between">
           <h1 className="text-xl font-bold text-content">
             {t('app.title')}

@@ -595,7 +595,7 @@ export function LanguagePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="language-packs-modal"
       >
@@ -805,7 +805,7 @@ function InstalledRowView({
           onBlur={() => void onRenameCommit(row.packId as string)}
           onKeyDown={(e) => onRenameKey(e, row.packId as string)}
           maxLength={64}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
           data-testid={`language-packs-rename-input-${row.reactKey}`}
         />
       )

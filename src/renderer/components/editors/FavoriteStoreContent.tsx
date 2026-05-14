@@ -239,7 +239,7 @@ export function FavoriteStoreContent({
                         onBlur={() => void commitRename(entry.id)}
                         onKeyDown={(e) => handleRenameKeyDown(e, entry.id)}
                         maxLength={200}
-                        className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
+                        className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content focus:outline-none focus:border-accent"
                         data-testid="favorite-store-rename-input"
                         autoFocus
                       />

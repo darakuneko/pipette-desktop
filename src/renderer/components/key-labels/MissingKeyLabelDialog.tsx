@@ -37,7 +37,7 @@ export function MissingKeyLabelDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="missing-key-label-title"
-        className="w-modal-md max-w-[90vw] rounded-lg bg-surface p-5 shadow-xl"
+        className="w-modal-md max-w-modal-vw rounded-lg bg-surface p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="missing-key-label-dialog"
       >

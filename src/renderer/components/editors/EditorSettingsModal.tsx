@@ -6,7 +6,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { LayoutStoreContent, type LayoutStoreContentProps } from './LayoutStoreModal'
 import { ModalCloseButton } from './ModalCloseButton'
 
-const PANEL_BASE = 'absolute top-0 h-full w-modal-sm max-w-[90vw] flex flex-col border-edge bg-surface-alt shadow-xl transition-transform duration-300 ease-out'
+const PANEL_BASE = 'absolute top-0 h-full w-modal-sm max-w-modal-vw flex flex-col border-edge bg-surface-alt shadow-xl transition-transform duration-300 ease-out'
 
 function panelPositionClass(open: boolean): string {
   return `${PANEL_BASE} left-0 border-r ${open ? 'translate-x-0' : '-translate-x-full'}`

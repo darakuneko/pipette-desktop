@@ -197,7 +197,7 @@ export function QmkSettings({
                   onChange={(e) =>
                     handleIntegerChange(field, parseInt(e.target.value, 10) || 0)
                   }
-                  className="w-28 rounded border border-edge px-2 py-1 text-sm"
+                  className="w-28 rounded border border-edge px-2 py-1 text-sm focus:border-accent focus:outline-none"
                 />
               )}
             </div>

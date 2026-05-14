@@ -28,7 +28,7 @@ export function JaRemovedBanner(): JSX.Element | null {
       role="dialog"
       aria-modal="true"
     >
-      <div className="max-w-md rounded-lg border border-edge bg-surface p-4 shadow-lg">
+      <div className="max-w-md rounded-lg border border-edge bg-surface p-4 shadow-xl">
         <h2 className="mb-2 text-lg font-semibold text-content">
           {t('i18n.jaRemoved.title')}
         </h2>

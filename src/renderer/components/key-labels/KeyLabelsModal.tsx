@@ -358,7 +358,7 @@ export function KeyLabelsModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="key-labels-modal"
       >
@@ -601,7 +601,7 @@ function InstalledRowView({
           onBlur={() => void onRenameCommit(row.localId)}
           onKeyDown={(e) => onRenameKey(e, row.localId)}
           maxLength={100}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
           data-testid={`key-labels-rename-input-${row.localId}`}
         />
       )

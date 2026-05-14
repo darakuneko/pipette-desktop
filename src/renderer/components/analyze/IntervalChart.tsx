@@ -33,7 +33,7 @@ import {
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
-import { CHART_TICK_FONT_SIZE, CHART_LEGEND_FONT_SIZE } from '../../utils/chart-palette'
+import { CHART_TICK_FONT_SIZE, CHART_LEGEND_FONT_SIZE, CHART_CYAN_SERIES_COLOR } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -59,7 +59,7 @@ type SeriesKey = (typeof SERIES_KEYS)[number]
 // old dashed whiskers were hard to tell apart at a glance.
 const SERIES_STYLE: Record<SeriesKey, string> = {
   min: 'var(--color-success)',
-  p25: '#06b6d4', // Exception: cyan-500, no design token — intentional 5th distinct hue
+  p25: CHART_CYAN_SERIES_COLOR,
   p50: 'var(--color-accent-hover)',
   p75: 'var(--color-warning)',
   max: 'var(--color-danger)',

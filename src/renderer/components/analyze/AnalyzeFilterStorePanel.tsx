@@ -269,7 +269,7 @@ export function AnalyzeFilterStorePanel({
                                 onKeyDown={(e) => { void handleRenameKeyDown(e, entry.id) }}
                                 onBlur={() => { void commitRename(entry.id) }}
                                 maxLength={200}
-                                className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
+                                className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content focus:outline-none focus:border-accent"
                                 data-testid={`analyze-filter-store-rename-input-${entry.id}`}
                               />
                             ) : (

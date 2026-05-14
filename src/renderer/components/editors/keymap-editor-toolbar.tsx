@@ -36,7 +36,7 @@ export function ScaleInput({ scale, onScaleChange }: { scale: number; onScaleCha
     <input
       ref={inputRef}
       data-testid="scale-input"
-      className="size-scale-btn rounded-md border border-accent bg-transparent text-xs leading-none tabular-nums text-content text-center outline-none"
+      className="size-scale-btn rounded-md border border-accent bg-transparent text-xs leading-none tabular-nums text-content text-center focus:border-accent focus:outline-none"
       value={draft}
       autoFocus
       onFocus={() => inputRef.current?.select()}

@@ -271,7 +271,7 @@ export function DataModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="data-modal-title"
-        className="w-modal-data max-w-[95vw] h-modal-data flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-data max-w-modal-xl-vw h-modal-data flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         data-testid="data-modal"
       >

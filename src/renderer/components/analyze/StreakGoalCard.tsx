@@ -345,7 +345,7 @@ function InlineNumberField({
         }}
         aria-label={ariaLabel}
         data-testid={testid}
-        className="w-20 border-b border-edge bg-transparent p-0 text-lg font-bold text-content outline-none focus:border-accent"
+        className="w-20 border-b border-edge bg-transparent p-0 text-lg font-bold text-content focus:outline-none focus:border-accent"
       />
       {confirmPending && (
         <button

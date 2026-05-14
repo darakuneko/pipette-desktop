@@ -247,7 +247,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
       onClick={handleClose}
     >
       <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] h-modal-80vh flex flex-col`}
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-modal-xl-vw h-modal-80vh flex flex-col`}
         data-testid={`${prefix}-modal`}
         onClick={(e) => e.stopPropagation()}
       >

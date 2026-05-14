@@ -371,7 +371,7 @@ export function TypingTestPane({
                       aria-label={t('editor.typingTest.baseLayer')}
                       value={typingTest.baseLayer}
                       onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                      className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary"
+                      className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
                     >
                       {Array.from({ length: layers }, (_, i) => (
                         <option key={i} value={i}>{layerNames?.[i] || i}</option>
@@ -607,7 +607,7 @@ export function TypingTestPane({
                       aria-label={t('editor.typingTest.heatmapWindow')}
                       value={heatmapWindowMin ?? 5}
                       onChange={(e) => onHeatmapWindowMinChange(Number(e.target.value))}
-                      className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                      className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary focus:border-accent focus:outline-none"
                     >
                       {TYPING_HEATMAP_WINDOW_OPTIONS.map((m) => (
                         <option key={m} value={m}>{t('editor.typingTest.heatmapWindowOption', { minutes: m })}</option>
@@ -629,7 +629,7 @@ export function TypingTestPane({
                   aria-label={t('editor.typingTest.baseLayer')}
                   value={typingTest.baseLayer}
                   onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                  className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary"
+                  className="rounded border border-edge bg-surface-alt px-1.5 py-0.5 text-xs text-content-secondary focus:border-accent focus:outline-none"
                 >
                   {Array.from({ length: layers }, (_, i) => (
                     <option key={i} value={i}>{layerNames?.[i] || i}</option>

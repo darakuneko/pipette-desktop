@@ -81,7 +81,7 @@ export function PackRow({
           onBlur={() => void onRenameCommit(meta.id)}
           onKeyDown={(e) => onRenameKey(e, meta.id)}
           maxLength={64}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
           data-testid={`theme-packs-rename-input-${meta.id}`}
         />
       )

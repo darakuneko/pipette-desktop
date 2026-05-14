@@ -70,7 +70,7 @@ export function SettingsModal({
         aria-modal="true"
         aria-busy={syncState.busy}
         aria-labelledby="settings-title"
-        className="w-modal-lg max-w-[90vw] h-modal-settings flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-lg max-w-modal-vw h-modal-settings flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
         data-testid="settings-modal"
       >
