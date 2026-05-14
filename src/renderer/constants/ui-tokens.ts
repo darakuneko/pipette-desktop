@@ -22,3 +22,10 @@ export const BTN_DANGER_XS = 'rounded-lg bg-danger px-3 py-1.5 text-xs font-semi
 export const TOOLBAR_BTN_BASE = 'rounded-md border p-2 transition-colors'
 export const TOOLBAR_BTN_ACTIVE = `${TOOLBAR_BTN_BASE} border-accent bg-accent/10 text-accent`
 export const TOOLBAR_BTN_INACTIVE = `${TOOLBAR_BTN_BASE} border-edge text-content-secondary hover:text-content`
+
+// Compact text toggle buttons (px-2 py-1) — StatusBar / TypingTestPane tabs
+export const BTN_TOGGLE_ACTIVE = 'rounded border border-accent bg-accent/10 px-2 py-1 text-sm text-accent transition-colors'
+export const BTN_TOGGLE_INACTIVE = 'rounded border border-edge px-2 py-1 text-sm text-content-secondary transition-colors hover:text-content'
+
+// Accent-outline button — non-destructive secondary CTA on accent color
+export const BTN_ACCENT_OUTLINE = 'rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed'

@@ -224,7 +224,7 @@ export function FingerAssignmentModal({
           </button>
           <button
             type="button"
-            className="rounded-md border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-surface hover:bg-accent/90"
+            className="rounded border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-content-inverse hover:bg-accent/90"
             onClick={handleSave}
             data-testid="finger-assignment-save"
           >

@@ -10,7 +10,7 @@ import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
-import { BTN_SECONDARY } from '../constants/ui-tokens'
+import { BTN_SECONDARY, BTN_ACCENT_OUTLINE } from '../constants/ui-tokens'
 
 interface Props {
   /** Called when the user clicks "Enable" — caller is expected to
@@ -92,7 +92,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
             type="button"
             data-testid="typing-consent-accept"
             onClick={onAccept}
-            className="rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20"
+            className={BTN_ACCENT_OUTLINE}
           >
             {t('editor.typingTest.consent.accept')}
           </button>
