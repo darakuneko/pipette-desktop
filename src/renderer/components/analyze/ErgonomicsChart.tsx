@@ -418,7 +418,7 @@ function ErgonomicsSnapshotView({
         * needs the wider column to keep the diverging axis legible.
         * `min-w-0` keeps recharts measurement from forcing either child
         * past its grid track. */}
-      <div className="grid grid-cols-[1fr_3fr] gap-4">
+      <div className="grid grid-cols-1-3 gap-4">
         <div className="min-w-0">
           <Section
             title={t('analyze.ergonomics.handBalance')}
@@ -453,7 +453,7 @@ function ErgonomicsSnapshotView({
       {/* Row 2: Row balance (sum across hands) sits next to its
         * left/right pyramid so the totals and the per-hand split
         * read together. */}
-      <div className="grid grid-cols-[1fr_3fr] gap-4">
+      <div className="grid grid-cols-1-3 gap-4">
         <div className="min-w-0">
           <Section
             title={t('analyze.ergonomics.rowUsage')}

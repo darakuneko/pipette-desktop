@@ -77,7 +77,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
   // visible area so names slide out horizontally.
   return (
     <div
-      className="shrink-0 overflow-hidden rounded-xl border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
+      className="shrink-0 overflow-hidden rounded-xl border border-edge bg-picker-bg transition-width duration-200 ease-out"
       style={{ width: collapsed ? PANEL_COLLAPSED_WIDTH : '11rem' }}
       data-testid={collapsed ? 'layer-list-panel-collapsed' : 'layer-list-panel'}
     >

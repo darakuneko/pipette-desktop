@@ -192,7 +192,7 @@ export function LayoutComparisonView({
               // position vs. finger shifts together, and the metric
               // table spans both rows on the right so the numeric
               // baseline stays visible alongside either chart.
-              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[3fr_2fr] lg:grid-rows-2">
+              <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-3-2 lg:grid-rows-2">
                 <div className="min-w-0 min-h-0 overflow-auto lg:col-start-1 lg:row-start-1">
                   <LayoutComparisonHeatmapDiff
                     current={result.targets[0]}

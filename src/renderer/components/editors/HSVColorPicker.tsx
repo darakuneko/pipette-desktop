@@ -287,7 +287,7 @@ export function HSVColorPicker({
           {/* 10x10 Palette grid */}
           <div
             data-testid="palette-grid"
-            className="grid grid-cols-[repeat(10,1.5rem)] gap-0"
+            className="grid grid-cols-swatches gap-0"
           >
             {PALETTE.map((entry, i) => {
               const selected = i === nearestIdx
