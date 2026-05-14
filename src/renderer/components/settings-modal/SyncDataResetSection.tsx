@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BTN_SECONDARY, BTN_DANGER_OUTLINE, toggleSetItem } from './settings-modal-shared'
+import { BTN_SECONDARY, BTN_DANGER_OUTLINE, BTN_DANGER, toggleSetItem } from './settings-modal-shared'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import type { SyncDataScanResult, StoredKeyboardInfo } from '../../../shared/types/sync'
 
@@ -282,7 +282,7 @@ export function SyncDataResetSection({ sync, storedKeyboards, disabled, onResetS
                 </button>
                 <button
                   type="button"
-                  className="rounded bg-danger px-3 py-1.5 text-sm font-medium text-content-inverse hover:bg-danger/90 disabled:opacity-50"
+                  className={BTN_DANGER}
                   onClick={handleDelete}
                   disabled={!anySelected || deleting}
                   data-testid="sync-reset-data-confirm"

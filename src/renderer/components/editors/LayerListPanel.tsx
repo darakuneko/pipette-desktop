@@ -77,7 +77,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
   // visible area so names slide out horizontally.
   return (
     <div
-      className="shrink-0 overflow-hidden rounded-xl border border-edge bg-picker-bg transition-[width] duration-200 ease-out"
+      className="shrink-0 overflow-hidden rounded-xl border border-edge bg-picker-bg transition-width duration-200 ease-out"
       style={{ width: collapsed ? PANEL_COLLAPSED_WIDTH : '11rem' }}
       data-testid={collapsed ? 'layer-list-panel-collapsed' : 'layer-list-panel'}
     >
@@ -105,7 +105,7 @@ export function LayerListPanel({ layers, currentLayer, onLayerChange, layerNames
                     {isEditing && onSetLayerName ? (
                       <input
                         data-testid={`layer-panel-layer-name-input-${i}`}
-                        className="w-full border-b border-edge bg-transparent text-xs text-content outline-none focus:border-accent"
+                        className="w-full border-b border-edge bg-transparent text-xs text-content focus:outline-none focus:border-accent"
                         value={layerRename.editLabel}
                         onChange={(e) => layerRename.setEditLabel(e.target.value)}
                         placeholder={defaultLabel}

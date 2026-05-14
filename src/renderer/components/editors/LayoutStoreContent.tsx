@@ -6,6 +6,7 @@ import { useInlineRename } from '../../hooks/useInlineRename'
 import { SectionHeader } from './store-modal-shared'
 import { ROW_CLASS } from './modal-controls'
 import { FORMAT_BTN, EXPORT_BTN, IMPORT_BTN } from './layout-store-types'
+import { BTN_PRIMARY_XS, BTN_DANGER_XS } from '../../constants/ui-tokens'
 import type { FileStatus, LayoutStoreContentProps } from './layout-store-types'
 import { FormatButtons } from './LayoutStoreEntry'
 import { LayoutStoreEntry } from './LayoutStoreEntry'
@@ -184,7 +185,7 @@ export function LayoutStoreContent({
                       <button
                         type="submit"
                         disabled={saving}
-                        className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-danger/90 disabled:opacity-50"
+                        className={`shrink-0 ${BTN_DANGER_XS}`}
                         data-testid="layout-store-overwrite-confirm"
                       >
                         {t('layoutStore.confirmOverwrite')}
@@ -202,7 +203,7 @@ export function LayoutStoreContent({
                     <button
                       type="submit"
                       disabled={saving || !saveLabel.trim()}
-                      className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+                      className={`shrink-0 ${BTN_PRIMARY_XS}`}
                       data-testid="layout-store-save-submit"
                     >
                       {t('common.save')}
@@ -213,10 +214,10 @@ export function LayoutStoreContent({
               {(hasCurrentExport || showSaved || showExported) && (
                 <div className={`flex items-center gap-1${!isDummy ? ' mt-2' : ''}`}>
                   {showSaved && (
-                    <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                    <span className="text-xs font-medium text-success" data-testid="layout-store-saved">{t('common.saved')}</span>
                   )}
                   {showExported && (
-                    <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
+                    <span className="text-xs font-medium text-success" data-testid="layout-store-exported">{t('common.exported')}</span>
                   )}
                   <div className="ml-auto flex gap-1">
                     <FormatButtons
@@ -253,7 +254,7 @@ export function LayoutStoreContent({
                     <button
                       type="submit"
                       disabled={saving}
-                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-danger/90 disabled:opacity-50"
+                      className={`shrink-0 ${BTN_DANGER_XS}`}
                       data-testid="layout-store-overwrite-confirm"
                     >
                       {t('layoutStore.confirmOverwrite')}
@@ -271,7 +272,7 @@ export function LayoutStoreContent({
                   <button
                     type="submit"
                     disabled={saving || !saveLabel.trim()}
-                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+                    className={`shrink-0 ${BTN_PRIMARY_XS}`}
                     data-testid="layout-store-save-submit"
                   >
                     {t('common.save')}
@@ -287,10 +288,10 @@ export function LayoutStoreContent({
               <SectionHeader label={t('layoutStore.export')} />
               <div className="flex items-center gap-2">
                 {showSaved && (
-                  <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-saved">{t('common.saved')}</span>
+                  <span className="text-xs font-medium text-success" data-testid="layout-store-saved">{t('common.saved')}</span>
                 )}
                 {showExported && (
-                  <span className="text-xs font-medium text-emerald-500" data-testid="layout-store-exported">{t('common.exported')}</span>
+                  <span className="text-xs font-medium text-success" data-testid="layout-store-exported">{t('common.exported')}</span>
                 )}
                 <div className="ml-auto flex gap-2">
                   <FormatButtons

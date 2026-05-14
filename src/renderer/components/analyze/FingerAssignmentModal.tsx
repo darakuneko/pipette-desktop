@@ -181,7 +181,7 @@ export function FingerAssignmentModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="finger-assignment-title"
-        className="w-modal-xl max-w-[95vw] max-h-modal-90vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-xl max-w-modal-xl-vw max-h-modal-90vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-0 shrink-0">
@@ -224,7 +224,7 @@ export function FingerAssignmentModal({
           </button>
           <button
             type="button"
-            className="rounded-md border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-surface hover:bg-accent/90"
+            className="rounded border border-accent bg-accent px-4 py-1.5 text-sm font-medium text-content-inverse hover:bg-accent/90"
             onClick={handleSave}
             data-testid="finger-assignment-save"
           >

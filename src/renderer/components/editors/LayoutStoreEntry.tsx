@@ -147,7 +147,7 @@ export function LayoutStoreEntry({
               onBlur={() => onCommitRename?.(entry.id)}
               onKeyDown={(e) => onHandleRenameKeyDown?.(e, entry.id)}
               maxLength={200}
-              className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content outline-none focus:border-accent"
+              className="w-full border-b border-edge bg-transparent px-1 text-sm font-semibold text-content focus:outline-none focus:border-accent"
               data-testid="layout-store-rename-input"
               autoFocus
             />

@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
-import { ICON_SM } from '../../constants/ui-tokens'
+import { BTN_PRIMARY, ICON_SM } from '../../constants/ui-tokens'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
@@ -358,7 +358,7 @@ export function KeyLabelsModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="key-labels-modal"
       >
@@ -397,7 +397,7 @@ export function KeyLabelsModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void triggerSearch()}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
+              className={BTN_PRIMARY}
               data-testid="key-labels-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}
@@ -601,7 +601,7 @@ function InstalledRowView({
           onBlur={() => void onRenameCommit(row.localId)}
           onKeyDown={(e) => onRenameKey(e, row.localId)}
           maxLength={100}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
           data-testid={`key-labels-rename-input-${row.localId}`}
         />
       )
@@ -854,7 +854,7 @@ function HubLineActions({
           {hasUpdateAvailable && (
             <span
               aria-hidden="true"
-              className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+              className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"
               data-testid={`key-labels-update-available-${localId}`}
             />
           )}

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { MacroAction } from '../../../preload/macro'
 import { jsonToMacroActions } from '../../../preload/macro'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 interface Props {
   initialJson: string
@@ -93,7 +94,7 @@ export function MacroTextEditor({ initialJson, onApply, onClose }: Props) {
             type="button"
             onClick={handleApply}
             disabled={error}
-            className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+            className={BTN_PRIMARY}
             data-testid="macro-text-editor-apply"
           >
             {t('common.save')}

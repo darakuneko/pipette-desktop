@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { GripVertical, X } from 'lucide-react'
 import { ICON_SM, ICON_LG } from '../../constants/ui-tokens'
 import { isValidMacroText, type MacroAction } from '../../../preload/macro'
+import { INPUT_BASE } from './store-modal-shared'
 import { KeycodeField, KEYCODE_FIELD_SIZE } from './KeycodeField'
 import { Tooltip } from '../ui/Tooltip'
 
@@ -91,7 +92,7 @@ export function MacroActionItem({
               onChange={(e) => onChange(index, { type: 'text', text: e.target.value })}
               placeholder={t('editor.macro.text')}
               disabled={disabled}
-              className={`w-full rounded border px-2 py-1 text-sm disabled:opacity-50 ${valid ? 'border-edge' : 'border-danger'}`}
+              className={`w-full rounded border px-2 py-1 text-sm focus:border-accent focus:outline-none disabled:opacity-50 ${valid ? 'border-edge' : 'border-danger'}`}
             />
             {!valid && (
               <p className="mt-0.5 text-xs text-danger">{t('editor.macro.asciiOnly')}</p>
@@ -144,7 +145,7 @@ export function MacroActionItem({
                 })
               }
               disabled={disabled}
-              className="w-24 rounded border border-edge px-2 py-1 text-sm disabled:opacity-50"
+              className={`w-24 ${INPUT_BASE}`}
             />
             <span className="text-sm text-content-secondary">ms</span>
           </div>

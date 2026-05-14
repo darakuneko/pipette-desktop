@@ -26,7 +26,7 @@ export function FavoriteStoreModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-sm max-w-[90vw] h-modal-70vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-sm max-w-modal-vw h-modal-70vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

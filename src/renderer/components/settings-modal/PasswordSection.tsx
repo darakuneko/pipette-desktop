@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { scoreColor, BTN_SECONDARY } from './settings-modal-shared'
+import { scoreColor, BTN_PRIMARY, BTN_SECONDARY } from './settings-modal-shared'
 import type { UseSyncReturn } from '../../hooks/useSync'
 
 export interface PasswordSectionProps {
@@ -112,7 +112,7 @@ export function PasswordSection({
         <div className="flex gap-2">
           <button
             type="button"
-            className="rounded bg-accent px-4 py-2 text-sm font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+            className={BTN_PRIMARY}
             onClick={onSetPassword}
             disabled={!password || (passwordScore !== null && passwordScore < 4) || sync.syncUnavailable}
             data-testid="sync-password-save"

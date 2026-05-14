@@ -16,12 +16,13 @@
 
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CHART_LEGEND_FONT_SIZE } from '../../utils/chart-palette'
 
 const SHELL_STYLE = {
   backgroundColor: 'var(--color-surface)',
   border: '1px solid var(--color-edge)',
   color: 'var(--color-content)',
-  fontSize: 12,
+  fontSize: CHART_LEGEND_FONT_SIZE,
   padding: '4px 8px',
   borderRadius: 4,
 } as const
@@ -36,7 +37,7 @@ const VALUE_STYLE = { fontWeight: 600 } as const
  * rendering; reach for `TooltipShell` instead when supplying a custom
  * `content` renderer. */
 export const ANALYZE_TOOLTIP_DEFAULTS = {
-  contentStyle: { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: 12 },
+  contentStyle: { backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-edge)', fontSize: CHART_LEGEND_FONT_SIZE },
   labelStyle: { color: 'var(--color-content-secondary)' },
   itemStyle: { color: 'var(--color-content)' },
 } as const

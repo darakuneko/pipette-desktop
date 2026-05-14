@@ -100,7 +100,7 @@ export function HubPostRow({ post, onRename, onDelete, hubOrigin }: HubPostRowPr
           {rename.editingId === post.id ? (
             <input
               type="text"
-              className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+              className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
               value={rename.editLabel}
               onChange={(e) => rename.setEditLabel(e.target.value)}
               onBlur={handleBlurCommit}

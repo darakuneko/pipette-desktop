@@ -38,6 +38,10 @@ export function generateAnalyzeThumbnail(input: AnalyzeThumbnailInput): string {
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('Canvas 2D context unavailable')
 
+  // Exception: Canvas API requires literal color strings — CSS custom properties
+  // (var(--color-*)) are not supported in CanvasRenderingContext2D fillStyle.
+  // This thumbnail is always rendered in dark-theme style (slate palette).
+  //
   // Background — slate gradient gives a recognisable Pipette look
   // without needing a logo asset bundled.
   const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_HEIGHT)

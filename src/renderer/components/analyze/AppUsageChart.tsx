@@ -5,7 +5,7 @@
 // or two apps observed) collapse into a single "Unknown" slice so the
 // total still adds up to all keystrokes in the range.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import {
@@ -147,10 +147,13 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
   // as the "missing data" bucket rather than a real app, while still
   // being visible on both themes (the surface-dim fill blended into
   // the panel background and made the slice unreadable).
-  const colorFor = (datum: PieDatum, index: number): string => {
-    if (datum.isUnknown) return '#9ca3af'
-    return chartSeriesColor(index, data.length, theme)
-  }
+  const colorFor = useCallback(
+    (datum: PieDatum, index: number): string => {
+      if (datum.isUnknown) return 'var(--color-content-muted)'
+      return chartSeriesColor(index, data.length, theme)
+    },
+    [data.length, theme],
+  )
 
   if (loading) {
     return (

@@ -81,7 +81,7 @@ export function PackRow({
           onBlur={() => void onRenameCommit(meta.id)}
           onKeyDown={(e) => onRenameKey(e, meta.id)}
           maxLength={64}
-          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content outline-none focus:border-accent"
+          className="w-full border-b border-edge bg-transparent px-1 text-sm text-content focus:outline-none focus:border-accent"
           data-testid={`theme-packs-rename-input-${meta.id}`}
         />
       )
@@ -215,7 +215,7 @@ export function PackRow({
             {hasUpdateAvailable && (
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"
                 data-testid={`theme-packs-update-available-${meta.id}`}
               />
             )}

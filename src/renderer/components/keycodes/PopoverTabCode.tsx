@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { serialize, isLMKeycode, resolve } from '../../../shared/keycodes/keycodes'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 interface Props {
   currentKeycode: number
@@ -96,7 +97,7 @@ export function PopoverTabCode({ currentKeycode, maskOnly, onRawKeycodeSelect }:
 
       <button
         type="button"
-        className="self-end rounded bg-accent px-3 py-1.5 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+        className={`self-end ${BTN_PRIMARY}`}
         disabled={!canApply}
         onClick={handleApply}
         data-testid="popover-code-apply"

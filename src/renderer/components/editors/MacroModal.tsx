@@ -83,7 +83,7 @@ export function MacroModal({
       onClick={isRecording ? undefined : onClose}
     >
       <div
-        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] ${modalHeight} flex flex-col overflow-hidden`}
+        className={`rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-modal-xl-vw ${modalHeight} flex flex-col overflow-hidden`}
         data-testid="macro-modal"
         onClick={(e) => e.stopPropagation()}
       >

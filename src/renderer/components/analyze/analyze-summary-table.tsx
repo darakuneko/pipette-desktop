@@ -43,7 +43,7 @@ export function AnalyzeSummaryTable({ items, ariaLabelKey, testId = 'analyze-sum
   const { t } = useTranslation()
   return (
     <div
-      className="grid shrink-0 grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-x-4 gap-y-1 border-t border-edge pt-2 text-xs"
+      className="grid shrink-0 grid-cols-auto-fit-160 gap-x-4 gap-y-1 border-t border-edge pt-2 text-xs"
       data-testid={testId}
       aria-label={t(ariaLabelKey)}
     >

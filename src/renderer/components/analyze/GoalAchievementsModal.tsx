@@ -40,7 +40,7 @@ export function GoalAchievementsModal({ isOpen, onClose, achievements }: Props) 
         role="dialog"
         aria-modal="true"
         aria-labelledby="goal-achievements-title"
-        className="w-modal-goal max-w-[95vw] max-h-modal-90vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-goal max-w-modal-xl-vw max-h-modal-90vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-5 pt-4 pb-2 shrink-0">

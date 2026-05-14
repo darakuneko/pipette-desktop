@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2, Monitor, Sun, Moon } from 'lucide-react'
-import { ICON_MD } from '../../constants/ui-tokens'
+import { BTN_PRIMARY, ICON_MD } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -442,7 +442,7 @@ export function ThemePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-modal-vw h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="theme-packs-modal"
       >
@@ -471,7 +471,7 @@ export function ThemePacksModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void runSearch(search.trim())}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
+              className={BTN_PRIMARY}
               data-testid="theme-packs-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('i18n.search')}

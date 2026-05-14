@@ -23,6 +23,7 @@ import { FINGER_LIST } from '../../../shared/kle/kle-ergonomics'
 import type { LayoutComparisonTargetResult } from '../../../shared/types/typing-analytics'
 import { formatSignedPercent } from './analyze-format'
 import { Stat, TooltipShell } from './analyze-tooltip'
+import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
 
 interface Props {
   current: LayoutComparisonTargetResult
@@ -98,12 +99,12 @@ export function LayoutComparisonFingerDiff({ current, target, targetLabel }: Pro
               type="category"
               dataKey="label"
               stroke="var(--color-content-muted)"
-              fontSize={11}
+              fontSize={CHART_TICK_FONT_SIZE}
             />
             <YAxis
               type="number"
               stroke="var(--color-content-muted)"
-              fontSize={11}
+              fontSize={CHART_TICK_FONT_SIZE}
               tickFormatter={(value: number) => `${value >= 0 ? '+' : ''}${(value * 100).toFixed(0)}%`}
             />
             <ReferenceLine y={0} stroke="var(--color-content-muted)" />

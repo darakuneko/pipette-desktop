@@ -17,6 +17,7 @@ import {
 } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
@@ -344,7 +345,7 @@ export function MacroEditor({
             <div className="flex-1" />
             <select
               data-testid="macro-add-action"
-              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50"
+              className="rounded border border-transparent bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50 focus:border-accent focus:outline-none"
               value=""
               disabled={isRecording}
               onChange={(e) => {
@@ -363,7 +364,7 @@ export function MacroEditor({
             <button
               type="button"
               data-testid="macro-text-editor-btn"
-              className="rounded bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50"
+              className="rounded border border-transparent bg-surface-dim px-2.5 py-1 text-xs hover:bg-surface-raised disabled:opacity-50 focus:border-accent focus:outline-none"
               disabled={isRecording}
               onClick={() => setShowTextEditor(true)}
             >
@@ -458,7 +459,7 @@ export function MacroEditor({
               <button
                 type="button"
                 data-testid="macro-save"
-                className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                className={BTN_PRIMARY}
                 onClick={isEditing ? commitAndDeselect : handleSave}
                 disabled={isEditing
                   ? (isRecording || !hasPendingEdit)

@@ -39,7 +39,7 @@ function KeycodeButtonInner({ keycode, onClick, onDoubleClick, onHover, onHoverE
   const layout = useQuadrant
     ? 'grid grid-cols-2 grid-rows-2 place-items-center'
     : 'flex flex-col items-center justify-center'
-  const base = `${layout} rounded border border-transparent p-1 text-xs outline-none cursor-pointer ${hover} active:bg-accent/20 ${size} transition-colors`
+  const base = `${layout} rounded border border-transparent p-1 text-xs focus:outline-none focus:border-accent cursor-pointer ${hover} active:bg-accent/20 ${size} transition-colors`
   let variant: string
   if (selected) {
     variant = 'bg-accent/20 text-accent'

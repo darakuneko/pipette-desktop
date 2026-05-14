@@ -108,7 +108,7 @@ export function SettingsDataTab({
           <div className="space-y-2">
             <button
               type="button"
-              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+              className={`w-full ${BTN_PRIMARY}`}
               onClick={handleSignIn}
               disabled={authenticating}
               data-testid="sync-sign-in"
@@ -243,7 +243,7 @@ export function SettingsDataTab({
           <div data-testid="hub-enable-row">
             <button
               type="button"
-              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+              className={`w-full ${BTN_PRIMARY}`}
               onClick={() => onHubEnabledChange(true)}
               disabled={!hubAuthenticated}
               data-testid="hub-enable-toggle"
