@@ -9,6 +9,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { useAppConfig } from '../../hooks/useAppConfig'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 export function JaRemovedBanner(): JSX.Element | null {
   const { t } = useTranslation()
@@ -37,7 +38,7 @@ export function JaRemovedBanner(): JSX.Element | null {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:bg-accent/90"
+            className={BTN_PRIMARY}
             onClick={dismiss}
             data-testid="ja-removed-dismiss"
           >

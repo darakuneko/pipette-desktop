@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ModalCloseButton } from './ModalCloseButton'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 export interface JsonEditorModalProps<T> {
   title: string
@@ -130,7 +131,7 @@ export function JsonEditorModal<T>({
               type="button"
               onClick={handleApply}
               disabled={!!error || applying}
-              className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+              className={BTN_PRIMARY}
               data-testid={`${testIdPrefix}-apply`}
             >
               {t('common.save')}

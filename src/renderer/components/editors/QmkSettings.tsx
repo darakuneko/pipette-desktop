@@ -6,6 +6,7 @@ import type { QmkSettingsTab, QmkSettingsField } from '../../../shared/types/pro
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { ConfirmButton } from './ConfirmButton'
 import settingsDefs from '../../../shared/qmk-settings-defs.json'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 interface Props {
   tabName: string
@@ -221,7 +222,7 @@ export function QmkSettings({
         <button
           type="button"
           data-testid="qmk-save"
-          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+          className={BTN_PRIMARY}
           onClick={handleSave}
           disabled={!hasChanges}
         >

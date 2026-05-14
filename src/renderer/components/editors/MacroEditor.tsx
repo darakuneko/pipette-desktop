@@ -17,6 +17,7 @@ import {
 } from '../../../preload/macro'
 import type { TapDanceEntry } from '../../../shared/types/protocol'
 import { useUnlockGate } from '../../hooks/useUnlockGate'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useFavoriteStore } from '../../hooks/useFavoriteStore'
@@ -458,7 +459,7 @@ export function MacroEditor({
               <button
                 type="button"
                 data-testid="macro-save"
-                className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+                className={BTN_PRIMARY}
                 onClick={isEditing ? commitAndDeselect : handleSave}
                 disabled={isEditing
                   ? (isRecording || !hasPendingEdit)

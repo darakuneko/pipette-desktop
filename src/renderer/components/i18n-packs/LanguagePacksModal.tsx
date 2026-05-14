@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { Circle, CheckCircle2 } from 'lucide-react'
-import { ICON_XL } from '../../constants/ui-tokens'
+import { BTN_PRIMARY, ICON_XL } from '../../constants/ui-tokens'
 import { ModalCloseButton } from '../editors/ModalCloseButton'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useInlineRename } from '../../hooks/useInlineRename'
@@ -624,7 +624,7 @@ export function LanguagePacksModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void runSearch(search.trim())}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
+              className={BTN_PRIMARY}
               data-testid="language-packs-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('i18n.search')}

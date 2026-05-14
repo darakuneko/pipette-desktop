@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { ChevronUp } from 'lucide-react'
 import { AnchoredPopover } from './ui/AnchoredPopover'
+import { ICON_XS } from '../constants/ui-tokens'
 
 export interface UpwardSelectOption {
   id: string
@@ -35,7 +36,7 @@ export function UpwardSelect({ value, onChange, options, 'aria-label': ariaLabel
         onClick={() => setOpen((v) => !v)}
       >
         <span>{currentName}</span>
-        <ChevronUp size={10} className={open ? 'opacity-100' : 'opacity-50'} />
+        <ChevronUp size={ICON_XS} className={open ? 'opacity-100' : 'opacity-50'} />
       </button>
       <AnchoredPopover
         anchorRef={triggerRef}

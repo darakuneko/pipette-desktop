@@ -6,6 +6,7 @@ import { HSVColorPicker, hsvToRgb, rgbToHsv, rgbToHex, hexToRgb } from './HSVCol
 import { useConfirmAction } from '../../hooks/useConfirmAction'
 import { ConfirmButton } from './ConfirmButton'
 import { QMK_RGBLIGHT_EFFECTS, VIALRGB_EFFECTS } from '../../../shared/constants/lighting'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 interface Props {
   lightingType: string | undefined
@@ -486,7 +487,7 @@ export function RGBConfigurator({
             }
           }}
           disabled={!isDirty}
-          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+          className={BTN_PRIMARY}
         >
           {t('common.save')}
         </button>

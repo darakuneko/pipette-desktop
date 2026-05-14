@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from 'lucide-react'
 import { Monitor, Sun, Moon } from 'lucide-react'
-export { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER_OUTLINE } from '../../constants/ui-tokens'
+export { BTN_PRIMARY, BTN_SECONDARY, BTN_DANGER_OUTLINE, BTN_DANGER } from '../../constants/ui-tokens'
 import type { UseSyncReturn } from '../../hooks/useSync'
 import type { ThemeMode, ThemeSelection } from '../../hooks/useTheme'
 import type { KeyboardLayoutId, AutoLockMinutes } from '../../hooks/useDevicePrefs'

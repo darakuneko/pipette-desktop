@@ -18,6 +18,7 @@ import {
   formatDate,
 } from '../editors/store-modal-shared'
 import { FORMAT_BTN } from '../editors/layout-store-types'
+import { BTN_PRIMARY_XS, BTN_DANGER_XS } from '../../constants/ui-tokens'
 import type { HubEntryResult } from '../editors/layout-store-types'
 import type { AnalyzeFilterSnapshotMeta } from '../../../shared/types/analyze-filter-store'
 import { AnalyzeFilterStoreHubRow } from './AnalyzeFilterStoreHubRow'
@@ -194,7 +195,7 @@ export function AnalyzeFilterStorePanel({
                     <button
                       type="submit"
                       disabled={saving}
-                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-danger/90 disabled:opacity-50"
+                      className={`shrink-0 ${BTN_DANGER_XS}`}
                       data-testid="analyze-filter-store-overwrite-confirm"
                     >
                       {t('analyzeFilterStore.confirmOverwrite')}
@@ -212,7 +213,7 @@ export function AnalyzeFilterStorePanel({
                   <button
                     type="submit"
                     disabled={saving || !saveLabel.trim()}
-                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-accent/90 disabled:opacity-50"
+                    className={`shrink-0 ${BTN_PRIMARY_XS}`}
                     data-testid="analyze-filter-store-save-submit"
                   >
                     {t('common.save')}

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { ACTION_BTN, CONFIRM_DELETE_BTN, DELETE_BTN, SectionHeader, formatDate } from './store-modal-shared'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 import { FavoriteHubActions } from './FavoriteHubActions'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 import type { FavoriteType, SavedFavoriteMeta } from '../../../shared/types/favorite-store'
@@ -168,7 +169,7 @@ export function FavoriteStoreContent({
             <button
               type="submit"
               disabled={!canSubmitSave}
-              className="shrink-0 rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+              className={`shrink-0 ${BTN_PRIMARY}`}
               data-testid="favorite-store-save-submit"
             >
               {t('common.save')}

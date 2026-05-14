@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Trans, useTranslation } from 'react-i18next'
 import { GripVertical } from 'lucide-react'
-import { ICON_SM } from '../../constants/ui-tokens'
+import { BTN_PRIMARY, ICON_SM } from '../../constants/ui-tokens'
 import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { useInlineRename } from '../../hooks/useInlineRename'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
@@ -397,7 +397,7 @@ export function KeyLabelsModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void triggerSearch()}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
+              className={BTN_PRIMARY}
               data-testid="key-labels-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}

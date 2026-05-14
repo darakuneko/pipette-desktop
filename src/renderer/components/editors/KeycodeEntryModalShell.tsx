@@ -12,6 +12,7 @@ import { TabbedKeycodes } from '../keycodes/TabbedKeycodes'
 import { KeyPopover } from '../keycodes/KeyPopover'
 import { FavoriteStoreContent } from './FavoriteStoreContent'
 import type { BasicViewType, SplitKeyMode } from '../../../shared/types/app-config'
+import { BTN_PRIMARY } from '../../constants/ui-tokens'
 
 // ---------------------------------------------------------------------------
 // Hub props (forwarded to FavoriteStoreContent)
@@ -191,7 +192,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
         <button
           type="button"
           data-testid={`${prefix}-modal-save`}
-          className="rounded bg-accent px-4 py-2 text-sm text-content-inverse hover:bg-accent-hover disabled:opacity-50"
+          className={BTN_PRIMARY}
           disabled={!hasChanges}
           onClick={handleEntrySave}
         >

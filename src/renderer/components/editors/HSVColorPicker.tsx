@@ -297,7 +297,7 @@ export function HSVColorPicker({
                   data-selected={selected || undefined}
                   className={
                     selected
-                      ? 'relative z-10 h-6 w-6 rounded-none border-0 p-0 ring-2 ring-white shadow-[0_0_0_1px_rgba(0,0,0,0.3)]'
+                      ? 'relative z-10 h-6 w-6 rounded-none border-0 p-0 ring-2 ring-content-inverse shadow-[0_0_0_1px_rgba(0,0,0,0.3)]'
                       : 'h-6 w-6 rounded-none border-0 p-0'
                   }
                   style={{ backgroundColor: entry.hex }}

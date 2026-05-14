@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useTranslation } from 'react-i18next'
-import { BTN_SECONDARY, BTN_DANGER_OUTLINE } from './settings-modal-shared'
+import { BTN_SECONDARY, BTN_DANGER_OUTLINE, BTN_DANGER } from './settings-modal-shared'
 import type { LocalResetTargets, StoredKeyboardInfo } from '../../../shared/types/sync'
 
 export interface LocalDataResetGroupProps {
@@ -121,7 +121,7 @@ export function LocalDataResetGroup({
             </button>
             <button
               type="button"
-              className="rounded bg-danger px-3 py-1.5 text-sm font-medium text-content-inverse hover:bg-danger/90 disabled:opacity-50"
+              className={BTN_DANGER}
               onClick={onConfirm}
               disabled={confirmDisabled || !anySelected}
               data-testid="reset-local-data-confirm"
