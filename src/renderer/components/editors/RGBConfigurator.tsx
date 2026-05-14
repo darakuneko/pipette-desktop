@@ -69,12 +69,12 @@ function ColorCodeFields({
 
   return (
     <div className="flex items-center gap-3">
-      <label className="min-w-[100px] text-sm">{t('editor.lighting.hex')}</label>
+      <label className="min-w-rgb-label text-sm">{t('editor.lighting.hex')}</label>
       <div className="flex items-center gap-1 text-xs">
         <span className="text-content-muted">#</span>
         <input
           data-testid="hex-input"
-          className={`${INPUT_CLASS} w-[4.5rem]`}
+          className={`${INPUT_CLASS} w-18`}
           value={localHex ?? hexStr.slice(1)}
           maxLength={6}
           onFocus={() => setLocalHex(hexStr.slice(1))}
@@ -257,7 +257,7 @@ export function RGBConfigurator({
           )}
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.brightness')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.brightness')}</label>
             <input
               type="range"
               min={0}
@@ -272,7 +272,7 @@ export function RGBConfigurator({
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.breathing')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.breathing')}</label>
             <input
               type="checkbox"
               checked={backlightEffect === 1}
@@ -293,7 +293,7 @@ export function RGBConfigurator({
           )}
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.effect')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.effect')}</label>
             <select
               value={rgblightEffect}
               onChange={async (e) => {
@@ -310,7 +310,7 @@ export function RGBConfigurator({
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.speed')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.speed')}</label>
             <input
               type="range"
               min={0}
@@ -327,7 +327,7 @@ export function RGBConfigurator({
           {selectedRgblightEffect?.hasColorPicker && (
             <>
               <div className="flex items-start gap-3">
-                <label className="min-w-[100px] pt-1 text-sm">
+                <label className="min-w-rgb-label pt-1 text-sm">
                   {t('editor.lighting.colorPicker.label')}
                 </label>
                 <HSVColorPicker
@@ -351,7 +351,7 @@ export function RGBConfigurator({
               </div>
 
               <div className="flex items-center gap-3">
-                <label className="min-w-[100px] text-sm">
+                <label className="min-w-rgb-label text-sm">
                   {t('editor.lighting.brightness')}
                 </label>
                 <input
@@ -383,7 +383,7 @@ export function RGBConfigurator({
       {hasVialRGB && (
         <section className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.effect')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.effect')}</label>
             <select
               value={vialRGBMode}
               onChange={async (e) => {
@@ -400,7 +400,7 @@ export function RGBConfigurator({
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">{t('editor.lighting.speed')}</label>
+            <label className="min-w-rgb-label text-sm">{t('editor.lighting.speed')}</label>
             <input
               type="range"
               min={0}
@@ -415,7 +415,7 @@ export function RGBConfigurator({
           </div>
 
           <div className="flex items-start gap-3">
-            <label className="min-w-[100px] pt-1 text-sm">
+            <label className="min-w-rgb-label pt-1 text-sm">
               {t('editor.lighting.colorPicker.label')}
             </label>
             <HSVColorPicker
@@ -438,7 +438,7 @@ export function RGBConfigurator({
           </div>
 
           <div className="flex items-center gap-3">
-            <label className="min-w-[100px] text-sm">
+            <label className="min-w-rgb-label text-sm">
               {t('editor.lighting.brightness')}
             </label>
             <input

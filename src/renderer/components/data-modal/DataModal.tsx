@@ -284,7 +284,7 @@ export function DataModal({
         {/* Body: sidebar + content */}
         <div className="flex flex-1 min-h-0">
           {/* Sidebar */}
-          <div className="w-[220px] shrink-0 border-r border-edge overflow-y-auto">
+          <div className="w-data-sidebar shrink-0 border-r border-edge overflow-y-auto">
             <DataNavTree
               storedKeyboards={nav.storedKeyboards}
               typingKeyboards={nav.typingKeyboards}

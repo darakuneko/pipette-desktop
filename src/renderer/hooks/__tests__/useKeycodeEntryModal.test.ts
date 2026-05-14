@@ -160,11 +160,11 @@ describe('useKeycodeEntryModal', () => {
   it('modalWidth supports function form', () => {
     const widthAdapter: KeycodeEntryModalAdapter<TestEntry> = {
       ...testAdapter,
-      modalWidth: ({ isDummy }) => isDummy ? 'w-[900px]' : 'w-[1050px]',
+      modalWidth: ({ isDummy }) => isDummy ? 'w-modal-wide' : 'w-modal-editor',
     }
     const opts = makeOptions({ isDummy: true })
     const { result } = renderHook(() => useKeycodeEntryModal(widthAdapter, opts))
-    expect(result.current.modalWidth).toBe('w-[900px]')
+    expect(result.current.modalWidth).toBe('w-modal-wide')
   })
 
   it('handleFieldSelect sets selectedField and stores preEditValue', () => {

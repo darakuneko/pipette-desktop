@@ -260,7 +260,7 @@ export function HSVColorPicker({
   }
 
   return (
-    <div className="flex w-[15rem] flex-col gap-3">
+    <div className="flex w-color-picker flex-col gap-3">
       {/* Mode toggle */}
       <div className="flex gap-1.5">
         <button
@@ -320,7 +320,7 @@ export function HSVColorPicker({
           <div
             ref={svRef}
             data-testid="sv-picker"
-            className="relative h-[180px] cursor-crosshair rounded-lg"
+            className="relative h-color-picker-sv cursor-crosshair rounded-lg"
             style={{
               background:
                 'linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent)',

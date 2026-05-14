@@ -731,7 +731,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         {pickerSource === 'device' && deviceBrowsing ? (
           /* --- Device browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
-            <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+            <div className="flex min-h-device-list max-h-device-list flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
               <span className="mb-1 text-xs text-content-secondary">{t('editor.keymap.pickerCurrentState')}</span>
               {probeStatus === 'probing' ? (
                 <p className="py-4 text-center text-xs text-content-muted">{t('editor.keymap.pickerProbing')}</p>
@@ -753,7 +753,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         ) : pickerSource === 'file' && !pickerFileData ? (
           /* --- File browse view --- */
           <div className="mx-auto flex w-full max-w-md flex-col px-3 py-3">
-            <div className="flex min-h-[340px] max-h-[340px] flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
+            <div className="flex min-h-device-list max-h-device-list flex-col gap-1.5 overflow-y-auto pb-2 pr-1">
             {pickerLoadError && (
               <div className="rounded-lg bg-danger/10 px-3 py-2 text-xs text-danger">
                 {pickerLoadError}
@@ -1020,7 +1020,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             }
             panelOverlay={
               <div id="keycodes-overlay-panel" ref={layoutPanelRef}
-                className={`absolute inset-y-0 right-0 z-10 w-fit min-w-[360px] max-w-[420px] rounded-l-lg rounded-r-[10px] border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`absolute inset-y-0 right-0 z-10 w-fit min-w-keycode-panel max-w-keycode-panel rounded-l-lg rounded-r-panel-connector border-l border-edge-subtle bg-surface-alt shadow-lg transition-transform duration-200 ease-out ${layoutPanelOpen ? 'translate-x-0' : 'translate-x-full'}`}
                 inert={!layoutPanelOpen || undefined}
               >
                 <KeycodesOverlayPanel

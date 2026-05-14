@@ -29,7 +29,7 @@ export function MissingKeyLabelDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-black/50"
       data-testid="missing-key-label-backdrop"
       onClick={onClose}
     >
@@ -37,7 +37,7 @@ export function MissingKeyLabelDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="missing-key-label-title"
-        className="w-[600px] max-w-[90vw] rounded-lg bg-surface p-5 shadow-xl"
+        className="w-modal-md max-w-[90vw] rounded-lg bg-surface p-5 shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="missing-key-label-dialog"
       >

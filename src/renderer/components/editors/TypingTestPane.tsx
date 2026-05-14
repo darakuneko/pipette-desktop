@@ -497,7 +497,7 @@ export function TypingTestPane({
                 other tabs match its natural height. Keep this in sync
                 if any tab grows/shrinks meaningfully. */}
             {menuTab === 'window' && (
-              <div className="flex min-h-[100px] flex-col gap-1.5">
+              <div className="flex min-h-word-list flex-col gap-1.5">
                 <button
                   type="button"
                   role="menuitem"
@@ -545,7 +545,7 @@ export function TypingTestPane({
             )}
 
             {menuTab === 'rec' && (
-              <div className="flex min-h-[100px] flex-col gap-1.5">
+              <div className="flex min-h-word-list flex-col gap-1.5">
                 {onRecordEnabledChange && (
                   <button
                     type="button"

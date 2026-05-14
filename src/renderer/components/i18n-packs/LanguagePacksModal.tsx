@@ -595,7 +595,7 @@ export function LanguagePacksModal({
       onClick={onClose}
     >
       <div
-        className="w-[760px] max-w-[90vw] h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="language-packs-modal"
       >
@@ -624,7 +624,7 @@ export function LanguagePacksModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void runSearch(search.trim())}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
               data-testid="language-packs-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('i18n.search')}

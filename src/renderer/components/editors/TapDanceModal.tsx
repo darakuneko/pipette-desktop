@@ -50,7 +50,7 @@ const tdAdapter: KeycodeEntryModalAdapter<TapDanceEntry> = {
   guardCodes: () => [], // TapDance has no unlock guard
   closeOnSave: false,
   showFavorites: ({ isDummy }) => !isDummy,
-  modalWidth: ({ isDummy }) => isDummy ? 'w-[900px]' : 'w-[1050px]',
+  modalWidth: ({ isDummy }) => isDummy ? 'w-modal-wide' : 'w-modal-editor',
 }
 
 export function TapDanceModal({
@@ -101,7 +101,7 @@ export function TapDanceModal({
       hubProps={hubProps}
       renderAfterFields={() => (
         <div className="flex items-center gap-3">
-          <label className="min-w-[140px] text-sm text-content">
+          <label className="min-w-modifier text-sm text-content">
             {t('editor.tapDance.tappingTerm')}
           </label>
           <input

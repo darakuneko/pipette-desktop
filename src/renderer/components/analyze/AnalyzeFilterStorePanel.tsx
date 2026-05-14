@@ -194,7 +194,7 @@ export function AnalyzeFilterStorePanel({
                     <button
                       type="submit"
                       disabled={saving}
-                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90 disabled:opacity-50"
+                      className="shrink-0 rounded-lg bg-danger px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-danger/90 disabled:opacity-50"
                       data-testid="analyze-filter-store-overwrite-confirm"
                     >
                       {t('analyzeFilterStore.confirmOverwrite')}
@@ -212,7 +212,7 @@ export function AnalyzeFilterStorePanel({
                   <button
                     type="submit"
                     disabled={saving || !saveLabel.trim()}
-                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white hover:bg-accent/90 disabled:opacity-50"
+                    className="shrink-0 rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-content-inverse hover:bg-accent/90 disabled:opacity-50"
                     data-testid="analyze-filter-store-save-submit"
                   >
                     {t('common.save')}

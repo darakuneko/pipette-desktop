@@ -111,7 +111,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
       title={tooltip}
       data-testid="keycode-field"
       disabled={disabled}
-      className={`flex shrink-0 rounded-sm ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
+      className={`flex shrink-0 rounded ring-1 ${disabled ? 'cursor-default' : 'cursor-pointer'} ${selected ? 'ring-accent' : `ring-picker-item-border ${disabled ? '' : 'hover:ring-accent'}`}`}
       onClick={handleClick}
       onDoubleClick={isMasked ? undefined : handleDoubleClick}
     >
@@ -143,7 +143,7 @@ export function KeycodeField({ value, selected, selectedMaskPart, onSelect, onMa
         type="button"
         data-testid="keycode-delete"
         aria-label={t('editor.macro.deleteKeycode')}
-        className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+        className="absolute -top-2 -right-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-content-inverse opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
         onClick={(e) => { e.stopPropagation(); onDelete() }}
       >
         <X size={ICON_SM} aria-hidden="true" />

@@ -119,7 +119,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
     const value = editedEntry[key] as number
     return (
       <div key={key} className="flex items-center gap-3">
-        <label className="min-w-[140px] text-sm text-content">{t(labelKey, labelOpts)}</label>
+        <label className="min-w-modifier text-sm text-content">{t(labelKey, labelOpts)}</label>
         <KeycodeField
           value={value}
           selected={selectedField === key}
@@ -205,7 +205,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
     if (!showFavorites) return null
     return (
       <div
-        className={`w-[456px] shrink-0 flex flex-col ${selectedField ? 'hidden' : ''}`}
+        className={`w-macro-editor shrink-0 flex flex-col ${selectedField ? 'hidden' : ''}`}
         data-testid={`${prefix}-favorites-panel`}
       >
         <FavoriteStoreContent
@@ -246,7 +246,7 @@ export function KeycodeEntryModalShell<TEntry extends Record<string, unknown>>({
       onClick={handleClose}
     >
       <div
-        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] h-[80vh] flex flex-col`}
+        className={`overflow-hidden rounded-lg bg-surface-alt shadow-xl ${modalWidth} max-w-[95vw] h-modal-80vh flex flex-col`}
         data-testid={`${prefix}-modal`}
         onClick={(e) => e.stopPropagation()}
       >

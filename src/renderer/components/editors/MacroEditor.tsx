@@ -498,7 +498,7 @@ export function MacroEditor({
 
       {!isDummy && (
         <div
-          className={`w-[456px] shrink-0 flex flex-col ${isEditing ? 'hidden' : isRecording ? 'invisible' : ''}`}
+          className={`w-macro-editor shrink-0 flex flex-col ${isEditing ? 'hidden' : isRecording ? 'invisible' : ''}`}
           data-testid="macro-favorites-panel"
         >
           <FavoriteStoreContent

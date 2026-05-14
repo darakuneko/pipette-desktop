@@ -25,7 +25,7 @@ export function LayoutStoreModal({ onClose, ...contentProps }: Props) {
       onClick={onClose}
     >
       <div
-        className="w-[440px] max-w-[90vw] max-h-[85vh] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-sm max-w-[90vw] max-h-modal-85vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

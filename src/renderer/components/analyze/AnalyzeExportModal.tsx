@@ -533,7 +533,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
         role="dialog"
         aria-modal="true"
         aria-label={t('analyze.export.categoriesLabel')}
-        className="w-[560px] max-w-[95vw] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-notify max-w-[95vw] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-end px-3 pt-3 shrink-0">
@@ -604,7 +604,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                           open={targetPickerOpen}
                           onClose={handleTargetClose}
                           placement="top"
-                          className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
+                          className="z-60 min-w-dropdown rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
                           role="listbox"
                           aria-multiselectable
                         >
@@ -651,7 +651,7 @@ export function AnalyzeExportModal({ isOpen, onClose, ctx, mode = 'export', uplo
                   open={appPickerOpen}
                   onClose={handleAppClose}
                   placement="top"
-                  className="z-[60] min-w-[200px] rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
+                  className="z-60 min-w-dropdown rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
                   role="listbox"
                   aria-multiselectable
                 >

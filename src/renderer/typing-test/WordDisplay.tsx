@@ -146,7 +146,7 @@ function displayChar(expected: string, index: number, input: string): string {
 function Cursor({ blink }: { blink: boolean }) {
   return (
     <span
-      className={`absolute left-0 bottom-[0.12em] h-[1.1em] w-0.5 rounded-full bg-accent${blink ? ' animate-blink' : ''}`}
+      className={`absolute left-0 bottom-cursor h-cursor w-0.5 rounded-full bg-accent${blink ? ' animate-blink' : ''}`}
       aria-hidden="true"
     />
   )

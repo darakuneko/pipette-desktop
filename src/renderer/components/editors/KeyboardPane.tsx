@@ -4,7 +4,7 @@ import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingHeatmapCell } from '../../../shared/types/typing-analytics'
 
-const PANE_CLASS = 'relative inline-block min-w-[280px] rounded-xl bg-surface-alt px-5 pt-3 pb-2 border-2 border-edge-subtle'
+const PANE_CLASS = 'relative inline-block min-w-keyboard-pane rounded-xl bg-surface-alt px-5 pt-3 pb-2 border-2 border-edge-subtle'
 
 /** Returns true when any selection-modifier key (Ctrl/Meta/Shift) is held. */
 export function hasModifierKey(e: React.MouseEvent): boolean {
@@ -110,7 +110,7 @@ export function KeyboardPane({
           onKeyHoverEnd={onKeyHoverEnd}
         />
       </div>
-      <div className="flex items-center justify-between px-[5px] text-xs leading-none text-content-muted">
+      <div className="flex items-center justify-between px-keyboard-px text-xs leading-none text-content-muted">
         <span data-testid={layerLabelTestId} className="text-content-muted">
           {layerLabel}
         </span>
