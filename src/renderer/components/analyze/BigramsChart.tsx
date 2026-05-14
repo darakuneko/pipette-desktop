@@ -37,6 +37,7 @@ import {
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
 import type { RangeMs } from './analyze-types'
 import { Stat, TooltipShell } from './analyze-tooltip'
+import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
 
 interface BigramsChartProps {
   uid: string
@@ -610,8 +611,8 @@ function BigramFingerBarChart({
   )
 }
 
-const BAR_LEFT = '#3b82f6'
-const BAR_RIGHT = '#ef4444'
+const BAR_LEFT = 'var(--color-accent-hover)'
+const BAR_RIGHT = 'var(--color-danger)'
 
 interface BarDatum {
   id: string
@@ -650,14 +651,14 @@ function BigramBarChart({ data, yAxisWidth, unit }: BigramBarChartProps): JSX.El
           <XAxis
             type="number"
             stroke="var(--color-content-muted)"
-            fontSize={11}
+            fontSize={CHART_TICK_FONT_SIZE}
             tickFormatter={(v) => `${Math.round(Number(v))}`}
           />
           <YAxis
             type="category"
             dataKey="label"
             stroke="var(--color-content-muted)"
-            fontSize={11}
+            fontSize={CHART_TICK_FONT_SIZE}
             width={yAxisWidth}
             interval={0}
           />
@@ -673,7 +674,7 @@ function BigramBarChart({ data, yAxisWidth, unit }: BigramBarChartProps): JSX.El
               dataKey="value"
               position="right"
               formatter={(v: unknown) => `${Math.round(Number(v))} ${unit}`}
-              style={{ fill: 'var(--color-content-muted)', fontSize: 11 }}
+              style={{ fill: 'var(--color-content-muted)', fontSize: CHART_TICK_FONT_SIZE }}
             />
           </Bar>
         </BarChart>

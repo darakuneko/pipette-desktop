@@ -148,7 +148,7 @@ export function AppUsageChart({ uid, range, deviceScopes }: Props) {
   // being visible on both themes (the surface-dim fill blended into
   // the panel background and made the slice unreadable).
   const colorFor = (datum: PieDatum, index: number): string => {
-    if (datum.isUnknown) return '#9ca3af'
+    if (datum.isUnknown) return 'var(--color-content-muted)'
     return chartSeriesColor(index, data.length, theme)
   }
 

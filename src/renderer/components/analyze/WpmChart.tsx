@@ -42,6 +42,7 @@ import {
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
+import { CHART_TICK_FONT_SIZE, CHART_LEGEND_FONT_SIZE } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -60,7 +61,7 @@ interface Props {
   minActiveMs: number
 }
 
-const ERROR_PROXY_COLOR = '#ef4444'
+const ERROR_PROXY_COLOR = 'var(--color-danger)'
 
 const INACTIVE_BAR_COLOR = 'var(--color-surface-dim)'
 
@@ -235,12 +236,12 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
                 interval={1}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
                 allowDecimals
               />
@@ -296,17 +297,17 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
               dataKey="bucketStartMs"
               type="number"
               domain={[range.fromMs, range.toMs]}
-              tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+              tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
               stroke="var(--color-edge)"
               tickFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
             />
-            <YAxis yAxisId="wpm" tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }} stroke="var(--color-edge)" allowDecimals />
+            <YAxis yAxisId="wpm" tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }} stroke="var(--color-edge)" allowDecimals />
             {errorProxyActive && (
               <YAxis
                 yAxisId="bks"
                 orientation="right"
                 domain={[0, 'auto']}
-                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
                 tickFormatter={(v: number) => `${v}%`}
                 width={40}
@@ -325,7 +326,7 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, granularity, vie
               }}
             />
             <Legend
-              wrapperStyle={{ fontSize: 12, cursor: 'pointer' }}
+              wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE, cursor: 'pointer' }}
               onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
               formatter={(value, entry) => {
                 const key = String(entry.dataKey ?? '') as WpmLineKey

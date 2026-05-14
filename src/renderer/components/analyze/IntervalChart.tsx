@@ -33,6 +33,7 @@ import {
 import type { AnalyzeSummaryItem } from './analyze-summary-table'
 import { AnalyzeStatGrid } from './stat-card'
 import { Tooltip as UITooltip } from '../ui/Tooltip'
+import { CHART_TICK_FONT_SIZE, CHART_LEGEND_FONT_SIZE } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -57,20 +58,20 @@ type SeriesKey = (typeof SERIES_KEYS)[number]
 // central tendency lines visually. All series are drawn solid — the
 // old dashed whiskers were hard to tell apart at a glance.
 const SERIES_STYLE: Record<SeriesKey, string> = {
-  min: '#10b981',
-  p25: '#06b6d4',
-  p50: '#3b82f6',
-  p75: '#f59e0b',
-  max: '#ef4444',
+  min: 'var(--color-success)',
+  p25: '#06b6d4', // Exception: cyan-500, no design token — intentional 5th distinct hue
+  p50: 'var(--color-accent-hover)',
+  p75: 'var(--color-warning)',
+  max: 'var(--color-danger)',
 }
 
 // Band palette blended from the timeSeries quartile colours so the
 // histogram stays visually related to the line chart.
 const RHYTHM_BAND_COLORS: Record<RhythmBandId, string> = {
-  fast: '#10b981',
-  normal: '#3b82f6',
-  slow: '#f59e0b',
-  pause: '#ef4444',
+  fast: 'var(--color-success)',
+  normal: 'var(--color-accent-hover)',
+  slow: 'var(--color-warning)',
+  pause: 'var(--color-danger)',
 }
 
 function formatIntervalValue(ms: number, unit: IntervalUnit): string {
@@ -222,12 +223,12 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
                 interval={0}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+                tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
                 stroke="var(--color-edge)"
                 tickFormatter={(v: number) => Math.round(v).toLocaleString()}
               />
@@ -278,7 +279,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
             dataKey="bucketStartMs"
             type="number"
             domain={[range.fromMs, range.toMs]}
-            tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+            tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
             stroke="var(--color-edge)"
             tickFormatter={(v: number) => formatBucketAxisLabel(v, bucketMs)}
           />
@@ -286,14 +287,14 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
             scale="log"
             domain={['auto', 'auto']}
             allowDataOverflow={false}
-            tick={{ fontSize: 11, fill: 'var(--color-content-muted)' }}
+            tick={{ fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' }}
             stroke="var(--color-edge)"
             tickFormatter={(v: number) => unit === 'sec' ? (v / 1000).toString() : v.toString()}
             label={{
               value: unit === 'sec' ? 'sec (log)' : 'ms (log)',
               angle: -90,
               position: 'insideLeft',
-              style: { fontSize: 11, fill: 'var(--color-content-muted)' },
+              style: { fontSize: CHART_TICK_FONT_SIZE, fill: 'var(--color-content-muted)' },
             }}
           />
           <Tooltip
@@ -306,7 +307,7 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
             }}
           />
           <Legend
-            wrapperStyle={{ fontSize: 12, cursor: 'pointer' }}
+            wrapperStyle={{ fontSize: CHART_LEGEND_FONT_SIZE, cursor: 'pointer' }}
             onClick={(entry) => toggleSeries(String(entry.dataKey ?? ''))}
             formatter={(value, entry) => {
               const key = String(entry.dataKey ?? '') as SeriesKey

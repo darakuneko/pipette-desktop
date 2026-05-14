@@ -20,6 +20,11 @@ import type { EffectiveTheme } from '../hooks/useEffectiveTheme'
  * paints a visible tint. */
 export const PALETTE_MIN_T = 0.05
 
+/** Recharts axis tick font size — matches `text-xs` (12px body, 11px tick). */
+export const CHART_TICK_FONT_SIZE = 11
+/** Recharts legend wrapper font size. */
+export const CHART_LEGEND_FONT_SIZE = 12
+
 const HUE_START = 220
 const HUE_RANGE = 220
 

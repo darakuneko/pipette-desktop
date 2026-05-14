@@ -37,6 +37,7 @@ import {
 } from './analyze-layer-usage'
 import { KeystrokeCountTooltip } from './analyze-tooltip'
 import { FILTER_SELECT } from './analyze-filter-styles'
+import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
 
 interface AxisTickProps {
   x?: number
@@ -286,12 +287,12 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, snapshot,
             margin={{ top: 4, right: 16, bottom: 4, left: 8 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-edge)" />
-            <XAxis type="number" stroke="var(--color-content-muted)" fontSize={11} />
+            <XAxis type="number" stroke="var(--color-content-muted)" fontSize={CHART_TICK_FONT_SIZE} />
             <YAxis
               type="category"
               dataKey="axisLabel"
               stroke="var(--color-content-muted)"
-              fontSize={11}
+              fontSize={CHART_TICK_FONT_SIZE}
               width={120}
               tick={<MultiLineYAxisTick />}
             />

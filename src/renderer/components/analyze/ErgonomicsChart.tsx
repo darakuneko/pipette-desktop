@@ -33,6 +33,7 @@ import { aggregateErgonomics, ROW_ORDER } from './analyze-ergonomics'
 import { fetchMatrixHeatmapAllLayers } from './analyze-fetch'
 import { KeystrokeCountTooltip, Stat, TooltipShell } from './analyze-tooltip'
 import { ErgonomicsLearningCurveChart } from './ErgonomicsLearningCurveChart'
+import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
 
 interface Props {
   uid: string
@@ -65,8 +66,8 @@ type BarDatum = { label: string; value: number }
 type FingerKind = 'thumb' | 'index' | 'middle' | 'ring' | 'pinky'
 const FINGER_KINDS: readonly FingerKind[] = ['thumb', 'index', 'middle', 'ring', 'pinky']
 
-const PYRAMID_LEFT_COLOR = '#3b82f6'
-const PYRAMID_RIGHT_COLOR = '#ef4444'
+const PYRAMID_LEFT_COLOR = 'var(--color-accent-hover)'
+const PYRAMID_RIGHT_COLOR = 'var(--color-danger)'
 
 interface PyramidDatum {
   /** Localised category label (drives YAxis ticks). */
@@ -111,13 +112,13 @@ const Section = memo(function Section({
                 <XAxis
                   type="number"
                   stroke="var(--color-content-muted)"
-                  fontSize={11}
+                  fontSize={CHART_TICK_FONT_SIZE}
                 />
                 <YAxis
                   type="category"
                   dataKey="label"
                   stroke="var(--color-content-muted)"
-                  fontSize={11}
+                  fontSize={CHART_TICK_FONT_SIZE}
                   width={80}
                 />
               </>
@@ -127,9 +128,9 @@ const Section = memo(function Section({
                   type="category"
                   dataKey="label"
                   stroke="var(--color-content-muted)"
-                  fontSize={11}
+                  fontSize={CHART_TICK_FONT_SIZE}
                 />
-                <YAxis type="number" stroke="var(--color-content-muted)" fontSize={11} />
+                <YAxis type="number" stroke="var(--color-content-muted)" fontSize={CHART_TICK_FONT_SIZE} />
               </>
             )}
             <Tooltip
@@ -194,13 +195,13 @@ const HandPyramidChart = memo(function HandPyramidChart({
               domain={[-maxAbs, maxAbs]}
               tickFormatter={(v) => Math.abs(Number(v)).toLocaleString()}
               stroke="var(--color-content-muted)"
-              fontSize={11}
+              fontSize={CHART_TICK_FONT_SIZE}
             />
             <YAxis
               type="category"
               dataKey="category"
               stroke="var(--color-content-muted)"
-              fontSize={11}
+              fontSize={CHART_TICK_FONT_SIZE}
               width={yAxisWidth}
             />
             <Tooltip
