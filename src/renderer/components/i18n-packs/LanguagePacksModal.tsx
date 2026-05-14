@@ -1000,7 +1000,7 @@ function InstalledRowView({
             {hasUpdateAvailable && (
               <span
                 aria-hidden="true"
-                className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"
+                className="h-1.5 w-1.5 rounded-full bg-success animate-pulse"
                 data-testid={`language-packs-update-available-${row.reactKey}`}
               />
             )}

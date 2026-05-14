@@ -222,7 +222,7 @@ export function AnalyzeFilterStorePanel({
               </form>
               <div className="mt-2 flex items-center gap-1">
                 {showSaved && (
-                  <span className="text-xs font-medium text-emerald-500" data-testid="analyze-filter-store-saved-flash">
+                  <span className="text-xs font-medium text-success" data-testid="analyze-filter-store-saved-flash">
                     {t('common.saved')}
                   </span>
                 )}

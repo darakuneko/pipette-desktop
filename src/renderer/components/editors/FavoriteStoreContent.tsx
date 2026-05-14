@@ -178,12 +178,12 @@ export function FavoriteStoreContent({
           {(onExportCurrent || onImportCurrent || showExported || showImported) && (
             <div className="flex items-center gap-1 mt-2">
               {showImported && (
-                <span className="text-xs font-medium text-emerald-500" data-testid="favorite-store-imported">
+                <span className="text-xs font-medium text-success" data-testid="favorite-store-imported">
                   {t('common.imported')}
                 </span>
               )}
               {showExported && (
-                <span className="text-xs font-medium text-emerald-500" data-testid="favorite-store-exported">
+                <span className="text-xs font-medium text-success" data-testid="favorite-store-exported">
                   {t('common.exported')}
                 </span>
               )}

@@ -306,7 +306,7 @@ export function TypingAnalyticsContent({ uid, onDeleted, mode = 'local', machine
     if (importStatus.phase === 'import-done' && importStatus.rejections.length > 0) {
       return 'border-warning/40 bg-warning/10 text-warning'
     }
-    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
+    return 'border-success/40 bg-success/10 text-success'
   })()
   const inProgress = importStatus?.phase === 'importing' || importStatus?.phase === 'exporting'
   const importBanner = importStatus ? (
