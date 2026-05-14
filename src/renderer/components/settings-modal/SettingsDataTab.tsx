@@ -82,7 +82,7 @@ export function SettingsDataTab({
     <div className="pt-4">
       {/* Google Account */}
       <section className="mb-4">
-        <h3 className="mb-3 text-[15px] font-bold text-content">
+        <h3 className="mb-3 text-heading-md font-bold text-content">
           {t('sync.googleAccount')}
         </h3>
         {sync.authStatus.authenticated ? (
@@ -108,7 +108,7 @@ export function SettingsDataTab({
           <div className="space-y-2">
             <button
               type="button"
-              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50"
               onClick={handleSignIn}
               disabled={authenticating}
               data-testid="sync-sign-in"
@@ -127,7 +127,7 @@ export function SettingsDataTab({
       <hr className="my-4 border-edge" />
 
       {/* Data Sync */}
-      <h3 className="mb-3 text-[15px] font-bold text-content" data-testid="data-sync-title">
+      <h3 className="mb-3 text-heading-md font-bold text-content" data-testid="data-sync-title">
         {t('settings.dataSync')}
       </h3>
 
@@ -210,7 +210,7 @@ export function SettingsDataTab({
       <hr className="my-4 border-edge" />
 
       {/* Pipette Hub */}
-      <h3 className="mb-3 text-[15px] font-bold text-content" data-testid="pipette-hub-title">
+      <h3 className="mb-3 text-heading-md font-bold text-content" data-testid="pipette-hub-title">
         {t('hub.pipetteHub')}
       </h3>
 
@@ -243,7 +243,7 @@ export function SettingsDataTab({
           <div data-testid="hub-enable-row">
             <button
               type="button"
-              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent/90 disabled:opacity-50"
+              className="w-full rounded bg-accent px-4 py-2 text-sm font-medium text-content-inverse hover:bg-accent/90 disabled:opacity-50"
               onClick={() => onHubEnabledChange(true)}
               disabled={!hubAuthenticated}
               data-testid="hub-enable-toggle"

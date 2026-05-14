@@ -48,7 +48,7 @@ export function MissingKeysModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-black/50"
       data-testid="missing-keys-modal-backdrop"
       onClick={(e) => {
         // Stop the click bubbling into the parent Languages modal —
@@ -58,7 +58,7 @@ export function MissingKeysModal({
       }}
     >
       <div
-        className="w-[600px] max-w-[90vw] h-[70vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-md max-w-[90vw] h-modal-70vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="missing-keys-modal"
       >

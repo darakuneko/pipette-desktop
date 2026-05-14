@@ -105,7 +105,7 @@ export function AltRepeatKeyPanelModal({
       hubProps={hubProps}
       renderBeforeFields={() => (
         <div className="flex items-center gap-3">
-          <label className="min-w-[140px] text-sm text-content">
+          <label className="min-w-modifier text-sm text-content">
             {t('editor.altRepeatKey.enabled')}
           </label>
           <input
@@ -127,7 +127,7 @@ export function AltRepeatKeyPanelModal({
             horizontal
           />
           <div className="flex items-start gap-3">
-            <label className="min-w-[140px] pt-0.5 text-sm font-medium">
+            <label className="min-w-modifier pt-0.5 text-sm font-medium">
               {t('editor.altRepeatKey.options')}
             </label>
             <div className="space-y-1">

@@ -54,10 +54,10 @@ function SettingsTileGrid<T extends Record<string, unknown>>({ entries, fields, 
               type="button"
               data-testid={`${testIdPrefix}-tile-${i}`}
               data-configured={configured || undefined}
-              className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${tileStyle(configured, enabled)}`}
+              className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${tileStyle(configured, enabled)}`}
               onClick={() => onOpen(i)}
             >
-              <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">{i}</span>
+              <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">{i}</span>
               {configured ? (
                 <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px overflow-hidden">
                   {fields.map(({ key, prefix }) => (
@@ -144,11 +144,11 @@ export function TdTileGrid({ entries, onSelect, onDoubleClick }: TdTileGridProps
             type="button"
             data-testid={`td-tile-${i}`}
             data-configured={configured || undefined}
-            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
+            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
           >
-            <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">TD({i})</span>
+            <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">TD({i})</span>
             {configured ? (
               <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-px">
                 {TD_FIELDS.map(({ key, prefix }) => (
@@ -218,11 +218,11 @@ export function MacroTileGrid({ macros, onSelect, onDoubleClick }: MacroTileGrid
             type="button"
             data-testid={`macro-tile-${i}`}
             data-configured={configured || undefined}
-            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-[9px] leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
+            className={`relative flex aspect-square min-h-0 flex-col items-start rounded-md border p-1 pl-1.5 text-3xs leading-snug transition-colors ${configured ? TILE_ENABLED : TILE_EMPTY}`}
             onClick={select}
             onDoubleClick={commit}
           >
-            <span className="absolute top-0.5 left-1 text-[8px] text-content-secondary/60">M{i}</span>
+            <span className="absolute top-0.5 left-1 text-4xs text-content-secondary/60">M{i}</span>
             {configured ? (
               <span className="mt-2 inline-grid grid-cols-[auto_1fr] gap-x-1 gap-y-0 overflow-hidden">
                 {actions.slice(0, maxVisible).map((action, j) => (

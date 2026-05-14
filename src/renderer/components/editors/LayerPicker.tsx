@@ -64,7 +64,7 @@ export function LayerPicker({ value, onChange, label, horizontal }: Props) {
   if (horizontal) {
     return (
       <div className="flex items-start gap-3">
-        <span className="min-w-[140px] pt-0.5 text-sm font-medium">{label}</span>
+        <span className="min-w-modifier pt-0.5 text-sm font-medium">{label}</span>
         <div className="space-y-1">
           {grid}
           {buttons}

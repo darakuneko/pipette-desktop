@@ -21,12 +21,12 @@ export function FavoriteStoreModal({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-black/50"
       data-testid="favorite-store-modal-backdrop"
       onClick={onClose}
     >
       <div
-        className="w-[440px] max-w-[90vw] h-[70vh] flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
+        className="w-modal-sm max-w-[90vw] h-modal-70vh flex flex-col rounded-2xl bg-surface-alt border border-edge shadow-xl overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

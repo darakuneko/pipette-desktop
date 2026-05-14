@@ -285,7 +285,7 @@ export function TypingTestView({
       {/* Word display — fixed 3-line window with scroll */}
       <div
         data-testid="typing-test-words"
-        className="relative h-[7.25rem] w-full max-w-4xl font-mono text-2xl leading-normal"
+        className="relative h-typing-display w-full max-w-4xl font-mono text-2xl leading-normal"
         onClick={() => imeInputRef.current?.focus()}
       >
         {/* Hidden textarea for IME composition input */}

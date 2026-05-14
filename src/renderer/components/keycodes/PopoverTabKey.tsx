@@ -208,7 +208,7 @@ export function PopoverTabKey({ currentKeycode, emptyInitial, maskOnly, modMask 
             onClick={() => { setTooltip(null); onKeycodeSelect(entry.keycode); setSuppressResults(true); setQuery(entry.keycode.label || stripPrefix(entry.keycode.qmkId)) }}
             data-testid={`popover-result-${entry.keycode.qmkId}`}
           >
-            <span className="min-w-[60px] font-mono text-xs font-medium">
+            <span className="min-w-keycode font-mono text-xs font-medium">
               {entry.keycode.label}
             </span>
             <span

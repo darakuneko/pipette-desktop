@@ -59,7 +59,7 @@ export function LayoutEditor({
       <div className="space-y-3">
         {options.map((opt) => (
           <div key={opt.index} className="flex items-center gap-3">
-            <span className="min-w-[120px] text-sm text-content">
+            <span className="min-w-layout-label text-sm text-content">
               {opt.labels[0]}
             </span>
             {opt.labels.length <= 2 ? (

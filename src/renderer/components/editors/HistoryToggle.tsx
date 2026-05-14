@@ -51,7 +51,7 @@ export function HistoryToggle({ results, deviceName }: HistoryToggleProps) {
           onClick={() => setShowHistory(false)}
         >
           <div
-            className="flex h-[80vh] w-[900px] max-w-[90vw] flex-col rounded-lg bg-surface-alt p-6 shadow-xl"
+            className="flex h-modal-80vh w-modal-wide max-w-[90vw] flex-col rounded-lg bg-surface-alt p-6 shadow-xl"
             data-testid="history-modal"
             onClick={(e) => e.stopPropagation()}
           >

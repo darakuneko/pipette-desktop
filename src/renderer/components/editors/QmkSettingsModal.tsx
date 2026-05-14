@@ -36,7 +36,7 @@ function SettingsModal({
       onClick={onClose}
     >
       <div
-        className="w-[600px] max-w-[90vw] max-h-[80vh] overflow-y-auto rounded-lg bg-surface-alt p-6 shadow-xl"
+        className="w-modal-md max-w-[90vw] max-h-modal-80vh overflow-y-auto rounded-lg bg-surface-alt p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

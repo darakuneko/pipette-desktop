@@ -20,13 +20,13 @@ const TAB_CLASS =
   'flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors'
 
 const TAB_ACTIVE =
-  'bg-surface text-content shadow-sm'
+  'bg-surface text-content'
 
 const TAB_INACTIVE =
   'text-content-muted hover:text-content-secondary'
 
 const LIST_CLASS =
-  'min-h-[340px] max-h-[340px] space-y-2 overflow-y-auto pb-2 pr-1'
+  'min-h-device-list max-h-device-list space-y-2 overflow-y-auto pb-2 pr-1'
 
 function formatDate(iso: string): string {
   const d = new Date(iso)

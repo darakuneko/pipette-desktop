@@ -42,7 +42,7 @@ export function ModifierPicker({ value, onChange, label, horizontal }: Props) {
   if (horizontal) {
     return (
       <div className="flex items-start gap-3">
-        <label className="min-w-[140px] pt-0.5 text-sm font-medium">{label}</label>
+        <label className="min-w-modifier pt-0.5 text-sm font-medium">{label}</label>
         {grid}
       </div>
     )

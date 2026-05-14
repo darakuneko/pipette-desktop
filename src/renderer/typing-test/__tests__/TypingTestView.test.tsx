@@ -72,7 +72,7 @@ describe('TypingTestView', () => {
   it('word container has fixed height to prevent layout shift', () => {
     renderView({ state: makeState({ status: 'waiting' }) })
     const wordsContainer = screen.getByTestId('typing-test-words')
-    expect(wordsContainer.className).toContain('h-[7.25rem]')
+    expect(wordsContainer.className).toContain('h-typing-display')
   })
 
   it('displays word elements when running', () => {

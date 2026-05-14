@@ -268,10 +268,66 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --color-picker-item-border: var(--picker-item-border);
 
   /* Typography */
-  --text-2xs: 10px; /* micro labels: badges, section headers */
+  --text-2xs: 10px;      /* micro labels: badges, section headers */
+  --text-3xs: 9px;       /* tile grid keycode text */
+  --text-4xs: 8px;       /* tile grid index labels */
+  --text-heading-md: 15px; /* settings section headings */
 
   /* Spacing */
   --spacing-key: 44px; /* KeycodeButton / KeycodeGrid cell size */
+  --spacing-keyboard-px: 5px; /* KeyboardPane horizontal label padding */
+
+  /* Modal widths */
+  --width-modal-sm: 440px;     /* EditorSettingsModal, FavoriteStoreModal, LayoutStoreModal */
+  --width-modal-md: 600px;     /* MissingKeyLabelDialog, UnlockDialog, QmkSettings, JsonEditor */
+  --width-modal-notify: 560px; /* NotificationModal, AnalyzeExportModal */
+  --width-modal-typing: 480px; /* LanguageSelectorModal, TypingRecordingConsentModal */
+  --width-modal-lg: 760px;     /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal */
+  --width-modal-goal: 720px;   /* GoalAchievementsModal */
+  --width-modal-app: 500px;    /* App toast, MacroTextEditor */
+  --width-modal-xl: 960px;     /* FingerAssignmentModal */
+  --width-modal-wide: 900px;   /* HistoryToggle, TapDanceModal (dummy) */
+  --width-modal-editor: 1050px; /* KeycodeEntryModalShell, TapDanceModal */
+  --width-modal-2xl: 1200px;   /* MacroModal large */
+  --width-modal-3xl: 1300px;   /* MacroModal recording */
+  --width-macro-editor: 456px; /* MacroEditor / KeycodeEntryModalShell list panel */
+  --width-data-sidebar: 220px; /* DataModal tree sidebar */
+
+  /* Modal heights */
+  --height-modal-80vh: 80vh; /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal */
+  --height-modal-70vh: 70vh; /* MissingKeysModal, TypingAnalyticsView */
+  --height-modal-90vh: 90vh; /* MacroModal */
+
+  /* Modal max-heights */
+  --max-height-modal-80vh: 80vh; /* Various modals */
+  --max-height-modal-85vh: 85vh; /* LayoutStoreModal */
+  --max-height-modal-90vh: 90vh; /* GoalAchievements, FingerAssignment, MacroModal */
+
+  /* Component sizing */
+  --min-width-keycode: 60px;           /* PopoverTabKey, MacroActionItem */
+  --min-width-dropdown: 200px;         /* AppSelect, AnalyzeExportModal dropdowns */
+  --min-width-modifier: 140px;         /* AltRepeatKeyPanelModal, ModifierPicker, LayerPicker, TapDanceModal */
+  --min-width-rgb-label: 100px;        /* RGBConfigurator form labels */
+  --min-width-layout-label: 120px;     /* LayoutEditor form label */
+  --min-width-keyboard-pane: 280px;    /* KeyboardPane */
+  --min-width-keycode-panel: 360px;    /* KeymapEditor layout overlay panel */
+  --max-width-keycode-panel: 420px;    /* KeymapEditor layout overlay panel */
+  --min-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
+  --max-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
+  --min-height-word-list: 100px;       /* TypingTestPane word list */
+  --height-typing-display: 7.25rem;    /* TypingTestView word display area */
+  --width-color-picker: 15rem;         /* HSVColorPicker container */
+  --height-color-picker-sv: 180px;     /* HSVColorPicker saturation/value canvas */
+
+  /* Border radius - custom */
+  --radius-panel-connector: 10px; /* KeymapEditor layout panel right edge */
+
+  /* Cursor positioning (em-relative, typing test) */
+  --bottom-cursor: 0.12em;
+  --height-cursor: 1.1em;
+
+  /* Z-index */
+  --z-60: 60; /* AnalyzeExportModal dropdown overlay */
 }
 
 @keyframes confirm-flash {

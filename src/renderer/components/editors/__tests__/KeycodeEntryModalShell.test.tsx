@@ -129,7 +129,7 @@ function createMockHook(overrides?: Partial<KeycodeEntryModalReturn<TestEntry>>)
     },
     preEditValueRef: { current: 0 },
     showFavorites: true,
-    modalWidth: 'w-[1050px]',
+    modalWidth: 'w-modal-editor',
     ...overrides,
   }
 }

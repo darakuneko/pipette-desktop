@@ -62,7 +62,7 @@ const BRANCH_BASE = 'w-full text-left text-sm py-1 flex items-center gap-1 curso
 function Chevron({ open }: { open: boolean }) {
   return (
     <span
-      className={`inline-block text-[9px] text-content-muted transition-transform ${open ? 'rotate-90' : ''}`}
+      className={`inline-block text-3xs text-content-muted transition-transform ${open ? 'rotate-90' : ''}`}
       aria-hidden="true"
     >
       &#9654;

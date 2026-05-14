@@ -47,7 +47,7 @@ export function TypingRecordingConsentModal({ onAccept, onCancel }: Props) {
       onClick={handleBackdropClick}
       data-testid="typing-consent-modal"
     >
-      <div className="flex w-[480px] flex-col rounded-xl border border-edge bg-surface shadow-2xl">
+      <div className="flex w-modal-typing flex-col rounded-xl border border-edge bg-surface shadow-2xl">
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 id="typing-consent-title" className="text-lg font-semibold text-content">
             {t('editor.typingTest.consent.title')}

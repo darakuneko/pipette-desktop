@@ -116,7 +116,7 @@ export function KeyOverridePanelModal({
       hubProps={hubProps}
       renderBeforeFields={() => (
         <div className="flex items-center gap-3">
-          <label className="min-w-[140px] text-sm text-content">
+          <label className="min-w-modifier text-sm text-content">
             {t('editor.keyOverride.enabled')}
           </label>
           <input
@@ -147,7 +147,7 @@ export function KeyOverridePanelModal({
             />
           ))}
           <div className="flex items-start gap-3">
-            <label className="min-w-[140px] pt-0.5 text-sm font-medium">
+            <label className="min-w-modifier pt-0.5 text-sm font-medium">
               {t('editor.keyOverride.options')}
             </label>
             <div className="space-y-1">

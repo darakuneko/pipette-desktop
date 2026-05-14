@@ -167,7 +167,7 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
   return (
     <div className="flex flex-col gap-2 text-xs" data-testid="analyze-activity-chart">
       <div
-        className="grid gap-[2px]"
+        className="grid gap-0.5"
         style={{ gridTemplateColumns: 'auto repeat(24, minmax(0, 1fr))' }}
         role="table"
         aria-label={t(metric === 'wpm' ? 'analyze.activity.tableLabelWpm' : 'analyze.activity.tableLabel')}

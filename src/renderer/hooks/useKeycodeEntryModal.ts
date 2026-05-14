@@ -52,7 +52,7 @@ export interface KeycodeEntryModalAdapter<TEntry extends Record<string, unknown>
   closeOnSave: boolean
   /** Whether to show favorites panel. Default: () => true */
   showFavorites?: (opts: { isDummy?: boolean }) => boolean
-  /** Modal width class. Default: 'w-[1050px]' */
+  /** Modal width class. Default: 'w-modal-editor' */
   modalWidth?: string | ((opts: { isDummy?: boolean }) => string)
 }
 
@@ -319,7 +319,7 @@ export function useKeycodeEntryModal<TEntry extends Record<string, unknown>>(
 
   const modalWidth = typeof adapter.modalWidth === 'function'
     ? adapter.modalWidth({ isDummy })
-    : adapter.modalWidth ?? 'w-[1050px]'
+    : adapter.modalWidth ?? 'w-modal-editor'
 
   return {
     editedEntry,

@@ -71,8 +71,8 @@ export function MacroModal({
   const { t } = useTranslation()
   const [isEditing, setIsEditing] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
-  const modalWidth = isDummy ? 'w-[1200px]' : 'w-[1300px]'
-  const modalHeight = isEditing ? 'max-h-[90vh]' : 'h-[90vh]'
+  const modalWidth = isDummy ? 'w-modal-2xl' : 'w-modal-3xl'
+  const modalHeight = isEditing ? 'max-h-modal-90vh' : 'h-modal-90vh'
 
   useEscapeClose(onClose, !isRecording && !isEditing)
 

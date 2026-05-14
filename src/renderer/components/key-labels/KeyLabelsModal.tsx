@@ -358,7 +358,7 @@ export function KeyLabelsModal({
       onClick={onClose}
     >
       <div
-        className="w-[760px] max-w-[90vw] h-[80vh] flex flex-col rounded-lg bg-surface shadow-xl"
+        className="w-modal-lg max-w-[90vw] h-modal-80vh flex flex-col rounded-lg bg-surface shadow-xl"
         onClick={(e) => e.stopPropagation()}
         data-testid="key-labels-modal"
       >
@@ -397,7 +397,7 @@ export function KeyLabelsModal({
               type="button"
               disabled={hubSearching || search.trim().length < 2}
               onClick={() => void triggerSearch()}
-              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+              className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:opacity-90 disabled:opacity-50"
               data-testid="key-labels-search-button"
             >
               {hubSearching ? t('keyLabels.searching') : t('keyLabels.search')}
@@ -680,7 +680,7 @@ function InstalledRowView({
               every row — without it the QWERTY row's empty actions
               area collapses to 0 px and the "pipette" label drifts
               right relative to the other rows. */}
-          <span className="min-w-[6rem] text-right whitespace-nowrap">
+          <span className="min-w-24 text-right whitespace-nowrap">
             {row.isQwerty ? null : (
               <InstalledActions
                 localId={row.localId}
@@ -730,7 +730,7 @@ function InstalledRowView({
           // QWERTY (and any other no-action rows): keep the spacer so
           // the card height matches Hub-aware rows, and surface the
           // result badge on the left edge when one applies.
-          <div className="mt-2 flex h-[18px] items-center pr-1">
+          <div className="mt-2 flex h-4.5 items-center pr-1">
             <ResultBadge result={lastResult} rowId={row.localId} />
           </div>
         )}

@@ -22,7 +22,7 @@ export function JaRemovedBanner(): JSX.Element | null {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-60 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       data-testid="ja-removed-banner"
       role="dialog"
       aria-modal="true"
@@ -37,7 +37,7 @@ export function JaRemovedBanner(): JSX.Element | null {
         <div className="flex justify-end">
           <button
             type="button"
-            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-white hover:bg-accent/90"
+            className="rounded bg-accent px-3 py-1.5 text-sm font-medium text-content-inverse hover:bg-accent/90"
             onClick={dismiss}
             data-testid="ja-removed-dismiss"
           >
