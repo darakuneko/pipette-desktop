@@ -39,9 +39,9 @@ All local data is stored under the OS user data directory:
 
 | OS | Path |
 |----|------|
-| Linux | `~/.config/Pipette/` |
-| macOS | `~/Library/Application Support/Pipette/` |
-| Windows | `%APPDATA%/Pipette/` |
+| Linux | `~/.config/pipette-desktop/` |
+| macOS | `~/Library/Application Support/pipette-desktop/` |
+| Windows | `%APPDATA%/pipette-desktop/` |
 
 ### App Settings
 
