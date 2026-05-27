@@ -986,7 +986,11 @@ function HubTable({ rows, hubSearched, pendingId, hubOrigin, onDownload }: HubTa
           >
             <span className="flex-1 min-w-0 truncate text-content">{row.name}</span>
             <span className="w-40 truncate text-content-secondary">{row.author}</span>
-            <span className="inline-flex items-center gap-3 whitespace-nowrap">
+            {/* Fixed-width slot keeps the Author column anchored across rows
+                — without it the "Open Download" vs "Open Installed" width
+                difference (different glyph widths + font-medium vs regular)
+                shifts the uploader name horizontally between rows. */}
+            <span className="inline-flex w-32 items-center justify-end gap-3 whitespace-nowrap">
               {openUrl && (
                 <a
                   href={openUrl}
