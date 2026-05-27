@@ -78,6 +78,15 @@ describe('mergeKeyboardMetaIndex', () => {
     return { type: 'keyboard-meta', version: 1, entries }
   }
 
+  // Tombstones older than TOMBSTONE_TTL_MS (30 days) are GC'd by
+  // mergeKeyboardMetaIndex, so any test that asserts a tombstone
+  // survives the merge must use a deletedAt within the TTL window.
+  // Use relative offsets from "now" instead of hard-coded dates so the
+  // tests do not rot as the wall clock advances past the fixture date.
+  function isoDaysAgo(days: number): string {
+    return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  }
+
   it('keeps remote entries that are unknown locally', () => {
     const { merged, remoteNeedsUpdate } = mergeKeyboardMetaIndex(
       meta([]),
@@ -103,15 +112,15 @@ describe('mergeKeyboardMetaIndex', () => {
   })
 
   it('tombstone with later timestamp keeps deletion', () => {
-    const local = meta([{ uid: '0xA', deviceName: 'A', updatedAt: '2026-04-10T00:00:00.000Z' }])
-    const remote = meta([{ uid: '0xA', deviceName: 'A', updatedAt: '2026-04-16T00:00:00.000Z', deletedAt: '2026-04-16T00:00:00.000Z' }])
+    const local = meta([{ uid: '0xA', deviceName: 'A', updatedAt: isoDaysAgo(7) }])
+    const remote = meta([{ uid: '0xA', deviceName: 'A', updatedAt: isoDaysAgo(1), deletedAt: isoDaysAgo(1) }])
     const { merged } = mergeKeyboardMetaIndex(local, remote)
     expect(merged.entries[0].deletedAt).toBeDefined()
   })
 
   it('tombstone older than a save lets the save win', () => {
-    const local = meta([{ uid: '0xA', deviceName: 'A', updatedAt: '2026-04-16T00:00:00.000Z' }])
-    const remote = meta([{ uid: '0xA', deviceName: 'A', updatedAt: '2026-04-10T00:00:00.000Z', deletedAt: '2026-04-10T00:00:00.000Z' }])
+    const local = meta([{ uid: '0xA', deviceName: 'A', updatedAt: isoDaysAgo(1) }])
+    const remote = meta([{ uid: '0xA', deviceName: 'A', updatedAt: isoDaysAgo(7), deletedAt: isoDaysAgo(7) }])
     const { merged } = mergeKeyboardMetaIndex(local, remote)
     expect(merged.entries[0].deletedAt).toBeUndefined()
   })
