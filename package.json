@@ -1,6 +1,6 @@
 {
   "name": "pipette-desktop",
-  "version": "0.4.6",
+  "version": "0.4.7",
   "description": "Pipette — Vial-compatible keyboard configurator built with Electron and TypeScript",
   "license": "GPL-3.0-or-later",
   "type": "module",
@@ -68,7 +68,7 @@
     "@typescript-eslint/eslint-plugin": "^8.54.0",
     "@typescript-eslint/parser": "^8.54.0",
     "@vitejs/plugin-react": "^5.2.0",
-    "electron": "~41.1.1",
+    "electron": "~41.7.1",
     "electron-builder": "^26.7.0",
     "electron-vite": "^5.0.0",
     "eslint": "^9.27.0",

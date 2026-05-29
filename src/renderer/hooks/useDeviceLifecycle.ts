@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useAutoLock } from './useAutoLock'
 import { isKeyboardDefinition, isVilFile, isVilFileV1, VILFILE_CURRENT_VERSION } from '../../shared/vil-file'
 import type { DeviceInfo, VilFile, KeyboardDefinition } from '../../shared/types/protocol'
+import type { SyncScope } from '../../shared/types/sync'
 import type { PipetteFileKeyboard, PipetteFileEntry } from '../app-types'
 
 interface Options {
@@ -30,7 +31,7 @@ interface Options {
   autoSync: boolean
   authenticated: boolean
   hasPassword: boolean
-  syncNow: (direction: string, target: string) => Promise<void>
+  syncNow: (direction: 'download' | 'upload', scope?: SyncScope) => Promise<void>
   deviceSyncing: boolean
   // Cross-cutting callbacks
   resetUIState: () => void
@@ -111,6 +112,21 @@ export function useDeviceLifecycle(options: Options) {
       if (success) {
         const uid = await keyboardReload()
         if (uid) {
+          // Pull the cloud copies of keyboards/{uid}/* (and favorites) BEFORE
+          // applying local prefs. Otherwise applyDevicePrefs sees a missing
+          // local file, writes defaults with a fresh _updatedAt, and the
+          // file-level LWW merge later overwrites the good remote copy with
+          // empty defaults (issue #190: layer names lost on PC switch).
+          // Covers favorites too because syncNow has a global `isSyncing`
+          // mutex — running the two scopes here as one call avoids a race
+          // with useDeviceAutoSync's parallel `syncNow` no-oping silently.
+          if (autoSync && authenticated && hasPassword) {
+            try {
+              await syncNow('download', { favorites: true, keyboard: uid })
+            } catch {
+              // Non-fatal — fall through to apply whatever local data we have.
+            }
+          }
           await applyDevicePrefs(uid)
         } else {
           try { await handleDisconnect() } catch { /* cleanup best-effort */ }
@@ -118,7 +134,8 @@ export function useDeviceLifecycle(options: Options) {
         }
       }
     },
-    [connectDevice, keyboardReload, applyDevicePrefs, handleDisconnect, t],
+    [connectDevice, keyboardReload, applyDevicePrefs, handleDisconnect, t,
+     autoSync, authenticated, hasPassword, syncNow],
   )
 
   const handleLock = useCallback(async () => {

@@ -28,6 +28,12 @@ export default defineConfig({
       // depend on the Electron-ABI prebuilt binary. Production code path is
       // untouched — the alias only applies inside vitest's module graph.
       'better-sqlite3': resolve(__dirname, 'src/main/__tests__/better-sqlite3-adapter.ts'),
+      // Replace the real `electron` package with a stub. The real package's
+      // `index.js` throws "Electron failed to install correctly" at module
+      // load when `path.txt` is missing, which can happen on fresh CI
+      // installs where the postinstall script silently short-circuits.
+      // Tests that need specific behavior still override via `vi.mock`.
+      electron: resolve(__dirname, 'src/main/__tests__/electron-stub.ts'),
     },
   },
   test: {
