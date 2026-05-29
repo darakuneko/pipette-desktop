@@ -1,0 +1,48 @@
+{
+  "name": "Morphous Abalone",
+  "version": "1.0.0",
+  "colorScheme": "light",
+  "colors": {
+    "surface":               "#F7F8FA",
+    "surface-alt":           "#FEFBF7",
+    "surface-dim":           "#E6E9EE",
+    "surface-raised":        "#FFFFFF",
+
+    "content":               "#0F1A1D",
+    "content-secondary":     "#45686D",
+    "content-muted":         "#9BA8AA",
+    "content-inverse":       "#FEFBF7",
+
+    "edge":                  "#C8CDD8",
+    "edge-subtle":           "#DDE2E8",
+    "edge-strong":           "#9BA8AA",
+
+    "accent":                "#0A7A78",
+    "accent-hover":          "#0EA5A3",
+    "accent-alt":            "#6ED1C5",
+    "success":               "#10B981",
+    "warning":               "#F59E0B",
+    "danger":                "#EF4444",
+    "pending":               "#EA580C",
+
+    "key-bg":                "#FEFBF7",
+    "key-bg-hover":          "#E6E9EE",
+    "key-bg-active":         "#0A7A78",
+    "key-border":            "#C8CDD8",
+    "key-shadow":            "rgba(7, 23, 25, 0.25)",
+    "key-label":             "#0F1A1D",
+    "key-sublabel":          "#9BA8AA",
+    "key-label-remap":       "#0A7A78",
+    "key-bg-multi-selected": "#6ED1C5",
+
+    "tab-bg-active":         "#0A7A78",
+    "tab-text":              "#9BA8AA",
+    "tab-text-active":       "#FEFBF7",
+
+    "picker-bg":             "#EEF2F3",
+    "picker-item-bg":        "#F7F8FA",
+    "picker-item-hover":     "#DDE2E8",
+    "picker-item-text":      "#0F1A1D",
+    "picker-item-border":    "#C8CDD8"
+  }
+}
