@@ -1,6 +1,5 @@
 import tseslint from '@typescript-eslint/eslint-plugin'
 import tsparser from '@typescript-eslint/parser'
-import reactPlugin from 'eslint-plugin-react'
 
 export default [
   {
@@ -14,17 +13,12 @@ export default [
       }
     },
     plugins: {
-      '@typescript-eslint': tseslint,
-      react: reactPlugin
+      '@typescript-eslint': tseslint
     },
     rules: {
       ...tseslint.configs.recommended.rules,
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
-      'react/react-in-jsx-scope': 'off'
-    },
-    settings: {
-      react: { version: 'detect' }
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }]
     }
   },
   {
