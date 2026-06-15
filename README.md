@@ -136,6 +136,26 @@ Without this permission, Monitor App silently records `null` for every minute on
 
 ## Features
 
+### Feature Availability
+
+| Feature | No Integration | Google Account Integration |
+|---|:---:|:---:|
+| Keymap / macro / tap-dance / combo / key-override / alt-repeat editing | ✅ | ✅ |
+| RGB lighting · QMK settings · Matrix tester | ✅ | ✅ |
+| Snapshots & Favorites (local save / load) | ✅ | ✅ |
+| Import / Export (`.vil` · `.pipette` · `keymap.c` · PDF) | ✅ | ✅ |
+| Offline editing (`.pipette` without a keyboard) | ✅ | ✅ |
+| Typing Test & Typing View | ✅ | ✅ |
+| **Download** community language / theme / key-label packs from Hub | ✅ | ✅ |
+| Cloud Sync — snapshots / favorites / settings across devices | ❌ | ✅ |
+| Download remote-only keyboards on demand | ❌ | ✅ |
+| Share keymaps to Hub | ❌ | ✅ (Hub) |
+| Share favorites (tap dance · macro · combo · …) to Hub | ❌ | ✅ (Hub) |
+| Share typing analytics to Hub | ❌ | ✅ (Hub) |
+| Publish your own language / theme / key-label packs | ❌ | ✅ (Hub) |
+
+> **Pipette Hub requires a connected Google account.** Rows marked **(Hub)** need Hub connected (set a Display Name in Settings → Data) in addition to Google sign-in. Cloud Sync also needs a sync encryption password. **Downloading community packs from Hub needs no sign-in at all.**
+
 ### Keyboard Configuration
 
 - **Keymap Editor** — Layer-based key assignment with drag & drop, auto-advance, and a searchable keycode palette with Mod Mask/Mod-Tap wrapper modes. Basic tab supports ANSI, ISO, JIS, and List views with International (INT1–5) and Language (LANG1–5) keycode groups. Reorganized key picker tabs (System, Behavior, dedicated Combo/Key Override/Alt Repeat Key tabs) with instant key selection. Keymap change history with undo/redo via toolbar buttons, keyboard shortcuts (Ctrl/Cmd+Z, Ctrl+Y/Ctrl/Cmd+Shift+Z), and popover undo/redo. Key popover includes a layer switching sidebar for quick layer navigation without closing the popover

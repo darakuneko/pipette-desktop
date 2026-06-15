@@ -9,6 +9,7 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
 
 ## Table of Contents
 
+- [Feature Availability](#feature-availability)
 - [1. Device Connection](#1-device-connection)
   - [1.1 Device Selection Screen](#11-device-selection-screen)
   - [1.2 Connecting a Keyboard](#12-connecting-a-keyboard)
@@ -63,6 +64,30 @@ Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
   - [Unlock Dialog Protection](#unlock-dialog-protection)
   - [Escape Suppression During Busy Flows](#escape-suppression-during-busy-flows)
 - [9. Status Bar](#9-status-bar)
+
+---
+
+## Feature Availability
+
+What you can do depends on whether you connect a Google account. Editing and most local features work with no integration at all; signing in unlocks cross-device Cloud Sync, and connecting Pipette Hub additionally lets you share to the community.
+
+| Feature | No Integration | Google Account Integration |
+|---|:---:|:---:|
+| Keymap / macro / tap-dance / combo / key-override / alt-repeat editing | ✅ | ✅ |
+| RGB lighting · QMK settings · Matrix tester | ✅ | ✅ |
+| Snapshots & Favorites (local save / load) | ✅ | ✅ |
+| Import / Export (`.vil` · `.pipette` · `keymap.c` · PDF) | ✅ | ✅ |
+| Offline editing (`.pipette` without a keyboard) | ✅ | ✅ |
+| Typing Test & Typing View | ✅ | ✅ |
+| **Download** community language / theme / key-label packs from Hub | ✅ | ✅ |
+| Cloud Sync — snapshots / favorites / settings across devices | ❌ | ✅ |
+| Download remote-only keyboards on demand | ❌ | ✅ |
+| Share keymaps to Hub | ❌ | ✅ (Hub) |
+| Share favorites (tap dance · macro · combo · …) to Hub | ❌ | ✅ (Hub) |
+| Share typing analytics to Hub | ❌ | ✅ (Hub) |
+| Publish your own language / theme / key-label packs | ❌ | ✅ (Hub) |
+
+> **Pipette Hub requires a connected Google account.** Rows marked **(Hub)** need Hub connected (set a Display Name in Settings → Data) in addition to Google sign-in. Cloud Sync also needs a sync encryption password. **Downloading community packs from Hub needs no sign-in at all.**
 
 ---
 
