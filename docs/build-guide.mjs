@@ -37,9 +37,12 @@ const XDOC_LINK_PATTERNS = [
 
 // ─── Markdown → HTML ─────────────────────────────────────────────────────────
 
-function convertMd(md, docId) {
-  const codeBlocks  = [];
-  const inlineCodes = [];
+function convertMd(md, docId, context = null) {
+  // Recursive calls (e.g. blockquotes) share the parent's placeholder arrays so
+  // that \x00IC / \x00CB tokens are restored once, at the root level only.
+  const isRoot = !context;
+  if (isRoot) context = { codeBlocks: [], inlineCodes: [] };
+  const { codeBlocks, inlineCodes } = context;
 
   // 0. Strip embedded TOC sections — sidebar replaces them
   md = md.replace(/^## (Table of Contents|目次)\n[\s\S]*?(?=^## )/m, '');
@@ -151,7 +154,7 @@ function convertMd(md, docId) {
           break;
         }
       }
-      parts.push(`<blockquote>${convertMd(bqLines.join('\n'), docId)}</blockquote>`);
+      parts.push(`<blockquote>${convertMd(bqLines.join('\n'), docId, context)}</blockquote>`);
       continue;
     }
 
@@ -208,8 +211,11 @@ function convertMd(md, docId) {
 
   let html = parts.join('\n');
 
-  // Restore inline code placeholders in a single O(n) pass
-  html = html.replace(/\x00IC(\d+)\x00/g, (_, i) => inlineCodes[+i]);
+  // Restore inline code placeholders in a single O(n) pass — only at the root
+  // call, so nested (blockquote) output keeps its tokens for the parent to fill.
+  if (isRoot) {
+    html = html.replace(/\x00IC(\d+)\x00/g, (_, i) => inlineCodes[+i]);
+  }
 
   return html;
 }

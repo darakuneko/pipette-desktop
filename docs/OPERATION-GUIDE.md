@@ -118,6 +118,8 @@ The File tab allows offline editing of `.pipette` files without a physical keybo
 
 > **Use case:** You want to tweak your keyboard's keymap, but the keyboard isn't with you right now. If you've previously saved its data, you can load it from the File tab, make your edits offline, and later connect the keyboard and load the modified data to apply your changes.
 
+> **Tip — Save a shared file under your own name:** Load a community or shared `.pipette` file (for example, one downloaded from Pipette Hub or sent by a friend), then open the Save panel (§3.14) and use **Save Current State** to store it under a name of your choice. It joins your saved keyboards and becomes selectable as a **File** source in the Keyboard tab (§3.13) — even for hardware you don't own.
+
 **Feature Availability: Device vs File Mode**
 
 | Feature | Device (USB) | File (.pipette) |
@@ -131,8 +133,8 @@ The File tab allows offline editing of `.pipette` files without a physical keybo
 | Lighting control | Yes | No |
 | Matrix Tester | Yes | No |
 | Lock / Unlock | Yes | No |
-| Snapshot save / load | Yes | No |
-| Hub upload | Yes | No |
+| Snapshot save / load | Yes | Yes |
+| Hub upload | Yes | Yes |
 | JSON sideload | Yes | No |
 | Device probe (Keyboard tab) | Yes | No |
 | Cloud Sync | Yes | No |
@@ -914,6 +916,8 @@ When you open the Keyboard tab, a list of all connected Vial-compatible keyboard
 Click the **File** button at the bottom to switch to the file source. This shows saved keyboard snapshots and allows loading `.pipette` files — the same keycode picking workflow applies.
 
 > **Note**: Only V2 format (`.pipette`) files are supported in the key picker. If a legacy V1 format file is selected, a warning is displayed prompting you to connect the keyboard and open the keymap to migrate the data.
+
+> **Tip — Build from keyboards you don't own:** The reference keyboard doesn't have to be one you physically own. Save a shared `.pipette` file under a name (§1.1), pick it as the **File** source here, then Ctrl+click / Shift+click to multi-select keys on the reference keyboard and click a key on your own keymap to paste them in. This lets you copy assignments from other people's layouts — or any keyboard you've collected — straight into yours, with no hardware connected.
 
 **Composite Keycodes**
 
