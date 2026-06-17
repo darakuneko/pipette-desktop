@@ -54,7 +54,9 @@ jobs:
           - os: macos-latest
             platform: mac
             arch: arm64
-          - os: windows-latest
+          # Pin to windows-2022 (VS 2022 / v17): node-gyp 11 cannot yet
+          # detect the VS 18 toolchain that windows-latest now ships.
+          - os: windows-2022
             platform: win
             arch: x64
           - os: ubuntu-latest
@@ -70,12 +72,6 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-
-      # node-gyp / electron-rebuild needs MSBuild to compile native
-      # modules (node-hid, better-sqlite3) on Windows runners.
-      - name: Set up MSBuild (Windows)
-        if: matrix.platform == 'win'
-        uses: microsoft/setup-msbuild@v2
 
       - name: Install Linux dependencies
         if: matrix.platform == 'linux'
