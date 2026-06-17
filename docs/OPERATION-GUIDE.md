@@ -1643,6 +1643,9 @@ To upload a keymap to Hub:
 
 4. Click the **Upload** button on the saved snapshot entry
 5. A confirmation dialog opens — choose **Public** or **Private** (see *Public vs Private* below), then click **Confirm**
+
+![Upload confirmation dialog](screenshots/hub-upload-confirm.png)
+
 6. After uploading, the entry's Hub row is labelled **Hub (Public)** or **Hub (Private)** and shows **Open in Browser**, **Update**, and **Remove** buttons
 
 ![Uploaded](screenshots/hub-04-uploaded.png)
