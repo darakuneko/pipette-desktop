@@ -10,9 +10,11 @@ import type {
   HubUploadFavoritePostParams, HubUpdateFavoritePostParams,
   HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams,
   HubAnalyticsPreview, HubAnalyticsFilters, HubAnalyticsCategoryId,
+  HubPrivateUploadResult, HubPrivateKind,
+  HubPrivateUploadPostParams, HubPrivateUploadFavoritePostParams, HubPrivateUploadAnalyticsPostParams,
 } from '../../shared/types/hub'
 import { getIdToken } from '../sync/google-auth'
-import { Hub401Error, Hub403Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub, uploadAnalyticsPostToHub, updateAnalyticsPostOnHub } from './hub-client'
+import { Hub401Error, Hub403Error, Hub404Error, Hub409Error, Hub429Error, authenticateWithHub, uploadPostToHub, updatePostOnHub, patchPostOnHub, deletePostFromHub, fetchMyPosts, fetchMyPostsByKeyboard, fetchAuthMe, patchAuthMe, getHubOrigin, uploadFeaturePostToHub, updateFeaturePostOnHub, uploadAnalyticsPostToHub, updateAnalyticsPostOnHub, uploadPrivatePostToHub, uploadPrivateFeaturePostToHub, uploadPrivateAnalyticsPostToHub, deletePrivatePostFromHub } from './hub-client'
 import {
   buildAnalyticsExport,
   estimateAnalyticsExportSizeBytes,
@@ -365,6 +367,10 @@ function invalidateCachedHubJwt(): void {
 
 function extractError(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback
+}
+
+function toPrivateResult(res: { id: string; url: string; expires_at: string | null }): HubPrivateUploadResult {
+  return { success: true, id: res.id, url: res.url, expiresAt: res.expires_at }
 }
 
 function rethrowAsHubSentinel(err: unknown): void {
@@ -800,6 +806,88 @@ export function setupHubIpc(): void {
   // does not need a separate title field — the Hub derives identity
   // from `pack.name` + `pack.version`. Listing / download stays
   // anonymous; CRUD requires the JWT.
+
+  // --- Private (unlisted) upload handlers ---
+  //
+  // Each uploads to `/api/private/*` and returns the relative share URL
+  // + expiry. Persisting the link onto the local entry is the renderer's
+  // job (via the per-store `set-hub-private` IPC), mirroring how the
+  // public keymap/favorite uploads return a postId for the renderer to
+  // persist. The single delete handler is shared by Remove and the
+  // visibility-switch path; a 404 (already expired) counts as success.
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_PRIVATE_POST,
+    async (_event, params: HubPrivateUploadPostParams): Promise<HubPrivateUploadResult> => {
+      try {
+        const title = validateTitle(params.title)
+        const files = buildFiles(params)
+        const res = await withTokenRetry((jwt) =>
+          uploadPrivatePostToHub(jwt, title, params.keyboardName, files, params.expiresInDays),
+        )
+        return toPrivateResult(res)
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_PRIVATE_FAVORITE_POST,
+    async (_event, params: HubPrivateUploadFavoritePostParams): Promise<HubPrivateUploadResult> => {
+      try {
+        const { title, postType, jsonFile } = await prepareFavoritePost(params)
+        const res = await withTokenRetry((jwt) =>
+          uploadPrivateFeaturePostToHub(jwt, title, postType, jsonFile, params.expiresInDays),
+        )
+        return toPrivateResult(res)
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_UPLOAD_PRIVATE_ANALYTICS_POST,
+    async (_event, params: HubPrivateUploadAnalyticsPostParams): Promise<HubPrivateUploadResult> => {
+      try {
+        const built = await prepareAnalyticsExport(params)
+        if (!built.ok) return { success: false, error: built.error }
+        const title = validateTitle(params.title)
+        const baseName = sanitizeFilenameBase(params.keyboard.productName, params.uid)
+        const jsonBuffer = Buffer.from(JSON.stringify(built.exportData), 'utf-8')
+        const thumbnailBuffer = Buffer.from(params.thumbnailBase64, 'base64')
+        const res = await withTokenRetry((jwt) =>
+          uploadPrivateAnalyticsPostToHub(
+            jwt,
+            title,
+            { name: `${baseName}.json`, data: jsonBuffer },
+            { name: `${baseName}.jpg`, data: thumbnailBuffer },
+            params.expiresInDays,
+          ),
+        )
+        return toPrivateResult(res)
+      } catch (err) {
+        return { success: false, error: extractError(err, 'Analytics upload failed') }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.HUB_DELETE_PRIVATE_POST,
+    async (_event, kind: HubPrivateKind, id: string): Promise<HubDeleteResult> => {
+      try {
+        if (typeof id !== 'string' || !id) return { success: false, error: 'Invalid id' }
+        await withTokenRetry((jwt) => deletePrivatePostFromHub(jwt, kind, id))
+        return { success: true }
+      } catch (err) {
+        // Already gone (expired / removed elsewhere) — treat as success so
+        // the local link can be cleared / a visibility switch can proceed.
+        if (err instanceof Hub404Error) return { success: true }
+        return { success: false, error: extractError(err, 'Delete failed') }
+      }
+    },
+  )
 
   secureHandle(
     IpcChannels.HUB_UPLOAD_I18N_POST,

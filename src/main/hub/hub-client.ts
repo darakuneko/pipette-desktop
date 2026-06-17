@@ -2,6 +2,7 @@
 // Hub API client — auth token exchange + multipart post upload
 
 import type { HubMyPost, HubUser, HubFetchMyPostsParams } from '../../shared/types/hub'
+import type { HubPrivateKind, HubPrivateUploadResponse } from '../../shared/types/hub-private'
 
 const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
 const isDev = !!process.env.ELECTRON_RENDERER_URL
@@ -39,6 +40,11 @@ export class Hub401Error extends HubHttpError {
 export class Hub403Error extends HubHttpError {
   override name = 'Hub403Error'
   constructor(label: string, body: string) { super(label, 403, body) }
+}
+
+export class Hub404Error extends HubHttpError {
+  override name = 'Hub404Error'
+  constructor(label: string, body: string) { super(label, 404, body) }
 }
 
 export class Hub409Error extends HubHttpError {
@@ -94,6 +100,7 @@ async function hubFetch<T>(url: string, init: RequestInit, label: string): Promi
       const text = await response.text()
       if (response.status === 401) throw new Hub401Error(label, text)
       if (response.status === 403) throw new Hub403Error(label, text)
+      if (response.status === 404) throw new Hub404Error(label, text)
       if (response.status === 409) throw new Hub409Error(label, text)
       throw new Error(`${label}: ${response.status} ${text}`)
     }
@@ -149,10 +156,14 @@ class MultipartBuilder {
   }
 }
 
+// `expiresInDays` is only meaningful for private uploads: a positive
+// integer appends the `expires_in_days` field; `null` / `undefined`
+// (public uploads, or private "no expiry") appends nothing.
 function buildMultipartBody(
   title: string,
   keyboardName: string,
   files: HubUploadFiles,
+  expiresInDays?: number | null,
 ): { body: Buffer; boundary: string } {
   const mp = new MultipartBuilder()
   mp.appendField('title', title)
@@ -162,6 +173,7 @@ function buildMultipartBody(
   mp.appendFile('c', files.c.name, files.c.data, 'text/plain')
   mp.appendFile('pdf', files.pdf.name, files.pdf.data, 'application/pdf')
   mp.appendFile('thumbnail', files.thumbnail.name, files.thumbnail.data, 'image/jpeg')
+  if (expiresInDays != null) mp.appendField('expires_in_days', String(expiresInDays))
   return mp.build()
 }
 
@@ -273,6 +285,39 @@ export function updatePostOnHub(
   return submitPost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, keyboardName, files, 'Hub update failed')
 }
 
+export async function uploadPrivatePostToHub(
+  jwt: string,
+  title: string,
+  keyboardName: string,
+  files: HubUploadFiles,
+  expiresInDays: number | null,
+): Promise<HubPrivateUploadResponse> {
+  const { body, boundary } = buildMultipartBody(title, keyboardName, files, expiresInDays)
+  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  }, 'Hub private upload failed')
+}
+
+/** Deletes a private (unlisted) post. Authenticated with the owner's
+ *  JWT (not the share token). Throws `Hub404Error` when the post is
+ *  already gone (expired / never existed) — callers performing a
+ *  visibility switch treat that as success. */
+export async function deletePrivatePostFromHub(
+  jwt: string,
+  kind: HubPrivateKind,
+  id: string,
+): Promise<void> {
+  await hubFetch<unknown>(`${HUB_API_BASE}/api/private/${kind}/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${jwt}` },
+  }, 'Hub private delete failed')
+}
+
 // --- Feature (favorite) post support ---
 
 export interface HubFeatureUploadFile {
@@ -284,11 +329,13 @@ function buildFeatureMultipartBody(
   title: string,
   postType: string,
   jsonFile: HubFeatureUploadFile,
+  expiresInDays?: number | null,
 ): { body: Buffer; boundary: string } {
   const mp = new MultipartBuilder()
   mp.appendField('title', title)
   mp.appendField('post_type', postType)
   mp.appendFile('json', jsonFile.name, jsonFile.data, 'application/json')
+  if (expiresInDays != null) mp.appendField('expires_in_days', String(expiresInDays))
   return mp.build()
 }
 
@@ -331,6 +378,24 @@ export function updateFeaturePostOnHub(
   return submitFeaturePost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, postType, jsonFile, 'Hub feature update failed')
 }
 
+export async function uploadPrivateFeaturePostToHub(
+  jwt: string,
+  title: string,
+  postType: string,
+  jsonFile: HubFeatureUploadFile,
+  expiresInDays: number | null,
+): Promise<HubPrivateUploadResponse> {
+  const { body, boundary } = buildFeatureMultipartBody(title, postType, jsonFile, expiresInDays)
+  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  }, 'Hub private feature upload failed')
+}
+
 // --- Analytics post support ---
 //
 // Analytics posts share the `/api/files` endpoint but use a hybrid
@@ -342,12 +407,14 @@ function buildAnalyticsMultipartBody(
   title: string,
   jsonFile: HubFeatureUploadFile,
   thumbnail: HubFeatureUploadFile,
+  expiresInDays?: number | null,
 ): { body: Buffer; boundary: string } {
   const mp = new MultipartBuilder()
   mp.appendField('title', title)
   mp.appendField('post_type', 'analytics')
   mp.appendFile('json', jsonFile.name, jsonFile.data, 'application/json')
   mp.appendFile('thumbnail', thumbnail.name, thumbnail.data, 'image/jpeg')
+  if (expiresInDays != null) mp.appendField('expires_in_days', String(expiresInDays))
   return mp.build()
 }
 
@@ -388,6 +455,24 @@ export function updateAnalyticsPostOnHub(
   thumbnail: HubFeatureUploadFile,
 ): Promise<HubPostResponse> {
   return submitAnalyticsPost(jwt, 'PUT', `/api/files/${encodeURIComponent(postId)}`, title, jsonFile, thumbnail, 'Hub analytics update failed')
+}
+
+export async function uploadPrivateAnalyticsPostToHub(
+  jwt: string,
+  title: string,
+  jsonFile: HubFeatureUploadFile,
+  thumbnail: HubFeatureUploadFile,
+  expiresInDays: number | null,
+): Promise<HubPrivateUploadResponse> {
+  const { body, boundary } = buildAnalyticsMultipartBody(title, jsonFile, thumbnail, expiresInDays)
+  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${jwt}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+    },
+    body,
+  }, 'Hub private analytics upload failed')
 }
 
 export function getHubOrigin(): string {

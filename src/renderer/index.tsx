@@ -5,6 +5,7 @@ import './style.css'
 import i18n from './i18n'
 import { App } from './App'
 import { AppConfigProvider } from './hooks/useAppConfig'
+import { UploadConfirmProvider } from './hooks/useUploadConfirm'
 
 const root = document.getElementById('root')
 if (root) {
@@ -12,7 +13,9 @@ if (root) {
     <StrictMode>
       <I18nextProvider i18n={i18n}>
         <AppConfigProvider>
-          <App />
+          <UploadConfirmProvider>
+            <App />
+          </UploadConfirmProvider>
         </AppConfigProvider>
       </I18nextProvider>
     </StrictMode>,

@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { HubPrivateLink } from './hub-private'
+
 export type FavoriteType = 'tapDance' | 'macro' | 'combo' | 'keyOverride' | 'altRepeatKey'
 
 export interface SavedFavoriteMeta {
@@ -9,7 +11,8 @@ export interface SavedFavoriteMeta {
   filename: string // Internal filename
   updatedAt?: string // ISO 8601 — last update time
   deletedAt?: string // ISO 8601 — tombstone timestamp
-  hubPostId?: string // Hub post ID (if uploaded)
+  hubPostId?: string // Hub post ID (if uploaded publicly)
+  hubPrivate?: HubPrivateLink // Private (unlisted) Hub linkage — exclusive with hubPostId
 }
 
 export interface FavoriteIndex {

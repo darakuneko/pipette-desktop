@@ -21,6 +21,7 @@ import {
   type AnalyzeFilterSnapshotIndex,
   type AnalyzeFilterSnapshotMeta,
 } from '../shared/types/analyze-filter-store'
+import type { HubPrivateLink } from '../shared/types/hub-private'
 
 const MAX_ENTRIES_PER_KEYBOARD = ANALYZE_FILTER_STORE_MAX_ENTRIES_PER_KEYBOARD
 
@@ -237,14 +238,14 @@ export function setupAnalyzeFilterStore(): void {
   secureHandle(
     IpcChannels.ANALYZE_FILTER_STORE_SET_HUB_POST_ID,
     async (_event, uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> => {
-      return updateEntry(uid, entryId, (entry) => {
-        const normalized = hubPostId?.trim() || null
-        if (normalized === null) {
-          delete entry.hubPostId
-        } else {
-          entry.hubPostId = normalized
-        }
-      })
+      return setAnalyzeFilterHubPostId(uid, entryId, hubPostId)
+    },
+  )
+
+  secureHandle(
+    IpcChannels.ANALYZE_FILTER_STORE_SET_HUB_PRIVATE,
+    async (_event, uid: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }> => {
+      return setAnalyzeFilterHubPrivate(uid, entryId, link)
     },
   )
 }
@@ -282,6 +283,25 @@ export async function setAnalyzeFilterHubPostId(
       delete entry.hubPostId
     } else {
       entry.hubPostId = normalized
+      // public and private linkage are mutually exclusive
+      delete entry.hubPrivate
+    }
+  })
+}
+
+/** Sets (or clears with `null`) the private Hub linkage on an analyze
+ *  filter entry. Setting a link clears the public `hubPostId`. */
+export async function setAnalyzeFilterHubPrivate(
+  uid: string,
+  entryId: string,
+  link: HubPrivateLink | null,
+): Promise<{ success: boolean; error?: string }> {
+  return updateEntry(uid, entryId, (entry) => {
+    if (link === null) {
+      delete entry.hubPrivate
+    } else {
+      entry.hubPrivate = link
+      delete entry.hubPostId
     }
   })
 }

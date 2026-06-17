@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { SavedFavoriteMeta } from '../../../shared/types/favorite-store'
+import { formatDateShort } from './store-modal-shared'
 
 const HUB_BTN_BASE = 'text-xs font-medium text-accent bg-accent/10 border border-accent/30 px-2 py-0.5 rounded hover:bg-accent/20 hover:border-accent/50'
 const HUB_BTN = `${HUB_BTN_BASE} disabled:opacity-50`
@@ -44,15 +45,23 @@ export function FavoriteHubActions({
   const isUploading = hubUploading === entry.id
   const result = hubUploadResult?.entryId === entry.id ? hubUploadResult : null
 
-  const hasHubPost = !!entry.hubPostId
-  const hubPostUrl = hasHubPost && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(entry.hubPostId!)}` : null
+  // public and private linkage are mutually exclusive.
+  const isPrivate = !!entry.hubPrivate
+  const hasHubPost = !isPrivate && !!entry.hubPostId
+  const linked = isPrivate || hasHubPost
+  const hubPostUrl = isPrivate
+    ? (hubOrigin && entry.hubPrivate ? `${hubOrigin}${entry.hubPrivate.url}` : null)
+    : (hasHubPost && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(entry.hubPostId!)}` : null)
+  const badge = isPrivate
+    ? t('hub.private.badgePrivate')
+    : (hasHubPost ? t('hub.private.badgePublic') : t('hub.pipetteHub'))
 
   return (
     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="fav-hub-actions">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-accent">{t('hub.pipetteHub')}</span>
+        <span className="text-xs font-medium text-accent" data-testid="fav-hub-badge">{badge}</span>
         <div className="flex gap-1">
-          {!isUploading && hasHubPost && (
+          {!isUploading && linked && (
             <>
               {confirmRemoveId === entry.id ? (
                 <>
@@ -115,7 +124,7 @@ export function FavoriteHubActions({
               )}
             </>
           )}
-          {!isUploading && !hasHubPost && !hubNeedsDisplayName && onUploadToHub && (
+          {!isUploading && !linked && !hubNeedsDisplayName && onUploadToHub && (
             <button
               type="button"
               className={HUB_BTN}
@@ -128,7 +137,14 @@ export function FavoriteHubActions({
           )}
         </div>
       </div>
-      {hubNeedsDisplayName && (hasHubPost ? !onUpdateOnHub : !onUploadToHub) && (
+      {isPrivate && entry.hubPrivate && (
+        <div className="mt-1 text-xs text-content-muted" data-testid="fav-hub-expiry">
+          {entry.hubPrivate.expiresAt
+            ? t('hub.private.expiresAt', { date: formatDateShort(entry.hubPrivate.expiresAt) })
+            : t('hub.private.noExpiry')}
+        </div>
+      )}
+      {hubNeedsDisplayName && (linked ? !onUpdateOnHub : !onUploadToHub) && (
         <div
           className="mt-1 text-xs text-content-muted"
           data-testid="fav-hub-needs-display-name"

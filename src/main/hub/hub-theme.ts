@@ -16,7 +16,6 @@ import type {
   HubThemeListParams,
   HubThemeListResponse,
 } from '../../shared/types/hub'
-
 const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
 const isDev = !!process.env.ELECTRON_RENDERER_URL
 const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT

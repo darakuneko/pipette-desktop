@@ -19,7 +19,7 @@ export interface I18nPackMeta {
   /** Whether the pack is registered as an i18next resource bundle.
    * Disabled packs are kept on disk but not loaded. */
   enabled: boolean
-  /** When set, the pack is mirrored to a Pipette Hub post. */
+  /** When set, the pack is mirrored to a public Pipette Hub post. */
   hubPostId?: string
   /** Hub-side `updated_at` cached locally so the startup auto-update
    *  can detect remote changes by comparing this against

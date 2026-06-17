@@ -4,6 +4,8 @@
 // Sync layout mirrors keyboards/{uid}/snapshots: an index.json plus one
 // JSON file per entry under sync/keyboards/{uid}/analyze_filters/.
 
+import type { HubPrivateLink } from './hub-private'
+
 export interface AnalyzeFilterSnapshotMeta {
   id: string // UUID v4
   label: string
@@ -21,6 +23,8 @@ export interface AnalyzeFilterSnapshotMeta {
    * uses this to switch the row's primary action between
    * "↑ Hub" (initial upload) and "↻ Hub" (update). */
   hubPostId?: string
+  /** Private (unlisted) Hub linkage — mutually exclusive with hubPostId. */
+  hubPrivate?: HubPrivateLink
 }
 
 export interface AnalyzeFilterSnapshotIndex {

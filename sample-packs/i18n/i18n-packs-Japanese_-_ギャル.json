@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1358,6 +1358,30 @@
       "titleTooLong": "タイトル長すぎｗ 200文字以内にして☆",
       "authFailed": "認証失敗っしょｗサインインし直して！",
       "payloadTooLarge": "デカすぎｗチャート減らすか期間短くして☆"
+    },
+    "uploadConfirm": {
+      "title": {
+        "create": "Hubにアップっしょ☆",
+        "update": "Hub投稿をアプデ☆"
+      },
+      "visibilityPublic": "公開",
+      "publicDesc": "Hubの一覧と検索に出るよ☆",
+      "visibilityPrivate": "非公開（限定リンク）",
+      "privateDesc": "秘密リンク知ってる子だけ見れるっしょ☆ 一覧・検索には出ないよ",
+      "expiryLabel": "リンクの有効期限",
+      "expiryDays_one": "{{count}}日",
+      "expiryDays_other": "{{count}}日",
+      "expiresAtPreview": "{{date}} に切れちゃう☆",
+      "warnUrlExpiryChange": "アプデすると投稿作り直しだから、共有リンクと期限が変わるっしょ☆",
+      "confirm": "決定☆",
+      "cancel": "やめとく"
+    },
+    "private": {
+      "badgePublic": "Hub（公開）",
+      "badgePrivate": "Hub（非公開）",
+      "expiresAt": "{{date}} に切れちゃう☆",
+      "noExpiry": "無期限",
+      "removeConfirm": "Hubから消しちゃう？ 非公開リンクはすぐ使えなくなるよ☆"
     }
   },
   "notification": {

@@ -3,7 +3,10 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { HubMyPost, HubUploadResult, HubPaginationMeta, HubFetchMyPostsParams } from '../../shared/types/hub'
+import type { HubPrivateLink } from '../../shared/types/hub-private'
 import { HUB_ERROR_DISPLAY_NAME_CONFLICT, HUB_ERROR_ACCOUNT_DEACTIVATED, HUB_ERROR_RATE_LIMITED } from '../../shared/types/hub'
+import { useUploadConfirm } from './useUploadConfirm'
+import { linkFromResult } from '../utils/hub-private-link'
 import type { HubEntryResult } from '../components/editors/LayoutStoreModal'
 import type { FavHubEntryResult } from '../components/editors/FavoriteHubActions'
 import type { SnapshotMeta } from '../../shared/types/snapshot-store'
@@ -57,6 +60,7 @@ export function useHubState(options: Options) {
   } = options
 
   const { t } = useTranslation()
+  const { requestUploadOptions } = useUploadConfirm()
 
   const [hubMyPosts, setHubMyPosts] = useState<HubMyPost[]>([])
   const [hubMyPostsPagination, setHubMyPostsPagination] = useState<HubPaginationMeta | undefined>()
@@ -181,6 +185,11 @@ export function useHubState(options: Options) {
     await layoutStoreRefreshEntries()
   }, [keyboardUid, layoutStoreRefreshEntries])
 
+  const persistHubPrivate = useCallback(async (entryId: string, link: HubPrivateLink | null) => {
+    await window.vialAPI.snapshotStoreSetHubPrivate(keyboardUid!, entryId, link)
+    await layoutStoreRefreshEntries()
+  }, [keyboardUid, layoutStoreRefreshEntries])
+
   const handleHubRenamePost = useCallback(async (postId: string, newTitle: string) => {
     const result = await window.vialAPI.hubPatchPost({ postId, title: newTitle })
     if (!result.success) throw new Error(result.error ?? 'Rename failed')
@@ -242,6 +251,8 @@ export function useHubState(options: Options) {
   }, [layoutStoreEntries, markAccountDeactivated, t])
 
   const handleUploadToHub = useCallback(async (entryId: string) => {
+    const choice = await requestUploadOptions({ mode: 'create', currentVisibility: 'none' })
+    if (!choice) return
     await runHubOperation(
       entryId,
       (entries) => entries.find((e) => e.id === entryId),
@@ -249,9 +260,17 @@ export function useHubState(options: Options) {
         const vilData = await loadEntryVilData(entryId)
         if (!vilData) return { success: false, error: t('hub.uploadFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
-        const result = await window.vialAPI.hubUploadPost(postParams)
+        if (choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUploadPost(postParams)
+          if (result.success) {
+            if (result.postId) await persistHubPostId(entryId, result.postId)
+            await refreshHubPosts()
+          }
+          return result
+        }
+        const result = await window.vialAPI.hubUploadPrivatePost({ ...postParams, expiresInDays: choice.expiresInDays })
         if (result.success) {
-          if (result.postId) await persistHubPostId(entryId, result.postId)
+          await persistHubPrivate(entryId, linkFromResult(result))
           await refreshHubPosts()
         }
         return result
@@ -259,12 +278,18 @@ export function useHubState(options: Options) {
       t('hub.uploadSuccess'),
       t('hub.uploadFailed'),
     )
-  }, [runHubOperation, loadEntryVilData, buildHubPostParams, persistHubPostId, refreshHubPosts, t])
+  }, [requestUploadOptions, runHubOperation, loadEntryVilData, buildHubPostParams, persistHubPostId, persistHubPrivate, refreshHubPosts, t])
 
   const handleUpdateOnHub = useCallback(async (entryId: string) => {
     const entry = layoutStoreEntries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry) : undefined
-    if (!entry || !postId) return
+    if (!entry) return
+    const isPrivate = !!entry.hubPrivate
+    const publicPostId = isPrivate ? undefined : getHubPostId(entry)
+    const currentVisibility = isPrivate ? 'private' : (publicPostId ? 'public' : 'none')
+    if (currentVisibility === 'none') return
+
+    const choice = await requestUploadOptions({ mode: 'update', currentVisibility })
+    if (!choice) return
 
     await runHubOperation(
       entryId,
@@ -273,25 +298,62 @@ export function useHubState(options: Options) {
         const vilData = await loadEntryVilData(entryId)
         if (!vilData) return { success: false, error: t('hub.updateFailed') }
         const postParams = await buildHubPostParams(entry, vilData)
-        const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId })
-        if (result.success) await refreshHubPosts()
+
+        // public → public keeps the same post (and URL): a plain update.
+        if (currentVisibility === 'public' && choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUpdatePost({ ...postParams, postId: publicPostId! })
+          if (result.success) await refreshHubPosts()
+          return result
+        }
+
+        // Any visibility switch (and private→private) rebuilds the post:
+        // delete the old one, then create fresh in the target visibility.
+        if (currentVisibility === 'public') {
+          await window.vialAPI.hubDeletePost(publicPostId!).catch(() => {})
+        } else {
+          await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate!.id).catch(() => {})
+        }
+
+        if (choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUploadPost(postParams)
+          if (result.success) {
+            if (result.postId) await persistHubPostId(entryId, result.postId)
+            await refreshHubPosts()
+          }
+          return result
+        }
+        const result = await window.vialAPI.hubUploadPrivatePost({ ...postParams, expiresInDays: choice.expiresInDays })
+        if (result.success) {
+          await persistHubPrivate(entryId, linkFromResult(result))
+          await refreshHubPosts()
+        }
         return result
       },
       t('hub.updateSuccess'),
       t('hub.updateFailed'),
     )
-  }, [runHubOperation, layoutStoreEntries, loadEntryVilData, buildHubPostParams, getHubPostId, refreshHubPosts, t])
+  }, [requestUploadOptions, runHubOperation, layoutStoreEntries, loadEntryVilData, buildHubPostParams, getHubPostId, persistHubPostId, persistHubPrivate, refreshHubPosts, t])
 
   const handleRemoveFromHub = useCallback(async (entryId: string) => {
     const entry = layoutStoreEntries.find((e) => e.id === entryId)
-    const postId = entry ? getHubPostId(entry) : undefined
-    if (!entry || !postId) return
+    if (!entry) return
+    const isPrivate = !!entry.hubPrivate
+    const publicPostId = isPrivate ? undefined : getHubPostId(entry)
+    if (!isPrivate && !publicPostId) return
 
     await runHubOperation(
       entryId,
       () => entry,
       async () => {
-        const result = await window.vialAPI.hubDeletePost(postId)
+        if (isPrivate) {
+          const result = await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate!.id)
+          if (result.success) {
+            await persistHubPrivate(entryId, null)
+            await refreshHubPosts()
+          }
+          return result
+        }
+        const result = await window.vialAPI.hubDeletePost(publicPostId!)
         if (result.success) {
           await persistHubPostId(entryId, null)
           await refreshHubPosts()
@@ -301,7 +363,7 @@ export function useHubState(options: Options) {
       t('hub.removeSuccess'),
       t('hub.removeFailed'),
     )
-  }, [runHubOperation, layoutStoreEntries, getHubPostId, persistHubPostId, refreshHubPosts, t])
+  }, [runHubOperation, layoutStoreEntries, getHubPostId, persistHubPostId, persistHubPrivate, refreshHubPosts, t])
 
   const handleReuploadToHub = useCallback(async (entryId: string, orphanedPostId: string) => {
     await runHubOperation(
@@ -411,6 +473,10 @@ export function useHubState(options: Options) {
     await window.vialAPI.favoriteStoreSetHubPostId(type, entryId, postId)
   }, [])
 
+  const persistFavHubPrivate = useCallback(async (type: FavoriteType, entryId: string, link: HubPrivateLink | null) => {
+    await window.vialAPI.favoriteStoreSetHubPrivate(type, entryId, link)
+  }, [])
+
   function hubResultErrorMessage(result: HubUploadResult, fallbackKey: string): string {
     if (result.error === HUB_ERROR_ACCOUNT_DEACTIVATED) {
       markAccountDeactivated()
@@ -423,7 +489,7 @@ export function useHubState(options: Options) {
   const runFavHubOperation = useCallback(async (
     type: FavoriteType,
     entryId: string,
-    requireHubPostId: boolean,
+    requireLinked: boolean,
     operation: (entry: SavedFavoriteMeta) => Promise<void>,
   ) => {
     if (favHubUploadingRef.current) return
@@ -431,7 +497,7 @@ export function useHubState(options: Options) {
 
     const listResult = await window.vialAPI.favoriteStoreList(type)
     const entry = listResult.entries?.find((e: SavedFavoriteMeta) => e.id === entryId)
-    if (!entry || (requireHubPostId && !entry.hubPostId)) {
+    if (!entry || (requireLinked && !entry.hubPostId && !entry.hubPrivate)) {
       favHubUploadingRef.current = false
       return
     }
@@ -447,13 +513,27 @@ export function useHubState(options: Options) {
   }, [])
 
   const handleFavUploadToHub = useCallback(async (type: FavoriteType, entryId: string) => {
+    const choice = await requestUploadOptions({ mode: 'create', currentVisibility: 'none' })
+    if (!choice) return
     await runFavHubOperation(type, entryId, false, async (entry) => {
       try {
-        const result = await window.vialAPI.hubUploadFavoritePost({
-          type, entryId, title: entry.label || type, vialProtocol,
+        if (choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUploadFavoritePost({
+            type, entryId, title: entry.label || type, vialProtocol,
+          })
+          if (result.success) {
+            if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
+            setFavHubUploadResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId })
+          } else {
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.uploadFailed'), entryId })
+          }
+          return
+        }
+        const result = await window.vialAPI.hubUploadPrivateFavoritePost({
+          type, entryId, title: entry.label || type, vialProtocol, expiresInDays: choice.expiresInDays,
         })
         if (result.success) {
-          if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
+          await persistFavHubPrivate(type, entryId, linkFromResult(result))
           setFavHubUploadResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId })
         } else {
           setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.uploadFailed'), entryId })
@@ -462,15 +542,58 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.uploadFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t, vialProtocol])
+  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, vialProtocol])
 
   const handleFavUpdateOnHub = useCallback(async (type: FavoriteType, entryId: string) => {
+    const listResult = await window.vialAPI.favoriteStoreList(type)
+    const current = listResult.entries?.find((e: SavedFavoriteMeta) => e.id === entryId)
+    if (!current) return
+    const isPrivate = !!current.hubPrivate
+    const currentVisibility = isPrivate ? 'private' : (current.hubPostId ? 'public' : 'none')
+    if (currentVisibility === 'none') return
+
+    const choice = await requestUploadOptions({ mode: 'update', currentVisibility })
+    if (!choice) return
+
     await runFavHubOperation(type, entryId, true, async (entry) => {
       try {
-        const result = await window.vialAPI.hubUpdateFavoritePost({
-          type, entryId, title: entry.label || type, postId: entry.hubPostId!, vialProtocol,
+        // public → public is a plain in-place update (URL preserved).
+        if (currentVisibility === 'public' && choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUpdateFavoritePost({
+            type, entryId, title: entry.label || type, postId: entry.hubPostId!, vialProtocol,
+          })
+          if (result.success) {
+            setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
+          } else {
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+          }
+          return
+        }
+
+        // Visibility switch / private→private: delete then recreate.
+        if (currentVisibility === 'public') {
+          await window.vialAPI.hubDeletePost(entry.hubPostId!).catch(() => {})
+        } else {
+          await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate!.id).catch(() => {})
+        }
+
+        if (choice.visibility === 'public') {
+          const result = await window.vialAPI.hubUploadFavoritePost({
+            type, entryId, title: entry.label || type, vialProtocol,
+          })
+          if (result.success) {
+            if (result.postId) await persistFavHubPostId(type, entryId, result.postId)
+            setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
+          } else {
+            setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
+          }
+          return
+        }
+        const result = await window.vialAPI.hubUploadPrivateFavoritePost({
+          type, entryId, title: entry.label || type, vialProtocol, expiresInDays: choice.expiresInDays,
         })
         if (result.success) {
+          await persistFavHubPrivate(type, entryId, linkFromResult(result))
           setFavHubUploadResult({ kind: 'success', message: t('hub.updateSuccess'), entryId })
         } else {
           setFavHubUploadResult({ kind: 'error', message: hubResultErrorMessage(result, 'hub.updateFailed'), entryId })
@@ -479,11 +602,21 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.updateFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, markAccountDeactivated, t, vialProtocol])
+  }, [requestUploadOptions, runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, markAccountDeactivated, t, vialProtocol])
 
   const handleFavRemoveFromHub = useCallback(async (type: FavoriteType, entryId: string) => {
     await runFavHubOperation(type, entryId, true, async (entry) => {
       try {
+        if (entry.hubPrivate) {
+          const result = await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate.id)
+          if (result.success) {
+            await persistFavHubPrivate(type, entryId, null)
+            setFavHubUploadResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
+          } else {
+            setFavHubUploadResult({ kind: 'error', message: result.error || t('hub.removeFailed'), entryId })
+          }
+          return
+        }
         const result = await window.vialAPI.hubDeletePost(entry.hubPostId!)
         if (result.success) {
           await persistFavHubPostId(type, entryId, null)
@@ -495,7 +628,7 @@ export function useHubState(options: Options) {
         setFavHubUploadResult({ kind: 'error', message: t('hub.removeFailed'), entryId })
       }
     })
-  }, [runFavHubOperation, persistFavHubPostId, t])
+  }, [runFavHubOperation, persistFavHubPostId, persistFavHubPrivate, t])
 
   const handleFavRenameOnHub = useCallback(async (entryId: string, hubPostId: string, newLabel: string) => {
     if (!hubReady || favHubUploadingRef.current) return

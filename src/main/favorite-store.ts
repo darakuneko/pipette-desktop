@@ -11,6 +11,7 @@ import { serialize as serializeKeycode, deserialize as deserializeKeycode, getPr
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import type { FavoriteType, SavedFavoriteMeta, FavoriteIndex, FavoriteExportEntry, FavoriteImportResult } from '../shared/types/favorite-store'
+import type { HubPrivateLink } from '../shared/types/hub-private'
 
 function isSafePathSegment(segment: string): boolean {
   if (!segment || segment === '.' || segment === '..') return false
@@ -338,6 +339,32 @@ export function setupFavoriteStore(): void {
           delete found.entry.hubPostId
         } else {
           found.entry.hubPostId = normalized
+          // public and private linkage are mutually exclusive
+          delete found.entry.hubPrivate
+        }
+        found.entry.updatedAt = new Date().toISOString()
+        await writeIndex(type, found.index)
+        notifyChange(`favorites/${type}`)
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: String(err) }
+      }
+    },
+  )
+
+  secureHandle(
+    IpcChannels.FAVORITE_STORE_SET_HUB_PRIVATE,
+    async (_event, type: unknown, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }> => {
+      try {
+        validateType(type)
+        const found = await findEntry(type, entryId)
+        if (!found) return { success: false, error: 'Entry not found' }
+
+        if (link === null) {
+          delete found.entry.hubPrivate
+        } else {
+          found.entry.hubPrivate = link
+          delete found.entry.hubPostId
         }
         found.entry.updatedAt = new Date().toISOString()
         await writeIndex(type, found.index)

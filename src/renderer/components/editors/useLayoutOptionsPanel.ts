@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
+import { useUploadConfirm } from '../../hooks/useUploadConfirm'
 import { parseLayoutLabels, unpackLayoutOptions, packLayoutOptions } from '../../../shared/layout-options'
 import { filterVisibleKeys, repositionLayoutKeys } from '../../../shared/kle/filter-keys'
 import { KEY_UNIT, KEY_SPACING, KEYBOARD_PADDING } from '../keyboard/constants'
@@ -133,10 +134,14 @@ export function useLayoutOptionsPanel({
   const [layoutPanelOpen, setLayoutPanelOpen] = useState(false)
   const layoutPanelRef = useRef<HTMLDivElement>(null)
   const layoutButtonRef = useRef<HTMLButtonElement>(null)
+  // The Hub upload confirmation dialog renders at the document root,
+  // outside this panel. While it is open, its clicks / Escape must not
+  // be treated as "outside" interactions that close the panel behind it.
+  const { isOpen: uploadConfirmOpen } = useUploadConfirm()
 
   // Close layout panel on click-outside or Escape
   useEffect(() => {
-    if (!layoutPanelOpen) return
+    if (!layoutPanelOpen || uploadConfirmOpen) return
     function onMouseDown(e: MouseEvent) {
       if (layoutPanelRef.current?.contains(e.target as Node) || layoutButtonRef.current?.contains(e.target as Node)) return
       setLayoutPanelOpen(false)
@@ -150,7 +155,7 @@ export function useLayoutOptionsPanel({
       document.removeEventListener('mousedown', onMouseDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [layoutPanelOpen])
+  }, [layoutPanelOpen, uploadConfirmOpen])
 
   return {
     parsedOptions,

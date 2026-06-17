@@ -10,7 +10,7 @@
 import { useTranslation } from 'react-i18next'
 import { HUB_BTN, SHARE_LINK_BTN } from '../editors/layout-store-types'
 import type { HubEntryResult } from '../editors/layout-store-types'
-import { ACTION_BTN, CONFIRM_DELETE_BTN } from '../editors/store-modal-shared'
+import { ACTION_BTN, CONFIRM_DELETE_BTN, formatDateShort } from '../editors/store-modal-shared'
 import type { AnalyzeFilterSnapshotMeta } from '../../../shared/types/analyze-filter-store'
 
 interface ShareLinkProps {
@@ -68,10 +68,19 @@ export function AnalyzeFilterStoreHubRow({
   onRemoveFromHub,
 }: AnalyzeFilterStoreHubRowProps): JSX.Element {
   const { t } = useTranslation()
-  const hubPostId = entry.hubPostId
+  // public and private linkage are mutually exclusive.
+  const isPrivate = !!entry.hubPrivate
+  const hubPostId = isPrivate ? undefined : entry.hubPostId
+  const linked = isPrivate || !!hubPostId
   const isUploading = hubUploading === entry.id
   const buttonsDisabled = !!hubUploading || fileDisabled
   const resultMatches = hubUploadResult?.entryId === entry.id
+  const openUrl = isPrivate
+    ? (hubOrigin && entry.hubPrivate ? `${hubOrigin}${entry.hubPrivate.url}` : undefined)
+    : (hubPostId && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(hubPostId)}` : undefined)
+  const badge = isPrivate
+    ? t('hub.private.badgePrivate')
+    : (hubPostId ? t('hub.private.badgePublic') : t('hub.pipetteHub'))
 
   return (
     <div
@@ -79,14 +88,12 @@ export function AnalyzeFilterStoreHubRow({
       data-testid={`analyze-filter-store-hub-row-${entry.id}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-accent">
-          {t('hub.pipetteHub')}
+        <span className="text-xs font-medium text-accent" data-testid={`analyze-filter-store-hub-badge-${entry.id}`}>
+          {badge}
         </span>
         <div className="flex gap-1">
-          {hubPostId && hubOrigin && (
-            <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(hubPostId)}`} />
-          )}
-          {hubPostId && confirmHubRemoveId === entry.id && (
+          {openUrl && <ShareLink url={openUrl} />}
+          {linked && confirmHubRemoveId === entry.id && (
             <>
               <button
                 type="button"
@@ -106,7 +113,7 @@ export function AnalyzeFilterStoreHubRow({
               </button>
             </>
           )}
-          {hubPostId && confirmHubRemoveId !== entry.id && (
+          {linked && confirmHubRemoveId !== entry.id && (
             <>
               {onUpdateOnHub && (
                 <button
@@ -132,7 +139,7 @@ export function AnalyzeFilterStoreHubRow({
               )}
             </>
           )}
-          {!hubPostId && onUploadToHub && (
+          {!linked && onUploadToHub && (
             <button
               type="button"
               className={HUB_BTN}
@@ -145,7 +152,14 @@ export function AnalyzeFilterStoreHubRow({
           )}
         </div>
       </div>
-      {hubNeedsDisplayName && (hubPostId ? !onUpdateOnHub : !onUploadToHub) && (
+      {isPrivate && entry.hubPrivate && (
+        <div className="mt-1 text-xs text-content-muted" data-testid={`analyze-filter-store-hub-expiry-${entry.id}`}>
+          {entry.hubPrivate.expiresAt
+            ? t('hub.private.expiresAt', { date: formatDateShort(entry.hubPrivate.expiresAt) })
+            : t('hub.private.noExpiry')}
+        </div>
+      )}
+      {hubNeedsDisplayName && (linked ? !onUpdateOnHub : !onUploadToHub) && (
         <div
           className="mt-1 text-xs text-content-muted"
           data-testid={`analyze-filter-store-hub-needs-display-name-${entry.id}`}

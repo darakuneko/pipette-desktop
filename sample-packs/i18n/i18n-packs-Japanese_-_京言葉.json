@@ -1,5 +1,5 @@
 {
-  "version": "0.1.1",
+  "version": "0.1.2",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1358,6 +1358,30 @@
       "titleTooLong": "タイトルが長すぎますえ（200文字以内で）。",
       "authFailed": "Hubの認証があきまへんでしたえ。いっぺんサインアウトしてからサインインし直しておくれやす。",
       "payloadTooLarge": "大きすぎてアップロードできまへんえ。チャートを減らすか期間を短こうしておくれやす。"
+    },
+    "uploadConfirm": {
+      "title": {
+        "create": "Hubにアップロードしますえ",
+        "update": "Hub投稿を更新しますえ"
+      },
+      "visibilityPublic": "公開",
+      "publicDesc": "Hubの一覧と検索に出ますえ",
+      "visibilityPrivate": "非公開（限定リンク）",
+      "privateDesc": "秘密のリンクを知ってはる方だけ見られますえ。一覧・検索には出まへん",
+      "expiryLabel": "リンクの有効期限",
+      "expiryDays_one": "{{count}}日",
+      "expiryDays_other": "{{count}}日",
+      "expiresAtPreview": "{{date}} に切れますえ",
+      "warnUrlExpiryChange": "更新すると投稿が作り直しになって、共有リンクと期限が変わりますえ",
+      "confirm": "決定",
+      "cancel": "やめときますえ"
+    },
+    "private": {
+      "badgePublic": "Hub（公開）",
+      "badgePrivate": "Hub（非公開）",
+      "expiresAt": "{{date}} に切れますえ",
+      "noExpiry": "無期限",
+      "removeConfirm": "Hubから消してもよろしおすか？ 非公開リンクはすぐに使えのうなりますえ"
     }
   },
   "notification": {

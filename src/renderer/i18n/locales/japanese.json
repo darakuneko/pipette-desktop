@@ -1346,6 +1346,30 @@
     "displayNameSaveFailed": "投稿者名の保存に失敗しました",
     "displayNameTaken": "この投稿者名は既に使用されています",
     "openInBrowser": "開く",
+    "uploadConfirm": {
+      "title": {
+        "create": "Hub にアップロード",
+        "update": "Hub 投稿を更新"
+      },
+      "visibilityPublic": "公開",
+      "publicDesc": "Hub の一覧・検索に表示されます。",
+      "visibilityPrivate": "非公開（限定リンク）",
+      "privateDesc": "秘密リンクを知る人だけが閲覧できます。一覧・検索には表示されません。",
+      "expiryLabel": "リンクの有効期限",
+      "expiryDays_one": "{{count}}日",
+      "expiryDays_other": "{{count}}日",
+      "expiresAtPreview": "{{date}} に期限切れ",
+      "warnUrlExpiryChange": "更新すると投稿が作り直され、共有リンクと有効期限が変わります。",
+      "confirm": "決定",
+      "cancel": "キャンセル"
+    },
+    "private": {
+      "badgePublic": "Hub（公開）",
+      "badgePrivate": "Hub（非公開）",
+      "expiresAt": "{{date}} に期限切れ",
+      "noExpiry": "無期限",
+      "removeConfirm": "Hub から削除しますか？ 非公開リンクは直ちに無効になります。"
+    },
     "needsDisplayName": "アップロードするには設定で表示名を設定してください",
     "displayNameRequired": "Hub へのアップロードに必要です",
     "authDisplayNameConflict": "Googleアカウント名が既存の投稿者名と重複しています。別の投稿者名を設定してください。",

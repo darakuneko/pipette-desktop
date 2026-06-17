@@ -188,6 +188,7 @@ export const IpcChannels = {
 
   // Snapshot Store extensions
   SNAPSHOT_STORE_SET_HUB_POST_ID: 'snapshot-store:set-hub-post-id',
+  SNAPSHOT_STORE_SET_HUB_PRIVATE: 'snapshot-store:set-hub-private',
 
   // Hub Feature posts (favorites)
   HUB_UPLOAD_FAVORITE_POST: 'hub:upload-favorite-post',
@@ -197,6 +198,12 @@ export const IpcChannels = {
   HUB_UPLOAD_ANALYTICS_POST: 'hub:upload-analytics-post',
   HUB_UPDATE_ANALYTICS_POST: 'hub:update-analytics-post',
   HUB_PREVIEW_ANALYTICS_POST: 'hub:preview-analytics-post',
+
+  // Hub Private (unlisted) uploads
+  HUB_UPLOAD_PRIVATE_POST: 'hub:upload-private-post',
+  HUB_UPLOAD_PRIVATE_FAVORITE_POST: 'hub:upload-private-favorite-post',
+  HUB_UPLOAD_PRIVATE_ANALYTICS_POST: 'hub:upload-private-analytics-post',
+  HUB_DELETE_PRIVATE_POST: 'hub:delete-private-post',
 
   // i18n language pack store (renderer ↔ main)
   I18N_PACK_STORE_LIST: 'i18n-pack-store:list',
@@ -221,9 +228,11 @@ export const IpcChannels = {
 
   // Favorite Store extensions
   FAVORITE_STORE_SET_HUB_POST_ID: 'favorite-store:set-hub-post-id',
+  FAVORITE_STORE_SET_HUB_PRIVATE: 'favorite-store:set-hub-private',
 
   // Analyze Filter Store extensions
   ANALYZE_FILTER_STORE_SET_HUB_POST_ID: 'analyze-filter-store:set-hub-post-id',
+  ANALYZE_FILTER_STORE_SET_HUB_PRIVATE: 'analyze-filter-store:set-hub-private',
 
   // Key Label Store (renderer → main → renderer)
   KEY_LABEL_STORE_LIST: 'key-label-store:list',

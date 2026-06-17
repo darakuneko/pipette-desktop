@@ -4,6 +4,16 @@
 import type { FavoriteType } from './favorite-store'
 import type { ThemeColorScheme } from './theme-store'
 
+export type {
+  HubPrivateKind,
+  HubPrivateLink,
+  HubPrivateUploadResponse,
+  HubPrivateUploadResult,
+} from './hub-private'
+
+/** Days until a private upload expires; `null` = no expiry. */
+export type HubExpiresInDays = number | null
+
 // --- i18n language pack posts -------------------------------------------------
 
 /** Wire-format wrapper sent to / received from Pipette Hub for an i18n
@@ -426,3 +436,23 @@ export interface HubAnalyticsPreview {
     | { ok: true }
     | { ok: false; reason: string }
 }
+
+// --- Private (unlisted) upload params ----------------------------------------
+//
+// Each mirrors its public counterpart plus `expiresInDays` (`null` = no
+// expiry). The handlers upload to `/api/private/*` and return a
+// `HubPrivateUploadResult`; the renderer persists the returned link via
+// the per-store `set-hub-private` IPC.
+
+export interface HubPrivateUploadPostParams extends HubUploadPostParams {
+  expiresInDays: HubExpiresInDays
+}
+
+export interface HubPrivateUploadFavoritePostParams extends HubUploadFavoritePostParams {
+  expiresInDays: HubExpiresInDays
+}
+
+export interface HubPrivateUploadAnalyticsPostParams extends HubUploadAnalyticsPostParams {
+  expiresInDays: HubExpiresInDays
+}
+

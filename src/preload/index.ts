@@ -42,7 +42,13 @@ import type {
   HubThemePackTimestampsResponse,
   HubUploadResult,
   HubDeleteResult,
+  HubPrivateUploadResult,
+  HubPrivateUploadPostParams,
+  HubPrivateUploadFavoritePostParams,
+  HubPrivateUploadAnalyticsPostParams,
+  HubPrivateKind,
 } from '../shared/types/hub'
+import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
@@ -612,6 +618,10 @@ const vialAPI = {
   // --- Hub ---
   hubUploadPost: (params: HubUploadPostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_POST, params),
+  hubUploadPrivatePost: (params: HubPrivateUploadPostParams): Promise<HubPrivateUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_PRIVATE_POST, params),
+  hubDeletePrivatePost: (kind: HubPrivateKind, id: string): Promise<HubDeleteResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_DELETE_PRIVATE_POST, kind, id),
   hubUpdatePost: (params: HubUpdatePostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPDATE_POST, params),
   hubPatchPost: (params: HubPatchPostParams): Promise<HubDeleteResult> =>
@@ -638,16 +648,22 @@ const vialAPI = {
   // --- Hub Feature posts (favorites) ---
   hubUploadFavoritePost: (params: HubUploadFavoritePostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_FAVORITE_POST, params),
+  hubUploadPrivateFavoritePost: (params: HubPrivateUploadFavoritePostParams): Promise<HubPrivateUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_PRIVATE_FAVORITE_POST, params),
   hubUpdateFavoritePost: (params: HubUpdateFavoritePostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPDATE_FAVORITE_POST, params),
 
   // --- Favorite Store extensions ---
   favoriteStoreSetHubPostId: (type: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_SET_HUB_POST_ID, type, entryId, hubPostId),
+  favoriteStoreSetHubPrivate: (type: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.FAVORITE_STORE_SET_HUB_PRIVATE, type, entryId, link),
 
   // --- Hub Analytics posts ---
   hubUploadAnalyticsPost: (params: HubUploadAnalyticsPostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_ANALYTICS_POST, params),
+  hubUploadPrivateAnalyticsPost: (params: HubPrivateUploadAnalyticsPostParams): Promise<HubPrivateUploadResult> =>
+    ipcRenderer.invoke(IpcChannels.HUB_UPLOAD_PRIVATE_ANALYTICS_POST, params),
   hubUpdateAnalyticsPost: (params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult> =>
     ipcRenderer.invoke(IpcChannels.HUB_UPDATE_ANALYTICS_POST, params),
   hubPreviewAnalyticsPost: (params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }> =>
@@ -656,10 +672,14 @@ const vialAPI = {
   // --- Analyze Filter Store extensions ---
   analyzeFilterStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SET_HUB_POST_ID, uid, entryId, hubPostId),
+  analyzeFilterStoreSetHubPrivate: (uid: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.ANALYZE_FILTER_STORE_SET_HUB_PRIVATE, uid, entryId, link),
 
   // --- Snapshot Store extensions ---
   snapshotStoreSetHubPostId: (uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SET_HUB_POST_ID, uid, entryId, hubPostId),
+  snapshotStoreSetHubPrivate: (uid: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.SNAPSHOT_STORE_SET_HUB_PRIVATE, uid, entryId, link),
 
   // --- Shell ---
   openExternal: (url: string): Promise<void> =>

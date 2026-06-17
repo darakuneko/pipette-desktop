@@ -166,7 +166,7 @@ The left sidebar provides a **tree navigation** with the following structure:
 
 Per-entry actions in the favorites list:
 - Click to rename, delete, or **Export** individual entries
-- **Hub actions**: When Hub is connected, each entry shows **Upload to Hub** / **Update on Hub** / **Remove from Hub** buttons
+- **Hub actions**: When Hub is connected, each entry shows **Upload to Hub** / **Update on Hub** / **Remove from Hub** buttons. Uploading opens a Public / Private confirmation dialog (§7.2)
 - **Import** / **Export All** buttons at the footer for bulk operations
 
 A **breadcrumb navigation** at the top of the content area shows the current path (e.g., "Local › Favorites › Tap Dance")
@@ -225,7 +225,7 @@ The bookmark icon in the panel header opens the **Saved search conditions** side
 - Loading an entry written by a newer Pipette release shows an unsupported-version error rather than guessing at unknown fields
 - **Overwrite**: typing a label that already exists swaps the Save button to a danger-styled **Overwrite?** + Cancel pair. Editing the label clears the pending confirmation so you cannot overwrite a different entry by accident
 - **Load behavior**: loading a saved entry always opens on the **Summary** tab regardless of which tab was active when the condition was saved
-- **Hub actions**: when Pipette Hub is connected, each saved entry shows an additional Hub row with **Upload to Hub** / **Update on Hub** / **Remove from Hub** + **Open in Browser** — the same pattern as the keymap and favorites save panels (see §7.4)
+- **Hub actions**: when Pipette Hub is connected, each saved entry shows an additional Hub row with **Upload to Hub** / **Update on Hub** / **Remove from Hub** + **Open in Browser**. The row is labelled **Hub (Public)** or **Hub (Private)**, and uploading opens the Public / Private confirmation dialog — the same pattern as the keymap and favorites save panels (see §7.2, §7.4)
 
 #### Summary
 
@@ -1228,8 +1228,8 @@ When Pipette Hub is connected, each saved entry also shows Hub actions:
 
 ![Inline Favorites — Hub Actions](screenshots/hub-fav-inline.png)
 
-- **Upload to Hub**: Upload the favorite entry to Pipette Hub as a feature post
-- **Update on Hub**: Re-upload the latest configuration to update the existing Hub post
+- **Upload to Hub**: Upload the favorite entry to Pipette Hub as a feature post — opens the Public / Private confirmation dialog (§7.2)
+- **Update on Hub**: Re-upload the latest configuration; the dialog can also switch the post between Public and Private
 - **Remove from Hub**: Delete the entry from Pipette Hub (two-step confirmation)
 - **Open in Browser**: Open the individual Hub post page in your browser
 
@@ -1642,13 +1642,23 @@ To upload a keymap to Hub:
 ![Upload Button](screenshots/hub-03-upload-button.png)
 
 4. Click the **Upload** button on the saved snapshot entry
-5. After uploading, the entry shows **Uploaded** status with **Open in Browser**, **Update**, and **Remove** buttons
+5. A confirmation dialog opens — choose **Public** or **Private** (see *Public vs Private* below), then click **Confirm**
+6. After uploading, the entry's Hub row is labelled **Hub (Public)** or **Hub (Private)** and shows **Open in Browser**, **Update**, and **Remove** buttons
 
 ![Uploaded](screenshots/hub-04-uploaded.png)
 
-- **Open in Browser**: Opens the Hub page for this keymap
-- **Update**: Re-uploads the current keyboard state to update the existing Hub post
-- **Remove**: Removes the keymap from Hub
+- **Open in Browser**: For a public post, opens its Hub page. For a private post, copies/opens the secret share link.
+- **Update**: Opens the same confirmation dialog so you can re-upload **and** switch visibility (see below)
+- **Remove**: Removes the post from Hub (the private link stops working immediately)
+
+#### Public vs Private (Unlisted)
+
+Every upload (and every **Update**) opens a confirmation dialog with two choices:
+
+- **Public** — listed and searchable on Hub, just like before.
+- **Private (Unlisted)** — reachable only by a secret link; never listed or searchable. When you pick Private you also choose a **link expiry** (1 / 3 / 7 / 30 / 60 / 90 / 180 days; default 7 days). Private links always expire — the maximum is 180 days. The dialog previews the exact expiry date. The private link is stored locally and synced across your devices, so **Open in Browser** can hand it out at any time.
+
+**Switching visibility with Update.** Because a private post has no public page (and vice-versa), switching between Public and Private — or re-uploading a Private post — is performed as *delete + recreate*. This produces a **new share link and expiry**, so the dialog warns you before continuing. A plain Public → Public update keeps the same URL.
 
 > **Note**: Hub uploads include a `.pipette` file alongside the standard export formats, allowing other users to load the full keyboard state directly.
 
@@ -1660,9 +1670,9 @@ Individual favorite entries (Tap Dance, Macro, Combo, Key Override, Alt Repeat K
 
 1. Open any editor modal with the inline favorites panel, or use the Data modal from the device selection screen
 2. In the favorites list, each entry shows an **Upload to Hub** button when Hub is connected
-3. Click **Upload to Hub** to share the configuration
-4. After uploading, **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons appear
-5. Renaming a favorite that is uploaded to Hub also updates the title on Hub automatically
+3. Click **Upload to Hub** — the Public / Private confirmation dialog opens (see §7.2 *Public vs Private*)
+4. After uploading, the row is labelled **Hub (Public)** or **Hub (Private)** with **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons (Update re-opens the dialog and can switch visibility)
+5. Renaming a favorite that is uploaded to a public Hub post also updates the title on Hub automatically
 
 > **Note**: A Display Name must be set before uploading. If no Display Name is configured, a warning is shown instead of the Upload button.
 
@@ -1677,7 +1687,8 @@ Saved Analyze conditions can be uploaded to Hub, sharing your typing analytics c
 3. When Hub is connected, a **Hub** action row appears under each saved entry with an **Upload to Hub** button
 4. Click **Upload to Hub** — the category-picker modal opens in upload mode (see §1.4 Export / Upload)
 5. Select which chart categories to include, pick Layout Comparison targets and Per-app data if desired, then click **Upload**
-6. After uploading, the entry shows **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons
+6. The Public / Private confirmation dialog opens (see §7.2 *Public vs Private*); choose visibility (and, for Private, an expiry) and **Confirm**
+7. After uploading, the entry's Hub row is labelled **Hub (Public)** or **Hub (Private)** with **Open in Browser**, **Update on Hub**, and **Remove from Hub** buttons
 
 **Validation rules**
 

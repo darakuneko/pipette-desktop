@@ -11,6 +11,7 @@ import { upsertKeyboardMeta } from './sync/keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
 import type { SnapshotMeta, SnapshotIndex } from '../shared/types/snapshot-store'
+import type { HubPrivateLink } from '../shared/types/hub-private'
 
 const MAX_ENTRIES_PER_KEYBOARD = 30
 
@@ -241,8 +242,33 @@ export function setupSnapshotStore(): void {
           delete entry.hubPostId
         } else {
           entry.hubPostId = normalized
+          // public and private linkage are mutually exclusive
+          delete entry.hubPrivate
         }
       })
     },
   )
+
+  secureHandle(
+    IpcChannels.SNAPSHOT_STORE_SET_HUB_PRIVATE,
+    async (_event, uid: string, entryId: string, link: HubPrivateLink | null) =>
+      setSnapshotHubPrivate(uid, entryId, link),
+  )
+}
+
+/** Sets (or clears with `null`) the private Hub linkage on a snapshot
+ *  entry. Setting a link clears the mutually-exclusive public `hubPostId`. */
+export async function setSnapshotHubPrivate(
+  uid: string,
+  entryId: string,
+  link: HubPrivateLink | null,
+): Promise<{ success: boolean; error?: string }> {
+  return updateEntry(uid, entryId, (entry) => {
+    if (link === null) {
+      delete entry.hubPrivate
+    } else {
+      entry.hubPrivate = link
+      delete entry.hubPostId
+    }
+  })
 }

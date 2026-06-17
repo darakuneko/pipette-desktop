@@ -59,7 +59,8 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
-import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse, HubUploadThemePostParams, HubUpdateThemePostParams, HubThemeListParams, HubThemeListResponse, HubThemePackBody, HubThemePackTimestampsResponse } from './hub'
+import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse, HubUploadThemePostParams, HubUpdateThemePostParams, HubThemeListParams, HubThemeListResponse, HubThemePackBody, HubThemePackTimestampsResponse, HubPrivateUploadResult, HubPrivateKind, HubPrivateUploadPostParams, HubPrivateUploadFavoritePostParams, HubPrivateUploadAnalyticsPostParams } from './hub'
+import type { HubPrivateLink } from './hub-private'
 import type { NotificationFetchResult } from './notification'
 
 export interface VialAPI {
@@ -305,6 +306,8 @@ export interface VialAPI {
 
   // Hub
   hubUploadPost(params: HubUploadPostParams): Promise<HubUploadResult>
+  hubUploadPrivatePost(params: HubPrivateUploadPostParams): Promise<HubPrivateUploadResult>
+  hubDeletePrivatePost(kind: HubPrivateKind, id: string): Promise<HubDeleteResult>
   hubUpdatePost(params: HubUpdatePostParams): Promise<HubUploadResult>
   hubPatchPost(params: HubPatchPostParams): Promise<HubDeleteResult>
   hubDeletePost(postId: string): Promise<HubDeleteResult>
@@ -323,13 +326,16 @@ export interface VialAPI {
 
   // Snapshot Store extensions
   snapshotStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+  snapshotStoreSetHubPrivate(uid: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }>
 
   // Hub Feature posts (favorites)
   hubUploadFavoritePost(params: HubUploadFavoritePostParams): Promise<HubUploadResult>
+  hubUploadPrivateFavoritePost(params: HubPrivateUploadFavoritePostParams): Promise<HubPrivateUploadResult>
   hubUpdateFavoritePost(params: HubUpdateFavoritePostParams): Promise<HubUploadResult>
 
   // Hub Analytics posts
   hubUploadAnalyticsPost(params: HubUploadAnalyticsPostParams): Promise<HubUploadResult>
+  hubUploadPrivateAnalyticsPost(params: HubPrivateUploadAnalyticsPostParams): Promise<HubPrivateUploadResult>
   hubUpdateAnalyticsPost(params: HubUpdateAnalyticsPostParams): Promise<HubUploadResult>
   hubPreviewAnalyticsPost(params: HubPreviewAnalyticsPostParams): Promise<{ success: boolean; preview?: HubAnalyticsPreview; error?: string }>
 
@@ -381,9 +387,11 @@ export interface VialAPI {
 
   // Favorite Store extensions
   favoriteStoreSetHubPostId(type: FavoriteType, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+  favoriteStoreSetHubPrivate(type: FavoriteType, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }>
 
   // Analyze Filter Store extensions
   analyzeFilterStoreSetHubPostId(uid: string, entryId: string, hubPostId: string | null): Promise<{ success: boolean; error?: string }>
+  analyzeFilterStoreSetHubPrivate(uid: string, entryId: string, link: HubPrivateLink | null): Promise<{ success: boolean; error?: string }>
 
   // Window management
   setWindowCompactMode(enabled: boolean, compactSize?: { width: number; height: number }): Promise<{ width: number; height: number } | null>

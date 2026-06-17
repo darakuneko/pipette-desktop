@@ -122,4 +122,23 @@ describe('AnalyzeFilterStoreHubRow', () => {
     fireEvent.click(screen.getByTestId('analyze-filter-store-hub-remove-confirm-entry-1'))
     expect(props.onRemoveFromHub).toHaveBeenCalledWith('entry-1')
   })
+
+  it('labels a public entry "Hub (Public)"', () => {
+    renderRow({ entry: { ...ENTRY, hubPostId: 'post-1' }, hubOrigin: 'https://hub.example' })
+    expect(screen.getByTestId('analyze-filter-store-hub-badge-entry-1')).toHaveTextContent('Hub (Public)')
+  })
+
+  it('renders a private entry with the private badge, token open link, and expiry', () => {
+    renderRow({
+      entry: { ...ENTRY, hubPrivate: { id: 'p1', url: '/private/post/p1?token=tok', expiresAt: '2026-09-14T16:00:00.000Z' } },
+      hubOrigin: 'https://hub.example',
+    })
+    expect(screen.getByTestId('analyze-filter-store-hub-badge-entry-1')).toHaveTextContent('Hub (Private)')
+    const link = screen.getByTestId('analyze-filter-store-hub-share-link') as HTMLAnchorElement
+    expect(link.href).toBe('https://hub.example/private/post/p1?token=tok')
+    expect(screen.getByTestId('analyze-filter-store-update-hub-entry-1')).toBeInTheDocument()
+    expect(screen.getByTestId('analyze-filter-store-remove-hub-entry-1')).toBeInTheDocument()
+    expect(screen.getByTestId('analyze-filter-store-hub-expiry-entry-1')).toBeInTheDocument()
+    expect(screen.queryByTestId('analyze-filter-store-upload-hub-entry-1')).toBeNull()
+  })
 })

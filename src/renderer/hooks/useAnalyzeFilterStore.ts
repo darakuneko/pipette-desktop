@@ -21,6 +21,8 @@ import type {
 } from '../../shared/types/hub'
 import type { HubEntryResult } from '../components/editors/layout-store-types'
 import { localizeHubError } from '../utils/hub-error-i18n'
+import { linkFromResult } from '../utils/hub-private-link'
+import { useUploadConfirm } from './useUploadConfirm'
 
 /** Serialized snapshot payload. `version` lets us evolve the shape
  * later without losing already-saved entries — readers should bail out
@@ -71,6 +73,7 @@ const HUB_RESULT_FLASH_MS = 4_000
 
 export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
   const { t } = useTranslation()
+  const { requestUploadOptions } = useUploadConfirm()
   const [entries, setEntries] = useState<AnalyzeFilterSnapshotMeta[]>([])
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -246,11 +249,13 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
 
   const uploadEntryToHub = useCallback(async (input: UploadAnalyticsToHubInput): Promise<{ ok: boolean }> => {
     if (!uid || hubInflightRef.current) return { ok: false }
+    const choice = await requestUploadOptions({ mode: 'create', currentVisibility: 'none' })
+    if (!choice) return { ok: false }
     hubInflightRef.current = true
     setHubUploading(input.entryId)
     let ok = false
     try {
-      const result = await window.vialAPI.hubUploadAnalyticsPost({
+      const base = {
         uid,
         entryId: input.entryId,
         title: input.title,
@@ -260,17 +265,26 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
         layoutComparisonInputs: input.layoutComparisonInputs,
         categories: input.categories,
         appDataApps: input.appDataApps,
-      })
-      if (result.success && result.postId) {
-        ok = true
-        flashHubResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId: input.entryId })
-        await refreshEntries()
+      }
+      if (choice.visibility === 'public') {
+        const result = await window.vialAPI.hubUploadAnalyticsPost(base)
+        if (result.success && result.postId) {
+          ok = true
+          flashHubResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId: input.entryId })
+          await refreshEntries()
+        } else {
+          flashHubResult({ kind: 'error', message: localizeHubError(result.error, 'hub.uploadFailed', t), entryId: input.entryId })
+        }
       } else {
-        flashHubResult({
-          kind: 'error',
-          message: localizeHubError(result.error, 'hub.uploadFailed', t),
-          entryId: input.entryId,
-        })
+        const result = await window.vialAPI.hubUploadPrivateAnalyticsPost({ ...base, expiresInDays: choice.expiresInDays })
+        if (result.success) {
+          ok = true
+          await window.vialAPI.analyzeFilterStoreSetHubPrivate(uid, input.entryId, linkFromResult(result)).catch(() => {})
+          flashHubResult({ kind: 'success', message: t('hub.uploadSuccess'), entryId: input.entryId })
+          await refreshEntries()
+        } else {
+          flashHubResult({ kind: 'error', message: localizeHubError(result.error, 'hub.uploadFailed', t), entryId: input.entryId })
+        }
       }
     } catch (err) {
       flashHubResult({
@@ -283,21 +297,28 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
       setHubUploading(null)
     }
     return { ok }
-  }, [uid, refreshEntries, t, flashHubResult])
+  }, [uid, requestUploadOptions, refreshEntries, t, flashHubResult])
 
   const updateEntryOnHub = useCallback(async (input: UploadAnalyticsToHubInput): Promise<{ ok: boolean }> => {
     if (!uid || hubInflightRef.current) return { ok: false }
     const entry = entries.find((e) => e.id === input.entryId)
-    const postId = entry?.hubPostId
-    if (!entry || !postId) {
+    if (!entry) return { ok: false }
+    const isPrivate = !!entry.hubPrivate
+    const publicPostId = isPrivate ? undefined : entry.hubPostId
+    const currentVisibility = isPrivate ? 'private' : (publicPostId ? 'public' : 'none')
+    if (currentVisibility === 'none') {
       flashHubResult({ kind: 'error', message: t('hub.updateFailed'), entryId: input.entryId })
       return { ok: false }
     }
+
+    const choice = await requestUploadOptions({ mode: 'update', currentVisibility })
+    if (!choice) return { ok: false }
+
     hubInflightRef.current = true
     setHubUploading(input.entryId)
     let ok = false
     try {
-      const result = await window.vialAPI.hubUpdateAnalyticsPost({
+      const base = {
         uid,
         entryId: input.entryId,
         title: input.title,
@@ -307,18 +328,47 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
         layoutComparisonInputs: input.layoutComparisonInputs,
         categories: input.categories,
         appDataApps: input.appDataApps,
-        postId,
-      })
-      if (result.success) {
-        ok = true
-        flashHubResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: input.entryId })
-        await refreshEntries()
+      }
+
+      // public → public is a plain in-place update (URL preserved).
+      if (currentVisibility === 'public' && choice.visibility === 'public') {
+        const result = await window.vialAPI.hubUpdateAnalyticsPost({ ...base, postId: publicPostId! })
+        if (result.success) {
+          ok = true
+          flashHubResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: input.entryId })
+          await refreshEntries()
+        } else {
+          flashHubResult({ kind: 'error', message: localizeHubError(result.error, 'hub.updateFailed', t), entryId: input.entryId })
+        }
+        return { ok }
+      }
+
+      // Visibility switch / private→private: delete then recreate.
+      if (currentVisibility === 'public') {
+        await window.vialAPI.hubDeletePost(publicPostId!).catch(() => {})
       } else {
-        flashHubResult({
-          kind: 'error',
-          message: localizeHubError(result.error, 'hub.updateFailed', t),
-          entryId: input.entryId,
-        })
+        await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate!.id).catch(() => {})
+      }
+
+      if (choice.visibility === 'public') {
+        const result = await window.vialAPI.hubUploadAnalyticsPost(base)
+        if (result.success && result.postId) {
+          ok = true
+          flashHubResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: input.entryId })
+          await refreshEntries()
+        } else {
+          flashHubResult({ kind: 'error', message: localizeHubError(result.error, 'hub.updateFailed', t), entryId: input.entryId })
+        }
+      } else {
+        const result = await window.vialAPI.hubUploadPrivateAnalyticsPost({ ...base, expiresInDays: choice.expiresInDays })
+        if (result.success) {
+          ok = true
+          await window.vialAPI.analyzeFilterStoreSetHubPrivate(uid, input.entryId, linkFromResult(result)).catch(() => {})
+          flashHubResult({ kind: 'success', message: t('hub.updateSuccess'), entryId: input.entryId })
+          await refreshEntries()
+        } else {
+          flashHubResult({ kind: 'error', message: localizeHubError(result.error, 'hub.updateFailed', t), entryId: input.entryId })
+        }
       }
     } catch (err) {
       flashHubResult({
@@ -331,19 +381,24 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
       setHubUploading(null)
     }
     return { ok }
-  }, [uid, entries, refreshEntries, t, flashHubResult])
+  }, [uid, entries, requestUploadOptions, refreshEntries, t, flashHubResult])
 
-  // Remove from Hub — deletes the post on the Hub server, then clears
-  // the local hubPostId so the row reverts to the upload state.
+  // Remove from Hub — deletes the post on the Hub server (public or
+  // private), then clears the local linkage so the row reverts to the
+  // upload state.
   const removeEntryFromHub = useCallback(async (entryId: string): Promise<void> => {
     if (!uid || hubInflightRef.current) return
     const entry = entries.find((e) => e.id === entryId)
-    const postId = entry?.hubPostId
-    if (!entry || !postId) return
+    if (!entry) return
+    const isPrivate = !!entry.hubPrivate
+    const publicPostId = isPrivate ? undefined : entry.hubPostId
+    if (!isPrivate && !publicPostId) return
     hubInflightRef.current = true
     setHubUploading(entryId)
     try {
-      const deleteResult = await window.vialAPI.hubDeletePost(postId)
+      const deleteResult = isPrivate
+        ? await window.vialAPI.hubDeletePrivatePost('files', entry.hubPrivate!.id)
+        : await window.vialAPI.hubDeletePost(publicPostId!)
       if (!deleteResult.success) {
         flashHubResult({
           kind: 'error',
@@ -352,7 +407,11 @@ export function useAnalyzeFilterStore({ uid }: UseAnalyzeFilterStoreOptions) {
         })
         return
       }
-      await window.vialAPI.analyzeFilterStoreSetHubPostId(uid, entryId, null).catch(() => {})
+      if (isPrivate) {
+        await window.vialAPI.analyzeFilterStoreSetHubPrivate(uid, entryId, null).catch(() => {})
+      } else {
+        await window.vialAPI.analyzeFilterStoreSetHubPostId(uid, entryId, null).catch(() => {})
+      }
       flashHubResult({ kind: 'success', message: t('hub.removeSuccess'), entryId })
       await refreshEntries()
     } catch (err) {

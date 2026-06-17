@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next'
 import { HUB_BTN, SHARE_LINK_BTN } from './layout-store-types'
 import type { HubEntryResult } from './layout-store-types'
-import { ACTION_BTN, CONFIRM_DELETE_BTN } from './store-modal-shared'
+import { ACTION_BTN, CONFIRM_DELETE_BTN, formatDateShort } from './store-modal-shared'
 import type { SnapshotMeta } from '../../../shared/types/snapshot-store'
 import type { HubMyPost } from '../../../shared/types/hub'
 
@@ -135,15 +135,26 @@ export function LayoutStoreHubRow({
 }: LayoutStoreHubRowProps) {
   const { t } = useTranslation()
 
+  // public and private linkage are mutually exclusive; if a private link
+  // exists, ignore any same-label public post match so the row reflects
+  // the entry's actual (private) state.
+  const isPrivate = !!entry.hubPrivate
+  const publicPostId = isPrivate ? undefined : entryHubPostId
+  const linked = isPrivate || !!publicPostId
+  const openUrl = isPrivate
+    ? (hubOrigin && entry.hubPrivate ? `${hubOrigin}${entry.hubPrivate.url}` : undefined)
+    : (publicPostId && hubOrigin ? `${hubOrigin}/post/${encodeURIComponent(publicPostId)}` : undefined)
+  const badge = isPrivate
+    ? t('hub.private.badgePrivate')
+    : (publicPostId ? t('hub.private.badgePublic') : t('hub.pipetteHub'))
+
   return (
     <div className="mt-1.5 border-t border-edge pt-1.5" data-testid="layout-store-hub-row">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-accent">{t('hub.pipetteHub')}</span>
+        <span className="text-xs font-medium text-accent" data-testid="layout-store-hub-badge">{badge}</span>
         <div className="flex gap-1">
-          {entryHubPostId && hubOrigin && (
-            <ShareLink url={`${hubOrigin}/post/${encodeURIComponent(entryHubPostId)}`} />
-          )}
-          {entryHubPostId && confirmHubRemoveId === entry.id && (
+          {openUrl && <ShareLink url={openUrl} />}
+          {linked && confirmHubRemoveId === entry.id && (
             <>
               <button
                 type="button"
@@ -163,7 +174,7 @@ export function LayoutStoreHubRow({
               </button>
             </>
           )}
-          {entryHubPostId && confirmHubRemoveId !== entry.id && (
+          {linked && confirmHubRemoveId !== entry.id && (
             <>
               {onUpdateOnHub && (
                 <button
@@ -189,7 +200,7 @@ export function LayoutStoreHubRow({
               )}
             </>
           )}
-          {!entryHubPostId && (
+          {!linked && (
             <HubOrphanButtons
               entry={entry}
               keyboardName={keyboardName}
@@ -203,7 +214,14 @@ export function LayoutStoreHubRow({
           )}
         </div>
       </div>
-      {hubNeedsDisplayName && (entryHubPostId ? !onUpdateOnHub : !onUploadToHub) && (
+      {isPrivate && entry.hubPrivate && (
+        <div className="mt-1 text-xs text-content-muted" data-testid="layout-store-hub-expiry">
+          {entry.hubPrivate.expiresAt
+            ? t('hub.private.expiresAt', { date: formatDateShort(entry.hubPrivate.expiresAt) })
+            : t('hub.private.noExpiry')}
+        </div>
+      )}
+      {hubNeedsDisplayName && (linked ? !onUpdateOnHub : !onUploadToHub) && (
         <div
           className="mt-1 text-xs text-content-muted"
           data-testid="layout-store-hub-needs-display-name"

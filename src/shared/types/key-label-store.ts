@@ -12,7 +12,7 @@ export interface KeyLabelMeta {
   /** Hub `uploader_name` cached locally for the Author column. Absent
    *  for entries that have never been associated with a Hub post. */
   uploaderName?: string
-  /** Hub post id when synced to Pipette Hub. */
+  /** Hub post id when synced publicly to Pipette Hub. */
   hubPostId?: string
   /** Hub-side `updated_at` cached locally so the Updated column shows
    *  the same value as the Hub website (= when the author last

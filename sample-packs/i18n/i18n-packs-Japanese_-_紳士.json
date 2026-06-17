@@ -1,5 +1,5 @@
 {
-  "version": "0.1.3",
+  "version": "0.1.4",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1358,6 +1358,30 @@
       "titleTooLong": "題名が長すぎます（二百文字以内にて）。",
       "authFailed": "確認に失敗いたしました。一度退出して入り直してくださいませ。",
       "payloadTooLarge": "内容が大きすぎます。期間を短くしてはいかがでしょうか。"
+    },
+    "uploadConfirm": {
+      "title": {
+        "create": "Hubに披露する",
+        "update": "Hub投稿を更新"
+      },
+      "visibilityPublic": "公開",
+      "publicDesc": "Hubの一覧と検索に掲載されます",
+      "visibilityPrivate": "非公開（限定リンク）",
+      "privateDesc": "秘密のリンクをご存じの方のみ閲覧可能。一覧・検索には掲載されません",
+      "expiryLabel": "リンクの有効期限",
+      "expiryDays_one": "{{count}}日",
+      "expiryDays_other": "{{count}}日",
+      "expiresAtPreview": "{{date}} に失効いたします",
+      "warnUrlExpiryChange": "更新すると投稿を作り直すため、共有リンクと有効期限が変わります",
+      "confirm": "決定",
+      "cancel": "取り消し"
+    },
+    "private": {
+      "badgePublic": "Hub（公開）",
+      "badgePrivate": "Hub（非公開）",
+      "expiresAt": "{{date}} に失効いたします",
+      "noExpiry": "無期限",
+      "removeConfirm": "Hubから抹消いたしますか？ 非公開リンクは即座に無効となります"
     }
   },
   "notification": {
