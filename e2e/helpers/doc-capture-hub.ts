@@ -379,7 +379,17 @@ async function captureEditorDataTab(page: Page): Promise<void> {
   if (available) {
     await capture(page, 'hub-03-upload-button', { fullPage: true })
 
+    // Upload now opens the Public/Private confirmation dialog instead of
+    // uploading immediately. Capture the dialog, then Confirm (default =
+    // Public) to complete the public upload that hub-04/05 document.
     await uploadBtn.click()
+    const confirmDialog = page.locator('[data-testid="upload-confirm-backdrop"]').first()
+    await confirmDialog.waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    if (await isAvailable(confirmDialog)) {
+      await page.waitForTimeout(500)
+      await capture(page, 'hub-upload-confirm', { fullPage: true })
+      await page.locator('[data-testid="upload-confirm-submit"]').click()
+    }
     await page.waitForTimeout(5000)
     await capture(page, 'hub-04-uploaded', { fullPage: true })
 
