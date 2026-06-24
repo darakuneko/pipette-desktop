@@ -155,6 +155,14 @@ export const IpcChannels = {
    * analyze range. Backs the "WPM by App" bar chart. */
   TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE: 'typing-analytics:get-wpm-by-app-for-range',
 
+  // Typing Test Text Store (renderer → main → renderer)
+  TYPING_TEST_TEXT_LIST: 'typing-test-text:list',
+  TYPING_TEST_TEXT_GET: 'typing-test-text:get',
+  TYPING_TEST_TEXT_RENAME: 'typing-test-text:rename',
+  TYPING_TEST_TEXT_DELETE: 'typing-test-text:delete',
+  TYPING_TEST_TEXT_IMPORT: 'typing-test-text:import',
+  TYPING_TEST_TEXT_IMPORT_CONFIRM: 'typing-test-text:import-confirm',
+
   // Language Store (renderer → main → renderer)
   LANG_LIST: 'lang:list',
   LANG_GET: 'lang:get',

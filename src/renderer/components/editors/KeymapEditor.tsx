@@ -106,12 +106,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   layerPanelOpen: layerPanelOpenProp, onLayerPanelOpenChange,
   scale: scaleProp = 1, onScaleChange,
   keyEditorZoom, onKeyEditorZoomChange,
-  typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, typingTestHistory,
+  typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, onRenameTypingTestResult, onDeleteTypingTestResult, typingTestHistory,
   typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
+  typingTestMemory: savedTypingTestMemory, onTypingTestMemoryChange,
+  typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
   typingHeatmapWindowMin, onTypingHeatmapWindowMinChange,
@@ -162,10 +164,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     matrixMode, pressedKeys, everPressedKeys, hasMatrixTester,
     handleMatrixToggle, handleTypingTestToggle,
     typingTest, handleTypingTestConfigChange, handleTypingTestLanguageChange,
+    pauseTypingTest, resumeTypingTest, restartTypingTestFromStart,
   } = useInputModes({
     rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange, keymap,
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, typingTestHistory,
+    savedTypingTestMemory, onTypingTestMemoryChange,
     typingTestViewOnly, typingRecordEnabled,
     typingRecordKeyboard: keyboardUid && connectedDevice
       ? {
@@ -932,6 +936,8 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               layers={layers}
               layerNames={layerNames}
               typingTestHistory={typingTestHistory}
+              onRenameTypingTestResult={onRenameTypingTestResult}
+              onDeleteTypingTestResult={onDeleteTypingTestResult}
               deviceName={deviceName}
               pressedKeys={pressedKeys}
               keycodes={typingTestKeycodes}
@@ -942,6 +948,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               keys={layout.keys}
               layerLabel={layerLabel(typingTest.effectiveLayer)}
               contentRef={keyboardContentRef}
+              hasSavedMemory={!!savedTypingTestMemory}
+              displayLines={typingTestDisplayLines}
+              fontSize={typingTestFontSize}
+              onDisplayLinesChange={onTypingTestDisplayLinesChange}
+              onFontSizeChange={onTypingTestFontSizeChange}
+              onPauseTest={pauseTypingTest}
+              onResumeTest={resumeTypingTest}
+              onRestartTestFromStart={restartTypingTestFromStart}
               viewOnly={typingTestViewOnly}
               onViewOnlyChange={onTypingTestViewOnlyChange}
               viewOnlyWindowSize={typingTestViewOnlyWindowSize}

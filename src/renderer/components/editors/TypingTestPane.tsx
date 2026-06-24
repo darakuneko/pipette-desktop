@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Globe } from 'lucide-react'
+import { Pause, Play } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
 import { TypingTestView } from '../../typing-test/TypingTestView'
+import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
@@ -16,6 +17,10 @@ import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/fil
 import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from '../../typing-test/types'
+
+const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN + 1 }, (_, i) => DISPLAY_LINES_MIN + i)
+const FONT_OPTIONS = Array.from({ length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 }, (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP)
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
 
@@ -36,6 +41,20 @@ export interface TypingTestPaneProps {
   keys: KleKey[]
   layerLabel: string
   contentRef?: React.RefObject<HTMLDivElement | null>
+  /** Memory mode (imported custom text): a paused snapshot is saved. */
+  hasSavedMemory?: boolean
+  onPauseTest?: () => void
+  onResumeTest?: () => void
+  onRestartTestFromStart?: () => void
+  /** Imported-text display preferences (custom mode). */
+  displayLines?: number
+  fontSize?: number
+  onDisplayLinesChange?: (lines: number) => void
+  onFontSizeChange?: (px: number) => void
+  /** Label a saved result (by ISO date) from the History modal. */
+  onRenameTypingTestResult?: (date: string, name: string) => void
+  /** Delete a saved result (by ISO date) from the History modal. */
+  onDeleteTypingTestResult?: (date: string) => void
   viewOnly?: boolean
   onViewOnlyChange?: (enabled: boolean) => void
   viewOnlyWindowSize?: { width: number; height: number }
@@ -96,6 +115,16 @@ export function TypingTestPane({
   keys,
   layerLabel,
   contentRef,
+  hasSavedMemory,
+  onPauseTest,
+  onResumeTest,
+  onRestartTestFromStart,
+  displayLines,
+  fontSize,
+  onDisplayLinesChange,
+  onFontSizeChange,
+  onRenameTypingTestResult,
+  onDeleteTypingTestResult,
   viewOnly,
   onViewOnlyChange,
   viewOnlyWindowSize,
@@ -134,6 +163,7 @@ export function TypingTestPane({
   const heatmapActive = heatmapMaxTotal > 0
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [showConsentModal, setShowConsentModal] = useState(false)
+  const [showResumeModal, setShowResumeModal] = useState(false)
 
   const handleRecordToggle = useCallback(() => {
     if (!onRecordEnabledChange) return
@@ -333,10 +363,20 @@ export function TypingTestPane({
           onCancel={handleConsentCancel}
         />
       )}
+      {showResumeModal && (
+        <PauseResumeModal
+          wordIndex={typingTest.state.currentWordIndex}
+          totalWords={typingTest.state.words.length}
+          onResume={() => { setShowResumeModal(false); onResumeTest?.() }}
+          onRestart={() => { setShowResumeModal(false); onRestartTestFromStart?.() }}
+          onCancel={() => setShowResumeModal(false)}
+        />
+      )}
       {!viewOnly && (
         <TypingTestView
           state={typingTest.state}
           wpm={typingTest.wpm}
+          kpm={typingTest.kpm}
           accuracy={typingTest.accuracy}
           elapsedSeconds={typingTest.elapsedSeconds}
           remainingSeconds={typingTest.remainingSeconds}
@@ -348,6 +388,13 @@ export function TypingTestPane({
           onCompositionUpdate={typingTest.processCompositionUpdate}
           onCompositionEnd={typingTest.processCompositionEnd}
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
+          displayLines={displayLines}
+          fontSize={fontSize}
+          onNameResult={(name) => {
+            // The auto-save prepends the finished result, so history[0] is it.
+            const date = typingTestHistory?.[0]?.date
+            if (date) onRenameTypingTestResult?.(date, name)
+          }}
         />
       )}
       <div
@@ -361,7 +408,7 @@ export function TypingTestPane({
             style={viewOnly ? { transform: `scale(${cssScale})`, transformOrigin: 'top left' } : undefined}
           >
           {!viewOnly && (
-            <div className="mb-3 flex items-center justify-between px-5">
+            <div className="mb-3 flex items-center justify-between gap-4 px-5">
               <div className="flex items-center gap-4">
                 {layers > 1 && (
                   <div className="flex items-center gap-1.5">
@@ -380,38 +427,108 @@ export function TypingTestPane({
                   </div>
                 )}
                 {typingTest.config.mode !== 'quote' && (
-                  <button
-                    type="button"
-                    data-testid="language-selector"
-                    className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1 text-sm text-content-secondary transition-colors hover:text-content"
-                    onClick={() => setShowLanguageModal(true)}
-                    disabled={typingTest.isLanguageLoading}
-                  >
-                    {typingTest.isLanguageLoading ? (
-                      <span>{t('editor.typingTest.language.loadingLanguage')}</span>
-                    ) : (
-                      <>
-                        <Globe size={ICON_SM} aria-hidden="true" />
-                        <span>{typingTest.language.replace(/_/g, ' ')}</span>
-                      </>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}:</span>
+                    <button
+                      type="button"
+                      data-testid="language-selector"
+                      className="rounded-md border border-edge px-2.5 py-1 text-sm text-content-secondary transition-colors hover:text-content"
+                      onClick={() => setShowLanguageModal(true)}
+                      disabled={typingTest.isLanguageLoading}
+                    >
+                      {typingTest.isLanguageLoading ? (
+                        t('editor.typingTest.language.loadingLanguage')
+                      ) : typingTest.config.mode === 'custom' ? (
+                        `${t('editor.typingTest.language.tabCustom')} - ${typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.customText')}`
+                      ) : (
+                        `${t('editor.typingTest.language.tabNormal')} - ${typingTest.language.replace(/_/g, ' ')}`
+                      )}
+                    </button>
+                  </div>
                 )}
                 {showLanguageModal && (
                   <LanguageSelectorModal
                     currentLanguage={typingTest.language}
-                    onSelectLanguage={onLanguageChange}
+                    currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
+                    onSelectLanguage={(name) => {
+                      // Picking a language leaves custom mode — fall back to
+                      // a words config so the language source applies.
+                      if (typingTest.config.mode === 'custom') onConfigChange(DEFAULT_CONFIG)
+                      void onLanguageChange(name)
+                    }}
+                    onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}
+                    onCurrentTextDeleted={() => {
+                      // The selected imported text was deleted — fall back to
+                      // the default (words mode, English).
+                      onConfigChange(DEFAULT_CONFIG)
+                      void onLanguageChange(DEFAULT_LANGUAGE)
+                    }}
                     onClose={() => setShowLanguageModal(false)}
                   />
+                )}
+                {/* Imported-text display: visible line count + font size. */}
+                {typingTest.config.mode === 'custom' && (
+                  <>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
+                      <select
+                        data-testid="display-lines-select"
+                        aria-label={t('editor.typingTest.lines')}
+                        value={displayLines ?? DEFAULT_DISPLAY_LINES}
+                        onChange={(e) => onDisplayLinesChange?.(Number(e.target.value))}
+                        className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
+                      >
+                        {LINE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
+                      <select
+                        data-testid="font-size-select"
+                        aria-label={t('editor.typingTest.fontSize')}
+                        value={fontSize ?? DEFAULT_FONT_SIZE}
+                        onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
+                        className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
+                      >
+                        {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </div>
+                  </>
                 )}
               </div>
               <div className="flex items-center gap-3">
                 {typingTestHistory && typingTestHistory.length > 0 && (
-                  <HistoryToggle results={typingTestHistory} deviceName={deviceName} />
+                  <HistoryToggle results={typingTestHistory} deviceName={deviceName} onRename={onRenameTypingTestResult} onDelete={onDeleteTypingTestResult} />
+                )}
+                {/* Memory mode (imported custom text): pause while running, or
+                    resume a saved snapshot. */}
+                {typingTest.config.mode === 'custom' && (
+                  typingTest.state.status === 'running' ? (
+                    <button
+                      type="button"
+                      data-testid="typing-memory-pause"
+                      className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1 text-sm text-content-secondary transition-colors hover:text-content"
+                      onClick={() => onPauseTest?.()}
+                    >
+                      <Pause size={ICON_SM} aria-hidden="true" />
+                      <span>{t('editor.typingTest.memory.pause')}</span>
+                    </button>
+                  ) : (typingTest.state.status === 'paused' || hasSavedMemory) ? (
+                    <button
+                      type="button"
+                      data-testid="typing-memory-resume"
+                      className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1 text-sm text-accent transition-colors hover:text-accent/80"
+                      onClick={() => setShowResumeModal(true)}
+                    >
+                      <Play size={ICON_SM} aria-hidden="true" />
+                      <span>{t('editor.typingTest.memory.resumeButton')}</span>
+                    </button>
+                  ) : null
                 )}
               </div>
             </div>
           )}
+          <div className="flex justify-center">
           <KeyboardPane
             paneId="primary"
             isActive={false}
@@ -435,6 +552,7 @@ export function TypingTestPane({
             layerLabelTestId="layer-label"
             contentRef={contentRef}
           />
+          </div>
           {heatmapActive && (
             <p
               data-testid="typing-test-heatmap-legend"

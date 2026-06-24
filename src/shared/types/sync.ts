@@ -6,6 +6,7 @@ import type { AnalyzeFilterSnapshotIndex } from './analyze-filter-store'
 import type { AppConfig } from './app-config'
 import type { KeyboardMetaIndex, KeyboardMetaSyncUnit } from './keyboard-meta'
 import type { KeyLabelIndex } from './key-label-store'
+import type { TypingTestTextIndex } from './typing-test-text-store'
 import type { I18nPackIndex, I18nIndexSyncUnit, I18nPackSyncUnit } from './i18n-store'
 
 export type { AppConfig }
@@ -21,9 +22,9 @@ export interface SyncEnvelope {
 }
 
 export interface SyncBundle {
-  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
-  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'i18n-index', or packId for i18n-pack
-  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | I18nPackIndex
+  type: 'favorite' | 'layout' | 'analyze-filter' | 'settings' | 'keyboard-meta' | 'typing-analytics-device' | 'key-label' | 'typing-test-text' | 'i18n-index' | 'i18n-pack' | 'theme-index' | 'theme-pack'
+  key: string // FavoriteType, UID, 'keyboard-names' for meta, `${uid}|${machineHash}` for device, 'key-labels', 'typing-test-texts', 'i18n-index', or packId for i18n-pack
+  index: FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyboardMetaIndex | KeyLabelIndex | TypingTestTextIndex | I18nPackIndex
   files: Record<string, string> // filename -> content (empty for meta / i18n-index)
 }
 
@@ -63,6 +64,7 @@ export type KeyboardSnapshotsSyncUnit = `keyboards/${string}/snapshots`
 export type KeyboardAnalyzeFiltersSyncUnit = `keyboards/${string}/analyze_filters`
 export type KeyboardTypingAnalyticsDeviceSyncUnit = `keyboards/${string}/devices/${string}`
 export type KeyLabelSyncUnit = 'key-labels'
+export type TypingTestTextSyncUnit = 'typing-test-texts'
 export type SyncUnit =
   | FavoriteSyncUnit
   | KeyboardSettingsSyncUnit
@@ -71,6 +73,7 @@ export type SyncUnit =
   | KeyboardMetaSyncUnit
   | KeyboardTypingAnalyticsDeviceSyncUnit
   | KeyLabelSyncUnit
+  | TypingTestTextSyncUnit
   | I18nIndexSyncUnit
   | I18nPackSyncUnit
 

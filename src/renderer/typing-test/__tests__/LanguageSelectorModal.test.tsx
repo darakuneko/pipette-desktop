@@ -219,4 +219,55 @@ describe('LanguageSelectorModal', () => {
     const arabicRow = screen.getByTestId('language-row-arabic')
     expect(arabicRow.textContent).toContain('RTL')
   })
+
+  it('deleting the selected imported text then closing fires onCurrentTextDeleted', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [{ id: 'x', name: 'My Text', wordCount: 3, filename: 'x.json', savedAt: '', updatedAt: '' }],
+      }),
+      typingTestTextStoreDelete: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as typeof window.vialAPI
+
+    const onCurrentTextDeleted = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        currentCustomTextId="x"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onCurrentTextDeleted={onCurrentTextDeleted}
+        onClose={onClose}
+      />,
+    )
+
+    // Modal opens on the Import tab because a custom text is selected.
+    await waitFor(() => expect(screen.getByTestId('typing-text-delete-x')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('typing-text-delete-x'))
+    await waitFor(() => expect(window.vialAPI.typingTestTextStoreDelete).toHaveBeenCalledWith('x'))
+
+    fireEvent.click(screen.getByTestId('language-modal-close'))
+    expect(onCurrentTextDeleted).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not fire onCurrentTextDeleted when nothing was deleted', async () => {
+    const onCurrentTextDeleted = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onCurrentTextDeleted={onCurrentTextDeleted}
+        onClose={onClose}
+      />,
+    )
+    await waitFor(() => expect(screen.getByTestId('language-search')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('language-modal-close'))
+    expect(onCurrentTextDeleted).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

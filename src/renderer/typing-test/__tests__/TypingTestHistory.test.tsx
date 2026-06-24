@@ -101,7 +101,8 @@ describe('TypingTestHistory', () => {
       const trs = history.querySelectorAll('tbody tr')
       return Array.from(trs).map((tr) => {
         const cells = tr.querySelectorAll('td')
-        return Number(cells[1].textContent)
+        // Columns: Name, Date, WPM, Accuracy, Mode, Duration, PB
+        return Number(cells[2].textContent)
       })
     }
 
@@ -131,7 +132,7 @@ describe('TypingTestHistory', () => {
 
     // Other sortable headers should be 'none'
     const noneHeaders = Array.from(headers).filter((h) => h.getAttribute('aria-sort') === 'none')
-    expect(noneHeaders.length).toBe(4) // wpm, accuracy, mode, duration
+    expect(noneHeaders.length).toBe(5) // wpm, kpm, accuracy, mode, duration
   })
 
   it('computes stats from filtered data', () => {
@@ -164,7 +165,7 @@ describe('TypingTestHistory', () => {
     expect(onExportCsv).toHaveBeenCalledTimes(1)
 
     const csv = onExportCsv.mock.calls[0][0] as string
-    expect(csv).toContain('date,wpm,accuracy')
+    expect(csv).toContain('date,name,wpm,kpm,accuracy')
     expect(csv).toContain('2025-01-01T00:00:00Z')
     expect(csv).toContain('80')
   })
@@ -172,5 +173,83 @@ describe('TypingTestHistory', () => {
   it('does not show export button when onExportCsv is not provided', () => {
     renderWithI18n(<TypingTestHistory results={[makeResult()]} />)
     expect(screen.queryByTestId('history-export-csv')).toBeNull()
+  })
+
+  it('renames a result inline and calls onRename', () => {
+    const date = '2025-02-02T03:04:05.000Z'
+    const onRename = vi.fn()
+    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onRename={onRename} />)
+    fireEvent.click(screen.getByTestId(`history-name-${date}`))
+    const input = screen.getByTestId(`history-name-input-${date}`)
+    fireEvent.change(input, { target: { value: 'QWERTY baseline' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onRename).toHaveBeenCalledWith(date, 'QWERTY baseline')
+  })
+
+  it('shows the imported-text name (not the textId) for custom-mode rows under the Text tab', () => {
+    const results = [makeResult({
+      mode: 'custom',
+      mode2: 'b286fff1-78d1-40d5-8ea0-6dd57561badf',
+      customTextName: 'my-novel.txt',
+    })]
+    renderWithI18n(<TypingTestHistory results={results} />)
+    // Custom rows live under the Text tab, not Monkeytype (the default).
+    fireEvent.click(screen.getByTestId('history-tab-text'))
+    expect(screen.getByText('my-novel.txt')).toBeTruthy()
+    expect(screen.queryByText(/b286fff1/)).toBeNull()
+  })
+
+  it('shows a KPM column derived from chars and duration', () => {
+    // correctChars 100 over 30s → 100 * 60 / 30 = 200 KPM.
+    renderWithI18n(<TypingTestHistory results={[makeResult({ correctChars: 100, durationSeconds: 30 })]} />)
+    expect(screen.getAllByText('200').length).toBeGreaterThan(0)
+  })
+
+  it('separates Monkeytype and Text results into tabs', () => {
+    const results = [
+      makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
+      makeResult({ wpm: 82, mode: 'custom', mode2: 'id-1', customTextName: 'novel.txt' }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+    // Monkeytype tab (default): words result shown, custom hidden.
+    expect(screen.getAllByText('81').length).toBeGreaterThan(0)
+    expect(screen.queryByText('novel.txt')).toBeNull()
+    // Text tab: custom result shown, words hidden.
+    fireEvent.click(screen.getByTestId('history-tab-text'))
+    expect(screen.getByText('novel.txt')).toBeTruthy()
+    expect(screen.queryByText('81')).toBeNull()
+  })
+
+  it('deletes a result only after confirmation', () => {
+    const date = '2025-03-03T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    // First click asks for confirmation, does not delete yet.
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    expect(onDelete).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId(`history-delete-confirm-${date}`))
+    expect(onDelete).toHaveBeenCalledWith(date)
+  })
+
+  it('cancels deletion when cancel is clicked', () => {
+    const date = '2025-04-04T01:02:03.000Z'
+    const onDelete = vi.fn()
+    renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onDelete={onDelete} />)
+    fireEvent.click(screen.getByTestId(`history-delete-${date}`))
+    fireEvent.click(screen.getByTestId(`history-delete-cancel-${date}`))
+    expect(onDelete).not.toHaveBeenCalled()
+    // Delete button is back.
+    expect(screen.getByTestId(`history-delete-${date}`)).toBeTruthy()
+  })
+
+  it('shows no delete button when no onDelete handler', () => {
+    renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'd1' })]} />)
+    expect(screen.queryByTestId('history-delete-d1')).toBeNull()
+  })
+
+  it('renders the name read-only (no edit) when no onRename handler', () => {
+    renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'x', name: 'kept' })]} />)
+    expect(screen.queryByTestId('history-name-x')).toBeNull()
+    expect(screen.getByText('kept')).toBeTruthy()
   })
 })

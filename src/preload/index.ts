@@ -13,6 +13,7 @@ import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
 import type { KeyLabelMeta, KeyLabelRecord, KeyLabelStoreResult } from '../shared/types/key-label-store'
+import type { TypingTestTextMeta, TypingTestTextRecord, TypingTestTextStoreResult } from '../shared/types/typing-test-text-store'
 import type { HubKeyLabelItem, HubKeyLabelListResponse, HubKeyLabelListParams, HubKeyLabelTimestampsResponse } from '../shared/types/hub-key-label'
 import type {
   I18nPackMeta,
@@ -285,6 +286,20 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_SET_HUB_POST_ID, id, hubPostId),
   keyLabelStoreHasName: (name: string, excludeId?: string): Promise<KeyLabelStoreResult<boolean>> =>
     ipcRenderer.invoke(IpcChannels.KEY_LABEL_STORE_HAS_NAME, name, excludeId),
+
+  // --- Typing Test Text Store (local) ---
+  typingTestTextStoreList: (): Promise<TypingTestTextStoreResult<TypingTestTextMeta[]>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_LIST),
+  typingTestTextStoreGet: (id: string): Promise<TypingTestTextStoreResult<TypingTestTextRecord>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_GET, id),
+  typingTestTextStoreRename: (id: string, newName: string): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_RENAME, id, newName),
+  typingTestTextStoreDelete: (id: string): Promise<TypingTestTextStoreResult<void>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_DELETE, id),
+  typingTestTextStoreImport: (): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_IMPORT),
+  typingTestTextStoreImportConfirm: (): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_TEST_TEXT_IMPORT_CONFIRM),
 
   // --- Key Label Hub ---
   keyLabelHubList: (params?: HubKeyLabelListParams): Promise<KeyLabelStoreResult<HubKeyLabelListResponse>> =>

@@ -24,6 +24,8 @@ function makeState(overrides: Partial<TypingTestState> = {}): TypingTestState {
     incorrectChars: 0,
     currentQuote: null,
     wpmHistory: [],
+    lineBreaks: new Set(),
+    lineIndents: [],
     ...overrides,
   }
 }
@@ -418,6 +420,77 @@ describe('TypingTestView quote mode display', () => {
   })
 })
 
+describe('TypingTestView custom mode result naming', () => {
+  const customConfig: TypingTestConfig = { mode: 'custom', textId: 'abc' }
+
+  it('shows an inline name field (placeholder Unnamed) instead of the quote source', () => {
+    renderView({
+      config: customConfig,
+      state: makeState({ status: 'finished', currentQuote: { id: 1, text: 'x', source: 'code', length: 1 } }),
+    })
+    expect(screen.queryByTestId('typing-test-quote-source')).toBeNull()
+    const field = screen.getByTestId('typing-test-result-name')
+    expect(field.textContent).toBe('Unnamed')
+  })
+
+  it('shows both WPM and KPM in custom mode', () => {
+    renderView({
+      config: customConfig,
+      state: makeState({ status: 'running' }),
+      wpm: 24,
+      kpm: 120,
+    })
+    expect(screen.getByTestId('typing-test-wpm').textContent).toBe('24')
+    expect(screen.getByTestId('typing-test-kpm').textContent).toBe('120')
+  })
+
+  it('preserves leading indentation per line (display only)', () => {
+    renderView({
+      config: customConfig,
+      state: makeState({
+        status: 'running',
+        words: ['def', 'x'],
+        lineBreaks: new Set([0]),
+        lineIndents: ['', '  '],
+      }),
+    })
+    // First line has no indent; second line keeps its two-space indent.
+    expect(screen.queryByTestId('line-indent-0')).toBeNull()
+    expect(screen.getByTestId('line-indent-1').textContent).toBe('  ')
+  })
+
+  it('counts custom progress by character, the word gap included', () => {
+    // "AAA AA" -> 3 + 2 + 1 separator = 6 characters total.
+    renderView({
+      config: customConfig,
+      state: makeState({ status: 'running', words: ['AAA', 'AA'], currentWordIndex: 1, currentInput: '' }),
+    })
+    // 1 word done (3 chars) + 1 separator passed = 4 / 6.
+    expect(screen.getByTestId('typing-test-word-count').textContent).toBe('4 / 6')
+  })
+
+  it('hides the words/time/quote settings bar in custom mode', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+    expect(screen.queryByTestId('mode-words')).toBeNull()
+    expect(screen.queryByTestId('mode-time')).toBeNull()
+    expect(screen.queryByTestId('mode-quote')).toBeNull()
+  })
+
+  it('names the finished result on commit', () => {
+    const onNameResult = vi.fn()
+    renderView({
+      config: customConfig,
+      state: makeState({ status: 'finished' }),
+      onNameResult,
+    })
+    fireEvent.click(screen.getByTestId('typing-test-result-name'))
+    const input = screen.getByTestId('typing-test-result-name-input')
+    fireEvent.change(input, { target: { value: 'QWERTY baseline' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onNameResult).toHaveBeenCalledWith('QWERTY baseline')
+  })
+})
+
 describe('TypingTestView IME space key', () => {
   it('calls onImeSpaceKey when textarea receives half-width space input while not composing', () => {
     const onImeSpaceKey = vi.fn()
@@ -495,5 +568,62 @@ describe('TypingTestView paused overlay', () => {
       paused: true,
     })
     expect(screen.queryByTestId('typing-test-paused')).not.toBeInTheDocument()
+  })
+})
+
+describe('TypingTestView — imported custom text (line breaks)', () => {
+  it('renders one row per logical line with ⏎ at line ends, and uses the 4-line window', () => {
+    const { container } = renderView({
+      state: makeState({
+        status: 'running',
+        words: ['a', 'b', 'c', 'd'],
+        currentInput: '',
+        lineBreaks: new Set([1]),
+      }),
+    })
+    // Two logical lines: [a b] / [c d].
+    const rows = container.querySelectorAll('[data-line-row]')
+    expect(rows).toHaveLength(2)
+    // ⏎ marker only after the non-final line.
+    expect(container.textContent).toContain('⏎')
+    expect(container.querySelectorAll('[data-line-row]')[0].textContent).toContain('⏎')
+    expect(container.querySelectorAll('[data-line-row]')[1].textContent).not.toContain('⏎')
+    // Imported text uses the var-driven multiline window.
+    expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
+  })
+
+  it('applies font size and line count as CSS vars on the custom window', () => {
+    renderView({
+      displayLines: 6,
+      fontSize: 32,
+      state: makeState({ status: 'running', words: ['a', 'b', 'c', 'd'], lineBreaks: new Set([1]) }),
+    })
+    const win = screen.getByTestId('typing-test-words')
+    expect(win.style.getPropertyValue('--tt-font')).toBe('32')
+    expect(win.style.getPropertyValue('--tt-lines')).toBe('6')
+  })
+
+  it('shows character progress (not word/line progress) in the stats bar', () => {
+    renderView({
+      config: { mode: 'custom', textId: 'x' },
+      state: makeState({
+        status: 'running',
+        words: ['a', 'b', 'c', 'd'],
+        currentWordIndex: 2,
+        lineBreaks: new Set([1]),
+      }),
+    })
+    // total = 4 word chars + 3 separators = 7. Done: 2 words (2 chars) + 2
+    // separators passed = 4 → "4 / 7".
+    expect(screen.getByTestId('typing-test-word-count').textContent).toBe('4 / 7')
+  })
+
+  it('keeps the flat word-flow layout (no line rows) when there are no line breaks', () => {
+    const { container } = renderView({
+      state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set() }),
+    })
+    expect(container.querySelectorAll('[data-line-row]')).toHaveLength(0)
+    expect(screen.getByTestId('typing-test-words').className).toContain('h-typing-display')
+    expect(screen.getByTestId('typing-test-words').className).not.toContain('typing-multiline-window')
   })
 })

@@ -250,9 +250,13 @@
       "exitTypingMode": "タイピングテスト終了",
       "restart": "やり直す",
       "wpm": "WPM",
+      "kpm": "KPM",
       "accuracy": "正確性",
       "time": "時間",
       "words": "単語",
+      "lines": "行",
+      "chars": "文字数",
+      "fontSize": "Font",
       "correct": "正解",
       "incorrect": "ミス",
       "finished": "完了",
@@ -261,7 +265,8 @@
       "mode": {
         "words": "単語",
         "time": "時間",
-        "quote": "引用"
+        "quote": "引用",
+        "custom": "テキスト"
       },
       "punctuation": "句読点",
       "numbers": "数字",
@@ -272,6 +277,7 @@
         "all": "全て"
       },
       "quoteSource": "-- {{source}}",
+      "nameResult": "この結果に名前を付ける",
       "viewOnly": "タイピングビュー",
       "exitViewOnly": "タイピングビュー終了",
       "alwaysOnTop": "最前面",
@@ -293,6 +299,7 @@
       "resetSize": "初期サイズ",
       "fitSize": "フィット",
       "baseLayer": "Base Layer",
+      "modeLabel": "Mode",
       "baseLayerShort": "Base",
       "heatmapWindow": "ヒートマップの表示期間（分）",
       "heatmapWindowShort": "HeatMap",
@@ -317,14 +324,33 @@
       "paused": "ウィンドウがフォーカスを失いました",
       "layerNote": "レイヤー切替の追随は MO / LT / LM のみ対応しています。その他のレイヤーキーや特殊機能は反映されない場合があります。",
       "language": {
-        "title": "言語",
+        "title": "Mode",
         "searchPlaceholder": "言語を検索...",
         "downloaded": "ダウンロード済み",
         "available": "利用可能",
         "noResults": "一致する言語がありません",
         "words": "{{count}} 単語",
         "loadingLanguage": "言語を読み込み中...",
-        "downloadFailed": "ダウンロードに失敗しました"
+        "downloadFailed": "ダウンロードに失敗しました",
+        "tabNormal": "Normal",
+        "tabCustom": "カスタム",
+        "import": "UTF-8 テキストをインポート",
+        "importEmpty": "インポートされたテキストはありません",
+        "importFailed": "インポートに失敗しました",
+        "importErrorNotUtf8": "UTF-8 のテキストファイルのみ対応しています",
+        "importErrorTooLarge": "ファイルが大きすぎます（最大 5 MB）",
+        "importErrorEmpty": "打鍵できるテキストがありません",
+        "importOverwritePrompt": "「{{name}}」は既に存在します。上書きしますか？",
+        "confirmOverwrite": "上書き",
+        "customText": "インポートテキスト"
+      },
+      "memory": {
+        "pause": "一時停止",
+        "resumeButton": "再開",
+        "resumeTitle": "保存したテストを再開しますか？",
+        "resumeBody": "{{total}} 語中 {{current}} 語目で一時停止しました。続きから再開しますか？最初からやり直しますか？",
+        "resume": "続きから再開",
+        "restart": "最初から"
       },
       "history": {
         "title": "履歴",
@@ -334,11 +360,17 @@
         "totalTests": "テスト数",
         "avgAccuracy": "平均正確性",
         "date": "日時",
+        "name": "名前",
+        "unnamed": "名称未設定",
         "mode": "モード",
+        "tabNormal": "Normal",
+        "tabCustom": "カスタム",
+        "tabText": "テキスト",
         "noResults": "結果がありません",
         "pb": "PB",
         "allModes": "すべて",
-        "exportCsv": "CSV出力"
+        "exportCsv": "CSV出力",
+        "delete": "削除"
       }
     }
   },

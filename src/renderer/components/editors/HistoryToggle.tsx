@@ -16,9 +16,11 @@ function historyToggleClass(active: boolean): string {
 interface HistoryToggleProps {
   results: TypingTestResult[]
   deviceName?: string
+  onRename?: (date: string, name: string) => void
+  onDelete?: (date: string) => void
 }
 
-export function HistoryToggle({ results, deviceName }: HistoryToggleProps) {
+export function HistoryToggle({ results, deviceName, onRename, onDelete }: HistoryToggleProps) {
   const { t } = useTranslation()
   const [showHistory, setShowHistory] = useState(false)
 
@@ -59,7 +61,7 @@ export function HistoryToggle({ results, deviceName }: HistoryToggleProps) {
               <h3 id="history-modal-title" className="text-lg font-semibold">{t('editor.typingTest.history.title')}</h3>
               <ModalCloseButton testid="history-modal-close" onClick={() => setShowHistory(false)} />
             </div>
-            <TypingTestHistory results={results} onExportCsv={handleExportCsv} />
+            <TypingTestHistory results={results} onExportCsv={handleExportCsv} onRename={onRename} onDelete={onDelete} />
           </div>
         </div>
       )}

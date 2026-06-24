@@ -6,7 +6,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -118,6 +118,8 @@ export interface KeymapEditorProps {
   typingTestMode?: boolean
   onTypingTestModeChange?: (enabled: boolean) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
+  onRenameTypingTestResult?: (date: string, name: string) => void
+  onDeleteTypingTestResult?: (date: string) => void
   typingTestHistory?: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
   typingTestLanguage?: string
@@ -129,6 +131,12 @@ export interface KeymapEditorProps {
   onTypingTestViewOnlyWindowSizeChange?: (size: { width: number; height: number }) => void
   typingTestViewOnlyAlwaysOnTop?: boolean
   onTypingTestViewOnlyAlwaysOnTopChange?: (enabled: boolean) => void
+  typingTestMemory?: TypingTestMemory
+  onTypingTestMemoryChange?: (memory: TypingTestMemory | undefined) => void
+  typingTestDisplayLines?: number
+  typingTestFontSize?: number
+  onTypingTestDisplayLinesChange?: (lines: number) => void
+  onTypingTestFontSizeChange?: (px: number) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
   /** AppConfig flag — true once the user has accepted the recording

@@ -36,6 +36,7 @@ import {
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT, type KeyboardMetaIndex } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
+import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
 import { THEME_SYNC_UNIT_PREFIX } from '../../shared/types/theme-store'
 import {
@@ -142,6 +143,7 @@ export function matchesScope(syncUnit: string | null, scope: SyncScope): boolean
   if (syncUnit === null) return false
   if (syncUnit === KEYBOARD_META_SYNC_UNIT) return true // meta follows every scope
   if (syncUnit === KEY_LABEL_SYNC_UNIT) return true // key-labels follow every scope (global, all-keyboard)
+  if (syncUnit === TYPING_TEST_TEXT_SYNC_UNIT) return true // imported typing-test texts follow every scope (global, all-keyboard)
   if (syncUnit.startsWith(I18N_SYNC_UNIT_PREFIX)) return false // i18n checked once at startup via i18n-startup-sync
   if (syncUnit.startsWith(THEME_SYNC_UNIT_PREFIX)) return false // themes follow i18n pattern — not in periodic polls
   if (scope === 'favorites') return syncUnit.startsWith('favorites/')

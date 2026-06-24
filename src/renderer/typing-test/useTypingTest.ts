@@ -2,10 +2,12 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords } from './word-generator'
+import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getCustomTextData, getCustomTextDataSync } from './word-generator'
+import type { CustomTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, Quote } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from './types'
+import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
 
 export interface UseTypingTestOptions {
@@ -28,7 +30,7 @@ interface PressStartRecord {
   keycode: number
 }
 
-export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished'
+export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished' | 'paused'
 
 const COUNTDOWN_MS = 3000
 const TIME_MODE_BATCH_SIZE = 60
@@ -61,6 +63,13 @@ export interface TypingTestState {
   incorrectChars: number
   currentQuote: Quote | null
   wpmHistory: number[]
+  /** Word indices that end a line (imported custom text only). At these
+   *  words Enter advances; elsewhere Space advances. Empty for every other
+   *  mode, so their submit behaviour is unchanged. */
+  lineBreaks: Set<number>
+  /** Leading whitespace per logical line (imported custom text, display only).
+   *  Indexed by line order; empty for every other mode. */
+  lineIndents: string[]
 }
 
 export interface UseTypingTestReturn {
@@ -87,6 +96,9 @@ export interface UseTypingTestReturn {
   setLanguage: (language: string) => Promise<string>
   setBaseLayer: (layer: number) => void
   setWindowFocused: (focused: boolean) => void
+  captureMemory: () => TypingTestMemory | null
+  pause: () => void
+  restoreState: (memory: TypingTestMemory, resume: boolean) => Promise<boolean>
 }
 
 /** Return the word count and generation options for word-based modes (words/time). */
@@ -97,32 +109,63 @@ function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): {
   }
 }
 
-function createWordsForConfigSync(config: TypingTestConfig, language: string): { words: string[]; quote: Quote | null } {
+interface WordsForConfig {
+  words: string[]
+  quote: Quote | null
+  /** Line-end word indices (custom mode only); empty otherwise. */
+  lineBreaks: number[]
+  /** Per-line leading whitespace (custom mode only); empty otherwise. */
+  lineIndents: string[]
+}
+
+/** Build the verbatim quote shell for an imported custom text so the
+ *  finished screen can show its name as the source. Carries the line-break
+ *  positions through so Enter can advance at line ends. */
+function customTextToWords(data: CustomTextData): WordsForConfig {
+  const text = data.words.join(' ')
+  return {
+    words: data.words,
+    quote: { id: 0, text, source: data.name, length: text.length },
+    lineBreaks: data.lineBreaks,
+    lineIndents: data.indents,
+  }
+}
+
+function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote }
+    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+  }
+  if (config.mode === 'custom') {
+    const data = getCustomTextDataSync(config.textId)
+    // Cache miss — the async setConfig path fills words once the store
+    // round-trip resolves. Return empty (never call sampleWords on []).
+    return data ? customTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
   }
   const { count, opts } = wordGenParams(config)
   const { words } = generateWordsSync(count, opts, language)
-  return { words, quote: null }
+  return { words, quote: null, lineBreaks: [], lineIndents: [] }
 }
 
-async function createWordsForConfig(config: TypingTestConfig, language: string): Promise<{ words: string[]; quote: Quote | null }> {
+async function createWordsForConfig(config: TypingTestConfig, language: string): Promise<WordsForConfig> {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote }
+    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+  }
+  if (config.mode === 'custom') {
+    const data = await getCustomTextData(config.textId)
+    return data ? customTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
   }
   const { count, opts } = wordGenParams(config)
   const { words } = await generateWords(count, opts, language)
-  return { words, quote: null }
+  return { words, quote: null, lineBreaks: [], lineIndents: [] }
 }
 
 function createInitialState(config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting'): TypingTestState {
-  const { words, quote } = createWordsForConfigSync(config, language)
-  return freshState(words, quote, status)
+  return freshState(createWordsForConfigSync(config, language), status)
 }
 
-function freshState(words: string[], quote: Quote | null, status: TypingTestStatus = 'waiting'): TypingTestState {
+function freshState({ words, quote, lineBreaks, lineIndents }: WordsForConfig, status: TypingTestStatus = 'waiting'): TypingTestState {
   return {
     status,
     words,
@@ -136,6 +179,8 @@ function freshState(words: string[], quote: Quote | null, status: TypingTestStat
     incorrectChars: 0,
     currentQuote: quote,
     wpmHistory: [],
+    lineBreaks: new Set(lineBreaks),
+    lineIndents,
   }
 }
 
@@ -202,6 +247,7 @@ export function useTypingTest(
   const [windowFocused, setWindowFocusedState] = useState(true)
   const [state, setState] = useState<TypingTestState>(() => createInitialState(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE))
   const configRef = useRef(config)
+  const stateRef = useRef(state)
   const languageRef = useRef(language)
   const baseLayerRef = useRef(baseLayer)
   const windowFocusedRef = useRef(windowFocused)
@@ -215,6 +261,7 @@ export function useTypingTest(
   const seqRef = useRef(0)
   const langLoadSeqRef = useRef(0)
   configRef.current = config
+  stateRef.current = state
   languageRef.current = language
   baseLayerRef.current = baseLayer
   windowFocusedRef.current = windowFocused
@@ -223,9 +270,9 @@ export function useTypingTest(
 
   const restartAsync = useCallback(async () => {
     const seq = ++seqRef.current
-    const { words, quote } = await createWordsForConfig(configRef.current, languageRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(words, quote))
+    setState(freshState(result))
   }, [])
 
   const restart = useCallback(() => {
@@ -234,9 +281,9 @@ export function useTypingTest(
 
   const restartWithCountdown = useCallback(async () => {
     const seq = ++seqRef.current
-    const { words, quote } = await createWordsForConfig(configRef.current, languageRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(words, quote, 'countdown'))
+    setState(freshState(result, 'countdown'))
   }, [])
 
   // Transition from countdown to waiting after delay
@@ -252,9 +299,9 @@ export function useTypingTest(
     setConfigState(newConfig)
     configRef.current = newConfig
     const seq = ++seqRef.current
-    const { words, quote } = await createWordsForConfig(newConfig, languageRef.current)
+    const result = await createWordsForConfig(newConfig, languageRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(words, quote))
+    setState(freshState(result))
   }, [])
 
   const setLanguage = useCallback(async (newLanguage: string): Promise<string> => {
@@ -266,9 +313,9 @@ export function useTypingTest(
     const langSeq = ++langLoadSeqRef.current
     try {
       await getLanguageData(newLanguage)
-      const { words, quote } = await createWordsForConfig(configRef.current, newLanguage)
+      const result = await createWordsForConfig(configRef.current, newLanguage)
       if (seqRef.current !== seq) return languageRef.current
-      setState(freshState(words, quote))
+      setState(freshState(result))
       return newLanguage
     } catch {
       if (seqRef.current !== seq) return languageRef.current
@@ -288,9 +335,72 @@ export function useTypingTest(
     baseLayerRef.current = layer
     setEffectiveLayer(layer)
     const seq = ++seqRef.current
-    const { words, quote } = await createWordsForConfig(configRef.current, languageRef.current)
+    const result = await createWordsForConfig(configRef.current, languageRef.current)
     if (seqRef.current !== seq) return
-    setState(freshState(words, quote))
+    setState(freshState(result))
+  }, [])
+
+  // --- Memory mode (imported custom text only): pause / capture / restore ---
+
+  /** Snapshot the in-progress test so it can be persisted and resumed.
+   *  Returns null unless an imported custom text is active. */
+  const captureMemory = useCallback((): TypingTestMemory | null => {
+    const s = stateRef.current
+    const cfg = configRef.current
+    if (cfg.mode !== 'custom') return null
+    return {
+      textId: cfg.textId,
+      currentWordIndex: s.currentWordIndex,
+      currentInput: s.currentInput,
+      wordResults: s.wordResults.map((w) => ({ word: w.word, typed: w.typed, correct: w.correct })),
+      correctChars: s.correctChars,
+      incorrectChars: s.incorrectChars,
+      // startTime already folds in any earlier paused/resumed segments.
+      elapsedMs: s.startTime ? Date.now() - s.startTime : 0,
+      wpmHistory: s.wpmHistory,
+      savedAt: new Date().toISOString(),
+    }
+  }, [])
+
+  /** Stop accepting input and freeze the timer (endTime pins elapsed/WPM)
+   *  without discarding progress. */
+  const pause = useCallback(() => {
+    setState((s) => (s.status === 'running' ? { ...s, status: 'paused', endTime: Date.now() } : s))
+  }, [])
+
+  /** Load a persisted snapshot's text and restore its progress.
+   *  `resume=true` continues the timer (status 'running'); `resume=false`
+   *  shows it frozen ('paused') — used on re-entry so the user must confirm
+   *  before continuing. Returns false when the text can no longer be loaded
+   *  (e.g. deleted) so the caller can fall back to a fresh test. */
+  const restoreState = useCallback(async (memory: TypingTestMemory, resume: boolean): Promise<boolean> => {
+    const cfg: TypingTestConfig = { mode: 'custom', textId: memory.textId }
+    setConfigState(cfg)
+    configRef.current = cfg
+    const seq = ++seqRef.current
+    const { words, quote, lineBreaks, lineIndents } = await createWordsForConfig(cfg, languageRef.current)
+    if (seqRef.current !== seq) return false
+    if (words.length === 0) return false
+    const idx = Math.min(Math.max(0, memory.currentWordIndex), words.length - 1)
+    const startTime = Date.now() - memory.elapsedMs
+    setState({
+      status: resume ? 'running' : 'paused',
+      words,
+      currentWordIndex: idx,
+      currentInput: memory.currentInput,
+      compositionText: '',
+      wordResults: memory.wordResults.map((w) => ({ word: w.word, typed: w.typed, correct: w.correct })),
+      startTime,
+      // Paused: pin endTime so elapsed/WPM display stays frozen at the saved time.
+      endTime: resume ? null : Date.now(),
+      correctChars: memory.correctChars,
+      incorrectChars: memory.incorrectChars,
+      currentQuote: quote,
+      wpmHistory: memory.wpmHistory,
+      lineBreaks: new Set(lineBreaks),
+      lineIndents,
+    })
+    return true
   }, [])
 
   const processMatrixFrame = useCallback((pressed: Set<string>, keymap: Map<string, number>) => {
@@ -431,10 +541,18 @@ export function useTypingTest(
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
 
-      if (isSubmitKey(key)) {
+      // Space and Enter both advance a word, but they are distinct: at a
+      // line-end word (imported custom text) Enter is expected, elsewhere
+      // Space. The non-matching key is a no-op. For every non-custom mode
+      // `lineBreaks` is empty, so Space always advances and Enter is always
+      // ignored — identical to the previous behaviour.
+      if (isSubmitKey(key) || key === 'Enter') {
         if (s.status === 'waiting') {
           return { ...s, status: 'running', startTime: Date.now() }
         }
+        const expectsEnter = s.lineBreaks.has(s.currentWordIndex)
+        const wrongSubmitKey = key === 'Enter' ? !expectsEnter : expectsEnter
+        if (wrongSubmitKey) return s
         return handleSpace(s, configRef.current, languageRef.current)
       }
 
@@ -537,6 +655,16 @@ export function useTypingTest(
     return Math.round((state.correctChars / 5) / minutes)
   }, [state.startTime, state.endTime, state.correctChars, tick])
 
+  // Keystrokes per minute (correct chars / minute). Custom mode shows this
+  // instead of WPM, since imported code / CJK text has no meaningful "words".
+  const kpm = useMemo(() => {
+    if (!state.startTime) return 0
+    const end = state.endTime ?? Date.now()
+    const minutes = (end - state.startTime) / 60000
+    if (minutes <= 0) return 0
+    return Math.round(state.correctChars / minutes)
+  }, [state.startTime, state.endTime, state.correctChars, tick])
+
   const accuracy = useMemo(() => {
     const total = state.correctChars + state.incorrectChars
     if (total === 0) return 100
@@ -560,6 +688,7 @@ export function useTypingTest(
   return {
     state,
     wpm,
+    kpm,
     accuracy,
     elapsedSeconds,
     remainingSeconds,
@@ -581,6 +710,9 @@ export function useTypingTest(
     setLanguage,
     setBaseLayer,
     setWindowFocused,
+    captureMemory,
+    pause,
+    restoreState,
   }
 }
 

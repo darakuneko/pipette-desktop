@@ -346,7 +346,12 @@ export function setupSyncIpc(): void {
         stopPolling()
       } else {
         if (targets.keyboards) cancelPendingChanges('keyboards/')
-        if (targets.favorites) cancelPendingChanges('favorites/')
+        if (targets.favorites) {
+          cancelPendingChanges('favorites/')
+          // Imported typing-test texts are global user content — reset
+          // them alongside favorites (the global-content reset bucket).
+          cancelPendingChanges('typing-test-texts')
+        }
         if (targets.i18nPacks) cancelPendingChanges(I18N_SYNC_UNIT_PREFIX)
         if (targets.themePacks) cancelPendingChanges(THEME_SYNC_UNIT_PREFIX)
         // Clearing appSettings resets autoSync config, so stop polling to match
@@ -357,6 +362,7 @@ export function setupSyncIpc(): void {
       }
       if (targets.favorites) {
         await rm(join(userData, 'sync', 'favorites'), { recursive: true, force: true })
+        await rm(join(userData, 'sync', 'typing-test-texts'), { recursive: true, force: true })
       }
       if (targets.i18nPacks) {
         await rm(join(userData, 'sync', 'i18n'), { recursive: true, force: true })
