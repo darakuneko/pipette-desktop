@@ -69,9 +69,17 @@ export type TypingMatrixAction = 'tap' | 'hold'
 /** Partial event emitted by `useTypingTest` before the active keyboard is
  * attached. `useInputModes` wraps it into a full {@link TypingAnalyticsEvent}
  * before dispatching to the main process. */
+interface TypingAnalyticsEventCommon {
+  /** Identifies the typing test producing this keystroke (custom = text
+   *  name, normal = `mode (language)`). Absent for ordinary Typing View REC
+   *  input. Resolved per-minute into the `typing_test` dimension (like the
+   *  active-app tag), so Analyze can slice by which test it was. */
+  typingTest?: string
+}
+
 export type TypingAnalyticsEventPayload =
-  | { kind: 'char'; key: string; ts: number }
-  | {
+  | (TypingAnalyticsEventCommon & { kind: 'char'; key: string; ts: number })
+  | (TypingAnalyticsEventCommon & {
       kind: 'matrix'
       row: number
       col: number
@@ -83,7 +91,7 @@ export type TypingAnalyticsEventPayload =
        * and presses that have not yet seen a release leave this
        * undefined; the count still lands in the `count` total column. */
       action?: TypingMatrixAction
-    }
+    })
 
 /** Normalized analytics event carried over the IPC to the main process. */
 export type TypingAnalyticsEvent = TypingAnalyticsEventPayload & {

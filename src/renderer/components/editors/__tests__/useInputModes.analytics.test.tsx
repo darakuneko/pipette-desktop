@@ -77,9 +77,11 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('does not dispatch analytics events in regular typing-test mode (not view-only)', () => {
+  it('dispatches a typingTest-tagged event in regular typing-test mode, even with REC off', () => {
+    // The editor test path is independent of the REC toggle: a running test
+    // always feeds analytics, tagged with its typing_test label.
     const { result } = renderUseInputModes({
-      typingRecordEnabled: true,
+      typingRecordEnabled: false,
       typingTestViewOnly: false,
     })
 
@@ -87,7 +89,10 @@ describe('useInputModes — typing analytics dispatch', () => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
 
-    expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+    expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'matrix', keyboard: sampleKeyboard, typingTest: expect.any(String) }),
+    )
   })
 
   it('does not dispatch when the active keyboard is unknown', () => {

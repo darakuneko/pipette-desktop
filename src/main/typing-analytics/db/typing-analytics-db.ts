@@ -38,6 +38,10 @@ export interface CharMinuteRow {
    * shape to keep older callers / fixtures terse; the DB layer
    * normalizes missing to null on insert. */
   appName?: string | null
+  /** Typing test label captured per-event (custom = text name, normal =
+   * `mode (language)`). Missing/null = ordinary REC input or a mixed
+   * minute. Normalized to null on insert. */
+  typingTest?: string | null
 }
 
 export interface MatrixMinuteRow {
@@ -57,6 +61,8 @@ export interface MatrixMinuteRow {
   holdCount?: number
   /** See {@link CharMinuteRow.appName}. */
   appName?: string | null
+  /** See {@link CharMinuteRow.typingTest}. */
+  typingTest?: string | null
 }
 
 export interface MinuteStatsRow {
@@ -72,6 +78,8 @@ export interface MinuteStatsRow {
   intervalMaxMs: number | null
   /** See {@link CharMinuteRow.appName}. */
   appName?: string | null
+  /** See {@link CharMinuteRow.typingTest}. */
+  typingTest?: string | null
 }
 
 export interface SessionRow {
@@ -359,12 +367,16 @@ export class TypingAnalyticsDB {
     // as mixed. This matches the aggregator's "size>1 set => null"
     // payload contract on the read side.
     this.upsertCharMinuteStmt = this.db.prepare(`
-      INSERT INTO typing_char_minute (scope_id, minute_ts, char, count, app_name, updated_at, is_deleted)
-      VALUES (@scopeId, @minuteTs, @char, @count, @appName, @updatedAt, 0)
+      INSERT INTO typing_char_minute (scope_id, minute_ts, char, count, app_name, typing_test, updated_at, is_deleted)
+      VALUES (@scopeId, @minuteTs, @char, @count, @appName, @typingTest, @updatedAt, 0)
       ON CONFLICT(scope_id, minute_ts, char) DO UPDATE SET
         count = typing_char_minute.count + excluded.count,
         app_name = CASE
           WHEN typing_char_minute.app_name IS excluded.app_name THEN typing_char_minute.app_name
+          ELSE NULL
+        END,
+        typing_test = CASE
+          WHEN typing_char_minute.typing_test IS excluded.typing_test THEN typing_char_minute.typing_test
           ELSE NULL
         END,
         updated_at = excluded.updated_at,
@@ -375,13 +387,13 @@ export class TypingAnalyticsDB {
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
         tap_count, hold_count,
-        app_name,
+        app_name, typing_test,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
         @tapCount, @holdCount,
-        @appName,
+        @appName, @typingTest,
         @updatedAt, 0
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
@@ -393,6 +405,10 @@ export class TypingAnalyticsDB {
           WHEN typing_matrix_minute.app_name IS excluded.app_name THEN typing_matrix_minute.app_name
           ELSE NULL
         END,
+        typing_test = CASE
+          WHEN typing_matrix_minute.typing_test IS excluded.typing_test THEN typing_matrix_minute.typing_test
+          ELSE NULL
+        END,
         updated_at = excluded.updated_at,
         is_deleted = 0
     `)
@@ -402,14 +418,14 @@ export class TypingAnalyticsDB {
         scope_id, minute_ts, keystrokes, active_ms,
         interval_avg_ms, interval_min_ms,
         interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
-        app_name,
+        app_name, typing_test,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @keystrokes, @activeMs,
         @intervalAvgMs, @intervalMinMs,
         @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
-        @appName,
+        @appName, @typingTest,
         @updatedAt, 0
       )
       ON CONFLICT(scope_id, minute_ts) DO UPDATE SET
@@ -423,6 +439,10 @@ export class TypingAnalyticsDB {
         interval_max_ms = MAX(typing_minute_stats.interval_max_ms, excluded.interval_max_ms),
         app_name = CASE
           WHEN typing_minute_stats.app_name IS excluded.app_name THEN typing_minute_stats.app_name
+          ELSE NULL
+        END,
+        typing_test = CASE
+          WHEN typing_minute_stats.typing_test IS excluded.typing_test THEN typing_minute_stats.typing_test
           ELSE NULL
         END,
         updated_at = excluded.updated_at,
@@ -498,14 +518,15 @@ export class TypingAnalyticsDB {
     // parameter is always defined.
     this.mergeCharMinuteStmt = this.db.prepare(`
       INSERT INTO typing_char_minute (
-        scope_id, minute_ts, char, count, app_name, updated_at, is_deleted
+        scope_id, minute_ts, char, count, app_name, typing_test, updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @char, @count, @appName, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @char, @count, @appName, @typingTest, @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, char) DO UPDATE SET
         count = excluded.count,
         app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_char_minute.updated_at
@@ -515,13 +536,13 @@ export class TypingAnalyticsDB {
       INSERT INTO typing_matrix_minute (
         scope_id, minute_ts, row, col, layer, keycode, count,
         tap_count, hold_count,
-        app_name,
+        app_name, typing_test,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @row, @col, @layer, @keycode, @count,
         @tapCount, @holdCount,
-        @appName,
+        @appName, @typingTest,
         @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, row, col, layer) DO UPDATE SET
@@ -530,6 +551,7 @@ export class TypingAnalyticsDB {
         tap_count = excluded.tap_count,
         hold_count = excluded.hold_count,
         app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_matrix_minute.updated_at
@@ -540,14 +562,14 @@ export class TypingAnalyticsDB {
         scope_id, minute_ts, keystrokes, active_ms,
         interval_avg_ms, interval_min_ms,
         interval_p25_ms, interval_p50_ms, interval_p75_ms, interval_max_ms,
-        app_name,
+        app_name, typing_test,
         updated_at, is_deleted
       )
       VALUES (
         @scopeId, @minuteTs, @keystrokes, @activeMs,
         @intervalAvgMs, @intervalMinMs,
         @intervalP25Ms, @intervalP50Ms, @intervalP75Ms, @intervalMaxMs,
-        @appName,
+        @appName, @typingTest,
         @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts) DO UPDATE SET
@@ -560,6 +582,7 @@ export class TypingAnalyticsDB {
         interval_p75_ms = excluded.interval_p75_ms,
         interval_max_ms = excluded.interval_max_ms,
         app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_minute_stats.updated_at
@@ -583,15 +606,16 @@ export class TypingAnalyticsDB {
 
     this.mergeBigramMinuteStmt = this.db.prepare(`
       INSERT INTO typing_bigram_minute (
-        scope_id, minute_ts, bigram_id, count, hist, app_name, updated_at, is_deleted
+        scope_id, minute_ts, bigram_id, count, hist, app_name, typing_test, updated_at, is_deleted
       )
       VALUES (
-        @scopeId, @minuteTs, @bigramId, @count, @hist, @appName, @updatedAt, @isDeleted
+        @scopeId, @minuteTs, @bigramId, @count, @hist, @appName, @typingTest, @updatedAt, @isDeleted
       )
       ON CONFLICT(scope_id, minute_ts, bigram_id) DO UPDATE SET
         count = excluded.count,
         hist = excluded.hist,
         app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
         updated_at = excluded.updated_at,
         is_deleted = excluded.is_deleted
       WHERE excluded.updated_at > typing_bigram_minute.updated_at
@@ -1673,6 +1697,9 @@ export class TypingAnalyticsDB {
     // fixtures that hand-build mixed rows still work; live ingestion
     // sets stats.appName once and lets the rows inherit.
     const minuteAppName = stats.appName ?? null
+    // typing_test flows the same way as app_name (uniform per minute, with
+    // a per-row override accepted for hand-built fixtures).
+    const minuteTypingTest = stats.typingTest ?? null
     const upsertTx = this.db.transaction(() => {
       this.upsertMinuteStatsStmt.run({
         scopeId: stats.scopeId,
@@ -1686,6 +1713,7 @@ export class TypingAnalyticsDB {
         intervalP75Ms: stats.intervalP75Ms,
         intervalMaxMs: stats.intervalMaxMs,
         appName: minuteAppName,
+        typingTest: minuteTypingTest,
         updatedAt,
       })
       for (const c of charCounts) {
@@ -1695,6 +1723,7 @@ export class TypingAnalyticsDB {
           char: c.char,
           count: c.count,
           appName: c.appName ?? minuteAppName,
+          typingTest: c.typingTest ?? minuteTypingTest,
           updatedAt,
         })
       }
@@ -1710,6 +1739,7 @@ export class TypingAnalyticsDB {
           tapCount: m.tapCount ?? 0,
           holdCount: m.holdCount ?? 0,
           appName: m.appName ?? minuteAppName,
+          typingTest: m.typingTest ?? minuteTypingTest,
           updatedAt,
         })
       }
@@ -2364,6 +2394,7 @@ export class TypingAnalyticsDB {
       char: row.char,
       count: row.count,
       appName: row.appName ?? null,
+      typingTest: row.typingTest ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2381,6 +2412,7 @@ export class TypingAnalyticsDB {
       tapCount: row.tapCount ?? 0,
       holdCount: row.holdCount ?? 0,
       appName: row.appName ?? null,
+      typingTest: row.typingTest ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2399,6 +2431,7 @@ export class TypingAnalyticsDB {
       intervalP75Ms: row.intervalP75Ms,
       intervalMaxMs: row.intervalMaxMs,
       appName: row.appName ?? null,
+      typingTest: row.typingTest ?? null,
       updatedAt: row.updatedAt,
       isDeleted: row.isDeleted ? 1 : 0,
     })
@@ -2421,6 +2454,7 @@ export class TypingAnalyticsDB {
   mergeBigramMinute(row: BigramMinuteExportRow): void {
     const isDeleted = row.isDeleted ? 1 : 0
     const appName = row.appName ?? null
+    const typingTest = row.typingTest ?? null
     for (const bigramId of Object.keys(row.bigrams)) {
       const entry = row.bigrams[bigramId]
       this.mergeBigramMinuteStmt.run({
@@ -2430,6 +2464,7 @@ export class TypingAnalyticsDB {
         count: entry.c,
         hist: encodeHistBuffer(entry.h),
         appName,
+        typingTest,
         updatedAt: row.updatedAt,
         isDeleted,
       })
@@ -2470,6 +2505,18 @@ export class TypingAnalyticsDB {
         ALTER TABLE typing_matrix_minute ADD COLUMN app_name TEXT;
         ALTER TABLE typing_minute_stats ADD COLUMN app_name TEXT;
         ALTER TABLE typing_bigram_minute ADD COLUMN app_name TEXT;
+      `)
+    }
+    // v4 -> v5: Add typing_test to the four minute rollups so
+    // TypingTest-filtered analytics can restrict to one test's keystrokes.
+    // NULL means ordinary REC input or a mixed minute. Indices are created
+    // in CREATE_SCHEMA_SQL's second-phase exec (see app_name note above).
+    if (fromVersion < 5) {
+      this.db.exec(`
+        ALTER TABLE typing_char_minute ADD COLUMN typing_test TEXT;
+        ALTER TABLE typing_matrix_minute ADD COLUMN typing_test TEXT;
+        ALTER TABLE typing_minute_stats ADD COLUMN typing_test TEXT;
+        ALTER TABLE typing_bigram_minute ADD COLUMN typing_test TEXT;
       `)
     }
   }

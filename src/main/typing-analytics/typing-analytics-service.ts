@@ -1409,6 +1409,9 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
   // Older master files predate this field; the readers fall back to
   // null on missing.
   const appName = snapshot.appName
+  // typing_test carries through identically to appName so the JSONL master
+  // stays the source of truth for TypingTest filtering after a rebuild.
+  const typingTest = snapshot.typingTest
   const rows: JsonlRow[] = [
     {
       id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs),
@@ -1426,6 +1429,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         intervalP75Ms: snapshot.intervalP75Ms,
         intervalMaxMs: snapshot.intervalMaxMs,
         appName,
+        typingTest,
       },
     },
   ]
@@ -1434,7 +1438,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, char),
       kind: 'char-minute',
       updated_at: updatedAt,
-      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count, appName },
+      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count, appName, typingTest },
     })
   }
   for (const cell of snapshot.matrixCounts.values()) {
@@ -1453,6 +1457,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         tapCount: cell.tapCount,
         holdCount: cell.holdCount,
         appName,
+        typingTest,
       },
     })
   }
@@ -1470,6 +1475,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         minuteTs: snapshot.minuteTs,
         bigrams,
         appName,
+        typingTest,
       },
     })
   }

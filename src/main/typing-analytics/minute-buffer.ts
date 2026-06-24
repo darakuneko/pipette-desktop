@@ -54,6 +54,11 @@ export interface MinuteSnapshot {
    * Computed from the entry's app-set on finalize so the consumer sees
    * a flat string|null and never has to reason about set semantics. */
   appName: string | null
+  /** Typing test label observed during this minute, or null when no test
+   *  input (ordinary REC) or the minute mixed multiple tests. Same
+   *  single-or-null semantics as {@link appName}, but sourced per-event
+   *  (each keystroke carries its own `typingTest`) rather than at flush. */
+  typingTest: string | null
 }
 
 interface Entry {
@@ -72,6 +77,10 @@ interface Entry {
    * just before each flush). Size>1 collapses to null on finalize so
    * downstream consumers only see "single app" or "mixed/unknown". */
   appSet: Set<string>
+  /** Distinct typing-test labels observed across this minute, populated
+   * per-event in {@link MinuteBuffer.addEvent}. Same size→value/null
+   * collapse as {@link appSet} on finalize. */
+  typingTestSet: Set<string>
 }
 
 function floorMinute(ts: number): number {
@@ -101,6 +110,10 @@ function finalize(entry: Entry): MinuteSnapshot {
     // Iterator is the only way to peek a Set without copying.
     appName = entry.appSet.values().next().value ?? null
   }
+  let typingTest: string | null = null
+  if (entry.typingTestSet.size === 1) {
+    typingTest = entry.typingTestSet.values().next().value ?? null
+  }
   return {
     scopeId: entry.scopeId,
     fingerprint: entry.fingerprint,
@@ -117,6 +130,7 @@ function finalize(entry: Entry): MinuteSnapshot {
     matrixCounts: entry.matrixCounts,
     bigrams: entry.bigrams,
     appName,
+    typingTest,
   }
 }
 
@@ -147,9 +161,12 @@ export class MinuteBuffer {
         firstEventMs: event.ts,
         lastEventMs: event.ts,
         appSet: new Set<string>(),
+        typingTestSet: new Set<string>(),
       }
       this.buffers.set(key, entry)
     }
+
+    if (event.typingTest) entry.typingTestSet.add(event.typingTest)
 
     if (entry.keystrokes > 0) {
       const gap = event.ts - entry.lastEventMs

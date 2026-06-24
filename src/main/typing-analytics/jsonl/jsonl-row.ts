@@ -15,6 +15,12 @@ export const JSONL_SCHEMA_VERSION = 1
  * existed. */
 export type AppNameField = string | null
 
+/** Typing test label attached to per-minute payloads (custom = text name,
+ * normal = `mode (language)`). null / absent for ordinary REC input or a
+ * minute that mixed multiple tests. Optional on the wire for backward
+ * compatibility with master files written before this field existed. */
+export type TypingTestField = string | null
+
 export type JsonlRowKind =
   | 'scope'
   | 'char-minute'
@@ -41,6 +47,7 @@ export interface JsonlCharMinutePayload {
   char: string
   count: number
   appName?: AppNameField
+  typingTest?: TypingTestField
 }
 
 export interface JsonlMatrixMinutePayload {
@@ -54,6 +61,7 @@ export interface JsonlMatrixMinutePayload {
   tapCount: number
   holdCount: number
   appName?: AppNameField
+  typingTest?: TypingTestField
 }
 
 export interface JsonlMinuteStatsPayload {
@@ -68,6 +76,7 @@ export interface JsonlMinuteStatsPayload {
   intervalP75Ms: number | null
   intervalMaxMs: number | null
   appName?: AppNameField
+  typingTest?: TypingTestField
 }
 
 export interface JsonlSessionPayload {
@@ -92,6 +101,7 @@ export interface JsonlBigramMinutePayload {
    * joined by underscore). One row per minute aggregates all bigrams. */
   bigrams: Record<string, JsonlBigramMinuteEntry>
   appName?: AppNameField
+  typingTest?: TypingTestField
 }
 
 /** Number of buckets in the bigram IKI histogram. Kept as a constant so
@@ -222,7 +232,8 @@ function isCharMinutePayload(p: Record<string, unknown>): boolean {
     hasNumberField(p, 'minuteTs') &&
     hasStringField(p, 'char') &&
     hasNumberField(p, 'count') &&
-    isOptionalAppName(p)
+    isOptionalAppName(p) &&
+    isOptionalTypingTest(p)
   )
 }
 
@@ -237,7 +248,8 @@ function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
     hasNumberField(p, 'count') &&
     hasNumberField(p, 'tapCount') &&
     hasNumberField(p, 'holdCount') &&
-    isOptionalAppName(p)
+    isOptionalAppName(p) &&
+    isOptionalTypingTest(p)
   )
 }
 
@@ -256,6 +268,14 @@ function isOptionalAppName(p: Record<string, unknown>): boolean {
   return v === null || typeof v === 'string'
 }
 
+/** Same optional string|null contract as {@link isOptionalAppName}, for the
+ * typing-test dimension. Missing reads as null. */
+function isOptionalTypingTest(p: Record<string, unknown>): boolean {
+  if (!('typingTest' in p)) return true
+  const v = p.typingTest
+  return v === null || typeof v === 'string'
+}
+
 function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
   return (
     hasStringField(p, 'scopeId') &&
@@ -268,7 +288,8 @@ function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
     isNumericOrNull(p, 'intervalP50Ms') &&
     isNumericOrNull(p, 'intervalP75Ms') &&
     isNumericOrNull(p, 'intervalMaxMs') &&
-    isOptionalAppName(p)
+    isOptionalAppName(p) &&
+    isOptionalTypingTest(p)
   )
 }
 
@@ -298,6 +319,7 @@ function isBigramMinuteEntry(value: unknown): boolean {
 function isBigramMinutePayload(p: Record<string, unknown>): boolean {
   if (!hasStringField(p, 'scopeId') || !hasNumberField(p, 'minuteTs')) return false
   if (!isOptionalAppName(p)) return false
+  if (!isOptionalTypingTest(p)) return false
   const bigrams = p.bigrams
   if (typeof bigrams !== 'object' || bigrams === null) return false
   for (const value of Object.values(bigrams as Record<string, unknown>)) {
