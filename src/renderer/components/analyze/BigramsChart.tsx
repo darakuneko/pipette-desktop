@@ -45,6 +45,7 @@ interface BigramsChartProps {
   deviceScopes: readonly DeviceScope[]
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
+  typingTestScopes: string[]
   topLimit: number
   slowLimit: number
   fingerLimit: number
@@ -73,6 +74,7 @@ export function BigramsChart({
   range,
   deviceScopes,
   appScopes,
+  typingTestScopes,
   topLimit,
   slowLimit,
   fingerLimit,
@@ -102,7 +104,7 @@ export function BigramsChart({
     setError(false)
     fetchBigramAggregateForRange(uid, scope, range.fromMs, range.toMs, 'top', {
       limit: ALL_PAIRS_LIMIT,
-    }, appScopes)
+    }, appScopes, typingTestScopes)
       .then((next) => {
         if (cancelled) return
         setResult(next)

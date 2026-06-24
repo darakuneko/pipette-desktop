@@ -148,6 +148,7 @@ export const IpcChannels = {
    * collected into the `appScopes` array passed to every per-app-aware
    * range query. */
   TYPING_ANALYTICS_LIST_APPS_FOR_RANGE: 'typing-analytics:list-apps-for-range',
+  TYPING_ANALYTICS_LIST_TYPING_TESTS_FOR_RANGE: 'typing-analytics:list-typing-tests-for-range',
   /** Per-app keystroke / activeMs aggregate over the analyze range.
    * Backs the App Usage Distribution pie chart. */
   TYPING_ANALYTICS_GET_APP_USAGE_FOR_RANGE: 'typing-analytics:get-app-usage-for-range',

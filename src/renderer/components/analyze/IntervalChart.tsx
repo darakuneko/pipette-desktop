@@ -46,6 +46,7 @@ interface Props {
   deviceScopes: readonly DeviceScope[]
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
+  typingTestScopes: string[]
   unit: IntervalUnit
   granularity: GranularityChoice
   viewMode: IntervalViewMode
@@ -87,7 +88,7 @@ function formatShare(v: number): string {
   return `${formatSharePercent(v)}%`
 }
 
-export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granularity, viewMode }: Props) {
+export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestScopes, unit, granularity, viewMode }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [peakRecords, setPeakRecords] = useState<PeakRecords | null>(null)
@@ -111,14 +112,14 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    listMinuteStatsForScope(uid, effectiveDeviceScope, range.fromMs, range.toMs, appScopes)
+    listMinuteStatsForScope(uid, effectiveDeviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
       .then((data) => { if (!cancelled) setRows(data) })
       .catch(() => { if (!cancelled) setRows([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // `scopeKey` encodes `effectiveDeviceScope` identity; including the
     // object would refetch every parent rerender.
-  }, [uid, scopeKey, range, appScopes])
+  }, [uid, scopeKey, range, appScopes, typingTestScopes])
 
   // Longest session comes from a narrow aggregation IPC rather than
   // the minute-stats rows so it surfaces the run that straddles bucket
@@ -130,15 +131,15 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, unit, granu
     }
     let cancelled = false
     const peakPromise = isHashScope(effectiveDeviceScope)
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs, appScopes)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, effectiveDeviceScope.machineHash, range.fromMs, range.toMs, appScopes, typingTestScopes)
       : isOwnScope(effectiveDeviceScope)
-        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScopes)
-        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScopes)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
     void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range, appScopes])
+  }, [uid, scopeKey, range, appScopes, typingTestScopes])
 
   // Log-axis can't plot 0 ms, but min often legitimately rounds to 0
   // on fast adjacent keystrokes. Clamp the axis floor at 1 ms so the

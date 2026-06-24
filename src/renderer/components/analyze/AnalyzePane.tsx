@@ -58,6 +58,7 @@ import { ConnectingOverlay } from '../ConnectingOverlay'
 import { ActivityChart } from './ActivityChart'
 import { DeviceMultiSelect } from './DeviceMultiSelect'
 import { AppSelect } from './AppSelect'
+import { TypingTestSelect } from './TypingTestSelect'
 import { RangeDayPicker } from './RangeDayPicker'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
@@ -248,6 +249,7 @@ export function AnalyzePane({
     filters: {
       deviceScopes,
       appScopes,
+      typingTestScopes,
       heatmap: heatmapFilter,
       wpm: wpmFilter,
       interval: intervalFilter,
@@ -260,6 +262,7 @@ export function AnalyzePane({
     ready: filtersReady,
     setDeviceScopes,
     setAppScopes,
+    setTypingTestScopes,
     setHeatmap,
     setWpm,
     setInterval: setIntervalFilter,
@@ -647,6 +650,7 @@ export function AnalyzePane({
       range,
       deviceScope: scope,
       appScopes,
+      typingTestScopes,
       snapshot: effectiveSnapshot,
       heatmap: heatmapFilter,
       wpm: {
@@ -668,7 +672,7 @@ export function AnalyzePane({
       conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
-    selected, deviceScopes, appScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    selected, deviceScopes, appScopes, typingTestScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
     snapshotSummaries, heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
     layoutComparisonFilter, fingerAssignments, t,
   ])
@@ -696,6 +700,7 @@ export function AnalyzePane({
       filters: {
         deviceScopes,
         appScopes,
+        typingTestScopes,
         heatmap: heatmapFilter,
         wpm: wpmFilter,
         interval: intervalFilter,
@@ -722,7 +727,7 @@ export function AnalyzePane({
     return { payload, summary }
   }, [
     analysisTab, range,
-    deviceScopes, appScopes, heatmapFilter, wpmFilter, intervalFilter,
+    deviceScopes, appScopes, typingTestScopes, heatmapFilter, wpmFilter, intervalFilter,
     activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
     layoutComparisonFilter, exportCtx,
   ])
@@ -760,6 +765,7 @@ export function AnalyzePane({
       setRange(payload.range)
       setDeviceScopes(payload.filters.deviceScopes)
       setAppScopes(payload.filters.appScopes)
+      setTypingTestScopes(payload.filters.typingTestScopes)
       setHeatmap(payload.filters.heatmap)
       setWpm(payload.filters.wpm)
       setIntervalFilter(payload.filters.interval)
@@ -771,7 +777,7 @@ export function AnalyzePane({
       return true
     },
     [
-      filterStore, setAnalysisTab, setRange, setDeviceScopes, setAppScopes,
+      filterStore, setAnalysisTab, setRange, setDeviceScopes, setAppScopes, setTypingTestScopes,
       setHeatmap, setWpm, setIntervalFilter, setActivity, setLayer,
       setErgonomics, setBigrams, setLayoutComparison,
     ],
@@ -1163,6 +1169,17 @@ export function AnalyzePane({
                         />
                       </label>
                     )}
+                    <label className={FILTER_LABEL}>
+                      <span>{t('analyze.filters.typingTest')}</span>
+                      <TypingTestSelect
+                        uid={selected.uid}
+                        range={range}
+                        deviceScopes={deviceScopes}
+                        value={typingTestScopes}
+                        onChange={setTypingTestScopes}
+                        ariaLabel={t('analyze.filters.typingTest')}
+                      />
+                    </label>
                   </>
                 ) : (
                   <>
@@ -1358,6 +1375,7 @@ export function AnalyzePane({
                   uid={selected.uid}
                   deviceScope={deviceScopes[0]}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />
@@ -1367,6 +1385,7 @@ export function AnalyzePane({
                   range={range}
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   granularity={wpmFilter.granularity}
                   viewMode={wpmFilter.viewMode}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1377,6 +1396,7 @@ export function AnalyzePane({
                   range={range}
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}
@@ -1387,6 +1407,7 @@ export function AnalyzePane({
                   range={range}
                   deviceScope={deviceScopes[0]}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   metric={activityFilter.metric}
                   view={activityFilter.view}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1401,6 +1422,7 @@ export function AnalyzePane({
                     range={range}
                     deviceScope={deviceScopes[0]}
                     appScopes={appScopes}
+                    typingTestScopes={typingTestScopes}
                     snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
@@ -1417,6 +1439,7 @@ export function AnalyzePane({
                     range={range}
                     deviceScopes={deviceScopes}
                     appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                     snapshot={effectiveSnapshot}
                     fingerOverrides={fingerAssignments}
                     viewMode={ergonomicsFilter.viewMode}
@@ -1435,6 +1458,7 @@ export function AnalyzePane({
                   range={range}
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   topLimit={bigramsFilter.topLimit}
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}
@@ -1452,6 +1476,7 @@ export function AnalyzePane({
                   range={range}
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
+                  typingTestScopes={typingTestScopes}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
                   onSkipPercentChange={onSkipPercentChange}
@@ -1470,6 +1495,7 @@ export function AnalyzePane({
                       range={range}
                       deviceScopes={deviceScopes}
                       appScopes={appScopes}
+                      typingTestScopes={typingTestScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="keystrokes"
                       baseLayer={layerFilter.baseLayer}
@@ -1481,6 +1507,7 @@ export function AnalyzePane({
                       range={range}
                       deviceScopes={deviceScopes}
                       appScopes={appScopes}
+                      typingTestScopes={typingTestScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="activations"
                       baseLayer={layerFilter.baseLayer}

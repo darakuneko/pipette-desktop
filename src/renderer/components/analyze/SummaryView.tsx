@@ -22,6 +22,8 @@ interface Props {
    * daily-summary fetch and to TypingProfileCard so every per-app
    * subview re-aggregates from the same single-app minute set. */
   appScopes: string[]
+  /** TypingTest filter — same contract as appScopes, forwarded alongside. */
+  typingTestScopes: string[]
   /** Snapshot the parent already resolved for the current scope —
    * Profile uses it to map bigram keycodes to fingers / hands. */
   snapshot: TypingKeymapSnapshot | null
@@ -30,8 +32,8 @@ interface Props {
   fingerOverrides: Record<string, FingerType>
 }
 
-export function SummaryView({ uid, deviceScope, appScopes, snapshot, fingerOverrides }: Props) {
-  const { daily } = useDailySummary(uid, deviceScope, appScopes)
+export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, snapshot, fingerOverrides }: Props) {
+  const { daily } = useDailySummary(uid, deviceScope, appScopes, typingTestScopes)
   const today = useLocalToday()
   return (
     <div className="flex h-full w-full flex-col gap-3">
@@ -41,6 +43,7 @@ export function SummaryView({ uid, deviceScope, appScopes, snapshot, fingerOverr
         uid={uid}
         deviceScope={deviceScope}
         appScopes={appScopes}
+        typingTestScopes={typingTestScopes}
         daily={daily}
         today={today}
         snapshot={snapshot}
