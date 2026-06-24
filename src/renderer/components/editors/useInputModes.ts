@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
@@ -9,6 +9,18 @@ import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/p
 import type { TypingAnalyticsEventPayload, TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
+
+/** Analytics `typing_test` dimension label for the running test: the
+ *  imported text's name for custom, else `mode (language)` (e.g.
+ *  `words (english)`) so Analyze can slice normal runs by language too. */
+function typingTestAnalyticsLabel(
+  config: TypingTestConfig,
+  language: string,
+  currentQuote: { source: string } | null,
+): string {
+  if (config.mode === 'custom') return currentQuote?.source ?? 'custom'
+  return `${config.mode} (${language})`
+}
 
 export interface UseInputModesOptions {
   rows?: number
@@ -162,29 +174,26 @@ export function useInputModes({
   // --- Typing test ---
   const keyboardRef = useRef(typingRecordKeyboard)
   keyboardRef.current = typingRecordKeyboard
-  const analyticsSink = useMemo<((event: TypingAnalyticsEventPayload) => void) | undefined>(() => {
-    // Recording lifecycle — see .claude/plans/typing-analytics.md.
-    //
-    // Events only flow to the main process when all three conditions hold:
-    //   1. typing-view compact window is open (typingTestViewOnly)
-    //   2. user has Start pressed on the record toggle (typingRecordEnabled)
-    //   3. useTypingTest's processMatrixFrame / processKeyEvent actually
-    //      fires, which is gated to typingTestMode by useInputModes below
-    //
-    // typingRecordEnabled is the user's explicit Start/Stop choice —
-    // persisted in PipetteSettings + synced across devices. Leaving
-    // the typing view (Exit, analytics navigation, disconnect) stops
-    // the sink via typingTestViewOnly=false without touching the
-    // toggle, so the next re-entry resumes recording automatically.
-    if (!typingRecordEnabled || !typingTestViewOnly) return undefined
-    return (payload) => {
-      const keyboard = keyboardRef.current
-      if (!keyboard) return
-      window.vialAPI
-        .typingAnalyticsEvent({ ...payload, keyboard })
-        .catch(() => { /* fire-and-forget */ })
-    }
-  }, [typingRecordEnabled, typingTestViewOnly])
+  // Analytics event sink — two independent sources feed the same pipeline:
+  //   1. Typing View REC ambient typing — gated by recordingActiveRef
+  //      (record toggle ON + compact window open), emitted untagged.
+  //   2. A typing test running in the editor — gated by testLabelRef
+  //      (non-null while a test is the active input source), emitted with
+  //      a `typingTest` dimension tag so Analyze can slice by which test.
+  // Both refs are updated below from render so this stays a stable callback
+  // (useTypingTest captures it once).
+  const recordingActiveRef = useRef(false)
+  const testLabelRef = useRef<string | null>(null)
+  const analyticsSink = useCallback((payload: TypingAnalyticsEventPayload) => {
+    const keyboard = keyboardRef.current
+    if (!keyboard) return
+    const label = testLabelRef.current
+    if (!recordingActiveRef.current && !label) return
+    const event = label
+      ? { ...payload, keyboard, typingTest: label }
+      : { ...payload, keyboard }
+    window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
+  }, [])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {
     onAnalyticsEvent: analyticsSink,
     tappingTermMs,
@@ -266,6 +275,12 @@ export function useInputModes({
   // Effective recording condition: view-only + record toggle on. Anything
   // else leaves the analytics pipeline idle.
   const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
+  // Keep the sink's refs current (the sink itself is a stable callback).
+  recordingActiveRef.current = recordingActive
+  // A test in the editor (not the REC view) is the tagged input source.
+  testLabelRef.current = typingTestMode && !typingTestViewOnly
+    ? typingTestAnalyticsLabel(typingTest.config, typingTest.language, typingTest.state.currentQuote)
+    : null
 
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
@@ -336,6 +351,11 @@ export function useInputModes({
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       onSaveTypingTestResult(result)
+      // Flush the test's analytics so the just-finished minute/session
+      // lands in the cache promptly (Analyze can show it without waiting
+      // for the minute-close / before-quit flush).
+      const uid = keyboardRef.current?.uid
+      if (uid) window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
       // A completed test makes any saved pause snapshot obsolete.
       if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
