@@ -44,6 +44,9 @@ export interface AnalyzeFiltersState {
    * list is fetched from the analyze range; stale persisted names
    * are silently dropped on next load via `normalizeAppScopes`. */
   appScopes: string[]
+  /** Selected typing-test labels (custom = text name, normal =
+   * `mode (language)`). Empty = no filter. Same semantics as appScopes. */
+  typingTestScopes: string[]
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>
   interval: Required<IntervalFilters>
@@ -61,6 +64,7 @@ export interface AnalyzeFiltersState {
 export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   deviceScopes: ['own'],
   appScopes: [],
+  typingTestScopes: [],
   heatmap: {
     selectedLayers: [0],
     groups: [[0]],
@@ -121,6 +125,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
   return {
     deviceScopes: normalizeDeviceScopes(saved.deviceScopes),
     appScopes: normalizeAppScopes(saved.appScopes),
+    typingTestScopes: normalizeAppScopes(saved.typingTestScopes),
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
@@ -150,6 +155,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
   return {
     deviceScopes: state.deviceScopes,
     appScopes: state.appScopes,
+    typingTestScopes: state.typingTestScopes,
     heatmap: state.heatmap,
     wpm: state.wpm,
     interval: state.interval,
@@ -316,6 +322,11 @@ export function useAnalyzeFilters(
     update((prev) => (appScopesEqual(prev.appScopes, next) ? prev : { ...prev, appScopes: next }))
   }, [update])
 
+  const setTypingTestScopes = useCallback((v: string[]) => {
+    const next = normalizeAppScopes(v)
+    update((prev) => (appScopesEqual(prev.typingTestScopes, next) ? prev : { ...prev, typingTestScopes: next }))
+  }, [update])
+
   const setHeatmap = useCallback((patch: Partial<HeatmapFilters>) => {
     update((prev) => ({ ...prev, heatmap: { ...prev.heatmap, ...patch } }))
   }, [update])
@@ -361,6 +372,7 @@ export function useAnalyzeFilters(
     ready,
     setDeviceScopes,
     setAppScopes,
+    setTypingTestScopes,
     setHeatmap,
     setWpm,
     setInterval,

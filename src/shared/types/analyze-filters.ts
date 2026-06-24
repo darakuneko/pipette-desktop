@@ -300,6 +300,9 @@ export interface AnalyzeFilterSettings {
    * for an app that has no rows. Order is preserved; duplicates are
    * collapsed. */
   appScopes?: string[]
+  /** Selected typing-test labels; same persistence/normalization contract
+   * as appScopes. */
+  typingTestScopes?: string[]
   heatmap?: HeatmapFilters
   wpm?: WpmFilters
   interval?: IntervalFilters
@@ -505,6 +508,10 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (o.appScopes !== undefined) {
     if (!Array.isArray(o.appScopes)) return false
     if (!o.appScopes.every((v) => typeof v === 'string')) return false
+  }
+  if (o.typingTestScopes !== undefined) {
+    if (!Array.isArray(o.typingTestScopes)) return false
+    if (!o.typingTestScopes.every((v) => typeof v === 'string')) return false
   }
   if (!isValidHeatmapFilters(o.heatmap)) return false
   if (!isValidWpmFilters(o.wpm)) return false

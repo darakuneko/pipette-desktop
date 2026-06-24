@@ -541,6 +541,36 @@ describe('TypingAnalyticsDB', () => {
       expect(summaries[0].activeMs).toBe(1_500)
     })
 
+    it('lists distinct typing_test labels and filters queries by typingTestScopes', () => {
+      // Two extra minutes on 0xAABB tagged with different typing tests.
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 5, typingTest: 'words (english)' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 180_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 5, typingTest: 'words (english)' }],
+        2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 240_000, ...baseStats, keystrokes: 9, typingTest: 'novel.txt' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 240_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 9, typingTest: 'novel.txt' }],
+        2_000,
+      )
+
+      // Option source: both labels present, NULL (the untagged 60_000 minute) excluded.
+      const labels = db.listTypingTestsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000).map((r) => r.name).sort()
+      expect(labels).toEqual(['novel.txt', 'words (english)'])
+
+      // Filtering a cell query to one test returns only that test's count.
+      const cell = (rows: { count: number }[]): number => rows.reduce((s, r) => s + r.count, 0)
+      const novelOnly = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], ['novel.txt'])
+      expect(cell(novelOnly)).toBe(9)
+      const wordsOnly = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], ['words (english)'])
+      expect(cell(wordsOnly)).toBe(5)
+      // Empty filter = no filter: includes the untagged 60_000 cell (3) + 5 + 9.
+      const unfiltered = db.listMatrixCellsForUid('0xAABB', 0, 300_000)
+      expect(cell(unfiltered)).toBe(17)
+    })
+
     it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {
       const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
       expect(result.charMinutes).toBe(2) // aabb-local + aabb-remote at minute 60_000

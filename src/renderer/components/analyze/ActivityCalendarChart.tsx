@@ -60,6 +60,7 @@ interface Props {
   deviceScope: DeviceScope
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
+  typingTestScopes: string[]
   /** Outer Activity metric — drives both the cell value and (when
    * `'sessions'`) the dedicated sessions IPC fetch. */
   metric: ActivityMetric
@@ -80,6 +81,7 @@ export function ActivityCalendarChart({
   uid,
   deviceScope,
   appScopes,
+  typingTestScopes,
   metric,
   calendarFilter,
   nowMs,
@@ -98,7 +100,7 @@ export function ActivityCalendarChart({
     [monthsToShow, endMonthIso, nowMs],
   )
 
-  const { daily, loading: dailyLoading } = useDailySummary(uid, deviceScope, appScopes)
+  const { daily, loading: dailyLoading } = useDailySummary(uid, deviceScope, appScopes, typingTestScopes)
   const [sessions, setSessions] = useState<TypingSessionRow[]>([])
   const [sessionsLoading, setSessionsLoading] = useState(false)
 

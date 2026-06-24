@@ -1199,6 +1199,11 @@
         "none": "All apps",
         "multi": "{{first}} +{{rest}}"
       },
+      "typingTest": "TypingTest",
+      "typingTestOption": {
+        "none": "All tests",
+        "multi": "{{first}} +{{rest}}"
+      },
       "unit": "Display",
       "unitOption": {
         "sec": "Seconds",

@@ -48,6 +48,7 @@ interface Props {
   deviceScope: DeviceScope
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
+  typingTestScopes: string[]
   metric: ActivityMetric
   /** Chart geometry — `grid` keeps the existing 24×7 grid / sessions
    * histogram, `calendar` swaps to the year heatmap. */
@@ -100,7 +101,7 @@ export function ActivityChart(props: Props) {
   return <ActivityGridChart {...props} />
 }
 
-function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActiveMs }: Props) {
+function ActivityGridChart({ uid, range, deviceScope, appScopes, typingTestScopes, metric, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -112,10 +113,10 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
     const load = async () => {
       try {
         const data = isHashScope(deviceScope)
-          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScopes)
+          ? await window.vialAPI.typingAnalyticsListMinuteStatsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScopes, typingTestScopes)
           : isOwnScope(deviceScope)
-            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs, appScopes)
-            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs, appScopes)
+            ? await window.vialAPI.typingAnalyticsListMinuteStatsLocal(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
+            : await window.vialAPI.typingAnalyticsListMinuteStats(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
         if (!cancelled) setRows(data)
       } catch {
         if (!cancelled) setRows([])
@@ -125,7 +126,7 @@ function ActivityGridChart({ uid, range, deviceScope, appScopes, metric, minActi
     }
     void load()
     return () => { cancelled = true }
-  }, [uid, scopeKey, range, appScopes])
+  }, [uid, scopeKey, range, appScopes, typingTestScopes])
 
   const grid = useMemo(
     () => buildActivityGrid({ rows, range, minActiveMs }),
