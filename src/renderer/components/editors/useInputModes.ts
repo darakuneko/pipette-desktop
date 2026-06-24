@@ -5,7 +5,7 @@ import { useTypingTest } from '../../typing-test/useTypingTest'
 import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
-import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingAnalyticsKeyboard } from '../../../shared/types/typing-analytics'
 import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
@@ -25,6 +25,10 @@ export interface UseInputModesOptions {
   onTypingTestConfigChange?: (config: TypingTestConfig) => void
   onTypingTestLanguageChange?: (lang: string) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
+  /** Persisted paused-test snapshot for the active keyboard (memory mode). */
+  savedTypingTestMemory?: TypingTestMemory
+  /** Persist or clear the paused-test snapshot. */
+  onTypingTestMemoryChange?: (memory: TypingTestMemory | undefined) => void
   typingTestHistory?: TypingTestResult[]
   typingTestViewOnly?: boolean
   typingRecordEnabled?: boolean
@@ -45,6 +49,11 @@ export interface UseInputModesReturn {
   typingTest: ReturnType<typeof useTypingTest>
   handleTypingTestConfigChange: (config: TypingTestConfig) => void
   handleTypingTestLanguageChange: (lang: string) => Promise<void>
+  /** Memory mode (imported custom text). */
+  savedTypingTestMemory?: TypingTestMemory
+  pauseTypingTest: () => void
+  resumeTypingTest: () => void
+  restartTypingTestFromStart: () => void
 }
 
 export function useInputModes({
@@ -62,6 +71,8 @@ export function useInputModes({
   onTypingTestConfigChange,
   onTypingTestLanguageChange,
   onSaveTypingTestResult,
+  savedTypingTestMemory,
+  onTypingTestMemoryChange,
   typingTestHistory,
   typingTestViewOnly,
   typingRecordEnabled,
@@ -186,16 +197,45 @@ export function useInputModes({
     processKeyEvent,
     setWindowFocused,
   } = typingTest
+
+  const savedMemoryRef = useRef(savedTypingTestMemory)
+  savedMemoryRef.current = savedTypingTestMemory
+  const savedConfigRef = useRef(savedTypingTestConfig)
+  savedConfigRef.current = savedTypingTestConfig
+  const onMemoryChangeRef = useRef(onTypingTestMemoryChange)
+  onMemoryChangeRef.current = onTypingTestMemoryChange
+  // Tracks the config JSON last pushed into useTypingTest so the config-sync
+  // effect below doesn't re-apply (and overwrite a restored snapshot).
+  const lastSyncedConfigRef = useRef('')
+
+  /** Enter the typing test. When a paused snapshot is saved for the active
+   *  custom text, restore it frozen ('paused') so the user must choose
+   *  resume / restart before typing; otherwise start a fresh test. */
+  const beginTypingTest = useCallback((withCountdown: boolean) => {
+    enterMatrixMode()
+    const mem = savedMemoryRef.current
+    const cfg = savedConfigRef.current
+    if (mem && cfg?.mode === 'custom' && cfg.textId === mem.textId) {
+      // Pre-mark the config as synced so the config-sync effect doesn't
+      // clobber the restored snapshot with a fresh test.
+      lastSyncedConfigRef.current = JSON.stringify(cfg)
+      void typingTest.restoreState(mem, false)
+    } else if (withCountdown) {
+      restartWithCountdown()
+    } else {
+      restartTypingTest()
+    }
+    onTypingTestModeChange?.(true)
+  }, [enterMatrixMode, typingTest, restartWithCountdown, restartTypingTest, onTypingTestModeChange])
+
   const [pendingTypingTest, setPendingTypingTest] = useState(false)
 
   useEffect(() => {
     if (pendingTypingTest && unlocked) {
       setPendingTypingTest(false)
-      enterMatrixMode()
-      restartWithCountdown()
-      onTypingTestModeChange?.(true)
+      beginTypingTest(true)
     }
-  }, [pendingTypingTest, unlocked, enterMatrixMode, restartWithCountdown, onTypingTestModeChange])
+  }, [pendingTypingTest, unlocked, beginTypingTest])
 
   // Exit typing test when the keyboard is locked
   useEffect(() => {
@@ -210,14 +250,12 @@ export function useInputModes({
       resetMatrixState()
       onTypingTestModeChange?.(false)
     } else if (unlocked) {
-      enterMatrixMode()
-      restartTypingTest()
-      onTypingTestModeChange?.(true)
+      beginTypingTest(false)
     } else {
       setPendingTypingTest(true)
       onUnlock?.()
     }
-  }, [typingTestMode, unlocked, resetMatrixState, enterMatrixMode, restartTypingTest, onTypingTestModeChange, onUnlock])
+  }, [typingTestMode, unlocked, resetMatrixState, beginTypingTest, onTypingTestModeChange, onUnlock])
 
   // Feed matrix frames to typing test
   useEffect(() => {
@@ -255,6 +293,9 @@ export function useInputModes({
     if (!typingTestMode || typingTestViewOnly) return
     function handler(e: KeyboardEvent) {
       if (document.querySelector('[role="dialog"]')) return
+      // Inline edit fields (e.g. naming a finished result) opt out of typing
+      // capture so their keystrokes reach the input instead of the test.
+      if (e.target instanceof HTMLElement && e.target.dataset.ttPassthrough != null) return
       if (e.isComposing) return
       let key = e.key
       if (key === 'Process') {
@@ -291,9 +332,12 @@ export function useInputModes({
         config: typingTest.config,
         language: typingTest.language,
         wpmHistory: typingTest.state.wpmHistory,
+        customTextName: typingTest.config.mode === 'custom' ? typingTest.state.currentQuote?.source : undefined,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       onSaveTypingTestResult(result)
+      // A completed test makes any saved pause snapshot obsolete.
+      if (savedMemoryRef.current) onMemoryChangeRef.current?.(undefined)
     }
     if (typingTest.state.status !== 'finished') {
       savedResultRef.current = false
@@ -301,12 +345,12 @@ export function useInputModes({
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
+    typingTest.state.currentQuote,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult])
 
   // Sync saved config/language from device prefs into useTypingTest
-  const lastSyncedConfigRef = useRef('')
   useEffect(() => {
     const target = savedTypingTestConfig
     const json = target ? JSON.stringify(target) : ''
@@ -325,6 +369,11 @@ export function useInputModes({
 
   // Wrapped setters that persist user-initiated changes to device prefs
   const handleTypingTestConfigChange = useCallback((newConfig: TypingTestConfig) => {
+    // Starting a different imported text discards the saved snapshot.
+    const mem = savedMemoryRef.current
+    if (mem && newConfig.mode === 'custom' && newConfig.textId !== mem.textId) {
+      onMemoryChangeRef.current?.(undefined)
+    }
     typingTest.setConfig(newConfig)
     lastSyncedConfigRef.current = JSON.stringify(newConfig)
     onTypingTestConfigChange?.(newConfig)
@@ -335,6 +384,30 @@ export function useInputModes({
     lastSyncedLanguageRef.current = resolved
     onTypingTestLanguageChange?.(resolved)
   }, [typingTest.setLanguage, onTypingTestLanguageChange])
+
+  // --- Memory mode handlers ---
+  const pauseTypingTest = useCallback(() => {
+    const mem = typingTest.captureMemory()
+    if (!mem) return
+    onMemoryChangeRef.current?.(mem)
+    typingTest.pause()
+  }, [typingTest])
+
+  const resumeTypingTest = useCallback(() => {
+    const mem = savedMemoryRef.current
+    if (!mem) return
+    void typingTest.restoreState(mem, true).then((ok) => {
+      if (!ok) {
+        onMemoryChangeRef.current?.(undefined)
+        restartTypingTest()
+      }
+    })
+  }, [typingTest, restartTypingTest])
+
+  const restartTypingTestFromStart = useCallback(() => {
+    onMemoryChangeRef.current?.(undefined)
+    restartTypingTest()
+  }, [restartTypingTest])
 
   // Window focus/blur listeners
   useEffect(() => {
@@ -363,5 +436,9 @@ export function useInputModes({
     typingTest,
     handleTypingTestConfigChange,
     handleTypingTestLanguageChange,
+    savedTypingTestMemory,
+    pauseTypingTest,
+    resumeTypingTest,
+    restartTypingTestFromStart,
   }
 }

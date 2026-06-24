@@ -798,6 +798,8 @@ export function App() {
             typingTestMode={editorUI.typingTestMode}
             onTypingTestModeChange={editorUI.handleTypingTestModeChange}
             onSaveTypingTestResult={devicePrefs.addTypingTestResult}
+            onRenameTypingTestResult={devicePrefs.renameTypingTestResult}
+            onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
             typingTestHistory={devicePrefs.typingTestResults}
             typingTestConfig={devicePrefs.typingTestConfig}
             typingTestLanguage={devicePrefs.typingTestLanguage}
@@ -819,6 +821,12 @@ export function App() {
             onTypingTestViewOnlyWindowSizeChange={devicePrefs.setTypingTestViewOnlyWindowSize}
             typingTestViewOnlyAlwaysOnTop={devicePrefs.typingTestViewOnlyAlwaysOnTop}
             onTypingTestViewOnlyAlwaysOnTopChange={devicePrefs.setTypingTestViewOnlyAlwaysOnTop}
+            typingTestMemory={devicePrefs.typingTestMemory}
+            onTypingTestMemoryChange={devicePrefs.setTypingTestMemory}
+            typingTestDisplayLines={devicePrefs.typingTestDisplayLines}
+            typingTestFontSize={devicePrefs.typingTestFontSize}
+            onTypingTestDisplayLinesChange={devicePrefs.setTypingTestDisplayLines}
+            onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
             onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
             typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}

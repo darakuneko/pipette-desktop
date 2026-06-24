@@ -250,9 +250,13 @@
       "exitTypingMode": "Exit Typing Test",
       "restart": "Restart",
       "wpm": "WPM",
+      "kpm": "KPM",
       "accuracy": "Accuracy",
       "time": "Time",
       "words": "Words",
+      "lines": "Lines",
+      "chars": "Chars",
+      "fontSize": "Font",
       "correct": "Correct",
       "incorrect": "Incorrect",
       "finished": "Complete",
@@ -261,7 +265,8 @@
       "mode": {
         "words": "words",
         "time": "time",
-        "quote": "quote"
+        "quote": "quote",
+        "custom": "text"
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
@@ -272,6 +277,7 @@
         "all": "all"
       },
       "quoteSource": "-- {{source}}",
+      "nameResult": "Name this result",
       "viewOnly": "Typing View",
       "exitViewOnly": "Exit Typing View",
       "alwaysOnTop": "top",
@@ -293,6 +299,7 @@
       "resetSize": "Default Size",
       "fitSize": "Fit Size",
       "baseLayer": "Base Layer",
+      "modeLabel": "Mode",
       "baseLayerShort": "Base",
       "heatmapWindow": "Heatmap window (minutes)",
       "heatmapWindowShort": "HeatMap",
@@ -317,14 +324,33 @@
       "paused": "Window lost focus",
       "layerNote": "Only MO / LT / LM layer switches are tracked. Other layer keys and advanced features may not be reflected.",
       "language": {
-        "title": "Languages",
+        "title": "Mode",
         "searchPlaceholder": "Search languages...",
         "downloaded": "Downloaded",
         "available": "Available",
         "noResults": "No matching languages",
         "words": "{{count}} words",
         "loadingLanguage": "Loading language...",
-        "downloadFailed": "Download failed"
+        "downloadFailed": "Download failed",
+        "tabNormal": "Normal",
+        "tabCustom": "Custom",
+        "import": "Import UTF-8 text file",
+        "importEmpty": "No imported texts yet",
+        "importFailed": "Import failed",
+        "importErrorNotUtf8": "Only UTF-8 encoded text files are supported",
+        "importErrorTooLarge": "File is too large (max 5 MB)",
+        "importErrorEmpty": "The file has no typeable text",
+        "importOverwritePrompt": "\"{{name}}\" already exists. Overwrite?",
+        "confirmOverwrite": "Overwrite",
+        "customText": "Imported text"
+      },
+      "memory": {
+        "pause": "Pause",
+        "resumeButton": "Resume",
+        "resumeTitle": "Resume saved test?",
+        "resumeBody": "You paused at word {{current}} of {{total}}. Continue from there, or start over?",
+        "resume": "Resume",
+        "restart": "Start over"
       },
       "history": {
         "title": "History",
@@ -334,11 +360,17 @@
         "totalTests": "Tests",
         "avgAccuracy": "Avg Acc",
         "date": "Date",
+        "name": "Name",
+        "unnamed": "Unnamed",
         "mode": "Mode",
+        "tabNormal": "Normal",
+        "tabCustom": "Custom",
+        "tabText": "Text",
         "noResults": "No results yet",
         "pb": "PB",
         "allModes": "All",
-        "exportCsv": "Export CSV"
+        "exportCsv": "Export CSV",
+        "delete": "Delete"
       }
     }
   },

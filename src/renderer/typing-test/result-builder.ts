@@ -44,6 +44,9 @@ export function deriveMode2(config: TypingTestConfig): number | string {
       return config.duration
     case 'quote':
       return config.quoteLength
+    case 'custom':
+      // Group PBs per imported text via its id.
+      return config.textId
   }
 }
 
@@ -57,14 +60,17 @@ export interface BuildTypingTestResultInput {
   config: TypingTestConfig
   language: string
   wpmHistory: number[]
+  /** Imported-text display name (custom mode); ignored for other modes. */
+  customTextName?: string
 }
 
 export function buildTypingTestResult(input: BuildTypingTestResultInput): TypingTestResult {
   const totalChars = input.correctChars + input.incorrectChars
   const rawWpm = computeRawWpm(totalChars, input.elapsedMs)
   const consistency = computeConsistency(input.wpmHistory)
-  const hasPunctuation = input.config.mode !== 'quote' ? input.config.punctuation : undefined
-  const hasNumbers = input.config.mode !== 'quote' ? input.config.numbers : undefined
+  const hasToggles = input.config.mode === 'words' || input.config.mode === 'time'
+  const hasPunctuation = hasToggles ? input.config.punctuation : undefined
+  const hasNumbers = hasToggles ? input.config.numbers : undefined
 
   return {
     date: new Date().toISOString(),
@@ -77,6 +83,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     rawWpm,
     mode: input.config.mode,
     mode2: deriveMode2(input.config),
+    customTextName: input.config.mode === 'custom' ? input.customTextName : undefined,
     language: input.language,
     punctuation: hasPunctuation,
     numbers: hasNumbers,

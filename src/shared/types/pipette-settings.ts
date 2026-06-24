@@ -6,6 +6,8 @@ import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing
 
 export interface TypingTestResult {
   date: string
+  /** User-assigned label for comparing runs (e.g. "QWERTY baseline"). */
+  name?: string
   wpm: number
   accuracy: number
   wordCount: number
@@ -13,8 +15,12 @@ export interface TypingTestResult {
   incorrectChars: number
   durationSeconds: number
   rawWpm?: number
-  mode?: 'words' | 'time' | 'quote'
+  mode?: 'words' | 'time' | 'quote' | 'custom'
   mode2?: number | string
+  /** Human-readable imported-text name, snapshotted at test time (custom
+   *  mode only). `mode2` keeps the stable textId for PB grouping; this is
+   *  what History shows so the row isn't an opaque id. */
+  customTextName?: string
   language?: string
   punctuation?: boolean
   numbers?: boolean
@@ -109,6 +115,31 @@ export const DEFAULT_PIPETTE_SETTINGS: PipetteSettings = {
   layerNames: [],
 }
 
+/** Serializable per-word result for resuming a paused custom typing test. */
+export interface TypingTestMemoryWord {
+  word: string
+  typed: string
+  correct: boolean
+}
+
+/** Snapshot of an in-progress imported (custom) typing test, persisted so
+ * the user can pause and resume later. One slot per keyboard. Words and
+ * line breaks are regenerated from `textId`, so only progress is stored. */
+export interface TypingTestMemory {
+  /** typing-test-texts store id of the imported text being typed. */
+  textId: string
+  currentWordIndex: number
+  currentInput: string
+  wordResults: TypingTestMemoryWord[]
+  correctChars: number
+  incorrectChars: number
+  /** Accumulated typing time in ms (excludes the paused interval). */
+  elapsedMs: number
+  wpmHistory: number[]
+  /** ISO 8601 save time. */
+  savedAt: string
+}
+
 export interface PipetteSettings {
   _rev: 1
   keyboardLayout: string
@@ -120,6 +151,13 @@ export interface PipetteSettings {
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop?: boolean
+  /** Paused custom typing-test snapshot (memory mode). Cleared on finish,
+   * "start over", text change, or device switch. */
+  typingTestMemory?: TypingTestMemory
+  /** Imported-text display: visible line count (2–10, default 4). */
+  typingTestDisplayLines?: number
+  /** Imported-text display: font size in px (14–48, default 24). */
+  typingTestFontSize?: number
   /** User-chosen record toggle. Persisted + synced so the setting
    * survives reloads and follows the keyboard across machines. Actual
    * recording is gated additionally on typingTestViewOnly at the

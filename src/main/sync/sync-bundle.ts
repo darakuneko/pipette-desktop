@@ -11,9 +11,11 @@ import type { FavoriteIndex } from '../../shared/types/favorite-store'
 import type { SnapshotIndex } from '../../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotIndex } from '../../shared/types/analyze-filter-store'
 import type { KeyLabelIndex } from '../../shared/types/key-label-store'
+import type { TypingTestTextIndex } from '../../shared/types/typing-test-text-store'
 import type { SyncBundle } from '../../shared/types/sync'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { KEY_LABEL_SYNC_UNIT } from '../key-label-store'
+import { TYPING_TEST_TEXT_SYNC_UNIT } from '../typing-test-text-store'
 import { I18N_INDEX_SYNC_UNIT, type I18nPackIndex } from '../../shared/types/i18n-store'
 import { THEME_INDEX_SYNC_UNIT, type ThemePackIndex } from '../../shared/types/theme-store'
 import {
@@ -28,10 +30,10 @@ import {
 } from '../typing-analytics/sync'
 import { log } from '../logger'
 
-export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | null> {
+export async function readIndexFile(dir: string): Promise<FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | TypingTestTextIndex | null> {
   try {
     const raw = await readFile(join(dir, 'index.json'), 'utf-8')
-    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex
+    return JSON.parse(raw) as FavoriteIndex | SnapshotIndex | AnalyzeFilterSnapshotIndex | KeyLabelIndex | TypingTestTextIndex
   } catch {
     return null
   }
@@ -175,6 +177,9 @@ export async function bundleSyncUnit(syncUnit: string): Promise<SyncBundle | nul
   if (syncUnit === KEY_LABEL_SYNC_UNIT) {
     type = 'key-label'
     key = KEY_LABEL_SYNC_UNIT
+  } else if (syncUnit === TYPING_TEST_TEXT_SYNC_UNIT) {
+    type = 'typing-test-text'
+    key = TYPING_TEST_TEXT_SYNC_UNIT
   } else if (parts[0] === 'favorites') {
     type = 'favorite'
     key = parts[1]
@@ -230,6 +235,11 @@ export async function collectAllSyncUnits(): Promise<string[]> {
     await access(join(userData, 'sync', KEY_LABEL_SYNC_UNIT, 'index.json'))
     units.push(KEY_LABEL_SYNC_UNIT)
   } catch { /* no key labels */ }
+
+  try {
+    await access(join(userData, 'sync', TYPING_TEST_TEXT_SYNC_UNIT, 'index.json'))
+    units.push(TYPING_TEST_TEXT_SYNC_UNIT)
+  } catch { /* no typing-test texts */ }
 
   // i18n: emit "i18n/index" plus one "i18n/packs/{packId}" per known
   // meta (including tombstones — the tombstone needs to propagate to

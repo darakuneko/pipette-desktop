@@ -61,6 +61,15 @@
   margin-left: 6px;
 }
 
+/* Imported-text typing display: font size + visible-line window driven by
+   --tt-font (px) and --tt-lines (count). Window height = font × 1.5 (the
+   leading-normal line box) × line count. Kept here (not inline styles) so
+   the sizing math stays in the stylesheet. */
+.typing-multiline-window {
+  font-size: calc(var(--tt-font) * 1px);
+  height: calc(var(--tt-font) * var(--tt-lines) * 1.5px);
+}
+
 /* Interactive elements use pointer cursor */
 button:not(:disabled),
 a,
@@ -320,7 +329,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --min-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --max-height-device-list: 340px;     /* DeviceSelector, KeymapEditor device list */
   --min-height-word-list: 100px;       /* TypingTestPane word list */
-  --height-typing-display: 7.25rem;    /* TypingTestView word display area */
+  --height-typing-display: 7.25rem;    /* TypingTestView word display area (word-flow modes) */
   --width-color-picker: 15rem;         /* HSVColorPicker container */
   --height-color-picker-sv: 180px;     /* HSVColorPicker saturation/value canvas */
   --spacing-scale-btn: 34px;           /* ScaleControl toolbar button (non-grid: between sm key and toolbar icon) */

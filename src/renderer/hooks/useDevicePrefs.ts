@@ -5,10 +5,11 @@ import type { KeyboardLayoutId } from '../data/keyboard-layouts'
 import { useKeyLabelLookup } from './useKeyLabelLookup'
 import { useAppConfig } from './useAppConfig'
 import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
-import type { TypingTestResult, TypingViewMenuTab, ViewMode } from '../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord } from '../../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingViewMenuTab } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
 import type { TypingTestConfig } from '../typing-test/types'
+import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, clampDisplayLines, clampFontSize } from '../typing-test/types'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import { clampZoomFactor } from '../../shared/types/app-config'
 
@@ -37,6 +38,9 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }
+    case 'custom':
+      if (typeof obj.textId !== 'string' || obj.textId.length === 0) return undefined
+      return { mode: 'custom', textId: obj.textId }
     default:
       return undefined
   }
@@ -45,6 +49,39 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
 function validateTypingTestLanguage(raw: unknown): string | undefined {
   if (typeof raw !== 'string' || raw.length === 0) return undefined
   return raw
+}
+
+function validateTypingTestMemory(raw: unknown): TypingTestMemory | undefined {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const o = raw as Record<string, unknown>
+  if (typeof o.textId !== 'string' || o.textId.length === 0) return undefined
+  if (typeof o.currentWordIndex !== 'number' || !Number.isFinite(o.currentWordIndex) || o.currentWordIndex < 0) return undefined
+  if (typeof o.currentInput !== 'string') return undefined
+  if (typeof o.correctChars !== 'number' || typeof o.incorrectChars !== 'number') return undefined
+  if (typeof o.elapsedMs !== 'number' || !Number.isFinite(o.elapsedMs) || o.elapsedMs < 0) return undefined
+  if (!Array.isArray(o.wordResults)) return undefined
+  const rawResults = o.wordResults as unknown[]
+  const wordResults = rawResults.filter((w): w is TypingTestMemoryWord => {
+    if (typeof w !== 'object' || w === null) return false
+    const r = w as Record<string, unknown>
+    return typeof r.word === 'string' && typeof r.typed === 'string' && typeof r.correct === 'boolean'
+  })
+  // A malformed entry means the snapshot is untrustworthy — discard it.
+  if (wordResults.length !== rawResults.length) return undefined
+  const wpmHistory = Array.isArray(o.wpmHistory)
+    ? (o.wpmHistory as unknown[]).filter((n): n is number => typeof n === 'number')
+    : []
+  return {
+    textId: o.textId,
+    currentWordIndex: o.currentWordIndex,
+    currentInput: o.currentInput,
+    wordResults,
+    correctChars: o.correctChars,
+    incorrectChars: o.incorrectChars,
+    elapsedMs: o.elapsedMs,
+    wpmHistory,
+    savedAt: typeof o.savedAt === 'string' ? o.savedAt : new Date(0).toISOString(),
+  }
 }
 
 function isValidTypingTestResult(item: unknown): item is TypingTestResult {
@@ -73,6 +110,9 @@ interface ValidatedPrefs {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingTestMemory?: TypingTestMemory
+  typingTestDisplayLines: number
+  typingTestFontSize: number
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
@@ -80,7 +120,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -152,6 +192,9 @@ function validateIpcPrefs(
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
     typingTestViewOnlyAlwaysOnTop: typeof data.typingTestViewOnlyAlwaysOnTop === 'boolean' ? data.typingTestViewOnlyAlwaysOnTop : false,
+    typingTestMemory: validateTypingTestMemory(data.typingTestMemory),
+    typingTestDisplayLines: typeof data.typingTestDisplayLines === 'number' ? clampDisplayLines(data.typingTestDisplayLines) : DEFAULT_DISPLAY_LINES,
+    typingTestFontSize: typeof data.typingTestFontSize === 'number' ? clampFontSize(data.typingTestFontSize) : DEFAULT_FONT_SIZE,
     typingRecordEnabled: typeof data.typingRecordEnabled === 'boolean' ? data.typingRecordEnabled : false,
     typingViewMenuTab: isTypingViewMenuTab(data.typingViewMenuTab) ? data.typingViewMenuTab : 'window',
     viewMode,
@@ -182,6 +225,9 @@ export interface UseDevicePrefsReturn {
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize: { width: number; height: number } | undefined
   typingTestViewOnlyAlwaysOnTop: boolean
+  typingTestMemory: TypingTestMemory | undefined
+  typingTestDisplayLines: number
+  typingTestFontSize: number
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
@@ -195,11 +241,16 @@ export interface UseDevicePrefsReturn {
   setKeymapScale: (scale: number) => void
   setLayerNames: (names: string[]) => void
   addTypingTestResult: (result: TypingTestResult) => void
+  renameTypingTestResult: (date: string, name: string) => void
+  deleteTypingTestResult: (date: string) => void
   setTypingTestConfig: (config: TypingTestConfig) => void
   setTypingTestLanguage: (lang: string) => void
   setTypingTestViewOnly: (enabled: boolean) => void
   setTypingTestViewOnlyWindowSize: (size: { width: number; height: number }) => void
   setTypingTestViewOnlyAlwaysOnTop: (enabled: boolean) => void
+  setTypingTestMemory: (memory: TypingTestMemory | undefined) => void
+  setTypingTestDisplayLines: (lines: number) => void
+  setTypingTestFontSize: (px: number) => void
   setTypingRecordEnabled: (enabled: boolean) => void
   setTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   setViewMode: (mode: ViewMode) => void
@@ -266,6 +317,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
   const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
   const [typingTestViewOnlyAlwaysOnTop, updateTypingTestViewOnlyAlwaysOnTop, typingTestViewOnlyAlwaysOnTopRef] = useStateRef<boolean>(false)
+  const [typingTestMemory, updateTypingTestMemory, typingTestMemoryRef] = useStateRef<TypingTestMemory | undefined>(undefined)
+  const [typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef] = useStateRef<number>(DEFAULT_DISPLAY_LINES)
+  const [typingTestFontSize, updateTypingTestFontSize, typingTestFontSizeRef] = useStateRef<number>(DEFAULT_FONT_SIZE)
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
   const [typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef] = useStateRef<TypingViewMenuTab>('window')
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
@@ -295,6 +349,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
       typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current || undefined,
+      typingTestMemory: typingTestMemoryRef.current,
+      typingTestDisplayLines: typingTestDisplayLinesRef.current,
+      typingTestFontSize: typingTestFontSizeRef.current,
       typingRecordEnabled: typingRecordEnabledRef.current || undefined,
       typingViewMenuTab: typingViewMenuTabRef.current,
       viewMode: viewModeRef.current,
@@ -352,6 +409,29 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestResults])
 
+  /** Label a saved result (keyed by its ISO date) for run comparison. An
+   *  empty name clears the label. No-op when nothing changed. */
+  const renameTypingTestResult = useCallback((date: string, name: string) => {
+    const nextName = name.trim() || undefined
+    let changed = false
+    const updated = typingTestResultsRef.current.map((r) => {
+      if (r.date !== date || (r.name ?? '') === (nextName ?? '')) return r
+      changed = true
+      return { ...r, name: nextName }
+    })
+    if (!changed) return
+    updateTypingTestResults(updated)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestResults])
+
+  /** Remove a single saved result (keyed by its ISO date). */
+  const deleteTypingTestResult = useCallback((date: string) => {
+    const updated = typingTestResultsRef.current.filter((r) => r.date !== date)
+    if (updated.length === typingTestResultsRef.current.length) return
+    updateTypingTestResults(updated)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestResults])
+
   const setTypingTestConfig = useCallback((cfg: TypingTestConfig) => {
     updateTypingTestConfig(cfg)
     saveCurrentPrefs()
@@ -377,6 +457,28 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingTestViewOnlyAlwaysOnTop(enabled)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestViewOnlyAlwaysOnTop])
+
+  const setTypingTestMemory = useCallback((memory: TypingTestMemory | undefined) => {
+    // Skip the full-prefs write when nothing changed — most commonly a
+    // clear (undefined) issued while already cleared (finish / restart).
+    if (typingTestMemoryRef.current === memory) return
+    updateTypingTestMemory(memory)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestMemory])
+
+  const setTypingTestDisplayLines = useCallback((lines: number) => {
+    const clamped = clampDisplayLines(lines)
+    if (typingTestDisplayLinesRef.current === clamped) return
+    updateTypingTestDisplayLines(clamped)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestDisplayLines])
+
+  const setTypingTestFontSize = useCallback((px: number) => {
+    const clamped = clampFontSize(px)
+    if (typingTestFontSizeRef.current === clamped) return
+    updateTypingTestFontSize(clamped)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestFontSize])
 
   const setTypingRecordEnabled = useCallback((enabled: boolean) => {
     if (typingRecordEnabledRef.current === enabled) return
@@ -458,6 +560,8 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestResults: [],
       typingTestViewOnly: false,
       typingTestViewOnlyAlwaysOnTop: false,
+      typingTestDisplayLines: DEFAULT_DISPLAY_LINES,
+      typingTestFontSize: DEFAULT_FONT_SIZE,
       typingRecordEnabled: false,
       typingViewMenuTab: 'window',
       viewMode: 'editor',
@@ -476,6 +580,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingTestViewOnly(resolved.typingTestViewOnly)
     updateTypingTestViewOnlyWindowSize(resolved.typingTestViewOnlyWindowSize)
     updateTypingTestViewOnlyAlwaysOnTop(resolved.typingTestViewOnlyAlwaysOnTop)
+    updateTypingTestMemory(resolved.typingTestMemory)
+    updateTypingTestDisplayLines(resolved.typingTestDisplayLines)
+    updateTypingTestFontSize(resolved.typingTestFontSize)
     updateTypingRecordEnabled(resolved.typingRecordEnabled)
     updateTypingViewMenuTab(resolved.typingViewMenuTab)
     updateViewMode(resolved.viewMode)
@@ -531,6 +638,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestViewOnly,
     typingTestViewOnlyWindowSize,
     typingTestViewOnlyAlwaysOnTop,
+    typingTestMemory,
+    typingTestDisplayLines,
+    typingTestFontSize,
     typingRecordEnabled,
     typingViewMenuTab,
     viewMode,
@@ -545,11 +655,16 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setKeymapScale,
     setLayerNames,
     addTypingTestResult,
+    renameTypingTestResult,
+    deleteTypingTestResult,
     setTypingTestConfig,
     setTypingTestLanguage,
     setTypingTestViewOnly,
     setTypingTestViewOnlyWindowSize,
     setTypingTestViewOnlyAlwaysOnTop,
+    setTypingTestMemory,
+    setTypingTestDisplayLines,
+    setTypingTestFontSize,
     setTypingRecordEnabled,
     setTypingViewMenuTab,
     setViewMode,

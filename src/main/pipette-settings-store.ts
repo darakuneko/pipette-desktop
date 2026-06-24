@@ -84,6 +84,9 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
     if (typeof ws.width !== 'number' || typeof ws.height !== 'number') return false
   }
   if ('typingTestViewOnlyAlwaysOnTop' in obj && obj.typingTestViewOnlyAlwaysOnTop != null && typeof obj.typingTestViewOnlyAlwaysOnTop !== 'boolean') return false
+  if ('typingTestMemory' in obj && obj.typingTestMemory != null && (typeof obj.typingTestMemory !== 'object' || Array.isArray(obj.typingTestMemory))) return false
+  if ('typingTestDisplayLines' in obj && obj.typingTestDisplayLines != null && typeof obj.typingTestDisplayLines !== 'number') return false
+  if ('typingTestFontSize' in obj && obj.typingTestFontSize != null && typeof obj.typingTestFontSize !== 'number') return false
   if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
   if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
@@ -130,6 +133,9 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
       typingTestViewOnlyAlwaysOnTop: parsed.typingTestViewOnlyAlwaysOnTop,
+      typingTestMemory: parsed.typingTestMemory,
+      typingTestDisplayLines: parsed.typingTestDisplayLines,
+      typingTestFontSize: parsed.typingTestFontSize,
       typingRecordEnabled: parsed.typingRecordEnabled,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
       typingViewMenuTab: parsed.typingViewMenuTab,
