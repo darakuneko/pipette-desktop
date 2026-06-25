@@ -250,6 +250,91 @@ describe('useAnalyzeFilters', () => {
     expect(result.current.filters.bigrams.fingerLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.fingerLimit)
   })
 
+  it('defaults filterDimension to app', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.filterDimension).toBe('app')
+  })
+
+  it('zeroes the inactive dimension in effective filters but keeps raw selections', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+
+    act(() => {
+      result.current.setAppScopes(['vscode'])
+      result.current.setTypingTestScopes(['words (english)'])
+    })
+
+    // Default dimension 'app' → typingTest zeroed in effective, app kept.
+    expect(result.current.filters.appScopes).toEqual(['vscode'])
+    expect(result.current.filters.typingTestScopes).toEqual([])
+    // Raw keeps both regardless of which dimension is active.
+    expect(result.current.rawAppScopes).toEqual(['vscode'])
+    expect(result.current.rawTypingTestScopes).toEqual(['words (english)'])
+
+    act(() => { result.current.setFilterDimension('typingTest') })
+
+    // Switching flips which dimension is zeroed; raw is untouched.
+    expect(result.current.filters.appScopes).toEqual([])
+    expect(result.current.filters.typingTestScopes).toEqual(['words (english)'])
+    expect(result.current.rawAppScopes).toEqual(['vscode'])
+    expect(result.current.rawTypingTestScopes).toEqual(['words (english)'])
+  })
+
+  it('forces the typingTest dimension on the byApp tab regardless of filterDimension', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a', 'A', 'byApp'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+
+    act(() => {
+      result.current.setAppScopes(['vscode'])
+      result.current.setTypingTestScopes(['quote (english)'])
+      result.current.setFilterDimension('app')
+    })
+
+    // byApp disallows the app dimension, so app is zeroed even though
+    // filterDimension says 'app'. Raw still carries the app selection.
+    expect(result.current.filters.appScopes).toEqual([])
+    expect(result.current.filters.typingTestScopes).toEqual(['quote (english)'])
+    expect(result.current.rawAppScopes).toEqual(['vscode'])
+  })
+
+  it('persists filterDimension through setFilterDimension', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    setSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+
+    act(() => { result.current.setFilterDimension('typingTest') })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(setSpy).toHaveBeenCalledTimes(1)
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.filterDimension).toBe('typingTest')
+  })
+
+  it('restores a persisted filterDimension on mount', async () => {
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          appScopes: ['vscode'],
+          typingTestScopes: ['words (english)'],
+          filterDimension: 'typingTest',
+        },
+      },
+    })
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.filterDimension).toBe('typingTest')
+    // Effective reflects the restored dimension immediately.
+    expect(result.current.filters.appScopes).toEqual([])
+    expect(result.current.filters.typingTestScopes).toEqual(['words (english)'])
+  })
+
   it('restores a persisted pairIntervalThresholdMs on mount', async () => {
     getSpy.mockResolvedValueOnce({
       _rev: 1,

@@ -27,5 +27,11 @@ export const TOOLBAR_BTN_INACTIVE = `${TOOLBAR_BTN_BASE} border-edge text-conten
 export const BTN_TOGGLE_ACTIVE = 'rounded border border-accent bg-accent/10 px-2 py-1 text-sm text-accent transition-colors'
 export const BTN_TOGGLE_INACTIVE = 'rounded border border-edge px-2 py-1 text-sm text-content-secondary transition-colors hover:text-content'
 
+// Borderless segments inside a bordered container (px-1.5 py-0.5 text-xs) —
+// segmented controls that must stay compact, e.g. the Analyze filter-row
+// App / TypingTest dimension toggle. The container draws the single border.
+export const SEGMENT_TOGGLE_ACTIVE = 'rounded px-1.5 py-0.5 text-xs text-accent bg-accent/10 transition-colors'
+export const SEGMENT_TOGGLE_INACTIVE = 'rounded px-1.5 py-0.5 text-xs text-content-secondary transition-colors hover:text-content'
+
 // Accent-outline button — non-destructive secondary CTA on accent color
 export const BTN_ACCENT_OUTLINE = 'rounded border border-accent bg-accent/10 px-3 py-1.5 text-sm text-accent hover:bg-accent/20 disabled:opacity-50 disabled:cursor-not-allowed'
