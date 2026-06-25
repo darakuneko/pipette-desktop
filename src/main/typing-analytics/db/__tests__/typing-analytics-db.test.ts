@@ -196,6 +196,38 @@ describe('TypingAnalyticsDB', () => {
     expect(stats.active_ms).toBe(2_000)
   })
 
+  it('keeps two runs in the same minute as separate rows (run_id in the key)', () => {
+    db.upsertScope(sampleScope())
+    const stats = (runId: string, keystrokes: number) => ({
+      scopeId: 'scope-1', minuteTs: 60_000, keystrokes, activeMs: 500,
+      intervalAvgMs: 500, intervalMinMs: 500, intervalP25Ms: 500,
+      intervalP50Ms: 500, intervalP75Ms: 500, intervalMaxMs: 500, runId,
+    })
+    db.writeMinute(stats('run-1', 2), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 2, runId: 'run-1' }], [], 2_000)
+    db.writeMinute(stats('run-2', 3), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 3, runId: 'run-2' }], [], 2_000)
+    // Plain REC input in the same minute lands in the '' bucket.
+    db.writeMinute(stats('', 1), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 1 }], [], 2_000)
+
+    const conn = db.getConnection()
+    const rows = conn.prepare(
+      'SELECT run_id AS runId, count FROM typing_char_minute WHERE scope_id = ? AND minute_ts = ? AND char = ? ORDER BY run_id',
+    ).all('scope-1', 60_000, 'a') as Array<{ runId: string; count: number }>
+    // Three distinct rows — no collapse despite sharing minute + char.
+    expect(rows).toEqual([
+      { runId: '', count: 1 },
+      { runId: 'run-1', count: 2 },
+      { runId: 'run-2', count: 3 },
+    ])
+    const statRows = conn.prepare(
+      'SELECT run_id AS runId, keystrokes FROM typing_minute_stats WHERE scope_id = ? AND minute_ts = ? ORDER BY run_id',
+    ).all('scope-1', 60_000) as Array<{ runId: string; keystrokes: number }>
+    expect(statRows).toEqual([
+      { runId: '', keystrokes: 1 },
+      { runId: 'run-1', keystrokes: 2 },
+      { runId: 'run-2', keystrokes: 3 },
+    ])
+  })
+
   it('accumulates matrix counts additively on conflict', () => {
     db.upsertScope(sampleScope())
     db.writeMinute(

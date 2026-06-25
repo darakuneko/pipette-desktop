@@ -129,7 +129,12 @@ async function initialize(): Promise<void> {
   const machineHash = await getMachineHash()
   const db = getTypingAnalyticsDB()
   const userDataDir = app.getPath('userData')
-  const { state } = await ensureCacheIsFresh(db, userDataDir, machineHash)
+  // A schema migration that dropped tables (e.g. the run_id PK change)
+  // leaves the cache empty, so force a rebuild from the JSONL masters
+  // regardless of the usual sync-state freshness check.
+  const { state } = await ensureCacheIsFresh(db, userDataDir, machineHash, {
+    force: db.cacheNeedsRebuild,
+  })
   syncState = state
 }
 
@@ -1444,9 +1449,12 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
   // typing_test carries through identically to appName so the JSONL master
   // stays the source of truth for TypingTest filtering after a rebuild.
   const typingTest = snapshot.typingTest
+  // run_id is part of every per-minute row's identity (id + SQLite PK) so
+  // two runs in one minute stay distinct. '' for non-test (REC) input.
+  const runId = snapshot.runId
   const rows: JsonlRow[] = [
     {
-      id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs),
+      id: minuteStatsRowId(snapshot.scopeId, snapshot.minuteTs, runId),
       kind: 'minute-stats',
       updated_at: updatedAt,
       payload: {
@@ -1462,20 +1470,21 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         intervalMaxMs: snapshot.intervalMaxMs,
         appName,
         typingTest,
+        runId,
       },
     },
   ]
   for (const [char, count] of snapshot.charCounts) {
     rows.push({
-      id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, char),
+      id: charMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId, char),
       kind: 'char-minute',
       updated_at: updatedAt,
-      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count, appName, typingTest },
+      payload: { scopeId: snapshot.scopeId, minuteTs: snapshot.minuteTs, char, count, appName, typingTest, runId },
     })
   }
   for (const cell of snapshot.matrixCounts.values()) {
     rows.push({
-      id: matrixMinuteRowId(snapshot.scopeId, snapshot.minuteTs, cell.row, cell.col, cell.layer),
+      id: matrixMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId, cell.row, cell.col, cell.layer),
       kind: 'matrix-minute',
       updated_at: updatedAt,
       payload: {
@@ -1490,6 +1499,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         holdCount: cell.holdCount,
         appName,
         typingTest,
+        runId,
       },
     })
   }
@@ -1499,7 +1509,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       bigrams[pairKey] = { c: ikis.length, h: bucketizeIki(ikis) }
     }
     rows.push({
-      id: bigramMinuteRowId(snapshot.scopeId, snapshot.minuteTs),
+      id: bigramMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId),
       kind: 'bigram-minute',
       updated_at: updatedAt,
       payload: {
@@ -1508,6 +1518,7 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
         bigrams,
         appName,
         typingTest,
+        runId,
       },
     })
   }

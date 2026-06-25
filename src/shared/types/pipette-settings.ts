@@ -6,6 +6,10 @@ import { ALLOWED_TYPING_SYNC_SPAN_DAYS, type TypingSyncSpanDays } from './typing
 
 export interface TypingTestResult {
   date: string
+  /** Run id linking this History entry to its analytics keystrokes
+   *  (the `run_id` dimension). Absent for runs recorded before run
+   *  tagging existed — those can't be sliced in Analyze. */
+  runId?: string
   /** User-assigned label for comparing runs (e.g. "QWERTY baseline"). */
   name?: string
   wpm: number
@@ -128,6 +132,9 @@ export interface TypingTestMemoryWord {
 export interface TypingTestMemory {
   /** typing-test-texts store id of the imported text being typed. */
   textId: string
+  /** Run id of the paused run, so resume keeps it one run in analytics.
+   *  Absent in memories saved before run tagging existed. */
+  runId?: string
   currentWordIndex: number
   currentInput: string
   wordResults: TypingTestMemoryWord[]

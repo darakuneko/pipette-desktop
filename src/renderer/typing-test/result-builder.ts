@@ -62,6 +62,8 @@ export interface BuildTypingTestResultInput {
   wpmHistory: number[]
   /** Imported-text display name (custom mode); ignored for other modes. */
   customTextName?: string
+  /** Run id of the finished run, linking History to analytics keystrokes. */
+  runId?: string
 }
 
 export function buildTypingTestResult(input: BuildTypingTestResultInput): TypingTestResult {
@@ -74,6 +76,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
 
   return {
     date: new Date().toISOString(),
+    runId: input.runId,
     wpm: input.wpm,
     accuracy: input.accuracy,
     wordCount: input.wordCount,

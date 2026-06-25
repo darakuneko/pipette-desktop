@@ -184,13 +184,16 @@ export function useInputModes({
   // (useTypingTest captures it once).
   const recordingActiveRef = useRef(false)
   const testLabelRef = useRef<string | null>(null)
+  const testRunIdRef = useRef<string | null>(null)
   const analyticsSink = useCallback((payload: TypingAnalyticsEventPayload) => {
     const keyboard = keyboardRef.current
     if (!keyboard) return
     const label = testLabelRef.current
     if (!recordingActiveRef.current && !label) return
+    // A test keystroke carries both its material label and its run id; REC
+    // input carries neither (so it lands as the null run / null test).
     const event = label
-      ? { ...payload, keyboard, typingTest: label }
+      ? { ...payload, keyboard, typingTest: label, runId: testRunIdRef.current ?? undefined }
       : { ...payload, keyboard }
     window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
   }, [])
@@ -281,6 +284,8 @@ export function useInputModes({
   testLabelRef.current = typingTestMode && !typingTestViewOnly
     ? typingTestAnalyticsLabel(typingTest.config, typingTest.language, typingTest.state.currentQuote)
     : null
+  // Run id travels with the label so each run's keystrokes are separable.
+  testRunIdRef.current = testLabelRef.current ? typingTest.state.runId : null
 
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
@@ -348,6 +353,7 @@ export function useInputModes({
         language: typingTest.language,
         wpmHistory: typingTest.state.wpmHistory,
         customTextName: typingTest.config.mode === 'custom' ? typingTest.state.currentQuote?.source : undefined,
+        runId: typingTest.state.runId,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       onSaveTypingTestResult(result)
@@ -365,7 +371,7 @@ export function useInputModes({
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
-    typingTest.state.currentQuote,
+    typingTest.state.currentQuote, typingTest.state.runId,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult])

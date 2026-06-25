@@ -66,6 +66,27 @@ describe('MinuteBuffer', () => {
     expect(snapshots[1].keystrokes).toBe(1)
   })
 
+  it('splits one wall-clock minute into separate buckets per run id', () => {
+    const fp = fingerprint()
+    // Two runs typing in the same minute must not collapse: each run keeps
+    // its own snapshot so per-run analytics stay exact.
+    buffer.addEvent({ ...charEvent('a', 1_000), runId: 'run-1' }, fp)
+    buffer.addEvent({ ...charEvent('a', 2_000), runId: 'run-1' }, fp)
+    buffer.addEvent({ ...charEvent('b', 3_000), runId: 'run-2' }, fp)
+    // Plain REC input (no runId) is its own '' bucket.
+    buffer.addEvent(charEvent('c', 4_000), fp)
+
+    const snapshots = buffer.drainAll().sort((a, b) => a.runId.localeCompare(b.runId))
+    expect(snapshots).toHaveLength(3)
+    expect(snapshots.map((s) => s.runId)).toEqual(['', 'run-1', 'run-2'])
+    expect(snapshots.every((s) => s.minuteTs === 0)).toBe(true)
+    const run1 = snapshots.find((s) => s.runId === 'run-1')
+    expect(run1?.keystrokes).toBe(2)
+    expect(run1?.charCounts.get('a')).toBe(2)
+    expect(snapshots.find((s) => s.runId === 'run-2')?.keystrokes).toBe(1)
+    expect(snapshots.find((s) => s.runId === '')?.charCounts.get('c')).toBe(1)
+  })
+
   it('accumulates char counts within the same minute', () => {
     const fp = fingerprint()
     buffer.addEvent(charEvent('a', 1_000), fp)
