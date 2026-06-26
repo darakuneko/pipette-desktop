@@ -32,6 +32,7 @@ export function useDailySummary(
   deviceScope: DeviceScope,
   appScopes: string[] = [],
   typingTestScopes: string[] = [],
+  runIdScopes: string[] = [],
 ): DailySummaryState {
   const [daily, setDaily] = useState<TypingDailySummary[]>([])
   const [loading, setLoading] = useState(true)
@@ -40,18 +41,19 @@ export function useDailySummary(
   // refire when the parent passes a fresh-but-equal array each render.
   const appScopesKey = appScopes.join('|')
   const typingTestScopesKey = typingTestScopes.join('|')
+  const runIdScopesKey = runIdScopes.join('|')
 
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void listDailyForScope(uid, deviceScope, appScopes, typingTestScopes)
+    void listDailyForScope(uid, deviceScope, appScopes, typingTestScopes, runIdScopes)
       .then((rows) => { if (!cancelled) setDaily(rows) })
       .catch(() => { if (!cancelled) setDaily([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // appScopesKey carries the array's identity, so the raw array can
     // be omitted from deps.
-  }, [uid, scopeKey, appScopesKey, typingTestScopesKey])
+  }, [uid, scopeKey, appScopesKey, typingTestScopesKey, runIdScopesKey])
 
   return { daily, loading }
 }

@@ -61,6 +61,7 @@ import { DeviceMultiSelect } from './DeviceMultiSelect'
 import { AppSelect } from './AppSelect'
 import { TypingTestSelect } from './TypingTestSelect'
 import { FilterDimensionToggle } from './FilterDimensionToggle'
+import { RunSelect } from './RunSelect'
 import { RangeDayPicker } from './RangeDayPicker'
 import { clampRangeToBoundaries, getSnapshotBoundaries } from './clamp-range'
 import { resolveAnalyzeLoadingPhase } from './analyze-loading-phase'
@@ -252,6 +253,7 @@ export function AnalyzePane({
       deviceScopes,
       appScopes,
       typingTestScopes,
+      runIdScopes,
       filterDimension,
       heatmap: heatmapFilter,
       wpm: wpmFilter,
@@ -263,12 +265,13 @@ export function AnalyzePane({
       layoutComparison: layoutComparisonFilter,
     },
     ready: filtersReady,
-    effectiveDimension,
     rawAppScopes,
     rawTypingTestScopes,
+    rawRunIdScopes,
     setDeviceScopes,
     setAppScopes,
     setTypingTestScopes,
+    setRunIdScopes,
     setFilterDimension,
     setHeatmap,
     setWpm,
@@ -658,6 +661,7 @@ export function AnalyzePane({
       deviceScope: scope,
       appScopes,
       typingTestScopes,
+      runIdScopes,
       snapshot: effectiveSnapshot,
       heatmap: heatmapFilter,
       wpm: {
@@ -679,23 +683,56 @@ export function AnalyzePane({
       conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
-    selected, deviceScopes, appScopes, typingTestScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
+    selected, deviceScopes, appScopes, typingTestScopes, runIdScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
     snapshotSummaries, heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
     layoutComparisonFilter, fingerAssignments, t,
   ])
 
   // The TypingTest select renders in two filter-row branches (the byApp
-  // tab and the toggle's typingTest position), so share one builder.
+  // tab and the toggle's typingTest position), so share one builder. The
+  // second-level Results (run) select sits inline right beside it — no
+  // label of its own — and only appears once a material is picked.
   const renderTypingTestSelect = (kbUid: string) => (
-    <TypingTestSelect
-      uid={kbUid}
-      range={range}
-      deviceScopes={deviceScopes}
-      value={typingTestScopes}
-      onChange={setTypingTestScopes}
-      ariaLabel={t('analyze.filters.typingTest')}
-    />
+    <>
+      <TypingTestSelect
+        uid={kbUid}
+        range={range}
+        deviceScopes={deviceScopes}
+        value={typingTestScopes}
+        onChange={setTypingTestScopes}
+        ariaLabel={t('analyze.filters.typingTest')}
+      />
+      {rawTypingTestScopes.length > 0 && (
+        <RunSelect
+          uid={kbUid}
+          materialScopes={rawTypingTestScopes}
+          value={rawRunIdScopes}
+          onChange={setRunIdScopes}
+          ariaLabel={t('analyze.filters.run')}
+          testId={tid('analyze-filter-run')}
+        />
+      )}
+    </>
   )
+
+  // The active select for the App/TypingTest toggle cell. TypingTest shows
+  // the test (+ inline run) select; App shows the app select — except on
+  // the By App tab, which groups across apps, so a specific app can't be
+  // picked there (an empty cell keeps the grid column stable).
+  const renderDimensionSelect = (kbUid: string) => {
+    if (filterDimension === 'typingTest') return renderTypingTestSelect(kbUid)
+    if (analysisTab === 'byApp') return <span />
+    return (
+      <AppSelect
+        uid={kbUid}
+        range={range}
+        deviceScopes={deviceScopes}
+        value={appScopes}
+        onChange={setAppScopes}
+        ariaLabel={t('analyze.filters.app')}
+      />
+    )
+  }
 
   // Pull the saved-entry list when the keyboard changes so the count /
   // list reflects the new uid even before the user opens the panel.
@@ -726,9 +763,8 @@ export function AnalyzePane({
         // back to an App filter the user never chose there.
         appScopes: rawAppScopes,
         typingTestScopes: rawTypingTestScopes,
-        // `effectiveDimension` already folds in the byApp override, so the
-        // saved dimension matches what was actually applied.
-        filterDimension: effectiveDimension,
+        runIdScopes: rawRunIdScopes,
+        filterDimension,
         heatmap: heatmapFilter,
         wpm: wpmFilter,
         interval: intervalFilter,
@@ -755,7 +791,7 @@ export function AnalyzePane({
     return { payload, summary }
   }, [
     analysisTab, range,
-    deviceScopes, rawAppScopes, rawTypingTestScopes, effectiveDimension,
+    deviceScopes, rawAppScopes, rawTypingTestScopes, rawRunIdScopes, filterDimension,
     heatmapFilter, wpmFilter, intervalFilter,
     activityFilter, layerFilter, ergonomicsFilter, bigramsFilter,
     layoutComparisonFilter, exportCtx,
@@ -795,6 +831,7 @@ export function AnalyzePane({
       setDeviceScopes(payload.filters.deviceScopes)
       setAppScopes(payload.filters.appScopes)
       setTypingTestScopes(payload.filters.typingTestScopes)
+      setRunIdScopes(payload.filters.runIdScopes)
       // Snapshots saved before this field existed restore as 'app'.
       setFilterDimension(parseFilterDimension(payload.filters.filterDimension))
       setHeatmap(payload.filters.heatmap)
@@ -809,7 +846,7 @@ export function AnalyzePane({
     },
     [
       filterStore, setAnalysisTab, setRange, setDeviceScopes, setAppScopes, setTypingTestScopes,
-      setFilterDimension, setHeatmap, setWpm, setIntervalFilter, setActivity, setLayer,
+      setRunIdScopes, setFilterDimension, setHeatmap, setWpm, setIntervalFilter, setActivity, setLayer,
       setErgonomics, setBigrams, setLayoutComparison,
     ],
   )
@@ -1180,38 +1217,20 @@ export function AnalyzePane({
                     </label>
                     {/* App and TypingTest are mutually exclusive minute-tag
                         dimensions (a test always runs inside some app), so
-                        they share one grid cell to save the row a column: a
-                        segmented toggle in the label slot picks which select
-                        shows. On the By App tab the app dimension is
-                        disallowed (those charts compare across apps, so a
-                        single-app filter would collapse to one slice), so
-                        only the TypingTest select is offered — no toggle. */}
-                    {analysisTab === 'byApp' ? (
-                      <label className={FILTER_LABEL}>
-                        <span>{t('analyze.filters.typingTest')}</span>
-                        {renderTypingTestSelect(selected.uid)}
-                      </label>
-                    ) : (
-                      <div className={FILTER_LABEL}>
-                        <FilterDimensionToggle
-                          value={filterDimension}
-                          onChange={setFilterDimension}
-                          testId={tid('analyze-filter-dimension')}
-                        />
-                        {filterDimension === 'app' ? (
-                          <AppSelect
-                            uid={selected.uid}
-                            range={range}
-                            deviceScopes={deviceScopes}
-                            value={appScopes}
-                            onChange={setAppScopes}
-                            ariaLabel={t('analyze.filters.app')}
-                          />
-                        ) : (
-                          renderTypingTestSelect(selected.uid)
-                        )}
-                      </div>
-                    )}
+                        they share one grid cell: a segmented toggle picks
+                        which select shows. The By App tab carries the same
+                        toggle for consistency, but it groups across apps so a
+                        specific app can't be picked there — the App side just
+                        means "all apps" (no select), while the TypingTest side
+                        still narrows to a test. */}
+                    <div className={FILTER_LABEL}>
+                      <FilterDimensionToggle
+                        value={filterDimension}
+                        onChange={setFilterDimension}
+                        testId={tid('analyze-filter-dimension')}
+                      />
+                      {renderDimensionSelect(selected.uid)}
+                    </div>
                   </>
                 ) : (
                   // distribution view hides Device + the App/TypingTest cell;
@@ -1413,6 +1432,7 @@ export function AnalyzePane({
                   deviceScope={deviceScopes[0]}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />
@@ -1423,6 +1443,7 @@ export function AnalyzePane({
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   granularity={wpmFilter.granularity}
                   viewMode={wpmFilter.viewMode}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1434,6 +1455,7 @@ export function AnalyzePane({
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   unit={intervalFilter.unit}
                   granularity={wpmFilter.granularity}
                   viewMode={intervalFilter.viewMode}
@@ -1445,6 +1467,7 @@ export function AnalyzePane({
                   deviceScope={deviceScopes[0]}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   metric={activityFilter.metric}
                   view={activityFilter.view}
                   minActiveMs={wpmFilter.minActiveMs}
@@ -1460,6 +1483,7 @@ export function AnalyzePane({
                     deviceScope={deviceScopes[0]}
                     appScopes={appScopes}
                     typingTestScopes={typingTestScopes}
+                    runIdScopes={runIdScopes}
                     snapshot={effectiveSnapshot}
                     heatmap={heatmapFilter}
                     onHeatmapChange={setHeatmap}
@@ -1476,7 +1500,8 @@ export function AnalyzePane({
                     range={range}
                     deviceScopes={deviceScopes}
                     appScopes={appScopes}
-                  typingTestScopes={typingTestScopes}
+                    typingTestScopes={typingTestScopes}
+                    runIdScopes={runIdScopes}
                     snapshot={effectiveSnapshot}
                     fingerOverrides={fingerAssignments}
                     viewMode={ergonomicsFilter.viewMode}
@@ -1496,6 +1521,7 @@ export function AnalyzePane({
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   topLimit={bigramsFilter.topLimit}
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}
@@ -1514,6 +1540,7 @@ export function AnalyzePane({
                   deviceScopes={deviceScopes}
                   appScopes={appScopes}
                   typingTestScopes={typingTestScopes}
+                  runIdScopes={runIdScopes}
                   snapshot={effectiveSnapshot}
                   filter={layoutComparisonFilter}
                   onSkipPercentChange={onSkipPercentChange}
@@ -1533,6 +1560,7 @@ export function AnalyzePane({
                       deviceScopes={deviceScopes}
                       appScopes={appScopes}
                       typingTestScopes={typingTestScopes}
+                      runIdScopes={runIdScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="keystrokes"
                       baseLayer={layerFilter.baseLayer}
@@ -1545,6 +1573,7 @@ export function AnalyzePane({
                       deviceScopes={deviceScopes}
                       appScopes={appScopes}
                       typingTestScopes={typingTestScopes}
+                      runIdScopes={runIdScopes}
                       snapshot={effectiveSnapshot}
                       viewMode="activations"
                       baseLayer={layerFilter.baseLayer}

@@ -50,6 +50,7 @@ interface Props {
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot
   period: ErgonomicsLearningPeriod
   minSampleKeystrokes?: number
@@ -132,6 +133,7 @@ export function ErgonomicsLearningCurveChart({
   deviceScopes,
   appScopes,
   typingTestScopes,
+  runIdScopes,
   snapshot,
   period,
   minSampleKeystrokes = DEFAULT_LEARNING_MIN_SAMPLE,
@@ -146,7 +148,7 @@ export function ErgonomicsLearningCurveChart({
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void listMatrixCellsByDayForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
+    void listMatrixCellsByDayForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
       .then((next) => {
         if (cancelled) return
         setRows(next)
@@ -159,7 +161,7 @@ export function ErgonomicsLearningCurveChart({
       })
     return () => { cancelled = true }
     // `scopeKey` carries `deviceScope` identity.
-  }, [uid, range, scopeKey, appScopes, typingTestScopes])
+  }, [uid, range, scopeKey, appScopes, typingTestScopes, runIdScopes])
 
   const layout = snapshot.layout as KeyboardLayout | null
   const layoutKeys = layout?.keys

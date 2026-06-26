@@ -313,9 +313,15 @@ export function App() {
   // from the previous toggle-ON. `saveKeymapSnapshotIfChanged` on
   // main dedupes by content, so re-firing on unrelated keyboard
   // state churn is cheap (no file write when the keymap is equal).
+  //
+  // An editor typing test counts too: it records matrix keystrokes
+  // tagged by test/run, so without a snapshot the Analyze Heatmap /
+  // Ergonomics / Layer-activations views have no layout to draw them on
+  // ("No keymap snapshot recorded for this range").
   const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
   useEffect(() => {
-    const active = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+    const active = (devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly)
+      || editorUI.typingTestMode
     const uid = keyboard.uid
     const prev = recordingSnapshotRef.current
     recordingSnapshotRef.current = { active, uid }
@@ -324,7 +330,7 @@ export function App() {
     const snap = buildKeymapSnapshot(keyboard)
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
-  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, keyboard])
+  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
 
   const handleViewAnalytics = useCallback(() => {
     setViewExitTransition(true)

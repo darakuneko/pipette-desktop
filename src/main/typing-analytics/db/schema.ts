@@ -72,6 +72,8 @@ CREATE INDEX IF NOT EXISTS idx_char_minute_scope_app_ts
   ON typing_char_minute(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_char_minute_scope_test_ts
   ON typing_char_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_char_minute_scope_run_ts
+  ON typing_char_minute(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   scope_id TEXT NOT NULL,
@@ -100,6 +102,8 @@ CREATE TABLE IF NOT EXISTS typing_matrix_minute (
 CREATE INDEX IF NOT EXISTS idx_matrix_minute_ts ON typing_matrix_minute(minute_ts);
 CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_test_ts
   ON typing_matrix_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_run_ts
+  ON typing_matrix_minute(scope_id, run_id, minute_ts);
 -- Supports the typing-view heatmap (scope_id + layer + minute_ts range scan
 -- polled every few seconds). Without it the heatmap query falls back to the
 -- minute_ts-only index and re-filters every scope/layer row in memory.
@@ -133,6 +137,8 @@ CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_app_ts
   ON typing_minute_stats(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_test_ts
   ON typing_minute_stats(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_run_ts
+  ON typing_minute_stats(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   scope_id TEXT NOT NULL,
@@ -163,6 +169,8 @@ CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_app_ts
   ON typing_bigram_minute(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_test_ts
   ON typing_bigram_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_run_ts
+  ON typing_bigram_minute(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_sessions (
   id TEXT PRIMARY KEY,

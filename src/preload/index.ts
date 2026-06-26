@@ -440,8 +440,8 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_WPM_BY_APP_FOR_RANGE, uid, sinceMs, untilMs, scope),
   typingAnalyticsListKeyboards: (): Promise<TypingKeyboardSummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYBOARDS),
-  typingAnalyticsListItems: (uid: string, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS, uid, appScopes, typingTestScopes),
+  typingAnalyticsListItems: (uid: string, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS, uid, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsDeleteItems: (uid: string, dates: string[]): Promise<TypingTombstoneResult> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS, uid, dates),
   typingAnalyticsDeleteAll: (uid: string): Promise<TypingTombstoneResult> =>
@@ -452,74 +452,74 @@ const vialAPI = {
     sinceMs: number,
   ): Promise<TypingHeatmapByCell> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP, uid, layer, sinceMs),
-  typingAnalyticsListItemsLocal: (uid: string, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid, appScopes, typingTestScopes),
+  typingAnalyticsListItemsLocal: (uid: string, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_LOCAL, uid, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsListDeviceInfos: (uid: string): Promise<TypingAnalyticsDeviceInfoBundle | null> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_DEVICE_INFOS, uid),
-  typingAnalyticsListItemsForHash: (uid: string, machineHash: string, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingDailySummary[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash, appScopes, typingTestScopes),
+  typingAnalyticsListItemsForHash: (uid: string, machineHash: string, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingDailySummary[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ITEMS_FOR_HASH, uid, machineHash, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsListIntervalItems: (uid: string): Promise<TypingIntervalDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS, uid),
   typingAnalyticsListIntervalItemsLocal: (uid: string): Promise<TypingIntervalDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_LOCAL, uid),
   typingAnalyticsListIntervalItemsForHash: (uid: string, machineHash: string): Promise<TypingIntervalDailySummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_INTERVAL_ITEMS_FOR_HASH, uid, machineHash),
-  typingAnalyticsListActivityGrid: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingActivityCell[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListActivityGridLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingActivityCell[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListActivityGridForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingActivityCell[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListLayerUsage: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListLayerUsageLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListLayerUsageForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCells: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCellsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCellsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCellsByDay: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCellsByDayLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMatrixCellsByDayForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListMinuteStatsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
+  typingAnalyticsListActivityGrid: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingActivityCell[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListActivityGridLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingActivityCell[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListActivityGridForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingActivityCell[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_ACTIVITY_GRID_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListLayerUsage: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListLayerUsageLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListLayerUsageForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingLayerUsageRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LAYER_USAGE_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCells: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCellsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCellsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCellsByDay: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCellsByDayLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMatrixCellsByDayForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMatrixCellDailyRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MATRIX_CELLS_BY_DAY_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMinuteStats: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMinuteStatsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListMinuteStatsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingMinuteStatsRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_MINUTE_STATS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsListSessions: (uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS, uid, sinceMs, untilMs),
   typingAnalyticsListSessionsLocal: (uid: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS_LOCAL, uid, sinceMs, untilMs),
   typingAnalyticsListSessionsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number): Promise<TypingSessionRow[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_SESSIONS_FOR_HASH, uid, machineHash, sinceMs, untilMs),
-  typingAnalyticsListBksMinute: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListBksMinuteLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsListBksMinuteForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsGetPeakRecords: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsGetPeakRecordsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes),
-  typingAnalyticsGetPeakRecordsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<PeakRecords> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes),
+  typingAnalyticsListBksMinute: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListBksMinuteLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsListBksMinuteForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingBksMinuteRow[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_BKS_MINUTE_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsGetPeakRecords: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsGetPeakRecordsLocal: (uid: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_LOCAL, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
+  typingAnalyticsGetPeakRecordsForHash: (uid: string, machineHash: string, sinceMs: number, untilMs: number, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<PeakRecords> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_PEAK_RECORDS_FOR_HASH, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsSaveKeymapSnapshot: (partial: Omit<TypingKeymapSnapshot, 'machineHash'>): Promise<{ saved: boolean; savedAt: number | null }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_SAVE_KEYMAP_SNAPSHOT, partial),
   typingAnalyticsGetKeymapSnapshotForRange: (uid: string, fromMs: number, toMs: number): Promise<TypingKeymapSnapshot | null> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_KEYMAP_SNAPSHOT_FOR_RANGE, uid, fromMs, toMs),
   typingAnalyticsListKeymapSnapshots: (uid: string): Promise<TypingKeymapSnapshotSummary[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_KEYMAP_SNAPSHOTS, uid),
-  typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScopes: string[] = [], typingTestScopes: string[] = []): Promise<TypingHeatmapByCell> =>
-    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scope, appScopes, typingTestScopes),
+  typingAnalyticsGetMatrixHeatmapForRange: (uid: string, layer: number, sinceMs: number, untilMs: number, scope: DeviceScope, appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = []): Promise<TypingHeatmapByCell> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_GET_MATRIX_HEATMAP_FOR_RANGE, uid, layer, sinceMs, untilMs, scope, appScopes, typingTestScopes, runIdScopes),
   typingAnalyticsGetBigramAggregateForRange: (
     uid: string,
     sinceMs: number,
@@ -527,7 +527,7 @@ const vialAPI = {
     view: TypingBigramAggregateView,
     scope: DeviceScope,
     options?: TypingBigramAggregateOptions,
-    appScopes: string[] = [], typingTestScopes: string[] = [],
+    appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = [],
   ): Promise<TypingBigramAggregateResult> =>
     ipcRenderer.invoke(
       IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE,
@@ -539,6 +539,7 @@ const vialAPI = {
       options,
       appScopes,
       typingTestScopes,
+      runIdScopes,
     ),
   typingAnalyticsGetLayoutComparisonForRange: (
     uid: string,
@@ -546,7 +547,7 @@ const vialAPI = {
     untilMs: number,
     scope: DeviceScope,
     options: LayoutComparisonOptions,
-    appScopes: string[] = [], typingTestScopes: string[] = [],
+    appScopes: string[] = [], typingTestScopes: string[] = [], runIdScopes: string[] = [],
   ): Promise<LayoutComparisonResult | null> =>
     ipcRenderer.invoke(
       IpcChannels.TYPING_ANALYTICS_GET_LAYOUT_COMPARISON_FOR_RANGE,
@@ -557,6 +558,7 @@ const vialAPI = {
       options,
       appScopes,
       typingTestScopes,
+      runIdScopes,
     ),
   typingAnalyticsListLocalDeviceDays: (uid: string, machineHash: string): Promise<string[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_LOCAL_DEVICE_DAYS, uid, machineHash),

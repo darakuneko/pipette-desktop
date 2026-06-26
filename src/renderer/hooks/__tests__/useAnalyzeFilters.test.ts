@@ -281,21 +281,61 @@ describe('useAnalyzeFilters', () => {
     expect(result.current.rawTypingTestScopes).toEqual(['words (english)'])
   })
 
-  it('forces the typingTest dimension on the byApp tab regardless of filterDimension', async () => {
+  it('applies runIdScopes only while the typingTest dimension is active', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+
+    act(() => {
+      result.current.setTypingTestScopes(['words (english)'])
+      result.current.setRunIdScopes(['run-1', 'run-2'])
+    })
+
+    // Default dimension 'app' → typingTest sub-filter (runId) is zeroed.
+    expect(result.current.filters.runIdScopes).toEqual([])
+    expect(result.current.rawRunIdScopes).toEqual(['run-1', 'run-2'])
+
+    act(() => { result.current.setFilterDimension('typingTest') })
+    // Now the typingTest dimension is active, so runId applies.
+    expect(result.current.filters.runIdScopes).toEqual(['run-1', 'run-2'])
+    expect(result.current.filters.typingTestScopes).toEqual(['words (english)'])
+  })
+
+  it('persists runIdScopes through setRunIdScopes', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    setSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+
+    act(() => { result.current.setRunIdScopes(['run-1']) })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(setSpy).toHaveBeenCalledTimes(1)
+    expect(setSpy.mock.calls[0][1].analyze?.filters?.runIdScopes).toEqual(['run-1'])
+  })
+
+  it('forces the app dimension off on the byApp tab (across-apps view)', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a', 'A', 'byApp'))
     await waitFor(() => expect(result.current.ready).toBe(true))
 
     act(() => {
       result.current.setAppScopes(['vscode'])
       result.current.setTypingTestScopes(['quote (english)'])
-      result.current.setFilterDimension('app')
     })
 
-    // byApp disallows the app dimension, so app is zeroed even though
-    // filterDimension says 'app'. Raw still carries the app selection.
+    // byApp respects the toggle, but the app dimension can't filter there
+    // (it groups across apps), so appScopes is always zeroed. On the app
+    // dimension nothing is applied; raw still carries the selection.
+    act(() => { result.current.setFilterDimension('app') })
+    expect(result.current.filters.appScopes).toEqual([])
+    expect(result.current.filters.typingTestScopes).toEqual([])
+    expect(result.current.rawAppScopes).toEqual(['vscode'])
+
+    // Toggling to typingTest on byApp DOES apply the test filter.
+    act(() => { result.current.setFilterDimension('typingTest') })
     expect(result.current.filters.appScopes).toEqual([])
     expect(result.current.filters.typingTestScopes).toEqual(['quote (english)'])
-    expect(result.current.rawAppScopes).toEqual(['vscode'])
   })
 
   it('persists filterDimension through setFilterDimension', async () => {

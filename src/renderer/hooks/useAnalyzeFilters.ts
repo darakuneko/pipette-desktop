@@ -55,6 +55,10 @@ export interface AnalyzeFiltersState {
   /** Selected typing-test labels (custom = text name, normal =
    * `mode (language)`). Empty = no filter. Same semantics as appScopes. */
   typingTestScopes: string[]
+  /** Selected run ids — second-level filter under `typingTestScopes`.
+   * Only applies while the typingTest dimension is active; zeroed in the
+   * effective filters otherwise. Empty = no run filter. */
+  runIdScopes: string[]
   /** Which of `appScopes` / `typingTestScopes` is active. The inactive
    * one is preserved here but zeroed in the effective filters the hook
    * returns, so toggling back restores the prior selection. */
@@ -77,6 +81,7 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   deviceScopes: ['own'],
   appScopes: [],
   typingTestScopes: [],
+  runIdScopes: [],
   filterDimension: 'app',
   heatmap: {
     selectedLayers: [0],
@@ -139,6 +144,7 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
     deviceScopes: normalizeDeviceScopes(saved.deviceScopes),
     appScopes: normalizeAppScopes(saved.appScopes),
     typingTestScopes: normalizeAppScopes(saved.typingTestScopes),
+    runIdScopes: normalizeAppScopes(saved.runIdScopes),
     filterDimension: parseFilterDimension(saved.filterDimension),
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
@@ -170,6 +176,7 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
     deviceScopes: state.deviceScopes,
     appScopes: state.appScopes,
     typingTestScopes: state.typingTestScopes,
+    runIdScopes: state.runIdScopes,
     filterDimension: state.filterDimension,
     heatmap: state.heatmap,
     wpm: state.wpm,
@@ -188,18 +195,18 @@ export interface UseAnalyzeFiltersReturn {
    * driving. Persisted state keeps both dimensions' raw selections. */
   filters: AnalyzeFiltersState
   ready: boolean
-  /** The dimension actually in force after the `byApp` override — the
-   * single source of truth for "App or TypingTest" so consumers (snapshot
-   * save) don't re-derive the tab rule. */
-  effectiveDimension: FilterDimension
   /** Raw (un-zeroed) App scope selection for binding the select control
    * and saving snapshots — never zeroed by the active dimension. */
   rawAppScopes: string[]
   /** Raw TypingTest scope selection — see `rawAppScopes`. */
   rawTypingTestScopes: string[]
+  /** Raw run-id selection for the second-level Results select — see
+   * `rawAppScopes`. */
+  rawRunIdScopes: string[]
   setDeviceScopes: (v: readonly DeviceScope[]) => void
   setAppScopes: (v: string[]) => void
   setTypingTestScopes: (v: string[]) => void
+  setRunIdScopes: (v: string[]) => void
   setFilterDimension: (v: FilterDimension) => void
   setHeatmap: (patch: Partial<HeatmapFilters>) => void
   setWpm: (patch: Partial<WpmFilters>) => void
@@ -360,6 +367,11 @@ export function useAnalyzeFilters(
     update((prev) => (appScopesEqual(prev.typingTestScopes, next) ? prev : { ...prev, typingTestScopes: next }))
   }, [update])
 
+  const setRunIdScopes = useCallback((v: string[]) => {
+    const next = normalizeAppScopes(v)
+    update((prev) => (appScopesEqual(prev.runIdScopes, next) ? prev : { ...prev, runIdScopes: next }))
+  }, [update])
+
   const setFilterDimension = useCallback((v: FilterDimension) => {
     update((prev) => (prev.filterDimension === v ? prev : { ...prev, filterDimension: v }))
   }, [update])
@@ -404,32 +416,41 @@ export function useAnalyzeFilters(
     update((prev) => ({ ...prev, layoutComparison: { ...prev.layoutComparison, ...patch } }))
   }, [update])
 
-  // Resolve the effective dimension: `byApp` charts compare across apps,
-  // so the app filter is forced off there no matter what `filterDimension`
-  // says. Everywhere else the stored dimension wins.
-  const effectiveDimension: FilterDimension =
-    analysisTab === 'byApp' ? 'typingTest' : filters.filterDimension
-
   // Zero the inactive dimension so charts only ever query the dimension
-  // the user is driving. State keeps both raw selections for the toggle.
+  // the user is driving (the toggle's stored `filterDimension`). State
+  // keeps both raw selections for the toggle. The By App tab groups across
+  // apps, so an app-specific filter would collapse it to one slice — the
+  // app dimension is forced off there (the toggle still shows App, but it
+  // acts as "all apps").
   const effectiveFilters = useMemo<AnalyzeFiltersState>(() => {
-    const appScopes = effectiveDimension === 'app' ? filters.appScopes : EMPTY_SCOPES
-    const typingTestScopes = effectiveDimension === 'typingTest' ? filters.typingTestScopes : EMPTY_SCOPES
-    if (appScopes === filters.appScopes && typingTestScopes === filters.typingTestScopes) {
+    const dimension = filters.filterDimension
+    const appActive = dimension === 'app' && analysisTab !== 'byApp'
+    const ttActive = dimension === 'typingTest'
+    const appScopes = appActive ? filters.appScopes : EMPTY_SCOPES
+    const typingTestScopes = ttActive ? filters.typingTestScopes : EMPTY_SCOPES
+    // runIdScopes is a sub-filter of typingTestScopes, so it only applies
+    // while the typingTest dimension is active.
+    const runIdScopes = ttActive ? filters.runIdScopes : EMPTY_SCOPES
+    if (
+      appScopes === filters.appScopes &&
+      typingTestScopes === filters.typingTestScopes &&
+      runIdScopes === filters.runIdScopes
+    ) {
       return filters
     }
-    return { ...filters, appScopes, typingTestScopes }
-  }, [filters, effectiveDimension])
+    return { ...filters, appScopes, typingTestScopes, runIdScopes }
+  }, [filters, analysisTab])
 
   return {
     filters: effectiveFilters,
     ready,
-    effectiveDimension,
     rawAppScopes: filters.appScopes,
     rawTypingTestScopes: filters.typingTestScopes,
+    rawRunIdScopes: filters.runIdScopes,
     setDeviceScopes,
     setAppScopes,
     setTypingTestScopes,
+    setRunIdScopes,
     setFilterDimension,
     setHeatmap,
     setWpm,

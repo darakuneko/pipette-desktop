@@ -95,6 +95,7 @@ interface Props {
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   /** Optional snapshot. Keystrokes mode still works without one
    * (zero-fills against the max observed layer); activations mode
    * needs it to resolve layer-op keycodes. */
@@ -113,7 +114,7 @@ interface Props {
   onBaseLayerChange?: (baseLayer: number) => void
 }
 
-export function LayerUsageChart({ uid, range, deviceScopes, appScopes, typingTestScopes, snapshot, viewMode, baseLayer, onBaseLayerChange }: Props) {
+export function LayerUsageChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, snapshot, viewMode, baseLayer, onBaseLayerChange }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingLayerUsageRow[]>([])
   const [cells, setCells] = useState<TypingMatrixCellRow[]>([])
@@ -127,8 +128,8 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, typingTes
     let cancelled = false
     setLoading(true)
     const promise = viewMode === 'activations'
-      ? listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
-      : listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
+      ? listMatrixCellsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
+      : listLayerUsageForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
     void promise
       .then((result) => {
         if (cancelled) return
@@ -144,7 +145,7 @@ export function LayerUsageChart({ uid, range, deviceScopes, appScopes, typingTes
     return () => { cancelled = true }
     // `scopeKey` carries `deviceScope` identity — adding the object
     // would refetch on every parent rerender.
-  }, [uid, range, scopeKey, viewMode, appScopes, typingTestScopes])
+  }, [uid, range, scopeKey, viewMode, appScopes, typingTestScopes, runIdScopes])
 
   // Settings tracks `uid` only — layer names don't change per range /
   // deviceScope / viewMode, so merging this with the rows fetch would

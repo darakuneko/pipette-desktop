@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
-import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
+import { buildTypingTestResult, isPbForConfig, materialLabel } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -12,14 +12,15 @@ import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
 /** Analytics `typing_test` dimension label for the running test: the
  *  imported text's name for custom, else `mode (language)` (e.g.
- *  `words (english)`) so Analyze can slice normal runs by language too. */
+ *  `words (english)`) so Analyze can slice normal runs by language too.
+ *  Delegates to `materialLabel` so the recording side and the Analyze run
+ *  filter produce the identical join key. */
 function typingTestAnalyticsLabel(
   config: TypingTestConfig,
   language: string,
   currentQuote: { source: string } | null,
 ): string {
-  if (config.mode === 'custom') return currentQuote?.source ?? 'custom'
-  return `${config.mode} (${language})`
+  return materialLabel(config.mode, language, currentQuote?.source)
 }
 
 export interface UseInputModesOptions {

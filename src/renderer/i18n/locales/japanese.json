@@ -1204,6 +1204,11 @@
         "none": "全テスト合算",
         "multi": "{{first}} 他{{rest}}件"
       },
+      "run": "結果",
+      "runOption": {
+        "none": "全ラン合算",
+        "multi": "{{first}} 他{{rest}}件"
+      },
       "dimensionLabel": "App / TypingTest で絞り込み",
       "unit": "表示",
       "unitOption": {

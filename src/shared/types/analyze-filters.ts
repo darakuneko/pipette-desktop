@@ -318,6 +318,11 @@ export interface AnalyzeFilterSettings {
   /** Selected typing-test labels; same persistence/normalization contract
    * as appScopes. */
   typingTestScopes?: string[]
+  /** Selected run ids — a second-level filter under typingTestScopes that
+   * narrows a chosen test material to specific History runs. Only applies
+   * when the typingTest dimension is active; same normalization contract
+   * as appScopes. */
+  runIdScopes?: string[]
   /** Which dimension the filter row is driving. App and TypingTest are
    * mutually exclusive; the inactive one's scopes are kept in storage
    * but zeroed before querying. Absent = `'app'` (legacy default). */
@@ -531,6 +536,10 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (o.typingTestScopes !== undefined) {
     if (!Array.isArray(o.typingTestScopes)) return false
     if (!o.typingTestScopes.every((v) => typeof v === 'string')) return false
+  }
+  if (o.runIdScopes !== undefined) {
+    if (!Array.isArray(o.runIdScopes)) return false
+    if (!o.runIdScopes.every((v) => typeof v === 'string')) return false
   }
   if (o.filterDimension !== undefined
     && o.filterDimension !== 'app'

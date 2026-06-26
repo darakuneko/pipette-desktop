@@ -603,6 +603,32 @@ describe('TypingAnalyticsDB', () => {
       expect(cell(unfiltered)).toBe(17)
     })
 
+    it('filters cell queries by runIdScopes (second-level run filter)', () => {
+      // Two runs of the same material sharing a wall-clock minute stay
+      // separable thanks to run_id in the key.
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 4, typingTest: 'words (english)', runId: 'run-a' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 180_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 4, typingTest: 'words (english)', runId: 'run-a' }],
+        2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 6, typingTest: 'words (english)', runId: 'run-b' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 180_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 6, typingTest: 'words (english)', runId: 'run-b' }],
+        2_000,
+      )
+
+      const cell = (rows: { count: number }[]): number => rows.reduce((s, r) => s + r.count, 0)
+      // appScopes [], typingTestScopes [], runIdScopes ['run-a'] → only run-a's 4.
+      const runA = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-a'])
+      expect(cell(runA)).toBe(4)
+      const runB = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-b'])
+      expect(cell(runB)).toBe(6)
+      const both = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-a', 'run-b'])
+      expect(cell(both)).toBe(10)
+    })
+
     it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {
       const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
       expect(result.charMinutes).toBe(2) // aabb-local + aabb-remote at minute 60_000
