@@ -13,6 +13,10 @@ import type { FavHubEntryResult } from './FavoriteHubActions'
 export const MIN_SCALE = 0.3
 export const MAX_SCALE = 2.0
 
+/** Where a "View Analytics" action was triggered, so the analytics page's
+ * Back can return the user to the same place. */
+export type AnalyticsOrigin = 'typingView' | 'typingTest'
+
 /** Collapsed width of the layer list panel / toolbar column (3.125rem). */
 export const PANEL_COLLAPSED_WIDTH = '3.125rem'
 
@@ -157,13 +161,14 @@ export interface KeymapEditorProps {
   onTypingMonitorAppEnabledChange?: (enabled: boolean) => void
   typingViewMenuTab?: TypingViewMenuTab
   onTypingViewMenuTabChange?: (tab: TypingViewMenuTab) => void
-  /** Called when the typing-view REC tab triggers "View Analytics".
-   * KeymapEditor forwards to the App shell so the shell can exit the
-   * compact window and swap to the analytics page. The record toggle
-   * is preserved across the navigation — leaving the compact window
-   * stops the sink via typingTestViewOnly without touching the
-   * persisted preference. */
-  onViewAnalytics?: () => void
+  /** Called when "View Analytics" is triggered, from either the compact
+   * Typing View REC tab (`'typingView'`) or the full-screen Typing Test
+   * header (`'typingTest'`). KeymapEditor forwards to the App shell, which
+   * swaps to the analytics page and remembers the origin so Back returns
+   * there. The record toggle is preserved across the navigation — leaving
+   * the compact window stops the sink via typingTestViewOnly without
+   * touching the persisted preference. */
+  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
    * useTypingTest so masked-key tap/hold classification uses the same
    * timeout QMK itself enforces. */

@@ -44,6 +44,7 @@ interface Props {
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
   /** Sub-view selector: `'snapshot'` keeps the four-pane summary,
@@ -272,6 +273,7 @@ export function ErgonomicsChart({
   deviceScopes,
   appScopes,
   typingTestScopes,
+  runIdScopes,
   snapshot,
   fingerOverrides,
   viewMode = 'snapshot',
@@ -287,6 +289,7 @@ export function ErgonomicsChart({
         deviceScopes={deviceScopes}
         appScopes={appScopes}
         typingTestScopes={typingTestScopes}
+        runIdScopes={runIdScopes}
         snapshot={snapshot}
         period={period}
         minSampleKeystrokes={learningMinSampleKeystrokes}
@@ -300,6 +303,7 @@ export function ErgonomicsChart({
       deviceScopes={deviceScopes}
       appScopes={appScopes}
       typingTestScopes={typingTestScopes}
+      runIdScopes={runIdScopes}
       snapshot={snapshot}
       fingerOverrides={fingerOverrides}
       onOpenFingerAssignment={onOpenFingerAssignment}
@@ -313,6 +317,7 @@ interface SnapshotViewProps {
   deviceScopes: readonly DeviceScope[]
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot
   fingerOverrides?: Record<string, FingerType>
   onOpenFingerAssignment?: () => void
@@ -324,6 +329,7 @@ function ErgonomicsSnapshotView({
   deviceScopes,
   appScopes,
   typingTestScopes,
+  runIdScopes,
   snapshot,
   fingerOverrides,
   onOpenFingerAssignment,
@@ -338,7 +344,7 @@ function ErgonomicsSnapshotView({
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes)
+    void fetchMatrixHeatmapAllLayers(uid, snapshot, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
       .then((next) => {
         if (cancelled) return
         setLayerCells(next)
@@ -346,7 +352,7 @@ function ErgonomicsSnapshotView({
       })
     return () => { cancelled = true }
     // `scopeKey` carries `deviceScope` identity.
-  }, [uid, range, scopeKey, snapshot, appScopes, typingTestScopes])
+  }, [uid, range, scopeKey, snapshot, appScopes, typingTestScopes, runIdScopes])
 
   const mergedHeatmap = useMemo(
     () => mergeLayerHeatmaps(layerCells),

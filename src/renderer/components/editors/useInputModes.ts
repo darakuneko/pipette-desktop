@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { useTypingTest } from '../../typing-test/useTypingTest'
-import { buildTypingTestResult, isPbForConfig } from '../../typing-test/result-builder'
+import { buildTypingTestResult, isPbForConfig, materialLabel } from '../../typing-test/result-builder'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from '../../typing-test/types'
 import type { TypingTestResult, TypingTestMemory } from '../../../shared/types/pipette-settings'
@@ -12,14 +12,15 @@ import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
 /** Analytics `typing_test` dimension label for the running test: the
  *  imported text's name for custom, else `mode (language)` (e.g.
- *  `words (english)`) so Analyze can slice normal runs by language too. */
+ *  `words (english)`) so Analyze can slice normal runs by language too.
+ *  Delegates to `materialLabel` so the recording side and the Analyze run
+ *  filter produce the identical join key. */
 function typingTestAnalyticsLabel(
   config: TypingTestConfig,
   language: string,
   currentQuote: { source: string } | null,
 ): string {
-  if (config.mode === 'custom') return currentQuote?.source ?? 'custom'
-  return `${config.mode} (${language})`
+  return materialLabel(config.mode, language, currentQuote?.source)
 }
 
 export interface UseInputModesOptions {
@@ -184,13 +185,16 @@ export function useInputModes({
   // (useTypingTest captures it once).
   const recordingActiveRef = useRef(false)
   const testLabelRef = useRef<string | null>(null)
+  const testRunIdRef = useRef<string | null>(null)
   const analyticsSink = useCallback((payload: TypingAnalyticsEventPayload) => {
     const keyboard = keyboardRef.current
     if (!keyboard) return
     const label = testLabelRef.current
     if (!recordingActiveRef.current && !label) return
+    // A test keystroke carries both its material label and its run id; REC
+    // input carries neither (so it lands as the null run / null test).
     const event = label
-      ? { ...payload, keyboard, typingTest: label }
+      ? { ...payload, keyboard, typingTest: label, runId: testRunIdRef.current ?? undefined }
       : { ...payload, keyboard }
     window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
   }, [])
@@ -277,10 +281,23 @@ export function useInputModes({
   const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
   // Keep the sink's refs current (the sink itself is a stable callback).
   recordingActiveRef.current = recordingActive
-  // A test in the editor (not the REC view) is the tagged input source.
-  testLabelRef.current = typingTestMode && !typingTestViewOnly
+  // A test in the editor (not the REC view) is the tagged input source — but
+  // only while it is actually running. Entering the test view auto-starts a
+  // countdown on the default ('words') config; tagging keystrokes before the
+  // run starts would record a phantom material (e.g. `words (english)`) for
+  // presses made during countdown / waiting or before the user picks a custom
+  // text. Gating on 'running' guarantees the config has settled to the chosen
+  // material before anything is recorded. Trade-off: the keystroke that starts
+  // the run (waiting -> running) and the matrix edge of the key that ends it
+  // (running -> finished, seen a poll later) may go untagged — a negligible
+  // 1-2 edge gap in the aggregate heatmap, accepted to avoid the phantom run.
+  // ('finished' is intentionally excluded so idle presses after a test can't
+  // re-introduce a phantom record.)
+  testLabelRef.current = typingTestMode && !typingTestViewOnly && typingTest.state.status === 'running'
     ? typingTestAnalyticsLabel(typingTest.config, typingTest.language, typingTest.state.currentQuote)
     : null
+  // Run id travels with the label so each run's keystrokes are separable.
+  testRunIdRef.current = testLabelRef.current ? typingTest.state.runId : null
 
   // Reset matrix press-edge tracking when keymap changes or recording toggles
   // so the next frame doesn't emit stale press events against an old state.
@@ -348,6 +365,7 @@ export function useInputModes({
         language: typingTest.language,
         wpmHistory: typingTest.state.wpmHistory,
         customTextName: typingTest.config.mode === 'custom' ? typingTest.state.currentQuote?.source : undefined,
+        runId: typingTest.state.runId,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
       onSaveTypingTestResult(result)
@@ -365,7 +383,7 @@ export function useInputModes({
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
     typingTest.state.currentWordIndex, typingTest.state.wpmHistory,
-    typingTest.state.currentQuote,
+    typingTest.state.currentQuote, typingTest.state.runId,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
     typingTestHistory, onSaveTypingTestResult])

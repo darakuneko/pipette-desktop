@@ -2,7 +2,7 @@
 // SQLite schema for the typing analytics database. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
-export const SCHEMA_VERSION = 5
+export const SCHEMA_VERSION = 6
 
 /** User-data tables in the order a rebuild should truncate them. Listed
  * child-before-parent so any future FK_ON delete won't trip itself. */
@@ -58,9 +58,13 @@ CREATE TABLE IF NOT EXISTS typing_char_minute (
   -- for minutes that mixed multiple tests. TypingTest-filtered analytics
   -- queries compare against this column directly (see app_name).
   typing_test TEXT,
+  -- Individual test run id, part of the primary key so two runs sharing a
+  -- minute stay distinct rows (exact per-run filtering). '' for non-test
+  -- (REC) input and rows that predate run tagging.
+  run_id TEXT NOT NULL DEFAULT '',
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (scope_id, minute_ts, char),
+  PRIMARY KEY (scope_id, minute_ts, run_id, char),
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_char_minute_ts ON typing_char_minute(minute_ts);
@@ -68,6 +72,8 @@ CREATE INDEX IF NOT EXISTS idx_char_minute_scope_app_ts
   ON typing_char_minute(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_char_minute_scope_test_ts
   ON typing_char_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_char_minute_scope_run_ts
+  ON typing_char_minute(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   scope_id TEXT NOT NULL,
@@ -86,14 +92,18 @@ CREATE TABLE IF NOT EXISTS typing_matrix_minute (
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.
   typing_test TEXT,
+  -- See typing_char_minute.run_id comment.
+  run_id TEXT NOT NULL DEFAULT '',
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (scope_id, minute_ts, row, col, layer),
+  PRIMARY KEY (scope_id, minute_ts, run_id, row, col, layer),
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_matrix_minute_ts ON typing_matrix_minute(minute_ts);
 CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_test_ts
   ON typing_matrix_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_matrix_minute_scope_run_ts
+  ON typing_matrix_minute(scope_id, run_id, minute_ts);
 -- Supports the typing-view heatmap (scope_id + layer + minute_ts range scan
 -- polled every few seconds). Without it the heatmap query falls back to the
 -- minute_ts-only index and re-filters every scope/layer row in memory.
@@ -116,15 +126,19 @@ CREATE TABLE IF NOT EXISTS typing_minute_stats (
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.
   typing_test TEXT,
+  -- See typing_char_minute.run_id comment.
+  run_id TEXT NOT NULL DEFAULT '',
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (scope_id, minute_ts),
+  PRIMARY KEY (scope_id, minute_ts, run_id),
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_app_ts
   ON typing_minute_stats(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_test_ts
   ON typing_minute_stats(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_minute_stats_scope_run_ts
+  ON typing_minute_stats(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   scope_id TEXT NOT NULL,
@@ -142,9 +156,11 @@ CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.
   typing_test TEXT,
+  -- See typing_char_minute.run_id comment.
+  run_id TEXT NOT NULL DEFAULT '',
   updated_at INTEGER NOT NULL,
   is_deleted INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (scope_id, minute_ts, bigram_id),
+  PRIMARY KEY (scope_id, minute_ts, run_id, bigram_id),
   FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_minute
@@ -153,6 +169,8 @@ CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_app_ts
   ON typing_bigram_minute(scope_id, app_name, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_test_ts
   ON typing_bigram_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_run_ts
+  ON typing_bigram_minute(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_sessions (
   id TEXT PRIMARY KEY,

@@ -19,22 +19,31 @@ describe('composite id builders', () => {
   })
 
   it('distinguishes char rows that differ only by character', () => {
-    expect(charMinuteRowId('s', 60_000, 'a')).toBe('char|s|60000|a')
-    expect(charMinuteRowId('s', 60_000, '|')).toBe('char|s|60000|%7C')
-    expect(charMinuteRowId('s', 60_000, 'a')).not.toBe(charMinuteRowId('s', 60_000, 'b'))
+    expect(charMinuteRowId('s', 60_000, '', 'a')).toBe('char|s|60000||a')
+    expect(charMinuteRowId('s', 60_000, '', '|')).toBe('char|s|60000||%7C')
+    expect(charMinuteRowId('s', 60_000, '', 'a')).not.toBe(charMinuteRowId('s', 60_000, '', 'b'))
+  })
+
+  it('distinguishes char rows that differ only by run id', () => {
+    expect(charMinuteRowId('s', 60_000, 'run-1', 'a')).toBe('char|s|60000|run-1|a')
+    expect(charMinuteRowId('s', 60_000, 'run-1', 'a'))
+      .not.toBe(charMinuteRowId('s', 60_000, 'run-2', 'a'))
   })
 
   it('includes row/col/layer in matrix row ids', () => {
-    expect(matrixMinuteRowId('s', 60_000, 2, 3, 1)).toBe('matrix|s|60000|2|3|1')
+    expect(matrixMinuteRowId('s', 60_000, '', 2, 3, 1)).toBe('matrix|s|60000||2|3|1')
+    expect(matrixMinuteRowId('s', 60_000, 'run-1', 2, 3, 1)).toBe('matrix|s|60000|run-1|2|3|1')
   })
 
   it('builds stats and session row ids', () => {
-    expect(minuteStatsRowId('s', 60_000)).toBe('stats|s|60000')
+    expect(minuteStatsRowId('s', 60_000, '')).toBe('stats|s|60000|')
+    expect(minuteStatsRowId('s', 60_000, 'run-1')).toBe('stats|s|60000|run-1')
     expect(sessionRowId('uuid-123')).toBe('session|uuid-123')
   })
 
   it('builds bigram-minute row ids without per-pair suffix (one row per minute)', () => {
-    expect(bigramMinuteRowId('s', 60_000)).toBe('bigram|s|60000')
+    expect(bigramMinuteRowId('s', 60_000, '')).toBe('bigram|s|60000|')
+    expect(bigramMinuteRowId('s', 60_000, 'run-1')).toBe('bigram|s|60000|run-1')
   })
 })
 

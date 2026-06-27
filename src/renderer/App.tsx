@@ -35,6 +35,7 @@ import { KeyOverridePanelModal } from './components/editors/KeyOverridePanelModa
 import { RGBConfigurator } from './components/editors/RGBConfigurator'
 import { UnlockDialog } from './components/editors/UnlockDialog'
 import { KeymapEditor, type KeymapEditorHandle } from './components/editors/KeymapEditor'
+import type { AnalyticsOrigin } from './components/editors/keymap-editor-types'
 import { AnalyzePage } from './components/analyze/AnalyzePage'
 import { buildKeymapSnapshot } from './components/analyze/keymap-snapshot-builder'
 import { LayoutStoreContent } from './components/editors/LayoutStoreModal'
@@ -283,6 +284,9 @@ export function App() {
   // from the REC tab of the typing view exits the compact window
   // and hands the main content area over to TypingAnalyticsPage.
   const [analyticsPageOpen, setAnalyticsPageOpen] = useState(false)
+  // Where the user opened Analyze from, so Back returns there: the compact
+  // Typing View or the full-screen Typing Test.
+  const analyticsOriginRef = useRef<AnalyticsOrigin>('typingView')
 
   // Exit view-only mode: hide content → wait for paint → resize → show editor
   const exitViewOnlyMode = useCallback(() => {
@@ -313,9 +317,15 @@ export function App() {
   // from the previous toggle-ON. `saveKeymapSnapshotIfChanged` on
   // main dedupes by content, so re-firing on unrelated keyboard
   // state churn is cheap (no file write when the keymap is equal).
+  //
+  // An editor typing test counts too: it records matrix keystrokes
+  // tagged by test/run, so without a snapshot the Analyze Heatmap /
+  // Ergonomics / Layer-activations views have no layout to draw them on
+  // ("No keymap snapshot recorded for this range").
   const recordingSnapshotRef = useRef<{ active: boolean; uid: string }>({ active: false, uid: '' })
   useEffect(() => {
-    const active = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+    const active = (devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly)
+      || editorUI.typingTestMode
     const uid = keyboard.uid
     const prev = recordingSnapshotRef.current
     recordingSnapshotRef.current = { active, uid }
@@ -324,9 +334,11 @@ export function App() {
     const snap = buildKeymapSnapshot(keyboard)
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
-  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, keyboard])
+  }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
 
-  const handleViewAnalytics = useCallback(() => {
+  const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
+    // Each entry point states its own origin so Back returns there.
+    analyticsOriginRef.current = origin
     setViewExitTransition(true)
     requestAnimationFrame(() => { requestAnimationFrame(() => {
       window.vialAPI.setWindowCompactMode(false).then(() => {
@@ -353,15 +365,22 @@ export function App() {
     }).catch(() => {})
   }, [typingTestViewOnlyWindowSize, setTypingTestViewOnly, editorUI.typingTestMode])
 
-  // Back from the analytics page should return the user to wherever
-  // they came from — which today is always the typing view (there's
-  // no other entry point yet). Close the page and re-enter the
-  // compact window + typing-test mode in one step so the user lands
+  // Back from the analytics page returns the user to wherever they came
+  // from (recorded in analyticsOriginRef): the full-screen Typing Test or
+  // the compact Typing View. Re-enter that view in one step so they land
   // exactly where they were before clicking View Analytics.
   const handleAnalyticsBack = useCallback(() => {
     setAnalyticsPageOpen(false)
-    enterTypingViewOnly()
-    devicePrefs.setViewMode('typingView')
+    if (analyticsOriginRef.current === 'typingTest') {
+      // KeymapEditor is unmounted while the analytics page is open, so its
+      // ref is null right now — defer the typing-test re-entry to an effect
+      // that fires after the editor remounts (see below).
+      devicePrefs.setViewMode('typingTest')
+      pendingTypingTestReentryRef.current = true
+    } else {
+      enterTypingViewOnly()
+      devicePrefs.setViewMode('typingView')
+    }
   }, [enterTypingViewOnly, devicePrefs])
 
   // One-shot guard: prevents re-restoring the same uid after an initial restore
@@ -370,6 +389,10 @@ export function App() {
   // Pending refs for deferred user intents (set while unlock dialog is open)
   const pendingViewOnlyRef = useRef(false)
   const pendingTypingTestSaveRef = useRef(false)
+  // Re-enter the full typing test after returning from the analytics page —
+  // deferred because KeymapEditor (which owns the typing test) only remounts
+  // once analyticsPageOpen flips back to false.
+  const pendingTypingTestReentryRef = useRef(false)
   const prevZoomRef = useRef<number | null>(null)
 
   const { setViewMode } = devicePrefs
@@ -414,6 +437,17 @@ export function App() {
       setViewMode('typingTest')
     }
   }, [editorUI.typingTestMode, setViewMode])
+
+  // Re-enter the full typing test after Back from analytics (typingTest
+  // origin). Runs once the editor has remounted (analyticsPageOpen false)
+  // so keymapEditorRef is live; the auto-restore effect is one-shot per uid
+  // and already fired, so this is the only path that re-enters here.
+  useEffect(() => {
+    if (analyticsPageOpen) return
+    if (!pendingTypingTestReentryRef.current) return
+    pendingTypingTestReentryRef.current = false
+    if (!editorUI.typingTestMode) keymapEditorRef.current?.toggleTypingTest()
+  }, [analyticsPageOpen, editorUI.typingTestMode])
 
   // Auto-restore last view mode once prefs are applied for the connected uid
   useEffect(() => {

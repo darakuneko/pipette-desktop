@@ -1204,6 +1204,12 @@
         "none": "All tests",
         "multi": "{{first}} +{{rest}}"
       },
+      "run": "Results",
+      "runOption": {
+        "none": "All runs",
+        "multi": "{{first}} +{{rest}}"
+      },
+      "dimensionLabel": "Filter by App or TypingTest",
       "unit": "Display",
       "unitOption": {
         "sec": "Seconds",

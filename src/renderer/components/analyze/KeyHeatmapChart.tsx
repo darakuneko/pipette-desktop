@@ -36,6 +36,7 @@ interface Props {
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot
   /** Persisted filter state for this tab — `selectedLayers` / `groups`
    * / ranking controls / normalization. Lifted to `TypingAnalyticsView`
@@ -264,7 +265,7 @@ function groupOf(groups: number[][], layer: number): number {
   return groups.findIndex((g) => g.includes(layer))
 }
 
-export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTestScopes, snapshot, heatmap, onHeatmapChange }: Props) {
+export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTestScopes, runIdScopes, snapshot, heatmap, onHeatmapChange }: Props) {
   const { t } = useTranslation()
   const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
@@ -291,7 +292,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     setLoading(true)
     void Promise.all(selectedLayers.map((layer) =>
       window.vialAPI
-        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes)
+        .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
         .catch(() => ({} as TypingHeatmapByCell)),
     )).then((results) => {
       if (cancelled) return
@@ -303,7 +304,7 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     return () => { cancelled = true }
     // selectedLayersKey carries the layer-set identity (joined string)
     // so an unchanged array doesn't refire on every render.
-  }, [uid, range, scopeKey, selectedLayersKey, appScopes, typingTestScopes])
+  }, [uid, range, scopeKey, selectedLayersKey, appScopes, typingTestScopes, runIdScopes])
 
   const layout = snapshot.layout as KeyboardLayout | null
 

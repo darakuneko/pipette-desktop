@@ -5,19 +5,19 @@
 // functions. `range` stays out of the persisted shape on purpose — the
 // default 7-day window re-arms each session via renderer-local state.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PipetteSettings } from '../../shared/types/pipette-settings'
-import { DEFAULT_PIPETTE_SETTINGS } from '../../shared/types/pipette-settings'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   appScopesEqual,
   deviceScopesEqual,
   normalizeAppScopes,
   normalizeDeviceScopes,
+  parseFilterDimension,
   type ActivityCalendarFilters,
   type ActivityFilters,
   type AnalyzeFilterSettings,
   type BigramFilters,
   type DeviceScope,
+  type FilterDimension,
   type ErgonomicsFilters,
   type HeatmapFilters,
   type IntervalFilters,
@@ -25,10 +25,16 @@ import {
   type LayoutComparisonFilters,
   type WpmFilters,
 } from '../../shared/types/analyze-filters'
+import type { AnalysisTabKey } from '../components/analyze/analyze-types'
 import { toLocalMonth } from '../components/analyze/analyze-streak-goal'
 import { DEFAULT_LEARNING_MIN_SAMPLE } from '../components/analyze/analyze-ergonomics-curve'
 
 const DEBOUNCE_MS = 300
+
+/** Stable empty scope array so the zeroed (inactive) dimension keeps a
+ * constant reference across renders — chart effect deps compare by
+ * identity and would otherwise re-fire every render. */
+const EMPTY_SCOPES: string[] = []
 
 export interface AnalyzeFiltersState {
   /** Single-select Device filter — held as an array so the persisted
@@ -47,6 +53,14 @@ export interface AnalyzeFiltersState {
   /** Selected typing-test labels (custom = text name, normal =
    * `mode (language)`). Empty = no filter. Same semantics as appScopes. */
   typingTestScopes: string[]
+  /** Selected run ids — second-level filter under `typingTestScopes`.
+   * Only applies while the typingTest dimension is active; zeroed in the
+   * effective filters otherwise. Empty = no run filter. */
+  runIdScopes: string[]
+  /** Which of `appScopes` / `typingTestScopes` is active. The inactive
+   * one is preserved here but zeroed in the effective filters the hook
+   * returns, so toggling back restores the prior selection. */
+  filterDimension: FilterDimension
   heatmap: Required<HeatmapFilters>
   wpm: Required<WpmFilters>
   interval: Required<IntervalFilters>
@@ -65,6 +79,8 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
   deviceScopes: ['own'],
   appScopes: [],
   typingTestScopes: [],
+  runIdScopes: [],
+  filterDimension: 'app',
   heatmap: {
     selectedLayers: [0],
     groups: [[0]],
@@ -126,6 +142,8 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
     deviceScopes: normalizeDeviceScopes(saved.deviceScopes),
     appScopes: normalizeAppScopes(saved.appScopes),
     typingTestScopes: normalizeAppScopes(saved.typingTestScopes),
+    runIdScopes: normalizeAppScopes(saved.runIdScopes),
+    filterDimension: parseFilterDimension(saved.filterDimension),
     heatmap: { ...DEFAULT_ANALYZE_FILTERS.heatmap, ...saved.heatmap },
     wpm: { ...DEFAULT_ANALYZE_FILTERS.wpm, ...saved.wpm },
     interval: { ...DEFAULT_ANALYZE_FILTERS.interval, ...saved.interval },
@@ -156,6 +174,8 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
     deviceScopes: state.deviceScopes,
     appScopes: state.appScopes,
     typingTestScopes: state.typingTestScopes,
+    runIdScopes: state.runIdScopes,
+    filterDimension: state.filterDimension,
     heatmap: state.heatmap,
     wpm: state.wpm,
     interval: state.interval,
@@ -168,10 +188,24 @@ function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
 }
 
 export interface UseAnalyzeFiltersReturn {
+  /** Effective filters: the inactive dimension's scopes are zeroed so
+   * charts / CSV always query the dimension the user is actually
+   * driving. Persisted state keeps both dimensions' raw selections. */
   filters: AnalyzeFiltersState
   ready: boolean
+  /** Raw (un-zeroed) App scope selection for binding the select control
+   * and saving snapshots — never zeroed by the active dimension. */
+  rawAppScopes: string[]
+  /** Raw TypingTest scope selection — see `rawAppScopes`. */
+  rawTypingTestScopes: string[]
+  /** Raw run-id selection for the second-level Results select — see
+   * `rawAppScopes`. */
+  rawRunIdScopes: string[]
   setDeviceScopes: (v: readonly DeviceScope[]) => void
   setAppScopes: (v: string[]) => void
+  setTypingTestScopes: (v: string[]) => void
+  setRunIdScopes: (v: string[]) => void
+  setFilterDimension: (v: FilterDimension) => void
   setHeatmap: (patch: Partial<HeatmapFilters>) => void
   setWpm: (patch: Partial<WpmFilters>) => void
   setInterval: (patch: Partial<IntervalFilters>) => void
@@ -206,6 +240,10 @@ function fieldForPane(paneKey: AnalyzePaneKey): 'filters' | 'compareFilters' {
 export function useAnalyzeFilters(
   uid: string | null,
   paneKey: AnalyzePaneKey = 'A',
+  // The active analysis tab. `byApp` charts compare across apps, so the
+  // app dimension is forced off there regardless of `filterDimension` —
+  // the effective filters reflect that without mutating stored state.
+  analysisTab?: AnalysisTabKey,
 ): UseAnalyzeFiltersReturn {
   const [filters, setFilters] = useState<AnalyzeFiltersState>(DEFAULT_ANALYZE_FILTERS)
   const [ready, setReady] = useState<boolean>(uid === null)
@@ -229,10 +267,13 @@ export function useAnalyzeFilters(
     if (!pendingUid || !pendingFilters) return
     void (async () => {
       try {
-        const prefs = await window.vialAPI.pipetteSettingsGet(pendingUid)
-        const base: PipetteSettings = prefs ?? DEFAULT_PIPETTE_SETTINGS
-        const nextAnalyze = { ...base.analyze, [field]: serializeFilters(pendingFilters) }
-        await window.vialAPI.pipetteSettingsSet(pendingUid, { ...base, analyze: nextAnalyze })
+        // PATCH only this pane's analyze sub-field. The main-side merge is
+        // one level deep on `analyze`, so the sibling pane's filters and
+        // every other field (typingTestResults etc.) are preserved without
+        // a read-modify-write here (which would otherwise race).
+        await window.vialAPI.pipetteSettingsPatch(pendingUid, {
+          analyze: { [field]: serializeFilters(pendingFilters) },
+        })
       } catch {
         // best-effort save — a failed write just drops the change
       }
@@ -327,6 +368,15 @@ export function useAnalyzeFilters(
     update((prev) => (appScopesEqual(prev.typingTestScopes, next) ? prev : { ...prev, typingTestScopes: next }))
   }, [update])
 
+  const setRunIdScopes = useCallback((v: string[]) => {
+    const next = normalizeAppScopes(v)
+    update((prev) => (appScopesEqual(prev.runIdScopes, next) ? prev : { ...prev, runIdScopes: next }))
+  }, [update])
+
+  const setFilterDimension = useCallback((v: FilterDimension) => {
+    update((prev) => (prev.filterDimension === v ? prev : { ...prev, filterDimension: v }))
+  }, [update])
+
   const setHeatmap = useCallback((patch: Partial<HeatmapFilters>) => {
     update((prev) => ({ ...prev, heatmap: { ...prev.heatmap, ...patch } }))
   }, [update])
@@ -367,12 +417,46 @@ export function useAnalyzeFilters(
     update((prev) => ({ ...prev, layoutComparison: { ...prev.layoutComparison, ...patch } }))
   }, [update])
 
+  // Zero the inactive dimension so charts only ever query the dimension
+  // the user is driving (the toggle's stored `filterDimension`). State
+  // keeps both raw selections for the toggle. The By App tab groups across
+  // apps, so an app-specific filter would collapse it to one slice — the
+  // app dimension is forced off there (the toggle still shows App, but it
+  // acts as "all apps").
+  const effectiveFilters = useMemo<AnalyzeFiltersState>(() => {
+    const dimension = filters.filterDimension
+    const appActive = dimension === 'app' && analysisTab !== 'byApp'
+    const ttActive = dimension === 'typingTest'
+    const appScopes = appActive ? filters.appScopes : EMPTY_SCOPES
+    const typingTestScopes = ttActive ? filters.typingTestScopes : EMPTY_SCOPES
+    // runIdScopes is a sub-filter of typingTestScopes, so it only applies
+    // while the typingTest dimension is active AND a material is selected.
+    // Without the material guard a stale run filter would keep narrowing
+    // charts after the material is cleared (RunSelect unmounts then, so the
+    // selection can no longer be edited away).
+    const runIdScopes =
+      ttActive && filters.typingTestScopes.length > 0 ? filters.runIdScopes : EMPTY_SCOPES
+    if (
+      appScopes === filters.appScopes &&
+      typingTestScopes === filters.typingTestScopes &&
+      runIdScopes === filters.runIdScopes
+    ) {
+      return filters
+    }
+    return { ...filters, appScopes, typingTestScopes, runIdScopes }
+  }, [filters, analysisTab])
+
   return {
-    filters,
+    filters: effectiveFilters,
     ready,
+    rawAppScopes: filters.appScopes,
+    rawTypingTestScopes: filters.typingTestScopes,
+    rawRunIdScopes: filters.runIdScopes,
     setDeviceScopes,
     setAppScopes,
     setTypingTestScopes,
+    setRunIdScopes,
+    setFilterDimension,
     setHeatmap,
     setWpm,
     setInterval,

@@ -21,6 +21,13 @@ export type AppNameField = string | null
  * compatibility with master files written before this field existed. */
 export type TypingTestField = string | null
 
+/** Individual test run id attached to per-minute payloads. '' for
+ * non-test (REC) input; a uuid for a specific run. Unlike appName /
+ * typingTest this is part of the row's identity (it's in the SQLite
+ * primary key) so two runs in one minute stay distinct. Optional on the
+ * wire for backward compatibility — absent rows read back as ''. */
+export type RunIdField = string
+
 export type JsonlRowKind =
   | 'scope'
   | 'char-minute'
@@ -48,6 +55,7 @@ export interface JsonlCharMinutePayload {
   count: number
   appName?: AppNameField
   typingTest?: TypingTestField
+  runId?: RunIdField
 }
 
 export interface JsonlMatrixMinutePayload {
@@ -62,6 +70,7 @@ export interface JsonlMatrixMinutePayload {
   holdCount: number
   appName?: AppNameField
   typingTest?: TypingTestField
+  runId?: RunIdField
 }
 
 export interface JsonlMinuteStatsPayload {
@@ -77,6 +86,7 @@ export interface JsonlMinuteStatsPayload {
   intervalMaxMs: number | null
   appName?: AppNameField
   typingTest?: TypingTestField
+  runId?: RunIdField
 }
 
 export interface JsonlSessionPayload {
@@ -102,6 +112,7 @@ export interface JsonlBigramMinutePayload {
   bigrams: Record<string, JsonlBigramMinuteEntry>
   appName?: AppNameField
   typingTest?: TypingTestField
+  runId?: RunIdField
 }
 
 /** Number of buckets in the bigram IKI histogram. Kept as a constant so
@@ -169,30 +180,36 @@ export function scopeRowId(scopeId: string): string {
   return `scope|${enc(scopeId)}`
 }
 
-export function charMinuteRowId(scopeId: string, minuteTs: number, char: string): string {
-  return `char|${enc(scopeId)}|${minuteTs}|${enc(char)}`
+// runId joins the per-minute row ids so two runs sharing a wall-clock
+// minute stay distinct lines in the append log (it's part of the SQLite
+// primary key too). '' is the non-test bucket; rows written before run
+// tagging used the same id without the run segment, but the cache rebuild
+// keys off the payload, not the id, so old files still merge correctly.
+export function charMinuteRowId(scopeId: string, minuteTs: number, runId: string, char: string): string {
+  return `char|${enc(scopeId)}|${minuteTs}|${enc(runId)}|${enc(char)}`
 }
 
 export function matrixMinuteRowId(
   scopeId: string,
   minuteTs: number,
+  runId: string,
   row: number,
   col: number,
   layer: number,
 ): string {
-  return `matrix|${enc(scopeId)}|${minuteTs}|${row}|${col}|${layer}`
+  return `matrix|${enc(scopeId)}|${minuteTs}|${enc(runId)}|${row}|${col}|${layer}`
 }
 
-export function minuteStatsRowId(scopeId: string, minuteTs: number): string {
-  return `stats|${enc(scopeId)}|${minuteTs}`
+export function minuteStatsRowId(scopeId: string, minuteTs: number, runId: string): string {
+  return `stats|${enc(scopeId)}|${minuteTs}|${enc(runId)}`
 }
 
 export function sessionRowId(sessionId: string): string {
   return `session|${enc(sessionId)}`
 }
 
-export function bigramMinuteRowId(scopeId: string, minuteTs: number): string {
-  return `bigram|${enc(scopeId)}|${minuteTs}`
+export function bigramMinuteRowId(scopeId: string, minuteTs: number, runId: string): string {
+  return `bigram|${enc(scopeId)}|${minuteTs}|${enc(runId)}`
 }
 
 /** Serialize a single row as a newline-terminated JSON line. */
@@ -233,7 +250,8 @@ function isCharMinutePayload(p: Record<string, unknown>): boolean {
     hasStringField(p, 'char') &&
     hasNumberField(p, 'count') &&
     isOptionalAppName(p) &&
-    isOptionalTypingTest(p)
+    isOptionalTypingTest(p) &&
+    isOptionalRunId(p)
   )
 }
 
@@ -249,7 +267,8 @@ function isMatrixMinutePayload(p: Record<string, unknown>): boolean {
     hasNumberField(p, 'tapCount') &&
     hasNumberField(p, 'holdCount') &&
     isOptionalAppName(p) &&
-    isOptionalTypingTest(p)
+    isOptionalTypingTest(p) &&
+    isOptionalRunId(p)
   )
 }
 
@@ -276,6 +295,14 @@ function isOptionalTypingTest(p: Record<string, unknown>): boolean {
   return v === null || typeof v === 'string'
 }
 
+/** runId is optional on the wire (rows written before run tagging omit
+ * it; they read back as ''). When present it must be a string — '' for
+ * non-test input or a run uuid. */
+function isOptionalRunId(p: Record<string, unknown>): boolean {
+  if (!('runId' in p)) return true
+  return typeof p.runId === 'string'
+}
+
 function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
   return (
     hasStringField(p, 'scopeId') &&
@@ -289,7 +316,8 @@ function isMinuteStatsPayload(p: Record<string, unknown>): boolean {
     isNumericOrNull(p, 'intervalP75Ms') &&
     isNumericOrNull(p, 'intervalMaxMs') &&
     isOptionalAppName(p) &&
-    isOptionalTypingTest(p)
+    isOptionalTypingTest(p) &&
+    isOptionalRunId(p)
   )
 }
 
@@ -320,6 +348,7 @@ function isBigramMinutePayload(p: Record<string, unknown>): boolean {
   if (!hasStringField(p, 'scopeId') || !hasNumberField(p, 'minuteTs')) return false
   if (!isOptionalAppName(p)) return false
   if (!isOptionalTypingTest(p)) return false
+  if (!isOptionalRunId(p)) return false
   const bigrams = p.bigrams
   if (typeof bigrams !== 'object' || bigrams === null) return false
   for (const value of Object.values(bigrams as Record<string, unknown>)) {

@@ -37,6 +37,7 @@ interface Props {
   /** App filter — see WpmChart.Props.appScopes. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot | null
   /** Persisted source / target read from `useAnalyzeFilters`. The
    * AnalyzePane filter row owns the picker UI; this view stays
@@ -57,6 +58,7 @@ export function LayoutComparisonView({
   deviceScopes,
   appScopes,
   typingTestScopes,
+  runIdScopes,
   snapshot,
   filter,
   onSkipPercentChange,
@@ -113,7 +115,7 @@ export function LayoutComparisonView({
       source,
       targets: [source, target],
       metrics: [...LAYOUT_COMPARISON_PHASE_1_METRICS],
-    }, appScopes, typingTestScopes)
+    }, appScopes, typingTestScopes, runIdScopes)
       .then((next) => {
         if (cancelled) return
         setResult(next)

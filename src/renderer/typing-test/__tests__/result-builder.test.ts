@@ -7,9 +7,29 @@ import {
   computeConsistency,
   isPbForConfig,
   trimResults,
+  typingTestResultMaterialLabel,
 } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
+
+describe('typingTestResultMaterialLabel', () => {
+  const base: TypingTestResult = {
+    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 10,
+    correctChars: 50, incorrectChars: 2, durationSeconds: 30,
+  }
+  it('uses mode (language) for normal modes', () => {
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'words', language: 'english' }))
+      .toBe('words (english)')
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'quote', language: 'japanese' }))
+      .toBe('quote (japanese)')
+  })
+  it('uses the snapshotted text name for custom mode', () => {
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'custom', customTextName: 'novel.txt' }))
+      .toBe('novel.txt')
+    // Falls back to 'custom' when the name wasn't captured.
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'custom' })).toBe('custom')
+  })
+})
 
 describe('computeRawWpm', () => {
   it('computes raw WPM from total chars and duration', () => {

@@ -54,6 +54,7 @@ interface Props {
    * mixed/unknown). */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   granularity: GranularityChoice
   viewMode: WpmViewMode
   /** Minimum `activeMs` (ms) a bucket / hour must clear to count
@@ -72,7 +73,7 @@ function formatHourWithWpm(hour: number, wpm: number): string {
 
 type WpmLineKey = 'wpm' | 'bksPercent'
 
-export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes, granularity, viewMode, minActiveMs }: Props) {
+export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes, runIdScopes, granularity, viewMode, minActiveMs }: Props) {
   const { t } = useTranslation()
   const [rows, setRows] = useState<TypingMinuteStatsRow[]>([])
   const [bksRows, setBksRows] = useState<TypingBksMinuteRow[]>([])
@@ -98,13 +99,13 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
+    listMinuteStatsForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
       .then((data) => { if (!cancelled) setRows(data) })
       .catch(() => { if (!cancelled) setRows([]) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
     // `scopeKey` is the canonical identity for `deviceScope`.
-  }, [uid, scopeKey, range, appScopes, typingTestScopes])
+  }, [uid, scopeKey, range, appScopes, typingTestScopes, runIdScopes])
 
   // The Bksp% overlay is always available in timeSeries mode; users
   // who don't want it click the legend to hide the line instead of
@@ -116,11 +117,11 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
       return
     }
     let cancelled = false
-    listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes)
+    listBksMinuteForScope(uid, deviceScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
       .then((data) => { if (!cancelled) setBksRows(data) })
       .catch(() => { if (!cancelled) setBksRows([]) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range, errorProxyActive, appScopes, typingTestScopes])
+  }, [uid, scopeKey, range, errorProxyActive, appScopes, typingTestScopes, runIdScopes])
 
   // Peak / lowest WPM come from a narrow aggregation IPC rather than
   // the timeseries rows so they reflect the entire range (including
@@ -133,15 +134,15 @@ export function WpmChart({ uid, range, deviceScopes, appScopes, typingTestScopes
     }
     let cancelled = false
     const peakPromise = isHashScope(deviceScope)
-      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScopes, typingTestScopes)
+      ? window.vialAPI.typingAnalyticsGetPeakRecordsForHash(uid, deviceScope.machineHash, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
       : isOwnScope(deviceScope)
-        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
-        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScopes, typingTestScopes)
+        ? window.vialAPI.typingAnalyticsGetPeakRecordsLocal(uid, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
+        : window.vialAPI.typingAnalyticsGetPeakRecords(uid, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes)
     void peakPromise
       .then((r) => { if (!cancelled) setPeakRecords(r) })
       .catch(() => { if (!cancelled) setPeakRecords(null) })
     return () => { cancelled = true }
-  }, [uid, scopeKey, range, appScopes, typingTestScopes])
+  }, [uid, scopeKey, range, appScopes, typingTestScopes, runIdScopes])
 
   const bucketMs = useMemo(
     () => (granularity === 'auto' ? pickBucketMs(range) : granularity),

@@ -6,7 +6,6 @@ import { renderHook, act, waitFor } from '@testing-library/react'
 import { useMissingKeyLabelNotice } from '../useMissingKeyLabelNotice'
 
 const pipetteSettingsGet = vi.fn()
-const pipetteSettingsSet = vi.fn().mockResolvedValue({ success: true })
 const keyLabelStoreList = vi.fn()
 const keyLabelStoreListAll = vi.fn()
 const keyLabelHubDetail = vi.fn().mockResolvedValue({ success: false, errorCode: 'NOT_FOUND' })
@@ -14,7 +13,6 @@ const keyLabelHubDetail = vi.fn().mockResolvedValue({ success: false, errorCode:
 Object.defineProperty(window, 'vialAPI', {
   value: {
     pipetteSettingsGet,
-    pipetteSettingsSet,
     keyLabelStoreList,
     keyLabelStoreListAll,
     keyLabelHubDetail,

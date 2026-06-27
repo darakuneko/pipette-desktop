@@ -75,6 +75,12 @@ interface TypingAnalyticsEventCommon {
    *  input. Resolved per-minute into the `typing_test` dimension (like the
    *  active-app tag), so Analyze can slice by which test it was. */
   typingTest?: string
+  /** Identifies the individual test run producing this keystroke (one
+   *  uuid per run, regenerated on every (re)start and carried across
+   *  pause/resume). Absent for ordinary Typing View REC input. Resolved
+   *  per-run into the `run_id` dimension so Analyze can slice a single
+   *  test material down to specific History runs. */
+  runId?: string
 }
 
 export type TypingAnalyticsEventPayload =

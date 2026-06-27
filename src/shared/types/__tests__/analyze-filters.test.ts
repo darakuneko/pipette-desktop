@@ -14,6 +14,7 @@ import {
   isValidAnalyzeFilterSettings,
   normalizeDeviceScopes,
   parseDeviceScope,
+  parseFilterDimension,
   primaryDeviceScope,
   scopeFromSelectValue,
   scopeToSelectValue,
@@ -166,6 +167,14 @@ describe('isValidAnalyzeFilterSettings', () => {
         deviceScopes: { kind: 'hash', machineHash: 'abc' },
       }),
     ).toBe(false)
+  })
+
+  it('accepts a valid filterDimension and rejects unknown values', () => {
+    expect(isValidAnalyzeFilterSettings({ filterDimension: 'app' })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ filterDimension: 'typingTest' })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({})).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ filterDimension: 'bogus' })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ filterDimension: 1 })).toBe(false)
   })
 
   it('accepts a valid bigrams slot', () => {
@@ -386,5 +395,19 @@ describe('isValidAnalyzeFilterSettings (activity view / display / calendar)', ()
   it('rejects an unknown activity metric (calendar is no longer a metric)', () => {
     expect(isValidAnalyzeFilterSettings({ activity: { metric: 'calendar' } })).toBe(false)
     expect(isValidAnalyzeFilterSettings({ activity: { metric: 'nonsense' } })).toBe(false)
+  })
+})
+
+describe('parseFilterDimension', () => {
+  it('passes through the two valid dimensions', () => {
+    expect(parseFilterDimension('app')).toBe('app')
+    expect(parseFilterDimension('typingTest')).toBe('typingTest')
+  })
+
+  it('defaults to app for absent or malformed input', () => {
+    expect(parseFilterDimension(undefined)).toBe('app')
+    expect(parseFilterDimension(null)).toBe('app')
+    expect(parseFilterDimension('bogus')).toBe('app')
+    expect(parseFilterDimension(42)).toBe('app')
   })
 })

@@ -19,6 +19,23 @@ export function computeConsistency(wpmHistory: number[]): number {
   return Math.max(0, Math.round(100 - cv))
 }
 
+/** The single source of truth for the analytics `typing_test` material
+ *  label: custom → the imported text name, every other mode →
+ *  `mode (language)`. Both the recording side (`typingTestAnalyticsLabel`
+ *  in useInputModes) and the Analyze run filter
+ *  (`typingTestResultMaterialLabel`) funnel through this so the join key
+ *  stays byte-identical on both ends. */
+export function materialLabel(mode: string, language: string, customName: string | undefined): string {
+  if (mode === 'custom') return customName ?? 'custom'
+  return `${mode} (${language})`
+}
+
+/** The material label a finished result was recorded under — used by the
+ *  Analyze run filter to match a History row to its keystrokes. */
+export function typingTestResultMaterialLabel(result: TypingTestResult): string {
+  return materialLabel(result.mode ?? 'words', result.language ?? '', result.customTextName)
+}
+
 export function configKey(result: TypingTestResult): string {
   return `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}`
 }
@@ -62,6 +79,8 @@ export interface BuildTypingTestResultInput {
   wpmHistory: number[]
   /** Imported-text display name (custom mode); ignored for other modes. */
   customTextName?: string
+  /** Run id of the finished run, linking History to analytics keystrokes. */
+  runId?: string
 }
 
 export function buildTypingTestResult(input: BuildTypingTestResultInput): TypingTestResult {
@@ -74,6 +93,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
 
   return {
     date: new Date().toISOString(),
+    runId: input.runId,
     wpm: input.wpm,
     accuracy: input.accuracy,
     wordCount: input.wordCount,

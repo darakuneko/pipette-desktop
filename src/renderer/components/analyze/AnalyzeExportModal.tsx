@@ -60,6 +60,7 @@ export interface AnalyzeExportContext {
    * = "All apps" — same row set as the pre-Monitor-App export. */
   appScopes: string[]
   typingTestScopes: string[]
+  runIdScopes: string[]
   snapshot: TypingKeymapSnapshot | null
   heatmap: Required<HeatmapFilters>
   wpm: { granularity: GranularityChoice; viewMode: WpmViewMode; minActiveMs: number }
@@ -275,6 +276,7 @@ function pickBuilders(
     deviceScope: ctx.deviceScope,
     appScopes: ctx.appScopes,
     typingTestScopes: ctx.typingTestScopes,
+    runIdScopes: ctx.runIdScopes,
   }
   if (selected.summary) {
     out.push(buildSummaryCsv(scope))

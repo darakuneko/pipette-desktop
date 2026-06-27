@@ -59,12 +59,21 @@ export interface MinuteSnapshot {
    *  single-or-null semantics as {@link appName}, but sourced per-event
    *  (each keystroke carries its own `typingTest`) rather than at flush. */
   typingTest: string | null
+  /** Individual test run id for this bucket, or '' for non-test (REC)
+   *  input. Unlike appName / typingTest this is part of the bucket key
+   *  (see {@link MinuteBuffer.addEvent}), so a single minute with two
+   *  runs splits into two snapshots instead of collapsing to null — the
+   *  run dimension stays exact. */
+  runId: string
 }
 
 interface Entry {
   scopeId: string
   fingerprint: TypingAnalyticsFingerprint
   minuteTs: number
+  /** Run id for this bucket ('' = non-test input). Part of the bucket
+   *  key, so every event in this entry shares it. */
+  runId: string
   charCounts: Map<string, number>
   matrixCounts: Map<string, MatrixCellCounts>
   intervals: number[]
@@ -131,6 +140,7 @@ function finalize(entry: Entry): MinuteSnapshot {
     bigrams: entry.bigrams,
     appName,
     typingTest,
+    runId: entry.runId,
   }
 }
 
@@ -146,13 +156,18 @@ export class MinuteBuffer {
   addEvent(event: TypingAnalyticsEvent, fingerprint: TypingAnalyticsFingerprint): void {
     const scopeId = canonicalScopeKey(fingerprint)
     const minuteTs = floorMinute(event.ts)
-    const key = `${scopeId}|${minuteTs}`
+    // run id joins the bucket key so two runs sharing a wall-clock minute
+    // land in separate snapshots (exact per-run aggregation). '' is the
+    // non-test bucket, identical to the pre-run-tagging behaviour.
+    const runId = event.runId ?? ''
+    const key = `${scopeId}|${minuteTs}|${runId}`
     let entry = this.buffers.get(key)
     if (!entry) {
       entry = {
         scopeId,
         fingerprint,
         minuteTs,
+        runId,
         charCounts: new Map(),
         matrixCounts: new Map(),
         intervals: [],

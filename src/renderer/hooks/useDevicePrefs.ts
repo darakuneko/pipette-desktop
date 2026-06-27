@@ -332,7 +332,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const saveCurrentPrefs = useCallback(() => {
     const uid = uidRef.current
     if (!uid) return
-    window.vialAPI.pipetteSettingsSet(uid, {
+    window.vialAPI.pipetteSettingsPatch(uid, {
       _rev: 1,
       keyboardLayout: layoutRef.current,
       autoAdvance: autoAdvanceRef.current,
@@ -348,11 +348,14 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestLanguage: typingTestLanguageRef.current,
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
-      typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current || undefined,
-      typingTestMemory: typingTestMemoryRef.current,
+      typingTestViewOnlyAlwaysOnTop: typingTestViewOnlyAlwaysOnTopRef.current,
+      // `null` clears the persisted memory; the field-level PATCH skips
+      // `undefined`, so a bare `undefined` would leave a stale paused run
+      // on disk after finish / restart.
+      typingTestMemory: typingTestMemoryRef.current ?? null,
       typingTestDisplayLines: typingTestDisplayLinesRef.current,
       typingTestFontSize: typingTestFontSizeRef.current,
-      typingRecordEnabled: typingRecordEnabledRef.current || undefined,
+      typingRecordEnabled: typingRecordEnabledRef.current,
       typingViewMenuTab: typingViewMenuTabRef.current,
       viewMode: viewModeRef.current,
     }).catch(() => {

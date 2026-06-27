@@ -11,6 +11,21 @@
 export const DEVICE_SCOPES = ['own', 'all'] as const
 export type StaticDeviceScope = typeof DEVICE_SCOPES[number]
 
+/** Which of the two mutually-exclusive minute-tag dimensions the Analyze
+ * filter row is currently driving. App and TypingTest filters target the
+ * same charts and are never useful together, so the UI shows one at a
+ * time (segmented toggle) and zeroes the inactive dimension's scopes
+ * before querying. */
+export const FILTER_DIMENSIONS = ['app', 'typingTest'] as const
+export type FilterDimension = typeof FILTER_DIMENSIONS[number]
+
+/** Coerce a persisted value to a valid `FilterDimension`, defaulting to
+ * `'app'` (the historical single-dimension behaviour) for absent or
+ * malformed input. */
+export function parseFilterDimension(value: unknown): FilterDimension {
+  return value === 'typingTest' ? 'typingTest' : 'app'
+}
+
 /** Individual remote machine-hash scope — picked from the Device
  * select when a user has data from another machine synced in. */
 export interface HashDeviceScope {
@@ -303,6 +318,15 @@ export interface AnalyzeFilterSettings {
   /** Selected typing-test labels; same persistence/normalization contract
    * as appScopes. */
   typingTestScopes?: string[]
+  /** Selected run ids — a second-level filter under typingTestScopes that
+   * narrows a chosen test material to specific History runs. Only applies
+   * when the typingTest dimension is active; same normalization contract
+   * as appScopes. */
+  runIdScopes?: string[]
+  /** Which dimension the filter row is driving. App and TypingTest are
+   * mutually exclusive; the inactive one's scopes are kept in storage
+   * but zeroed before querying. Absent = `'app'` (legacy default). */
+  filterDimension?: FilterDimension
   heatmap?: HeatmapFilters
   wpm?: WpmFilters
   interval?: IntervalFilters
@@ -512,6 +536,15 @@ export function isValidAnalyzeFilterSettings(value: unknown): boolean {
   if (o.typingTestScopes !== undefined) {
     if (!Array.isArray(o.typingTestScopes)) return false
     if (!o.typingTestScopes.every((v) => typeof v === 'string')) return false
+  }
+  if (o.runIdScopes !== undefined) {
+    if (!Array.isArray(o.runIdScopes)) return false
+    if (!o.runIdScopes.every((v) => typeof v === 'string')) return false
+  }
+  if (o.filterDimension !== undefined
+    && o.filterDimension !== 'app'
+    && o.filterDimension !== 'typingTest') {
+    return false
   }
   if (!isValidHeatmapFilters(o.heatmap)) return false
   if (!isValidWpmFilters(o.wpm)) return false

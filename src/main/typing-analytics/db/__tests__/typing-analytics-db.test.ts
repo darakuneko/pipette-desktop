@@ -196,6 +196,38 @@ describe('TypingAnalyticsDB', () => {
     expect(stats.active_ms).toBe(2_000)
   })
 
+  it('keeps two runs in the same minute as separate rows (run_id in the key)', () => {
+    db.upsertScope(sampleScope())
+    const stats = (runId: string, keystrokes: number) => ({
+      scopeId: 'scope-1', minuteTs: 60_000, keystrokes, activeMs: 500,
+      intervalAvgMs: 500, intervalMinMs: 500, intervalP25Ms: 500,
+      intervalP50Ms: 500, intervalP75Ms: 500, intervalMaxMs: 500, runId,
+    })
+    db.writeMinute(stats('run-1', 2), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 2, runId: 'run-1' }], [], 2_000)
+    db.writeMinute(stats('run-2', 3), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 3, runId: 'run-2' }], [], 2_000)
+    // Plain REC input in the same minute lands in the '' bucket.
+    db.writeMinute(stats('', 1), [{ scopeId: 'scope-1', minuteTs: 60_000, char: 'a', count: 1 }], [], 2_000)
+
+    const conn = db.getConnection()
+    const rows = conn.prepare(
+      'SELECT run_id AS runId, count FROM typing_char_minute WHERE scope_id = ? AND minute_ts = ? AND char = ? ORDER BY run_id',
+    ).all('scope-1', 60_000, 'a') as Array<{ runId: string; count: number }>
+    // Three distinct rows — no collapse despite sharing minute + char.
+    expect(rows).toEqual([
+      { runId: '', count: 1 },
+      { runId: 'run-1', count: 2 },
+      { runId: 'run-2', count: 3 },
+    ])
+    const statRows = conn.prepare(
+      'SELECT run_id AS runId, keystrokes FROM typing_minute_stats WHERE scope_id = ? AND minute_ts = ? ORDER BY run_id',
+    ).all('scope-1', 60_000) as Array<{ runId: string; keystrokes: number }>
+    expect(statRows).toEqual([
+      { runId: '', keystrokes: 1 },
+      { runId: 'run-1', keystrokes: 2 },
+      { runId: 'run-2', keystrokes: 3 },
+    ])
+  })
+
   it('accumulates matrix counts additively on conflict', () => {
     db.upsertScope(sampleScope())
     db.writeMinute(
@@ -569,6 +601,60 @@ describe('TypingAnalyticsDB', () => {
       // Empty filter = no filter: includes the untagged 60_000 cell (3) + 5 + 9.
       const unfiltered = db.listMatrixCellsForUid('0xAABB', 0, 300_000)
       expect(cell(unfiltered)).toBe(17)
+    })
+
+    it('filters cell queries by runIdScopes (second-level run filter)', () => {
+      // Two runs of the same material sharing a wall-clock minute stay
+      // separable thanks to run_id in the key.
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 4, typingTest: 'words (english)', runId: 'run-a' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 180_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 4, typingTest: 'words (english)', runId: 'run-a' }],
+        2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 6, typingTest: 'words (english)', runId: 'run-b' },
+        [],
+        [{ scopeId: 'scope-aabb-local', minuteTs: 180_000, row: 1, col: 1, layer: 0, keycode: 0x05, count: 6, typingTest: 'words (english)', runId: 'run-b' }],
+        2_000,
+      )
+
+      const cell = (rows: { count: number }[]): number => rows.reduce((s, r) => s + r.count, 0)
+      // appScopes [], typingTestScopes [], runIdScopes ['run-a'] → only run-a's 4.
+      const runA = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-a'])
+      expect(cell(runA)).toBe(4)
+      const runB = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-b'])
+      expect(cell(runB)).toBe(6)
+      const both = db.listMatrixCellsForUid('0xAABB', 0, 300_000, [], [], ['run-a', 'run-b'])
+      expect(cell(both)).toBe(10)
+    })
+
+    it('lists distinct run ids in range with firstMs, excluding the non-test bucket', () => {
+      // run-old: one minute. run-new: two minutes (its start is the earlier).
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 120_000, ...baseStats, keystrokes: 3, typingTest: 'novel.txt', runId: 'run-old' },
+        [], [], 2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 4, typingTest: 'words (english)', runId: 'run-new' },
+        [], [], 2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 240_000, ...baseStats, keystrokes: 5, typingTest: 'words (english)', runId: 'run-new' },
+        [], [], 2_000,
+      )
+
+      // Source of truth = analytics: both runs, newest start first; the
+      // untagged 60_000 minute (run_id '') is the REC bucket and excluded.
+      const all = db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000)
+      expect(all.map((r) => r.runId)).toEqual(['run-new', 'run-old'])
+      const runNew = all.find((r) => r.runId === 'run-new')
+      expect(runNew?.firstMs).toBe(180_000) // earliest of its two minutes
+      expect(runNew?.keystrokes).toBe(9) // 4 + 5 summed
+
+      // Material scope narrows the run list to that test's runs.
+      expect(db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000, ['novel.txt']).map((r) => r.runId)).toEqual(['run-old'])
+      expect(db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000, ['words (english)']).map((r) => r.runId)).toEqual(['run-new'])
     })
 
     it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {

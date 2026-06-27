@@ -7,6 +7,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
+import { withWriteLock } from './per-uid-write-lock'
 import { upsertKeyboardMeta } from './sync/keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../shared/types/keyboard-meta'
 import { secureHandle } from './ipc-guard'
@@ -86,15 +87,6 @@ async function updateEntry(
       return { success: false, error: String(err) }
     }
   })
-}
-
-// Simple per-uid write serialization to prevent race conditions
-const writeLocks = new Map<string, Promise<unknown>>()
-function withWriteLock<T>(uid: string, fn: () => Promise<T>): Promise<T> {
-  const prev = writeLocks.get(uid) ?? Promise.resolve()
-  const next = prev.then(fn, fn)
-  writeLocks.set(uid, next)
-  return next
 }
 
 export function setupSnapshotStore(): void {

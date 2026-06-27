@@ -24,6 +24,7 @@ interface Props {
   appScopes: string[]
   /** TypingTest filter — same contract as appScopes, forwarded alongside. */
   typingTestScopes: string[]
+  runIdScopes: string[]
   /** Snapshot the parent already resolved for the current scope —
    * Profile uses it to map bigram keycodes to fingers / hands. */
   snapshot: TypingKeymapSnapshot | null
@@ -32,8 +33,8 @@ interface Props {
   fingerOverrides: Record<string, FingerType>
 }
 
-export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, snapshot, fingerOverrides }: Props) {
-  const { daily } = useDailySummary(uid, deviceScope, appScopes, typingTestScopes)
+export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, runIdScopes, snapshot, fingerOverrides }: Props) {
+  const { daily } = useDailySummary(uid, deviceScope, appScopes, typingTestScopes, runIdScopes)
   const today = useLocalToday()
   return (
     <div className="flex h-full w-full flex-col gap-3">
@@ -44,6 +45,7 @@ export function SummaryView({ uid, deviceScope, appScopes, typingTestScopes, sna
         deviceScope={deviceScope}
         appScopes={appScopes}
         typingTestScopes={typingTestScopes}
+        runIdScopes={runIdScopes}
         daily={daily}
         today={today}
         snapshot={snapshot}
