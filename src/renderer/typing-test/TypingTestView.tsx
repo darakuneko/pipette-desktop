@@ -4,12 +4,14 @@ import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } fr
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RotateCcw } from 'lucide-react'
-import { ICON_XL } from '../constants/ui-tokens'
+import { ICON_XL, BTN_TOGGLE_INACTIVE } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
 import { Tooltip } from '../components/ui/Tooltip'
+import { HistoryToggle } from '../components/editors/HistoryToggle'
+import type { TypingTestResult } from '../../shared/types/pipette-settings'
 
 const GAP_Y_PX = 4 // corresponds to Tailwind gap-y-1 (0.25rem at 16px base)
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
@@ -39,6 +41,15 @@ interface Props {
   /** Name the just-finished result inline from the completion screen
    *  (imported custom text only). Keyed to the most recent saved result. */
   onNameResult?: (name: string) => void
+  /** Open the Analyze view from the test header. Disabled while a test is
+   *  actively running so the user can't navigate away mid-run. */
+  onViewAnalytics?: () => void
+  /** Saved results powering the header History button (moved here from the
+   *  pane so the test screen carries its own History + Analyze controls). */
+  history?: TypingTestResult[]
+  deviceName?: string
+  onRenameResult?: (date: string, name: string) => void
+  onDeleteResult?: (date: string) => void
 }
 
 function formatTime(seconds: number): string {
@@ -98,6 +109,11 @@ export function TypingTestView({
   displayLines = DEFAULT_DISPLAY_LINES,
   fontSize = DEFAULT_FONT_SIZE,
   onNameResult,
+  onViewAnalytics,
+  history,
+  deviceName,
+  onRenameResult,
+  onDeleteResult,
 }: Props) {
   const { t } = useTranslation()
   const showStats = state.status === 'running' || state.status === 'finished' || state.status === 'paused'
@@ -254,6 +270,32 @@ export function TypingTestView({
 
   return (
     <div data-testid="typing-test-view" className="flex flex-col items-center gap-6 px-6 py-8">
+      {/* Header toolbar: History + Analyze. Analyze is disabled while a
+          test is running so the user can't navigate away mid-run. Shown in
+          every mode (the settings bar below is hidden for custom text). */}
+      {(onViewAnalytics || (history && history.length > 0)) && (
+        <div className="flex w-full items-center justify-end gap-3">
+          {history && history.length > 0 && (
+            <HistoryToggle
+              results={history}
+              deviceName={deviceName}
+              onRename={onRenameResult}
+              onDelete={onDeleteResult}
+            />
+          )}
+          {onViewAnalytics && (
+            <button
+              type="button"
+              data-testid="typing-test-view-analytics"
+              className={`${BTN_TOGGLE_INACTIVE} disabled:cursor-not-allowed disabled:opacity-40`}
+              disabled={state.status === 'running'}
+              onClick={onViewAnalytics}
+            >
+              {t('editor.typingTest.viewAnalytics')}
+            </button>
+          )}
+        </div>
+      )}
       {/* Settings bar — hidden for imported custom text: its words/time/quote
           tabs don't apply, so dropping it frees space for the reading area. */}
       {config.mode !== 'custom' && (

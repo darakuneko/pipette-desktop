@@ -10,7 +10,6 @@ import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
-import { HistoryToggle } from './HistoryToggle'
 import { KeyboardPane } from './KeyboardPane'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
@@ -23,6 +22,7 @@ const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN 
 const FONT_OPTIONS = Array.from({ length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 }, (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP)
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
+import type { AnalyticsOrigin } from './keymap-editor-types'
 
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -91,7 +91,7 @@ export interface TypingTestPaneProps {
   /** Called when the user picks "View Analytics" from the REC tab.
    * The parent owns the navigation — the pane only surfaces the
    * entry point. */
-  onViewAnalytics?: () => void
+  onViewAnalytics?: (origin: AnalyticsOrigin) => void
   /** Keyboard uid used for the typing-view heatmap query. The heatmap
    * stays hidden while this is unset or recording is off so a session
    * without a device never sees stale overlay data. */
@@ -395,6 +395,11 @@ export function TypingTestPane({
             const date = typingTestHistory?.[0]?.date
             if (date) onRenameTypingTestResult?.(date, name)
           }}
+          onViewAnalytics={onViewAnalytics ? () => onViewAnalytics('typingTest') : undefined}
+          history={typingTestHistory}
+          deviceName={deviceName}
+          onRenameResult={onRenameTypingTestResult}
+          onDeleteResult={onDeleteTypingTestResult}
         />
       )}
       <div
@@ -497,9 +502,6 @@ export function TypingTestPane({
                 )}
               </div>
               <div className="flex items-center gap-3">
-                {typingTestHistory && typingTestHistory.length > 0 && (
-                  <HistoryToggle results={typingTestHistory} deviceName={deviceName} onRename={onRenameTypingTestResult} onDelete={onDeleteTypingTestResult} />
-                )}
                 {/* Memory mode (imported custom text): pause while running, or
                     resume a saved snapshot. */}
                 {typingTest.config.mode === 'custom' && (
@@ -711,7 +713,7 @@ export function TypingTestPane({
                     className={`whitespace-nowrap ${BTN_TOGGLE_INACTIVE}`}
                     onClick={() => {
                       setViewOnlyControlsOpen(false)
-                      onViewAnalytics()
+                      onViewAnalytics('typingView')
                     }}
                   >
                     {t('editor.typingTest.viewAnalytics')}
