@@ -704,6 +704,8 @@ export function AnalyzePane({
       {rawTypingTestScopes.length > 0 && (
         <RunSelect
           uid={kbUid}
+          range={range}
+          deviceScopes={deviceScopes}
           materialScopes={rawTypingTestScopes}
           value={rawRunIdScopes}
           onChange={setRunIdScopes}

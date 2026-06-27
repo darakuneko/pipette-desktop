@@ -697,6 +697,24 @@ export function setupTypingAnalyticsIpc(): void {
     },
   )
 
+  // Distinct run ids in range — the per-run ("Results") filter's options.
+  // The analytics DB is the source of truth for which runs exist;
+  // `typingTestScopes` narrows them to the selected material(s).
+  secureHandle(
+    IpcChannels.TYPING_ANALYTICS_LIST_TYPING_TEST_RUNS_FOR_RANGE,
+    async (_event, uid, sinceMs, untilMs, scope, typingTestScopes): Promise<{ runId: string; keystrokes: number; firstMs: number }[]> => {
+      const args = await parseAppRangeArgs(uid, sinceMs, untilMs, scope)
+      if (!args) return []
+      return getTypingAnalyticsDB().listTypingTestRunsForUidInRange(
+        args.uid,
+        args.machineHash,
+        args.sinceMs,
+        args.untilMs,
+        normalizeAppScopes(typingTestScopes),
+      )
+    },
+  )
+
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_GET_APP_USAGE_FOR_RANGE,
     async (_event, uid, sinceMs, untilMs, scope): Promise<{ name: string; keystrokes: number; activeMs: number }[]> => {

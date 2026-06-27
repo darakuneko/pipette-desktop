@@ -326,6 +326,7 @@ export class TypingAnalyticsDB {
   // serves both "all devices" and "this device" scopes.
   private readonly selectAppsForUidInRangeStmt: Statement
   private readonly selectTypingTestsForUidInRangeStmt: Statement
+  private readonly selectTypingTestRunsForUidInRangeStmt: Statement
   private readonly selectAppUsageForUidInRangeStmt: Statement
   private readonly selectWpmByAppForUidInRangeStmt: Statement
 
@@ -1156,6 +1157,29 @@ export class TypingAnalyticsDB {
          AND t.typing_test IS NOT NULL
        GROUP BY t.typing_test
        ORDER BY keystrokes DESC
+    `)
+
+    // Distinct typing-test run ids in range — the per-run ("Results") filter's
+    // option source. run_id '' is the non-test (REC) bucket, so it's excluded.
+    // @typingTestsJson narrows runs to the selected material(s); empty = all.
+    // firstMs (MIN minute_ts) is the run's start, used to label runs that have
+    // no saved typingTestResults entry.
+    this.selectTypingTestRunsForUidInRangeStmt = this.db.prepare(`
+      SELECT t.run_id AS runId,
+             SUM(t.keystrokes) AS keystrokes,
+             MIN(t.minute_ts) AS firstMs
+        FROM typing_minute_stats t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND (@machineHash IS NULL OR s.machine_hash = @machineHash)
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         AND t.run_id != ''
+         ${typingTestFilterClause('t.typing_test')}
+       GROUP BY t.run_id
+       ORDER BY firstMs DESC
     `)
 
     // App-Usage Distribution aggregates per app, plus a synthetic
@@ -2131,6 +2155,27 @@ export class TypingAnalyticsDB {
       keystrokes: number
       activeMs: number
     }[]
+  }
+
+  /** Distinct typing-test run ids with activity in range — the per-run
+   * ("Results") filter's option source. Runs are the source of truth for
+   * what exists; `typingTestScopes` narrows them to the selected
+   * material(s) (empty = all). `firstMs` is the run's start minute, used to
+   * label runs that have no saved typingTestResults entry. */
+  listTypingTestRunsForUidInRange(
+    uid: string,
+    machineHash: string | null,
+    sinceMs: number,
+    untilMs: number,
+    typingTestScopes: readonly string[] = [],
+  ): { runId: string; keystrokes: number; firstMs: number }[] {
+    return this.selectTypingTestRunsForUidInRangeStmt.all({
+      uid,
+      machineHash,
+      sinceMs,
+      untilMs,
+      typingTestsJson: JSON.stringify(typingTestScopes),
+    }) as { runId: string; keystrokes: number; firstMs: number }[]
   }
 
   /** Per-app keystroke / activeMs aggregates including a synthetic

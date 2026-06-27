@@ -424,6 +424,14 @@ const vialAPI = {
     scope: unknown,
   ): Promise<{ name: string; keystrokes: number; activeMs: number }[]> =>
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_TYPING_TESTS_FOR_RANGE, uid, sinceMs, untilMs, scope),
+  typingAnalyticsListTypingTestRunsForRange: (
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+    typingTestScopes: string[],
+  ): Promise<{ runId: string; keystrokes: number; firstMs: number }[]> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_LIST_TYPING_TEST_RUNS_FOR_RANGE, uid, sinceMs, untilMs, scope, typingTestScopes),
   typingAnalyticsGetAppUsageForRange: (
     uid: string,
     sinceMs: number,

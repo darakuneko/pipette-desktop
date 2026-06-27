@@ -223,6 +223,17 @@ export interface VialAPI {
     untilMs: number,
     scope: unknown,
   ): Promise<{ name: string; keystrokes: number; activeMs: number }[]>
+  /** Distinct run ids in range, narrowed to the selected material(s). The
+   * analytics DB is the source of truth for which runs exist; labels are
+   * resolved separately from typingTestResults. `firstMs` is the run's
+   * start minute, for labeling runs with no saved result. */
+  typingAnalyticsListTypingTestRunsForRange(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    scope: unknown,
+    typingTestScopes: string[],
+  ): Promise<{ runId: string; keystrokes: number; firstMs: number }[]>
   typingAnalyticsGetAppUsageForRange(
     uid: string,
     sinceMs: number,

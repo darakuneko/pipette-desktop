@@ -430,8 +430,12 @@ export function useAnalyzeFilters(
     const appScopes = appActive ? filters.appScopes : EMPTY_SCOPES
     const typingTestScopes = ttActive ? filters.typingTestScopes : EMPTY_SCOPES
     // runIdScopes is a sub-filter of typingTestScopes, so it only applies
-    // while the typingTest dimension is active.
-    const runIdScopes = ttActive ? filters.runIdScopes : EMPTY_SCOPES
+    // while the typingTest dimension is active AND a material is selected.
+    // Without the material guard a stale run filter would keep narrowing
+    // charts after the material is cleared (RunSelect unmounts then, so the
+    // selection can no longer be edited away).
+    const runIdScopes =
+      ttActive && filters.typingTestScopes.length > 0 ? filters.runIdScopes : EMPTY_SCOPES
     if (
       appScopes === filters.appScopes &&
       typingTestScopes === filters.typingTestScopes &&

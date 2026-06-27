@@ -301,6 +301,24 @@ describe('useAnalyzeFilters', () => {
     expect(result.current.filters.typingTestScopes).toEqual(['words (english)'])
   })
 
+  it('drops the effective run filter when no material is selected', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+
+    act(() => {
+      result.current.setFilterDimension('typingTest')
+      result.current.setTypingTestScopes(['words (english)'])
+      result.current.setRunIdScopes(['run-1'])
+    })
+    expect(result.current.filters.runIdScopes).toEqual(['run-1'])
+
+    // Clearing the material unmounts RunSelect; the stale run id must not
+    // keep filtering charts (raw selection is preserved though).
+    act(() => { result.current.setTypingTestScopes([]) })
+    expect(result.current.filters.runIdScopes).toEqual([])
+    expect(result.current.rawRunIdScopes).toEqual(['run-1'])
+  })
+
   it('persists runIdScopes through setRunIdScopes', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))

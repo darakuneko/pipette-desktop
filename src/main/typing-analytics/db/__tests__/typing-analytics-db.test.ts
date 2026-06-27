@@ -629,6 +629,34 @@ describe('TypingAnalyticsDB', () => {
       expect(cell(both)).toBe(10)
     })
 
+    it('lists distinct run ids in range with firstMs, excluding the non-test bucket', () => {
+      // run-old: one minute. run-new: two minutes (its start is the earlier).
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 120_000, ...baseStats, keystrokes: 3, typingTest: 'novel.txt', runId: 'run-old' },
+        [], [], 2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 180_000, ...baseStats, keystrokes: 4, typingTest: 'words (english)', runId: 'run-new' },
+        [], [], 2_000,
+      )
+      db.writeMinute(
+        { scopeId: 'scope-aabb-local', minuteTs: 240_000, ...baseStats, keystrokes: 5, typingTest: 'words (english)', runId: 'run-new' },
+        [], [], 2_000,
+      )
+
+      // Source of truth = analytics: both runs, newest start first; the
+      // untagged 60_000 minute (run_id '') is the REC bucket and excluded.
+      const all = db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000)
+      expect(all.map((r) => r.runId)).toEqual(['run-new', 'run-old'])
+      const runNew = all.find((r) => r.runId === 'run-new')
+      expect(runNew?.firstMs).toBe(180_000) // earliest of its two minutes
+      expect(runNew?.keystrokes).toBe(9) // 4 + 5 summed
+
+      // Material scope narrows the run list to that test's runs.
+      expect(db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000, ['novel.txt']).map((r) => r.runId)).toEqual(['run-old'])
+      expect(db.listTypingTestRunsForUidInRange('0xAABB', MACHINE_HASH, 0, 300_000, ['words (english)']).map((r) => r.runId)).toEqual(['run-new'])
+    })
+
     it('tombstoneRowsForUidInRange flips is_deleted on matching rows and bumps updated_at', () => {
       const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
       expect(result.charMinutes).toBe(2) // aabb-local + aabb-remote at minute 60_000
