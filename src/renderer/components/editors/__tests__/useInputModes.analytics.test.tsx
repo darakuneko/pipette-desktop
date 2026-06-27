@@ -77,9 +77,11 @@ describe('useInputModes — typing analytics dispatch', () => {
     expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
   })
 
-  it('dispatches a typingTest-tagged event in regular typing-test mode, even with REC off', () => {
-    // The editor test path is independent of the REC toggle: a running test
-    // always feeds analytics, tagged with its typing_test label.
+  it('does not tag editor-test keystrokes before the test is running', () => {
+    // Entering the test view auto-starts a countdown on the default config,
+    // so a press made before the run starts must NOT be recorded — otherwise
+    // it lands as a phantom material (e.g. `words (english)`) for a run that
+    // never completes. The editor path (REC off) drops it entirely.
     const { result } = renderUseInputModes({
       typingRecordEnabled: false,
       typingTestViewOnly: false,
@@ -89,7 +91,34 @@ describe('useInputModes — typing analytics dispatch', () => {
       result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
     })
 
-    expect(mockTypingAnalyticsEvent).toHaveBeenCalledTimes(1)
+    expect(mockTypingAnalyticsEvent).not.toHaveBeenCalled()
+  })
+
+  it('tags editor-test keystrokes once the test is running, with REC off', () => {
+    // The editor test path is independent of the REC toggle: a running test
+    // feeds analytics tagged with its typing_test label. Use 'time' mode so
+    // the first key starts the run without auto-finishing on an empty word
+    // list (words/quote auto-finish; time does not).
+    const { result } = renderUseInputModes({
+      typingRecordEnabled: false,
+      typingTestViewOnly: false,
+      savedTypingTestConfig: { mode: 'time', duration: 30, punctuation: false, numbers: false },
+    })
+
+    // jsdom reports the window as unfocused, which gates key events out, so
+    // mark it focused before typing.
+    act(() => {
+      result.current.typingTest.setWindowFocused(true)
+    })
+    // A printable key transitions waiting -> running (this first char emits
+    // while still 'waiting', so it's not tagged); subsequent frames run.
+    act(() => {
+      result.current.typingTest.processKeyEvent('a', false, false, false)
+    })
+    act(() => {
+      result.current.typingTest.processMatrixFrame(new Set(['0,0']), buildKeymap())
+    })
+
     expect(mockTypingAnalyticsEvent).toHaveBeenCalledWith(
       expect.objectContaining({ kind: 'matrix', keyboard: sampleKeyboard, typingTest: expect.any(String) }),
     )

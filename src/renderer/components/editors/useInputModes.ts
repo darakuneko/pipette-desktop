@@ -281,8 +281,19 @@ export function useInputModes({
   const recordingActive = (typingRecordEnabled ?? false) && (typingTestViewOnly ?? false)
   // Keep the sink's refs current (the sink itself is a stable callback).
   recordingActiveRef.current = recordingActive
-  // A test in the editor (not the REC view) is the tagged input source.
-  testLabelRef.current = typingTestMode && !typingTestViewOnly
+  // A test in the editor (not the REC view) is the tagged input source — but
+  // only while it is actually running. Entering the test view auto-starts a
+  // countdown on the default ('words') config; tagging keystrokes before the
+  // run starts would record a phantom material (e.g. `words (english)`) for
+  // presses made during countdown / waiting or before the user picks a custom
+  // text. Gating on 'running' guarantees the config has settled to the chosen
+  // material before anything is recorded. Trade-off: the keystroke that starts
+  // the run (waiting -> running) and the matrix edge of the key that ends it
+  // (running -> finished, seen a poll later) may go untagged — a negligible
+  // 1-2 edge gap in the aggregate heatmap, accepted to avoid the phantom run.
+  // ('finished' is intentionally excluded so idle presses after a test can't
+  // re-introduce a phantom record.)
+  testLabelRef.current = typingTestMode && !typingTestViewOnly && typingTest.state.status === 'running'
     ? typingTestAnalyticsLabel(typingTest.config, typingTest.language, typingTest.state.currentQuote)
     : null
   // Run id travels with the label so each run's keystrokes are separable.
