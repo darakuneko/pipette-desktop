@@ -7,8 +7,10 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
-import type { PipetteSettings, ViewMode } from '../shared/types/pipette-settings'
-import { VIEW_MODES, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
+import { withWriteLock } from './per-uid-write-lock'
+import { isRecord } from '../shared/vil-file'
+import type { PipetteSettings, PipetteSettingsPatch, ViewMode } from '../shared/types/pipette-settings'
+import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
 import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
 import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
 
@@ -49,6 +51,7 @@ function isValidAnalyzeSettings(value: unknown): boolean {
     if (!obj.goalHistory.every(isValidGoalHistoryEntry)) return false
   }
   if ('filters' in obj && obj.filters != null && !isValidAnalyzeFilterSettings(obj.filters)) return false
+  if ('compareFilters' in obj && obj.compareFilters != null && !isValidAnalyzeFilterSettings(obj.compareFilters)) return false
   return true
 }
 
@@ -162,6 +165,42 @@ async function writeData(uid: string, prefs: PipetteSettings): Promise<void> {
   notifyChange(`keyboards/${uid}/settings`)
 }
 
+/** Merge `base.analyze` with `partial.analyze` one level deep so the three
+ * analyze writers (filters / fingerAssignments / goal) only ever send their
+ * own sub-fields and never clobber each other's. `undefined` skips a
+ * sub-field (leave existing); an empty object/array clears that field's
+ * contents (e.g. fingerAssignments `{}` drops all overrides). */
+function mergeAnalyze(base: unknown, partial: Record<string, unknown>): Record<string, unknown> {
+  const merged: Record<string, unknown> = isRecord(base) ? { ...base } : {}
+  for (const [k, v] of Object.entries(partial)) {
+    if (v === undefined) continue
+    merged[k] = v
+  }
+  return merged
+}
+
+/** Shallow-merge only the defined keys of `partial` onto `base` so a writer
+ * that omits (or leaves undefined) a field never erases the persisted value
+ * another writer owns. `undefined` skips a field; `null` clears it (removes
+ * the key, used by the full-prefs writer for owned fields like
+ * `typingTestMemory`). `analyze` is merged one level deeper (see
+ * {@link mergeAnalyze}) because three independent writers own disjoint
+ * sub-fields of it. */
+function mergeDefined(base: PipetteSettings, partial: PipetteSettingsPatch): PipetteSettings {
+  const merged: Record<string, unknown> = { ...base }
+  for (const [k, v] of Object.entries(partial)) {
+    if (v === undefined) continue
+    if (v === null) {
+      delete merged[k]
+    } else if (k === 'analyze' && isRecord(v)) {
+      merged.analyze = mergeAnalyze(base.analyze, v)
+    } else {
+      merged[k] = v
+    }
+  }
+  return merged as PipetteSettings
+}
+
 export function setupPipetteSettingsStore(): void {
   secureHandle(
     IpcChannels.PIPETTE_SETTINGS_GET,
@@ -175,17 +214,28 @@ export function setupPipetteSettingsStore(): void {
     },
   )
 
+  // Field-level merge: each renderer writer PATCHes only the fields it owns,
+  // so concurrent writers (full prefs / analyze filters / goal / keymap
+  // scale) never clobber each other. The read-merge-write runs inside the
+  // per-uid queue so it's atomic against other writes.
   secureHandle(
-    IpcChannels.PIPETTE_SETTINGS_SET,
+    IpcChannels.PIPETTE_SETTINGS_PATCH,
     async (
       _event,
       uid: string,
-      prefs: PipetteSettings,
+      partial: PipetteSettingsPatch,
     ): Promise<{ success: boolean; error?: string }> => {
       try {
         validateUid(uid)
-        validatePrefs(prefs)
-        await writeData(uid, prefs)
+        if (typeof partial !== 'object' || partial === null || Array.isArray(partial)) {
+          throw new Error('Invalid patch')
+        }
+        await withWriteLock(uid, async () => {
+          const existing = await readData(uid)
+          const merged = mergeDefined(existing ?? DEFAULT_PIPETTE_SETTINGS, partial)
+          validatePrefs(merged)
+          await writeData(uid, merged)
+        })
         return { success: true }
       } catch (err) {
         return { success: false, error: String(err) }

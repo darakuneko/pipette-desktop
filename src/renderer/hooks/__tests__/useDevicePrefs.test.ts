@@ -8,14 +8,14 @@ import { setupAppConfigMock, renderHookWithConfig } from './test-helpers'
 
 // Mock vialAPI for IPC calls
 const mockPipetteSettingsGet = vi.fn<(uid: string) => Promise<{ _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] } | null>>()
-const mockPipetteSettingsSet = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }) => Promise<{ success: boolean }>>()
+const mockPipetteSettingsPatch = vi.fn<(uid: string, prefs: { _rev: 1; keyboardLayout: string; autoAdvance: boolean; layerNames: string[] }) => Promise<{ success: boolean }>>()
 
 beforeEach(() => {
   vi.clearAllMocks()
   mockPipetteSettingsGet.mockReset()
-  mockPipetteSettingsSet.mockReset()
+  mockPipetteSettingsPatch.mockReset()
   mockPipetteSettingsGet.mockResolvedValue(null)
-  mockPipetteSettingsSet.mockResolvedValue({ success: true })
+  mockPipetteSettingsPatch.mockResolvedValue({ success: true })
 })
 
 function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = {}) {
@@ -24,7 +24,7 @@ function setupMocks(configOverrides: Parameters<typeof setupAppConfigMock>[0] = 
     value: {
       ...((window as Record<string, unknown>).vialAPI as Record<string, unknown>),
       pipetteSettingsGet: mockPipetteSettingsGet,
-      pipetteSettingsSet: mockPipetteSettingsSet,
+      pipetteSettingsPatch: mockPipetteSettingsPatch,
     },
     writable: true,
     configurable: true,
@@ -94,7 +94,7 @@ describe('useDevicePrefs', () => {
       expect(result.current.layerNames).toEqual([])
 
       expect(mockPipetteSettingsGet).toHaveBeenCalledWith('0xAABB')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         keyboardLayout: 'dvorak',
         autoAdvance: false,
@@ -123,7 +123,7 @@ describe('useDevicePrefs', () => {
       expect(result.current.layout).toBe('colemak')
       expect(result.current.autoAdvance).toBe(false)
       expect(result.current.layerNames).toEqual(['Base', 'Fn'])
-      expect(mockPipetteSettingsSet).not.toHaveBeenCalled()
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
     })
 
     it('does not overwrite existing per-device prefs with defaults', async () => {
@@ -153,13 +153,13 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setLayout('french')
       })
 
       expect(result.current.layout).toBe('french')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         keyboardLayout: 'french',
       }))
@@ -172,13 +172,13 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setAutoAdvance(false)
       })
 
       expect(result.current.autoAdvance).toBe(false)
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         autoAdvance: false,
       }))
@@ -191,13 +191,13 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setLayerNames(['Base', 'Nav', 'Sym'])
       })
 
       expect(result.current.layerNames).toEqual(['Base', 'Nav', 'Sym'])
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         _rev: 1,
         layerNames: ['Base', 'Nav', 'Sym'],
       }))
@@ -216,12 +216,12 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setLayout('dvorak')
       })
 
-      const call = mockPipetteSettingsSet.mock.calls[0]
+      const call = mockPipetteSettingsPatch.mock.calls[0]
       expect(call[1].layerNames).toEqual(['Base', 'Fn'])
     })
   })
@@ -406,7 +406,7 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: true, numbers: false })
@@ -418,7 +418,7 @@ describe('useDevicePrefs', () => {
         punctuation: true,
         numbers: false,
       })
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         typingTestConfig: { mode: 'words', wordCount: 60, punctuation: true, numbers: false },
       }))
     })
@@ -430,14 +430,14 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingTestLanguage('english_5k')
       })
 
       expect(result.current.typingTestLanguage).toBe('english_5k')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         typingTestLanguage: 'english_5k',
       }))
     })
@@ -651,13 +651,13 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setSplitKeyMode('flat')
       })
 
       expect(result.current.splitKeyMode).toBe('flat')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         splitKeyMode: 'flat',
       }))
     })
@@ -745,13 +745,13 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
       act(() => {
         result.current.setViewMode('typingTest')
       })
 
       expect(result.current.viewMode).toBe('typingTest')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         viewMode: 'typingTest',
       }))
     })
@@ -789,7 +789,7 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       // Simulates disconnect cleanup: resets typingTestViewOnly but should not touch viewMode
       act(() => {
@@ -797,7 +797,7 @@ describe('useDevicePrefs', () => {
       })
 
       expect(result.current.viewMode).toBe('typingView')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         typingTestViewOnly: false,
         viewMode: 'typingView',
       }))
@@ -858,14 +858,14 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingViewMenuTab('rec')
       })
 
       expect(result.current.typingViewMenuTab).toBe('rec')
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         typingViewMenuTab: 'rec',
       }))
     })
@@ -877,14 +877,14 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingViewMenuTab('window')
       })
 
       expect(result.current.typingViewMenuTab).toBe('window')
-      expect(mockPipetteSettingsSet).not.toHaveBeenCalled()
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
     })
   })
 
@@ -942,14 +942,14 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingRecordEnabled(true)
       })
 
       expect(result.current.typingRecordEnabled).toBe(true)
-      expect(mockPipetteSettingsSet).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
+      expect(mockPipetteSettingsPatch).toHaveBeenCalledWith('0xAABB', expect.objectContaining({
         typingRecordEnabled: true,
       }))
     })
@@ -961,14 +961,14 @@ describe('useDevicePrefs', () => {
       await act(async () => {
         await result.current.applyDevicePrefs('0xAABB')
       })
-      mockPipetteSettingsSet.mockClear()
+      mockPipetteSettingsPatch.mockClear()
 
       act(() => {
         result.current.setTypingRecordEnabled(false)
       })
 
       expect(result.current.typingRecordEnabled).toBe(false)
-      expect(mockPipetteSettingsSet).not.toHaveBeenCalled()
+      expect(mockPipetteSettingsPatch).not.toHaveBeenCalled()
     })
   })
 

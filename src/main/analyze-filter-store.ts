@@ -14,6 +14,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
+import { withWriteLock } from './per-uid-write-lock'
 import { secureHandle } from './ipc-guard'
 import {
   ANALYZE_FILTER_STORE_ERROR_MAX_ENTRIES,
@@ -89,13 +90,6 @@ async function updateEntry(
   })
 }
 
-const writeLocks = new Map<string, Promise<unknown>>()
-function withWriteLock<T>(uid: string, fn: () => Promise<T>): Promise<T> {
-  const prev = writeLocks.get(uid) ?? Promise.resolve()
-  const next = prev.then(fn, fn)
-  writeLocks.set(uid, next)
-  return next
-}
 
 export function setupAnalyzeFilterStore(): void {
   secureHandle(

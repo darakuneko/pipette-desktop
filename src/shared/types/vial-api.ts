@@ -36,7 +36,7 @@ import type {
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
-import type { PipetteSettings } from './pipette-settings'
+import type { PipetteSettings, PipetteSettingsPatch } from './pipette-settings'
 import type {
   TypingActivityCell,
   TypingAnalyticsDeviceInfoBundle,
@@ -204,7 +204,9 @@ export interface VialAPI {
 
   // Pipette Settings Store
   pipetteSettingsGet(uid: string): Promise<PipetteSettings | null>
-  pipetteSettingsSet(uid: string, prefs: PipetteSettings): Promise<{ success: boolean; error?: string }>
+  /** Field-level merge persist: only the defined keys of `partial` are
+   * written, so concurrent writers never clobber each other's fields. */
+  pipetteSettingsPatch(uid: string, partial: PipetteSettingsPatch): Promise<{ success: boolean; error?: string }>
 
   // Typing Analytics
   typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>

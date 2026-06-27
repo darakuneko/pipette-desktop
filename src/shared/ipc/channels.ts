@@ -85,7 +85,7 @@ export const IpcChannels = {
 
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',
-  PIPETTE_SETTINGS_SET: 'pipette-settings:set',
+  PIPETTE_SETTINGS_PATCH: 'pipette-settings:patch',
 
   // Typing Analytics (renderer ↔ main)
   TYPING_ANALYTICS_EVENT: 'typing-analytics:event',

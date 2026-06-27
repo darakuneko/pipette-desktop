@@ -12,16 +12,18 @@ import { useAnalyzeFilters, DEFAULT_ANALYZE_FILTERS } from '../useAnalyzeFilters
 
 interface MockPipetteAPI {
   pipetteSettingsGet: (uid: string) => Promise<PipetteSettings | null>
-  pipetteSettingsSet: (uid: string, prefs: PipetteSettings) => Promise<{ success: true } | { success: false; error: string }>
+  pipetteSettingsPatch: (uid: string, partial: Partial<PipetteSettings>) => Promise<{ success: true } | { success: false; error: string }>
 }
 
 const getSpy = vi.fn<MockPipetteAPI['pipetteSettingsGet']>()
-const setSpy = vi.fn<MockPipetteAPI['pipetteSettingsSet']>()
+// useAnalyzeFilters persists via the field-level PATCH ({ analyze }) so a
+// concurrent full-prefs write can't clobber sibling fields.
+const patchSpy = vi.fn<MockPipetteAPI['pipetteSettingsPatch']>()
 
 Object.defineProperty(window, 'vialAPI', {
   value: {
     pipetteSettingsGet: (uid: string) => getSpy(uid),
-    pipetteSettingsSet: (uid: string, prefs: PipetteSettings) => setSpy(uid, prefs),
+    pipetteSettingsPatch: (uid: string, partial: Partial<PipetteSettings>) => patchSpy(uid, partial),
   },
   writable: true,
 })
@@ -35,7 +37,7 @@ async function flushMicrotasks(): Promise<void> {
 describe('useAnalyzeFilters', () => {
   beforeEach(() => {
     getSpy.mockReset().mockResolvedValue(null)
-    setSpy.mockReset().mockResolvedValue({ success: true as const })
+    patchSpy.mockReset().mockResolvedValue({ success: true as const })
     vi.useFakeTimers({ shouldAdvanceTime: true })
   })
 
@@ -78,7 +80,7 @@ describe('useAnalyzeFilters', () => {
   it('debounces writes and only flushes once after 300 ms of quiet', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => {
@@ -90,14 +92,14 @@ describe('useAnalyzeFilters', () => {
     // 299 ms: nothing should have flushed yet.
     act(() => { vi.advanceTimersByTime(299) })
     await flushMicrotasks()
-    expect(setSpy).not.toHaveBeenCalled()
+    expect(patchSpy).not.toHaveBeenCalled()
 
     act(() => { vi.advanceTimersByTime(1) })
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    const [uid, prefs] = setSpy.mock.calls[0]
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    const [uid, prefs] = patchSpy.mock.calls[0]
     expect(uid).toBe('uid-a')
     expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
     expect(prefs.analyze?.filters?.wpm?.viewMode).toBe('timeOfDay')
@@ -110,7 +112,7 @@ describe('useAnalyzeFilters', () => {
       { initialProps: { uid: 'uid-a' as string | null } },
     )
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => { result.current.setDeviceScopes(['all']) })
@@ -119,15 +121,15 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][0]).toBe('uid-a')
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual(['all'])
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][0]).toBe('uid-a')
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual(['all'])
   })
 
   it('flushes pending writes on unmount', async () => {
     const { result, unmount } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => { result.current.setHeatmap({ frequentUsedN: 50 }) })
@@ -135,8 +137,8 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.heatmap?.frequentUsedN).toBe(50)
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.heatmap?.frequentUsedN).toBe(50)
   })
 
   it('ignores setter calls when uid is null', async () => {
@@ -144,7 +146,7 @@ describe('useAnalyzeFilters', () => {
     act(() => { result.current.setDeviceScopes(['all']) })
     act(() => { vi.advanceTimersByTime(1000) })
     await flushMicrotasks()
-    expect(setSpy).not.toHaveBeenCalled()
+    expect(patchSpy).not.toHaveBeenCalled()
   })
 
   it('round-trips a hash deviceScope through load → setter → flush', async () => {
@@ -165,7 +167,7 @@ describe('useAnalyzeFilters', () => {
       { kind: 'hash', machineHash: 'abcd1234' },
     ])
 
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
     act(() => {
       result.current.setDeviceScopes([{ kind: 'hash', machineHash: 'ffff0000' }])
@@ -174,8 +176,8 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual([
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.deviceScopes).toEqual([
       { kind: 'hash', machineHash: 'ffff0000' },
     ])
   })
@@ -183,7 +185,7 @@ describe('useAnalyzeFilters', () => {
   it('normalizes setter input by collapsing all+hash to all and capping at MAX_DEVICE_SCOPES', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-norm'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
 
     act(() => {
       result.current.setDeviceScopes([
@@ -210,31 +212,30 @@ describe('useAnalyzeFilters', () => {
     expect(result.current.filters.deviceScopes).toEqual(['own'])
   })
 
-  it('bootstraps a minimal PipetteSettings when pipetteSettingsGet returns null', async () => {
+  it('patches only the analyze field even when no prior settings exist', async () => {
     getSpy.mockResolvedValue(null)
     const { result } = renderHook(() => useAnalyzeFilters('uid-new'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
 
     act(() => { result.current.setDeviceScopes(['all']) })
     act(() => { vi.advanceTimersByTime(300) })
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    const prefs = setSpy.mock.calls[0][1]
-    // Must still be a valid PipetteSettings — missing `_rev` or
-    // `keyboardLayout` would trip the main-process validator.
-    expect(prefs._rev).toBe(1)
-    expect(prefs.keyboardLayout).toBe('qwerty')
-    expect(prefs.autoAdvance).toBe(true)
-    expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    const partial = patchSpy.mock.calls[0][1]
+    // The hook only owns `analyze`; the minimal valid base (keyboardLayout
+    // etc.) is supplied by the main-side PATCH handler's DEFAULT, so the
+    // payload carries just the analyze slice and nothing it doesn't own.
+    expect(Object.keys(partial)).toEqual(['analyze'])
+    expect(partial.analyze?.filters?.deviceScopes).toEqual(['all'])
   })
 
   it('persists pairIntervalThresholdMs through setBigrams', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => { result.current.setBigrams({ pairIntervalThresholdMs: 200 }) })
@@ -242,8 +243,8 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.bigrams?.pairIntervalThresholdMs).toBe(200)
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.bigrams?.pairIntervalThresholdMs).toBe(200)
     // Sibling defaults must survive the partial patch — otherwise the
     // first user that flips the threshold loses topLimit/slowLimit.
     expect(result.current.filters.bigrams.topLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.topLimit)
@@ -303,7 +304,7 @@ describe('useAnalyzeFilters', () => {
   it('persists runIdScopes through setRunIdScopes', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => { result.current.setRunIdScopes(['run-1']) })
@@ -311,8 +312,8 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.runIdScopes).toEqual(['run-1'])
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.runIdScopes).toEqual(['run-1'])
   })
 
   it('forces the app dimension off on the byApp tab (across-apps view)', async () => {
@@ -341,7 +342,7 @@ describe('useAnalyzeFilters', () => {
   it('persists filterDimension through setFilterDimension', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))
-    setSpy.mockClear()
+    patchSpy.mockClear()
     getSpy.mockClear().mockResolvedValue(null)
 
     act(() => { result.current.setFilterDimension('typingTest') })
@@ -349,8 +350,8 @@ describe('useAnalyzeFilters', () => {
     await flushMicrotasks()
     await flushMicrotasks()
 
-    expect(setSpy).toHaveBeenCalledTimes(1)
-    expect(setSpy.mock.calls[0][1].analyze?.filters?.filterDimension).toBe('typingTest')
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.filterDimension).toBe('typingTest')
   })
 
   it('restores a persisted filterDimension on mount', async () => {

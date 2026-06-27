@@ -53,7 +53,7 @@ import type { HubPrivateLink } from '../shared/types/hub-private'
 import type { AppConfig } from '../shared/types/app-config'
 import type { DeviceScope } from '../shared/types/analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncDataScanResult, SyncScope, StoredKeyboardInfo, SyncOperationResult } from '../shared/types/sync'
-import type { PipetteSettings } from '../shared/types/pipette-settings'
+import type { PipetteSettings, PipetteSettingsPatch } from '../shared/types/pipette-settings'
 import type {
   LayoutComparisonOptions,
   LayoutComparisonResult,
@@ -402,8 +402,8 @@ const vialAPI = {
   // --- Pipette Settings Store (internal save/load via IPC) ---
   pipetteSettingsGet: (uid: string): Promise<PipetteSettings | null> =>
     ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_GET, uid),
-  pipetteSettingsSet: (uid: string, prefs: PipetteSettings): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_SET, uid, prefs),
+  pipetteSettingsPatch: (uid: string, partial: PipetteSettingsPatch): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.PIPETTE_SETTINGS_PATCH, uid, partial),
 
   // --- Typing Analytics (fire-and-forget event dispatch) ---
   typingAnalyticsEvent: (event: TypingAnalyticsEvent): Promise<void> =>

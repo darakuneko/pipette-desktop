@@ -592,13 +592,12 @@ export function AnalyzePane({
       setFingerAssignments(next)
       if (!selectedUid) return
       try {
-        const prefs = await window.vialAPI.pipetteSettingsGet(selectedUid)
-        if (!prefs) return
-        const hasAny = Object.keys(next).length > 0
-        const analyze = hasAny
-          ? { ...prefs.analyze, fingerAssignments: next }
-          : { ...prefs.analyze, fingerAssignments: undefined }
-        await window.vialAPI.pipetteSettingsSet(selectedUid, { ...prefs, analyze })
+        // PATCH only this sub-field; the main-side deep merge on `analyze`
+        // preserves filters/goal. An empty map clears all overrides (each
+        // absent key falls back to the geometry estimate).
+        await window.vialAPI.pipetteSettingsPatch(selectedUid, {
+          analyze: { fingerAssignments: next },
+        })
       } catch {
         // best-effort save
       }

@@ -67,9 +67,127 @@ describe('pipette-settings-store', () => {
     })
   })
 
+  describe('patch (field-level merge)', () => {
+    it('merges only the given fields and preserves the rest', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-p', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestResults: [{ date: '2026-06-26T00:00:00.000Z', runId: 'run-1', wpm: 50, accuracy: 99, wordCount: 10, correctChars: 50, incorrectChars: 1, durationSeconds: 30 }],
+      })
+
+      const res = await patch(fakeEvent, 'uid-p', { analyze: { filters: { deviceScopes: ['all'] } } }) as { success: boolean }
+      expect(res.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-p') as { typingTestResults?: unknown[]; analyze?: { filters?: { deviceScopes?: string[] } } }
+      // analyze written, AND typingTestResults from the earlier full write
+      // survives (the bug this fixes: one writer clobbering another's field).
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+      expect(prefs.typingTestResults).toHaveLength(1)
+    })
+
+    it('ignores undefined values so they do not erase existing fields', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-u', {
+        _rev: 1, keyboardLayout: 'dvorak', autoAdvance: false, layerNames: ['A'],
+      })
+      await patch(fakeEvent, 'uid-u', { keyboardLayout: undefined, autoAdvance: true })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-u') as { keyboardLayout: string; autoAdvance: boolean }
+      expect(prefs.keyboardLayout).toBe('dvorak') // not erased by undefined
+      expect(prefs.autoAdvance).toBe(true) // updated
+    })
+
+    it('clears a top-level field when patched with null', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const memory = {
+        textId: 't1', currentWordIndex: 2, currentInput: 'ab',
+        wordResults: [], correctChars: 3, incorrectChars: 0,
+        elapsedMs: 1200, wpmHistory: [40], savedAt: '2026-06-26T00:00:00.000Z',
+      }
+      await patch(fakeEvent, 'uid-n', {
+        _rev: 1, keyboardLayout: 'qwerty', autoAdvance: true, layerNames: [], typingTestMemory: memory,
+      })
+      // the full-prefs writer sends `null` to clear the paused run on finish
+      await patch(fakeEvent, 'uid-n', { typingTestMemory: null })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-n') as { typingTestMemory?: unknown; keyboardLayout: string }
+      expect(prefs.typingTestMemory).toBeUndefined() // cleared
+      expect(prefs.keyboardLayout).toBe('qwerty') // sibling untouched
+    })
+
+    it('uses a valid default base when no prior settings exist', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const res = await patch(fakeEvent, 'uid-new', { analyze: { filters: { deviceScopes: ['own'] } } }) as { success: boolean }
+      expect(res.success).toBe(true)
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-new') as { keyboardLayout: string; analyze?: { filters?: { deviceScopes?: string[] } } }
+      expect(prefs.keyboardLayout).toBe('qwerty') // from DEFAULT base
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['own'])
+    })
+
+    it('serializes concurrent patches so neither is lost', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await Promise.all([
+        patch(fakeEvent, 'uid-c', { keyboardLayout: 'dvorak' }),
+        patch(fakeEvent, 'uid-c', { autoAdvance: false }),
+      ])
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-c') as { keyboardLayout: string; autoAdvance: boolean }
+      expect(prefs.keyboardLayout).toBe('dvorak')
+      expect(prefs.autoAdvance).toBe(false)
+    })
+
+    it('deep-merges analyze sub-fields so writers do not clobber each other', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      // three independent analyze writers, each owning a disjoint sub-field
+      await patch(fakeEvent, 'uid-a', { analyze: { filters: { deviceScopes: ['all'] } } })
+      await patch(fakeEvent, 'uid-a', { analyze: { compareFilters: { deviceScopes: ['own'] } } })
+      await patch(fakeEvent, 'uid-a', { analyze: { goalDays: 5, goalKeystrokes: 200 } })
+      await patch(fakeEvent, 'uid-a', { analyze: { fingerAssignments: { '0,0': 'left-index' } } })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-a') as {
+        analyze?: {
+          filters?: { deviceScopes?: string[] }
+          compareFilters?: { deviceScopes?: string[] }
+          goalDays?: number
+          goalKeystrokes?: number
+          fingerAssignments?: Record<string, string>
+        }
+      }
+      // every sub-field survives the others' writes
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+      expect(prefs.analyze?.compareFilters?.deviceScopes).toEqual(['own'])
+      expect(prefs.analyze?.goalDays).toBe(5)
+      expect(prefs.analyze?.goalKeystrokes).toBe(200)
+      expect(prefs.analyze?.fingerAssignments).toEqual({ '0,0': 'left-index' })
+    })
+
+    it('clears fingerAssignments with an empty map without touching siblings', async () => {
+      const patch = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      await patch(fakeEvent, 'uid-clr', { analyze: { fingerAssignments: { '0,0': 'left-index' }, goalDays: 3 } })
+      // AnalyzePane sends an empty map to clear all overrides
+      await patch(fakeEvent, 'uid-clr', { analyze: { fingerAssignments: {} } })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-clr') as {
+        analyze?: { fingerAssignments?: Record<string, string>; goalDays?: number }
+      }
+      expect(prefs.analyze?.fingerAssignments).toEqual({})
+      expect(prefs.analyze?.goalDays).toBe(3) // sibling untouched
+    })
+  })
+
   describe('set and get', () => {
     it('round-trips saved prefs', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'dvorak',
@@ -84,7 +202,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('round-trips layerNames field', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -98,7 +216,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('round-trips layerPanelOpen field', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -113,7 +231,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('defaults layerNames to [] when not present', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         keyboardLayout: 'qwerty',
         autoAdvance: true,
@@ -126,7 +244,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('always writes _rev: 1', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -140,7 +258,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('overwrites existing prefs', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'dvorak',
@@ -160,7 +278,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('stores prefs per uid independently', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'dvorak',
@@ -192,7 +310,7 @@ describe('pipette-settings-store', () => {
 
   describe('uid validation', () => {
     it('rejects uid with path traversal', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, '../..', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -204,7 +322,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects empty uid', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, '', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -216,7 +334,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects uid with slashes', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'foo/bar', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -235,18 +353,18 @@ describe('pipette-settings-store', () => {
   })
 
   describe('prefs validation', () => {
-    it('rejects non-object prefs', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+    it('rejects non-object patch', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', 'not-an-object') as {
         success: boolean
         error: string
       }
       expect(result.success).toBe(false)
-      expect(result.error).toContain('Invalid prefs')
+      expect(result.error).toContain('Invalid patch')
     })
 
     it('rejects prefs with non-string keyboardLayout', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 123,
@@ -258,7 +376,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects prefs with non-boolean autoAdvance', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -270,7 +388,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects prefs with unsupported _rev', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 99,
         keyboardLayout: 'qwerty',
@@ -282,7 +400,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects prefs with non-array layerNames', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -294,7 +412,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects prefs with non-string layerNames entries', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -306,7 +424,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('accepts typingRecordEnabled boolean and round-trips it', async () => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -322,7 +440,7 @@ describe('pipette-settings-store', () => {
     })
 
     it('rejects prefs with non-boolean typingRecordEnabled', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -335,7 +453,7 @@ describe('pipette-settings-store', () => {
     })
 
     it.each([1, 7, 30, 90])('accepts typingSyncSpanDays=%i', async (span) => {
-      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -351,7 +469,7 @@ describe('pipette-settings-store', () => {
     })
 
     it.each([0, 2, 14, 365, -1, 7.5])('rejects disallowed typingSyncSpanDays=%s', async (span) => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
@@ -366,7 +484,7 @@ describe('pipette-settings-store', () => {
 
   describe('sync notification', () => {
     it('calls notifyChange on set', async () => {
-      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_SET)
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await handler(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',

@@ -6,8 +6,6 @@
 // default 7-day window re-arms each session via renderer-local state.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { PipetteSettings } from '../../shared/types/pipette-settings'
-import { DEFAULT_PIPETTE_SETTINGS } from '../../shared/types/pipette-settings'
 import {
   appScopesEqual,
   deviceScopesEqual,
@@ -269,10 +267,13 @@ export function useAnalyzeFilters(
     if (!pendingUid || !pendingFilters) return
     void (async () => {
       try {
-        const prefs = await window.vialAPI.pipetteSettingsGet(pendingUid)
-        const base: PipetteSettings = prefs ?? DEFAULT_PIPETTE_SETTINGS
-        const nextAnalyze = { ...base.analyze, [field]: serializeFilters(pendingFilters) }
-        await window.vialAPI.pipetteSettingsSet(pendingUid, { ...base, analyze: nextAnalyze })
+        // PATCH only this pane's analyze sub-field. The main-side merge is
+        // one level deep on `analyze`, so the sibling pane's filters and
+        // every other field (typingTestResults etc.) are preserved without
+        // a read-modify-write here (which would otherwise race).
+        await window.vialAPI.pipetteSettingsPatch(pendingUid, {
+          analyze: { [field]: serializeFilters(pendingFilters) },
+        })
       } catch {
         // best-effort save — a failed write just drops the change
       }

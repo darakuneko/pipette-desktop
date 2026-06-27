@@ -132,10 +132,10 @@ Object.defineProperty(window, 'vialAPI', {
     // since they don't exercise the app filter.
     typingAnalyticsListAppsForRange: () => Promise.resolve([]),
     pipetteSettingsGet: () => Promise.resolve(null),
-    // `useAnalyzeFilters` debounces filter writes through this setter.
+    // `useAnalyzeFilters` debounces filter writes through this patcher.
     // Stubbing it with a no-op keeps the tests focused on prop
     // propagation without waiting on the 300 ms flush timer.
-    pipetteSettingsSet: () => Promise.resolve({ success: true as const }),
+    pipetteSettingsPatch: () => Promise.resolve({ success: true as const }),
     // Analyze mount pulls analytics via this IPC. Resolving `false`
     // keeps the rate-limit ref unset so nothing leaks across tests.
     syncAnalyticsNow: () => Promise.resolve(false),

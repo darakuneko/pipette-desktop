@@ -239,11 +239,9 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   useEffect(() => {
     const uid = pickerFileData?.uid
     if (pickerScale == null || !uid) return
-    window.vialAPI.pipetteSettingsGet(uid).then((prefs) => {
-      if (prefs) {
-        window.vialAPI.pipetteSettingsSet(uid, { ...prefs, keymapScale: pickerScale }).catch(() => {})
-      }
-    }).catch(() => {})
+    // PATCH only keymapScale so this can't clobber other fields on the
+    // target keyboard's settings.
+    window.vialAPI.pipetteSettingsPatch(uid, { keymapScale: pickerScale }).catch(() => {})
   }, [pickerScale, pickerFileData?.uid])
 
   // --- Escape clears picker selection ---

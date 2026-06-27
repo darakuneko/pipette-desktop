@@ -111,18 +111,14 @@ export function StreakGoalCard({ uid, daily, today }: Props) {
       ? prevHistory
       : [...prevHistory, { days: prevDays, keystrokes: prevKeystrokes, effectiveFrom: nowIso }]
 
-    const nextSettings: PipetteSettings = {
-      ...current,
-      analyze: {
-        ...prevAnalyze,
-        goalDays: next.days,
-        goalKeystrokes: next.keystrokes,
-        goalHistory: nextHistory,
-      },
-    }
-    setSettings(nextSettings)
+    // PATCH only the goal sub-fields; the main-side deep merge on `analyze`
+    // preserves filters / fingerAssignments owned by other writers (and
+    // can't clobber typingTestResults etc.). The same sub-fields seed the
+    // optimistic local state so the two never drift.
+    const goalPatch = { goalDays: next.days, goalKeystrokes: next.keystrokes, goalHistory: nextHistory }
+    setSettings({ ...current, analyze: { ...prevAnalyze, ...goalPatch } })
     try {
-      await window.vialAPI.pipetteSettingsSet(uid, nextSettings)
+      await window.vialAPI.pipetteSettingsPatch(uid, { analyze: goalPatch })
     } catch {
       setSettings(current)
     }
