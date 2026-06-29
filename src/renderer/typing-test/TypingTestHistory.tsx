@@ -2,12 +2,15 @@
 
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Trophy } from 'lucide-react'
+import { Trophy, SquarePen } from 'lucide-react'
+import { ICON_SM } from '../constants/ui-tokens'
 import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { buildCsv } from '../../shared/csv-export'
 import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN } from '../components/editors/store-modal-shared'
+import { resultKpm, buildResultNameChips } from './result-builder'
+import { ResultNameModal } from './ResultNameModal'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
@@ -48,12 +51,6 @@ function formatDuration(seconds: number): string {
 function modeDetail(r: TypingTestResult): string {
   if (r.mode === 'custom') return r.customTextName ?? (r.mode2 != null ? String(r.mode2) : '')
   return r.mode2 != null ? String(r.mode2) : ''
-}
-
-/** Keystrokes per minute, derived from the stored char count and duration so
- *  it works for legacy rows too (no separate field needed). */
-function resultKpm(r: TypingTestResult): number {
-  return r.durationSeconds > 0 ? Math.round((r.correctChars * 60) / r.durationSeconds) : 0
 }
 
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
@@ -348,47 +345,37 @@ interface NameCellProps {
   onRename?: (date: string, name: string) => void
 }
 
-/** Editable result label. Click to rename (commit on Enter / blur, cancel
- *  on Escape). Read-only "—" when no rename handler is provided. */
+/** Result label cell. A button (edit icon + current name / "Unnamed") that
+ *  opens the naming modal with quick-insert chips. Read-only when no rename
+ *  handler is provided. */
 function NameCell({ result, onRename }: NameCellProps) {
   const { t } = useTranslation()
-  const [editing, setEditing] = useState(false)
-  const [value, setValue] = useState(result.name ?? '')
+  const [modalOpen, setModalOpen] = useState(false)
   const placeholder = t('editor.typingTest.history.unnamed')
 
   if (!onRename) {
     return <td className="px-3 py-1.5 text-content-muted">{result.name || placeholder}</td>
   }
 
-  const commit = (): void => {
-    setEditing(false)
-    onRename(result.date, value)
-  }
-
   return (
     <td className="px-3 py-1.5">
-      {editing ? (
-        <input
-          autoFocus
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
-            else if (e.key === 'Escape') { setValue(result.name ?? ''); setEditing(false) }
-          }}
-          className="w-full rounded border border-edge bg-surface px-1.5 py-0.5 text-xs text-content focus:border-accent focus:outline-none"
-          data-testid={`history-name-input-${result.date}`}
+      <button
+        type="button"
+        onClick={() => setModalOpen(true)}
+        title={t('editor.typingTest.nameResult')}
+        className={`flex items-center gap-1.5 text-left transition-colors hover:text-content ${result.name ? 'text-content-secondary' : 'text-content-muted'}`}
+        data-testid={`history-name-${result.date}`}
+      >
+        <SquarePen size={ICON_SM} aria-hidden="true" />
+        <span className="truncate">{result.name || placeholder}</span>
+      </button>
+      {modalOpen && (
+        <ResultNameModal
+          initialName={result.name ?? ''}
+          chips={buildResultNameChips(result, t)}
+          onSave={(name) => onRename(result.date, name)}
+          onClose={() => setModalOpen(false)}
         />
-      ) : (
-        <button
-          type="button"
-          onClick={() => { setValue(result.name ?? ''); setEditing(true) }}
-          className="w-full cursor-text text-left text-content-secondary underline decoration-dotted underline-offset-4 hover:text-content"
-          data-testid={`history-name-${result.date}`}
-        >
-          {result.name || placeholder}
-        </button>
       )}
     </td>
   )

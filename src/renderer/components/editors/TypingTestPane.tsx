@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pause, Play } from 'lucide-react'
+import { Pause, Play, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
 import { TypingTestView } from '../../typing-test/TypingTestView'
+import { TypingTestSettingsBar } from '../../typing-test/TypingTestSettingsBar'
+import { buildResultNameChips } from '../../typing-test/result-builder'
 import { PauseResumeModal } from '../../typing-test/PauseResumeModal'
 import { LanguageSelectorModal } from '../../typing-test/LanguageSelectorModal'
 import { TypingRecordingConsentModal } from '../../typing-test/TypingRecordingConsentModal'
 import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
+import { HistoryToggle } from './HistoryToggle'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
@@ -20,9 +23,23 @@ import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_S
 
 const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN + 1 }, (_, i) => DISPLAY_LINES_MIN + i)
 const FONT_OPTIONS = Array.from({ length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 }, (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP)
+
+/** Labelled group inside the left config panel — a small heading with an
+ *  underline divider, then its controls (kept at natural width). */
+function PanelSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex w-full flex-col items-start gap-2">
+      <h3 className="w-full border-b border-edge pb-1 text-xs font-semibold uppercase tracking-wide text-content-muted">
+        {title}
+      </h3>
+      {children}
+    </section>
+  )
+}
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
 import type { AnalyticsOrigin } from './keymap-editor-types'
+import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
@@ -51,6 +68,15 @@ export interface TypingTestPaneProps {
   fontSize?: number
   onDisplayLinesChange?: (lines: number) => void
   onFontSizeChange?: (px: number) => void
+  /** Editor view toggles — hide the keymap pane / the stats (WPM) row.
+   *  Persisted per keyboard; only meaningful outside view-only mode. */
+  hideKeymap?: boolean
+  hideStatsRow?: boolean
+  onToggleHideKeymap?: (hidden: boolean) => void
+  onToggleHideStatsRow?: (hidden: boolean) => void
+  /** Left Settings panel expanded state (persisted per keyboard). */
+  settingsPanelOpen?: boolean
+  onToggleSettingsPanel?: (open: boolean) => void
   /** Label a saved result (by ISO date) from the History modal. */
   onRenameTypingTestResult?: (date: string, name: string) => void
   /** Delete a saved result (by ISO date) from the History modal. */
@@ -123,6 +149,12 @@ export function TypingTestPane({
   fontSize,
   onDisplayLinesChange,
   onFontSizeChange,
+  hideKeymap,
+  hideStatsRow,
+  onToggleHideKeymap,
+  onToggleHideStatsRow,
+  settingsPanelOpen = true,
+  onToggleSettingsPanel,
   onRenameTypingTestResult,
   onDeleteTypingTestResult,
   viewOnly,
@@ -234,6 +266,10 @@ export function TypingTestPane({
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
   const paneNaturalSizeRef = useRef({ w: 0, h: 0 })
+  // Measured rendered width of the centred keyboard, so the reading window
+  // (above it, in TypingTestView) can match the keymap's width.
+  const keyboardBoxRef = useRef<HTMLDivElement>(null)
+  const [keyboardWidth, setKeyboardWidth] = useState<number>()
   const MARGIN = 20
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
@@ -264,6 +300,17 @@ export function TypingTestPane({
     }
     return { width: w, height: h }
   }, [keys, layoutOptions])
+
+  // Track the keyboard's rendered width so the reading window can match it.
+  useEffect(() => {
+    const el = keyboardBoxRef.current
+    if (!el) return
+    const update = () => setKeyboardWidth(el.getBoundingClientRect().width)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [viewOnly])
 
   // App.tsx entry paths (analytics back, post-unlock, view restore, status bar)
   // call setWindowCompactMode with an undefined saved size, which main skips —
@@ -355,6 +402,210 @@ export function TypingTestPane({
     }
   }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
+  // Mode / language. The mode kind (Custom / Normal) goes in the label —
+  // "Mode(Custom):" — and the button shows just the source (file name or
+  // language), truncated to one line; the full text is on the title.
+  const modeType = typingTest.config.mode === 'custom'
+    ? t('editor.typingTest.language.tabCustom')
+    : t('editor.typingTest.language.tabNormal')
+  const modeLabel = typingTest.isLanguageLoading
+    ? t('editor.typingTest.language.loadingLanguage')
+    : typingTest.config.mode === 'custom'
+    ? (typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.customText'))
+    : typingTest.language.replace(/_/g, ' ')
+
+  // Config controls, pinned to the window's top-left as a sidebar in editor
+  // mode (view-only has no config UI). Lifted out of the keymap row so it sits
+  // at the top-left instead of beside the centred keyboard.
+  // Left Settings pane — collapsible like the keymap editor's LayerListPanel.
+  // The outer box clips + transitions width; the content keeps its full width
+  // and is hidden when collapsed (only the toggle rail remains).
+  const settingsCollapsed = !settingsPanelOpen
+  const configSidebar = viewOnly ? null : (
+    <div
+      className="flex shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-edge bg-picker-bg transition-width duration-200 ease-out"
+      style={{ width: settingsCollapsed ? PANEL_COLLAPSED_WIDTH : '15rem' }}
+      data-testid={settingsCollapsed ? 'typing-settings-panel-collapsed' : 'typing-settings-panel'}
+    >
+      {!settingsCollapsed && (
+      <div className="flex min-h-0 w-60 flex-1 flex-col gap-4 overflow-y-auto p-3">
+      {/* Settings — language/mode, base layer, pattern / units / options. */}
+      <PanelSection title={t('editor.typingTest.section.settings')}>
+        {typingTest.config.mode !== 'quote' && (
+          <div className="flex w-full flex-col items-start gap-1">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
+            <button
+              type="button"
+              data-testid="language-selector"
+              title={modeLabel}
+              className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+              onClick={() => setShowLanguageModal(true)}
+              disabled={typingTest.isLanguageLoading}
+            >
+              <span className="truncate">{modeLabel}</span>
+            </button>
+          </div>
+        )}
+        {showLanguageModal && (
+          <LanguageSelectorModal
+            currentLanguage={typingTest.language}
+            currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
+            onSelectLanguage={(name) => {
+              // Picking a language leaves custom mode — fall back to
+              // a words config so the language source applies.
+              if (typingTest.config.mode === 'custom') onConfigChange(DEFAULT_CONFIG)
+              void onLanguageChange(name)
+            }}
+            onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}
+            onCurrentTextDeleted={() => {
+              // The selected imported text was deleted — fall back to
+              // the default (words mode, English).
+              onConfigChange(DEFAULT_CONFIG)
+              void onLanguageChange(DEFAULT_LANGUAGE)
+            }}
+            onClose={() => setShowLanguageModal(false)}
+          />
+        )}
+        {/* Base Layer / Lines / Font side by side. Lines + Font are the shared
+            reading-window display settings (every mode); wraps if too narrow. */}
+        <div className="flex flex-wrap items-start gap-2">
+          {layers > 1 && (
+            <div className="flex flex-col items-start gap-1">
+              <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
+              <select
+                data-testid="base-layer-select"
+                aria-label={t('editor.typingTest.baseLayer')}
+                value={typingTest.baseLayer}
+                onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
+                className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+              >
+                {Array.from({ length: layers }, (_, i) => (
+                  <option key={i} value={i}>{layerNames?.[i] || i}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
+            <select
+              data-testid="display-lines-select"
+              aria-label={t('editor.typingTest.lines')}
+              value={displayLines ?? DEFAULT_DISPLAY_LINES}
+              onChange={(e) => onDisplayLinesChange?.(Number(e.target.value))}
+              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+            >
+              {LINE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col items-start gap-1">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
+            <select
+              data-testid="font-size-select"
+              aria-label={t('editor.typingTest.fontSize')}
+              value={fontSize ?? DEFAULT_FONT_SIZE}
+              onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
+              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+            >
+              {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+            </select>
+          </div>
+        </div>
+        {typingTest.config.mode !== 'custom' && (
+          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} />
+        )}
+      </PanelSection>
+
+      {/* Data — saved run history. */}
+      {typingTestHistory && typingTestHistory.length > 0 && (
+        <PanelSection title={t('editor.typingTest.section.data')}>
+          <HistoryToggle
+            results={typingTestHistory}
+            deviceName={deviceName}
+            onRename={onRenameTypingTestResult}
+            onDelete={onDeleteTypingTestResult}
+          />
+        </PanelSection>
+      )}
+
+      {/* Operations — pause/resume (imported custom text) and restart. */}
+      <PanelSection title={t('editor.typingTest.section.operations')}>
+        {typingTest.config.mode === 'custom' && (
+          typingTest.state.status === 'running' ? (
+            <button
+              type="button"
+              data-testid="typing-memory-pause"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+              onClick={() => onPauseTest?.()}
+            >
+              <Pause size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.pause')}</span>
+            </button>
+          ) : (typingTest.state.status === 'paused' || hasSavedMemory) ? (
+            <button
+              type="button"
+              data-testid="typing-memory-resume"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
+              onClick={() => setShowResumeModal(true)}
+            >
+              <Play size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.resumeButton')}</span>
+            </button>
+          ) : null
+        )}
+        <button
+          type="button"
+          data-testid="typing-test-restart"
+          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+          onClick={() => typingTest.restart()}
+        >
+          {t('editor.typingTest.restart')}
+        </button>
+      </PanelSection>
+
+      {/* Show — toggle the keymap and the live measurement display. Accent
+          highlight marks the hidden (active) state. */}
+      <PanelSection title={t('editor.typingTest.section.show')}>
+        <button
+          type="button"
+          data-testid="typing-test-toggle-keymap"
+          aria-pressed={!hideKeymap}
+          title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
+        >
+          {t('editor.typingTest.keymapToggle')}
+        </button>
+        <button
+          type="button"
+          data-testid="typing-test-toggle-stats"
+          aria-pressed={!hideStatsRow}
+          title={t(hideStatsRow ? 'editor.typingTest.showStats' : 'editor.typingTest.hideStats')}
+          aria-label={t(hideStatsRow ? 'editor.typingTest.showStats' : 'editor.typingTest.hideStats')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideStatsRow ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideStatsRow?.(!hideStatsRow)}
+        >
+          {t('editor.typingTest.statsToggle')}
+        </button>
+      </PanelSection>
+      </div>
+      )}
+      {/* Collapse / expand toggle — pinned to the bottom (mt-auto). */}
+      <div className="mt-auto shrink-0 border-t border-edge p-2">
+        <button
+          type="button"
+          data-testid="typing-settings-panel-toggle"
+          title={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}
+          aria-label={t(settingsCollapsed ? 'editor.typingTest.expandSettings' : 'editor.typingTest.collapseSettings')}
+          className="flex items-center justify-center rounded-md p-1 text-content-muted transition-colors hover:bg-surface-dim hover:text-content"
+          onClick={() => onToggleSettingsPanel?.(settingsCollapsed)}
+        >
+          {settingsCollapsed ? <ChevronsRight size={ICON_SM} aria-hidden="true" /> : <ChevronsLeft size={ICON_SM} aria-hidden="true" />}
+        </button>
+      </div>
+    </div>
+  )
+
   return (
     <>
       {showConsentModal && (
@@ -372,8 +623,18 @@ export function TypingTestPane({
           onCancel={() => setShowResumeModal(false)}
         />
       )}
+      {/* Editor: config sidebar pinned top-left, reading window + keymap
+          centred in the remaining space. View-only collapses the wrappers
+          (`contents`) so its scaled-pane layout is untouched. */}
+      <div className={viewOnly ? 'contents' : 'flex min-h-0 w-full flex-1 items-stretch gap-2'}>
+      {configSidebar}
+      <div className={viewOnly ? 'contents' : 'flex min-w-0 flex-1 flex-col items-center'}>
       {!viewOnly && (
         <TypingTestView
+          // Keymap hidden → its measured width is gone; let the reading window
+          // fall back to its own max width instead of collapsing.
+          readingMaxWidth={hideKeymap ? undefined : keyboardWidth}
+          hideStatsRow={hideStatsRow}
           state={typingTest.state}
           wpm={typingTest.wpm}
           kpm={typingTest.kpm}
@@ -382,8 +643,6 @@ export function TypingTestPane({
           remainingSeconds={typingTest.remainingSeconds}
           config={typingTest.config}
           paused={typingTest.state.status === 'running' && !typingTest.windowFocused}
-          onRestart={typingTest.restart}
-          onConfigChange={onConfigChange}
           onCompositionStart={typingTest.processCompositionStart}
           onCompositionUpdate={typingTest.processCompositionUpdate}
           onCompositionEnd={typingTest.processCompositionEnd}
@@ -395,165 +654,59 @@ export function TypingTestPane({
             const date = typingTestHistory?.[0]?.date
             if (date) onRenameTypingTestResult?.(date, name)
           }}
-          onViewAnalytics={onViewAnalytics ? () => onViewAnalytics('typingTest') : undefined}
-          history={typingTestHistory}
-          deviceName={deviceName}
-          onRenameResult={onRenameTypingTestResult}
-          onDeleteResult={onDeleteTypingTestResult}
+          // Chips come from the just-finished result (history[0]).
+          resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t) : []}
+          onStart={() => typingTest.restart()}
         />
       )}
       <div
         className={viewOnly ? 'flex min-h-0 w-full flex-1 cursor-pointer items-center justify-center overflow-hidden' : 'flex items-start justify-center overflow-auto'}
         onClick={viewOnly ? () => setViewOnlyControlsOpen((v) => !v) : undefined}
       >
-        <div className="relative" style={viewOnly && paneNaturalSizeRef.current.w > 0 ? { width: paneNaturalSizeRef.current.w * cssScale, height: paneNaturalSizeRef.current.h * cssScale, overflow: 'hidden' } : undefined}>
+        <div className={viewOnly ? 'relative' : 'relative w-full'} style={viewOnly && paneNaturalSizeRef.current.w > 0 ? { width: paneNaturalSizeRef.current.w * cssScale, height: paneNaturalSizeRef.current.h * cssScale, overflow: 'hidden' } : undefined}>
           {viewOnly && <div className="absolute inset-0 z-10" />}
           <div
             ref={viewOnly ? paneWrapperRef : undefined}
+            className={viewOnly ? undefined : 'w-full'}
             style={viewOnly ? { transform: `scale(${cssScale})`, transformOrigin: 'top left' } : undefined}
           >
-          {!viewOnly && (
-            <div className="mb-3 flex items-center justify-between gap-4 px-5">
-              <div className="flex items-center gap-4">
-                {layers > 1 && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
-                    <select
-                      data-testid="base-layer-select"
-                      aria-label={t('editor.typingTest.baseLayer')}
-                      value={typingTest.baseLayer}
-                      onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                      className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
-                    >
-                      {Array.from({ length: layers }, (_, i) => (
-                        <option key={i} value={i}>{layerNames?.[i] || i}</option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-                {typingTest.config.mode !== 'quote' && (
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}:</span>
-                    <button
-                      type="button"
-                      data-testid="language-selector"
-                      className="rounded-md border border-edge px-2.5 py-1 text-sm text-content-secondary transition-colors hover:text-content"
-                      onClick={() => setShowLanguageModal(true)}
-                      disabled={typingTest.isLanguageLoading}
-                    >
-                      {typingTest.isLanguageLoading ? (
-                        t('editor.typingTest.language.loadingLanguage')
-                      ) : typingTest.config.mode === 'custom' ? (
-                        `${t('editor.typingTest.language.tabCustom')} - ${typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.customText')}`
-                      ) : (
-                        `${t('editor.typingTest.language.tabNormal')} - ${typingTest.language.replace(/_/g, ' ')}`
-                      )}
-                    </button>
-                  </div>
-                )}
-                {showLanguageModal && (
-                  <LanguageSelectorModal
-                    currentLanguage={typingTest.language}
-                    currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
-                    onSelectLanguage={(name) => {
-                      // Picking a language leaves custom mode — fall back to
-                      // a words config so the language source applies.
-                      if (typingTest.config.mode === 'custom') onConfigChange(DEFAULT_CONFIG)
-                      void onLanguageChange(name)
-                    }}
-                    onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}
-                    onCurrentTextDeleted={() => {
-                      // The selected imported text was deleted — fall back to
-                      // the default (words mode, English).
-                      onConfigChange(DEFAULT_CONFIG)
-                      void onLanguageChange(DEFAULT_LANGUAGE)
-                    }}
-                    onClose={() => setShowLanguageModal(false)}
-                  />
-                )}
-                {/* Imported-text display: visible line count + font size. */}
-                {typingTest.config.mode === 'custom' && (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
-                      <select
-                        data-testid="display-lines-select"
-                        aria-label={t('editor.typingTest.lines')}
-                        value={displayLines ?? DEFAULT_DISPLAY_LINES}
-                        onChange={(e) => onDisplayLinesChange?.(Number(e.target.value))}
-                        className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
-                      >
-                        {LINE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
-                      <select
-                        data-testid="font-size-select"
-                        aria-label={t('editor.typingTest.fontSize')}
-                        value={fontSize ?? DEFAULT_FONT_SIZE}
-                        onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
-                        className="rounded-md border border-edge bg-surface-alt px-2 py-1 text-sm text-content-secondary focus:border-accent focus:outline-none"
-                      >
-                        {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
-                      </select>
-                    </div>
-                  </>
-                )}
-              </div>
-              <div className="flex items-center gap-3">
-                {/* Memory mode (imported custom text): pause while running, or
-                    resume a saved snapshot. */}
-                {typingTest.config.mode === 'custom' && (
-                  typingTest.state.status === 'running' ? (
-                    <button
-                      type="button"
-                      data-testid="typing-memory-pause"
-                      className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1 text-sm text-content-secondary transition-colors hover:text-content"
-                      onClick={() => onPauseTest?.()}
-                    >
-                      <Pause size={ICON_SM} aria-hidden="true" />
-                      <span>{t('editor.typingTest.memory.pause')}</span>
-                    </button>
-                  ) : (typingTest.state.status === 'paused' || hasSavedMemory) ? (
-                    <button
-                      type="button"
-                      data-testid="typing-memory-resume"
-                      className="flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1 text-sm text-accent transition-colors hover:text-accent/80"
-                      onClick={() => setShowResumeModal(true)}
-                    >
-                      <Play size={ICON_SM} aria-hidden="true" />
-                      <span>{t('editor.typingTest.memory.resumeButton')}</span>
-                    </button>
-                  ) : null
-                )}
-              </div>
-            </div>
+          {/* Editor: centre the keymap in the right pane. View-only must NOT
+              add justify-center — natural-size measurement happens at width 0,
+              where centring pushes content half-off and halves scrollWidth. */}
+          <div className={`flex w-full items-start${viewOnly ? '' : ' justify-center'}`}>
+          <div className="shrink-0">
+          {/* Measure only the keyboard so the reading window matches the
+              keymap width, even for a small board. */}
+          <div ref={keyboardBoxRef} className="w-fit">
+          {/* Keymap hidden only in the editor view — view-only mode is
+              keyboard-focused, so the toggle never applies there. */}
+          {!(hideKeymap && !viewOnly) && (
+            <KeyboardPane
+              paneId="primary"
+              isActive={false}
+              keys={keys}
+              keycodes={keycodes}
+              encoderKeycodes={encoderKeycodes}
+              selectedKey={null}
+              selectedEncoder={null}
+              selectedMaskPart={false}
+              selectedKeycode={null}
+              pressedKeys={pressedKeys}
+              everPressedKeys={undefined}
+              remappedKeys={remappedKeys}
+              layoutOptions={layoutOptions}
+              heatmapCells={heatmapCells}
+              heatmapMaxTotal={heatmapMaxTotal}
+              heatmapMaxTap={heatmapMaxTap}
+              heatmapMaxHold={heatmapMaxHold}
+              scale={viewOnly ? 1 : scale}
+              layerLabel={layerLabel}
+              layerLabelTestId="layer-label"
+              contentRef={contentRef}
+            />
           )}
-          <div className="flex justify-center">
-          <KeyboardPane
-            paneId="primary"
-            isActive={false}
-            keys={keys}
-            keycodes={keycodes}
-            encoderKeycodes={encoderKeycodes}
-            selectedKey={null}
-            selectedEncoder={null}
-            selectedMaskPart={false}
-            selectedKeycode={null}
-            pressedKeys={pressedKeys}
-            everPressedKeys={undefined}
-            remappedKeys={remappedKeys}
-            layoutOptions={layoutOptions}
-            heatmapCells={heatmapCells}
-            heatmapMaxTotal={heatmapMaxTotal}
-            heatmapMaxTap={heatmapMaxTap}
-            heatmapMaxHold={heatmapMaxHold}
-            scale={viewOnly ? 1 : scale}
-            layerLabel={layerLabel}
-            layerLabelTestId="layer-label"
-            contentRef={contentRef}
-          />
+          </div>
+          </div>
           </div>
           {heatmapActive && (
             <p
@@ -563,8 +716,16 @@ export function TypingTestPane({
               {t('editor.typingTest.heatmap.legend')}
             </p>
           )}
+          {/* Layer-tracking note describes the keymap, so hide it with the keymap. */}
+          {!viewOnly && !hideKeymap && (
+            <p data-testid="typing-test-layer-note" className="text-center text-xs text-content-muted">
+              {t('editor.typingTest.layerNote')}
+            </p>
+          )}
         </div>
         </div>
+      </div>
+      </div>
       </div>
       {viewOnly && (
         <>
@@ -777,11 +938,7 @@ export function TypingTestPane({
         </div>
         </>
       )}
-      {!viewOnly && (
-        <p data-testid="typing-test-layer-note" className="text-center text-xs text-content-muted">
-          {t('editor.typingTest.layerNote')}
-        </p>
-      )}
+
     </>
   )
 }

@@ -39,8 +39,6 @@ function renderView(props: Partial<Parameters<typeof TypingTestView>[0]> = {}) {
     remainingSeconds: null as number | null,
     config: DEFAULT_CONFIG,
     paused: false,
-    onRestart: vi.fn(),
-    onConfigChange: vi.fn(),
   }
   return render(
     <I18nextProvider i18n={i18n}>
@@ -53,6 +51,17 @@ describe('TypingTestView', () => {
   it('renders the view container', () => {
     renderView()
     expect(screen.getByTestId('typing-test-view')).toBeInTheDocument()
+  })
+
+  it('shows the stats row with "-" placeholders before measuring', () => {
+    // Stats bar is always present (no collapsing/layout shift); before a run
+    // is measured (waiting/countdown) every metric reads "-".
+    renderView({ state: makeState({ status: 'waiting', words: ['hello', 'world'] }) })
+    expect(screen.getByTestId('typing-test-wpm').textContent).toBe('-')
+    expect(screen.getByTestId('typing-test-kpm').textContent).toBe('-')
+    expect(screen.getByTestId('typing-test-accuracy').textContent).toBe('-')
+    expect(screen.getByTestId('typing-test-time').textContent).toBe('-')
+    expect(screen.getByTestId('typing-test-word-count').textContent).toBe('-')
   })
 
   it('cursor blinks in waiting state', () => {
@@ -71,10 +80,11 @@ describe('TypingTestView', () => {
     expect(cursor!.className).not.toContain('animate-blink')
   })
 
-  it('word container has fixed height to prevent layout shift', () => {
+  it('word container has a var-driven fixed-height window to prevent layout shift', () => {
     renderView({ state: makeState({ status: 'waiting' }) })
     const wordsContainer = screen.getByTestId('typing-test-words')
-    expect(wordsContainer.className).toContain('h-typing-display')
+    // All modes use the var-driven window (font/line settings are shared).
+    expect(wordsContainer.className).toContain('typing-multiline-window')
   })
 
   it('displays word elements when running', () => {
@@ -187,18 +197,13 @@ describe('TypingTestView', () => {
     expect(screen.getByTestId('typing-test-time').textContent).toBe('0:23')
   })
 
-  it('shows results panel and triggers onRestart when restart button clicked', () => {
-    const onRestart = vi.fn()
+  it('shows the results panel when finished', () => {
     renderView({
       state: makeState({ status: 'finished' }),
       wpm: 70,
       accuracy: 95,
-      onRestart,
     })
     expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
-    const restartBtn = screen.getByTestId('typing-test-restart')
-    fireEvent.click(restartBtn)
-    expect(onRestart).toHaveBeenCalledTimes(1)
   })
 
   it('displays current/total word count progress', () => {
@@ -228,166 +233,21 @@ describe('TypingTestView', () => {
   })
 })
 
-describe('TypingTestView mode tabs', () => {
-  it('renders mode tabs', () => {
-    renderView()
-    expect(screen.getByTestId('mode-words')).toBeInTheDocument()
-    expect(screen.getByTestId('mode-time')).toBeInTheDocument()
-    expect(screen.getByTestId('mode-quote')).toBeInTheDocument()
+describe('TypingTestView measurement toggle (hideStatsRow)', () => {
+  it('shows the live measurement row during a run when measurement is on', () => {
+    renderView({ hideStatsRow: false, state: makeState({ status: 'running', words: ['a'] }) })
+    expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
   })
 
-  it('highlights the active mode tab', () => {
-    renderView()
-    expect(screen.getByTestId('mode-words').className).toContain('text-accent')
-    expect(screen.getByTestId('mode-time').className).not.toContain('text-accent')
+  it('hides the live measurement row during a run when measurement is off', () => {
+    renderView({ hideStatsRow: true, state: makeState({ status: 'running', words: ['a'] }) })
+    expect(screen.queryByTestId('typing-test-results')).toBeNull()
   })
 
-  it('calls onConfigChange when mode tab clicked', () => {
-    const onConfigChange = vi.fn()
-    renderView({ onConfigChange })
-    fireEvent.click(screen.getByTestId('mode-time'))
-    expect(onConfigChange).toHaveBeenCalledTimes(1)
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(arg.mode).toBe('time')
-  })
-
-  it('shows word count options in words mode', () => {
-    renderView()
-    expect(screen.getByTestId('word-count-15')).toBeInTheDocument()
-    expect(screen.getByTestId('word-count-30')).toBeInTheDocument()
-    expect(screen.getByTestId('word-count-60')).toBeInTheDocument()
-    expect(screen.getByTestId('word-count-120')).toBeInTheDocument()
-  })
-
-  it('highlights the selected word count option with accent color', () => {
-    const config: TypingTestConfig = { mode: 'words', wordCount: 60, punctuation: false, numbers: false }
-    renderView({ config })
-    expect(screen.getByTestId('word-count-60').className).toContain('text-accent')
-    expect(screen.getByTestId('word-count-30').className).not.toContain('text-accent')
-  })
-
-  it('calls onConfigChange when word count option clicked', () => {
-    const onConfigChange = vi.fn()
-    renderView({ onConfigChange })
-    fireEvent.click(screen.getByTestId('word-count-60'))
-    expect(onConfigChange).toHaveBeenCalledTimes(1)
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(arg.mode).toBe('words')
-    if (arg.mode === 'words') {
-      expect(arg.wordCount).toBe(60)
-    }
-  })
-
-  it('shows duration options in time mode', () => {
-    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
-    renderView({ config })
-    expect(screen.getByTestId('duration-15')).toBeInTheDocument()
-    expect(screen.getByTestId('duration-30')).toBeInTheDocument()
-    expect(screen.getByTestId('duration-60')).toBeInTheDocument()
-    expect(screen.getByTestId('duration-120')).toBeInTheDocument()
-  })
-
-  it('shows quote length options in quote mode', () => {
-    const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
-    renderView({ config })
-    expect(screen.getByTestId('quote-short')).toBeInTheDocument()
-    expect(screen.getByTestId('quote-medium')).toBeInTheDocument()
-    expect(screen.getByTestId('quote-long')).toBeInTheDocument()
-    expect(screen.getByTestId('quote-all')).toBeInTheDocument()
-  })
-})
-
-describe('TypingTestView toggles', () => {
-  it('shows punctuation and numbers toggles in words mode', () => {
-    renderView()
-    expect(screen.getByTestId('toggle-punctuation')).toBeInTheDocument()
-    expect(screen.getByTestId('toggle-numbers')).toBeInTheDocument()
-  })
-
-  it('shows punctuation and numbers toggles in time mode', () => {
-    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
-    renderView({ config })
-    expect(screen.getByTestId('toggle-punctuation')).toBeInTheDocument()
-    expect(screen.getByTestId('toggle-numbers')).toBeInTheDocument()
-  })
-
-  it('hides punctuation and numbers toggles in quote mode', () => {
-    const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
-    renderView({ config })
-    expect(screen.queryByTestId('toggle-punctuation')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('toggle-numbers')).not.toBeInTheDocument()
-  })
-
-  it('highlights active punctuation toggle', () => {
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: true, numbers: false }
-    renderView({ config })
-    expect(screen.getByTestId('toggle-punctuation').className).toContain('text-accent')
-  })
-
-  it('calls onConfigChange when punctuation toggle clicked', () => {
-    const onConfigChange = vi.fn()
-    renderView({ onConfigChange })
-    fireEvent.click(screen.getByTestId('toggle-punctuation'))
-    expect(onConfigChange).toHaveBeenCalledTimes(1)
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') {
-      expect(arg.punctuation).toBe(true)
-    }
-  })
-})
-
-describe('TypingTestView toggle preservation', () => {
-  it('preserves punctuation/numbers when switching words -> quote -> time', () => {
-    const onConfigChange = vi.fn()
-    // Start in words mode with punctuation enabled
-    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: true, numbers: true }
-    const { rerender } = render(
-      <I18nextProvider i18n={i18n}>
-        <TypingTestView
-          state={makeState()}
-          wpm={0}
-          accuracy={100}
-          elapsedSeconds={0}
-          remainingSeconds={null}
-          config={config}
-          paused={false}
-          onRestart={vi.fn()}
-          onConfigChange={onConfigChange}
-        />
-      </I18nextProvider>,
-    )
-
-    // Switch to quote mode
-    fireEvent.click(screen.getByTestId('mode-quote'))
-    const quoteConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(quoteConfig.mode).toBe('quote')
-
-    // Rerender in quote mode
-    onConfigChange.mockClear()
-    rerender(
-      <I18nextProvider i18n={i18n}>
-        <TypingTestView
-          state={makeState()}
-          wpm={0}
-          accuracy={100}
-          elapsedSeconds={0}
-          remainingSeconds={null}
-          config={quoteConfig}
-          paused={false}
-          onRestart={vi.fn()}
-          onConfigChange={onConfigChange}
-        />
-      </I18nextProvider>,
-    )
-
-    // Switch to time mode - toggles should be preserved from before quote mode
-    fireEvent.click(screen.getByTestId('mode-time'))
-    const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    expect(timeConfig.mode).toBe('time')
-    if (timeConfig.mode === 'time') {
-      expect(timeConfig.punctuation).toBe(true)
-      expect(timeConfig.numbers).toBe(true)
-    }
+  it('always shows the results when finished, even with measurement off', () => {
+    // The toggle only hides the in-run live metrics — finished results are absolute.
+    renderView({ hideStatsRow: true, state: makeState({ status: 'finished' }), wpm: 70, accuracy: 95 })
+    expect(screen.getByTestId('typing-test-results')).toBeInTheDocument()
   })
 })
 
@@ -483,10 +343,11 @@ describe('TypingTestView custom mode result naming', () => {
       state: makeState({ status: 'finished' }),
       onNameResult,
     })
+    // Click opens the naming modal; type and Save commits.
     fireEvent.click(screen.getByTestId('typing-test-result-name'))
-    const input = screen.getByTestId('typing-test-result-name-input')
+    const input = screen.getByTestId('result-name-modal-input')
     fireEvent.change(input, { target: { value: 'QWERTY baseline' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByTestId('result-name-modal-save'))
     expect(onNameResult).toHaveBeenCalledWith('QWERTY baseline')
   })
 })
@@ -623,7 +484,7 @@ describe('TypingTestView — imported custom text (line breaks)', () => {
       state: makeState({ status: 'running', words: ['a', 'b'], lineBreaks: new Set() }),
     })
     expect(container.querySelectorAll('[data-line-row]')).toHaveLength(0)
-    expect(screen.getByTestId('typing-test-words').className).toContain('h-typing-display')
-    expect(screen.getByTestId('typing-test-words').className).not.toContain('typing-multiline-window')
+    // Flat word-flow still uses the shared var-driven window (no line rows).
+    expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
   })
 })

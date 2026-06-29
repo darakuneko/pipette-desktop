@@ -90,6 +90,9 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingTestMemory' in obj && obj.typingTestMemory != null && (typeof obj.typingTestMemory !== 'object' || Array.isArray(obj.typingTestMemory))) return false
   if ('typingTestDisplayLines' in obj && obj.typingTestDisplayLines != null && typeof obj.typingTestDisplayLines !== 'number') return false
   if ('typingTestFontSize' in obj && obj.typingTestFontSize != null && typeof obj.typingTestFontSize !== 'number') return false
+  if ('typingTestHideKeymap' in obj && obj.typingTestHideKeymap != null && typeof obj.typingTestHideKeymap !== 'boolean') return false
+  if ('typingTestHideStatsRow' in obj && obj.typingTestHideStatsRow != null && typeof obj.typingTestHideStatsRow !== 'boolean') return false
+  if ('typingTestSettingsPanelOpen' in obj && obj.typingTestSettingsPanelOpen != null && typeof obj.typingTestSettingsPanelOpen !== 'boolean') return false
   if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
   if ('typingViewMenuTab' in obj && obj.typingViewMenuTab != null && !isTypingViewMenuTab(obj.typingViewMenuTab)) return false
@@ -139,6 +142,9 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestMemory: parsed.typingTestMemory,
       typingTestDisplayLines: parsed.typingTestDisplayLines,
       typingTestFontSize: parsed.typingTestFontSize,
+      typingTestHideKeymap: parsed.typingTestHideKeymap,
+      typingTestHideStatsRow: parsed.typingTestHideStatsRow,
+      typingTestSettingsPanelOpen: parsed.typingTestSettingsPanelOpen,
       typingRecordEnabled: parsed.typingRecordEnabled,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
       typingViewMenuTab: parsed.typingViewMenuTab,

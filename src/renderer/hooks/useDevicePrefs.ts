@@ -113,6 +113,9 @@ interface ValidatedPrefs {
   typingTestMemory?: TypingTestMemory
   typingTestDisplayLines: number
   typingTestFontSize: number
+  typingTestHideKeymap: boolean
+  typingTestHideStatsRow: boolean
+  typingTestSettingsPanelOpen: boolean
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
@@ -120,7 +123,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -195,6 +198,9 @@ function validateIpcPrefs(
     typingTestMemory: validateTypingTestMemory(data.typingTestMemory),
     typingTestDisplayLines: typeof data.typingTestDisplayLines === 'number' ? clampDisplayLines(data.typingTestDisplayLines) : DEFAULT_DISPLAY_LINES,
     typingTestFontSize: typeof data.typingTestFontSize === 'number' ? clampFontSize(data.typingTestFontSize) : DEFAULT_FONT_SIZE,
+    typingTestHideKeymap: data.typingTestHideKeymap === true,
+    typingTestHideStatsRow: data.typingTestHideStatsRow === true,
+    typingTestSettingsPanelOpen: typeof data.typingTestSettingsPanelOpen === 'boolean' ? data.typingTestSettingsPanelOpen : true,
     typingRecordEnabled: typeof data.typingRecordEnabled === 'boolean' ? data.typingRecordEnabled : false,
     typingViewMenuTab: isTypingViewMenuTab(data.typingViewMenuTab) ? data.typingViewMenuTab : 'window',
     viewMode,
@@ -228,6 +234,9 @@ export interface UseDevicePrefsReturn {
   typingTestMemory: TypingTestMemory | undefined
   typingTestDisplayLines: number
   typingTestFontSize: number
+  typingTestHideKeymap: boolean
+  typingTestHideStatsRow: boolean
+  typingTestSettingsPanelOpen: boolean
   typingRecordEnabled: boolean
   typingViewMenuTab: TypingViewMenuTab
   viewMode: ViewMode
@@ -251,6 +260,9 @@ export interface UseDevicePrefsReturn {
   setTypingTestMemory: (memory: TypingTestMemory | undefined) => void
   setTypingTestDisplayLines: (lines: number) => void
   setTypingTestFontSize: (px: number) => void
+  setTypingTestHideKeymap: (hidden: boolean) => void
+  setTypingTestHideStatsRow: (hidden: boolean) => void
+  setTypingTestSettingsPanelOpen: (open: boolean) => void
   setTypingRecordEnabled: (enabled: boolean) => void
   setTypingViewMenuTab: (tab: TypingViewMenuTab) => void
   setViewMode: (mode: ViewMode) => void
@@ -320,6 +332,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingTestMemory, updateTypingTestMemory, typingTestMemoryRef] = useStateRef<TypingTestMemory | undefined>(undefined)
   const [typingTestDisplayLines, updateTypingTestDisplayLines, typingTestDisplayLinesRef] = useStateRef<number>(DEFAULT_DISPLAY_LINES)
   const [typingTestFontSize, updateTypingTestFontSize, typingTestFontSizeRef] = useStateRef<number>(DEFAULT_FONT_SIZE)
+  const [typingTestHideKeymap, updateTypingTestHideKeymap, typingTestHideKeymapRef] = useStateRef<boolean>(false)
+  const [typingTestHideStatsRow, updateTypingTestHideStatsRow, typingTestHideStatsRowRef] = useStateRef<boolean>(false)
+  const [typingTestSettingsPanelOpen, updateTypingTestSettingsPanelOpen, typingTestSettingsPanelOpenRef] = useStateRef<boolean>(true)
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
   const [typingViewMenuTab, updateTypingViewMenuTab, typingViewMenuTabRef] = useStateRef<TypingViewMenuTab>('window')
   const [viewMode, updateViewMode, viewModeRef] = useStateRef<ViewMode>('editor')
@@ -355,6 +370,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestMemory: typingTestMemoryRef.current ?? null,
       typingTestDisplayLines: typingTestDisplayLinesRef.current,
       typingTestFontSize: typingTestFontSizeRef.current,
+      typingTestHideKeymap: typingTestHideKeymapRef.current,
+      typingTestHideStatsRow: typingTestHideStatsRowRef.current,
+      typingTestSettingsPanelOpen: typingTestSettingsPanelOpenRef.current,
       typingRecordEnabled: typingRecordEnabledRef.current,
       typingViewMenuTab: typingViewMenuTabRef.current,
       viewMode: viewModeRef.current,
@@ -483,6 +501,24 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestFontSize])
 
+  const setTypingTestHideKeymap = useCallback((hidden: boolean) => {
+    if (typingTestHideKeymapRef.current === hidden) return
+    updateTypingTestHideKeymap(hidden)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestHideKeymap])
+
+  const setTypingTestHideStatsRow = useCallback((hidden: boolean) => {
+    if (typingTestHideStatsRowRef.current === hidden) return
+    updateTypingTestHideStatsRow(hidden)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestHideStatsRow])
+
+  const setTypingTestSettingsPanelOpen = useCallback((open: boolean) => {
+    if (typingTestSettingsPanelOpenRef.current === open) return
+    updateTypingTestSettingsPanelOpen(open)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestSettingsPanelOpen])
+
   const setTypingRecordEnabled = useCallback((enabled: boolean) => {
     if (typingRecordEnabledRef.current === enabled) return
     updateTypingRecordEnabled(enabled)
@@ -565,6 +601,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestViewOnlyAlwaysOnTop: false,
       typingTestDisplayLines: DEFAULT_DISPLAY_LINES,
       typingTestFontSize: DEFAULT_FONT_SIZE,
+      typingTestHideKeymap: false,
+      typingTestHideStatsRow: false,
+      typingTestSettingsPanelOpen: true,
       typingRecordEnabled: false,
       typingViewMenuTab: 'window',
       viewMode: 'editor',
@@ -586,6 +625,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingTestMemory(resolved.typingTestMemory)
     updateTypingTestDisplayLines(resolved.typingTestDisplayLines)
     updateTypingTestFontSize(resolved.typingTestFontSize)
+    updateTypingTestHideKeymap(resolved.typingTestHideKeymap)
+    updateTypingTestHideStatsRow(resolved.typingTestHideStatsRow)
+    updateTypingTestSettingsPanelOpen(resolved.typingTestSettingsPanelOpen)
     updateTypingRecordEnabled(resolved.typingRecordEnabled)
     updateTypingViewMenuTab(resolved.typingViewMenuTab)
     updateViewMode(resolved.viewMode)
@@ -644,6 +686,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestMemory,
     typingTestDisplayLines,
     typingTestFontSize,
+    typingTestHideKeymap,
+    typingTestHideStatsRow,
+    typingTestSettingsPanelOpen,
     typingRecordEnabled,
     typingViewMenuTab,
     viewMode,
@@ -668,6 +713,9 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingTestMemory,
     setTypingTestDisplayLines,
     setTypingTestFontSize,
+    setTypingTestHideKeymap,
+    setTypingTestHideStatsRow,
+    setTypingTestSettingsPanelOpen,
     setTypingRecordEnabled,
     setTypingViewMenuTab,
     setViewMode,

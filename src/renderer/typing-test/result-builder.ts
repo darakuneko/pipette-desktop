@@ -36,6 +36,36 @@ export function typingTestResultMaterialLabel(result: TypingTestResult): string 
   return materialLabel(result.mode ?? 'words', result.language ?? '', result.customTextName)
 }
 
+/** Keystrokes per minute, derived from the stored char count and duration so
+ *  it works for legacy rows too (no separate field needed). */
+export function resultKpm(r: TypingTestResult): number {
+  return r.durationSeconds > 0 ? Math.round((r.correctChars * 60) / r.durationSeconds) : 0
+}
+
+/** Compact `YYYYMMDDHHmmss` timestamp from a result's ISO date. */
+function compactTimestamp(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const p = (n: number): string => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
+}
+
+/** Quick-insert chips for the result-name modal: material label, a compact
+ *  timestamp, then the headline metrics. Each string is inserted verbatim.
+ *  `t` translates the metric labels (WPM / KPM / Accuracy) so the chips honour
+ *  the i18n locale. */
+export function buildResultNameChips(result: TypingTestResult, t: (key: string) => string): string[] {
+  const chips: string[] = []
+  const label = typingTestResultMaterialLabel(result)
+  if (label) chips.push(label)
+  const ts = compactTimestamp(result.date)
+  if (ts) chips.push(ts)
+  chips.push(`${t('editor.typingTest.wpm')}${result.wpm}`)
+  chips.push(`${t('editor.typingTest.kpm')}${resultKpm(result)}`)
+  chips.push(`${t('editor.typingTest.accuracy')}${result.accuracy}`)
+  return chips
+}
+
 export function configKey(result: TypingTestResult): string {
   return `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}`
 }
