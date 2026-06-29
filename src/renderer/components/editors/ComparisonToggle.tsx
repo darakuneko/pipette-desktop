@@ -6,6 +6,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from './ModalCloseButton'
 import { formatDate } from './store-modal-shared'
 import { BTN_PRIMARY, BTN_SECONDARY } from '../../constants/ui-tokens'
+import { Tooltip } from '../ui/Tooltip'
 import { COMPARISON_BASELINE_KINDS } from '../../../shared/types/pipette-settings'
 import type { PooledTypingTestResult, TypingTestComparisonBaseline, ComparisonBaselineKind } from '../../../shared/types/pipette-settings'
 
@@ -65,8 +66,11 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
       <button
         type="button"
         data-testid="typing-test-comparison-toggle"
-        className={toggleClass(open)}
-        aria-pressed={open}
+        // Accent-highlight whenever comparison is active (any baseline but
+        // 'off'), mirroring the Show toggles, so the button reflects on/off
+        // state rather than just whether the modal is open.
+        className={toggleClass(baseline.kind !== 'off')}
+        aria-pressed={baseline.kind !== 'off'}
         onClick={openModal}
       >
         {t('editor.typingTest.compare.button')}
@@ -81,7 +85,7 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
           onClick={close}
         >
           <div
-            className="flex max-h-modal-80vh w-full max-w-2xl flex-col rounded-xl border border-edge bg-surface-alt shadow-lg"
+            className="flex max-h-modal-80vh w-full max-w-3xl flex-col rounded-xl border border-edge bg-surface-alt shadow-lg"
             data-testid="comparison-modal"
             onClick={(e) => e.stopPropagation()}
           >
@@ -93,7 +97,6 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
             </div>
 
             <div className="flex min-h-0 flex-col gap-1 overflow-y-auto p-4">
-              <p className="mb-1 text-xs text-content-muted">{t('editor.typingTest.compare.description')}</p>
               {COMPARISON_BASELINE_KINDS.map((kind) => (
                 <label
                   key={kind}
@@ -121,8 +124,8 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
                         <thead className="sticky top-0 bg-surface-alt text-content-muted">
                           <tr>
                             <th className="px-2 py-1.5 text-left font-medium">{t('editor.typingTest.compare.colName')}</th>
-                            <th className="w-28 px-2 py-1.5 text-left font-medium">{t('editor.typingTest.compare.colKeyboard')}</th>
-                            <th className="w-36 px-2 py-1.5 text-left font-medium">{t('editor.typingTest.compare.colTime')}</th>
+                            <th className="w-36 px-2 py-1.5 text-left font-medium">{t('editor.typingTest.compare.colKeyboard')}</th>
+                            <th className="w-44 px-2 py-1.5 text-left font-medium">{t('editor.typingTest.compare.colTime')}</th>
                             <th className="w-14 px-2 py-1.5 text-right font-medium">{t('editor.typingTest.wpm')}</th>
                           </tr>
                         </thead>
@@ -135,10 +138,14 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
                               className={`cursor-pointer border-t border-edge/50 transition-colors ${draftPinnedDate === r.date ? 'bg-accent/10 font-semibold text-accent' : 'text-content hover:bg-surface-dim'}`}
                               onClick={() => setDraftPinnedDate(r.date)}
                             >
-                              <td className="truncate px-2 py-1.5">{r.name || t('editor.typingTest.history.unnamed')}</td>
-                              <td className="truncate px-2 py-1.5">{r.keyboardName}</td>
-                              <td className="px-2 py-1.5 font-mono">{formatDate(r.date)}</td>
-                              <td className="px-2 py-1.5 text-right font-mono">{r.wpm}</td>
+                              <td className="px-2 py-1.5">
+                                <Tooltip content={r.name || t('editor.typingTest.history.unnamed')} wrapperClassName="block max-w-full">
+                                  <span className="block truncate">{r.name || t('editor.typingTest.history.unnamed')}</span>
+                                </Tooltip>
+                              </td>
+                              <td className="whitespace-nowrap px-2 py-1.5">{r.keyboardName}</td>
+                              <td className="whitespace-nowrap px-2 py-1.5 font-mono">{formatDate(r.date)}</td>
+                              <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{r.wpm}</td>
                             </tr>
                           ))}
                         </tbody>

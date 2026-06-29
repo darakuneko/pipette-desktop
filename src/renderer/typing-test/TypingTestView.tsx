@@ -34,6 +34,9 @@ interface Props {
   /** Baseline metrics for the Measurement-row comparison delta, or null when
    *  comparison is off / no matching history. */
   comparison?: ComparisonStats | null
+  /** "Compare With <target>" caption describing what the deltas measure
+   *  against, or null when no comparison is active. */
+  comparisonLabel?: string | null
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
@@ -104,6 +107,7 @@ export function TypingTestView({
   hideStatsRow,
   hideControls,
   comparison,
+  comparisonLabel,
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
@@ -247,7 +251,7 @@ export function TypingTestView({
   )
 
   return (
-    <div data-testid="typing-test-view" className="flex flex-col items-center gap-4 px-4 py-4">
+    <div data-testid="typing-test-view" className="flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4">
       {/* Word display — fixed window with scroll. Word-flow modes show a
           3-line window; imported custom text shows 4 lines (line-row layout). */}
       <div
@@ -403,28 +407,40 @@ export function TypingTestView({
         <div className="flex flex-wrap items-center justify-center gap-8 text-sm">
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.wpm')}:</span>
-            <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent">
+            <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
               {showStats ? wpm : '-'}
             </span>
-            {showStats && comparison && <ComparisonDelta current={wpm} baseline={comparison.wpm} testid="wpm" />}
+            {comparison && (
+              <span className="inline-flex min-w-12 justify-start">
+                {showStats && <ComparisonDelta current={wpm} baseline={comparison.wpm} testid="wpm" />}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.kpm')}:</span>
-            <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent">
+            <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
               {showStats ? kpm : '-'}
             </span>
-            {showStats && comparison && <ComparisonDelta current={kpm} baseline={comparison.kpm} testid="kpm" />}
+            {comparison && (
+              <span className="inline-flex min-w-12 justify-start">
+                {showStats && <ComparisonDelta current={kpm} baseline={comparison.kpm} testid="kpm" />}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.accuracy')}:</span>
-            <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold">
+            <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold tabular-nums">
               {showStats ? `${accuracy}%` : '-'}
             </span>
-            {showStats && comparison && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
+            {comparison && (
+              <span className="inline-flex min-w-12 justify-start">
+                {showStats && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.time')}:</span>
-            <span data-testid="typing-test-time" className="font-mono text-lg font-semibold">
+            <span data-testid="typing-test-time" className="font-mono text-lg font-semibold tabular-nums">
               {showStats ? displayTime : '-'}
             </span>
           </div>
@@ -432,7 +448,7 @@ export function TypingTestView({
             {/* Imported custom text tracks character progress (spaces included);
                 everything else tracks words. */}
             <span className="text-content-muted">{t(isCustom ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
-            <span data-testid="typing-test-word-count" className="font-mono text-lg font-semibold">
+            <span data-testid="typing-test-word-count" className="font-mono text-lg font-semibold tabular-nums">
               {!showStats
                 ? '-'
                 : isCustom
@@ -449,6 +465,11 @@ export function TypingTestView({
             </span>
           )}
         </div>
+        {comparison && comparisonLabel && (
+          <p data-testid="typing-test-comparison-label" className="text-xs text-content-muted">
+            {comparisonLabel}
+          </p>
+        )}
       </div>
       )}
 

@@ -50,12 +50,13 @@ function compactTimestamp(iso: string): string {
   return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`
 }
 
-/** Quick-insert chips for the result-name modal: material label, a compact
- *  timestamp, then the headline metrics. Each string is inserted verbatim.
- *  `t` translates the metric labels (WPM / KPM / Accuracy) so the chips honour
- *  the i18n locale. */
-export function buildResultNameChips(result: TypingTestResult, t: (key: string) => string): string[] {
+/** Quick-insert chips for the result-name modal: the keyboard name (when
+ *  known), the material label, a compact timestamp, then the headline metrics.
+ *  Each string is inserted verbatim. `t` translates the metric labels
+ *  (WPM / KPM / Accuracy) so the chips honour the i18n locale. */
+export function buildResultNameChips(result: TypingTestResult, t: (key: string) => string, deviceName?: string): string[] {
   const chips: string[] = []
+  if (deviceName) chips.push(deviceName)
   const label = typingTestResultMaterialLabel(result)
   if (label) chips.push(label)
   const ts = compactTimestamp(result.date)

@@ -261,4 +261,9 @@ describe('buildResultNameChips', () => {
     const chips = buildResultNameChips({ ...base, mode: 'words', language: 'english' }, tStub)
     expect(chips[0]).toBe('words (english)')
   })
+  it('prepends the keyboard name when provided', () => {
+    const chips = buildResultNameChips({ ...base, mode: 'words', language: 'english' }, tStub, 'Ieneko54R')
+    expect(chips[0]).toBe('Ieneko54R')
+    expect(chips[1]).toBe('words (english)')
+  })
 })

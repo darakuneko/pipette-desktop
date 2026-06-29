@@ -11,6 +11,7 @@ import { WpmSparkline } from './WpmSparkline'
 import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN } from '../components/editors/store-modal-shared'
 import { resultKpm, buildResultNameChips } from './result-builder'
 import { ResultNameModal } from './ResultNameModal'
+import { Tooltip } from '../components/ui/Tooltip'
 
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
@@ -28,6 +29,8 @@ interface Props {
   onRename?: (date: string, name: string) => void
   /** Delete a single result (keyed by ISO date). */
   onDelete?: (date: string) => void
+  /** Current keyboard name, offered as a quick-insert chip when renaming. */
+  deviceName?: string
 }
 
 const MAX_TABLE_ROWS = 20
@@ -86,7 +89,7 @@ function buildResultsCsv(results: TypingTestResult[]): string {
   )
 }
 
-export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: Props) {
+export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
@@ -287,17 +290,17 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: 
                   key={r.date}
                   className="border-t border-edge/50 transition-colors hover:bg-surface-alt/50"
                 >
-                  <NameCell result={r} onRename={onRename} />
-                  <td className="px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
-                  <td className="px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
-                  <td className="px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
-                  <td className="px-3 py-1.5 font-mono">{r.accuracy}%</td>
-                  <td className="px-3 py-1.5 text-content-muted">
+                  <NameCell result={r} onRename={onRename} deviceName={deviceName} />
+                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 font-mono">{r.accuracy}%</td>
+                  <td className="whitespace-nowrap px-3 py-1.5 text-content-muted">
                     {isText
                       ? (modeDetail(r) || t('editor.typingTest.history.unnamed'))
                       : `${t(`editor.typingTest.mode.${r.mode ?? 'words'}`)}${modeDetail(r) ? ` ${modeDetail(r)}` : ''}`}
                   </td>
-                  <td className="px-3 py-1.5 font-mono text-content-muted">
+                  <td className="whitespace-nowrap px-3 py-1.5 font-mono text-content-muted">
                     {formatDuration(r.durationSeconds)}
                   </td>
                   <td className="px-3 py-1.5">
@@ -407,36 +410,46 @@ function StatItem({ label, value, highlight }: StatItemProps) {
 interface NameCellProps {
   result: TypingTestResult
   onRename?: (date: string, name: string) => void
+  deviceName?: string
 }
 
 /** Result label cell. A button (edit icon + current name / "Unnamed") that
  *  opens the naming modal with quick-insert chips. Read-only when no rename
  *  handler is provided. */
-function NameCell({ result, onRename }: NameCellProps) {
+function NameCell({ result, onRename, deviceName }: NameCellProps) {
   const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
   const placeholder = t('editor.typingTest.history.unnamed')
 
+  const display = result.name || placeholder
+
   if (!onRename) {
-    return <td className="px-3 py-1.5 text-content-muted">{result.name || placeholder}</td>
+    return (
+      <td className="max-w-[14rem] px-3 py-1.5 text-content-muted">
+        <Tooltip content={display} wrapperClassName="block max-w-full">
+          <span className="block truncate">{display}</span>
+        </Tooltip>
+      </td>
+    )
   }
 
   return (
-    <td className="px-3 py-1.5">
-      <button
-        type="button"
-        onClick={() => setModalOpen(true)}
-        title={t('editor.typingTest.nameResult')}
-        className={`flex items-center gap-1.5 text-left transition-colors hover:text-content ${result.name ? 'text-content-secondary' : 'text-content-muted'}`}
-        data-testid={`history-name-${result.date}`}
-      >
-        <SquarePen size={ICON_SM} aria-hidden="true" />
-        <span className="truncate">{result.name || placeholder}</span>
-      </button>
+    <td className="max-w-[14rem] px-3 py-1.5">
+      <Tooltip content={display} wrapperClassName="block max-w-full">
+        <button
+          type="button"
+          onClick={() => setModalOpen(true)}
+          className={`flex w-full items-center gap-1.5 text-left transition-colors hover:text-content ${result.name ? 'text-content-secondary' : 'text-content-muted'}`}
+          data-testid={`history-name-${result.date}`}
+        >
+          <SquarePen size={ICON_SM} aria-hidden="true" className="shrink-0" />
+          <span className="min-w-0 truncate">{display}</span>
+        </button>
+      </Tooltip>
       {modalOpen && (
         <ResultNameModal
           initialName={result.name ?? ''}
-          chips={buildResultNameChips(result, t)}
+          chips={buildResultNameChips(result, t, deviceName)}
           onSave={(name) => onRename(result.date, name)}
           onClose={() => setModalOpen(false)}
         />
