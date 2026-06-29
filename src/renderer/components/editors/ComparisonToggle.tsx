@@ -93,7 +93,6 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
             </div>
 
             <div className="flex min-h-0 flex-col gap-1 overflow-y-auto p-4">
-              <p className="mb-1 text-xs text-content-muted">{t('editor.typingTest.compare.description')}</p>
               {COMPARISON_BASELINE_KINDS.map((kind) => (
                 <label
                   key={kind}

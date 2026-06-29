@@ -34,6 +34,9 @@ interface Props {
   /** Baseline metrics for the Measurement-row comparison delta, or null when
    *  comparison is off / no matching history. */
   comparison?: ComparisonStats | null
+  /** "Compare With <target>" caption describing what the deltas measure
+   *  against, or null when no comparison is active. */
+  comparisonLabel?: string | null
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
@@ -104,6 +107,7 @@ export function TypingTestView({
   hideStatsRow,
   hideControls,
   comparison,
+  comparisonLabel,
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
@@ -449,6 +453,11 @@ export function TypingTestView({
             </span>
           )}
         </div>
+        {showStats && comparison && comparisonLabel && (
+          <p data-testid="typing-test-comparison-label" className="text-xs text-content-muted">
+            {comparisonLabel}
+          </p>
+        )}
       </div>
       )}
 
