@@ -61,7 +61,7 @@ export function HistoryToggle({ results, deviceName, onRename, onDelete }: Histo
               <h3 id="history-modal-title" className="text-lg font-semibold">{t('editor.typingTest.history.title')}</h3>
               <ModalCloseButton testid="history-modal-close" onClick={() => setShowHistory(false)} />
             </div>
-            <TypingTestHistory results={results} onExportCsv={handleExportCsv} onRename={onRename} onDelete={onDelete} />
+            <TypingTestHistory results={results} onExportCsv={handleExportCsv} onRename={onRename} onDelete={onDelete} deviceName={deviceName} />
           </div>
         </div>
       )}

@@ -705,7 +705,7 @@ export function TypingTestPane({
             if (date) onRenameTypingTestResult?.(date, name)
           }}
           // Chips come from the just-finished result (history[0]).
-          resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t) : []}
+          resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t, deviceName) : []}
           onStart={() => typingTest.restart()}
           onPause={() => onPauseTest?.()}
           onResume={() => setShowResumeModal(true)}

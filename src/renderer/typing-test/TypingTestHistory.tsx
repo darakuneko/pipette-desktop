@@ -28,6 +28,8 @@ interface Props {
   onRename?: (date: string, name: string) => void
   /** Delete a single result (keyed by ISO date). */
   onDelete?: (date: string) => void
+  /** Current keyboard name, offered as a quick-insert chip when renaming. */
+  deviceName?: string
 }
 
 const MAX_TABLE_ROWS = 20
@@ -86,7 +88,7 @@ function buildResultsCsv(results: TypingTestResult[]): string {
   )
 }
 
-export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: Props) {
+export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, deviceName }: Props) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
@@ -287,7 +289,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: 
                   key={r.date}
                   className="border-t border-edge/50 transition-colors hover:bg-surface-alt/50"
                 >
-                  <NameCell result={r} onRename={onRename} />
+                  <NameCell result={r} onRename={onRename} deviceName={deviceName} />
                   <td className="px-3 py-1.5 text-content-muted">{formatDate(r.date)}</td>
                   <td className="px-3 py-1.5 font-mono font-semibold text-accent">{r.wpm}</td>
                   <td className="px-3 py-1.5 font-mono font-semibold text-accent">{resultKpm(r)}</td>
@@ -407,12 +409,13 @@ function StatItem({ label, value, highlight }: StatItemProps) {
 interface NameCellProps {
   result: TypingTestResult
   onRename?: (date: string, name: string) => void
+  deviceName?: string
 }
 
 /** Result label cell. A button (edit icon + current name / "Unnamed") that
  *  opens the naming modal with quick-insert chips. Read-only when no rename
  *  handler is provided. */
-function NameCell({ result, onRename }: NameCellProps) {
+function NameCell({ result, onRename, deviceName }: NameCellProps) {
   const { t } = useTranslation()
   const [modalOpen, setModalOpen] = useState(false)
   const placeholder = t('editor.typingTest.history.unnamed')
@@ -436,7 +439,7 @@ function NameCell({ result, onRename }: NameCellProps) {
       {modalOpen && (
         <ResultNameModal
           initialName={result.name ?? ''}
-          chips={buildResultNameChips(result, t)}
+          chips={buildResultNameChips(result, t, deviceName)}
           onSave={(name) => onRename(result.date, name)}
           onClose={() => setModalOpen(false)}
         />
