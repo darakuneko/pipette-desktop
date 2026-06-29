@@ -1282,6 +1282,10 @@ export async function deleteTypingDailySummaries(
  * devices' files are untouched — they clear themselves on their own
  * Delete All action. */
 export async function deleteAllTypingForKeyboard(uid: string): Promise<TypingTombstoneResult> {
+  // Finalize this keyboard's active session first so flushNow persists it and
+  // the cache tombstone below covers it; otherwise closeAll() on quit would
+  // re-persist the open session and resurrect the deleted keyboard in Analyze.
+  closeSessionsForUid(uid)
   await flushNow({ final: true })
   const machineHash = await getMachineHash()
   const userDataDir = app.getPath('userData')

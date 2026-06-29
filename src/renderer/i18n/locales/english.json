@@ -1347,7 +1347,7 @@
     "noSaves": "No saves found",
     "importExportDesc": "Import/Export all local data (keyboards, favorites, settings)",
     "deleteAll": "Delete All Data",
-    "deleteAllConfirm": "This will delete all data including synced data.",
+    "deleteAllConfirm": "This deletes everything tied to this keyboard — keymaps, typing history & analytics, and settings — including synced data.",
     "syncNoOrphans": "All synced data is available locally",
     "resetAppSettings": "Reset application settings",
     "typing": {
