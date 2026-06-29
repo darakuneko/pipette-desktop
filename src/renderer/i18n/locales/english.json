@@ -391,6 +391,8 @@
         "noResults": "No results yet",
         "pb": "PB",
         "allModes": "All",
+        "filterMode": "Filter by mode",
+        "filterText": "Filter by text",
         "exportCsv": "Export CSV",
         "delete": "Delete"
       }

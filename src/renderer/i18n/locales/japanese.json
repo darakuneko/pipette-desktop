@@ -391,6 +391,8 @@
         "noResults": "結果がありません",
         "pb": "PB",
         "allModes": "すべて",
+        "filterMode": "モードで絞り込み",
+        "filterText": "テキストで絞り込み",
         "exportCsv": "CSV出力",
         "delete": "削除"
       }

@@ -21,7 +21,9 @@ type HistoryTab = 'monkeytype' | 'text'
 
 interface Props {
   results: TypingTestResult[]
-  onExportCsv?: (csv: string) => void
+  /** Export the currently-filtered rows. `filterSlug` describes the active
+   *  tab + selection (e.g. `normal-words`, `text-Alpha`) for the filename. */
+  onExportCsv?: (csv: string, filterSlug: string) => void
   /** Label a result (keyed by ISO date) for run comparison. */
   onRename?: (date: string, name: string) => void
   /** Delete a single result (keyed by ISO date). */
@@ -30,11 +32,8 @@ interface Props {
 
 const MAX_TABLE_ROWS = 20
 
-function modeFilterButtonClass(active: boolean): string {
-  const base = 'rounded-md border px-2.5 py-1 text-xs transition-colors'
-  if (active) return `${base} border-accent bg-accent/10 text-accent`
-  return `${base} border-edge text-content-secondary hover:text-content`
-}
+const FILTER_SELECT_CLASS = 'h-8 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none'
+const EXPORT_BTN_CLASS = 'rounded-md border border-edge px-2.5 py-1 text-xs text-content-secondary transition-colors hover:text-content'
 
 const MAX_SPARKLINE_RESULTS = 50
 
@@ -53,6 +52,29 @@ function modeDetail(r: TypingTestResult): string {
   return r.mode2 != null ? String(r.mode2) : ''
 }
 
+/** Stable filter key for an imported-text (custom) run; its textId is `mode2`. */
+function customTextId(r: TypingTestResult): string {
+  return String(r.mode2 ?? '')
+}
+
+/** Filename slug describing the active export selection (tab + filter), so each
+ *  filtered export lands in a distinct, self-describing file. Normal-all and
+ *  Text-all stay distinct via the tab prefix. */
+function exportFilterSlug(
+  isText: boolean,
+  modeFilter: ModeFilter,
+  textFilter: string,
+  customTexts: { id: string, name: string }[],
+): string {
+  if (isText) {
+    if (textFilter === 'all') return 'text'
+    // Fall back to the textId for an empty / missing name so the slug never
+    // ends in a bare `text-`.
+    return `text-${customTexts.find((c) => c.id === textFilter)?.name || textFilter}`
+  }
+  return modeFilter === 'all' ? 'normal' : `normal-${modeFilter}`
+}
+
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
 const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'customTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
@@ -68,6 +90,8 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: 
   const { t } = useTranslation()
   const [tab, setTab] = useState<HistoryTab>('monkeytype')
   const [modeFilter, setModeFilter] = useState<ModeFilter>('all')
+  // Text-tab filter, keyed by the stable textId (mode2). 'all' = no filter.
+  const [textFilter, setTextFilter] = useState<string>('all')
   const [sortColumn, setSortColumn] = useState<SortColumn>('date')
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc')
   const [confirmDeleteDate, setConfirmDeleteDate] = useState<string | null>(null)
@@ -84,15 +108,38 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: 
     [results, isText],
   )
 
+  // Distinct imported texts (custom rows), keyed by stable textId, displayed by
+  // the snapshotted name. Drives the Text-tab filter dropdown.
+  const customTexts = useMemo(() => {
+    const seen = new Map<string, string>()
+    for (const r of results) {
+      if (r.mode !== 'custom') continue
+      const id = customTextId(r)
+      if (!seen.has(id)) seen.set(id, r.customTextName ?? id)
+    }
+    return Array.from(seen, ([id, name]) => ({ id, name }))
+  }, [results])
+
+  // Fall back to 'all' when the selected text no longer exists (e.g. all its
+  // rows were deleted), so the dropdown stays controlled and the stats/chart
+  // never collapse to an empty selection.
+  const effectiveTextFilter = textFilter === 'all' || customTexts.some((c) => c.id === textFilter)
+    ? textFilter
+    : 'all'
+
   const filtered = useMemo(() => {
-    if (isText || modeFilter === 'all') return tabResults
+    if (isText) {
+      if (effectiveTextFilter === 'all') return tabResults
+      return tabResults.filter((r) => customTextId(r) === effectiveTextFilter)
+    }
+    if (modeFilter === 'all') return tabResults
     return tabResults.filter((r) => (r.mode ?? 'words') === modeFilter)
-  }, [tabResults, isText, modeFilter])
+  }, [tabResults, isText, modeFilter, effectiveTextFilter])
 
   // Export is per-tab: only the rows currently shown.
   const handleExport = useCallback(() => {
-    onExportCsv?.(buildResultsCsv(filtered))
-  }, [filtered, onExportCsv])
+    onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(isText, modeFilter, effectiveTextFilter, customTexts))
+  }, [filtered, onExportCsv, isText, modeFilter, effectiveTextFilter, customTexts])
 
   const stats = useMemo(() => computeStats(filtered), [filtered])
   const sparklineResults = useMemo(
@@ -152,31 +199,48 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete }: 
         ))}
       </div>
 
-      {/* Sub-filter (Monkeytype only) + per-tab export */}
+      {/* Sub-filter (mode dropdown for Monkeytype, text dropdown for Text) +
+          per-tab export. Both selects feed `filtered`, so the stats row and the
+          sparkline reflect the current selection too. */}
       <div className="flex items-center gap-2">
         {!isText && (
-          <div className="flex gap-1.5">
+          <select
+            data-testid="history-filter-mode"
+            aria-label={t('editor.typingTest.history.filterMode')}
+            className={FILTER_SELECT_CLASS}
+            value={modeFilter}
+            onChange={(e) => setModeFilter(e.target.value as ModeFilter)}
+          >
             {MODE_FILTERS.map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                data-testid={`history-filter-${mode}`}
-                className={modeFilterButtonClass(modeFilter === mode)}
-                aria-pressed={modeFilter === mode}
-                onClick={() => setModeFilter(mode)}
-              >
+              <option key={mode} value={mode}>
                 {mode === 'all'
                   ? t('editor.typingTest.history.allModes')
                   : t(`editor.typingTest.mode.${mode}`)}
-              </button>
+              </option>
             ))}
-          </div>
+          </select>
+        )}
+        {isText && customTexts.length > 1 && (
+          <select
+            data-testid="history-filter-text"
+            aria-label={t('editor.typingTest.history.filterText')}
+            className={FILTER_SELECT_CLASS}
+            value={effectiveTextFilter}
+            onChange={(e) => setTextFilter(e.target.value)}
+          >
+            <option value="all">{t('editor.typingTest.history.allModes')}</option>
+            {customTexts.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name || t('editor.typingTest.history.unnamed')}
+              </option>
+            ))}
+          </select>
         )}
         {onExportCsv && (
           <button
             type="button"
             data-testid="history-export-csv"
-            className={`ml-auto ${modeFilterButtonClass(false)}`}
+            className={`ml-auto ${EXPORT_BTN_CLASS}`}
             onClick={handleExport}
           >
             {t('editor.typingTest.history.exportCsv')}

@@ -24,9 +24,9 @@ export function HistoryToggle({ results, deviceName, onRename, onDelete }: Histo
   const { t } = useTranslation()
   const [showHistory, setShowHistory] = useState(false)
 
-  const handleExportCsv = useCallback((csv: string) => {
-    const prefix = deviceName ? `${deviceName}_typing-test-history` : undefined
-    window.vialAPI.exportCsv(csv, prefix)
+  const handleExportCsv = useCallback((csv: string, filterSlug: string) => {
+    const base = deviceName ? `${deviceName}_typing-test-history` : 'typing-test-history'
+    window.vialAPI.exportCsv(csv, filterSlug ? `${base}_${filterSlug}` : base)
   }, [deviceName])
 
   const closeHistory = useCallback(() => setShowHistory(false), [])
