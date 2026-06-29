@@ -42,6 +42,7 @@ function makeOptions(overrides: Partial<{
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(window as any).vialAPI = {
     lock: vi.fn().mockResolvedValue(undefined),
+    keyboardMetaNameIfMissing: vi.fn().mockResolvedValue(undefined),
   }
 
   return {
@@ -100,6 +101,17 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
 
     expect(callOrder).toEqual(['syncNow', 'applyDevicePrefs'])
     expect(syncNow).toHaveBeenCalledWith('download', { favorites: true, keyboard: 'uid-1' })
+  })
+
+  it('names the keyboard from its product name on connect', async () => {
+    const { options } = makeOptions()
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    expect((window as any).vialAPI.keyboardMetaNameIfMissing).toHaveBeenCalledWith('uid-1', 'Test Keyboard')
   })
 
   it('skips sync download when autoSync is disabled', async () => {

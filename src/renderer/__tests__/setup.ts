@@ -56,6 +56,8 @@ if (typeof window !== 'undefined') {
     typingAnalyticsListAppsForRange: async () => [],
     // Comparison baseline pool — TypingTestPane fetches this on mount.
     pipetteSettingsListAllTypingResults: async () => [],
+    // Connect-time keyboard naming — fire-and-forget in useDeviceLifecycle.
+    keyboardMetaNameIfMissing: async () => undefined,
     // i18n pack store: every renderer that mounts SettingsModal pulls in
     // LanguagePacksModal → useI18nPackStore, which calls i18nPackList on
     // mount. Stub the read paths to an empty list and the change-notifier
