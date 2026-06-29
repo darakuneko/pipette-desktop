@@ -868,8 +868,10 @@ export function App() {
             onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
             typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
             typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
+            typingTestHideControls={devicePrefs.typingTestHideControls}
             onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
             onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
+            onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
             typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
             onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}

@@ -230,7 +230,7 @@ describe('pipette-settings-store', () => {
       expect(prefs.layerPanelOpen).toBe(false)
     })
 
-    it('round-trips typingTestHideKeymap / typingTestHideStatsRow fields', async () => {
+    it('round-trips typingTestHideKeymap / typingTestHideStatsRow / typingTestHideControls fields', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
@@ -239,13 +239,15 @@ describe('pipette-settings-store', () => {
         layerNames: [],
         typingTestHideKeymap: true,
         typingTestHideStatsRow: true,
+        typingTestHideControls: true,
       })
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestHideKeymap: boolean; typingTestHideStatsRow: boolean }
-      // readData() must echo both back, else a later partial PATCH drops them.
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestHideKeymap: boolean; typingTestHideStatsRow: boolean; typingTestHideControls: boolean }
+      // readData() must echo all back, else a later partial PATCH drops them.
       expect(prefs.typingTestHideKeymap).toBe(true)
       expect(prefs.typingTestHideStatsRow).toBe(true)
+      expect(prefs.typingTestHideControls).toBe(true)
     })
 
     it('round-trips typingTestSettingsPanelOpen field', async () => {

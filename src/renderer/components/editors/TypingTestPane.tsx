@@ -74,8 +74,10 @@ export interface TypingTestPaneProps {
    *  Persisted per keyboard; only meaningful outside view-only mode. */
   hideKeymap?: boolean
   hideStatsRow?: boolean
+  hideControls?: boolean
   onToggleHideKeymap?: (hidden: boolean) => void
   onToggleHideStatsRow?: (hidden: boolean) => void
+  onToggleHideControls?: (hidden: boolean) => void
   /** Left Settings panel expanded state (persisted per keyboard). */
   settingsPanelOpen?: boolean
   onToggleSettingsPanel?: (open: boolean) => void
@@ -154,8 +156,10 @@ export function TypingTestPane({
   onFontSizeChange,
   hideKeymap,
   hideStatsRow,
+  hideControls,
   onToggleHideKeymap,
   onToggleHideStatsRow,
+  onToggleHideControls,
   settingsPanelOpen = true,
   onToggleSettingsPanel,
   onRenameTypingTestResult,
@@ -531,19 +535,20 @@ export function TypingTestPane({
         </PanelSection>
       )}
 
-      {/* Show — toggle the keymap and the live measurement display. Accent
-          highlight marks the hidden (active) state. */}
+      {/* Show — toggles ordered top-to-bottom to match the editor layout:
+          operation (controls row) → measurement (stats row) → keymap pane.
+          Accent highlight marks the visible (active) state. */}
       <PanelSection title={t('editor.typingTest.section.show')}>
         <button
           type="button"
-          data-testid="typing-test-toggle-keymap"
-          aria-pressed={!hideKeymap}
-          title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
+          data-testid="typing-test-toggle-controls"
+          aria-pressed={!hideControls}
+          title={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
+          aria-label={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideControls ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideControls?.(!hideControls)}
         >
-          {t('editor.typingTest.keymapToggle')}
+          {t('editor.typingTest.controlsToggle')}
         </button>
         <button
           type="button"
@@ -555,6 +560,17 @@ export function TypingTestPane({
           onClick={() => onToggleHideStatsRow?.(!hideStatsRow)}
         >
           {t('editor.typingTest.statsToggle')}
+        </button>
+        <button
+          type="button"
+          data-testid="typing-test-toggle-keymap"
+          aria-pressed={!hideKeymap}
+          title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
+        >
+          {t('editor.typingTest.keymapToggle')}
         </button>
       </PanelSection>
       </div>
@@ -604,6 +620,7 @@ export function TypingTestPane({
           // fall back to its own max width instead of collapsing.
           readingMaxWidth={hideKeymap ? undefined : keyboardWidth}
           hideStatsRow={hideStatsRow}
+          hideControls={hideControls}
           state={typingTest.state}
           wpm={typingTest.wpm}
           kpm={typingTest.kpm}

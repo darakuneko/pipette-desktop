@@ -255,10 +255,13 @@
       "expandSettings": "設定を開く",
       "keymapToggle": "キーマップ",
       "statsToggle": "計測",
+      "controlsToggle": "操作",
       "hideKeymap": "キーマップを隠す",
       "showKeymap": "キーマップを表示",
       "hideStats": "計測を隠す",
       "showStats": "計測を表示",
+      "hideControls": "操作を隠す",
+      "showControls": "操作を表示",
       "section": {
         "settings": "設定",
         "data": "データ",

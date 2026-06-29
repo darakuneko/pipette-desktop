@@ -172,6 +172,9 @@ export interface PipetteSettings {
   typingTestHideKeymap?: boolean
   /** Editor typing-test: hide the stats / results (WPM) row. Default false. */
   typingTestHideStatsRow?: boolean
+  /** Editor typing-test: hide the operation (Next Test button) controls row.
+   *  Default false. Force-shown once a test finishes. */
+  typingTestHideControls?: boolean
   /** Editor typing-test: the left Settings panel is expanded. Default true. */
   typingTestSettingsPanelOpen?: boolean
   /** User-chosen record toggle. Persisted + synced so the setting

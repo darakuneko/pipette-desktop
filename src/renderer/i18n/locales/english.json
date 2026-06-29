@@ -255,10 +255,13 @@
       "expandSettings": "Expand settings",
       "keymapToggle": "Keymap",
       "statsToggle": "Measurement",
+      "controlsToggle": "Operation",
       "hideKeymap": "Hide keymap",
       "showKeymap": "Show keymap",
       "hideStats": "Hide measurement",
       "showStats": "Show measurement",
+      "hideControls": "Hide operation",
+      "showControls": "Show operation",
       "section": {
         "settings": "Settings",
         "data": "Data",

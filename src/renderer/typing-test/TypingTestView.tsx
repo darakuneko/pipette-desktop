@@ -27,6 +27,9 @@ interface Props {
   readingMaxWidth?: number
   /** Hide the stats / results (WPM) row. Persisted per keyboard. */
   hideStatsRow?: boolean
+  /** Hide the operation (Next Test button) controls row. Persisted per
+   *  keyboard. Force-shown once a test finishes. */
+  hideControls?: boolean
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
@@ -95,6 +98,7 @@ export function TypingTestView({
   paused,
   readingMaxWidth,
   hideStatsRow,
+  hideControls,
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
@@ -339,6 +343,9 @@ export function TypingTestView({
           {t('editor.typingTest.complete')}
         </p>
       )}
+      {/* The "operation" toggle hides this controls row, but a finished test
+          always shows it so the result can be named and the next test started. */}
+      {(!hideControls || state.status === 'finished') && (
       <div className="flex items-center gap-2">
         {config.mode === 'custom' && (
           state.status === 'running' ? (
@@ -375,6 +382,7 @@ export function TypingTestView({
           {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
         </button>
       </div>
+      )}
 
       {/* Measurement / results row — below the reading window and the
           Unnamed / Next Test row. Live metrics during a run; before measuring

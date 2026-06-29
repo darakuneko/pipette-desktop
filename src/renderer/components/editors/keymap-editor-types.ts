@@ -144,8 +144,10 @@ export interface KeymapEditorProps {
   onTypingTestFontSizeChange?: (px: number) => void
   typingTestHideKeymap?: boolean
   typingTestHideStatsRow?: boolean
+  typingTestHideControls?: boolean
   onTypingTestHideKeymapChange?: (hidden: boolean) => void
   onTypingTestHideStatsRowChange?: (hidden: boolean) => void
+  onTypingTestHideControlsChange?: (hidden: boolean) => void
   typingTestSettingsPanelOpen?: boolean
   onTypingTestSettingsPanelOpenChange?: (open: boolean) => void
   typingRecordEnabled?: boolean

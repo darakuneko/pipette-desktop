@@ -114,7 +114,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingTestMemory: savedTypingTestMemory, onTypingTestMemoryChange,
   typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
-  typingTestHideKeymap, typingTestHideStatsRow, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange,
+  typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange,
   typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
@@ -965,8 +965,10 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onFontSizeChange={onTypingTestFontSizeChange}
               hideKeymap={typingTestHideKeymap}
               hideStatsRow={typingTestHideStatsRow}
+              hideControls={typingTestHideControls}
               onToggleHideKeymap={onTypingTestHideKeymapChange}
               onToggleHideStatsRow={onTypingTestHideStatsRowChange}
+              onToggleHideControls={onTypingTestHideControlsChange}
               settingsPanelOpen={typingTestSettingsPanelOpen}
               onToggleSettingsPanel={onTypingTestSettingsPanelOpenChange}
               onPauseTest={pauseTypingTest}
