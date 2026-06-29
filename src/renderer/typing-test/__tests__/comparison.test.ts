@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+
+import { describe, it, expect } from 'vitest'
+import { computeComparison, matchingResults, conditionKey } from '../comparison'
+import type { TypingTestResult } from '../../../shared/types/pipette-settings'
+import type { TypingTestConfig } from '../types'
+
+function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult {
+  return {
+    date: '2026-06-20T00:00:00.000Z',
+    wpm: 60,
+    accuracy: 95,
+    wordCount: 30,
+    correctChars: 300,
+    incorrectChars: 5,
+    durationSeconds: 30,
+    mode: 'words',
+    mode2: 30,
+    language: 'english',
+    punctuation: false,
+    numbers: false,
+    ...overrides,
+  }
+}
+
+const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false } as TypingTestConfig
+const customConfig: TypingTestConfig = { mode: 'custom', textId: 't1' } as TypingTestConfig
+
+describe('matchingResults', () => {
+  it('matches normal runs on mode + params + language + toggles', () => {
+    const pool = [
+      makeResult({ wpm: 70 }),                              // match
+      makeResult({ wpm: 80, mode2: 60 }),                   // different wordCount
+      makeResult({ wpm: 90, language: 'japanese' }),        // different language
+      makeResult({ wpm: 50, punctuation: true }),           // different toggle
+    ]
+    const out = matchingResults(pool, wordsConfig, 'english')
+    expect(out.map((r) => r.wpm)).toEqual([70])
+  })
+
+  it('matches custom runs on the imported text id only', () => {
+    const pool = [
+      makeResult({ wpm: 40, mode: 'custom', mode2: 't1', language: 'a' }),
+      makeResult({ wpm: 45, mode: 'custom', mode2: 't1', language: 'b' }), // same text, diff lang → still match
+      makeResult({ wpm: 99, mode: 'custom', mode2: 't2' }),                 // different text
+    ]
+    const out = matchingResults(pool, customConfig, 'english')
+    expect(out.map((r) => r.wpm).sort()).toEqual([40, 45])
+  })
+
+  it('excludes results at/after beforeMs (the in-flight run)', () => {
+    const pool = [
+      makeResult({ wpm: 70, date: '2026-06-20T00:00:00.000Z' }),
+      makeResult({ wpm: 99, date: '2026-06-21T00:00:00.000Z' }), // the current run
+    ]
+    const beforeMs = new Date('2026-06-21T00:00:00.000Z').getTime()
+    const out = matchingResults(pool, wordsConfig, 'english', beforeMs)
+    expect(out.map((r) => r.wpm)).toEqual([70])
+  })
+})
+
+describe('conditionKey', () => {
+  it('keys normal modes on mode + params + language + toggles', () => {
+    expect(conditionKey(wordsConfig, 'english')).toBe('words|30|english|false|false')
+    const timeConfig = { mode: 'time', duration: 10 } as TypingTestConfig
+    expect(conditionKey(timeConfig, 'english')).toBe('time|10|english|false|false')
+  })
+
+  it('keys custom on the imported text id only (language-independent)', () => {
+    expect(conditionKey(customConfig, 'english')).toBe('custom|t1')
+    expect(conditionKey(customConfig, 'japanese')).toBe('custom|t1')
+  })
+
+  it('distinguishes different conditions', () => {
+    const a = conditionKey(wordsConfig, 'english')
+    const b = conditionKey({ mode: 'time', duration: 10 } as TypingTestConfig, 'english')
+    const c = conditionKey(customConfig, 'english')
+    expect(new Set([a, b, c]).size).toBe(3)
+  })
+})
+
+describe('computeComparison', () => {
+  const pool = [
+    makeResult({ wpm: 60, accuracy: 90, date: '2026-06-18T00:00:00.000Z' }),
+    makeResult({ wpm: 80, accuracy: 96, date: '2026-06-19T00:00:00.000Z' }),
+    makeResult({ wpm: 70, accuracy: 92, date: '2026-06-20T00:00:00.000Z' }),
+  ]
+
+  it('off → null', () => {
+    expect(computeComparison(pool, wordsConfig, 'english', { kind: 'off' })).toBeNull()
+  })
+
+  it('previous → most recent matching run', () => {
+    const out = computeComparison(pool, wordsConfig, 'english', { kind: 'previous' })
+    expect(out?.wpm).toBe(70)
+  })
+
+  it('best → highest WPM', () => {
+    const out = computeComparison(pool, wordsConfig, 'english', { kind: 'best' })
+    expect(out?.wpm).toBe(80)
+  })
+
+  it('average → rounded mean of each metric', () => {
+    const out = computeComparison(pool, wordsConfig, 'english', { kind: 'average' })
+    expect(out?.wpm).toBe(70) // (60+80+70)/3
+    expect(out?.accuracy).toBe(93) // (90+96+92)/3 = 92.67 → 93
+  })
+
+  it('pinned → the result with the matching date, condition-independent', () => {
+    const out = computeComparison(pool, customConfig, 'english', { kind: 'pinned', pinnedDate: '2026-06-19T00:00:00.000Z' })
+    expect(out?.wpm).toBe(80)
+  })
+
+  it('pinned with a missing/unknown date → null', () => {
+    expect(computeComparison(pool, wordsConfig, 'english', { kind: 'pinned' })).toBeNull()
+    expect(computeComparison(pool, wordsConfig, 'english', { kind: 'pinned', pinnedDate: 'nope' })).toBeNull()
+  })
+
+  it('no matching history → null', () => {
+    const out = computeComparison([], wordsConfig, 'english', { kind: 'previous' })
+    expect(out).toBeNull()
+  })
+})

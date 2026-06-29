@@ -267,6 +267,20 @@
         "data": "データ",
         "show": "表示"
       },
+      "compare": {
+        "button": "比較",
+        "title": "比較",
+        "description": "計測値を同じ条件の過去の結果と比較します（全キーボード横断）。",
+        "previous": "前回",
+        "best": "ベスト",
+        "average": "平均",
+        "pinned": "特定の結果",
+        "off": "オフ",
+        "noResults": "ピンできる結果がありません",
+        "colName": "名前",
+        "colKeyboard": "キーボード",
+        "colTime": "時間"
+      },
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "正確性",

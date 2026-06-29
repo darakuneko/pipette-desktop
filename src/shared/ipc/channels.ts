@@ -86,6 +86,9 @@ export const IpcChannels = {
   // Pipette Settings Store (renderer → main → renderer)
   PIPETTE_SETTINGS_GET: 'pipette-settings:get',
   PIPETTE_SETTINGS_PATCH: 'pipette-settings:patch',
+  // Typing-test results pooled across every locally-stored keyboard, for the
+  // Measurement-row comparison baseline (keyboard-agnostic).
+  PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS: 'pipette-settings:list-all-typing-results',
 
   // Typing Analytics (renderer ↔ main)
   TYPING_ANALYTICS_EVENT: 'typing-analytics:event',

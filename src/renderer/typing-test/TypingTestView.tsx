@@ -7,6 +7,7 @@ import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
 import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig } from './types'
+import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
 import { ResultNameModal } from './ResultNameModal'
@@ -30,6 +31,9 @@ interface Props {
   /** Hide the operation (Next Test button) controls row. Persisted per
    *  keyboard. Force-shown once a test finishes. */
   hideControls?: boolean
+  /** Baseline metrics for the Measurement-row comparison delta, or null when
+   *  comparison is off / no matching history. */
+  comparison?: ComparisonStats | null
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
@@ -99,6 +103,7 @@ export function TypingTestView({
   readingMaxWidth,
   hideStatsRow,
   hideControls,
+  comparison,
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
@@ -401,18 +406,21 @@ export function TypingTestView({
             <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent">
               {showStats ? wpm : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={wpm} baseline={comparison.wpm} testid="wpm" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.kpm')}:</span>
             <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent">
               {showStats ? kpm : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={kpm} baseline={comparison.kpm} testid="kpm" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.accuracy')}:</span>
             <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold">
               {showStats ? `${accuracy}%` : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.time')}:</span>
@@ -445,6 +453,19 @@ export function TypingTestView({
       )}
 
     </div>
+  )
+}
+
+/** Signed delta of the live metric against the comparison baseline: an arrow +
+ *  the difference, green when ahead, red when behind, muted when level. */
+function ComparisonDelta({ current, baseline, suffix, testid }: { current: number; baseline: number; suffix?: string; testid: string }) {
+  const diff = current - baseline
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : ''
+  const color = diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-content-muted'
+  return (
+    <span data-testid={`typing-test-delta-${testid}`} className={`font-mono text-xs ${color}`}>
+      {arrow}{diff > 0 ? '+' : ''}{diff}{suffix ?? ''}
+    </span>
   )
 }
 

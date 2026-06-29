@@ -6,7 +6,7 @@ import type { BulkKeyEntry } from '../../hooks/useKeyboard'
 import type { MacroAction } from '../../../preload/macro'
 import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry, DeviceInfo } from '../../../shared/types/protocol'
 import type { KeyboardLayoutId } from '../../hooks/useKeyboardLayout'
-import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, TypingViewMenuTab, TypingTestMemory, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import type { FavHubEntryResult } from './FavoriteHubActions'
 
@@ -145,9 +145,11 @@ export interface KeymapEditorProps {
   typingTestHideKeymap?: boolean
   typingTestHideStatsRow?: boolean
   typingTestHideControls?: boolean
+  typingTestComparisonBaselines?: TypingTestComparisonBaselines
   onTypingTestHideKeymapChange?: (hidden: boolean) => void
   onTypingTestHideStatsRowChange?: (hidden: boolean) => void
   onTypingTestHideControlsChange?: (hidden: boolean) => void
+  onTypingTestComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   typingTestSettingsPanelOpen?: boolean
   onTypingTestSettingsPanelOpenChange?: (open: boolean) => void
   typingRecordEnabled?: boolean

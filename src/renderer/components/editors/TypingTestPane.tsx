@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
@@ -14,10 +14,13 @@ import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
 import { HistoryToggle } from './HistoryToggle'
+import { ComparisonToggle } from './ComparisonToggle'
+import { computeComparison, matchingResults, conditionKey } from '../../typing-test/comparison'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
-import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, PooledTypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
+import { DEFAULT_COMPARISON_BASELINE } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from '../../typing-test/types'
 
@@ -78,6 +81,11 @@ export interface TypingTestPaneProps {
   onToggleHideKeymap?: (hidden: boolean) => void
   onToggleHideStatsRow?: (hidden: boolean) => void
   onToggleHideControls?: (hidden: boolean) => void
+  /** Per-condition Measurement-row comparison baselines (persisted per
+   *  keyboard, synced). Keyed by condition; the current condition's baseline
+   *  is looked up and applied. */
+  comparisonBaselines?: TypingTestComparisonBaselines
+  onComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   /** Left Settings panel expanded state (persisted per keyboard). */
   settingsPanelOpen?: boolean
   onToggleSettingsPanel?: (open: boolean) => void
@@ -160,6 +168,8 @@ export function TypingTestPane({
   onToggleHideKeymap,
   onToggleHideStatsRow,
   onToggleHideControls,
+  comparisonBaselines,
+  onComparisonBaselineChange,
   settingsPanelOpen = true,
   onToggleSettingsPanel,
   onRenameTypingTestResult,
@@ -203,6 +213,38 @@ export function TypingTestPane({
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [showResumeModal, setShowResumeModal] = useState(false)
+
+  // Measurement-row comparison: pool every keyboard's saved results, then pick
+  // the baseline for the current condition. Refetched when this keyboard's
+  // history changes so a just-saved run joins the pool. `state.startTime`
+  // excludes the in-flight run from previous/best/average.
+  const [comparisonPool, setComparisonPool] = useState<PooledTypingTestResult[]>([])
+  useEffect(() => {
+    let cancelled = false
+    window.vialAPI.pipetteSettingsListAllTypingResults()
+      .then((all) => { if (!cancelled) setComparisonPool(all) })
+      .catch(() => { /* best-effort: no comparison if unavailable */ })
+    return () => { cancelled = true }
+  }, [typingTestHistory])
+
+  // The baseline is remembered per condition: switching the typing-test
+  // condition recalls the baseline saved for it (default: previous).
+  const currentConditionKey = conditionKey(typingTest.config, typingTest.language)
+  const comparisonBaselineValue = comparisonBaselines?.[currentConditionKey] ?? DEFAULT_COMPARISON_BASELINE
+  const comparison = useMemo(
+    () => computeComparison(comparisonPool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime),
+    [comparisonPool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime],
+  )
+  // Same-condition results only — the choices for a pinned baseline. No
+  // `beforeMs`: the user is pinning a past result, not measuring a live run.
+  const sameConditionResults = useMemo(
+    () => matchingResults(comparisonPool, typingTest.config, typingTest.language),
+    [comparisonPool, typingTest.config, typingTest.language],
+  )
+  const handleComparisonChange = useCallback(
+    (baseline: TypingTestComparisonBaseline) => onComparisonBaselineChange?.(currentConditionKey, baseline),
+    [onComparisonBaselineChange, currentConditionKey],
+  )
 
   const handleRecordToggle = useCallback(() => {
     if (!onRecordEnabledChange) return
@@ -523,17 +565,22 @@ export function TypingTestPane({
         )}
       </PanelSection>
 
-      {/* Data — saved run history. */}
-      {typingTestHistory && typingTestHistory.length > 0 && (
-        <PanelSection title={t('editor.typingTest.section.data')}>
-          <HistoryToggle
-            results={typingTestHistory}
-            deviceName={deviceName}
-            onRename={onRenameTypingTestResult}
-            onDelete={onDeleteTypingTestResult}
-          />
-        </PanelSection>
-      )}
+      {/* Data — saved run history + comparison baseline settings. Always shown
+          (even with no saved results yet) so History stays reachable and the
+          comparison baseline can be set up before the first result. */}
+      <PanelSection title={t('editor.typingTest.section.data')}>
+        <HistoryToggle
+          results={typingTestHistory ?? []}
+          deviceName={deviceName}
+          onRename={onRenameTypingTestResult}
+          onDelete={onDeleteTypingTestResult}
+        />
+        <ComparisonToggle
+          pool={sameConditionResults}
+          baseline={comparisonBaselineValue}
+          onChange={handleComparisonChange}
+        />
+      </PanelSection>
 
       {/* Show — toggles ordered top-to-bottom to match the editor layout:
           operation (controls row) → measurement (stats row) → keymap pane.
@@ -621,6 +668,7 @@ export function TypingTestPane({
           readingMaxWidth={hideKeymap ? undefined : keyboardWidth}
           hideStatsRow={hideStatsRow}
           hideControls={hideControls}
+          comparison={comparison}
           state={typingTest.state}
           wpm={typingTest.wpm}
           kpm={typingTest.kpm}

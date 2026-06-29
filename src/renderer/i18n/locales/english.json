@@ -267,6 +267,20 @@
         "data": "Data",
         "show": "Show"
       },
+      "compare": {
+        "button": "Compare",
+        "title": "Comparison",
+        "description": "Compare the Measurement values against past results matching the same condition (across all keyboards).",
+        "previous": "Previous",
+        "best": "Best",
+        "average": "Average",
+        "pinned": "Specific result",
+        "off": "Off",
+        "noResults": "No results to pin yet",
+        "colName": "Name",
+        "colKeyboard": "Keyboard",
+        "colTime": "Time"
+      },
       "wpm": "WPM",
       "kpm": "KPM",
       "accuracy": "Accuracy",

@@ -265,6 +265,37 @@ describe('pipette-settings-store', () => {
       expect(prefs.typingTestSettingsPanelOpen).toBe(false)
     })
 
+    it('round-trips typingTestComparisonBaselines map', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const baselines = {
+        'words|30|english|false|true': { kind: 'best' },
+        'custom|t2': { kind: 'pinned', pinnedDate: '2026-06-20T00:00:00.000Z' },
+      }
+      await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestComparisonBaselines: baselines,
+      })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestComparisonBaselines: typeof baselines }
+      expect(prefs.typingTestComparisonBaselines).toEqual(baselines)
+    })
+
+    it('rejects a typingTestComparisonBaselines map with an invalid kind', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestComparisonBaselines: { 'words|30': { kind: 'bogus' } },
+      })
+      expect(result.success).toBe(false)
+    })
+
     it('round-trips typingTestNormalConfig field', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const normalConfig = { mode: 'words', wordCount: 60, punctuation: true, numbers: false }
