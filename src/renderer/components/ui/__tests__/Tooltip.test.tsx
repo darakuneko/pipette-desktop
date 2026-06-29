@@ -3,7 +3,12 @@
 
 import { describe, it, expect } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { Tooltip } from '../Tooltip'
+import { Tooltip, computeBubblePosition } from '../Tooltip'
+
+const rect = (x: number, y: number, width: number, height: number): DOMRect => ({
+  x, y, width, height, top: y, left: x, right: x + width, bottom: y + height,
+  toJSON: () => ({}),
+})
 
 describe('Tooltip', () => {
   it('renders tooltip bubble (portaled to body) with role="tooltip" and auto-generated id', () => {
@@ -217,6 +222,32 @@ describe('Tooltip', () => {
     const bubble = screen.getByRole('tooltip')
     expect(bubble.className).toContain('whitespace-pre-line')
     expect(bubble.textContent).toBe('first line\nsecond line')
+  })
+
+  describe('computeBubblePosition viewport clamping', () => {
+    const viewport = { width: 1000, height: 800 }
+
+    it('clamps a top/center bubble back inside the left edge for a near-edge trigger', () => {
+      // Trigger hugging the left edge: centered bubble would land at left = -80.
+      const { left } = computeBubblePosition(rect(10, 700, 20, 20), rect(0, 0, 200, 30), 'top', 'center', 8, viewport)
+      expect(left).toBe(8)
+    })
+
+    it('clamps against the right edge so a wide bubble stays fully visible', () => {
+      const { left } = computeBubblePosition(rect(960, 400, 20, 20), rect(0, 0, 200, 30), 'top', 'center', 8, viewport)
+      expect(left).toBe(viewport.width - 200 - 8)
+    })
+
+    it('clamps the top so a bubble above an edge trigger is not pushed off-screen', () => {
+      const { top } = computeBubblePosition(rect(500, 2, 20, 20), rect(0, 0, 100, 40), 'top', 'center', 8, viewport)
+      expect(top).toBe(8)
+    })
+
+    it('leaves a comfortably-placed bubble untouched', () => {
+      const { top, left } = computeBubblePosition(rect(490, 400, 20, 20), rect(0, 0, 100, 30), 'top', 'center', 8, viewport)
+      expect(left).toBe(450)
+      expect(top).toBe(362)
+    })
   })
 
   it('lets wrapperClassName override wrapperProps.className on the wrapper', () => {
