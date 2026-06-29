@@ -344,6 +344,7 @@ function buildV6(): VersionedKeycodeMap {
     KC_ASON: 0x7c13,
     KC_ASOFF: 0x7c14,
     KC_ASTG: 0x7c15,
+    QK_VELOCIKEY_TOGGLE: 0x7c17,
     CMB_ON: 0x7c50,
     CMB_OFF: 0x7c51,
     CMB_TOG: 0x7c52,
@@ -593,11 +594,25 @@ function buildV6(): VersionedKeycodeMap {
     QK_REBOOT: 0x7c01,
     QK_CLEAR_EEPROM: 0x7c03,
 
+    QK_LEADER: 0x7c58,
+    QK_LOCK: 0x7c59,
+    QK_ONE_SHOT_ON: 0x7c5a,
+    QK_ONE_SHOT_OFF: 0x7c5b,
+    QK_ONE_SHOT_TOGGLE: 0x7c5c,
+
     QK_KEY_OVERRIDE_TOGGLE: 0x7c5d,
     QK_KEY_OVERRIDE_ON: 0x7c5e,
     QK_KEY_OVERRIDE_OFF: 0x7c5f,
 
+    QK_DYNAMIC_TAPPING_TERM_PRINT: 0x7c70,
+    QK_DYNAMIC_TAPPING_TERM_UP: 0x7c71,
+    QK_DYNAMIC_TAPPING_TERM_DOWN: 0x7c72,
+
     QK_CAPS_WORD_TOGGLE: 0x7c73,
+
+    QK_AUTOCORRECT_ON: 0x7c74,
+    QK_AUTOCORRECT_OFF: 0x7c75,
+    QK_AUTOCORRECT_TOGGLE: 0x7c76,
 
     FN_MO13: 0x7c77,
     FN_MO23: 0x7c78,

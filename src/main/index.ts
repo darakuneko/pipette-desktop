@@ -79,8 +79,8 @@ function createWindow(): void {
   const winOpts: Electron.BrowserWindowConstructorOptions = {
     width: saved.width,
     height: saved.height,
-    minWidth: 1320,
-    minHeight: 960,
+    minWidth: MIN_WIDTH,
+    minHeight: MIN_HEIGHT,
     icon: join(__dirname, '../../build/icon.png'),
     webPreferences: {
       preload: join(__dirname, '../preload/index.cjs'),

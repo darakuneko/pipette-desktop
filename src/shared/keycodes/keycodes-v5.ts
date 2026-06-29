@@ -668,6 +668,21 @@ function buildV5(): VersionedKeycodeMap {
     LM_BRID: 0x99a16,
     LM_SPDU: 0x99a17,
     LM_SPDD: 0x99a18,
+
+    // Leader / Lock / One-Shot control / Tapping Term / Autocorrect / Velocikey
+    // (not in v5, fake addresses — firmware values live in keycodes-v6 only)
+    QK_LEADER: 0x99a20,
+    QK_LOCK: 0x99a21,
+    QK_ONE_SHOT_ON: 0x99a22,
+    QK_ONE_SHOT_OFF: 0x99a23,
+    QK_ONE_SHOT_TOGGLE: 0x99a24,
+    QK_DYNAMIC_TAPPING_TERM_PRINT: 0x99a25,
+    QK_DYNAMIC_TAPPING_TERM_UP: 0x99a26,
+    QK_DYNAMIC_TAPPING_TERM_DOWN: 0x99a27,
+    QK_AUTOCORRECT_ON: 0x99a28,
+    QK_AUTOCORRECT_OFF: 0x99a29,
+    QK_AUTOCORRECT_TOGGLE: 0x99a2a,
+    QK_VELOCIKEY_TOGGLE: 0x99a2b,
   }
 
   // Generate macro keycodes M0-M255

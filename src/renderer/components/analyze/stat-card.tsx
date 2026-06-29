@@ -93,7 +93,7 @@ interface GridProps {
  * and `context` — same API shape as {@link AnalyzeSummaryTable} so
  * callers can swap between the two without rewriting their item
  * generator. The grid is always 4 columns (Electron main window enforces
- * `minWidth: 1320` so the Tailwind `sm` breakpoint is always met). */
+ * `minWidth: 1360` so the Tailwind `sm` breakpoint is always met). */
 export function AnalyzeStatGrid({ items, ariaLabelKey, testId, tooltipSide }: GridProps) {
   const { t } = useTranslation()
   return (
