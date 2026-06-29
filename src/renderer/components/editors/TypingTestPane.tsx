@@ -44,6 +44,8 @@ import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
   onConfigChange: (config: TypingTestConfig) => void
+  /** Last normal (words/time/quote) config, restored when leaving custom. */
+  normalConfig?: TypingTestConfig
   onLanguageChange: (lang: string) => Promise<void>
   layers: number
   layerNames?: string[]
@@ -127,6 +129,7 @@ export interface TypingTestPaneProps {
 export function TypingTestPane({
   typingTest,
   onConfigChange,
+  normalConfig,
   onLanguageChange,
   layers,
   layerNames,
@@ -431,29 +434,30 @@ export function TypingTestPane({
       <div className="flex min-h-0 w-60 flex-1 flex-col gap-4 overflow-y-auto p-3">
       {/* Settings — language/mode, base layer, pattern / units / options. */}
       <PanelSection title={t('editor.typingTest.section.settings')}>
-        {typingTest.config.mode !== 'quote' && (
-          <div className="flex w-full flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
-            <button
-              type="button"
-              data-testid="language-selector"
-              title={modeLabel}
-              className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={() => setShowLanguageModal(true)}
-              disabled={typingTest.isLanguageLoading}
-            >
-              <span className="truncate">{modeLabel}</span>
-            </button>
-          </div>
-        )}
+        {/* Mode / language — shown for every mode (words / time / quote /
+            custom); quote uses it to pick the quote source language. */}
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
+          <button
+            type="button"
+            data-testid="language-selector"
+            title={modeLabel}
+            className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+            onClick={() => setShowLanguageModal(true)}
+            disabled={typingTest.isLanguageLoading}
+          >
+            <span className="truncate">{modeLabel}</span>
+          </button>
+        </div>
         {showLanguageModal && (
           <LanguageSelectorModal
             currentLanguage={typingTest.language}
             currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
             onSelectLanguage={(name) => {
-              // Picking a language leaves custom mode — fall back to
-              // a words config so the language source applies.
-              if (typingTest.config.mode === 'custom') onConfigChange(DEFAULT_CONFIG)
+              // Picking a language leaves custom mode — restore the last normal
+              // (words/time/quote) config so its Pattern/Units/Option settings
+              // survive the round trip; fall back to the default if none saved.
+              if (typingTest.config.mode === 'custom') onConfigChange(normalConfig ?? DEFAULT_CONFIG)
               void onLanguageChange(name)
             }}
             onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}

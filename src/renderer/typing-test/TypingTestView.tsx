@@ -363,7 +363,7 @@ export function TypingTestView({
             </button>
           ) : null
         )}
-        {state.status === 'finished' && config.mode === 'custom' && (
+        {state.status === 'finished' && (
           <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
         )}
         <button

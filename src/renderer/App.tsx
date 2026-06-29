@@ -840,6 +840,7 @@ export function App() {
             onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
             typingTestHistory={devicePrefs.typingTestResults}
             typingTestConfig={devicePrefs.typingTestConfig}
+            typingTestNormalConfig={devicePrefs.typingTestNormalConfig}
             typingTestLanguage={devicePrefs.typingTestLanguage}
             onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}

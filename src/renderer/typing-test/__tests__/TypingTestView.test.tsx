@@ -306,6 +306,12 @@ describe('TypingTestView controls row (state-based)', () => {
     expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
   })
 
+  it('shows the result name field on finish for normal modes too', () => {
+    const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderView({ config: wordsConfig, state: makeState({ status: 'finished' }) })
+    expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
+  })
+
   it('shows the Complete message on the finished screen', () => {
     renderView({ config: customConfig, state: makeState({ status: 'finished' }) })
     expect(screen.getByTestId('typing-test-complete')).toBeInTheDocument()

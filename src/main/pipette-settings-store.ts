@@ -73,6 +73,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if (Array.isArray(obj.layerNames) && (obj.layerNames as unknown[]).some((n) => typeof n !== 'string')) return false
   if ('typingTestResults' in obj && obj.typingTestResults != null && !Array.isArray(obj.typingTestResults)) return false
   if ('typingTestConfig' in obj && obj.typingTestConfig != null && (typeof obj.typingTestConfig !== 'object' || Array.isArray(obj.typingTestConfig))) return false
+  if ('typingTestNormalConfig' in obj && obj.typingTestNormalConfig != null && (typeof obj.typingTestNormalConfig !== 'object' || Array.isArray(obj.typingTestNormalConfig))) return false
   if ('typingTestLanguage' in obj && obj.typingTestLanguage != null && typeof obj.typingTestLanguage !== 'string') return false
   if ('layerPanelOpen' in obj && obj.layerPanelOpen != null && typeof obj.layerPanelOpen !== 'boolean') return false
   if ('basicViewType' in obj && obj.basicViewType != null && obj.basicViewType !== 'ansi' && obj.basicViewType !== 'iso' && obj.basicViewType !== 'jis' && obj.basicViewType !== 'list' && obj.basicViewType !== 'keyboard') return false
@@ -135,6 +136,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       layerNames: parsed.layerNames ?? [],
       typingTestResults: parsed.typingTestResults,
       typingTestConfig: parsed.typingTestConfig,
+      typingTestNormalConfig: parsed.typingTestNormalConfig,
       typingTestLanguage: parsed.typingTestLanguage,
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,

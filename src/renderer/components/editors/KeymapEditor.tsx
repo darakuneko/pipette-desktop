@@ -107,7 +107,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   scale: scaleProp = 1, onScaleChange,
   keyEditorZoom, onKeyEditorZoomChange,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, onRenameTypingTestResult, onDeleteTypingTestResult, typingTestHistory,
-  typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
+  typingTestConfig: savedTypingTestConfig, typingTestNormalConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
@@ -941,6 +941,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             <TypingTestPane
               typingTest={typingTest}
               onConfigChange={handleTypingTestConfigChange}
+              normalConfig={typingTestNormalConfig}
               onLanguageChange={handleTypingTestLanguageChange}
               layers={layers}
               layerNames={layerNames}

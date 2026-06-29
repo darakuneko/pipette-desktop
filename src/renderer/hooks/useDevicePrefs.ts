@@ -106,6 +106,7 @@ interface ValidatedPrefs {
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
+  typingTestNormalConfig?: TypingTestConfig
   typingTestLanguage?: string
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
@@ -123,7 +124,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestNormalConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -191,6 +192,7 @@ function validateIpcPrefs(
     layerNames,
     typingTestResults,
     typingTestConfig,
+    typingTestNormalConfig: validateTypingTestConfig(data.typingTestNormalConfig),
     typingTestLanguage: validateTypingTestLanguage(data.typingTestLanguage),
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
@@ -227,6 +229,7 @@ export interface UseDevicePrefsReturn {
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
+  typingTestNormalConfig: TypingTestConfig | undefined
   typingTestLanguage: string | undefined
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize: { width: number; height: number } | undefined
@@ -325,6 +328,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
+  const [typingTestNormalConfig, updateTypingTestNormalConfig, typingTestNormalConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
   const [typingTestLanguage, updateTypingTestLanguage, typingTestLanguageRef] = useStateRef<string | undefined>(undefined)
   const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
   const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
@@ -360,6 +364,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
+      typingTestNormalConfig: typingTestNormalConfigRef.current as Record<string, unknown> | undefined,
       typingTestLanguage: typingTestLanguageRef.current,
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
@@ -454,9 +459,16 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   }, [saveCurrentPrefs, updateTypingTestResults])
 
   const setTypingTestConfig = useCallback((cfg: TypingTestConfig) => {
+    const prev = typingTestConfigRef.current
     updateTypingTestConfig(cfg)
+    // Remember the last normal (words/time/quote) config so it survives a
+    // switch into custom (imported text) and back. When entering custom,
+    // capture the outgoing normal config too — covers old prefs where
+    // typingTestNormalConfig was never saved.
+    if (cfg.mode !== 'custom') updateTypingTestNormalConfig(cfg)
+    else if (prev && prev.mode !== 'custom') updateTypingTestNormalConfig(prev)
     saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestConfig])
+  }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestNormalConfig])
 
   const setTypingTestLanguage = useCallback((lang: string) => {
     updateTypingTestLanguage(lang)
@@ -618,6 +630,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
+    updateTypingTestNormalConfig(resolved.typingTestNormalConfig)
     updateTypingTestLanguage(resolved.typingTestLanguage)
     updateTypingTestViewOnly(resolved.typingTestViewOnly)
     updateTypingTestViewOnlyWindowSize(resolved.typingTestViewOnlyWindowSize)
@@ -679,6 +692,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     layerNames,
     typingTestResults,
     typingTestConfig,
+    typingTestNormalConfig,
     typingTestLanguage,
     typingTestViewOnly,
     typingTestViewOnlyWindowSize,

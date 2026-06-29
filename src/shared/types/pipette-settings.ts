@@ -154,6 +154,9 @@ export interface PipetteSettings {
   layerNames: string[]
   typingTestResults?: TypingTestResult[]
   typingTestConfig?: Record<string, unknown>
+  /** Last words/time/quote config, restored when switching back from custom
+   *  (imported text) so normal-mode Pattern/Units/Option settings survive. */
+  typingTestNormalConfig?: Record<string, unknown>
   typingTestLanguage?: string
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
