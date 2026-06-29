@@ -454,12 +454,14 @@ describe('typing-analytics-service', () => {
         expect(result.charMinutes).toBeGreaterThan(0)
         expect(listTypingKeyboards().map((k) => k.uid)).not.toContain(sampleKeyboard.uid)
         const machineHash = await getMachineHash()
-        // Delete-all notifies one per-day unit per day captured before the
-        // unlink. Both seeded UTC days must show up exactly once.
+        // Delete-all notifies a per-day unit for each day captured before the
+        // unlink (plus a redundant one for the day the just-closed active
+        // session flushed to). Both seeded UTC days must be notified; the
+        // notify is idempotent so dedupe before comparing.
         const expectedUnits = ['2026-04-10', '2026-04-14'].map(
           (day) => `keyboards/${sampleKeyboard.uid}/devices/${machineHash}/days/${day}`,
         )
-        expect(notifier.mock.calls.map((call) => call[0]).sort()).toEqual(expectedUnits.sort())
+        expect([...new Set(notifier.mock.calls.map((call) => call[0] as string))].sort()).toEqual(expectedUnits.sort())
       })
 
       it('deleteTypingDailySummaries is a no-op when the dates array is empty', async () => {

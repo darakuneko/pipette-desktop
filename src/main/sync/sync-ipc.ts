@@ -46,6 +46,7 @@ import { exportTypingDataForKeyboard, importTypingDataFiles, type ImportResult }
 import { getMachineHash } from '../typing-analytics/machine-hash'
 import { ensureCacheIsFresh } from '../typing-analytics/cache-rebuild'
 import { getTypingAnalyticsDB } from '../typing-analytics/db/typing-analytics-db'
+import { deleteAllTypingForKeyboard } from '../typing-analytics/typing-analytics-service'
 import type { SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, SyncScope, StoredKeyboardInfo, SyncDataScanResult, SyncCredentialFailureReason, SyncBundle } from '../../shared/types/sync'
 import { secureHandle, secureOn } from '../ipc-guard'
 import type { FavoriteIndex, SavedFavoriteMeta } from '../../shared/types/favorite-store'
@@ -319,6 +320,12 @@ export function setupSyncIpc(): void {
       if (!isSafeKey(uid)) {
         throw new Error('Invalid uid')
       }
+      // Flush + unlink this keyboard's analytics JSONL and tombstone its
+      // SQLite-cache rows first, otherwise the Analyze view keeps showing the
+      // keyboard from the stale cache after the directory is removed.
+      await deleteAllTypingForKeyboard(uid).catch((err) => {
+        console.warn('[sync-ipc] reset keyboard: analytics cache cleanup failed', err)
+      })
       cancelPendingChanges(`keyboards/${uid}/`)
       const userData = app.getPath('userData')
       await rm(join(userData, 'sync', 'keyboards', uid), { recursive: true, force: true })
