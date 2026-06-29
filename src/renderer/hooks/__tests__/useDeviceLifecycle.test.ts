@@ -111,7 +111,7 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
       await result.current.handleConnect(mockDevice)
     })
 
-    expect((window as any).vialAPI.keyboardMetaNameIfMissing).toHaveBeenCalledWith('uid-1', 'Test Keyboard')
+    expect(window.vialAPI.keyboardMetaNameIfMissing).toHaveBeenCalledWith('uid-1', 'Test Keyboard')
   })
 
   it('skips sync download when autoSync is disabled', async () => {
