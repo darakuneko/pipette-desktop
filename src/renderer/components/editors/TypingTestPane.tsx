@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pause, Play, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { TypingTestSettingsBar } from '../../typing-test/TypingTestSettingsBar'
@@ -527,41 +527,6 @@ export function TypingTestPane({
         </PanelSection>
       )}
 
-      {/* Operations — pause/resume (imported custom text) and restart. */}
-      <PanelSection title={t('editor.typingTest.section.operations')}>
-        {typingTest.config.mode === 'custom' && (
-          typingTest.state.status === 'running' ? (
-            <button
-              type="button"
-              data-testid="typing-memory-pause"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={() => onPauseTest?.()}
-            >
-              <Pause size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.pause')}</span>
-            </button>
-          ) : (typingTest.state.status === 'paused' || hasSavedMemory) ? (
-            <button
-              type="button"
-              data-testid="typing-memory-resume"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
-              onClick={() => setShowResumeModal(true)}
-            >
-              <Play size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.resumeButton')}</span>
-            </button>
-          ) : null
-        )}
-        <button
-          type="button"
-          data-testid="typing-test-restart"
-          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-          onClick={() => typingTest.restart()}
-        >
-          {t('editor.typingTest.restart')}
-        </button>
-      </PanelSection>
-
       {/* Show — toggle the keymap and the live measurement display. Accent
           highlight marks the hidden (active) state. */}
       <PanelSection title={t('editor.typingTest.section.show')}>
@@ -657,6 +622,9 @@ export function TypingTestPane({
           // Chips come from the just-finished result (history[0]).
           resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t) : []}
           onStart={() => typingTest.restart()}
+          onPause={() => onPauseTest?.()}
+          onResume={() => setShowResumeModal(true)}
+          hasSavedMemory={hasSavedMemory}
         />
       )}
       <div

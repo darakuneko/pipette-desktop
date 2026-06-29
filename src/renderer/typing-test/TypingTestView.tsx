@@ -3,8 +3,8 @@
 import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SquarePen } from 'lucide-react'
-import { ICON_SM } from '../constants/ui-tokens'
+import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
+import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig } from './types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
@@ -42,8 +42,14 @@ interface Props {
   /** Quick-insert chips for the result-name modal (material label, timestamp,
    *  WPM / KPM / Accuracy of the just-finished result). */
   resultNameChips?: string[]
-  /** Start a fresh run from the result screen (same as the Restart button). */
+  /** Start a fresh run (Next Test / Restart — both restart the test). */
   onStart?: () => void
+  /** Memory mode (imported custom text): pause the running run. */
+  onPause?: () => void
+  /** Memory mode: open the resume dialog for a paused / saved run. */
+  onResume?: () => void
+  /** A paused custom run is saved and can be resumed. */
+  hasSavedMemory?: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -98,6 +104,9 @@ export function TypingTestView({
   onNameResult,
   resultNameChips = [],
   onStart,
+  onPause,
+  onResume,
+  hasSavedMemory,
 }: Props) {
   const { t } = useTranslation()
   const showStats = state.status === 'running' || state.status === 'finished' || state.status === 'paused'
@@ -318,22 +327,54 @@ export function TypingTestView({
         )}
       </div>
 
-      {/* Imported custom text: name the just-finished result, kept below the
-          reading window (its original spot) while the metrics row sits on top. */}
-      {state.status === 'finished' && config.mode === 'custom' && (
-        <div className="flex items-center gap-2">
-          <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
-          {/* Start a fresh run — same action as the Restart button. */}
-          <button
-            type="button"
-            data-testid="typing-test-start"
-            className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-            onClick={onStart}
-          >
-            {t('editor.typingTest.nextTest')}
-          </button>
-        </div>
+      {/* State-based controls row, below the reading window:
+          - not started (waiting / countdown): Next Test (+ Resume if a run is
+            saved for imported custom text)
+          - in progress (running / paused): Pause or Resume (custom) + Restart
+          - finished: result name (custom) + Next Test
+          Next Test and Restart share the same action; only the label differs. */}
+      {state.status === 'finished' && (
+        <p data-testid="typing-test-complete" className="flex items-center gap-1.5 text-lg font-semibold text-accent">
+          <CircleCheck size={ICON_LG} aria-hidden="true" />
+          {t('editor.typingTest.complete')}
+        </p>
       )}
+      <div className="flex items-center gap-2">
+        {config.mode === 'custom' && (
+          state.status === 'running' ? (
+            <button
+              type="button"
+              data-testid="typing-memory-pause"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+              onClick={onPause}
+            >
+              <Pause size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.pause')}</span>
+            </button>
+          ) : (state.status === 'paused' || ((state.status === 'waiting' || state.status === 'countdown') && hasSavedMemory)) ? (
+            <button
+              type="button"
+              data-testid="typing-memory-resume"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
+              onClick={onResume}
+            >
+              <Play size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.resumeButton')}</span>
+            </button>
+          ) : null
+        )}
+        {state.status === 'finished' && config.mode === 'custom' && (
+          <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
+        )}
+        <button
+          type="button"
+          data-testid={state.status === 'running' || state.status === 'paused' ? 'typing-test-restart' : 'typing-test-start'}
+          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+          onClick={onStart}
+        >
+          {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
+        </button>
+      </div>
 
       {/* Measurement / results row — below the reading window and the
           Unnamed / Next Test row. Live metrics during a run; before measuring

@@ -250,6 +250,7 @@
       "exitTypingMode": "Exit Typing Test",
       "restart": "Restart",
       "nextTest": "Next Test",
+      "complete": "Complete",
       "collapseSettings": "Collapse settings",
       "expandSettings": "Expand settings",
       "keymapToggle": "Keymap",
@@ -261,7 +262,6 @@
       "section": {
         "settings": "Settings",
         "data": "Data",
-        "operations": "Operations",
         "show": "Show"
       },
       "wpm": "WPM",

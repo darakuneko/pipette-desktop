@@ -250,6 +250,7 @@
       "exitTypingMode": "タイピングテスト終了",
       "restart": "やり直す",
       "nextTest": "次のテスト",
+      "complete": "完了",
       "collapseSettings": "設定を閉じる",
       "expandSettings": "設定を開く",
       "keymapToggle": "キーマップ",
@@ -261,7 +262,6 @@
       "section": {
         "settings": "設定",
         "data": "データ",
-        "operations": "操作",
         "show": "表示"
       },
       "wpm": "WPM",
