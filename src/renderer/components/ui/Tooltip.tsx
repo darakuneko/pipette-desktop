@@ -48,12 +48,22 @@ const BUBBLE_BASE =
 
 const WRAPPER_BASE = 'relative inline-block'
 
-function computeBubblePosition(
+const VIEWPORT_MARGIN = 8
+
+function clampAxis(value: number, size: number, viewport: number, margin: number): number {
+  // When the bubble is wider/taller than the available space, pin it to the
+  // near edge rather than producing a negative max (which would flip the clamp).
+  const max = Math.max(margin, viewport - size - margin)
+  return Math.min(Math.max(value, margin), max)
+}
+
+export function computeBubblePosition(
   trigger: DOMRect,
   bubble: DOMRect,
   side: TooltipSide,
   align: TooltipAlign,
   offset: number,
+  viewport: { width: number; height: number },
 ): { top: number; left: number } {
   let top = 0
   let left = 0
@@ -75,7 +85,12 @@ function computeBubblePosition(
     else if (align === 'end') top = trigger.bottom - bubble.height
     else top = trigger.top + trigger.height / 2 - bubble.height / 2
   }
-  return { top, left }
+  // Keep the whole bubble inside the viewport so triggers near a screen edge
+  // (e.g. the collapsed layer-panel toggle) don't render a clipped tooltip.
+  return {
+    top: clampAxis(top, bubble.height, viewport.height, VIEWPORT_MARGIN),
+    left: clampAxis(left, bubble.width, viewport.width, VIEWPORT_MARGIN),
+  }
 }
 
 export function Tooltip({
@@ -117,6 +132,7 @@ export function Tooltip({
       side,
       align,
       Math.max(0, offset),
+      { width: window.innerWidth, height: window.innerHeight },
     ))
   }, [side, align, offset])
 
