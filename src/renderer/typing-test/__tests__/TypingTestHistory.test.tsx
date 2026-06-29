@@ -291,6 +291,7 @@ describe('TypingTestHistory', () => {
   it('renders the name read-only (no edit) when no onRename handler', () => {
     renderWithI18n(<TypingTestHistory results={[makeResult({ date: 'x', name: 'kept' })]} />)
     expect(screen.queryByTestId('history-name-x')).toBeNull()
-    expect(screen.getByText('kept')).toBeTruthy()
+    // The name shows in the cell (and again in its hover tooltip bubble).
+    expect(screen.getAllByText('kept').length).toBeGreaterThan(0)
   })
 })

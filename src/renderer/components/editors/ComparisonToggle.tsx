@@ -6,6 +6,7 @@ import { useEscapeClose } from '../../hooks/useEscapeClose'
 import { ModalCloseButton } from './ModalCloseButton'
 import { formatDate } from './store-modal-shared'
 import { BTN_PRIMARY, BTN_SECONDARY } from '../../constants/ui-tokens'
+import { Tooltip } from '../ui/Tooltip'
 import { COMPARISON_BASELINE_KINDS } from '../../../shared/types/pipette-settings'
 import type { PooledTypingTestResult, TypingTestComparisonBaseline, ComparisonBaselineKind } from '../../../shared/types/pipette-settings'
 
@@ -137,7 +138,11 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
                               className={`cursor-pointer border-t border-edge/50 transition-colors ${draftPinnedDate === r.date ? 'bg-accent/10 font-semibold text-accent' : 'text-content hover:bg-surface-dim'}`}
                               onClick={() => setDraftPinnedDate(r.date)}
                             >
-                              <td className="truncate px-2 py-1.5">{r.name || t('editor.typingTest.history.unnamed')}</td>
+                              <td className="px-2 py-1.5">
+                                <Tooltip content={r.name || t('editor.typingTest.history.unnamed')} wrapperClassName="block max-w-full">
+                                  <span className="block truncate">{r.name || t('editor.typingTest.history.unnamed')}</span>
+                                </Tooltip>
+                              </td>
                               <td className="whitespace-nowrap px-2 py-1.5">{r.keyboardName}</td>
                               <td className="whitespace-nowrap px-2 py-1.5 font-mono">{formatDate(r.date)}</td>
                               <td className="whitespace-nowrap px-2 py-1.5 text-right font-mono">{r.wpm}</td>
