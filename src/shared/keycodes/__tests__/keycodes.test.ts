@@ -1495,9 +1495,14 @@ describe('serializeForCExport', () => {
       kc = proto === 6 ? keycodesV6.kc : keycodesV5.kc
     })
 
-    it('LM keycodes return hex', () => {
-      const lmCode = kc.QK_LAYER_MOD | (0 << kc.QMK_LM_SHIFT) | kc.MOD_LSFT
-      expect(serializeForCExport(lmCode)).toMatch(/^0x[0-9a-f]+$/)
+    it('LM exports the QMK function-macro form LM(layer, mod), not the packed LM1(mod)', () => {
+      const lm0 = kc.QK_LAYER_MOD | (0 << kc.QMK_LM_SHIFT) | kc.MOD_LSFT
+      const lm2 = kc.QK_LAYER_MOD | (2 << kc.QMK_LM_SHIFT) | kc.MOD_LSFT
+      // keymap.c only defines LM(layer, mod); the packed LM1(...) form does not compile.
+      expect(serializeForCExport(lm0)).toBe('LM(0, MOD_LSFT)')
+      expect(serializeForCExport(lm2)).toBe('LM(2, MOD_LSFT)')
+      // display / .vil serialization keeps the packed form.
+      expect(serialize(lm0)).toBe('LM0(MOD_LSFT)')
     })
 
     it('vial-qmk undefined Modifier Mask keycodes return hex', () => {
@@ -1711,11 +1716,17 @@ describe('serializeForCExport', () => {
       expect(serializeForCExport(lsftBspace)).toBe('LSFT(KC_BSPC)')
     })
 
-    it('MO/TG/LT layer keycodes match serialize()', () => {
+    it('MO/TG layer keycodes match serialize()', () => {
       expect(serializeForCExport(kc['MO(1)'])).toBe(serialize(kc['MO(1)']))
       expect(serializeForCExport(kc['TG(2)'])).toBe(serialize(kc['TG(2)']))
+    })
+
+    it('LT exports the QMK function-macro form LT(layer, kc), not the packed LT1(kc)', () => {
       const lt1a = kc['LT1(kc)'] | kc.KC_A
-      expect(serializeForCExport(lt1a)).toBe(serialize(lt1a))
+      // keymap.c only defines LT(layer, kc); the packed LT1(...) form does not compile.
+      expect(serializeForCExport(lt1a)).toBe('LT(1, KC_A)')
+      // display / .vil serialization keeps the packed form.
+      expect(serialize(lt1a)).toBe('LT1(KC_A)')
     })
   })
 
