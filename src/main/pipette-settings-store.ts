@@ -3,14 +3,16 @@
 
 import { app } from 'electron'
 import { join } from 'node:path'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, writeFile, readdir } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import { notifyChange } from './sync/sync-service'
 import { secureHandle } from './ipc-guard'
 import { withWriteLock } from './per-uid-write-lock'
 import { isRecord } from '../shared/vil-file'
-import type { PipetteSettings, PipetteSettingsPatch, ViewMode } from '../shared/types/pipette-settings'
-import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingViewMenuTab } from '../shared/types/pipette-settings'
+import { getActiveKeyboardMetaMap, readKeyboardMetaIndex, resolveKeyboardDisplayName } from './sync/keyboard-meta'
+import { getTypingAnalyticsDB } from './typing-analytics/db/typing-analytics-db'
+import type { PipetteSettings, PipetteSettingsPatch, ViewMode, PooledTypingTestResult } from '../shared/types/pipette-settings'
+import { VIEW_MODES, DEFAULT_PIPETTE_SETTINGS, isTypingSyncSpanDays, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../shared/types/pipette-settings'
 import { isPositiveInt, isValidAnalyzeFilterSettings } from '../shared/types/analyze-filters'
 import { FINGER_LIST, type FingerType } from '../shared/kle/kle-ergonomics'
 
@@ -73,6 +75,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if (Array.isArray(obj.layerNames) && (obj.layerNames as unknown[]).some((n) => typeof n !== 'string')) return false
   if ('typingTestResults' in obj && obj.typingTestResults != null && !Array.isArray(obj.typingTestResults)) return false
   if ('typingTestConfig' in obj && obj.typingTestConfig != null && (typeof obj.typingTestConfig !== 'object' || Array.isArray(obj.typingTestConfig))) return false
+  if ('typingTestNormalConfig' in obj && obj.typingTestNormalConfig != null && (typeof obj.typingTestNormalConfig !== 'object' || Array.isArray(obj.typingTestNormalConfig))) return false
   if ('typingTestLanguage' in obj && obj.typingTestLanguage != null && typeof obj.typingTestLanguage !== 'string') return false
   if ('layerPanelOpen' in obj && obj.layerPanelOpen != null && typeof obj.layerPanelOpen !== 'boolean') return false
   if ('basicViewType' in obj && obj.basicViewType != null && obj.basicViewType !== 'ansi' && obj.basicViewType !== 'iso' && obj.basicViewType !== 'jis' && obj.basicViewType !== 'list' && obj.basicViewType !== 'keyboard') return false
@@ -92,6 +95,8 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingTestFontSize' in obj && obj.typingTestFontSize != null && typeof obj.typingTestFontSize !== 'number') return false
   if ('typingTestHideKeymap' in obj && obj.typingTestHideKeymap != null && typeof obj.typingTestHideKeymap !== 'boolean') return false
   if ('typingTestHideStatsRow' in obj && obj.typingTestHideStatsRow != null && typeof obj.typingTestHideStatsRow !== 'boolean') return false
+  if ('typingTestHideControls' in obj && obj.typingTestHideControls != null && typeof obj.typingTestHideControls !== 'boolean') return false
+  if ('typingTestComparisonBaselines' in obj && obj.typingTestComparisonBaselines != null && !isTypingTestComparisonBaselines(obj.typingTestComparisonBaselines)) return false
   if ('typingTestSettingsPanelOpen' in obj && obj.typingTestSettingsPanelOpen != null && typeof obj.typingTestSettingsPanelOpen !== 'boolean') return false
   if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
   if ('typingSyncSpanDays' in obj && obj.typingSyncSpanDays != null && !isTypingSyncSpanDays(obj.typingSyncSpanDays)) return false
@@ -135,6 +140,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       layerNames: parsed.layerNames ?? [],
       typingTestResults: parsed.typingTestResults,
       typingTestConfig: parsed.typingTestConfig,
+      typingTestNormalConfig: parsed.typingTestNormalConfig,
       typingTestLanguage: parsed.typingTestLanguage,
       typingTestViewOnly: parsed.typingTestViewOnly,
       typingTestViewOnlyWindowSize: parsed.typingTestViewOnlyWindowSize,
@@ -144,6 +150,8 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestFontSize: parsed.typingTestFontSize,
       typingTestHideKeymap: parsed.typingTestHideKeymap,
       typingTestHideStatsRow: parsed.typingTestHideStatsRow,
+      typingTestHideControls: parsed.typingTestHideControls,
+      typingTestComparisonBaselines: parsed.typingTestComparisonBaselines,
       typingTestSettingsPanelOpen: parsed.typingTestSettingsPanelOpen,
       typingRecordEnabled: parsed.typingRecordEnabled,
       typingSyncSpanDays: parsed.typingSyncSpanDays,
@@ -217,6 +225,37 @@ export function setupPipetteSettingsStore(): void {
       } catch {
         return null
       }
+    },
+  )
+
+  // Pool every locally-stored keyboard's saved typing-test results into one
+  // flat list for the Measurement-row comparison baseline (keyboard-agnostic).
+  // Reads are best-effort: a missing / invalid keyboard dir is skipped.
+  secureHandle(
+    IpcChannels.PIPETTE_SETTINGS_LIST_ALL_TYPING_RESULTS,
+    async (): Promise<PooledTypingTestResult[]> => {
+      const keyboardsDir = join(app.getPath('userData'), 'sync', 'keyboards')
+      const metaMap = getActiveKeyboardMetaMap(await readKeyboardMetaIndex())
+      // Analytics carries a product name even for keyboards with no saved
+      // keymap (meta / snapshot), so it names otherwise-uid-only keyboards.
+      let analyticsNames: Map<string, string> | undefined
+      try {
+        analyticsNames = new Map(
+          getTypingAnalyticsDB().listKeyboardsWithTypingData().map((k) => [k.uid, k.productName]),
+        )
+      } catch { /* analytics db unavailable */ }
+      const all: PooledTypingTestResult[] = []
+      try {
+        const entries = await readdir(keyboardsDir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (!entry.isDirectory() || !isSafePathSegment(entry.name)) continue
+          const prefs = await readData(entry.name)
+          if (!prefs?.typingTestResults?.length) continue
+          const keyboardName = await resolveKeyboardDisplayName(entry.name, metaMap, analyticsNames)
+          for (const r of prefs.typingTestResults) all.push({ ...r, keyboardName })
+        }
+      } catch { /* keyboards dir doesn't exist yet */ }
+      return all
     },
   )
 

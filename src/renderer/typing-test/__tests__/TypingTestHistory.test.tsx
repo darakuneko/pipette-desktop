@@ -57,35 +57,54 @@ describe('TypingTestHistory', () => {
     expect(svgs.length).toBe(1) // cell trophy icon
   })
 
-  it('filters by mode when clicking filter buttons', () => {
+  it('filters by mode via the dropdown', () => {
     const results = [
       makeResult({ wpm: 80, mode: 'words', mode2: 30 }),
       makeResult({ wpm: 90, mode: 'time', mode2: 60 }),
       makeResult({ wpm: 70, mode: 'quote', mode2: 'short' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
+    const select = screen.getByTestId('history-filter-mode')
 
     // Default is 'all', all three should show
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
     expect(screen.getAllByText('90').length).toBeGreaterThan(0)
     expect(screen.getAllByText('70').length).toBeGreaterThan(0)
 
-    // Click 'words' filter
-    fireEvent.click(screen.getByTestId('history-filter-words'))
+    // Select 'words'
+    fireEvent.change(select, { target: { value: 'words' } })
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
     expect(screen.queryByText('90')).toBeNull()
     expect(screen.queryByText('70')).toBeNull()
 
-    // Click 'time' filter
-    fireEvent.click(screen.getByTestId('history-filter-time'))
+    // Select 'time'
+    fireEvent.change(select, { target: { value: 'time' } })
     expect(screen.queryByText('80')).toBeNull()
     expect(screen.getAllByText('90').length).toBeGreaterThan(0)
 
-    // Click 'all' to reset
-    fireEvent.click(screen.getByTestId('history-filter-all'))
+    // Back to 'all'
+    fireEvent.change(select, { target: { value: 'all' } })
     expect(screen.getAllByText('80').length).toBeGreaterThan(0)
     expect(screen.getAllByText('90').length).toBeGreaterThan(0)
     expect(screen.getAllByText('70').length).toBeGreaterThan(0)
+  })
+
+  it('filters the Text tab by imported text via the dropdown', () => {
+    const results = [
+      makeResult({ wpm: 80, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
+      makeResult({ wpm: 65, mode: 'custom', mode2: 't2', customTextName: 'Beta' }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+
+    // Switch to the Text tab
+    fireEvent.click(screen.getByTestId('history-tab-text'))
+    expect(screen.getAllByText('80').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('65').length).toBeGreaterThan(0)
+
+    // Filter to a single text → the other text's row drops out
+    fireEvent.change(screen.getByTestId('history-filter-text'), { target: { value: 't1' } })
+    expect(screen.getAllByText('80').length).toBeGreaterThan(0)
+    expect(screen.queryByText('65')).toBeNull()
   })
 
   it('sorts by WPM when clicking header', () => {
@@ -143,7 +162,7 @@ describe('TypingTestHistory', () => {
     renderWithI18n(<TypingTestHistory results={results} />)
 
     // Filter to words only
-    fireEvent.click(screen.getByTestId('history-filter-words'))
+    fireEvent.change(screen.getByTestId('history-filter-mode'), { target: { value: 'words' } })
 
     // Stats should reflect only words results (best=100, tests=1)
     expect(screen.getAllByText('100').length).toBeGreaterThan(0)
@@ -168,6 +187,27 @@ describe('TypingTestHistory', () => {
     expect(csv).toContain('date,name,wpm,kpm,accuracy')
     expect(csv).toContain('2025-01-01T00:00:00Z')
     expect(csv).toContain('80')
+    // Default (Normal tab, All) → 'normal' slug
+    expect(onExportCsv.mock.calls[0][1]).toBe('normal')
+  })
+
+  it('passes a filename slug reflecting the active filter selection', () => {
+    const onExportCsv = vi.fn()
+    const results = [
+      makeResult({ wpm: 80, mode: 'words', mode2: 30 }),
+      makeResult({ wpm: 70, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
+
+    // Normal tab, filter to words → 'normal-words'
+    fireEvent.change(screen.getByTestId('history-filter-mode'), { target: { value: 'words' } })
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('normal-words')
+
+    // Text tab, all → 'text'
+    fireEvent.click(screen.getByTestId('history-tab-text'))
+    fireEvent.click(screen.getByTestId('history-export-csv'))
+    expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('text')
   })
 
   it('does not show export button when onExportCsv is not provided', () => {

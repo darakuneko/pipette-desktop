@@ -280,6 +280,56 @@ describe('TypingTestView quote mode display', () => {
   })
 })
 
+describe('TypingTestView controls row (state-based)', () => {
+  const customConfig: TypingTestConfig = { mode: 'custom', textId: 'abc' }
+
+  it('shows Next Test (not Restart) before a run starts', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'waiting' }) })
+    expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
+    expect(screen.queryByTestId('typing-test-restart')).toBeNull()
+  })
+
+  it('shows Pause + Restart while running (custom)', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+    expect(screen.getByTestId('typing-memory-pause')).toBeInTheDocument()
+    expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
+  })
+
+  it('shows Resume + Restart while paused (custom)', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'paused' }) })
+    expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
+    expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
+  })
+
+  it('shows Resume in the waiting state when a custom run is saved', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'waiting' }), hasSavedMemory: true })
+    expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
+  })
+
+  it('shows the result name field on finish for normal modes too', () => {
+    const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderView({ config: wordsConfig, state: makeState({ status: 'finished' }) })
+    expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
+  })
+
+  it('shows the Complete message on the finished screen', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'finished' }) })
+    expect(screen.getByTestId('typing-test-complete')).toBeInTheDocument()
+  })
+
+  it('hides the Complete message while running', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+    expect(screen.queryByTestId('typing-test-complete')).toBeNull()
+  })
+
+  it('never shows Resume on the finished screen, even with a saved memory', () => {
+    renderView({ config: customConfig, state: makeState({ status: 'finished' }), hasSavedMemory: true })
+    expect(screen.queryByTestId('typing-memory-resume')).toBeNull()
+    expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
+    expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
+  })
+})
+
 describe('TypingTestView custom mode result naming', () => {
   const customConfig: TypingTestConfig = { mode: 'custom', textId: 'abc' }
 

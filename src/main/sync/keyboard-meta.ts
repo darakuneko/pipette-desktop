@@ -221,6 +221,23 @@ async function resolveDeviceNameFromLocalSnapshots(uid: string): Promise<string 
   }
 }
 
+/** Best-effort display name for a stored keyboard: its meta-index name, else
+ *  the device name from its local snapshot filename, else the analytics product
+ *  name (present even for keyboards with no saved keymap), else the uid.
+ *  No side effects (unlike the backfill path), so it's safe for read-only
+ *  lookups such as the comparison-result pool. */
+export async function resolveKeyboardDisplayName(
+  uid: string,
+  metaMap: Map<string, string>,
+  analyticsNames?: Map<string, string>,
+): Promise<string> {
+  const metaName = metaMap.get(uid)
+  if (metaName && metaName !== uid) return metaName
+  const snapshotName = await resolveDeviceNameFromLocalSnapshots(uid)
+  if (snapshotName) return snapshotName
+  return analyticsNames?.get(uid) || uid
+}
+
 async function resolveDeviceNameFromRemoteSnapshots(
   uid: string,
   password: string,

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Pause, Play, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { ICON_SM } from '../../constants/ui-tokens'
 import { TypingTestView } from '../../typing-test/TypingTestView'
 import { TypingTestSettingsBar } from '../../typing-test/TypingTestSettingsBar'
@@ -14,10 +14,13 @@ import { useTypingHeatmap } from '../../typing-test/useTypingHeatmap'
 import { TYPING_HEATMAP_WINDOW_OPTIONS } from '../../../shared/types/app-config'
 import { KeyboardPane } from './KeyboardPane'
 import { HistoryToggle } from './HistoryToggle'
+import { ComparisonToggle } from './ComparisonToggle'
+import { computeComparison, matchingResults, conditionKey } from '../../typing-test/comparison'
 import { KEY_UNIT, KEYBOARD_PADDING } from '../keyboard/constants'
 import { repositionLayoutKeys, filterVisibleKeys } from '../../../shared/kle/filter-keys'
 import type { KleKey } from '../../../shared/kle/types'
-import type { TypingTestResult, TypingViewMenuTab } from '../../../shared/types/pipette-settings'
+import type { TypingTestResult, PooledTypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
+import { DEFAULT_COMPARISON_BASELINE } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from '../../typing-test/types'
 
@@ -44,6 +47,8 @@ import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
   onConfigChange: (config: TypingTestConfig) => void
+  /** Last normal (words/time/quote) config, restored when leaving custom. */
+  normalConfig?: TypingTestConfig
   onLanguageChange: (lang: string) => Promise<void>
   layers: number
   layerNames?: string[]
@@ -72,8 +77,15 @@ export interface TypingTestPaneProps {
    *  Persisted per keyboard; only meaningful outside view-only mode. */
   hideKeymap?: boolean
   hideStatsRow?: boolean
+  hideControls?: boolean
   onToggleHideKeymap?: (hidden: boolean) => void
   onToggleHideStatsRow?: (hidden: boolean) => void
+  onToggleHideControls?: (hidden: boolean) => void
+  /** Per-condition Measurement-row comparison baselines (persisted per
+   *  keyboard, synced). Keyed by condition; the current condition's baseline
+   *  is looked up and applied. */
+  comparisonBaselines?: TypingTestComparisonBaselines
+  onComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   /** Left Settings panel expanded state (persisted per keyboard). */
   settingsPanelOpen?: boolean
   onToggleSettingsPanel?: (open: boolean) => void
@@ -127,6 +139,7 @@ export interface TypingTestPaneProps {
 export function TypingTestPane({
   typingTest,
   onConfigChange,
+  normalConfig,
   onLanguageChange,
   layers,
   layerNames,
@@ -151,8 +164,12 @@ export function TypingTestPane({
   onFontSizeChange,
   hideKeymap,
   hideStatsRow,
+  hideControls,
   onToggleHideKeymap,
   onToggleHideStatsRow,
+  onToggleHideControls,
+  comparisonBaselines,
+  onComparisonBaselineChange,
   settingsPanelOpen = true,
   onToggleSettingsPanel,
   onRenameTypingTestResult,
@@ -196,6 +213,38 @@ export function TypingTestPane({
   const [showLanguageModal, setShowLanguageModal] = useState(false)
   const [showConsentModal, setShowConsentModal] = useState(false)
   const [showResumeModal, setShowResumeModal] = useState(false)
+
+  // Measurement-row comparison: pool every keyboard's saved results, then pick
+  // the baseline for the current condition. Refetched when this keyboard's
+  // history changes so a just-saved run joins the pool. `state.startTime`
+  // excludes the in-flight run from previous/best/average.
+  const [comparisonPool, setComparisonPool] = useState<PooledTypingTestResult[]>([])
+  useEffect(() => {
+    let cancelled = false
+    window.vialAPI.pipetteSettingsListAllTypingResults()
+      .then((all) => { if (!cancelled) setComparisonPool(all) })
+      .catch(() => { /* best-effort: no comparison if unavailable */ })
+    return () => { cancelled = true }
+  }, [typingTestHistory])
+
+  // The baseline is remembered per condition: switching the typing-test
+  // condition recalls the baseline saved for it (default: previous).
+  const currentConditionKey = conditionKey(typingTest.config, typingTest.language)
+  const comparisonBaselineValue = comparisonBaselines?.[currentConditionKey] ?? DEFAULT_COMPARISON_BASELINE
+  const comparison = useMemo(
+    () => computeComparison(comparisonPool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime),
+    [comparisonPool, typingTest.config, typingTest.language, comparisonBaselineValue, typingTest.state.startTime],
+  )
+  // Same-condition results only — the choices for a pinned baseline. No
+  // `beforeMs`: the user is pinning a past result, not measuring a live run.
+  const sameConditionResults = useMemo(
+    () => matchingResults(comparisonPool, typingTest.config, typingTest.language),
+    [comparisonPool, typingTest.config, typingTest.language],
+  )
+  const handleComparisonChange = useCallback(
+    (baseline: TypingTestComparisonBaseline) => onComparisonBaselineChange?.(currentConditionKey, baseline),
+    [onComparisonBaselineChange, currentConditionKey],
+  )
 
   const handleRecordToggle = useCallback(() => {
     if (!onRecordEnabledChange) return
@@ -431,29 +480,30 @@ export function TypingTestPane({
       <div className="flex min-h-0 w-60 flex-1 flex-col gap-4 overflow-y-auto p-3">
       {/* Settings — language/mode, base layer, pattern / units / options. */}
       <PanelSection title={t('editor.typingTest.section.settings')}>
-        {typingTest.config.mode !== 'quote' && (
-          <div className="flex w-full flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
-            <button
-              type="button"
-              data-testid="language-selector"
-              title={modeLabel}
-              className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={() => setShowLanguageModal(true)}
-              disabled={typingTest.isLanguageLoading}
-            >
-              <span className="truncate">{modeLabel}</span>
-            </button>
-          </div>
-        )}
+        {/* Mode / language — shown for every mode (words / time / quote /
+            custom); quote uses it to pick the quote source language. */}
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
+          <button
+            type="button"
+            data-testid="language-selector"
+            title={modeLabel}
+            className="flex h-8 w-full items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+            onClick={() => setShowLanguageModal(true)}
+            disabled={typingTest.isLanguageLoading}
+          >
+            <span className="truncate">{modeLabel}</span>
+          </button>
+        </div>
         {showLanguageModal && (
           <LanguageSelectorModal
             currentLanguage={typingTest.language}
             currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
             onSelectLanguage={(name) => {
-              // Picking a language leaves custom mode — fall back to
-              // a words config so the language source applies.
-              if (typingTest.config.mode === 'custom') onConfigChange(DEFAULT_CONFIG)
+              // Picking a language leaves custom mode — restore the last normal
+              // (words/time/quote) config so its Pattern/Units/Option settings
+              // survive the round trip; fall back to the default if none saved.
+              if (typingTest.config.mode === 'custom') onConfigChange(normalConfig ?? DEFAULT_CONFIG)
               void onLanguageChange(name)
             }}
             onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}
@@ -515,66 +565,37 @@ export function TypingTestPane({
         )}
       </PanelSection>
 
-      {/* Data — saved run history. */}
-      {typingTestHistory && typingTestHistory.length > 0 && (
-        <PanelSection title={t('editor.typingTest.section.data')}>
-          <HistoryToggle
-            results={typingTestHistory}
-            deviceName={deviceName}
-            onRename={onRenameTypingTestResult}
-            onDelete={onDeleteTypingTestResult}
-          />
-        </PanelSection>
-      )}
-
-      {/* Operations — pause/resume (imported custom text) and restart. */}
-      <PanelSection title={t('editor.typingTest.section.operations')}>
-        {typingTest.config.mode === 'custom' && (
-          typingTest.state.status === 'running' ? (
-            <button
-              type="button"
-              data-testid="typing-memory-pause"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-              onClick={() => onPauseTest?.()}
-            >
-              <Pause size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.pause')}</span>
-            </button>
-          ) : (typingTest.state.status === 'paused' || hasSavedMemory) ? (
-            <button
-              type="button"
-              data-testid="typing-memory-resume"
-              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
-              onClick={() => setShowResumeModal(true)}
-            >
-              <Play size={ICON_SM} aria-hidden="true" />
-              <span>{t('editor.typingTest.memory.resumeButton')}</span>
-            </button>
-          ) : null
-        )}
-        <button
-          type="button"
-          data-testid="typing-test-restart"
-          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-          onClick={() => typingTest.restart()}
-        >
-          {t('editor.typingTest.restart')}
-        </button>
+      {/* Data — saved run history + comparison baseline settings. Always shown
+          (even with no saved results yet) so History stays reachable and the
+          comparison baseline can be set up before the first result. */}
+      <PanelSection title={t('editor.typingTest.section.data')}>
+        <HistoryToggle
+          results={typingTestHistory ?? []}
+          deviceName={deviceName}
+          onRename={onRenameTypingTestResult}
+          onDelete={onDeleteTypingTestResult}
+        />
+        <ComparisonToggle
+          pool={sameConditionResults}
+          baseline={comparisonBaselineValue}
+          onChange={handleComparisonChange}
+        />
       </PanelSection>
 
-      {/* Show — toggle the keymap and the live measurement display. Accent
-          highlight marks the hidden (active) state. */}
+      {/* Show — toggles ordered top-to-bottom to match the editor layout:
+          operation (controls row) → measurement (stats row) → keymap pane.
+          Accent highlight marks the visible (active) state. */}
       <PanelSection title={t('editor.typingTest.section.show')}>
         <button
           type="button"
-          data-testid="typing-test-toggle-keymap"
-          aria-pressed={!hideKeymap}
-          title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
+          data-testid="typing-test-toggle-controls"
+          aria-pressed={!hideControls}
+          title={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
+          aria-label={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideControls ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideControls?.(!hideControls)}
         >
-          {t('editor.typingTest.keymapToggle')}
+          {t('editor.typingTest.controlsToggle')}
         </button>
         <button
           type="button"
@@ -586,6 +607,17 @@ export function TypingTestPane({
           onClick={() => onToggleHideStatsRow?.(!hideStatsRow)}
         >
           {t('editor.typingTest.statsToggle')}
+        </button>
+        <button
+          type="button"
+          data-testid="typing-test-toggle-keymap"
+          aria-pressed={!hideKeymap}
+          title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
+        >
+          {t('editor.typingTest.keymapToggle')}
         </button>
       </PanelSection>
       </div>
@@ -635,6 +667,8 @@ export function TypingTestPane({
           // fall back to its own max width instead of collapsing.
           readingMaxWidth={hideKeymap ? undefined : keyboardWidth}
           hideStatsRow={hideStatsRow}
+          hideControls={hideControls}
+          comparison={comparison}
           state={typingTest.state}
           wpm={typingTest.wpm}
           kpm={typingTest.kpm}
@@ -657,6 +691,9 @@ export function TypingTestPane({
           // Chips come from the just-finished result (history[0]).
           resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t) : []}
           onStart={() => typingTest.restart()}
+          onPause={() => onPauseTest?.()}
+          onResume={() => setShowResumeModal(true)}
+          hasSavedMemory={hasSavedMemory}
         />
       )}
       <div

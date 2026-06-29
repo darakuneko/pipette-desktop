@@ -3,10 +3,11 @@
 import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from 'react'
 import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { SquarePen } from 'lucide-react'
-import { ICON_SM } from '../constants/ui-tokens'
+import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
+import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
 import type { TypingTestConfig } from './types'
+import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
 import { ResultNameModal } from './ResultNameModal'
@@ -27,6 +28,12 @@ interface Props {
   readingMaxWidth?: number
   /** Hide the stats / results (WPM) row. Persisted per keyboard. */
   hideStatsRow?: boolean
+  /** Hide the operation (Next Test button) controls row. Persisted per
+   *  keyboard. Force-shown once a test finishes. */
+  hideControls?: boolean
+  /** Baseline metrics for the Measurement-row comparison delta, or null when
+   *  comparison is off / no matching history. */
+  comparison?: ComparisonStats | null
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
@@ -42,8 +49,14 @@ interface Props {
   /** Quick-insert chips for the result-name modal (material label, timestamp,
    *  WPM / KPM / Accuracy of the just-finished result). */
   resultNameChips?: string[]
-  /** Start a fresh run from the result screen (same as the Restart button). */
+  /** Start a fresh run (Next Test / Restart — both restart the test). */
   onStart?: () => void
+  /** Memory mode (imported custom text): pause the running run. */
+  onPause?: () => void
+  /** Memory mode: open the resume dialog for a paused / saved run. */
+  onResume?: () => void
+  /** A paused custom run is saved and can be resumed. */
+  hasSavedMemory?: boolean
 }
 
 function formatTime(seconds: number): string {
@@ -89,6 +102,8 @@ export function TypingTestView({
   paused,
   readingMaxWidth,
   hideStatsRow,
+  hideControls,
+  comparison,
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
@@ -98,6 +113,9 @@ export function TypingTestView({
   onNameResult,
   resultNameChips = [],
   onStart,
+  onPause,
+  onResume,
+  hasSavedMemory,
 }: Props) {
   const { t } = useTranslation()
   const showStats = state.status === 'running' || state.status === 'finished' || state.status === 'paused'
@@ -318,21 +336,57 @@ export function TypingTestView({
         )}
       </div>
 
-      {/* Imported custom text: name the just-finished result, kept below the
-          reading window (its original spot) while the metrics row sits on top. */}
-      {state.status === 'finished' && config.mode === 'custom' && (
-        <div className="flex items-center gap-2">
+      {/* State-based controls row, below the reading window:
+          - not started (waiting / countdown): Next Test (+ Resume if a run is
+            saved for imported custom text)
+          - in progress (running / paused): Pause or Resume (custom) + Restart
+          - finished: result name (custom) + Next Test
+          Next Test and Restart share the same action; only the label differs. */}
+      {state.status === 'finished' && (
+        <p data-testid="typing-test-complete" className="flex items-center gap-1.5 text-lg font-semibold text-accent">
+          <CircleCheck size={ICON_LG} aria-hidden="true" />
+          {t('editor.typingTest.complete')}
+        </p>
+      )}
+      {/* The "operation" toggle hides this controls row, but a finished test
+          always shows it so the result can be named and the next test started. */}
+      {(!hideControls || state.status === 'finished') && (
+      <div className="flex items-center gap-2">
+        {config.mode === 'custom' && (
+          state.status === 'running' ? (
+            <button
+              type="button"
+              data-testid="typing-memory-pause"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+              onClick={onPause}
+            >
+              <Pause size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.pause')}</span>
+            </button>
+          ) : (state.status === 'paused' || ((state.status === 'waiting' || state.status === 'countdown') && hasSavedMemory)) ? (
+            <button
+              type="button"
+              data-testid="typing-memory-resume"
+              className="flex h-8 items-center gap-1.5 rounded-md border border-edge px-2.5 text-sm text-accent transition-colors hover:text-accent/80"
+              onClick={onResume}
+            >
+              <Play size={ICON_SM} aria-hidden="true" />
+              <span>{t('editor.typingTest.memory.resumeButton')}</span>
+            </button>
+          ) : null
+        )}
+        {state.status === 'finished' && (
           <ResultNameField key={state.startTime ?? 'none'} onName={onNameResult} chips={resultNameChips} />
-          {/* Start a fresh run — same action as the Restart button. */}
-          <button
-            type="button"
-            data-testid="typing-test-start"
-            className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
-            onClick={onStart}
-          >
-            {t('editor.typingTest.nextTest')}
-          </button>
-        </div>
+        )}
+        <button
+          type="button"
+          data-testid={state.status === 'running' || state.status === 'paused' ? 'typing-test-restart' : 'typing-test-start'}
+          className="flex h-8 items-center rounded-md border border-edge px-2.5 text-sm text-content-secondary transition-colors hover:text-content"
+          onClick={onStart}
+        >
+          {t(state.status === 'running' || state.status === 'paused' ? 'editor.typingTest.restart' : 'editor.typingTest.nextTest')}
+        </button>
+      </div>
       )}
 
       {/* Measurement / results row — below the reading window and the
@@ -352,18 +406,21 @@ export function TypingTestView({
             <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent">
               {showStats ? wpm : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={wpm} baseline={comparison.wpm} testid="wpm" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.kpm')}:</span>
             <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent">
               {showStats ? kpm : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={kpm} baseline={comparison.kpm} testid="kpm" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.accuracy')}:</span>
             <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold">
               {showStats ? `${accuracy}%` : '-'}
             </span>
+            {showStats && comparison && <ComparisonDelta current={accuracy} baseline={comparison.accuracy} suffix="%" testid="accuracy" />}
           </div>
           <div className="flex items-center gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.time')}:</span>
@@ -396,6 +453,19 @@ export function TypingTestView({
       )}
 
     </div>
+  )
+}
+
+/** Signed delta of the live metric against the comparison baseline: an arrow +
+ *  the difference, green when ahead, red when behind, muted when level. */
+function ComparisonDelta({ current, baseline, suffix, testid }: { current: number; baseline: number; suffix?: string; testid: string }) {
+  const diff = current - baseline
+  const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : ''
+  const color = diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : 'text-content-muted'
+  return (
+    <span data-testid={`typing-test-delta-${testid}`} className={`font-mono text-xs ${color}`}>
+      {arrow}{diff > 0 ? '+' : ''}{diff}{suffix ?? ''}
+    </span>
   )
 }
 

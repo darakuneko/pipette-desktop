@@ -230,7 +230,7 @@ describe('pipette-settings-store', () => {
       expect(prefs.layerPanelOpen).toBe(false)
     })
 
-    it('round-trips typingTestHideKeymap / typingTestHideStatsRow fields', async () => {
+    it('round-trips typingTestHideKeymap / typingTestHideStatsRow / typingTestHideControls fields', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
@@ -239,13 +239,15 @@ describe('pipette-settings-store', () => {
         layerNames: [],
         typingTestHideKeymap: true,
         typingTestHideStatsRow: true,
+        typingTestHideControls: true,
       })
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestHideKeymap: boolean; typingTestHideStatsRow: boolean }
-      // readData() must echo both back, else a later partial PATCH drops them.
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestHideKeymap: boolean; typingTestHideStatsRow: boolean; typingTestHideControls: boolean }
+      // readData() must echo all back, else a later partial PATCH drops them.
       expect(prefs.typingTestHideKeymap).toBe(true)
       expect(prefs.typingTestHideStatsRow).toBe(true)
+      expect(prefs.typingTestHideControls).toBe(true)
     })
 
     it('round-trips typingTestSettingsPanelOpen field', async () => {
@@ -261,6 +263,53 @@ describe('pipette-settings-store', () => {
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
       const prefs = await getter(fakeEvent, 'uid-1') as { typingTestSettingsPanelOpen: boolean }
       expect(prefs.typingTestSettingsPanelOpen).toBe(false)
+    })
+
+    it('round-trips typingTestComparisonBaselines map', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const baselines = {
+        'words|30|english|false|true': { kind: 'best' },
+        'custom|t2': { kind: 'pinned', pinnedDate: '2026-06-20T00:00:00.000Z' },
+      }
+      await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestComparisonBaselines: baselines,
+      })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestComparisonBaselines: typeof baselines }
+      expect(prefs.typingTestComparisonBaselines).toEqual(baselines)
+    })
+
+    it('rejects a typingTestComparisonBaselines map with an invalid kind', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestComparisonBaselines: { 'words|30': { kind: 'bogus' } },
+      })
+      expect(result.success).toBe(false)
+    })
+
+    it('round-trips typingTestNormalConfig field', async () => {
+      const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const normalConfig = { mode: 'words', wordCount: 60, punctuation: true, numbers: false }
+      await setter(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestNormalConfig: normalConfig,
+      })
+
+      const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestNormalConfig: typeof normalConfig }
+      expect(prefs.typingTestNormalConfig).toEqual(normalConfig)
     })
 
     it('defaults layerNames to [] when not present', async () => {

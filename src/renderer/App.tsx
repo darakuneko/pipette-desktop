@@ -840,6 +840,7 @@ export function App() {
             onDeleteTypingTestResult={devicePrefs.deleteTypingTestResult}
             typingTestHistory={devicePrefs.typingTestResults}
             typingTestConfig={devicePrefs.typingTestConfig}
+            typingTestNormalConfig={devicePrefs.typingTestNormalConfig}
             typingTestLanguage={devicePrefs.typingTestLanguage}
             onTypingTestConfigChange={devicePrefs.setTypingTestConfig}
             onTypingTestLanguageChange={devicePrefs.setTypingTestLanguage}
@@ -867,8 +868,12 @@ export function App() {
             onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
             typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
             typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
+            typingTestHideControls={devicePrefs.typingTestHideControls}
+            typingTestComparisonBaselines={devicePrefs.typingTestComparisonBaselines}
             onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
             onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
+            onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
+            onTypingTestComparisonBaselineChange={devicePrefs.setTypingTestComparisonBaseline}
             typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
             onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}

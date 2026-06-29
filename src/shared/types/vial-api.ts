@@ -36,7 +36,7 @@ import type {
 import type { AppConfig } from './app-config'
 import type { DeviceScope } from './analyze-filters'
 import type { SyncAuthStatus, SyncProgress, PasswordStrength, SyncResetTargets, LocalResetTargets, UndecryptableFile, SyncScope, SyncDataScanResult, StoredKeyboardInfo, SyncOperationResult } from './sync'
-import type { PipetteSettings, PipetteSettingsPatch } from './pipette-settings'
+import type { PipetteSettings, PipetteSettingsPatch, PooledTypingTestResult } from './pipette-settings'
 import type {
   TypingActivityCell,
   TypingAnalyticsDeviceInfoBundle,
@@ -207,6 +207,10 @@ export interface VialAPI {
   /** Field-level merge persist: only the defined keys of `partial` are
    * written, so concurrent writers never clobber each other's fields. */
   pipetteSettingsPatch(uid: string, partial: PipetteSettingsPatch): Promise<{ success: boolean; error?: string }>
+  /** Every locally-stored keyboard's saved typing-test results, pooled flat
+   * (each tagged with its keyboard name) for the keyboard-agnostic
+   * Measurement-row comparison baseline. */
+  pipetteSettingsListAllTypingResults(): Promise<PooledTypingTestResult[]>
 
   // Typing Analytics
   typingAnalyticsEvent(event: TypingAnalyticsEvent): Promise<void>

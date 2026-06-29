@@ -33,8 +33,49 @@ export interface TypingTestResult {
   wpmHistory?: number[]
 }
 
+/** A saved result tagged with the keyboard it belongs to. Returned by the
+ *  cross-keyboard pool so the comparison picker can show a Keyboard column. */
+export interface PooledTypingTestResult extends TypingTestResult {
+  keyboardName: string
+}
+
 export const VIEW_MODES = ['editor', 'typingView', 'typingTest'] as const
 export type ViewMode = typeof VIEW_MODES[number]
+
+/** Measurement-row comparison baseline. Comparison is always within the same
+ *  condition: `previous` (default) / `best` / `average` compute from
+ *  same-condition results pooled across all local keyboards; `pinned` fixes the
+ *  baseline to one chosen same-condition result (by its History `date` key);
+ *  `off` hides the delta. The baseline is remembered per condition (see
+ *  `typingTestComparisonBaselines`), so switching the typing-test condition
+ *  recalls the baseline saved for it. */
+export const COMPARISON_BASELINE_KINDS = ['previous', 'best', 'average', 'pinned', 'off'] as const
+export type ComparisonBaselineKind = typeof COMPARISON_BASELINE_KINDS[number]
+
+export interface TypingTestComparisonBaseline {
+  kind: ComparisonBaselineKind
+  /** History key (`date`, ISO string) of the chosen result when kind === 'pinned'. */
+  pinnedDate?: string
+}
+
+export function isTypingTestComparisonBaseline(value: unknown): value is TypingTestComparisonBaseline {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  if (!(COMPARISON_BASELINE_KINDS as readonly string[]).includes(v.kind as string)) return false
+  if ('pinnedDate' in v && v.pinnedDate != null && typeof v.pinnedDate !== 'string') return false
+  return true
+}
+
+/** Map of condition key → baseline. Each typing-test condition (mode + params,
+ *  or imported text) keeps its own remembered baseline. */
+export type TypingTestComparisonBaselines = Record<string, TypingTestComparisonBaseline>
+
+export function isTypingTestComparisonBaselines(value: unknown): value is TypingTestComparisonBaselines {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false
+  return Object.values(value).every((v) => isTypingTestComparisonBaseline(v))
+}
+
+export const DEFAULT_COMPARISON_BASELINE: TypingTestComparisonBaseline = { kind: 'previous' }
 
 /** Which tab of the typing-view menu is currently open. Persisted so
  * the next entry restores the user's last-chosen pane (Window controls
@@ -154,6 +195,9 @@ export interface PipetteSettings {
   layerNames: string[]
   typingTestResults?: TypingTestResult[]
   typingTestConfig?: Record<string, unknown>
+  /** Last words/time/quote config, restored when switching back from custom
+   *  (imported text) so normal-mode Pattern/Units/Option settings survive. */
+  typingTestNormalConfig?: Record<string, unknown>
   typingTestLanguage?: string
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
@@ -169,6 +213,12 @@ export interface PipetteSettings {
   typingTestHideKeymap?: boolean
   /** Editor typing-test: hide the stats / results (WPM) row. Default false. */
   typingTestHideStatsRow?: boolean
+  /** Editor typing-test: hide the operation (Next Test button) controls row.
+   *  Default false. Force-shown once a test finishes. */
+  typingTestHideControls?: boolean
+  /** Editor typing-test: Measurement-row comparison baseline per condition
+   *  key. Unset conditions default to `{ kind: 'previous' }`. */
+  typingTestComparisonBaselines?: TypingTestComparisonBaselines
   /** Editor typing-test: the left Settings panel is expanded. Default true. */
   typingTestSettingsPanelOpen?: boolean
   /** User-chosen record toggle. Persisted + synced so the setting

@@ -107,14 +107,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   scale: scaleProp = 1, onScaleChange,
   keyEditorZoom, onKeyEditorZoomChange,
   typingTestMode, onTypingTestModeChange, onSaveTypingTestResult, onRenameTypingTestResult, onDeleteTypingTestResult, typingTestHistory,
-  typingTestConfig: savedTypingTestConfig, typingTestLanguage: savedTypingTestLanguage,
+  typingTestConfig: savedTypingTestConfig, typingTestNormalConfig, typingTestLanguage: savedTypingTestLanguage,
   onTypingTestConfigChange, onTypingTestLanguageChange,
   typingTestViewOnly, onTypingTestViewOnlyChange,
   typingTestViewOnlyWindowSize, onTypingTestViewOnlyWindowSizeChange,
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingTestMemory: savedTypingTestMemory, onTypingTestMemoryChange,
   typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
-  typingTestHideKeymap, typingTestHideStatsRow, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange,
+  typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, typingTestComparisonBaselines, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange, onTypingTestComparisonBaselineChange,
   typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
@@ -941,6 +941,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
             <TypingTestPane
               typingTest={typingTest}
               onConfigChange={handleTypingTestConfigChange}
+              normalConfig={typingTestNormalConfig}
               onLanguageChange={handleTypingTestLanguageChange}
               layers={layers}
               layerNames={layerNames}
@@ -964,8 +965,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               onFontSizeChange={onTypingTestFontSizeChange}
               hideKeymap={typingTestHideKeymap}
               hideStatsRow={typingTestHideStatsRow}
+              hideControls={typingTestHideControls}
+              comparisonBaselines={typingTestComparisonBaselines}
               onToggleHideKeymap={onTypingTestHideKeymapChange}
               onToggleHideStatsRow={onTypingTestHideStatsRowChange}
+              onToggleHideControls={onTypingTestHideControlsChange}
+              onComparisonBaselineChange={onTypingTestComparisonBaselineChange}
               settingsPanelOpen={typingTestSettingsPanelOpen}
               onToggleSettingsPanel={onTypingTestSettingsPanelOpenChange}
               onPauseTest={pauseTypingTest}
