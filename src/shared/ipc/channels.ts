@@ -176,6 +176,8 @@ export const IpcChannels = {
 
   // Data management (renderer → main → renderer)
   LIST_STORED_KEYBOARDS: 'data:list-stored-keyboards',
+  // Record a keyboard's display name on connect, only when it has none yet.
+  KEYBOARD_META_NAME_IF_MISSING: 'data:keyboard-meta-name-if-missing',
   RESET_KEYBOARD_DATA: 'data:reset-keyboard',
   RESET_LOCAL_TARGETS: 'data:reset-local-targets',
   EXPORT_LOCAL_DATA: 'data:export-local',

@@ -8,6 +8,9 @@ import type { StoredKeyboardInfo, SyncDataScanResult } from '../../../shared/typ
 import type { FavoriteType } from '../../../shared/types/favorite-store'
 import type { TypingKeyboardSummary } from '../../../shared/types/typing-analytics'
 
+/** Case-insensitive A-Z compare for keyboard display names. */
+const byDisplayName = (a: string, b: string): number => a.localeCompare(b, undefined, { sensitivity: 'base' })
+
 interface Props {
   storedKeyboards: StoredKeyboardInfo[]
   typingKeyboards: TypingKeyboardSummary[]
@@ -164,7 +167,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
               {t('dataModal.noKeyboards')}
             </div>
           ) : (
-            storedKeyboards.map((kb) => (
+            [...storedKeyboards].sort((a, b) => byDisplayName(a.name, b.name)).map((kb) => (
               <Leaf
                 key={kb.uid}
                 label={kb.name}
@@ -214,7 +217,7 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
               {t('dataModal.typing.noKeyboards')}
             </div>
           ) : (
-            typingKeyboards.map((kb) => (
+            [...typingKeyboards].sort((a, b) => byDisplayName(a.productName || a.uid, b.productName || b.uid)).map((kb) => (
               <Leaf
                 key={kb.uid}
                 label={kb.productName || kb.uid}
@@ -271,7 +274,9 @@ export function DataNavTree({ storedKeyboards, typingKeyboards, hasRemoteTyping,
                 onToggle={() => onToggle('sync-keyboards')}
                 testId="nav-sync-keyboards"
               >
-                {syncScanResult.keyboards.map((uid) => {
+                {[...syncScanResult.keyboards]
+                  .sort((a, b) => byDisplayName(resolveSyncKeyboardName(a), resolveSyncKeyboardName(b)))
+                  .map((uid) => {
                   const name = resolveSyncKeyboardName(uid)
                   const isDownloading = downloadingUid === uid
                   const error = downloadErrorByUid[uid]

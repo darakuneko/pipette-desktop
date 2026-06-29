@@ -31,6 +31,7 @@ import {
   mergeKeyboardMetaIndex,
   readKeyboardMetaIndex,
   upsertKeyboardMeta,
+  upsertKeyboardMetaIfMissing,
   tombstoneKeyboardMeta,
   tombstoneAllKeyboardMeta,
   applyRemoteKeyboardMetaIndex,
@@ -205,5 +206,33 @@ describe('getActiveKeyboardMetaMap', () => {
     expect(map.get('0xA')).toBe('A')
     expect(map.has('0xB')).toBe(false)
     expect(map.has('0xC')).toBe(false)
+  })
+})
+
+describe('upsertKeyboardMetaIfMissing', () => {
+  it('records the name when the keyboard has none', async () => {
+    expect(await upsertKeyboardMetaIfMissing('0xc5', 'Ieneko54R')).toBe('upserted')
+    const map = getActiveKeyboardMetaMap(await readKeyboardMetaIndex())
+    expect(map.get('0xc5')).toBe('Ieneko54R')
+  })
+
+  it('does not overwrite an existing name (no churn on reconnect)', async () => {
+    await upsertKeyboardMeta('0xc5', 'My Custom Name')
+    expect(await upsertKeyboardMetaIfMissing('0xc5', 'Ieneko54R')).toBe('unchanged')
+    const map = getActiveKeyboardMetaMap(await readKeyboardMetaIndex())
+    expect(map.get('0xc5')).toBe('My Custom Name')
+  })
+
+  it('is a no-op for an empty uid or name', async () => {
+    expect(await upsertKeyboardMetaIfMissing('', 'Name')).toBe('unchanged')
+    expect(await upsertKeyboardMetaIfMissing('0xc5', '   ')).toBe('unchanged')
+    expect(getActiveKeyboardMetaMap(await readKeyboardMetaIndex()).size).toBe(0)
+  })
+
+  it('does not revive a tombstoned entry the user deleted', async () => {
+    await upsertKeyboardMeta('0xc5', 'Ieneko54R')
+    await tombstoneKeyboardMeta('0xc5')
+    expect(await upsertKeyboardMetaIfMissing('0xc5', 'Ieneko54R')).toBe('unchanged')
+    expect(getActiveKeyboardMetaMap(await readKeyboardMetaIndex()).has('0xc5')).toBe(false)
   })
 })

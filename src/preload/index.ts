@@ -724,6 +724,8 @@ const vialAPI = {
   // --- Data Management ---
   listStoredKeyboards: (): Promise<StoredKeyboardInfo[]> =>
     ipcRenderer.invoke(IpcChannels.LIST_STORED_KEYBOARDS),
+  keyboardMetaNameIfMissing: (uid: string, name: string): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.KEYBOARD_META_NAME_IF_MISSING, uid, name),
   resetKeyboardData: (uid: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.RESET_KEYBOARD_DATA, uid),
   resetLocalTargets: (targets: LocalResetTargets): Promise<{ success: boolean; error?: string }> =>

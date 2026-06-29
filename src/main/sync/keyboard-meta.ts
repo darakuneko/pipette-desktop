@@ -101,6 +101,30 @@ export async function upsertKeyboardMeta(
   })
 }
 
+/** Record `deviceName` for `uid` only when the index has NO entry for it yet.
+ *  Used at connect time to name keyboards that never saved a keymap snapshot,
+ *  without overwriting a name the user set or reviving a tombstone they deleted
+ *  (and without churning the index on every reconnect). The presence check and
+ *  the write share one lock so a concurrent writer can't be clobbered. Same
+ *  'unchanged' | 'upserted' contract as {@link upsertKeyboardMeta}. */
+export async function upsertKeyboardMetaIfMissing(
+  uid: string,
+  deviceName: string,
+): Promise<'unchanged' | 'upserted'> {
+  const normalized = deviceName.trim()
+  if (!uid || !normalized) return 'unchanged'
+  return withMetaWriteLock(async () => {
+    const index = await readKeyboardMetaIndex()
+    // Any entry — active OR tombstoned — counts as "has a name decision";
+    // only a uid the index has never seen gets the connect-time name.
+    if (findEntry(index, uid)) return 'unchanged'
+    index.entries.push({ uid, deviceName: normalized, updatedAt: new Date().toISOString() })
+    index.entries = gcKeyboardMetaTombstones(index.entries)
+    await writeKeyboardMetaIndex(index)
+    return 'upserted'
+  })
+}
+
 export async function tombstoneKeyboardMeta(uid: string): Promise<'unchanged' | 'tombstoned'> {
   if (!uid) return 'unchanged'
   return withMetaWriteLock(async () => {

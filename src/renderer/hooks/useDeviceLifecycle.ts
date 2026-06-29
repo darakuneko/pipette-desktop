@@ -112,6 +112,10 @@ export function useDeviceLifecycle(options: Options) {
       if (success) {
         const uid = await keyboardReload()
         if (uid) {
+          // Name the keyboard from its USB product name on connect, so a board
+          // that never saves a keymap still shows a name instead of its uid.
+          // Fire-and-forget; the handler no-ops when a name already exists.
+          void window.vialAPI.keyboardMetaNameIfMissing(uid, dev.productName).catch(() => { /* best-effort */ })
           // Pull the cloud copies of keyboards/{uid}/* (and favorites) BEFORE
           // applying local prefs. Otherwise applyDevicePrefs sees a missing
           // local file, writes defaults with a fresh _updatedAt, and the

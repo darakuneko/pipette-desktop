@@ -331,6 +331,9 @@ export interface VialAPI {
 
   // Data management
   listStoredKeyboards(): Promise<StoredKeyboardInfo[]>
+  /** Record a keyboard's display name on connect, only when it has none yet
+   * (never overwrites a user-set name). No-op for empty uid/name. */
+  keyboardMetaNameIfMissing(uid: string, name: string): Promise<void>
   resetKeyboardData(uid: string): Promise<{ success: boolean; error?: string }>
   resetLocalTargets(targets: LocalResetTargets): Promise<{ success: boolean; error?: string }>
   exportLocalData(): Promise<{ success: boolean; error?: string }>
