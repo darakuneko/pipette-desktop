@@ -209,9 +209,21 @@ function cExportName(kc: Keycode): string {
   return kc.cExportId ?? kc.qmkId
 }
 
-export function serializeForCExport(code: number): string {
-  if (isLMKeycode(code)) return toHex(code)
+// The GUI packs the layer index into layer-tap / layer-mod ops (`LT1(kc)`,
+// `LM1(MOD_LSFT)`), but QMK keymap.c only defines the function-macro forms
+// `LT(layer, kc)` / `LM(layer, mod)` — the packed spelling does not compile.
+// Rewrite them to the QMK form on C export only; the display and `.vil`
+// serializers keep the packed form. The inner argument is a basic keycode or a
+// `MOD_*` constant, so it never contains parentheses.
+const C_EXPORT_LAYER_OP_RE = /^(LT|LM)(\d+)\((.+)\)$/
 
+function toQmkCExportForm(name: string): string {
+  const m = C_EXPORT_LAYER_OP_RE.exec(name)
+  if (m) return `${m[1]}(${m[2]}, ${m[3]})`
+  return name
+}
+
+export function serializeForCExport(code: number): string {
   const protocol = getProtocolValue()
   const masked = protocol === 6 ? keycodesV6.masked : keycodesV5.masked
 
@@ -222,7 +234,7 @@ export function serializeForCExport(code: number): string {
     }
   }
 
-  return serializeInternal(code, cExportName)
+  return toQmkCExportForm(serializeInternal(code, cExportName))
 }
 
 export function deserialize(val: string | number): number {
