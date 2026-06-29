@@ -455,6 +455,14 @@ export const KEYCODES_MOD_OSM: Keycode[] = [
   ...KEYCODES_MOD_OSM_RIGHT,
 ]
 
+// One-Shot master switches — enable/disable the one-shot feature itself
+// (distinct from OSM/OSL which *trigger* a one-shot mod/layer).
+export const KEYCODES_MOD_ONESHOT_CTRL: Keycode[] = [
+  K('QK_ONE_SHOT_ON', 'OS\nOn', 'Turn on one-shot keys', { alias: ['OS_ON'], cExportId: 'OS_ON' }),
+  K('QK_ONE_SHOT_OFF', 'OS\nOff', 'Turn off one-shot keys', { alias: ['OS_OFF'], cExportId: 'OS_OFF' }),
+  K('QK_ONE_SHOT_TOGGLE', 'OS\nToggle', 'Toggle one-shot keys on or off', { alias: ['OS_TOGG'], cExportId: 'OS_TOGG' }),
+]
+
 const KEYCODES_MOD_MASK_LEFT: Keycode[] = [
   K('LSFT(kc)', 'LSft\n(kc)', { masked: true }),
   K('LCTL(kc)', 'LCtl\n(kc)', { masked: true }),
@@ -581,6 +589,7 @@ export const KEYCODES_MOD_SPECIAL: Keycode[] = [
 
 export const KEYCODES_MODIFIERS: Keycode[] = [
   ...KEYCODES_MOD_OSM,
+  ...KEYCODES_MOD_ONESHOT_CTRL,
   ...KEYCODES_MOD_MASK,
   ...KEYCODES_MOD_TAP,
   ...KEYCODES_MOD_SPECIAL,
@@ -782,6 +791,30 @@ export const KEYCODES_BEHAVIOR_CAPS_WORD: Keycode[] = [
   }),
 ]
 
+export const KEYCODES_BEHAVIOR_TAPPING_TERM: Keycode[] = [
+  K('QK_DYNAMIC_TAPPING_TERM_PRINT', 'DT\nPrint', 'Print the current tapping term', {
+    alias: ['DT_PRNT'], cExportId: 'DT_PRNT',
+  }),
+  K('QK_DYNAMIC_TAPPING_TERM_UP', 'DT\nUp', 'Increase the tapping term', {
+    alias: ['DT_UP'], cExportId: 'DT_UP',
+  }),
+  K('QK_DYNAMIC_TAPPING_TERM_DOWN', 'DT\nDown', 'Decrease the tapping term', {
+    alias: ['DT_DOWN'], cExportId: 'DT_DOWN',
+  }),
+]
+
+export const KEYCODES_BEHAVIOR_AUTOCORRECT: Keycode[] = [
+  K('QK_AUTOCORRECT_ON', 'AC\nOn', 'Turn on autocorrect', { alias: ['AC_ON'], cExportId: 'AC_ON' }),
+  K('QK_AUTOCORRECT_OFF', 'AC\nOff', 'Turn off autocorrect', { alias: ['AC_OFF'], cExportId: 'AC_OFF' }),
+  K('QK_AUTOCORRECT_TOGGLE', 'AC\nToggle', 'Toggle autocorrect on or off', {
+    alias: ['AC_TOGG'], cExportId: 'AC_TOGG',
+  }),
+]
+
+export const KEYCODES_BEHAVIOR_LEADER: Keycode[] = [
+  K('QK_LEADER', 'Leader', 'Begins a leader sequence', { alias: ['QK_LEAD'], cExportId: 'QK_LEAD' }),
+]
+
 export const KEYCODES_BEHAVIOR_SWAP_HANDS: Keycode[] = [
   K('SH_TOGG', 'SH\nToggle', 'Toggle swap hands'),
   K('SH_TT', 'SH\nTT', 'Momentary swap when held, toggle when tapped'),
@@ -804,6 +837,9 @@ export const KEYCODES_BEHAVIOR: Keycode[] = [
   ...KEYCODES_BEHAVIOR_COMBO,
   ...KEYCODES_BEHAVIOR_KEY_OVERRIDE,
   ...KEYCODES_BEHAVIOR_CAPS_WORD,
+  ...KEYCODES_BEHAVIOR_TAPPING_TERM,
+  ...KEYCODES_BEHAVIOR_AUTOCORRECT,
+  ...KEYCODES_BEHAVIOR_LEADER,
   ...KEYCODES_BEHAVIOR_REPEAT,
   ...KEYCODES_BEHAVIOR_SWAP_HANDS,
   ...KEYCODES_BEHAVIOR_SWAP_HANDS_TAP,
@@ -840,6 +876,9 @@ export const KEYCODES_LIGHTING_RGB: Keycode[] = [
   K('RGB_M_X', 'RGB\nMode X', 'RGB Mode: Christmas'),
   K('RGB_M_G', 'RGB\nMode G', 'RGB Mode: Gradient'),
   K('RGB_M_T', 'RGB\nMode T', 'RGB Mode: Test'),
+  K('QK_VELOCIKEY_TOGGLE', 'Veloci\nkey', 'Toggle Velocikey (typing-speed-reactive lighting)', {
+    alias: ['VK_TOGG'], cExportId: 'VK_TOGG',
+  }),
 ]
 
 export const KEYCODES_LIGHTING_MATRIX: Keycode[] = [
@@ -984,6 +1023,7 @@ export const KEYCODES_SYSTEM_LOCK: Keycode[] = [
   K('KC_LCAP', 'Locking\nCaps', 'Locking Caps Lock', { alias: ['KC_LOCKING_CAPS'] }),
   K('KC_LNUM', 'Locking\nNum', 'Locking Num Lock', { alias: ['KC_LOCKING_NUM'] }),
   K('KC_LSCR', 'Locking\nScroll', 'Locking Scroll Lock', { alias: ['KC_LOCKING_SCROLL'] }),
+  K('QK_LOCK', 'Lock', 'Hold down the next key pressed until the key is pressed again'),
 ]
 
 export const KEYCODES_SYSTEM_JOYSTICK: Keycode[] = Array.from({ length: 32 }, (_, i) =>

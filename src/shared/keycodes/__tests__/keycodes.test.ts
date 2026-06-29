@@ -189,6 +189,33 @@ describe('keycodesV6', () => {
     expect(keycodesV6.kc.QK_KEY_OVERRIDE_OFF).toBe(0x7c5f)
   })
 
+  it('has QK_LEADER and QK_LOCK', () => {
+    expect(keycodesV6.kc.QK_LEADER).toBe(0x7c58)
+    expect(keycodesV6.kc.QK_LOCK).toBe(0x7c59)
+  })
+
+  it('has One-Shot master switches (ON/OFF/TOGGLE)', () => {
+    expect(keycodesV6.kc.QK_ONE_SHOT_ON).toBe(0x7c5a)
+    expect(keycodesV6.kc.QK_ONE_SHOT_OFF).toBe(0x7c5b)
+    expect(keycodesV6.kc.QK_ONE_SHOT_TOGGLE).toBe(0x7c5c)
+  })
+
+  it('has dynamic tapping term keycodes (PRINT/UP/DOWN)', () => {
+    expect(keycodesV6.kc.QK_DYNAMIC_TAPPING_TERM_PRINT).toBe(0x7c70)
+    expect(keycodesV6.kc.QK_DYNAMIC_TAPPING_TERM_UP).toBe(0x7c71)
+    expect(keycodesV6.kc.QK_DYNAMIC_TAPPING_TERM_DOWN).toBe(0x7c72)
+  })
+
+  it('has autocorrect keycodes (ON/OFF/TOGGLE)', () => {
+    expect(keycodesV6.kc.QK_AUTOCORRECT_ON).toBe(0x7c74)
+    expect(keycodesV6.kc.QK_AUTOCORRECT_OFF).toBe(0x7c75)
+    expect(keycodesV6.kc.QK_AUTOCORRECT_TOGGLE).toBe(0x7c76)
+  })
+
+  it('has QK_VELOCIKEY_TOGGLE', () => {
+    expect(keycodesV6.kc.QK_VELOCIKEY_TOGGLE).toBe(0x7c17)
+  })
+
   it('has LM0(kc)-LM15(kc) masked keycodes', () => {
     // v6: QK_LAYER_MOD=0x5000, layer<<5, mod bits zeroed for masked base
     expect(keycodesV6.kc['LM0(kc)']).toBe(0x5000 | (0 << 5))
@@ -218,6 +245,47 @@ describe('keycodesV6', () => {
     expect(keycodesV6.kc.MOD_LSFT).toBe(keycodesV5.kc.MOD_LSFT)
     expect(keycodesV6.kc.QK_LCTL).toBe(keycodesV5.kc.QK_LCTL)
     expect(keycodesV6.kc.QK_LSFT).toBe(keycodesV5.kc.QK_LSFT)
+  })
+})
+
+// --- Newly exposed firmware keycodes (issue #205 batch) ---
+
+describe('firmware keycodes added to the picker (v6)', () => {
+  beforeEach(() => {
+    setProtocol(6)
+    recreateKeycodes()
+  })
+
+  // Reference keycodesV6.kc (the single source of the firmware values asserted
+  // in the keycodesV6 block above) so these round-trip tests can't drift.
+  it('resolves the canonical qmkIds through the active protocol map', () => {
+    expect(resolve('QK_LEADER')).toBe(keycodesV6.kc.QK_LEADER)
+    expect(resolve('QK_LOCK')).toBe(keycodesV6.kc.QK_LOCK)
+    expect(resolve('QK_ONE_SHOT_TOGGLE')).toBe(keycodesV6.kc.QK_ONE_SHOT_TOGGLE)
+    expect(resolve('QK_DYNAMIC_TAPPING_TERM_UP')).toBe(keycodesV6.kc.QK_DYNAMIC_TAPPING_TERM_UP)
+    expect(resolve('QK_AUTOCORRECT_TOGGLE')).toBe(keycodesV6.kc.QK_AUTOCORRECT_TOGGLE)
+    expect(resolve('QK_VELOCIKEY_TOGGLE')).toBe(keycodesV6.kc.QK_VELOCIKEY_TOGGLE)
+  })
+
+  it('serializes the firmware values back to canonical qmkIds', () => {
+    expect(serialize(keycodesV6.kc.QK_LEADER)).toBe('QK_LEADER')
+    expect(serialize(keycodesV6.kc.QK_LOCK)).toBe('QK_LOCK')
+    expect(serialize(keycodesV6.kc.QK_ONE_SHOT_TOGGLE)).toBe('QK_ONE_SHOT_TOGGLE')
+  })
+
+  it('registers short aliases on the picker entries', () => {
+    expect(findKeycode('QK_LEADER')?.alias).toContain('QK_LEAD')
+    expect(findKeycode('QK_ONE_SHOT_ON')?.alias).toContain('OS_ON')
+    expect(findKeycode('QK_DYNAMIC_TAPPING_TERM_PRINT')?.alias).toContain('DT_PRNT')
+    expect(findKeycode('QK_AUTOCORRECT_OFF')?.alias).toContain('AC_OFF')
+    expect(findKeycode('QK_VELOCIKEY_TOGGLE')?.alias).toContain('VK_TOGG')
+  })
+
+  it('exposes the new keycodes without a feature gate (always available)', () => {
+    const empty = new Set<string>()
+    expect(findKeycode('QK_LEADER')?.isSupportedBy(empty)).toBe(true)
+    expect(findKeycode('QK_LOCK')?.isSupportedBy(empty)).toBe(true)
+    expect(findKeycode('QK_AUTOCORRECT_TOGGLE')?.isSupportedBy(empty)).toBe(true)
   })
 })
 
