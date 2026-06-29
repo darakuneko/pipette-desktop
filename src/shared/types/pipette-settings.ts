@@ -165,6 +165,12 @@ export interface PipetteSettings {
   typingTestDisplayLines?: number
   /** Imported-text display: font size in px (14–48, default 24). */
   typingTestFontSize?: number
+  /** Editor typing-test: hide the keymap (keyboard) pane. Default false. */
+  typingTestHideKeymap?: boolean
+  /** Editor typing-test: hide the stats / results (WPM) row. Default false. */
+  typingTestHideStatsRow?: boolean
+  /** Editor typing-test: the left Settings panel is expanded. Default true. */
+  typingTestSettingsPanelOpen?: boolean
   /** User-chosen record toggle. Persisted + synced so the setting
    * survives reloads and follows the keyboard across machines. Actual
    * recording is gated additionally on typingTestViewOnly at the

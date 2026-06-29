@@ -336,6 +336,10 @@ export function App() {
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
   }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
 
+  // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
+  // the StatusBar's "View Analytics" button can be disabled mid-run.
+  const [typingTestRunning, setTypingTestRunning] = useState(false)
+
   const handleViewAnalytics = useCallback((origin: AnalyticsOrigin) => {
     // Each entry point states its own origin so Back returns there.
     analyticsOriginRef.current = origin
@@ -861,6 +865,12 @@ export function App() {
             typingTestFontSize={devicePrefs.typingTestFontSize}
             onTypingTestDisplayLinesChange={devicePrefs.setTypingTestDisplayLines}
             onTypingTestFontSizeChange={devicePrefs.setTypingTestFontSize}
+            typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
+            typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
+            onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
+            onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
+            typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
+            onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
             onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
             typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
@@ -872,6 +882,7 @@ export function App() {
             typingViewMenuTab={devicePrefs.typingViewMenuTab}
             onTypingViewMenuTabChange={devicePrefs.setTypingViewMenuTab}
             onViewAnalytics={handleViewAnalytics}
+            onTypingTestRunningChange={setTypingTestRunning}
             deviceName={deviceName}
             isDummy={effectiveIsDummy}
             onExportLayoutPdfAll={fileHandlers.handleExportLayoutPdfAll}
@@ -938,6 +949,8 @@ export function App() {
             }
             keymapEditorRef.current?.toggleTypingTest()
           }}
+          onViewAnalytics={() => handleViewAnalytics('typingTest')}
+          viewAnalyticsDisabled={typingTestRunning}
           onDisconnect={editorUI.typingTestMode ? undefined : lifecycle.handleDisconnect}
           quickSettings={{
             onThemeChange: themeCtx.setTheme,

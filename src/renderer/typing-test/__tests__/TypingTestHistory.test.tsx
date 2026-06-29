@@ -175,14 +175,15 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByTestId('history-export-csv')).toBeNull()
   })
 
-  it('renames a result inline and calls onRename', () => {
+  it('renames a result via the naming modal and calls onRename', () => {
     const date = '2025-02-02T03:04:05.000Z'
     const onRename = vi.fn()
     renderWithI18n(<TypingTestHistory results={[makeResult({ date })]} onRename={onRename} />)
+    // The name cell opens the naming modal; type and Save commits.
     fireEvent.click(screen.getByTestId(`history-name-${date}`))
-    const input = screen.getByTestId(`history-name-input-${date}`)
+    const input = screen.getByTestId('result-name-modal-input')
     fireEvent.change(input, { target: { value: 'QWERTY baseline' } })
-    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.click(screen.getByTestId('result-name-modal-save'))
     expect(onRename).toHaveBeenCalledWith(date, 'QWERTY baseline')
   })
 

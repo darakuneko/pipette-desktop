@@ -1,0 +1,162 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+// Labeled test-config bar (Pattern / Units / Option) shown below the Mode row
+// in editor typing-test mode. Hidden for imported custom text (the parent
+// gates on mode). Extracted from TypingTestView so the config controls live
+// with the Mode / Base Layer row rather than above the reading area.
+
+import { useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
+
+const MODES: TypingTestMode[] = ['words', 'time', 'quote']
+const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
+
+function optionButtonClass(active: boolean, px: 'px-2.5' | 'px-3' = 'px-3'): string {
+  // h-8 keeps every config control (here, the Mode row, and the History
+  // button) the same height; inline-flex centres the label within it.
+  const base = `inline-flex h-8 items-center rounded-md border ${px} text-sm transition-colors`
+  return active
+    ? `${base} border-accent bg-accent/10 font-semibold text-accent`
+    : `${base} border-edge text-content-secondary hover:text-content`
+}
+
+// Each group's label sits on its own line above the buttons.
+const LABEL = 'text-sm text-content-muted'
+
+interface Props {
+  config: TypingTestConfig
+  onConfigChange: (config: TypingTestConfig) => void
+}
+
+export function TypingTestSettingsBar({ config, onConfigChange }: Props) {
+  const { t } = useTranslation()
+
+  // Remember toggle state so it persists through quote modes (which have no toggles).
+  const togglesRef = useRef({ punctuation: false, numbers: false })
+  if (config.mode === 'words' || config.mode === 'time') {
+    togglesRef.current = { punctuation: config.punctuation, numbers: config.numbers }
+  }
+
+  const handleModeChange = useCallback((mode: TypingTestMode) => {
+    const { punctuation, numbers } = togglesRef.current
+    switch (mode) {
+      case 'words':
+        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers })
+        break
+      case 'time':
+        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers })
+        break
+      case 'quote':
+        onConfigChange({ mode: 'quote', quoteLength: config.mode === 'quote' ? config.quoteLength : 'medium' })
+        break
+    }
+  }, [config, onConfigChange])
+
+  const hasPunctuationNumbers = config.mode === 'words' || config.mode === 'time'
+
+  // The unit lives on the label so the buttons stay compact numbers.
+  const unitsLabel = config.mode === 'words'
+    ? t('editor.typingTest.unitsWords')
+    : config.mode === 'time'
+    ? t('editor.typingTest.unitsSec')
+    : t('editor.typingTest.units')
+
+  return (
+    <div className="flex flex-col items-start gap-3">
+      {/* Pattern — words / time / quote */}
+      <div className="flex flex-col items-start gap-1">
+        <span className={LABEL}>{t('editor.typingTest.pattern')}:</span>
+        <div className="flex h-8 items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
+          {MODES.map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              data-testid={`mode-${mode}`}
+              className={optionButtonClass(config.mode === mode)}
+              onClick={() => handleModeChange(mode)}
+            >
+              {t(`editor.typingTest.mode.${mode}`)}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Units — the unit (words / sec) is shown on the label, so the value
+          buttons stay compact numbers. Quote mode uses named lengths. */}
+      <div className="flex flex-col items-start gap-1">
+        <span className={LABEL}>{unitsLabel}:</span>
+        {config.mode === 'words' && (
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+            {WORD_COUNT_OPTIONS.map((count) => (
+              <button
+                key={count}
+                type="button"
+                data-testid={`word-count-${count}`}
+                className={optionButtonClass(config.wordCount === count)}
+                onClick={() => onConfigChange({ ...config, wordCount: count })}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+        )}
+        {config.mode === 'time' && (
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+            {TIME_DURATION_OPTIONS.map((dur) => (
+              <button
+                key={dur}
+                type="button"
+                data-testid={`duration-${dur}`}
+                className={optionButtonClass(config.duration === dur)}
+                onClick={() => onConfigChange({ ...config, duration: dur })}
+              >
+                {dur}
+              </button>
+            ))}
+          </div>
+        )}
+        {config.mode === 'quote' && (
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+            {QUOTE_LENGTHS.map((len) => (
+              <button
+                key={len}
+                type="button"
+                data-testid={`quote-${len}`}
+                className={optionButtonClass(config.quoteLength === len)}
+                onClick={() => onConfigChange({ ...config, quoteLength: len })}
+              >
+                {t(`editor.typingTest.quoteLength.${len}`)}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Option — punctuation / numbers (words & time only) */}
+      {hasPunctuationNumbers && (
+        <div className="flex flex-col items-start gap-1">
+          <span className={LABEL}>{t('editor.typingTest.optionLabel')}:</span>
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+            <button
+              type="button"
+              data-testid="toggle-punctuation"
+              className={optionButtonClass(config.punctuation, 'px-2.5')}
+              onClick={() => onConfigChange({ ...config, punctuation: !config.punctuation })}
+            >
+              {t('editor.typingTest.punctuation')}
+            </button>
+            <button
+              type="button"
+              data-testid="toggle-numbers"
+              className={optionButtonClass(config.numbers, 'px-2.5')}
+              onClick={() => onConfigChange({ ...config, numbers: !config.numbers })}
+            >
+              {t('editor.typingTest.numbers')}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

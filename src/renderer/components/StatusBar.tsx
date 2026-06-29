@@ -25,6 +25,11 @@ interface Props {
   viewOnly?: boolean
   onViewOnlyChange?: () => void
   onTypingTestModeChange?: () => void
+  /** Opens the Analyze view from the typing test. Shown only in typing-test
+   *  mode, beside "Exit Typing Test"; disabled mid-run so the user can't
+   *  navigate away from an in-progress test. */
+  onViewAnalytics?: () => void
+  viewAnalyticsDisabled?: boolean
   onDisconnect?: () => void
   quickSettings?: QuickSettingsSelectsProps
 }
@@ -45,6 +50,8 @@ export function StatusBar({
   viewOnly,
   onViewOnlyChange,
   onTypingTestModeChange,
+  onViewAnalytics,
+  viewAnalyticsDisabled,
   onDisconnect,
   quickSettings,
 }: Props) {
@@ -130,6 +137,17 @@ export function StatusBar({
             onClick={onViewOnlyChange}
           >
             {t('editor.typingTest.viewOnly')}
+          </button>
+        )}
+        {typingTestMode && onViewAnalytics && (
+          <button
+            type="button"
+            data-testid="status-view-analytics"
+            className={`${TYPING_TEST_INACTIVE} disabled:cursor-not-allowed disabled:opacity-40`}
+            disabled={viewAnalyticsDisabled}
+            onClick={onViewAnalytics}
+          >
+            {t('editor.typingTest.viewAnalytics')}
           </button>
         )}
         {onTypingTestModeChange && hasMatrixTester && (

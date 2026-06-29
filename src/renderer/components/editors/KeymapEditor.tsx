@@ -114,12 +114,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingTestMemory: savedTypingTestMemory, onTypingTestMemoryChange,
   typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
+  typingTestHideKeymap, typingTestHideStatsRow, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange,
+  typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
   typingHeatmapWindowMin, onTypingHeatmapWindowMinChange,
   typingMonitorAppEnabled, onTypingMonitorAppEnabledChange,
   typingViewMenuTab, onTypingViewMenuTabChange,
-  onViewAnalytics,
+  onViewAnalytics, onTypingTestRunningChange,
   tappingTermMs,
   deviceName, isDummy, onExportLayoutPdfAll, onExportLayoutPdfCurrent,
   favHubOrigin, favHubNeedsDisplayName, favHubUploading, favHubUploadResult,
@@ -243,6 +245,13 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     // target keyboard's settings.
     window.vialAPI.pipetteSettingsPatch(uid, { keymapScale: pickerScale }).catch(() => {})
   }, [pickerScale, pickerFileData?.uid])
+
+  // Surface the editor test's run state so the host can disable the
+  // StatusBar "View Analytics" button mid-run (it lives in the footer, not
+  // this component). False whenever the test isn't running or mode is off.
+  useEffect(() => {
+    onTypingTestRunningChange?.(typingTestMode && typingTest.state.status === 'running')
+  }, [typingTestMode, typingTest.state.status, onTypingTestRunningChange])
 
   // --- Escape clears picker selection ---
   useEffect(() => {
@@ -920,12 +929,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
       <div
-        className={typingTestMode && typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex items-start gap-2 overflow-auto'}
+        className={typingTestMode ? (typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex min-h-0 flex-1 items-stretch gap-2 overflow-auto') : 'flex items-start gap-2 overflow-auto'}
         style={!typingTestMode && keyboardAreaMinHeight ? { minHeight: keyboardAreaMinHeight } : undefined}
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
-        {!(typingTestMode && typingTestViewOnly) && toolbar}
-        <div className={typingTestMode ? 'flex min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
+        {/* The toolbar (undo/redo/zoom) is empty in typing-test mode — all its
+            controls are editor-only — so drop the whole 50px column there. */}
+        {!typingTestMode && toolbar}
+        <div className={typingTestMode ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
           {typingTestMode ? (
             <TypingTestPane
               typingTest={typingTest}
@@ -951,6 +962,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               fontSize={typingTestFontSize}
               onDisplayLinesChange={onTypingTestDisplayLinesChange}
               onFontSizeChange={onTypingTestFontSizeChange}
+              hideKeymap={typingTestHideKeymap}
+              hideStatsRow={typingTestHideStatsRow}
+              onToggleHideKeymap={onTypingTestHideKeymapChange}
+              onToggleHideStatsRow={onTypingTestHideStatsRowChange}
+              settingsPanelOpen={typingTestSettingsPanelOpen}
+              onToggleSettingsPanel={onTypingTestSettingsPanelOpenChange}
               onPauseTest={pauseTypingTest}
               onResumeTest={resumeTypingTest}
               onRestartTestFromStart={restartTypingTestFromStart}

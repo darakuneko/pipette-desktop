@@ -8,6 +8,8 @@ import {
   isPbForConfig,
   trimResults,
   typingTestResultMaterialLabel,
+  resultKpm,
+  buildResultNameChips,
 } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
@@ -221,5 +223,42 @@ describe('buildTypingTestResult', () => {
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
+  })
+})
+
+describe('resultKpm', () => {
+  const base: TypingTestResult = {
+    date: '2026-01-01T00:00:00.000Z', wpm: 50, accuracy: 95, wordCount: 10,
+    correctChars: 150, incorrectChars: 2, durationSeconds: 30,
+  }
+  it('derives keys per minute from chars and duration', () => {
+    // 150 chars over 30s -> 300 kpm
+    expect(resultKpm(base)).toBe(300)
+  })
+  it('returns 0 for zero duration', () => {
+    expect(resultKpm({ ...base, durationSeconds: 0 })).toBe(0)
+  })
+})
+
+describe('buildResultNameChips', () => {
+  const base: TypingTestResult = {
+    date: '2026-06-29T11:05:01.000Z', wpm: 139, accuracy: 99, wordCount: 10,
+    correctChars: 150, incorrectChars: 2, durationSeconds: 30,
+  }
+  // Stub translator: maps the metric-label keys to their English labels.
+  const tStub = (k: string): string =>
+    ({ 'editor.typingTest.wpm': 'WPM', 'editor.typingTest.kpm': 'KPM', 'editor.typingTest.accuracy': 'Accuracy' }[k] ?? k)
+  it('builds material-label, timestamp and metric chips', () => {
+    const chips = buildResultNameChips({ ...base, mode: 'custom', customTextName: 'Scala - Test001' }, tStub)
+    expect(chips[0]).toBe('Scala - Test001')
+    // compact local timestamp YYYYMMDDHHmmss (14 digits)
+    expect(chips[1]).toMatch(/^\d{14}$/)
+    expect(chips).toContain('WPM139')
+    expect(chips).toContain('KPM300')
+    expect(chips).toContain('Accuracy99')
+  })
+  it('uses mode (language) label for normal modes', () => {
+    const chips = buildResultNameChips({ ...base, mode: 'words', language: 'english' }, tStub)
+    expect(chips[0]).toBe('words (english)')
   })
 })

@@ -24,13 +24,13 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
     if (!result) return null
     if (result.correct) {
       return (
-        <span data-testid={testId} className="text-success">
+        <span data-testid={testId} className="min-w-0 break-all text-success">
           {word}
         </span>
       )
     }
     return (
-      <span data-testid={testId}>
+      <span data-testid={testId} className="min-w-0 break-all">
         {word.split('').map((char, charIdx) => (
           <span key={charIdx} className={charClassName(char, charIdx, result.typed)}>
             {displayChar(char, charIdx, result.typed)}
@@ -48,7 +48,7 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
     const isComposing = compositionLength > 0
     const cursorBlinks = !isComposing && cursorBlink
     return (
-      <span data-testid={testId}>
+      <span data-testid={testId} className="min-w-0 break-all">
         {word.split('').map((char, charIdx) => {
           // Already typed characters
           if (charIdx < typedLength) {
@@ -127,7 +127,7 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
 
   // Future word
   return (
-    <span data-testid={testId} className="text-content-muted">
+    <span data-testid={testId} className="min-w-0 break-all text-content-muted">
       {word}
     </span>
   )

@@ -141,6 +141,12 @@ export interface KeymapEditorProps {
   typingTestFontSize?: number
   onTypingTestDisplayLinesChange?: (lines: number) => void
   onTypingTestFontSizeChange?: (px: number) => void
+  typingTestHideKeymap?: boolean
+  typingTestHideStatsRow?: boolean
+  onTypingTestHideKeymapChange?: (hidden: boolean) => void
+  onTypingTestHideStatsRowChange?: (hidden: boolean) => void
+  typingTestSettingsPanelOpen?: boolean
+  onTypingTestSettingsPanelOpenChange?: (open: boolean) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
   /** AppConfig flag — true once the user has accepted the recording
@@ -169,6 +175,9 @@ export interface KeymapEditorProps {
    * the compact window stops the sink via typingTestViewOnly without
    * touching the persisted preference. */
   onViewAnalytics?: (origin: AnalyticsOrigin) => void
+  /** Reports whether an editor typing test is mid-run, so the host (App)
+   * can disable the StatusBar's "View Analytics" button mid-run. */
+  onTypingTestRunningChange?: (running: boolean) => void
   /** TAPPING_TERM (ms) from the keyboard's QMK settings. Forwarded to
    * useTypingTest so masked-key tap/hold classification uses the same
    * timeout QMK itself enforces. */
