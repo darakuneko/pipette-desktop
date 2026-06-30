@@ -1,24 +1,69 @@
 import { app, net } from 'electron'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
-import type { LanguageManifestEntry, LanguageListEntry, LanguageDownloadStatus } from '../shared/types/language-store'
-import manifest from '../shared/data/language-manifest.json'
+import type { LanguageListEntry, LanguageDownloadStatus, TypingTestDataset } from '../shared/types/language-store'
+import {
+  DEFAULT_TYPING_TEST_PROVIDER,
+  getProviderDefault,
+} from '../shared/data/typing-test-providers'
+import { fetchTypingDataset, fetchTypingDatasetVersion, isManifestEntry } from './hub/hub-typing-dataset'
 import { log } from './logger'
 import { secureHandle } from './ipc-guard'
 
-const BUNDLED_LANGUAGES = new Set(['english'])
-
-const MANIFEST_MAP = new Map(
-  (manifest as LanguageManifestEntry[]).map((e) => [e.name, e]),
-)
-
-const LANG_SOURCE_COMMIT = '629c82e112a2db2122c789dc6abe970b82c3f8c5'
-const DOWNLOAD_URL_BASE =
-  `https://github.com/monkeytypegame/monkeytype/raw/${LANG_SOURCE_COMMIT}/frontend/static/languages`
-
 function getLanguagesDir(): string {
   return join(app.getPath('userData'), 'local', 'downloads', 'languages')
+}
+
+/** Persisted Hub overrides keyed by provider. Absent / partial → bundled
+ *  defaults are used. Lives under `local/` (machine-local, never synced). */
+function getOverridePath(): string {
+  return join(app.getPath('userData'), 'local', 'typing-test-dataset.json')
+}
+
+// In-memory cache of the override file so the hot LANG_LIST / LANG_DOWNLOAD
+// paths don't re-read disk on every call. Reset whenever the file changes.
+let overridesCache: Record<string, TypingTestDataset> | null = null
+
+async function loadOverrides(): Promise<Record<string, TypingTestDataset>> {
+  if (overridesCache) return overridesCache
+  try {
+    const parsed: unknown = JSON.parse(await readFile(getOverridePath(), 'utf-8'))
+    overridesCache = (parsed && typeof parsed === 'object') ? (parsed as Record<string, TypingTestDataset>) : {}
+  } catch {
+    overridesCache = {}
+  }
+  return overridesCache
+}
+
+/** Effective dataset for a provider: the persisted Hub override if present
+ *  and well-formed, otherwise the bundled default from the provider config. */
+/** A persisted override is trusted only if it is fully well-formed — a
+ *  corrupt local file must not poison LANG_LIST / LANG_DOWNLOAD, so we fall
+ *  back to the bundled default instead. Mirrors the Hub-client validation. */
+function isValidOverride(ov: unknown): ov is TypingTestDataset {
+  if (typeof ov !== 'object' || ov === null) return false
+  const d = ov as Record<string, unknown>
+  return (
+    typeof d.version === 'string' &&
+    typeof d.downloadUrlBase === 'string' &&
+    /^https:\/\//.test(d.downloadUrlBase) &&
+    Array.isArray(d.languages) &&
+    d.languages.every(isManifestEntry)
+  )
+}
+
+async function getEffectiveDataset(provider: string): Promise<TypingTestDataset> {
+  const def = getProviderDefault(provider)
+  const overrides = await loadOverrides()
+  const ov = overrides[provider]
+  if (isValidOverride(ov)) return ov
+  if (!def) throw new Error(`Unknown typing-test provider: ${provider}`)
+  return { provider: def.provider, version: def.version, downloadUrlBase: def.downloadUrlBase, languages: def.languages }
+}
+
+function bundledSet(provider: string): Set<string> {
+  return new Set(getProviderDefault(provider)?.bundledLanguages ?? [])
 }
 
 function isSafeName(name: string): boolean {
@@ -41,8 +86,25 @@ async function getDownloadedSet(): Promise<Set<string>> {
   }
 }
 
-function getStatus(name: string, downloadedSet: Set<string>): LanguageDownloadStatus {
-  if (BUNDLED_LANGUAGES.has(name)) return 'bundled'
+/** Remove every downloaded language file. Called after a version change so
+ *  stale files (fetched from the old version's URL, with a now-mismatched
+ *  fileSize) are re-downloaded fresh on demand. */
+async function clearDownloadedLanguages(): Promise<void> {
+  let files: string[]
+  try {
+    files = await readdir(getLanguagesDir())
+  } catch {
+    return
+  }
+  await Promise.all(
+    files
+      .filter((f) => f.endsWith('.json'))
+      .map((f) => unlink(join(getLanguagesDir(), f)).catch(() => {})),
+  )
+}
+
+function getStatus(name: string, downloadedSet: Set<string>, bundled: Set<string>): LanguageDownloadStatus {
+  if (bundled.has(name)) return 'bundled'
   if (downloadedSet.has(name)) return 'downloaded'
   return 'not-downloaded'
 }
@@ -66,10 +128,12 @@ export function setupLanguageStore(): void {
   secureHandle(
     IpcChannels.LANG_LIST,
     async (): Promise<LanguageListEntry[]> => {
+      const dataset = await getEffectiveDataset(DEFAULT_TYPING_TEST_PROVIDER)
       const downloaded = await getDownloadedSet()
-      return (manifest as LanguageManifestEntry[]).map((entry) => ({
+      const bundled = bundledSet(DEFAULT_TYPING_TEST_PROVIDER)
+      return dataset.languages.map((entry) => ({
         ...entry,
-        status: getStatus(entry.name, downloaded),
+        status: getStatus(entry.name, downloaded, bundled),
       }))
     },
   )
@@ -78,7 +142,7 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_GET,
     async (_event, name: string): Promise<LanguageFileData | null> => {
       if (!isSafeName(name)) return null
-      if (BUNDLED_LANGUAGES.has(name)) return null
+      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return null
       try {
         const raw = await readFile(getLanguagePath(name), 'utf-8')
         const data: unknown = JSON.parse(raw)
@@ -94,11 +158,12 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_DOWNLOAD,
     async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
-      if (BUNDLED_LANGUAGES.has(name)) return { success: false, error: 'Language is bundled' }
-      const entry = MANIFEST_MAP.get(name)
+      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return { success: false, error: 'Language is bundled' }
+      const dataset = await getEffectiveDataset(DEFAULT_TYPING_TEST_PROVIDER)
+      const entry = dataset.languages.find((e) => e.name === name)
       if (!entry) return { success: false, error: 'Unknown language' }
 
-      const url = `${DOWNLOAD_URL_BASE}/${name}.json`
+      const url = `${dataset.downloadUrlBase}/${name}.json`
       try {
         const response = await net.fetch(url)
         if (!response.ok) {
@@ -130,7 +195,7 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_DELETE,
     async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
-      if (BUNDLED_LANGUAGES.has(name)) return { success: false, error: 'Cannot delete bundled language' }
+      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return { success: false, error: 'Cannot delete bundled language' }
       try {
         await unlink(getLanguagePath(name))
         log('info', `Deleted language: ${name}`)
@@ -140,4 +205,62 @@ export function setupLanguageStore(): void {
       }
     },
   )
+}
+
+export interface TypingDatasetSyncResult {
+  provider: string
+  changed: boolean
+  fromVersion: string
+  toVersion?: string
+}
+
+/**
+ * Compare the effective dataset version against the Hub's and, on a
+ * mismatch, pull the fresh dataset, persist it as the provider override,
+ * and clear stale downloaded language files. Never throws — returns
+ * `changed:false` on any network / shape error so the bundled defaults
+ * keep working offline.
+ */
+export async function syncTypingDataset(
+  provider: string = DEFAULT_TYPING_TEST_PROVIDER,
+): Promise<TypingDatasetSyncResult> {
+  const current = await getEffectiveDataset(provider)
+  const hubVersion = await fetchTypingDatasetVersion(provider)
+  if (!hubVersion || hubVersion === current.version) {
+    return { provider, changed: false, fromVersion: current.version }
+  }
+
+  const fresh = await fetchTypingDataset(provider)
+  if (!fresh || fresh.version === current.version) {
+    return { provider, changed: false, fromVersion: current.version }
+  }
+
+  const overrides = await loadOverrides()
+  const next = { ...overrides, [provider]: fresh }
+  const path = getOverridePath()
+  await mkdir(dirname(path), { recursive: true })
+  await writeFile(path, JSON.stringify(next), 'utf-8')
+  overridesCache = next
+
+  // The new version's files live at a different URL and may differ in size,
+  // so drop the old downloads; they re-fetch on demand against the new base.
+  await clearDownloadedLanguages()
+
+  log('info', `Typing dataset ${provider}: updated ${current.version} -> ${fresh.version}`)
+  return { provider, changed: true, fromVersion: current.version, toVersion: fresh.version }
+}
+
+/**
+ * Fire-and-forget startup hook (wired in `main/index.ts` via
+ * `app.whenReady()`). Checks the default provider's version against the Hub
+ * in the background; never blocks startup and swallows all errors.
+ */
+export function startTypingDatasetStartupSync(): void {
+  void syncTypingDataset()
+    .then((r) => {
+      if (r.changed) log('info', `Typing dataset startup sync: ${r.fromVersion} -> ${String(r.toVersion)}`)
+    })
+    .catch((err: unknown) => {
+      log('warn', `Typing dataset startup sync threw: ${err instanceof Error ? err.message : String(err)}`)
+    })
 }
