@@ -262,6 +262,9 @@
       "showStats": "Show measurement",
       "hideControls": "Hide operation",
       "showControls": "Show operation",
+      "saveUnnamedToggle": "Save Unnamed",
+      "enableSaveUnnamed": "Auto-save results without a name",
+      "disableSaveUnnamed": "Require a name to save results",
       "section": {
         "settings": "Settings",
         "data": "Data",

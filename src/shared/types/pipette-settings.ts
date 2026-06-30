@@ -216,6 +216,11 @@ export interface PipetteSettings {
   /** Editor typing-test: hide the operation (Next Test button) controls row.
    *  Default false. Force-shown once a test finishes. */
   typingTestHideControls?: boolean
+  /** Editor typing-test: auto-save finished results even without a name.
+   *  Default true (every result is saved, the user may name it after).
+   *  When false a finished result is held unsaved until the user gives it a
+   *  name — leaving it unnamed discards it. */
+  typingTestSaveUnnamed?: boolean
   /** Editor typing-test: Measurement-row comparison baseline per condition
    *  key. Unset conditions default to `{ kind: 'previous' }`. */
   typingTestComparisonBaselines?: TypingTestComparisonBaselines

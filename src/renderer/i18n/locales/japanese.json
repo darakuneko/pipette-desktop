@@ -262,6 +262,9 @@
       "showStats": "計測を表示",
       "hideControls": "操作を隠す",
       "showControls": "操作を表示",
+      "saveUnnamedToggle": "名称未設定も保存",
+      "enableSaveUnnamed": "名前なしでも結果を保存",
+      "disableSaveUnnamed": "保存には名前を必須にする",
       "section": {
         "settings": "設定",
         "data": "データ",
