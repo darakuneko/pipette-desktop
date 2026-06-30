@@ -202,8 +202,8 @@ describe('TypingTestHistory', () => {
     expect(csv).toContain('date,name,wpm,kpm,accuracy')
     expect(csv).toContain('2025-01-01T00:00:00Z')
     expect(csv).toContain('80')
-    // Default (Normal tab, All) → 'normal' slug
-    expect(onExportCsv.mock.calls[0][1]).toBe('normal')
+    // Default (MonkeyType tab, All) → 'monkeytype' slug
+    expect(onExportCsv.mock.calls[0][1]).toBe('monkeytype')
   })
 
   it('passes a filename slug reflecting the active filter selection', () => {
@@ -214,10 +214,10 @@ describe('TypingTestHistory', () => {
     ]
     renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
-    // Normal tab, filter to words → 'normal-words'
+    // MonkeyType tab, filter to words → 'monkeytype-words'
     fireEvent.change(screen.getByTestId('history-filter-mode'), { target: { value: 'words' } })
     fireEvent.click(screen.getByTestId('history-export-csv'))
-    expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('normal-words')
+    expect(onExportCsv.mock.calls.at(-1)?.[1]).toBe('monkeytype-words')
 
     // Text tab, all → 'text'
     fireEvent.click(screen.getByTestId('history-tab-text'))

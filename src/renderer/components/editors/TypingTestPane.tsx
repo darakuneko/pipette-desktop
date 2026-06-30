@@ -80,7 +80,7 @@ export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
   onConfigChange: (config: TypingTestConfig) => void
   /** Last normal (words/time/quote) config, restored when leaving fileImport. */
-  normalConfig?: TypingTestConfig
+  monkeytypeConfig?: TypingTestConfig
   onLanguageChange: (lang: string) => Promise<void>
   layers: number
   layerNames?: string[]
@@ -179,7 +179,7 @@ export interface TypingTestPaneProps {
 export function TypingTestPane({
   typingTest,
   onConfigChange,
-  normalConfig,
+  monkeytypeConfig,
   onLanguageChange,
   layers,
   layerNames,
@@ -487,7 +487,7 @@ export function TypingTestPane({
   // language), truncated to one line; the full text is on the title.
   const modeType = typingTest.config.mode === 'fileImport'
     ? t('editor.typingTest.language.tabFileImport')
-    : t('editor.typingTest.language.tabNormal')
+    : t('editor.typingTest.language.tabMonkeytype')
   const modeLabel = typingTest.isLanguageLoading
     ? t('editor.typingTest.language.loadingLanguage')
     : typingTest.config.mode === 'fileImport'
@@ -534,7 +534,7 @@ export function TypingTestPane({
               // Picking a language leaves fileImport mode — restore the last normal
               // (words/time/quote) config so its Pattern/Units/Option settings
               // survive the round trip; fall back to the default if none saved.
-              if (typingTest.config.mode === 'fileImport') onConfigChange(normalConfig ?? DEFAULT_CONFIG)
+              if (typingTest.config.mode === 'fileImport') onConfigChange(monkeytypeConfig ?? DEFAULT_CONFIG)
               void onLanguageChange(name)
             }}
             onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId })}

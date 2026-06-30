@@ -296,20 +296,20 @@ describe('pipette-settings-store', () => {
       expect(result.success).toBe(false)
     })
 
-    it('round-trips typingTestNormalConfig field', async () => {
+    it('round-trips typingTestMonkeytypeConfig field', async () => {
       const setter = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
-      const normalConfig = { mode: 'words', wordCount: 60, punctuation: true, numbers: false }
+      const monkeytypeConfig = { mode: 'words', wordCount: 60, punctuation: true, numbers: false }
       await setter(fakeEvent, 'uid-1', {
         _rev: 1,
         keyboardLayout: 'qwerty',
         autoAdvance: true,
         layerNames: [],
-        typingTestNormalConfig: normalConfig,
+        typingTestMonkeytypeConfig: monkeytypeConfig,
       })
 
       const getter = getHandler(IpcChannels.PIPETTE_SETTINGS_GET)
-      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestNormalConfig: typeof normalConfig }
-      expect(prefs.typingTestNormalConfig).toEqual(normalConfig)
+      const prefs = await getter(fakeEvent, 'uid-1') as { typingTestMonkeytypeConfig: typeof monkeytypeConfig }
+      expect(prefs.typingTestMonkeytypeConfig).toEqual(monkeytypeConfig)
     })
 
     it('defaults layerNames to [] when not present', async () => {

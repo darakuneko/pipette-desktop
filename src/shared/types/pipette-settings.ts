@@ -197,7 +197,7 @@ export interface PipetteSettings {
   typingTestConfig?: Record<string, unknown>
   /** Last words/time/quote config, restored when switching back from fileImport
    *  (imported text) so normal-mode Pattern/Units/Option settings survive. */
-  typingTestNormalConfig?: Record<string, unknown>
+  typingTestMonkeytypeConfig?: Record<string, unknown>
   typingTestLanguage?: string
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
