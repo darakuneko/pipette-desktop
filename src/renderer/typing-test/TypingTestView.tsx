@@ -404,7 +404,7 @@ export function TypingTestView({
         className="flex w-full flex-col items-center gap-2"
       >
         <div className="flex flex-wrap items-center justify-center gap-8 text-sm">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.wpm')}:</span>
             <span data-testid="typing-test-wpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
               {showStats ? wpm : '-'}
@@ -415,7 +415,7 @@ export function TypingTestView({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.kpm')}:</span>
             <span data-testid="typing-test-kpm" className="font-mono text-lg font-semibold text-accent tabular-nums">
               {showStats ? kpm : '-'}
@@ -426,7 +426,7 @@ export function TypingTestView({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.accuracy')}:</span>
             <span data-testid="typing-test-accuracy" className="font-mono text-lg font-semibold tabular-nums">
               {showStats ? `${accuracy}%` : '-'}
@@ -437,13 +437,13 @@ export function TypingTestView({
               </span>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             <span className="text-content-muted">{t('editor.typingTest.time')}:</span>
             <span data-testid="typing-test-time" className="font-mono text-lg font-semibold tabular-nums">
               {showStats ? displayTime : '-'}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-baseline gap-1.5">
             {/* Imported custom text tracks character progress (spaces included);
                 everything else tracks words. */}
             <span className="text-content-muted">{t(isCustom ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
