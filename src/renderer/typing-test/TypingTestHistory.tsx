@@ -36,7 +36,7 @@ interface Props {
 const MAX_TABLE_ROWS = 20
 
 const FILTER_SELECT_CLASS = 'h-8 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none'
-const EXPORT_BTN_CLASS = 'rounded-md border border-edge px-2.5 py-1 text-xs text-content-secondary transition-colors hover:text-content'
+const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
 
 const MAX_SPARKLINE_RESULTS = 50
 
