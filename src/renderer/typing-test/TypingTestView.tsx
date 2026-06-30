@@ -23,8 +23,8 @@ interface Props {
   remainingSeconds: number | null
   config: TypingTestConfig
   paused: boolean
-  /** Max width for the reading window + stats row, matched to the keyboard
-   *  below so the typing text lines up with the keymap (px). */
+  /** Max width for the reading window, matched to the keyboard below so the
+   *  typing text lines up with the keymap (px). */
   readingMaxWidth?: number
   /** Hide the stats / results (WPM) row. Persisted per keyboard. */
   hideStatsRow?: boolean
@@ -399,10 +399,13 @@ export function TypingTestView({
           hides the LIVE metrics during a run — once finished, the results
           always show. */}
       {(!hideStatsRow || state.status === 'finished') && (
+      // Not capped to readingMaxWidth (the keyboard width) like the reading
+      // window: the metrics row sits below the board and centres on the full
+      // available width, so all stats stay on one line instead of wrapping
+      // when the keyboard is narrower than the row.
       <div
         data-testid="typing-test-results"
-        className="flex w-full max-w-4xl flex-col items-center gap-2"
-        style={{ maxWidth: readingMaxWidth }}
+        className="flex w-full flex-col items-center gap-2"
       >
         <div className="flex flex-wrap items-center justify-center gap-8 text-sm">
           <div className="flex items-center gap-1.5">
