@@ -81,6 +81,14 @@ export interface TypingTestPaneProps {
   onToggleHideKeymap?: (hidden: boolean) => void
   onToggleHideStatsRow?: (hidden: boolean) => void
   onToggleHideControls?: (hidden: boolean) => void
+  /** Auto-save finished results without a name (default true). Drives only the
+   *  toggle button — the save/name behavior lives in `useInputModes`. */
+  saveUnnamed?: boolean
+  onToggleSaveUnnamed?: (enabled: boolean) => void
+  /** The just-finished result (held unsaved or saved latest), for name chips. */
+  finishedResult?: TypingTestResult | null
+  /** Name the just-finished result (save under name when held, else rename). */
+  onNameFinishedResult?: (name: string) => void
   /** Per-condition Measurement-row comparison baselines (persisted per
    *  keyboard, synced). Keyed by condition; the current condition's baseline
    *  is looked up and applied. */
@@ -168,6 +176,10 @@ export function TypingTestPane({
   onToggleHideKeymap,
   onToggleHideStatsRow,
   onToggleHideControls,
+  saveUnnamed = true,
+  onToggleSaveUnnamed,
+  finishedResult,
+  onNameFinishedResult,
   comparisonBaselines,
   onComparisonBaselineChange,
   settingsPanelOpen = true,
@@ -595,6 +607,19 @@ export function TypingTestPane({
           baseline={comparisonBaselineValue}
           onChange={handleComparisonChange}
         />
+        {/* Save Unnamed — when on (default), a finished result is auto-saved
+            even without a name; when off, only named results are kept. */}
+        <button
+          type="button"
+          data-testid="typing-test-toggle-save-unnamed"
+          aria-pressed={saveUnnamed}
+          title={t(saveUnnamed ? 'editor.typingTest.disableSaveUnnamed' : 'editor.typingTest.enableSaveUnnamed')}
+          aria-label={t(saveUnnamed ? 'editor.typingTest.disableSaveUnnamed' : 'editor.typingTest.enableSaveUnnamed')}
+          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${saveUnnamed ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
+          onClick={() => onToggleSaveUnnamed?.(!saveUnnamed)}
+        >
+          {t('editor.typingTest.saveUnnamedToggle')}
+        </button>
       </PanelSection>
 
       {/* Show — toggles ordered top-to-bottom to match the editor layout:
@@ -699,13 +724,9 @@ export function TypingTestPane({
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
           displayLines={displayLines}
           fontSize={fontSize}
-          onNameResult={(name) => {
-            // The auto-save prepends the finished result, so history[0] is it.
-            const date = typingTestHistory?.[0]?.date
-            if (date) onRenameTypingTestResult?.(date, name)
-          }}
-          // Chips come from the just-finished result (history[0]).
-          resultNameChips={typingTestHistory?.[0] ? buildResultNameChips(typingTestHistory[0], t, deviceName) : []}
+          onNameResult={onNameFinishedResult}
+          // Chips come from the just-finished result (held unsaved or saved).
+          resultNameChips={finishedResult ? buildResultNameChips(finishedResult, t, deviceName) : []}
           onStart={() => typingTest.restart()}
           onPause={() => onPauseTest?.()}
           onResume={() => setShowResumeModal(true)}

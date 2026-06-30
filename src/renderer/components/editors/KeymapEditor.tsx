@@ -114,7 +114,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestViewOnlyAlwaysOnTop, onTypingTestViewOnlyAlwaysOnTopChange,
   typingTestMemory: savedTypingTestMemory, onTypingTestMemoryChange,
   typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
-  typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, typingTestComparisonBaselines, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange, onTypingTestComparisonBaselineChange,
+  typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, typingTestSaveUnnamed = true, typingTestComparisonBaselines, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange, onTypingTestSaveUnnamedChange, onTypingTestComparisonBaselineChange,
   typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
   typingRecordEnabled, onTypingRecordEnabledChange,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
@@ -166,11 +166,12 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     matrixMode, pressedKeys, everPressedKeys, hasMatrixTester,
     handleMatrixToggle, handleTypingTestToggle,
     typingTest, handleTypingTestConfigChange, handleTypingTestLanguageChange,
+    finishedResult, nameFinishedResult,
     pauseTypingTest, resumeTypingTest, restartTypingTestFromStart,
   } = useInputModes({
     rows, cols, getMatrixState, unlocked, onUnlock, onMatrixModeChange, keymap,
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
-    onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, typingTestHistory,
+    onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, onRenameTypingTestResult, saveUnnamed: typingTestSaveUnnamed, typingTestHistory,
     savedTypingTestMemory, onTypingTestMemoryChange,
     typingTestViewOnly, typingRecordEnabled,
     typingRecordKeyboard: keyboardUid && connectedDevice
@@ -966,10 +967,14 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
               hideKeymap={typingTestHideKeymap}
               hideStatsRow={typingTestHideStatsRow}
               hideControls={typingTestHideControls}
+              saveUnnamed={typingTestSaveUnnamed}
+              finishedResult={finishedResult}
+              onNameFinishedResult={nameFinishedResult}
               comparisonBaselines={typingTestComparisonBaselines}
               onToggleHideKeymap={onTypingTestHideKeymapChange}
               onToggleHideStatsRow={onTypingTestHideStatsRowChange}
               onToggleHideControls={onTypingTestHideControlsChange}
+              onToggleSaveUnnamed={onTypingTestSaveUnnamedChange}
               onComparisonBaselineChange={onTypingTestComparisonBaselineChange}
               settingsPanelOpen={typingTestSettingsPanelOpen}
               onToggleSettingsPanel={onTypingTestSettingsPanelOpenChange}

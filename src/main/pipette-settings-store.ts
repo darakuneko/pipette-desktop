@@ -96,6 +96,7 @@ function isValidPrefs(value: unknown): value is PipetteSettings {
   if ('typingTestHideKeymap' in obj && obj.typingTestHideKeymap != null && typeof obj.typingTestHideKeymap !== 'boolean') return false
   if ('typingTestHideStatsRow' in obj && obj.typingTestHideStatsRow != null && typeof obj.typingTestHideStatsRow !== 'boolean') return false
   if ('typingTestHideControls' in obj && obj.typingTestHideControls != null && typeof obj.typingTestHideControls !== 'boolean') return false
+  if ('typingTestSaveUnnamed' in obj && obj.typingTestSaveUnnamed != null && typeof obj.typingTestSaveUnnamed !== 'boolean') return false
   if ('typingTestComparisonBaselines' in obj && obj.typingTestComparisonBaselines != null && !isTypingTestComparisonBaselines(obj.typingTestComparisonBaselines)) return false
   if ('typingTestSettingsPanelOpen' in obj && obj.typingTestSettingsPanelOpen != null && typeof obj.typingTestSettingsPanelOpen !== 'boolean') return false
   if ('typingRecordEnabled' in obj && obj.typingRecordEnabled != null && typeof obj.typingRecordEnabled !== 'boolean') return false
@@ -151,6 +152,7 @@ async function readData(uid: string): Promise<PipetteSettings | null> {
       typingTestHideKeymap: parsed.typingTestHideKeymap,
       typingTestHideStatsRow: parsed.typingTestHideStatsRow,
       typingTestHideControls: parsed.typingTestHideControls,
+      typingTestSaveUnnamed: parsed.typingTestSaveUnnamed,
       typingTestComparisonBaselines: parsed.typingTestComparisonBaselines,
       typingTestSettingsPanelOpen: parsed.typingTestSettingsPanelOpen,
       typingRecordEnabled: parsed.typingRecordEnabled,

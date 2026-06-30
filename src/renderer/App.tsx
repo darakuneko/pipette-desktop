@@ -869,10 +869,12 @@ export function App() {
             typingTestHideKeymap={devicePrefs.typingTestHideKeymap}
             typingTestHideStatsRow={devicePrefs.typingTestHideStatsRow}
             typingTestHideControls={devicePrefs.typingTestHideControls}
+            typingTestSaveUnnamed={devicePrefs.typingTestSaveUnnamed}
             typingTestComparisonBaselines={devicePrefs.typingTestComparisonBaselines}
             onTypingTestHideKeymapChange={devicePrefs.setTypingTestHideKeymap}
             onTypingTestHideStatsRowChange={devicePrefs.setTypingTestHideStatsRow}
             onTypingTestHideControlsChange={devicePrefs.setTypingTestHideControls}
+            onTypingTestSaveUnnamedChange={devicePrefs.setTypingTestSaveUnnamed}
             onTypingTestComparisonBaselineChange={devicePrefs.setTypingTestComparisonBaseline}
             typingTestSettingsPanelOpen={devicePrefs.typingTestSettingsPanelOpen}
             onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}

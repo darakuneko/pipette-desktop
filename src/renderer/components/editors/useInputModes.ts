@@ -38,6 +38,13 @@ export interface UseInputModesOptions {
   onTypingTestConfigChange?: (config: TypingTestConfig) => void
   onTypingTestLanguageChange?: (lang: string) => void
   onSaveTypingTestResult?: (result: TypingTestResult) => void
+  /** Label the latest saved result by its ISO date — used to name a finished
+   *  result when save-unnamed is on (the result is already in History). */
+  onRenameTypingTestResult?: (date: string, name: string) => void
+  /** When true (default), a finished result is auto-saved immediately, even
+   *  without a name. When false, the result is held unsaved until the user
+   *  names it (via `nameFinishedResult`); leaving it unnamed discards it. */
+  saveUnnamed?: boolean
   /** Persisted paused-test snapshot for the active keyboard (memory mode). */
   savedTypingTestMemory?: TypingTestMemory
   /** Persist or clear the paused-test snapshot. */
@@ -62,6 +69,12 @@ export interface UseInputModesReturn {
   typingTest: ReturnType<typeof useTypingTest>
   handleTypingTestConfigChange: (config: TypingTestConfig) => void
   handleTypingTestLanguageChange: (lang: string) => Promise<void>
+  /** The just-finished result — the held unsaved one when save-unnamed is off,
+   *  else the saved latest; null until a test finishes. For result-name chips. */
+  finishedResult: TypingTestResult | null
+  /** Name the just-finished result: persists a held unsaved result under the
+   *  name (save-unnamed off; blank → discarded) or renames the saved latest. */
+  nameFinishedResult: (name: string) => void
   /** Memory mode (imported custom text). */
   savedTypingTestMemory?: TypingTestMemory
   pauseTypingTest: () => void
@@ -84,6 +97,8 @@ export function useInputModes({
   onTypingTestConfigChange,
   onTypingTestLanguageChange,
   onSaveTypingTestResult,
+  onRenameTypingTestResult,
+  saveUnnamed = true,
   savedTypingTestMemory,
   onTypingTestMemoryChange,
   typingTestHistory,
@@ -345,8 +360,12 @@ export function useInputModes({
     return () => document.removeEventListener('keydown', handler, true)
   }, [typingTestMode, typingTestViewOnly, processKeyEvent])
 
-  // Auto-save typing test result when test finishes
+  // Auto-save typing test result when test finishes. With save-unnamed on
+  // (default) the result is persisted immediately; with it off the built
+  // result is held in `pendingUnnamedResult` and only saved once the user
+  // names it (commitPendingResult), so an unnamed run is discarded.
   const savedResultRef = useRef(false)
+  const [pendingUnnamedResult, setPendingUnnamedResult] = useState<TypingTestResult | null>(null)
   useEffect(() => {
     if (typingTestViewOnly) return
     if (typingTest.state.status === 'finished' && !savedResultRef.current && onSaveTypingTestResult) {
@@ -368,10 +387,15 @@ export function useInputModes({
         runId: typingTest.state.runId,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
-      onSaveTypingTestResult(result)
+      if (saveUnnamed) {
+        onSaveTypingTestResult(result)
+      } else {
+        setPendingUnnamedResult(result)
+      }
       // Flush the test's analytics so the just-finished minute/session
       // lands in the cache promptly (Analyze can show it without waiting
-      // for the minute-close / before-quit flush).
+      // for the minute-close / before-quit flush). Keystrokes are recorded
+      // regardless of whether the result row is saved.
       const uid = keyboardRef.current?.uid
       if (uid) window.vialAPI.typingAnalyticsFlush(uid).catch(() => { /* fire-and-forget */ })
       // A completed test makes any saved pause snapshot obsolete.
@@ -379,6 +403,9 @@ export function useInputModes({
     }
     if (typingTest.state.status !== 'finished') {
       savedResultRef.current = false
+      // Leaving the finished state (next test / restart) drops an unsaved,
+      // still-unnamed result.
+      if (pendingUnnamedResult) setPendingUnnamedResult(null)
     }
   }, [typingTest.state.status, typingTest.state.startTime, typingTest.state.endTime,
     typingTest.state.correctChars, typingTest.state.incorrectChars,
@@ -386,7 +413,28 @@ export function useInputModes({
     typingTest.state.currentQuote, typingTest.state.runId,
     typingTest.wpm, typingTest.accuracy,
     typingTest.config, typingTest.language,
-    typingTestHistory, onSaveTypingTestResult])
+    typingTestHistory, onSaveTypingTestResult, saveUnnamed, pendingUnnamedResult])
+
+  // The just-finished result, exposed so the pane can build name chips: the
+  // held unsaved one (save-unnamed off) until named, else the saved latest.
+  const finishedResult = typingTest.state.status === 'finished'
+    ? (pendingUnnamedResult ?? typingTestHistory?.[0] ?? null)
+    : null
+
+  // Name the just-finished result. A held unsaved result (save-unnamed off) is
+  // persisted under the name — blank keeps it discarded; otherwise the already
+  // saved latest result is renamed (save-unnamed on; blank clears its name).
+  const nameFinishedResult = useCallback((name: string) => {
+    if (pendingUnnamedResult) {
+      const trimmed = name.trim()
+      if (!trimmed) return
+      onSaveTypingTestResult?.({ ...pendingUnnamedResult, name: trimmed })
+      setPendingUnnamedResult(null)
+      return
+    }
+    const date = typingTestHistory?.[0]?.date
+    if (date) onRenameTypingTestResult?.(date, name)
+  }, [pendingUnnamedResult, onSaveTypingTestResult, onRenameTypingTestResult, typingTestHistory])
 
   // Sync saved config/language from device prefs into useTypingTest
   useEffect(() => {
@@ -474,6 +522,8 @@ export function useInputModes({
     typingTest,
     handleTypingTestConfigChange,
     handleTypingTestLanguageChange,
+    finishedResult,
+    nameFinishedResult,
     savedTypingTestMemory,
     pauseTypingTest,
     resumeTypingTest,

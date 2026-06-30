@@ -145,10 +145,12 @@ export interface KeymapEditorProps {
   typingTestHideKeymap?: boolean
   typingTestHideStatsRow?: boolean
   typingTestHideControls?: boolean
+  typingTestSaveUnnamed?: boolean
   typingTestComparisonBaselines?: TypingTestComparisonBaselines
   onTypingTestHideKeymapChange?: (hidden: boolean) => void
   onTypingTestHideStatsRowChange?: (hidden: boolean) => void
   onTypingTestHideControlsChange?: (hidden: boolean) => void
+  onTypingTestSaveUnnamedChange?: (enabled: boolean) => void
   onTypingTestComparisonBaselineChange?: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   typingTestSettingsPanelOpen?: boolean
   onTypingTestSettingsPanelOpenChange?: (open: boolean) => void

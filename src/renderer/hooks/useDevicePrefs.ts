@@ -117,6 +117,7 @@ interface ValidatedPrefs {
   typingTestHideKeymap: boolean
   typingTestHideStatsRow: boolean
   typingTestHideControls: boolean
+  typingTestSaveUnnamed: boolean
   typingTestComparisonBaselines: TypingTestComparisonBaselines
   typingTestSettingsPanelOpen: boolean
   typingRecordEnabled: boolean
@@ -126,7 +127,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestNormalConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestNormalConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -205,6 +206,8 @@ function validateIpcPrefs(
     typingTestHideKeymap: data.typingTestHideKeymap === true,
     typingTestHideStatsRow: data.typingTestHideStatsRow === true,
     typingTestHideControls: data.typingTestHideControls === true,
+    // Default true: a finished result is auto-saved unless the user opts out.
+    typingTestSaveUnnamed: data.typingTestSaveUnnamed !== false,
     typingTestComparisonBaselines: isTypingTestComparisonBaselines(data.typingTestComparisonBaselines) ? data.typingTestComparisonBaselines : {},
     typingTestSettingsPanelOpen: typeof data.typingTestSettingsPanelOpen === 'boolean' ? data.typingTestSettingsPanelOpen : true,
     typingRecordEnabled: typeof data.typingRecordEnabled === 'boolean' ? data.typingRecordEnabled : false,
@@ -244,6 +247,7 @@ export interface UseDevicePrefsReturn {
   typingTestHideKeymap: boolean
   typingTestHideStatsRow: boolean
   typingTestHideControls: boolean
+  typingTestSaveUnnamed: boolean
   typingTestComparisonBaselines: TypingTestComparisonBaselines
   typingTestSettingsPanelOpen: boolean
   typingRecordEnabled: boolean
@@ -272,6 +276,7 @@ export interface UseDevicePrefsReturn {
   setTypingTestHideKeymap: (hidden: boolean) => void
   setTypingTestHideStatsRow: (hidden: boolean) => void
   setTypingTestHideControls: (hidden: boolean) => void
+  setTypingTestSaveUnnamed: (enabled: boolean) => void
   setTypingTestComparisonBaseline: (conditionKey: string, baseline: TypingTestComparisonBaseline) => void
   setTypingTestSettingsPanelOpen: (open: boolean) => void
   setTypingRecordEnabled: (enabled: boolean) => void
@@ -347,6 +352,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [typingTestHideKeymap, updateTypingTestHideKeymap, typingTestHideKeymapRef] = useStateRef<boolean>(false)
   const [typingTestHideStatsRow, updateTypingTestHideStatsRow, typingTestHideStatsRowRef] = useStateRef<boolean>(false)
   const [typingTestHideControls, updateTypingTestHideControls, typingTestHideControlsRef] = useStateRef<boolean>(false)
+  const [typingTestSaveUnnamed, updateTypingTestSaveUnnamed, typingTestSaveUnnamedRef] = useStateRef<boolean>(true)
   const [typingTestComparisonBaselines, updateTypingTestComparisonBaselines, typingTestComparisonBaselinesRef] = useStateRef<TypingTestComparisonBaselines>({})
   const [typingTestSettingsPanelOpen, updateTypingTestSettingsPanelOpen, typingTestSettingsPanelOpenRef] = useStateRef<boolean>(true)
   const [typingRecordEnabled, updateTypingRecordEnabled, typingRecordEnabledRef] = useStateRef<boolean>(false)
@@ -388,6 +394,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestHideKeymap: typingTestHideKeymapRef.current,
       typingTestHideStatsRow: typingTestHideStatsRowRef.current,
       typingTestHideControls: typingTestHideControlsRef.current,
+      typingTestSaveUnnamed: typingTestSaveUnnamedRef.current,
       typingTestComparisonBaselines: typingTestComparisonBaselinesRef.current,
       typingTestSettingsPanelOpen: typingTestSettingsPanelOpenRef.current,
       typingRecordEnabled: typingRecordEnabledRef.current,
@@ -543,6 +550,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestHideControls])
 
+  const setTypingTestSaveUnnamed = useCallback((enabled: boolean) => {
+    if (typingTestSaveUnnamedRef.current === enabled) return
+    updateTypingTestSaveUnnamed(enabled)
+    saveCurrentPrefs()
+  }, [saveCurrentPrefs, updateTypingTestSaveUnnamed])
+
   const setTypingTestComparisonBaseline = useCallback((conditionKey: string, baseline: TypingTestComparisonBaseline) => {
     updateTypingTestComparisonBaselines({ ...typingTestComparisonBaselinesRef.current, [conditionKey]: baseline })
     saveCurrentPrefs()
@@ -639,6 +652,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       typingTestHideKeymap: false,
       typingTestHideStatsRow: false,
       typingTestHideControls: false,
+      typingTestSaveUnnamed: true,
       typingTestComparisonBaselines: {},
       typingTestSettingsPanelOpen: true,
       typingRecordEnabled: false,
@@ -666,6 +680,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateTypingTestHideKeymap(resolved.typingTestHideKeymap)
     updateTypingTestHideStatsRow(resolved.typingTestHideStatsRow)
     updateTypingTestHideControls(resolved.typingTestHideControls)
+    updateTypingTestSaveUnnamed(resolved.typingTestSaveUnnamed)
     updateTypingTestComparisonBaselines(resolved.typingTestComparisonBaselines)
     updateTypingTestSettingsPanelOpen(resolved.typingTestSettingsPanelOpen)
     updateTypingRecordEnabled(resolved.typingRecordEnabled)
@@ -730,6 +745,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     typingTestHideKeymap,
     typingTestHideStatsRow,
     typingTestHideControls,
+    typingTestSaveUnnamed,
     typingTestComparisonBaselines,
     typingTestSettingsPanelOpen,
     typingRecordEnabled,
@@ -759,6 +775,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     setTypingTestHideKeymap,
     setTypingTestHideStatsRow,
     setTypingTestHideControls,
+    setTypingTestSaveUnnamed,
     setTypingTestComparisonBaseline,
     setTypingTestSettingsPanelOpen,
     setTypingRecordEnabled,
