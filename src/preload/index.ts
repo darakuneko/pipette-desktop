@@ -596,6 +596,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.LANG_DOWNLOAD, name),
   langDelete: (name: string): Promise<{ success: boolean; error?: string }> =>
     ipcRenderer.invoke(IpcChannels.LANG_DELETE, name),
+  checkTypingDatasetUpdate: (provider?: string): Promise<{ provider: string; updateAvailable: boolean }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_DATASET_CHECK, provider),
+  updateTypingDataset: (provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }> =>
+    ipcRenderer.invoke(IpcChannels.TYPING_DATASET_UPDATE, provider),
 
   // --- App Config ---
   appConfigGetAll: (): Promise<AppConfig> =>

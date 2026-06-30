@@ -173,6 +173,8 @@ export const IpcChannels = {
   LANG_GET: 'lang:get',
   LANG_DOWNLOAD: 'lang:download',
   LANG_DELETE: 'lang:delete',
+  TYPING_DATASET_CHECK: 'typing-dataset:check',
+  TYPING_DATASET_UPDATE: 'typing-dataset:update',
 
   // Data management (renderer → main → renderer)
   LIST_STORED_KEYBOARDS: 'data:list-stored-keyboards',

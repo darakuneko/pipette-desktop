@@ -383,7 +383,10 @@
         "importErrorEmpty": "The file has no typeable text",
         "importOverwritePrompt": "\"{{name}}\" already exists. Overwrite?",
         "confirmOverwrite": "Overwrite",
-        "fileImportText": "Imported text"
+        "fileImportText": "Imported text",
+        "datasetUpdateAvailable": "An update is available for the word lists.",
+        "datasetUpdate": "Update",
+        "datasetUpdating": "Updating…"
       },
       "memory": {
         "pause": "Pause",

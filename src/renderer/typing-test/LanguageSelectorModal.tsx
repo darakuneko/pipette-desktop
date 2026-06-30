@@ -50,6 +50,8 @@ export function LanguageSelectorModal({
   const [languages, setLanguages] = useState<LanguageListEntry[]>([])
   const [search, setSearch] = useState('')
   const [downloading, setDownloading] = useState<Set<string>>(new Set())
+  const [updateAvailable, setUpdateAvailable] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const backdropRef = useRef<HTMLDivElement>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   // Flipped true when the currently-selected imported text is deleted, so a
@@ -74,6 +76,35 @@ export function LanguageSelectorModal({
   useEffect(() => {
     if (tab === 'existing') searchRef.current?.focus()
   }, [tab])
+
+  // Version check only — no auto-download. Runs when the MonkeyType tab is
+  // shown; the main process caches the result for the app session, so reopening
+  // the modal or switching tabs won't re-hit the Hub.
+  useEffect(() => {
+    if (tab !== 'existing') return
+    let alive = true
+    window.vialAPI.checkTypingDatasetUpdate('monkeytype')
+      .then((r) => { if (alive) setUpdateAvailable(r.updateAvailable) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [tab])
+
+  const handleUpdateDataset = useCallback(async () => {
+    setUpdating(true)
+    try {
+      const result = await window.vialAPI.updateTypingDataset('monkeytype')
+      if (result.changed) {
+        // The manifest may have new/changed languages; refresh the list.
+        const list = await window.vialAPI.langList()
+        setLanguages(list)
+        setUpdateAvailable(false)
+      }
+      // On `changed:false` (Hub unreachable / invalid payload) the update was
+      // NOT applied — keep the banner so the user can retry.
+    } finally {
+      setUpdating(false)
+    }
+  }, [])
 
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === backdropRef.current) handleClose()
@@ -174,6 +205,26 @@ export function LanguageSelectorModal({
                 data-testid="language-search"
               />
             </div>
+
+            {updateAvailable && (
+              <div
+                className="flex items-center justify-between gap-3 border-b border-edge bg-accent/5 px-4 py-2"
+                data-testid="typing-dataset-update-banner"
+              >
+                <span className="text-sm text-content-secondary">
+                  {t('editor.typingTest.language.datasetUpdateAvailable')}
+                </span>
+                <button
+                  type="button"
+                  data-testid="typing-dataset-update-button"
+                  disabled={updating}
+                  onClick={handleUpdateDataset}
+                  className="inline-flex h-8 items-center rounded-md border border-accent bg-accent/10 px-3 text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t(updating ? 'editor.typingTest.language.datasetUpdating' : 'editor.typingTest.language.datasetUpdate')}
+                </button>
+              </div>
+            )}
 
             <div className="flex-1 overflow-y-auto">
               {filtered.length === 0 && (

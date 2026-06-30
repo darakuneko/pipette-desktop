@@ -328,6 +328,8 @@ export interface VialAPI {
   langGet(name: string): Promise<unknown>
   langDownload(name: string): Promise<{ success: boolean; error?: string }>
   langDelete(name: string): Promise<{ success: boolean; error?: string }>
+  checkTypingDatasetUpdate(provider?: string): Promise<{ provider: string; updateAvailable: boolean }>
+  updateTypingDataset(provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }>
 
   // Data management
   listStoredKeyboards(): Promise<StoredKeyboardInfo[]>

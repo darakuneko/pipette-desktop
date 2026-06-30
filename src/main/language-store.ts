@@ -205,6 +205,22 @@ export function setupLanguageStore(): void {
       }
     },
   )
+
+  // Check-only: is a newer dataset version available? (session-cached)
+  secureHandle(
+    IpcChannels.TYPING_DATASET_CHECK,
+    async (_event, provider?: string): Promise<{ provider: string; updateAvailable: boolean }> => {
+      return checkTypingDatasetUpdate(typeof provider === 'string' && provider ? provider : DEFAULT_TYPING_TEST_PROVIDER)
+    },
+  )
+
+  // Manual update: download + apply the newer dataset (from the modal button).
+  secureHandle(
+    IpcChannels.TYPING_DATASET_UPDATE,
+    async (_event, provider?: string): Promise<TypingDatasetSyncResult> => {
+      return syncTypingDataset(typeof provider === 'string' && provider ? provider : DEFAULT_TYPING_TEST_PROVIDER)
+    },
+  )
 }
 
 export interface TypingDatasetSyncResult {
@@ -212,6 +228,29 @@ export interface TypingDatasetSyncResult {
   changed: boolean
   fromVersion: string
   toVersion?: string
+}
+
+// "Update available?" result, remembered for the app session only (cleared on
+// process restart). Lets the Mode modal check once per session and reuse the
+// flag on reopen/tab-switch without re-hitting the Hub. An applied update or a
+// restart re-checks.
+const updateCheckCache = new Map<string, boolean>()
+
+/** Check (without downloading) whether the Hub has a newer dataset version for
+ *  the provider. The first call per session probes the Hub `/version`; later
+ *  calls reuse the cached result. A Hub error is reported as "no update" and is
+ *  NOT cached, so a later modal open can retry. */
+export async function checkTypingDatasetUpdate(
+  provider: string = DEFAULT_TYPING_TEST_PROVIDER,
+): Promise<{ provider: string; updateAvailable: boolean }> {
+  const cached = updateCheckCache.get(provider)
+  if (cached !== undefined) return { provider, updateAvailable: cached }
+  const current = await getEffectiveDataset(provider)
+  const hubVersion = await fetchTypingDatasetVersion(provider)
+  if (!hubVersion) return { provider, updateAvailable: false }
+  const updateAvailable = hubVersion !== current.version
+  updateCheckCache.set(provider, updateAvailable)
+  return { provider, updateAvailable }
 }
 
 /**
@@ -246,21 +285,9 @@ export async function syncTypingDataset(
   // so drop the old downloads; they re-fetch on demand against the new base.
   await clearDownloadedLanguages()
 
+  // The update is applied, so the session no longer has one pending.
+  updateCheckCache.set(provider, false)
+
   log('info', `Typing dataset ${provider}: updated ${current.version} -> ${fresh.version}`)
   return { provider, changed: true, fromVersion: current.version, toVersion: fresh.version }
-}
-
-/**
- * Fire-and-forget startup hook (wired in `main/index.ts` via
- * `app.whenReady()`). Checks the default provider's version against the Hub
- * in the background; never blocks startup and swallows all errors.
- */
-export function startTypingDatasetStartupSync(): void {
-  void syncTypingDataset()
-    .then((r) => {
-      if (r.changed) log('info', `Typing dataset startup sync: ${r.fromVersion} -> ${String(r.toVersion)}`)
-    })
-    .catch((err: unknown) => {
-      log('warn', `Typing dataset startup sync threw: ${err instanceof Error ? err.message : String(err)}`)
-    })
 }
