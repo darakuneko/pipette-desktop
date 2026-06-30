@@ -20,11 +20,11 @@ interface Props {
 
 const MAX_PINNABLE = 100
 
-function toggleClass(active: boolean): string {
-  const base = 'flex h-8 w-full items-center justify-center rounded-md border px-3 text-sm transition-colors'
-  if (active) return `${base} border-accent bg-accent/10 text-accent`
-  return `${base} border-edge text-content-secondary hover:text-content`
-}
+// Compare opens a modal — a dialog trigger, not a stateful toggle — so it keeps
+// a single static style; the active baseline is conveyed by the button text
+// ("Compare - <baseline>") rather than an accent highlight.
+const COMPARE_BUTTON_CLASS =
+  'flex h-8 w-full items-center justify-center rounded-md border border-edge px-3 text-sm text-content-secondary transition-colors hover:text-content'
 
 export function ComparisonToggle({ pool, baseline, onChange }: Props) {
   const { t } = useTranslation()
@@ -66,14 +66,12 @@ export function ComparisonToggle({ pool, baseline, onChange }: Props) {
       <button
         type="button"
         data-testid="typing-test-comparison-toggle"
-        // Accent-highlight whenever comparison is active (any baseline but
-        // 'off'), mirroring the View toggles, so the button reflects on/off
-        // state rather than just whether the modal is open.
-        className={toggleClass(baseline.kind !== 'off')}
-        aria-pressed={baseline.kind !== 'off'}
+        className={COMPARE_BUTTON_CLASS}
+        aria-haspopup="dialog"
+        aria-expanded={open}
         onClick={openModal}
       >
-        {t('editor.typingTest.compare.button')}
+        {`${t('editor.typingTest.compare.button')} - ${t(`editor.typingTest.compare.${baseline.kind}`)}`}
       </button>
       {open && (
         <div
