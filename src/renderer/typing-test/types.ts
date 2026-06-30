@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-export type TypingTestMode = 'words' | 'time' | 'quote' | 'custom'
+export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport'
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
 
 export type TypingTestConfig =
@@ -9,7 +9,7 @@ export type TypingTestConfig =
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
-  | { mode: 'custom'; textId: string }
+  | { mode: 'fileImport'; textId: string }
 
 export interface Quote {
   id: number
@@ -22,7 +22,7 @@ export const WORD_COUNT_OPTIONS = [15, 30, 60, 120] as const
 export const TIME_DURATION_OPTIONS = [15, 30, 60, 120] as const
 export const DEFAULT_LANGUAGE = 'english'
 
-// Imported custom-text display preferences (custom mode only).
+// Imported file-import-text display preferences (fileImport mode only).
 export const DISPLAY_LINES_MIN = 2
 export const DISPLAY_LINES_MAX = 10
 export const DEFAULT_DISPLAY_LINES = 4

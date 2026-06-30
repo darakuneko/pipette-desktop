@@ -19,12 +19,12 @@ export interface TypingTestResult {
   incorrectChars: number
   durationSeconds: number
   rawWpm?: number
-  mode?: 'words' | 'time' | 'quote' | 'custom'
+  mode?: 'words' | 'time' | 'quote' | 'fileImport'
   mode2?: number | string
-  /** Human-readable imported-text name, snapshotted at test time (custom
+  /** Human-readable imported-text name, snapshotted at test time (fileImport
    *  mode only). `mode2` keeps the stable textId for PB grouping; this is
    *  what History shows so the row isn't an opaque id. */
-  customTextName?: string
+  fileImportTextName?: string
   language?: string
   punctuation?: boolean
   numbers?: boolean
@@ -160,14 +160,14 @@ export const DEFAULT_PIPETTE_SETTINGS: PipetteSettings = {
   layerNames: [],
 }
 
-/** Serializable per-word result for resuming a paused custom typing test. */
+/** Serializable per-word result for resuming a paused fileImport typing test. */
 export interface TypingTestMemoryWord {
   word: string
   typed: string
   correct: boolean
 }
 
-/** Snapshot of an in-progress imported (custom) typing test, persisted so
+/** Snapshot of an in-progress imported (fileImport) typing test, persisted so
  * the user can pause and resume later. One slot per keyboard. Words and
  * line breaks are regenerated from `textId`, so only progress is stored. */
 export interface TypingTestMemory {
@@ -195,14 +195,14 @@ export interface PipetteSettings {
   layerNames: string[]
   typingTestResults?: TypingTestResult[]
   typingTestConfig?: Record<string, unknown>
-  /** Last words/time/quote config, restored when switching back from custom
+  /** Last words/time/quote config, restored when switching back from fileImport
    *  (imported text) so normal-mode Pattern/Units/Option settings survive. */
   typingTestNormalConfig?: Record<string, unknown>
   typingTestLanguage?: string
   typingTestViewOnly?: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
   typingTestViewOnlyAlwaysOnTop?: boolean
-  /** Paused custom typing-test snapshot (memory mode). Cleared on finish,
+  /** Paused fileImport typing-test snapshot (memory mode). Cleared on finish,
    * "start over", text change, or device switch. */
   typingTestMemory?: TypingTestMemory
   /** Imported-text display: visible line count (2–10, default 4). */

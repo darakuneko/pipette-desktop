@@ -235,7 +235,7 @@ describe('LanguageSelectorModal', () => {
     render(
       <LanguageSelectorModal
         currentLanguage="english"
-        currentCustomTextId="x"
+        currentFileImportTextId="x"
         onSelectLanguage={vi.fn()}
         onSelectImport={vi.fn()}
         onCurrentTextDeleted={onCurrentTextDeleted}
@@ -243,7 +243,7 @@ describe('LanguageSelectorModal', () => {
       />,
     )
 
-    // Modal opens on the Import tab because a custom text is selected.
+    // Modal opens on the Import tab because a fileImport text is selected.
     await waitFor(() => expect(screen.getByTestId('typing-text-delete-x')).toBeInTheDocument())
     fireEvent.click(screen.getByTestId('typing-text-delete-x'))
     await waitFor(() => expect(window.vialAPI.typingTestTextStoreDelete).toHaveBeenCalledWith('x'))

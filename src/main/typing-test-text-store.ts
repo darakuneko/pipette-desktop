@@ -17,7 +17,7 @@ import type {
 } from '../shared/types/typing-test-text-store'
 import {
   TYPING_TEST_TEXT_MAX_FILE_BYTES,
-  normalizeCustomText,
+  normalizeFileImportText,
 } from '../shared/types/typing-test-text-store'
 
 export const TYPING_TEST_TEXT_SYNC_UNIT = 'typing-test-texts'
@@ -146,7 +146,7 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
   if (!validated.success || validated.data === undefined) return validated as TypingTestTextStoreResult<TypingTestTextMeta>
   const name = validated.data
 
-  const { text, wordCount } = normalizeCustomText(typeof input.text === 'string' ? input.text : '')
+  const { text, wordCount } = normalizeFileImportText(typeof input.text === 'string' ? input.text : '')
   if (wordCount === 0) return fail('EMPTY_TEXT', 'Text has no typeable words')
 
   try {

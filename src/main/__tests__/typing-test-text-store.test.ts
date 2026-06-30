@@ -42,7 +42,7 @@ import {
   confirmImportOverwrite,
   TYPING_TEST_TEXT_SYNC_UNIT,
 } from '../typing-test-text-store'
-import { parseCustomText, normalizeCustomText, TYPING_TEST_TEXT_MAX_WORDS } from '../../shared/types/typing-test-text-store'
+import { parseFileImportText, normalizeFileImportText, TYPING_TEST_TEXT_MAX_WORDS } from '../../shared/types/typing-test-text-store'
 
 const fakeWin = {} as Electron.BrowserWindow
 
@@ -56,38 +56,38 @@ describe('typing-test-text-store', () => {
     await rm(mockUserDataPath, { recursive: true, force: true })
   })
 
-  describe('parseCustomText', () => {
+  describe('parseFileImportText', () => {
     it('collapses intra-line whitespace and keeps single-line as no breaks', () => {
-      expect(parseCustomText('  the  quick\t fox ')).toEqual({ words: ['the', 'quick', 'fox'], lineBreaks: [], indents: ['  '] })
+      expect(parseFileImportText('  the  quick\t fox ')).toEqual({ words: ['the', 'quick', 'fox'], lineBreaks: [], indents: ['  '] })
     })
 
     it('treats newline as a line break distinct from space', () => {
       // "the quick" / "brown fox": break after index 1, none after the last word.
-      expect(parseCustomText('the quick\nbrown fox')).toEqual({ words: ['the', 'quick', 'brown', 'fox'], lineBreaks: [1], indents: ['', ''] })
+      expect(parseFileImportText('the quick\nbrown fox')).toEqual({ words: ['the', 'quick', 'brown', 'fox'], lineBreaks: [1], indents: ['', ''] })
     })
 
     it('normalizes CRLF/CR and drops empty lines', () => {
-      expect(parseCustomText('a\r\n\r\nb\rc')).toEqual({ words: ['a', 'b', 'c'], lineBreaks: [0, 1], indents: ['', '', ''] })
+      expect(parseFileImportText('a\r\n\r\nb\rc')).toEqual({ words: ['a', 'b', 'c'], lineBreaks: [0, 1], indents: ['', '', ''] })
     })
 
     it('caps at the word limit', () => {
       const many = Array.from({ length: TYPING_TEST_TEXT_MAX_WORDS + 50 }, (_, i) => `w${i}`).join(' ')
-      expect(parseCustomText(many).words).toHaveLength(TYPING_TEST_TEXT_MAX_WORDS)
+      expect(parseFileImportText(many).words).toHaveLength(TYPING_TEST_TEXT_MAX_WORDS)
     })
   })
 
-  describe('normalizeCustomText', () => {
+  describe('normalizeFileImportText', () => {
     it('canonicalizes with single spaces in a line and newline at breaks', () => {
-      expect(normalizeCustomText('the  quick\nbrown   fox')).toEqual({ text: 'the quick\nbrown fox', wordCount: 4 })
+      expect(normalizeFileImportText('the  quick\nbrown   fox')).toEqual({ text: 'the quick\nbrown fox', wordCount: 4 })
     })
 
     it('preserves leading indentation per line (code structure)', () => {
-      expect(normalizeCustomText('def f() {\n  val x = 1\n}')).toEqual({ text: 'def f() {\n  val x = 1\n}', wordCount: 8 })
+      expect(normalizeFileImportText('def f() {\n  val x = 1\n}')).toEqual({ text: 'def f() {\n  val x = 1\n}', wordCount: 8 })
     })
 
-    it('round-trips through parseCustomText', () => {
-      const { text } = normalizeCustomText('a b\nc\n\nd e f')
-      expect(parseCustomText(text)).toEqual(parseCustomText('a b\nc\n\nd e f'))
+    it('round-trips through parseFileImportText', () => {
+      const { text } = normalizeFileImportText('a b\nc\n\nd e f')
+      expect(parseFileImportText(text)).toEqual(parseFileImportText('a b\nc\n\nd e f'))
     })
   })
 

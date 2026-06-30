@@ -16,7 +16,7 @@ import { ResultNameModal } from './ResultNameModal'
 interface Props {
   state: TypingTestState
   wpm: number
-  /** Keystrokes per minute — shown instead of WPM in custom mode. */
+  /** Keystrokes per minute — shown instead of WPM in fileImport mode. */
   kpm?: number
   accuracy: number
   elapsedSeconds: number
@@ -40,22 +40,22 @@ interface Props {
   /** Called when Space is input via IME (keydown swallowed by the IME layer). */
   onImeSpaceKey?: () => void
   /** Imported-text display: visible line count + font size (px). Ignored
-   *  outside custom mode. */
+   *  outside fileImport mode. */
   displayLines?: number
   fontSize?: number
   /** Name the just-finished result inline from the completion screen
-   *  (imported custom text only). Keyed to the most recent saved result. */
+   *  (imported fileImport text only). Keyed to the most recent saved result. */
   onNameResult?: (name: string) => void
   /** Quick-insert chips for the result-name modal (material label, timestamp,
    *  WPM / KPM / Accuracy of the just-finished result). */
   resultNameChips?: string[]
   /** Start a fresh run (Next Test / Restart — both restart the test). */
   onStart?: () => void
-  /** Memory mode (imported custom text): pause the running run. */
+  /** Memory mode (imported fileImport text): pause the running run. */
   onPause?: () => void
   /** Memory mode: open the resume dialog for a paused / saved run. */
   onResume?: () => void
-  /** A paused custom run is saved and can be resumed. */
+  /** A paused fileImport run is saved and can be resumed. */
   hasSavedMemory?: boolean
 }
 
@@ -66,7 +66,7 @@ function formatTime(seconds: number): string {
 }
 
 /** Group flat word indices into logical lines using the line-break set
- *  (imported custom text). Each entry is the global word indices of one
+ *  (imported fileImport text). Each entry is the global word indices of one
  *  line, in order. */
 function groupIntoLines(words: string[], lineBreaks: Set<number>): number[][] {
   const lines: number[][] = []
@@ -125,7 +125,7 @@ export function TypingTestView({
   // Guard: prevent duplicate space submission when both keydown and input fire
   const lastSpaceTimeRef = useRef(0)
 
-  // Imported custom text (line breaks present) renders as explicit line
+  // Imported fileImport text (line breaks present) renders as explicit line
   // rows; every other mode keeps the flat word-flow layout. `null` = flat.
   const lines = useMemo(
     () => (state.lineBreaks.size > 0 ? groupIntoLines(state.words, state.lineBreaks) : null),
@@ -133,28 +133,28 @@ export function TypingTestView({
   )
   // Reading window: font size + line count drive the CSS calc in
   // .typing-multiline-window. Applied to every mode (normal word-flow and
-  // imported custom text share the same Font/Line settings). Memoized so the
+  // imported fileImport text share the same Font/Line settings). Memoized so the
   // style object is stable.
   const multilineStyle = useMemo(
     () => ({ '--tt-font': fontSize, '--tt-lines': displayLines } as CSSProperties),
     [fontSize, displayLines],
   )
 
-  // Imported custom text counts progress by character (spaces included): each
+  // Imported fileImport text counts progress by character (spaces included): each
   // word-gap is one separator char, so total = Σ word lengths + (words - 1).
   // Gated on the mode (not `lines`) so single-line imports count chars too.
-  const isCustom = config.mode === 'custom'
+  const isFileImport = config.mode === 'fileImport'
   const totalChars = useMemo(
-    () => (isCustom ? state.words.reduce((sum, w) => sum + w.length, 0) + Math.max(0, state.words.length - 1) : 0),
-    [isCustom, state.words],
+    () => (isFileImport ? state.words.reduce((sum, w) => sum + w.length, 0) + Math.max(0, state.words.length - 1) : 0),
+    [isFileImport, state.words],
   )
   const typedChars = useMemo(() => {
-    if (!isCustom) return 0
+    if (!isFileImport) return 0
     let sum = state.currentInput.length
     for (let i = 0; i < state.currentWordIndex && i < state.words.length; i++) sum += state.words[i].length
     sum += Math.min(state.currentWordIndex, Math.max(0, state.words.length - 1)) // separators passed
     return Math.min(sum, totalChars)
-  }, [isCustom, state.words, state.currentWordIndex, state.currentInput, totalChars])
+  }, [isFileImport, state.words, state.currentWordIndex, state.currentInput, totalChars])
 
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
@@ -187,7 +187,7 @@ export function TypingTestView({
     const container = wordsRef.current
     if (!container) return
 
-    // Imported custom text: align to real line-row elements (never clipped).
+    // Imported fileImport text: align to real line-row elements (never clipped).
     // Prefer the previous line at the top for context — but if a wrapped line
     // (one logical line spanning several visual rows) would push the current
     // line out of view, snap the current line to the top so what's being typed
@@ -249,7 +249,7 @@ export function TypingTestView({
   return (
     <div data-testid="typing-test-view" className="flex w-full min-w-0 flex-col items-center gap-4 px-4 py-4">
       {/* Word display — fixed window with scroll. Word-flow modes show a
-          3-line window; imported custom text shows 4 lines (line-row layout). */}
+          3-line window; imported fileImport text shows 4 lines (line-row layout). */}
       <div
         data-testid="typing-test-words"
         className="relative w-full max-w-4xl font-mono leading-normal typing-multiline-window"
@@ -304,7 +304,7 @@ export function TypingTestView({
         {state.status !== 'countdown' && state.words.length > 0 && (
           <div ref={wordsRef} className="h-full overflow-hidden">
             {lines ? (
-              // Imported custom text: one row per logical line, ⏎ marks the
+              // Imported fileImport text: one row per logical line, ⏎ marks the
               // line ends where Enter (not Space) advances.
               lines.map((lineWordIdxs, lineIdx) => (
                 <div key={lineIdx} data-line-row={lineIdx} className="flex flex-wrap gap-x-3">
@@ -338,9 +338,9 @@ export function TypingTestView({
 
       {/* State-based controls row, below the reading window:
           - not started (waiting / countdown): Next Test (+ Resume if a run is
-            saved for imported custom text)
-          - in progress (running / paused): Pause or Resume (custom) + Restart
-          - finished: result name (custom) + Next Test
+            saved for imported fileImport text)
+          - in progress (running / paused): Pause or Resume (fileImport) + Restart
+          - finished: result name (fileImport) + Next Test
           Next Test and Restart share the same action; only the label differs. */}
       {state.status === 'finished' && (
         <p data-testid="typing-test-complete" className="flex items-center gap-1.5 text-lg font-semibold text-accent">
@@ -352,7 +352,7 @@ export function TypingTestView({
           always shows it so the result can be named and the next test started. */}
       {(!hideControls || state.status === 'finished') && (
       <div className="flex items-center gap-2">
-        {config.mode === 'custom' && (
+        {config.mode === 'fileImport' && (
           state.status === 'running' ? (
             <button
               type="button"
@@ -444,13 +444,13 @@ export function TypingTestView({
             </span>
           </div>
           <div className="flex items-baseline gap-1.5">
-            {/* Imported custom text tracks character progress (spaces included);
+            {/* Imported fileImport text tracks character progress (spaces included);
                 everything else tracks words. */}
-            <span className="text-content-muted">{t(isCustom ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
+            <span className="text-content-muted">{t(isFileImport ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
             <span data-testid="typing-test-word-count" className="font-mono text-lg font-semibold tabular-nums">
               {!showStats
                 ? '-'
-                : isCustom
+                : isFileImport
                 ? t('editor.typingTest.wordCount', { current: typedChars, total: totalChars })
                 : t('editor.typingTest.wordCount', {
                     current: state.currentWordIndex,
@@ -484,7 +484,7 @@ function ComparisonDelta({ current, baseline, suffix, testid }: { current: numbe
   )
 }
 
-/** Name for the just-finished result (imported custom text). A button showing
+/** Name for the just-finished result (imported fileImport text). A button showing
  *  the current name (or the "Unnamed" placeholder) with an edit icon; clicking
  *  opens the naming modal with quick-insert chips. Mounted with a per-test
  *  `key`, so the draft starts empty for a fresh result. */

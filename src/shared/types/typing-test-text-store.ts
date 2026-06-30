@@ -65,7 +65,7 @@ export const TYPING_TEST_TEXT_MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 /** Max stored words per imported text. Excess is truncated on import. */
 export const TYPING_TEST_TEXT_MAX_WORDS = 5000
 
-export interface ParsedCustomText {
+export interface ParsedFileImportText {
   /** Words in original order (space- and newline-separated, flattened). */
   words: string[]
   /** Indices of words that END a line — a newline follows them, so the
@@ -86,7 +86,7 @@ export interface ParsedCustomText {
  * Shared by the main store (canonicalize on import) and the renderer
  * (verbatim playback) so the two never disagree on words or break points.
  */
-export function parseCustomText(text: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): ParsedCustomText {
+export function parseFileImportText(text: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): ParsedFileImportText {
   const lines = text
     .replace(/\r\n?/g, '\n')
     .split('\n')
@@ -122,10 +122,10 @@ export function parseCustomText(text: string, maxWords: number = TYPING_TEST_TEX
 /**
  * Canonicalize raw imported text for storage: words joined by a single
  * space within a line and a newline at each line break. Round-trips
- * through `parseCustomText` so storage and playback agree exactly.
+ * through `parseFileImportText` so storage and playback agree exactly.
  */
-export function normalizeCustomText(raw: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): { text: string; wordCount: number } {
-  const { words, lineBreaks, indents } = parseCustomText(raw, maxWords)
+export function normalizeFileImportText(raw: string, maxWords: number = TYPING_TEST_TEXT_MAX_WORDS): { text: string; wordCount: number } {
+  const { words, lineBreaks, indents } = parseFileImportText(raw, maxWords)
   const breakSet = new Set(lineBreaks)
   let text = ''
   let lineIdx = 0

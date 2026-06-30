@@ -3,7 +3,7 @@
 // Renderer-side state for imported Typing Test texts: list local
 // entries and CRUD against the store. Mirrors useKeyLabels' cross-
 // instance refresh signal so the modal and any other consumer stay in
-// lockstep. Also clears the word-generator custom-text cache on change
+// lockstep. Also clears the word-generator file-import-text cache on change
 // so freshly imported / renamed text plays back correctly.
 
 import { useCallback, useEffect, useState } from 'react'
@@ -11,7 +11,7 @@ import type {
   TypingTestTextMeta,
   TypingTestTextStoreResult,
 } from '../../shared/types/typing-test-text-store'
-import { clearCustomTextCache } from '../typing-test/word-generator'
+import { clearFileImportTextCache } from '../typing-test/word-generator'
 
 const REFRESH_EVENT = 'pipette:typing-test-texts-changed'
 
@@ -71,7 +71,7 @@ export function useTypingTestTexts(): UseTypingTestTextsReturn {
   const importFromFile = useCallback(async (): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> => {
     const result = await window.vialAPI.typingTestTextStoreImport()
     if (result.success) {
-      if (result.data) clearCustomTextCache(result.data.id)
+      if (result.data) clearFileImportTextCache(result.data.id)
       await refresh()
       emitTypingTestTextsChanged()
     }
@@ -81,7 +81,7 @@ export function useTypingTestTexts(): UseTypingTestTextsReturn {
   const confirmImport = useCallback(async (): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> => {
     const result = await window.vialAPI.typingTestTextStoreImportConfirm()
     if (result.success) {
-      if (result.data) clearCustomTextCache(result.data.id)
+      if (result.data) clearFileImportTextCache(result.data.id)
       await refresh()
       emitTypingTestTextsChanged()
     }
@@ -94,7 +94,7 @@ export function useTypingTestTexts(): UseTypingTestTextsReturn {
   ): Promise<TypingTestTextStoreResult<TypingTestTextMeta>> => {
     const result = await window.vialAPI.typingTestTextStoreRename(id, newName)
     if (result.success) {
-      clearCustomTextCache(id)
+      clearFileImportTextCache(id)
       await refresh()
       emitTypingTestTextsChanged()
     }
@@ -104,7 +104,7 @@ export function useTypingTestTexts(): UseTypingTestTextsReturn {
   const remove = useCallback(async (id: string): Promise<TypingTestTextStoreResult<void>> => {
     const result = await window.vialAPI.typingTestTextStoreDelete(id)
     if (result.success) {
-      clearCustomTextCache(id)
+      clearFileImportTextCache(id)
       await refresh()
       emitTypingTestTextsChanged()
     }

@@ -299,7 +299,7 @@
         "words": "words",
         "time": "time",
         "quote": "quote",
-        "custom": "text"
+        "fileImport": "text"
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
@@ -374,7 +374,7 @@
         "loadingLanguage": "Loading language...",
         "downloadFailed": "Download failed",
         "tabNormal": "Normal",
-        "tabCustom": "Custom",
+        "tabFileImport": "File Import",
         "import": "Import UTF-8 text file",
         "importEmpty": "No imported texts yet",
         "importFailed": "Import failed",
@@ -383,7 +383,7 @@
         "importErrorEmpty": "The file has no typeable text",
         "importOverwritePrompt": "\"{{name}}\" already exists. Overwrite?",
         "confirmOverwrite": "Overwrite",
-        "customText": "Imported text"
+        "fileImportText": "Imported text"
       },
       "memory": {
         "pause": "Pause",
@@ -405,7 +405,7 @@
         "unnamed": "Unnamed",
         "mode": "Mode",
         "tabNormal": "Normal",
-        "tabCustom": "Custom",
+        "tabFileImport": "File Import",
         "tabText": "Text",
         "noResults": "No results yet",
         "pb": "PB",

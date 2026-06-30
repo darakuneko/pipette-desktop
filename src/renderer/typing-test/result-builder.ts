@@ -20,20 +20,20 @@ export function computeConsistency(wpmHistory: number[]): number {
 }
 
 /** The single source of truth for the analytics `typing_test` material
- *  label: custom → the imported text name, every other mode →
+ *  label: fileImport → the imported text name, every other mode →
  *  `mode (language)`. Both the recording side (`typingTestAnalyticsLabel`
  *  in useInputModes) and the Analyze run filter
  *  (`typingTestResultMaterialLabel`) funnel through this so the join key
  *  stays byte-identical on both ends. */
-export function materialLabel(mode: string, language: string, customName: string | undefined): string {
-  if (mode === 'custom') return customName ?? 'custom'
+export function materialLabel(mode: string, language: string, fileImportName: string | undefined): string {
+  if (mode === 'fileImport') return fileImportName ?? 'fileImport'
   return `${mode} (${language})`
 }
 
 /** The material label a finished result was recorded under — used by the
  *  Analyze run filter to match a History row to its keystrokes. */
 export function typingTestResultMaterialLabel(result: TypingTestResult): string {
-  return materialLabel(result.mode ?? 'words', result.language ?? '', result.customTextName)
+  return materialLabel(result.mode ?? 'words', result.language ?? '', result.fileImportTextName)
 }
 
 /** Keystrokes per minute, derived from the stored char count and duration so
@@ -92,7 +92,7 @@ export function deriveMode2(config: TypingTestConfig): number | string {
       return config.duration
     case 'quote':
       return config.quoteLength
-    case 'custom':
+    case 'fileImport':
       // Group PBs per imported text via its id.
       return config.textId
   }
@@ -108,8 +108,8 @@ export interface BuildTypingTestResultInput {
   config: TypingTestConfig
   language: string
   wpmHistory: number[]
-  /** Imported-text display name (custom mode); ignored for other modes. */
-  customTextName?: string
+  /** Imported-text display name (fileImport mode); ignored for other modes. */
+  fileImportTextName?: string
   /** Run id of the finished run, linking History to analytics keystrokes. */
   runId?: string
 }
@@ -134,7 +134,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     rawWpm,
     mode: input.config.mode,
     mode2: deriveMode2(input.config),
-    customTextName: input.config.mode === 'custom' ? input.customTextName : undefined,
+    fileImportTextName: input.config.mode === 'fileImport' ? input.fileImportTextName : undefined,
     language: input.language,
     punctuation: hasPunctuation,
     numbers: hasNumbers,

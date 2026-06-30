@@ -11,7 +11,7 @@ import { parseMatrixState, POLL_INTERVAL } from './matrix-utils'
 import { PROCESS_CODE_TO_KEY } from './keymap-editor-types'
 
 /** Analytics `typing_test` dimension label for the running test: the
- *  imported text's name for custom, else `mode (language)` (e.g.
+ *  imported text's name for fileImport, else `mode (language)` (e.g.
  *  `words (english)`) so Analyze can slice normal runs by language too.
  *  Delegates to `materialLabel` so the recording side and the Analyze run
  *  filter produce the identical join key. */
@@ -75,7 +75,7 @@ export interface UseInputModesReturn {
   /** Name the just-finished result: persists a held unsaved result under the
    *  name (save-unnamed off; blank → discarded) or renames the saved latest. */
   nameFinishedResult: (name: string) => void
-  /** Memory mode (imported custom text). */
+  /** Memory mode (imported fileImport text). */
   savedTypingTestMemory?: TypingTestMemory
   pauseTypingTest: () => void
   resumeTypingTest: () => void
@@ -237,13 +237,13 @@ export function useInputModes({
   const lastSyncedConfigRef = useRef('')
 
   /** Enter the typing test. When a paused snapshot is saved for the active
-   *  custom text, restore it frozen ('paused') so the user must choose
+   *  fileImport text, restore it frozen ('paused') so the user must choose
    *  resume / restart before typing; otherwise start a fresh test. */
   const beginTypingTest = useCallback((withCountdown: boolean) => {
     enterMatrixMode()
     const mem = savedMemoryRef.current
     const cfg = savedConfigRef.current
-    if (mem && cfg?.mode === 'custom' && cfg.textId === mem.textId) {
+    if (mem && cfg?.mode === 'fileImport' && cfg.textId === mem.textId) {
       // Pre-mark the config as synced so the config-sync effect doesn't
       // clobber the restored snapshot with a fresh test.
       lastSyncedConfigRef.current = JSON.stringify(cfg)
@@ -300,7 +300,7 @@ export function useInputModes({
   // only while it is actually running. Entering the test view auto-starts a
   // countdown on the default ('words') config; tagging keystrokes before the
   // run starts would record a phantom material (e.g. `words (english)`) for
-  // presses made during countdown / waiting or before the user picks a custom
+  // presses made during countdown / waiting or before the user picks a fileImport
   // text. Gating on 'running' guarantees the config has settled to the chosen
   // material before anything is recorded. Trade-off: the keystroke that starts
   // the run (waiting -> running) and the matrix edge of the key that ends it
@@ -383,7 +383,7 @@ export function useInputModes({
         config: typingTest.config,
         language: typingTest.language,
         wpmHistory: typingTest.state.wpmHistory,
-        customTextName: typingTest.config.mode === 'custom' ? typingTest.state.currentQuote?.source : undefined,
+        fileImportTextName: typingTest.config.mode === 'fileImport' ? typingTest.state.currentQuote?.source : undefined,
         runId: typingTest.state.runId,
       })
       result.isPb = isPbForConfig(result, typingTestHistory ?? [])
@@ -457,7 +457,7 @@ export function useInputModes({
   const handleTypingTestConfigChange = useCallback((newConfig: TypingTestConfig) => {
     // Starting a different imported text discards the saved snapshot.
     const mem = savedMemoryRef.current
-    if (mem && newConfig.mode === 'custom' && newConfig.textId !== mem.textId) {
+    if (mem && newConfig.mode === 'fileImport' && newConfig.textId !== mem.textId) {
       onMemoryChangeRef.current?.(undefined)
     }
     typingTest.setConfig(newConfig)
