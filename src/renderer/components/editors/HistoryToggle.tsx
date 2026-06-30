@@ -8,7 +8,7 @@ import { ModalCloseButton } from './ModalCloseButton'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 
 function historyToggleClass(active: boolean): string {
-  const base = 'inline-flex h-8 items-center rounded-md border px-3 text-sm transition-colors'
+  const base = 'flex h-8 w-full items-center justify-center rounded-md border px-3 text-sm transition-colors'
   if (active) return `${base} border-accent bg-accent/10 text-accent`
   return `${base} border-edge text-content-secondary hover:text-content`
 }
