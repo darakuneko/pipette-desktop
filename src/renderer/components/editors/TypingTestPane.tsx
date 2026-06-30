@@ -39,8 +39,40 @@ function PanelSection({ title, children }: { title: string; children: ReactNode 
     </section>
   )
 }
+
+// Full-width switch row: label on the left, a track/knob toggle on the right —
+// reused by the View visibility toggles and the Data "Save Unnamed" setting.
+// The accessible name is the fixed label; `title` carries the state-dependent
+// show/hide hint for the hover tooltip (the on/off state is read from
+// `aria-checked`, so it must not be baked into the accessible name).
+function ToggleRow({ label, on, onToggle, title, testid }: {
+  label: string
+  on: boolean
+  onToggle: () => void
+  title: string
+  testid: string
+}) {
+  return (
+    <div className={`${ROW_CLASS} w-full`} data-testid={`${testid}-row`}>
+      <span className="min-w-0 truncate text-sm font-medium text-content">{label}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        title={title}
+        className={`${toggleTrackClass(on)} shrink-0`}
+        onClick={onToggle}
+        data-testid={testid}
+      >
+        <span className={toggleKnobClass(on)} />
+      </button>
+    </div>
+  )
+}
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
+import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
 import type { AnalyticsOrigin } from './keymap-editor-types'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 
@@ -609,56 +641,40 @@ export function TypingTestPane({
         />
         {/* Save Unnamed — when on (default), a finished result is auto-saved
             even without a name; when off, only named results are kept. */}
-        <button
-          type="button"
-          data-testid="typing-test-toggle-save-unnamed"
-          aria-pressed={saveUnnamed}
+        <ToggleRow
+          testid="typing-test-toggle-save-unnamed"
+          label={t('editor.typingTest.saveUnnamedToggle')}
+          on={saveUnnamed}
+          onToggle={() => onToggleSaveUnnamed?.(!saveUnnamed)}
           title={t(saveUnnamed ? 'editor.typingTest.disableSaveUnnamed' : 'editor.typingTest.enableSaveUnnamed')}
-          aria-label={t(saveUnnamed ? 'editor.typingTest.disableSaveUnnamed' : 'editor.typingTest.enableSaveUnnamed')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${saveUnnamed ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleSaveUnnamed?.(!saveUnnamed)}
-        >
-          {t('editor.typingTest.saveUnnamedToggle')}
-        </button>
+        />
       </PanelSection>
 
-      {/* Show — toggles ordered top-to-bottom to match the editor layout:
+      {/* View — toggles ordered top-to-bottom to match the editor layout:
           operation (controls row) → measurement (stats row) → keymap pane.
-          Accent highlight marks the visible (active) state. */}
-      <PanelSection title={t('editor.typingTest.section.show')}>
-        <button
-          type="button"
-          data-testid="typing-test-toggle-controls"
-          aria-pressed={!hideControls}
+          The switch is on when the section is visible. */}
+      <PanelSection title={t('editor.typingTest.section.view')}>
+        <ToggleRow
+          testid="typing-test-toggle-controls"
+          label={t('editor.typingTest.controlsToggle')}
+          on={!hideControls}
+          onToggle={() => onToggleHideControls?.(!hideControls)}
           title={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
-          aria-label={t(hideControls ? 'editor.typingTest.showControls' : 'editor.typingTest.hideControls')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideControls ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleHideControls?.(!hideControls)}
-        >
-          {t('editor.typingTest.controlsToggle')}
-        </button>
-        <button
-          type="button"
-          data-testid="typing-test-toggle-stats"
-          aria-pressed={!hideStatsRow}
+        />
+        <ToggleRow
+          testid="typing-test-toggle-stats"
+          label={t('editor.typingTest.statsToggle')}
+          on={!hideStatsRow}
+          onToggle={() => onToggleHideStatsRow?.(!hideStatsRow)}
           title={t(hideStatsRow ? 'editor.typingTest.showStats' : 'editor.typingTest.hideStats')}
-          aria-label={t(hideStatsRow ? 'editor.typingTest.showStats' : 'editor.typingTest.hideStats')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideStatsRow ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleHideStatsRow?.(!hideStatsRow)}
-        >
-          {t('editor.typingTest.statsToggle')}
-        </button>
-        <button
-          type="button"
-          data-testid="typing-test-toggle-keymap"
-          aria-pressed={!hideKeymap}
+        />
+        <ToggleRow
+          testid="typing-test-toggle-keymap"
+          label={t('editor.typingTest.keymapToggle')}
+          on={!hideKeymap}
+          onToggle={() => onToggleHideKeymap?.(!hideKeymap)}
           title={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          aria-label={t(hideKeymap ? 'editor.typingTest.showKeymap' : 'editor.typingTest.hideKeymap')}
-          className={`flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors ${!hideKeymap ? 'border-accent bg-accent/10 text-accent' : 'border-edge text-content-secondary hover:text-content'}`}
-          onClick={() => onToggleHideKeymap?.(!hideKeymap)}
-        >
-          {t('editor.typingTest.keymapToggle')}
-        </button>
+        />
       </PanelSection>
       </div>
       )}
