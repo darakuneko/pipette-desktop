@@ -101,13 +101,19 @@ export async function upsertKeyboardMeta(
   })
 }
 
-/** Record `deviceName` for `uid` only when the index has NO entry for it yet.
- *  Used at connect time to name keyboards that never saved a keymap snapshot,
- *  without overwriting a name the user set or reviving a tombstone they deleted
- *  (and without churning the index on every reconnect). The presence check and
- *  the write share one lock so a concurrent writer can't be clobbered. Same
- *  'unchanged' | 'upserted' contract as {@link upsertKeyboardMeta}. */
-export async function upsertKeyboardMetaIfMissing(
+/** Name a keyboard from its firmware `deviceName` at connect time.
+ *  - No entry yet → record the name.
+ *  - Tombstoned entry → revive it with the firmware name. The physical
+ *    keyboard is present, so its name should resolve again — a tombstone
+ *    (e.g. left by a "Delete all"/reset) must not permanently block naming a
+ *    reconnected device.
+ *  - Active entry → left untouched, so a user's manual rename is never
+ *    clobbered and reconnects don't churn the index.
+ *
+ *  The presence check and the write share one lock so a concurrent writer
+ *  can't be clobbered. Same 'unchanged' | 'upserted' contract as
+ *  {@link upsertKeyboardMeta}. */
+export async function nameKeyboardOnConnect(
   uid: string,
   deviceName: string,
 ): Promise<'unchanged' | 'upserted'> {
@@ -115,10 +121,18 @@ export async function upsertKeyboardMetaIfMissing(
   if (!uid || !normalized) return 'unchanged'
   return withMetaWriteLock(async () => {
     const index = await readKeyboardMetaIndex()
-    // Any entry — active OR tombstoned — counts as "has a name decision";
-    // only a uid the index has never seen gets the connect-time name.
-    if (findEntry(index, uid)) return 'unchanged'
-    index.entries.push({ uid, deviceName: normalized, updatedAt: new Date().toISOString() })
+    const existing = findEntry(index, uid)
+    // Active entry → keep the (possibly user-renamed) name as-is.
+    if (existing && !existing.deletedAt) return 'unchanged'
+    const now = new Date().toISOString()
+    if (existing) {
+      // Revive a tombstone with the firmware name.
+      existing.deviceName = normalized
+      existing.updatedAt = now
+      delete existing.deletedAt
+    } else {
+      index.entries.push({ uid, deviceName: normalized, updatedAt: now })
+    }
     index.entries = gcKeyboardMetaTombstones(index.entries)
     await writeKeyboardMetaIndex(index)
     return 'upserted'
