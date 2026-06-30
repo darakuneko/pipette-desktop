@@ -23,9 +23,6 @@ interface Props {
   remainingSeconds: number | null
   config: TypingTestConfig
   paused: boolean
-  /** Max width for the reading window, matched to the keyboard below so the
-   *  typing text lines up with the keymap (px). */
-  readingMaxWidth?: number
   /** Hide the stats / results (WPM) row. Persisted per keyboard. */
   hideStatsRow?: boolean
   /** Hide the operation (Next Test button) controls row. Persisted per
@@ -100,7 +97,6 @@ export function TypingTestView({
   remainingSeconds,
   config,
   paused,
-  readingMaxWidth,
   hideStatsRow,
   hideControls,
   comparison,
@@ -253,7 +249,7 @@ export function TypingTestView({
       <div
         data-testid="typing-test-words"
         className="relative w-full max-w-4xl font-mono leading-normal typing-multiline-window"
-        style={{ ...multilineStyle, maxWidth: readingMaxWidth }}
+        style={multilineStyle}
         onClick={() => imeInputRef.current?.focus()}
       >
         {/* Hidden textarea for IME composition input */}
@@ -395,10 +391,9 @@ export function TypingTestView({
           hides the LIVE metrics during a run — once finished, the results
           always show. */}
       {(!hideStatsRow || state.status === 'finished') && (
-      // Not capped to readingMaxWidth (the keyboard width) like the reading
-      // window: the metrics row sits below the board and centres on the full
-      // available width, so all stats stay on one line instead of wrapping
-      // when the keyboard is narrower than the row.
+      // Centres on the full available (window-driven) width so all stats stay
+      // on one line instead of wrapping — independent of the keyboard width,
+      // like the reading window above.
       <div
         data-testid="typing-test-results"
         className="flex w-full flex-col items-center gap-2"
