@@ -58,7 +58,7 @@ import {
   tombstoneAllKeyboardMeta,
   tombstoneKeyboardMeta,
   upsertKeyboardMeta,
-  upsertKeyboardMetaIfMissing,
+  nameKeyboardOnConnect,
 } from './keyboard-meta'
 import { KEYBOARD_META_SYNC_UNIT } from '../../shared/types/keyboard-meta'
 import { I18N_SYNC_UNIT_PREFIX } from '../../shared/types/i18n-store'
@@ -270,10 +270,11 @@ export function setupSyncIpc(): void {
       }),
   )
 
-  // --- Name a keyboard on connect (only if it has no name yet) ---
+  // --- Name a keyboard on connect (names a new uid, revives a tombstone;
+  //     leaves an active/user-renamed entry untouched) ---
   secureHandle(IpcChannels.KEYBOARD_META_NAME_IF_MISSING, async (_event, uid: string, name: string): Promise<void> => {
     if (typeof uid !== 'string' || !isSafeKey(uid) || typeof name !== 'string') return
-    const result = await upsertKeyboardMetaIfMissing(uid, name)
+    const result = await nameKeyboardOnConnect(uid, name)
     if (result === 'upserted') notifyChange(KEYBOARD_META_SYNC_UNIT)
   })
 
