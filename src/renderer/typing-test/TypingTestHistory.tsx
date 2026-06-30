@@ -223,7 +223,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
             ))}
           </select>
         )}
-        {isText && customTexts.length > 1 && (
+        {isText && customTexts.length > 0 && (
           <select
             data-testid="history-filter-text"
             aria-label={t('editor.typingTest.history.filterText')}

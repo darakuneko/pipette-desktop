@@ -107,6 +107,21 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByText('65')).toBeNull()
   })
 
+  it('shows the Text-tab filter dropdown even with a single imported text', () => {
+    const results = [
+      makeResult({ wpm: 80, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
+    ]
+    renderWithI18n(<TypingTestHistory results={results} />)
+
+    // The Monkeytype tab never renders the text filter…
+    expect(screen.queryByTestId('history-filter-text')).toBeNull()
+
+    // …but the Text tab shows it as soon as one imported text exists, matching
+    // the always-present Normal mode filter.
+    fireEvent.click(screen.getByTestId('history-tab-text'))
+    expect(screen.getByTestId('history-filter-text')).toBeTruthy()
+  })
+
   it('sorts by WPM when clicking header', () => {
     const results = [
       makeResult({ wpm: 60, date: '2025-01-03T00:00:00Z' }),
@@ -236,7 +251,8 @@ describe('TypingTestHistory', () => {
     renderWithI18n(<TypingTestHistory results={results} />)
     // Custom rows live under the Text tab, not Monkeytype (the default).
     fireEvent.click(screen.getByTestId('history-tab-text'))
-    expect(screen.getByText('my-novel.txt')).toBeTruthy()
+    // The name shows in the table row (the dropdown also lists it as an option).
+    expect(screen.getByText('my-novel.txt', { selector: 'td' })).toBeTruthy()
     expect(screen.queryByText(/b286fff1/)).toBeNull()
   })
 
@@ -257,7 +273,8 @@ describe('TypingTestHistory', () => {
     expect(screen.queryByText('novel.txt')).toBeNull()
     // Text tab: custom result shown, words hidden.
     fireEvent.click(screen.getByTestId('history-tab-text'))
-    expect(screen.getByText('novel.txt')).toBeTruthy()
+    // The name shows in the table row (the dropdown also lists it as an option).
+    expect(screen.getByText('novel.txt', { selector: 'td' })).toBeTruthy()
     expect(screen.queryByText('81')).toBeNull()
   })
 
