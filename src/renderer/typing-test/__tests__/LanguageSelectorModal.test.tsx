@@ -18,6 +18,8 @@ beforeEach(() => {
     langGet: vi.fn().mockResolvedValue(null),
     langDownload: vi.fn().mockResolvedValue({ success: true }),
     langDelete: vi.fn().mockResolvedValue({ success: true }),
+    checkTypingDatasetUpdate: vi.fn().mockResolvedValue({ provider: 'monkeytype', updateAvailable: false }),
+    updateTypingDataset: vi.fn().mockResolvedValue({ provider: 'monkeytype', changed: false, fromVersion: '' }),
   } as unknown as typeof window.vialAPI
 })
 
@@ -34,6 +36,47 @@ describe('LanguageSelectorModal', () => {
     await waitFor(() => {
       expect(screen.getByTestId('language-search')).toBeInTheDocument()
     })
+    // No update by default → no banner.
+    expect(screen.queryByTestId('typing-dataset-update-banner')).toBeNull()
+  })
+
+  it('shows the update banner and applies the update on click', async () => {
+    vi.mocked(window.vialAPI.checkTypingDatasetUpdate).mockResolvedValue({ provider: 'monkeytype', updateAvailable: true })
+    vi.mocked(window.vialAPI.updateTypingDataset).mockResolvedValue({ provider: 'monkeytype', changed: true, fromVersion: 'a', toVersion: 'b' })
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('typing-dataset-update-banner')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('typing-dataset-update-button'))
+
+    await waitFor(() => {
+      expect(window.vialAPI.updateTypingDataset).toHaveBeenCalledWith('monkeytype')
+      expect(screen.queryByTestId('typing-dataset-update-banner')).toBeNull()
+    })
+  })
+
+  it('keeps the banner when the update was not applied (offline retry path)', async () => {
+    vi.mocked(window.vialAPI.checkTypingDatasetUpdate).mockResolvedValue({ provider: 'monkeytype', updateAvailable: true })
+    vi.mocked(window.vialAPI.updateTypingDataset).mockResolvedValue({ provider: 'monkeytype', changed: false, fromVersion: 'a' })
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('typing-dataset-update-banner')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('typing-dataset-update-button'))
+
+    await waitFor(() => expect(window.vialAPI.updateTypingDataset).toHaveBeenCalled())
+    // Update not applied → banner stays so the user can retry.
+    expect(screen.getByTestId('typing-dataset-update-banner')).toBeInTheDocument()
   })
 
   it('displays downloaded and available sections', async () => {

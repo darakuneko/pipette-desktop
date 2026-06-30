@@ -383,7 +383,10 @@
         "importErrorEmpty": "打鍵できるテキストがありません",
         "importOverwritePrompt": "「{{name}}」は既に存在します。上書きしますか？",
         "confirmOverwrite": "上書き",
-        "fileImportText": "インポートテキスト"
+        "fileImportText": "インポートテキスト",
+        "datasetUpdateAvailable": "単語リストの更新があります。",
+        "datasetUpdate": "更新",
+        "datasetUpdating": "更新中…"
       },
       "memory": {
         "pause": "一時停止",

@@ -12,7 +12,7 @@ import { setupI18nPackStore } from './i18n-pack-ipc'
 import { setupThemePackStore } from './theme-pack-ipc'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
-import { setupLanguageStore, startTypingDatasetStartupSync } from './language-store'
+import { setupLanguageStore } from './language-store'
 import { setupSyncIpc } from './sync/sync-ipc'
 import { setupHubIpc } from './hub/hub-ipc'
 import { startI18nStartupSync } from './hub/i18n-startup-sync'
@@ -353,10 +353,9 @@ app.whenReady().then(() => {
   // applied updates without a manual reload.
   startI18nStartupSync()
 
-  // Best-effort: follow upstream typing-test word-dataset updates. Compares
-  // the bundled/overridden version against the Hub and, on a mismatch, pulls
-  // the fresh manifest + download URL base. Never blocks startup.
-  startTypingDatasetStartupSync()
+  // The typing-test dataset is NOT auto-synced at startup. The Mode modal
+  // checks the Hub version when its tab is shown and surfaces a manual
+  // "Update" button (see TYPING_DATASET_CHECK / TYPING_DATASET_UPDATE).
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

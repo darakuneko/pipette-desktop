@@ -48,6 +48,48 @@ function overridePath(): string {
   return join(testDir, 'local', 'typing-test-dataset.json')
 }
 
+describe('checkTypingDatasetUpdate', () => {
+  it('reports an update when the Hub version differs, then caches it for the session', async () => {
+    mockNet.fetch.mockResolvedValue(okJson({ provider: 'monkeytype', version: HUB_VERSION }))
+    const first = await mod.checkTypingDatasetUpdate('monkeytype')
+    expect(first.updateAvailable).toBe(true)
+    expect(mockNet.fetch).toHaveBeenCalledTimes(1)
+
+    // Second call within the session must not re-hit the Hub.
+    mockNet.fetch.mockRejectedValue(new Error('should not be called'))
+    const second = await mod.checkTypingDatasetUpdate('monkeytype')
+    expect(second.updateAvailable).toBe(true)
+    expect(mockNet.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports no update when the Hub version matches', async () => {
+    const { TYPING_TEST_PROVIDER_DEFAULTS } = await import('../../shared/data/typing-test-providers')
+    mockNet.fetch.mockResolvedValue(okJson({ provider: 'monkeytype', version: TYPING_TEST_PROVIDER_DEFAULTS[0].version }))
+    expect((await mod.checkTypingDatasetUpdate('monkeytype')).updateAvailable).toBe(false)
+  })
+
+  it('does not cache a Hub error, so a later check can retry', async () => {
+    mockNet.fetch.mockRejectedValueOnce(new Error('offline'))
+    expect((await mod.checkTypingDatasetUpdate('monkeytype')).updateAvailable).toBe(false)
+    // Now the Hub is reachable and reports a newer version.
+    mockNet.fetch.mockResolvedValue(okJson({ provider: 'monkeytype', version: HUB_VERSION }))
+    expect((await mod.checkTypingDatasetUpdate('monkeytype')).updateAvailable).toBe(true)
+  })
+
+  it('clears the pending flag once an update is applied', async () => {
+    mockNet.fetch
+      .mockResolvedValueOnce(okJson({ provider: 'monkeytype', version: HUB_VERSION }))
+      .mockResolvedValueOnce(okJson({
+        provider: 'monkeytype',
+        version: HUB_VERSION,
+        downloadUrlBase: NEW_DOWNLOAD_BASE,
+        languages: [{ name: 'english', wordCount: 200, rightToLeft: false, fileSize: 2540 }],
+      }))
+    await mod.syncTypingDataset('monkeytype')
+    expect((await mod.checkTypingDatasetUpdate('monkeytype')).updateAvailable).toBe(false)
+  })
+})
+
 describe('syncTypingDataset', () => {
   it('does nothing when the Hub version matches the current version', async () => {
     // Hub returns the SAME version as the bundled default → no fetch of full

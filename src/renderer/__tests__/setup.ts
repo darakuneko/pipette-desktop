@@ -58,6 +58,9 @@ if (typeof window !== 'undefined') {
     pipetteSettingsListAllTypingResults: async () => [],
     // Connect-time keyboard naming — fire-and-forget in useDeviceLifecycle.
     keyboardMetaNameIfMissing: async () => undefined,
+    // Typing-dataset version check — LanguageSelectorModal calls this on mount.
+    checkTypingDatasetUpdate: async () => ({ provider: 'monkeytype', updateAvailable: false }),
+    updateTypingDataset: async () => ({ provider: 'monkeytype', changed: false, fromVersion: '' }),
     // i18n pack store: every renderer that mounts SettingsModal pulls in
     // LanguagePacksModal → useI18nPackStore, which calls i18nPackList on
     // mount. Stub the read paths to an empty list and the change-notifier
