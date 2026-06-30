@@ -361,10 +361,6 @@ export function TypingTestPane({
   const [cssScale, setCssScale] = useState(1)
   const paneWrapperRef = useRef<HTMLDivElement>(null)
   const paneNaturalSizeRef = useRef({ w: 0, h: 0 })
-  // Measured rendered width of the centred keyboard, so the reading window
-  // (above it, in TypingTestView) can match the keymap's width.
-  const keyboardBoxRef = useRef<HTMLDivElement>(null)
-  const [keyboardWidth, setKeyboardWidth] = useState<number>()
   const MARGIN = 20
 
   // Calculate default compact window size: keyboard at 100% + pane padding + margins
@@ -395,17 +391,6 @@ export function TypingTestPane({
     }
     return { width: w, height: h }
   }, [keys, layoutOptions])
-
-  // Track the keyboard's rendered width so the reading window can match it.
-  useEffect(() => {
-    const el = keyboardBoxRef.current
-    if (!el) return
-    const update = () => setKeyboardWidth(el.getBoundingClientRect().width)
-    update()
-    const ro = new ResizeObserver(update)
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [viewOnly])
 
   // App.tsx entry paths (analytics back, post-unlock, view restore, status bar)
   // call setWindowCompactMode with an undefined saved size, which main skips —
@@ -706,9 +691,6 @@ export function TypingTestPane({
       <div className={viewOnly ? 'contents' : 'flex min-w-0 flex-1 flex-col items-center'}>
       {!viewOnly && (
         <TypingTestView
-          // Keymap hidden → its measured width is gone; let the reading window
-          // fall back to its own max width instead of collapsing.
-          readingMaxWidth={hideKeymap ? undefined : keyboardWidth}
           hideStatsRow={hideStatsRow}
           hideControls={hideControls}
           comparison={comparison}
@@ -751,9 +733,7 @@ export function TypingTestPane({
               where centring pushes content half-off and halves scrollWidth. */}
           <div className={`flex w-full items-start${viewOnly ? '' : ' justify-center'}`}>
           <div className="shrink-0">
-          {/* Measure only the keyboard so the reading window matches the
-              keymap width, even for a small board. */}
-          <div ref={keyboardBoxRef} className="w-fit">
+          <div className="w-fit">
           {/* Keymap hidden only in the editor view — view-only mode is
               keyboard-focused, so the toggle never applies there. */}
           {!(hideKeymap && !viewOnly) && (
