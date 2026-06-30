@@ -147,7 +147,7 @@ export function LanguageSelectorModal({
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'existing' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
             onClick={() => setTab('existing')}
           >
-            {t('editor.typingTest.language.tabNormal')}
+            {t('editor.typingTest.language.tabMonkeytype')}
           </button>
           <button
             type="button"

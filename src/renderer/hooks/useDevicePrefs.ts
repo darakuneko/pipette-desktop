@@ -106,7 +106,7 @@ interface ValidatedPrefs {
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
-  typingTestNormalConfig?: TypingTestConfig
+  typingTestMonkeytypeConfig?: TypingTestConfig
   typingTestLanguage?: string
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize?: { width: number; height: number }
@@ -127,7 +127,7 @@ interface ValidatedPrefs {
 }
 
 function validateIpcPrefs(
-  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestNormalConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
+  data: { keyboardLayout: string; autoAdvance: boolean; layerPanelOpen?: boolean; basicViewType?: string; splitKeyMode?: string; quickSelect?: boolean; keymapScale?: number; keyEditorZoom?: number; layerNames?: string[]; typingTestResults?: TypingTestResult[]; typingTestConfig?: unknown; typingTestMonkeytypeConfig?: unknown; typingTestLanguage?: unknown; typingTestViewOnly?: boolean; typingTestViewOnlyWindowSize?: unknown; typingTestViewOnlyAlwaysOnTop?: boolean; typingTestMemory?: unknown; typingTestDisplayLines?: unknown; typingTestFontSize?: unknown; typingTestHideKeymap?: boolean; typingTestHideStatsRow?: boolean; typingTestHideControls?: boolean; typingTestSaveUnnamed?: boolean; typingTestComparisonBaselines?: unknown; typingTestSettingsPanelOpen?: boolean; typingRecordEnabled?: boolean; typingViewMenuTab?: unknown; viewMode?: unknown } | null,
   defaultLayout: KeyboardLayoutId,
   defaultAutoAdvance: boolean,
   defaultLayerPanelOpen: boolean,
@@ -195,7 +195,7 @@ function validateIpcPrefs(
     layerNames,
     typingTestResults,
     typingTestConfig,
-    typingTestNormalConfig: validateTypingTestConfig(data.typingTestNormalConfig),
+    typingTestMonkeytypeConfig: validateTypingTestConfig(data.typingTestMonkeytypeConfig),
     typingTestLanguage: validateTypingTestLanguage(data.typingTestLanguage),
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
@@ -236,7 +236,7 @@ export interface UseDevicePrefsReturn {
   layerNames: string[]
   typingTestResults: TypingTestResult[]
   typingTestConfig: TypingTestConfig | undefined
-  typingTestNormalConfig: TypingTestConfig | undefined
+  typingTestMonkeytypeConfig: TypingTestConfig | undefined
   typingTestLanguage: string | undefined
   typingTestViewOnly: boolean
   typingTestViewOnlyWindowSize: { width: number; height: number } | undefined
@@ -341,7 +341,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
   const [layerNames, updateLayerNames, layerNamesRef] = useStateRef<string[]>([])
   const [typingTestResults, updateTypingTestResults, typingTestResultsRef] = useStateRef<TypingTestResult[]>([])
   const [typingTestConfig, updateTypingTestConfig, typingTestConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
-  const [typingTestNormalConfig, updateTypingTestNormalConfig, typingTestNormalConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
+  const [typingTestMonkeytypeConfig, updateTypingTestMonkeytypeConfig, typingTestMonkeytypeConfigRef] = useStateRef<TypingTestConfig | undefined>(undefined)
   const [typingTestLanguage, updateTypingTestLanguage, typingTestLanguageRef] = useStateRef<string | undefined>(undefined)
   const [typingTestViewOnly, updateTypingTestViewOnly, typingTestViewOnlyRef] = useStateRef<boolean>(false)
   const [typingTestViewOnlyWindowSize, updateTypingTestViewOnlyWindowSize, typingTestViewOnlyWindowSizeRef] = useStateRef<{ width: number; height: number } | undefined>(undefined)
@@ -380,7 +380,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
       layerNames: layerNamesRef.current,
       typingTestResults: typingTestResultsRef.current,
       typingTestConfig: typingTestConfigRef.current as Record<string, unknown> | undefined,
-      typingTestNormalConfig: typingTestNormalConfigRef.current as Record<string, unknown> | undefined,
+      typingTestMonkeytypeConfig: typingTestMonkeytypeConfigRef.current as Record<string, unknown> | undefined,
       typingTestLanguage: typingTestLanguageRef.current,
       typingTestViewOnly: typingTestViewOnlyRef.current,
       typingTestViewOnlyWindowSize: typingTestViewOnlyWindowSizeRef.current,
@@ -483,11 +483,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     // Remember the last normal (words/time/quote) config so it survives a
     // switch into fileImport (imported text) and back. When entering fileImport,
     // capture the outgoing normal config too — covers old prefs where
-    // typingTestNormalConfig was never saved.
-    if (cfg.mode !== 'fileImport') updateTypingTestNormalConfig(cfg)
-    else if (prev && prev.mode !== 'fileImport') updateTypingTestNormalConfig(prev)
+    // typingTestMonkeytypeConfig was never saved.
+    if (cfg.mode !== 'fileImport') updateTypingTestMonkeytypeConfig(cfg)
+    else if (prev && prev.mode !== 'fileImport') updateTypingTestMonkeytypeConfig(prev)
     saveCurrentPrefs()
-  }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestNormalConfig])
+  }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestMonkeytypeConfig])
 
   const setTypingTestLanguage = useCallback((lang: string) => {
     updateTypingTestLanguage(lang)
@@ -669,7 +669,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     updateLayerNames(resolved.layerNames)
     updateTypingTestResults(resolved.typingTestResults)
     updateTypingTestConfig(resolved.typingTestConfig)
-    updateTypingTestNormalConfig(resolved.typingTestNormalConfig)
+    updateTypingTestMonkeytypeConfig(resolved.typingTestMonkeytypeConfig)
     updateTypingTestLanguage(resolved.typingTestLanguage)
     updateTypingTestViewOnly(resolved.typingTestViewOnly)
     updateTypingTestViewOnlyWindowSize(resolved.typingTestViewOnlyWindowSize)
@@ -734,7 +734,7 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     layerNames,
     typingTestResults,
     typingTestConfig,
-    typingTestNormalConfig,
+    typingTestMonkeytypeConfig,
     typingTestLanguage,
     typingTestViewOnly,
     typingTestViewOnlyWindowSize,

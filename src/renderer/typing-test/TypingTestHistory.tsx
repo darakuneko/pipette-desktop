@@ -61,7 +61,7 @@ function fileImportTextId(r: TypingTestResult): string {
 }
 
 /** Filename slug describing the active export selection (tab + filter), so each
- *  filtered export lands in a distinct, self-describing file. Normal-all and
+ *  filtered export lands in a distinct, self-describing file. Monkeytype-all and
  *  Text-all stay distinct via the tab prefix. */
 function exportFilterSlug(
   isText: boolean,
@@ -75,7 +75,7 @@ function exportFilterSlug(
     // ends in a bare `text-`.
     return `text-${fileImportTexts.find((c) => c.id === textFilter)?.name || textFilter}`
   }
-  return modeFilter === 'all' ? 'normal' : `normal-${modeFilter}`
+  return modeFilter === 'all' ? 'monkeytype' : `monkeytype-${modeFilter}`
 }
 
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
@@ -197,7 +197,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
               : 'border-b-2 border-transparent px-1 pb-1.5 text-sm text-content-secondary hover:text-content'}
             onClick={() => setTab(tb)}
           >
-            {t(tb === 'text' ? 'editor.typingTest.history.tabFileImport' : 'editor.typingTest.history.tabNormal')}
+            {t(tb === 'text' ? 'editor.typingTest.history.tabFileImport' : 'editor.typingTest.history.tabMonkeytype')}
           </button>
         ))}
       </div>

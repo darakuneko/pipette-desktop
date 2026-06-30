@@ -126,7 +126,7 @@ export interface KeymapEditorProps {
   onDeleteTypingTestResult?: (date: string) => void
   typingTestHistory?: TypingTestResult[]
   typingTestConfig?: TypingTestConfig
-  typingTestNormalConfig?: TypingTestConfig
+  typingTestMonkeytypeConfig?: TypingTestConfig
   typingTestLanguage?: string
   onTypingTestConfigChange?: (config: TypingTestConfig) => void
   onTypingTestLanguageChange?: (lang: string) => void
