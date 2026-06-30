@@ -91,8 +91,8 @@ describe('TypingTestHistory', () => {
 
   it('filters the Text tab by imported text via the dropdown', () => {
     const results = [
-      makeResult({ wpm: 80, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
-      makeResult({ wpm: 65, mode: 'custom', mode2: 't2', customTextName: 'Beta' }),
+      makeResult({ wpm: 80, mode: 'fileImport', mode2: 't1', fileImportTextName: 'Alpha' }),
+      makeResult({ wpm: 65, mode: 'fileImport', mode2: 't2', fileImportTextName: 'Beta' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
 
@@ -109,7 +109,7 @@ describe('TypingTestHistory', () => {
 
   it('shows the Text-tab filter dropdown even with a single imported text', () => {
     const results = [
-      makeResult({ wpm: 80, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
+      makeResult({ wpm: 80, mode: 'fileImport', mode2: 't1', fileImportTextName: 'Alpha' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
 
@@ -210,7 +210,7 @@ describe('TypingTestHistory', () => {
     const onExportCsv = vi.fn()
     const results = [
       makeResult({ wpm: 80, mode: 'words', mode2: 30 }),
-      makeResult({ wpm: 70, mode: 'custom', mode2: 't1', customTextName: 'Alpha' }),
+      makeResult({ wpm: 70, mode: 'fileImport', mode2: 't1', fileImportTextName: 'Alpha' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} onExportCsv={onExportCsv} />)
 
@@ -242,14 +242,14 @@ describe('TypingTestHistory', () => {
     expect(onRename).toHaveBeenCalledWith(date, 'QWERTY baseline')
   })
 
-  it('shows the imported-text name (not the textId) for custom-mode rows under the Text tab', () => {
+  it('shows the imported-text name (not the textId) for fileImport-mode rows under the Text tab', () => {
     const results = [makeResult({
-      mode: 'custom',
+      mode: 'fileImport',
       mode2: 'b286fff1-78d1-40d5-8ea0-6dd57561badf',
-      customTextName: 'my-novel.txt',
+      fileImportTextName: 'my-novel.txt',
     })]
     renderWithI18n(<TypingTestHistory results={results} />)
-    // Custom rows live under the Text tab, not Monkeytype (the default).
+    // FileImport rows live under the Text tab, not Monkeytype (the default).
     fireEvent.click(screen.getByTestId('history-tab-text'))
     // The name shows in the table row (the dropdown also lists it as an option).
     expect(screen.getByText('my-novel.txt', { selector: 'td' })).toBeTruthy()
@@ -265,13 +265,13 @@ describe('TypingTestHistory', () => {
   it('separates Monkeytype and Text results into tabs', () => {
     const results = [
       makeResult({ wpm: 81, mode: 'words', mode2: 30 }),
-      makeResult({ wpm: 82, mode: 'custom', mode2: 'id-1', customTextName: 'novel.txt' }),
+      makeResult({ wpm: 82, mode: 'fileImport', mode2: 'id-1', fileImportTextName: 'novel.txt' }),
     ]
     renderWithI18n(<TypingTestHistory results={results} />)
-    // Monkeytype tab (default): words result shown, custom hidden.
+    // Monkeytype tab (default): words result shown, fileImport hidden.
     expect(screen.getAllByText('81').length).toBeGreaterThan(0)
     expect(screen.queryByText('novel.txt')).toBeNull()
-    // Text tab: custom result shown, words hidden.
+    // Text tab: fileImport result shown, words hidden.
     fireEvent.click(screen.getByTestId('history-tab-text'))
     // The name shows in the table row (the dropdown also lists it as an option).
     expect(screen.getByText('novel.txt', { selector: 'td' })).toBeTruthy()

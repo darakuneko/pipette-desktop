@@ -79,7 +79,7 @@ import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 export interface TypingTestPaneProps {
   typingTest: ReturnType<typeof useTypingTest>
   onConfigChange: (config: TypingTestConfig) => void
-  /** Last normal (words/time/quote) config, restored when leaving custom. */
+  /** Last normal (words/time/quote) config, restored when leaving fileImport. */
   normalConfig?: TypingTestConfig
   onLanguageChange: (lang: string) => Promise<void>
   layers: number
@@ -95,12 +95,12 @@ export interface TypingTestPaneProps {
   keys: KleKey[]
   layerLabel: string
   contentRef?: React.RefObject<HTMLDivElement | null>
-  /** Memory mode (imported custom text): a paused snapshot is saved. */
+  /** Memory mode (imported fileImport text): a paused snapshot is saved. */
   hasSavedMemory?: boolean
   onPauseTest?: () => void
   onResumeTest?: () => void
   onRestartTestFromStart?: () => void
-  /** Imported-text display preferences (custom mode). */
+  /** Imported-text display preferences (fileImport mode). */
   displayLines?: number
   fontSize?: number
   onDisplayLinesChange?: (lines: number) => void
@@ -497,16 +497,16 @@ export function TypingTestPane({
     }
   }, [viewOnly, viewOnlyWindowSize, getDefaultCompactSize, onViewOnlyChange, typingTest])
 
-  // Mode / language. The mode kind (Custom / Normal) goes in the label —
-  // "Mode(Custom):" — and the button shows just the source (file name or
+  // Mode / language. The mode kind (FileImport / Normal) goes in the label —
+  // "Mode(FileImport):" — and the button shows just the source (file name or
   // language), truncated to one line; the full text is on the title.
-  const modeType = typingTest.config.mode === 'custom'
-    ? t('editor.typingTest.language.tabCustom')
+  const modeType = typingTest.config.mode === 'fileImport'
+    ? t('editor.typingTest.language.tabFileImport')
     : t('editor.typingTest.language.tabNormal')
   const modeLabel = typingTest.isLanguageLoading
     ? t('editor.typingTest.language.loadingLanguage')
-    : typingTest.config.mode === 'custom'
-    ? (typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.customText'))
+    : typingTest.config.mode === 'fileImport'
+    ? (typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.fileImportText'))
     : typingTest.language.replace(/_/g, ' ')
 
   // Config controls, pinned to the window's top-left as a sidebar in editor
@@ -527,7 +527,7 @@ export function TypingTestPane({
       {/* Settings — language/mode, base layer, pattern / units / options. */}
       <PanelSection title={t('editor.typingTest.section.settings')}>
         {/* Mode / language — shown for every mode (words / time / quote /
-            custom); quote uses it to pick the quote source language. */}
+            fileImport); quote uses it to pick the quote source language. */}
         <div className="flex w-full flex-col items-start gap-1">
           <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
           <button
@@ -544,15 +544,15 @@ export function TypingTestPane({
         {showLanguageModal && (
           <LanguageSelectorModal
             currentLanguage={typingTest.language}
-            currentCustomTextId={typingTest.config.mode === 'custom' ? typingTest.config.textId : undefined}
+            currentFileImportTextId={typingTest.config.mode === 'fileImport' ? typingTest.config.textId : undefined}
             onSelectLanguage={(name) => {
-              // Picking a language leaves custom mode — restore the last normal
+              // Picking a language leaves fileImport mode — restore the last normal
               // (words/time/quote) config so its Pattern/Units/Option settings
               // survive the round trip; fall back to the default if none saved.
-              if (typingTest.config.mode === 'custom') onConfigChange(normalConfig ?? DEFAULT_CONFIG)
+              if (typingTest.config.mode === 'fileImport') onConfigChange(normalConfig ?? DEFAULT_CONFIG)
               void onLanguageChange(name)
             }}
-            onSelectImport={(textId) => onConfigChange({ mode: 'custom', textId })}
+            onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId })}
             onCurrentTextDeleted={() => {
               // The selected imported text was deleted — fall back to
               // the default (words mode, English).
@@ -606,7 +606,7 @@ export function TypingTestPane({
             </select>
           </div>
         </div>
-        {typingTest.config.mode !== 'custom' && (
+        {typingTest.config.mode !== 'fileImport' && (
           <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} />
         )}
       </PanelSection>

@@ -22,10 +22,10 @@ const IMPORT_ERROR_KEYS: Record<string, string> = {
 
 interface Props {
   currentLanguage: string
-  /** Active imported text id, when the current config is in custom mode. */
-  currentCustomTextId?: string
+  /** Active imported text id, when the current config is in fileImport mode. */
+  currentFileImportTextId?: string
   onSelectLanguage: (name: string) => void
-  /** Called when an imported text is picked — switches to custom mode. */
+  /** Called when an imported text is picked — switches to fileImport mode. */
   onSelectImport: (textId: string) => void
   /** Called on close when the currently-selected imported text was deleted
    *  (and nothing else was picked) so the caller can reset to the default. */
@@ -39,14 +39,14 @@ function formatName(name: string): string {
 
 export function LanguageSelectorModal({
   currentLanguage,
-  currentCustomTextId,
+  currentFileImportTextId,
   onSelectLanguage,
   onSelectImport,
   onCurrentTextDeleted,
   onClose,
 }: Props) {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<Tab>(currentCustomTextId ? 'import' : 'existing')
+  const [tab, setTab] = useState<Tab>(currentFileImportTextId ? 'import' : 'existing')
   const [languages, setLanguages] = useState<LanguageListEntry[]>([])
   const [search, setSearch] = useState('')
   const [downloading, setDownloading] = useState<Set<string>>(new Set())
@@ -157,7 +157,7 @@ export function LanguageSelectorModal({
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'import' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
             onClick={() => setTab('import')}
           >
-            {t('editor.typingTest.language.tabCustom')}
+            {t('editor.typingTest.language.tabFileImport')}
           </button>
         </div>
 
@@ -189,7 +189,7 @@ export function LanguageSelectorModal({
                     <LanguageRow
                       key={lang.name}
                       lang={lang}
-                      isCurrent={!currentCustomTextId && lang.name === currentLanguage}
+                      isCurrent={!currentFileImportTextId && lang.name === currentLanguage}
                       isDownloading={downloading.has(lang.name)}
                       onSelect={handleSelect}
                       onDelete={handleDelete}
@@ -219,7 +219,7 @@ export function LanguageSelectorModal({
           </>
         ) : (
           <ImportTab
-            currentCustomTextId={currentCustomTextId}
+            currentFileImportTextId={currentFileImportTextId}
             onSelect={handleSelectImport}
             onDeleteCurrent={() => { deletedCurrentRef.current = true }}
           />
@@ -230,13 +230,13 @@ export function LanguageSelectorModal({
 }
 
 interface ImportTabProps {
-  currentCustomTextId?: string
+  currentFileImportTextId?: string
   onSelect: (id: string) => void
   /** Fired when the currently-selected imported text is deleted. */
   onDeleteCurrent?: () => void
 }
 
-function ImportTab({ currentCustomTextId, onSelect, onDeleteCurrent }: ImportTabProps) {
+function ImportTab({ currentFileImportTextId, onSelect, onDeleteCurrent }: ImportTabProps) {
   const { t } = useTranslation()
   const { metas, importFromFile, confirmImport, remove } = useTypingTestTexts()
   const [importing, setImporting] = useState(false)
@@ -246,9 +246,9 @@ function ImportTab({ currentCustomTextId, onSelect, onDeleteCurrent }: ImportTab
 
   const handleRemove = useCallback(async (id: string) => {
     const result = await remove(id)
-    if (result.success && id === currentCustomTextId) onDeleteCurrent?.()
+    if (result.success && id === currentFileImportTextId) onDeleteCurrent?.()
     return result
-  }, [remove, currentCustomTextId, onDeleteCurrent])
+  }, [remove, currentFileImportTextId, onDeleteCurrent])
 
   const handleImport = useCallback(async () => {
     setImporting(true)
@@ -336,7 +336,7 @@ function ImportTab({ currentCustomTextId, onSelect, onDeleteCurrent }: ImportTab
             <ImportRow
               key={meta.id}
               meta={meta}
-              isCurrent={meta.id === currentCustomTextId}
+              isCurrent={meta.id === currentFileImportTextId}
               onSelect={onSelect}
               onDelete={handleRemove}
             />

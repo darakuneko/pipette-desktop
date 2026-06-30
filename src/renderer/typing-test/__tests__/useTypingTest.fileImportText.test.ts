@@ -4,14 +4,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
-import { getCustomTextData, clearCustomTextCache } from '../word-generator'
+import { getFileImportTextData, clearFileImportTextCache } from '../word-generator'
 
 const mockGet = vi.fn()
 const originalVialAPI = window.vialAPI
 
 beforeEach(() => {
   vi.clearAllMocks()
-  clearCustomTextCache()
+  clearFileImportTextCache()
   window.vialAPI = {
     ...(window.vialAPI ?? {}),
     typingTestTextStoreGet: mockGet,
@@ -19,7 +19,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  clearCustomTextCache()
+  clearFileImportTextCache()
   window.vialAPI = originalVialAPI
 })
 
@@ -27,7 +27,7 @@ const type = (result: { current: { processKeyEvent: (k: string, c: boolean, a: b
   act(() => result.current.processKeyEvent(key, false, false, false))
 }
 
-describe('useTypingTest — imported custom text (line breaks)', () => {
+describe('useTypingTest — imported fileImport text (line breaks)', () => {
   it('Enter advances at a line break, Space advances within a line; the wrong key is a no-op', async () => {
     // "a b" / "c d" → words [a,b,c,d], line break after index 1 (the word "b").
     mockGet.mockResolvedValue({
@@ -35,9 +35,9 @@ describe('useTypingTest — imported custom text (line breaks)', () => {
       data: { meta: { id: 't' }, data: { name: 'T', text: 'a b\nc d' } },
     })
     // Warm the cache so the hook's synchronous initial state has the words.
-    await getCustomTextData('t')
+    await getFileImportTextData('t')
 
-    const { result } = renderHook(() => useTypingTest({ mode: 'custom', textId: 't' }, 'english'))
+    const { result } = renderHook(() => useTypingTest({ mode: 'fileImport', textId: 't' }, 'english'))
     expect(result.current.state.words).toEqual(['a', 'b', 'c', 'd'])
     expect([...result.current.state.lineBreaks]).toEqual([1])
 
@@ -79,17 +79,17 @@ describe('useTypingTest — imported custom text (line breaks)', () => {
 })
 
 describe('useTypingTest — memory mode (pause / capture / restore)', () => {
-  const setupCustom = async () => {
+  const setupFileImport = async () => {
     mockGet.mockResolvedValue({
       success: true,
       data: { meta: { id: 't' }, data: { name: 'T', text: 'a b\nc d' } },
     })
-    await getCustomTextData('t')
-    return renderHook(() => useTypingTest({ mode: 'custom', textId: 't' }, 'english'))
+    await getFileImportTextData('t')
+    return renderHook(() => useTypingTest({ mode: 'fileImport', textId: 't' }, 'english'))
   }
 
   it('captureMemory snapshots progress; pause freezes and blocks input', async () => {
-    const { result } = await setupCustom()
+    const { result } = await setupFileImport()
     type(result, 'a')
     type(result, ' ')
     expect(result.current.state.currentWordIndex).toBe(1)
@@ -108,13 +108,13 @@ describe('useTypingTest — memory mode (pause / capture / restore)', () => {
     expect(result.current.state.currentInput).toBe('')
   })
 
-  it('captureMemory returns null for non-custom modes', () => {
+  it('captureMemory returns null for non-fileImport modes', () => {
     const { result } = renderHook(() => useTypingTest({ mode: 'words', wordCount: 5, punctuation: false, numbers: false }, 'english'))
     expect(result.current.captureMemory()).toBeNull()
   })
 
   it('restoreState(resume=true) continues running at the saved position', async () => {
-    const { result } = await setupCustom()
+    const { result } = await setupFileImport()
     const memory = {
       textId: 't', currentWordIndex: 2, currentInput: 'c',
       wordResults: [
@@ -134,7 +134,7 @@ describe('useTypingTest — memory mode (pause / capture / restore)', () => {
   })
 
   it('restoreState(resume=false) restores the snapshot frozen as paused', async () => {
-    const { result } = await setupCustom()
+    const { result } = await setupFileImport()
     const memory = {
       textId: 't', currentWordIndex: 1, currentInput: '',
       wordResults: [{ word: 'a', typed: 'a', correct: true }],

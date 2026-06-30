@@ -299,7 +299,7 @@
         "words": "単語",
         "time": "時間",
         "quote": "引用",
-        "custom": "テキスト"
+        "fileImport": "テキスト"
       },
       "punctuation": "句読点",
       "numbers": "数字",
@@ -374,7 +374,7 @@
         "loadingLanguage": "言語を読み込み中...",
         "downloadFailed": "ダウンロードに失敗しました",
         "tabNormal": "Normal",
-        "tabCustom": "カスタム",
+        "tabFileImport": "ファイル取込",
         "import": "UTF-8 テキストをインポート",
         "importEmpty": "インポートされたテキストはありません",
         "importFailed": "インポートに失敗しました",
@@ -383,7 +383,7 @@
         "importErrorEmpty": "打鍵できるテキストがありません",
         "importOverwritePrompt": "「{{name}}」は既に存在します。上書きしますか？",
         "confirmOverwrite": "上書き",
-        "customText": "インポートテキスト"
+        "fileImportText": "インポートテキスト"
       },
       "memory": {
         "pause": "一時停止",
@@ -405,7 +405,7 @@
         "unnamed": "名称未設定",
         "mode": "モード",
         "tabNormal": "Normal",
-        "tabCustom": "カスタム",
+        "tabFileImport": "ファイル取込",
         "tabText": "テキスト",
         "noResults": "結果がありません",
         "pb": "PB",

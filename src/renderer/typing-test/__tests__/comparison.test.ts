@@ -24,7 +24,7 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 }
 
 const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false } as TypingTestConfig
-const customConfig: TypingTestConfig = { mode: 'custom', textId: 't1' } as TypingTestConfig
+const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 't1' } as TypingTestConfig
 
 describe('matchingResults', () => {
   it('matches normal runs on mode + params + language + toggles', () => {
@@ -38,13 +38,13 @@ describe('matchingResults', () => {
     expect(out.map((r) => r.wpm)).toEqual([70])
   })
 
-  it('matches custom runs on the imported text id only', () => {
+  it('matches fileImport runs on the imported text id only', () => {
     const pool = [
-      makeResult({ wpm: 40, mode: 'custom', mode2: 't1', language: 'a' }),
-      makeResult({ wpm: 45, mode: 'custom', mode2: 't1', language: 'b' }), // same text, diff lang → still match
-      makeResult({ wpm: 99, mode: 'custom', mode2: 't2' }),                 // different text
+      makeResult({ wpm: 40, mode: 'fileImport', mode2: 't1', language: 'a' }),
+      makeResult({ wpm: 45, mode: 'fileImport', mode2: 't1', language: 'b' }), // same text, diff lang → still match
+      makeResult({ wpm: 99, mode: 'fileImport', mode2: 't2' }),                 // different text
     ]
-    const out = matchingResults(pool, customConfig, 'english')
+    const out = matchingResults(pool, fileImportConfig, 'english')
     expect(out.map((r) => r.wpm).sort()).toEqual([40, 45])
   })
 
@@ -66,15 +66,15 @@ describe('conditionKey', () => {
     expect(conditionKey(timeConfig, 'english')).toBe('time|10|english|false|false')
   })
 
-  it('keys custom on the imported text id only (language-independent)', () => {
-    expect(conditionKey(customConfig, 'english')).toBe('custom|t1')
-    expect(conditionKey(customConfig, 'japanese')).toBe('custom|t1')
+  it('keys fileImport on the imported text id only (language-independent)', () => {
+    expect(conditionKey(fileImportConfig, 'english')).toBe('fileImport|t1')
+    expect(conditionKey(fileImportConfig, 'japanese')).toBe('fileImport|t1')
   })
 
   it('distinguishes different conditions', () => {
     const a = conditionKey(wordsConfig, 'english')
     const b = conditionKey({ mode: 'time', duration: 10 } as TypingTestConfig, 'english')
-    const c = conditionKey(customConfig, 'english')
+    const c = conditionKey(fileImportConfig, 'english')
     expect(new Set([a, b, c]).size).toBe(3)
   })
 })
@@ -107,7 +107,7 @@ describe('computeComparison', () => {
   })
 
   it('pinned → the result with the matching date, condition-independent', () => {
-    const out = computeComparison(pool, customConfig, 'english', { kind: 'pinned', pinnedDate: '2026-06-19T00:00:00.000Z' })
+    const out = computeComparison(pool, fileImportConfig, 'english', { kind: 'pinned', pinnedDate: '2026-06-19T00:00:00.000Z' })
     expect(out?.wpm).toBe(80)
   })
 

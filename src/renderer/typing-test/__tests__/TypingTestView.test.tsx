@@ -281,28 +281,28 @@ describe('TypingTestView quote mode display', () => {
 })
 
 describe('TypingTestView controls row (state-based)', () => {
-  const customConfig: TypingTestConfig = { mode: 'custom', textId: 'abc' }
+  const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
 
   it('shows Next Test (not Restart) before a run starts', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'waiting' }) })
+    renderView({ config: fileImportConfig, state: makeState({ status: 'waiting' }) })
     expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
     expect(screen.queryByTestId('typing-test-restart')).toBeNull()
   })
 
-  it('shows Pause + Restart while running (custom)', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+  it('shows Pause + Restart while running (fileImport)', () => {
+    renderView({ config: fileImportConfig, state: makeState({ status: 'running' }) })
     expect(screen.getByTestId('typing-memory-pause')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
   })
 
-  it('shows Resume + Restart while paused (custom)', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'paused' }) })
+  it('shows Resume + Restart while paused (fileImport)', () => {
+    renderView({ config: fileImportConfig, state: makeState({ status: 'paused' }) })
     expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-restart')).toBeInTheDocument()
   })
 
-  it('shows Resume in the waiting state when a custom run is saved', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'waiting' }), hasSavedMemory: true })
+  it('shows Resume in the waiting state when a fileImport run is saved', () => {
+    renderView({ config: fileImportConfig, state: makeState({ status: 'waiting' }), hasSavedMemory: true })
     expect(screen.getByTestId('typing-memory-resume')).toBeInTheDocument()
   })
 
@@ -313,29 +313,29 @@ describe('TypingTestView controls row (state-based)', () => {
   })
 
   it('shows the Complete message on the finished screen', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'finished' }) })
+    renderView({ config: fileImportConfig, state: makeState({ status: 'finished' }) })
     expect(screen.getByTestId('typing-test-complete')).toBeInTheDocument()
   })
 
   it('hides the Complete message while running', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+    renderView({ config: fileImportConfig, state: makeState({ status: 'running' }) })
     expect(screen.queryByTestId('typing-test-complete')).toBeNull()
   })
 
   it('never shows Resume on the finished screen, even with a saved memory', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'finished' }), hasSavedMemory: true })
+    renderView({ config: fileImportConfig, state: makeState({ status: 'finished' }), hasSavedMemory: true })
     expect(screen.queryByTestId('typing-memory-resume')).toBeNull()
     expect(screen.getByTestId('typing-test-result-name')).toBeInTheDocument()
     expect(screen.getByTestId('typing-test-start')).toBeInTheDocument()
   })
 })
 
-describe('TypingTestView custom mode result naming', () => {
-  const customConfig: TypingTestConfig = { mode: 'custom', textId: 'abc' }
+describe('TypingTestView fileImport mode result naming', () => {
+  const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 'abc' }
 
   it('shows an inline name field (placeholder Unnamed) instead of the quote source', () => {
     renderView({
-      config: customConfig,
+      config: fileImportConfig,
       state: makeState({ status: 'finished', currentQuote: { id: 1, text: 'x', source: 'code', length: 1 } }),
     })
     expect(screen.queryByTestId('typing-test-quote-source')).toBeNull()
@@ -343,9 +343,9 @@ describe('TypingTestView custom mode result naming', () => {
     expect(field.textContent).toBe('Unnamed')
   })
 
-  it('shows both WPM and KPM in custom mode', () => {
+  it('shows both WPM and KPM in fileImport mode', () => {
     renderView({
-      config: customConfig,
+      config: fileImportConfig,
       state: makeState({ status: 'running' }),
       wpm: 24,
       kpm: 120,
@@ -356,7 +356,7 @@ describe('TypingTestView custom mode result naming', () => {
 
   it('preserves leading indentation per line (display only)', () => {
     renderView({
-      config: customConfig,
+      config: fileImportConfig,
       state: makeState({
         status: 'running',
         words: ['def', 'x'],
@@ -369,18 +369,18 @@ describe('TypingTestView custom mode result naming', () => {
     expect(screen.getByTestId('line-indent-1').textContent).toBe('  ')
   })
 
-  it('counts custom progress by character, the word gap included', () => {
+  it('counts fileImport progress by character, the word gap included', () => {
     // "AAA AA" -> 3 + 2 + 1 separator = 6 characters total.
     renderView({
-      config: customConfig,
+      config: fileImportConfig,
       state: makeState({ status: 'running', words: ['AAA', 'AA'], currentWordIndex: 1, currentInput: '' }),
     })
     // 1 word done (3 chars) + 1 separator passed = 4 / 6.
     expect(screen.getByTestId('typing-test-word-count').textContent).toBe('4 / 6')
   })
 
-  it('hides the words/time/quote settings bar in custom mode', () => {
-    renderView({ config: customConfig, state: makeState({ status: 'running' }) })
+  it('hides the words/time/quote settings bar in fileImport mode', () => {
+    renderView({ config: fileImportConfig, state: makeState({ status: 'running' }) })
     expect(screen.queryByTestId('mode-words')).toBeNull()
     expect(screen.queryByTestId('mode-time')).toBeNull()
     expect(screen.queryByTestId('mode-quote')).toBeNull()
@@ -389,7 +389,7 @@ describe('TypingTestView custom mode result naming', () => {
   it('names the finished result on commit', () => {
     const onNameResult = vi.fn()
     renderView({
-      config: customConfig,
+      config: fileImportConfig,
       state: makeState({ status: 'finished' }),
       onNameResult,
     })
@@ -482,7 +482,7 @@ describe('TypingTestView paused overlay', () => {
   })
 })
 
-describe('TypingTestView — imported custom text (line breaks)', () => {
+describe('TypingTestView — imported fileImport text (line breaks)', () => {
   it('renders one row per logical line with ⏎ at line ends, and uses the 4-line window', () => {
     const { container } = renderView({
       state: makeState({
@@ -503,7 +503,7 @@ describe('TypingTestView — imported custom text (line breaks)', () => {
     expect(screen.getByTestId('typing-test-words').className).toContain('typing-multiline-window')
   })
 
-  it('applies font size and line count as CSS vars on the custom window', () => {
+  it('applies font size and line count as CSS vars on the fileImport window', () => {
     renderView({
       displayLines: 6,
       fontSize: 32,
@@ -516,7 +516,7 @@ describe('TypingTestView — imported custom text (line breaks)', () => {
 
   it('shows character progress (not word/line progress) in the stats bar', () => {
     renderView({
-      config: { mode: 'custom', textId: 'x' },
+      config: { mode: 'fileImport', textId: 'x' },
       state: makeState({
         status: 'running',
         words: ['a', 'b', 'c', 'd'],

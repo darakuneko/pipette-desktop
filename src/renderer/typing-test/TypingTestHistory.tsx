@@ -16,7 +16,7 @@ import { Tooltip } from '../components/ui/Tooltip'
 type ModeFilter = 'all' | 'words' | 'time' | 'quote'
 type SortColumn = 'date' | 'wpm' | 'kpm' | 'accuracy' | 'mode' | 'duration'
 type SortDirection = 'asc' | 'desc'
-/** Top-level split: Monkeytype (words/time/quote) vs imported Text (custom).
+/** Top-level split: Monkeytype (words/time/quote) vs imported Text (fileImport).
  *  Their baselines aren't comparable, so stats / chart / export are separate. */
 type HistoryTab = 'monkeytype' | 'text'
 
@@ -47,16 +47,16 @@ function formatDuration(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-/** Mode-column detail. Custom (imported-text) runs show the snapshotted text
+/** Mode-column detail. FileImport (imported-text) runs show the snapshotted text
  *  name (falling back to the stable textId for legacy rows saved before the
  *  name was captured); every other mode shows its `mode2` value. */
 function modeDetail(r: TypingTestResult): string {
-  if (r.mode === 'custom') return r.customTextName ?? (r.mode2 != null ? String(r.mode2) : '')
+  if (r.mode === 'fileImport') return r.fileImportTextName ?? (r.mode2 != null ? String(r.mode2) : '')
   return r.mode2 != null ? String(r.mode2) : ''
 }
 
-/** Stable filter key for an imported-text (custom) run; its textId is `mode2`. */
-function customTextId(r: TypingTestResult): string {
+/** Stable filter key for an imported-text (fileImport) run; its textId is `mode2`. */
+function fileImportTextId(r: TypingTestResult): string {
   return String(r.mode2 ?? '')
 }
 
@@ -67,20 +67,20 @@ function exportFilterSlug(
   isText: boolean,
   modeFilter: ModeFilter,
   textFilter: string,
-  customTexts: { id: string, name: string }[],
+  fileImportTexts: { id: string, name: string }[],
 ): string {
   if (isText) {
     if (textFilter === 'all') return 'text'
     // Fall back to the textId for an empty / missing name so the slug never
     // ends in a bare `text-`.
-    return `text-${customTexts.find((c) => c.id === textFilter)?.name || textFilter}`
+    return `text-${fileImportTexts.find((c) => c.id === textFilter)?.name || textFilter}`
   }
   return modeFilter === 'all' ? 'normal' : `normal-${modeFilter}`
 }
 
 const MODE_FILTERS: ModeFilter[] = ['all', 'words', 'time', 'quote']
 
-const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'customTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
+const CSV_HEADERS = ['date', 'name', 'wpm', 'kpm', 'accuracy', 'wordCount', 'correctChars', 'incorrectChars', 'durationSeconds', 'rawWpm', 'mode', 'mode2', 'fileImportTextName', 'language', 'punctuation', 'numbers', 'consistency', 'isPb'] as const
 
 function buildResultsCsv(results: TypingTestResult[]): string {
   return buildCsv(
@@ -105,20 +105,20 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
     setSortColumn(column)
   }, [sortColumn])
 
-  // Active tab's rows: custom for Text, everything else for Monkeytype.
+  // Active tab's rows: fileImport for Text, everything else for Monkeytype.
   const tabResults = useMemo(
-    () => results.filter((r) => isText ? r.mode === 'custom' : r.mode !== 'custom'),
+    () => results.filter((r) => isText ? r.mode === 'fileImport' : r.mode !== 'fileImport'),
     [results, isText],
   )
 
-  // Distinct imported texts (custom rows), keyed by stable textId, displayed by
+  // Distinct imported texts (fileImport rows), keyed by stable textId, displayed by
   // the snapshotted name. Drives the Text-tab filter dropdown.
-  const customTexts = useMemo(() => {
+  const fileImportTexts = useMemo(() => {
     const seen = new Map<string, string>()
     for (const r of results) {
-      if (r.mode !== 'custom') continue
-      const id = customTextId(r)
-      if (!seen.has(id)) seen.set(id, r.customTextName ?? id)
+      if (r.mode !== 'fileImport') continue
+      const id = fileImportTextId(r)
+      if (!seen.has(id)) seen.set(id, r.fileImportTextName ?? id)
     }
     return Array.from(seen, ([id, name]) => ({ id, name }))
   }, [results])
@@ -126,14 +126,14 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
   // Fall back to 'all' when the selected text no longer exists (e.g. all its
   // rows were deleted), so the dropdown stays controlled and the stats/chart
   // never collapse to an empty selection.
-  const effectiveTextFilter = textFilter === 'all' || customTexts.some((c) => c.id === textFilter)
+  const effectiveTextFilter = textFilter === 'all' || fileImportTexts.some((c) => c.id === textFilter)
     ? textFilter
     : 'all'
 
   const filtered = useMemo(() => {
     if (isText) {
       if (effectiveTextFilter === 'all') return tabResults
-      return tabResults.filter((r) => customTextId(r) === effectiveTextFilter)
+      return tabResults.filter((r) => fileImportTextId(r) === effectiveTextFilter)
     }
     if (modeFilter === 'all') return tabResults
     return tabResults.filter((r) => (r.mode ?? 'words') === modeFilter)
@@ -141,8 +141,8 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
 
   // Export is per-tab: only the rows currently shown.
   const handleExport = useCallback(() => {
-    onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(isText, modeFilter, effectiveTextFilter, customTexts))
-  }, [filtered, onExportCsv, isText, modeFilter, effectiveTextFilter, customTexts])
+    onExportCsv?.(buildResultsCsv(filtered), exportFilterSlug(isText, modeFilter, effectiveTextFilter, fileImportTexts))
+  }, [filtered, onExportCsv, isText, modeFilter, effectiveTextFilter, fileImportTexts])
 
   const stats = useMemo(() => computeStats(filtered), [filtered])
   const sparklineResults = useMemo(
@@ -167,8 +167,8 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           cmp = a.accuracy - b.accuracy
           break
         case 'mode': {
-          // Sort by what the Mode column actually shows (text name for custom),
-          // so custom rows order by name rather than an opaque textId.
+          // Sort by what the Mode column actually shows (text name for fileImport),
+          // so fileImport rows order by name rather than an opaque textId.
           const modeA = `${a.mode ?? ''}${modeDetail(a)}`
           const modeB = `${b.mode ?? ''}${modeDetail(b)}`
           cmp = modeA.localeCompare(modeB)
@@ -184,7 +184,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
 
   return (
     <div data-testid="typing-test-history" className="flex h-full max-w-4xl flex-col gap-3">
-      {/* Top tabs: Monkeytype (words/time/quote) vs imported Text (custom). */}
+      {/* Top tabs: Monkeytype (words/time/quote) vs imported Text (fileImport). */}
       <div className="flex items-center gap-4 border-b border-edge">
         {(['monkeytype', 'text'] as HistoryTab[]).map((tb) => (
           <button
@@ -197,7 +197,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
               : 'border-b-2 border-transparent px-1 pb-1.5 text-sm text-content-secondary hover:text-content'}
             onClick={() => setTab(tb)}
           >
-            {t(tb === 'text' ? 'editor.typingTest.history.tabCustom' : 'editor.typingTest.history.tabNormal')}
+            {t(tb === 'text' ? 'editor.typingTest.history.tabFileImport' : 'editor.typingTest.history.tabNormal')}
           </button>
         ))}
       </div>
@@ -223,7 +223,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
             ))}
           </select>
         )}
-        {isText && customTexts.length > 0 && (
+        {isText && fileImportTexts.length > 0 && (
           <select
             data-testid="history-filter-text"
             aria-label={t('editor.typingTest.history.filterText')}
@@ -232,7 +232,7 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
             onChange={(e) => setTextFilter(e.target.value)}
           >
             <option value="all">{t('editor.typingTest.history.allModes')}</option>
-            {customTexts.map((c) => (
+            {fileImportTexts.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name || t('editor.typingTest.history.unnamed')}
               </option>

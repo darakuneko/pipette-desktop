@@ -13,12 +13,12 @@ export interface ComparisonStats {
 
 /** Stable key identifying the current test condition, used both to group
  *  same-condition history and to remember the per-condition baseline:
- *  - custom: the imported text id (`custom|textId`)
+ *  - fileImport: the imported text id (`fileImport|textId`)
  *  - normal: mode + params + language + toggles (mirrors `configKey`)
  *  This must agree with {@link matchingResults} so the saved baseline and the
  *  pinnable choices stay in lockstep. */
 export function conditionKey(config: TypingTestConfig, language: string): string {
-  if (config.mode === 'custom') return `custom|${String(deriveMode2(config) ?? '')}`
+  if (config.mode === 'fileImport') return `fileImport|${String(deriveMode2(config) ?? '')}`
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   return configKey({
     mode: config.mode,
@@ -30,7 +30,7 @@ export function conditionKey(config: TypingTestConfig, language: string): string
 }
 
 /** Results from the pool sharing the current test's condition:
- *  - custom: the same imported text (matched on `mode2` = textId)
+ *  - fileImport: the same imported text (matched on `mode2` = textId)
  *  - normal: same mode + params + language + punctuation/numbers (`configKey`)
  *  `beforeMs`, when given, drops results at/after that time so the in-flight
  *  run (saved on finish) never compares against itself. */
@@ -40,7 +40,7 @@ export function matchingResults<T extends TypingTestResult>(
   language: string,
   beforeMs?: number,
 ): T[] {
-  const isCustom = config.mode === 'custom'
+  const isFileImport = config.mode === 'fileImport'
   const currentTextId = String(deriveMode2(config) ?? '')
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   // configKey only reads these 5 fields, so a config-shaped partial is enough.
@@ -54,7 +54,7 @@ export function matchingResults<T extends TypingTestResult>(
 
   return pool.filter((r) => {
     if (beforeMs != null && new Date(r.date).getTime() >= beforeMs) return false
-    if (isCustom) return r.mode === 'custom' && String(r.mode2 ?? '') === currentTextId
+    if (isFileImport) return r.mode === 'fileImport' && String(r.mode2 ?? '') === currentTextId
     return configKey(r) === currentKey
   })
 }

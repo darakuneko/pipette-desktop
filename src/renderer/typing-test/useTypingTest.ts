@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getCustomTextData, getCustomTextDataSync } from './word-generator'
-import type { CustomTextData } from './word-generator'
+import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync } from './word-generator'
+import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, Quote } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from './types'
@@ -68,11 +68,11 @@ export interface TypingTestState {
   incorrectChars: number
   currentQuote: Quote | null
   wpmHistory: number[]
-  /** Word indices that end a line (imported custom text only). At these
+  /** Word indices that end a line (imported fileImport text only). At these
    *  words Enter advances; elsewhere Space advances. Empty for every other
    *  mode, so their submit behaviour is unchanged. */
   lineBreaks: Set<number>
-  /** Leading whitespace per logical line (imported custom text, display only).
+  /** Leading whitespace per logical line (imported fileImport text, display only).
    *  Indexed by line order; empty for every other mode. */
   lineIndents: string[]
 }
@@ -117,16 +117,16 @@ function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): {
 interface WordsForConfig {
   words: string[]
   quote: Quote | null
-  /** Line-end word indices (custom mode only); empty otherwise. */
+  /** Line-end word indices (fileImport mode only); empty otherwise. */
   lineBreaks: number[]
-  /** Per-line leading whitespace (custom mode only); empty otherwise. */
+  /** Per-line leading whitespace (fileImport mode only); empty otherwise. */
   lineIndents: string[]
 }
 
-/** Build the verbatim quote shell for an imported custom text so the
+/** Build the verbatim quote shell for an imported fileImport text so the
  *  finished screen can show its name as the source. Carries the line-break
  *  positions through so Enter can advance at line ends. */
-function customTextToWords(data: CustomTextData): WordsForConfig {
+function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
   const text = data.words.join(' ')
   return {
     words: data.words,
@@ -141,11 +141,11 @@ function createWordsForConfigSync(config: TypingTestConfig, language: string): W
     const quote = selectQuote(config.quoteLength)
     return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
   }
-  if (config.mode === 'custom') {
-    const data = getCustomTextDataSync(config.textId)
+  if (config.mode === 'fileImport') {
+    const data = getFileImportTextDataSync(config.textId)
     // Cache miss — the async setConfig path fills words once the store
     // round-trip resolves. Return empty (never call sampleWords on []).
-    return data ? customTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
   }
   const { count, opts } = wordGenParams(config)
   const { words } = generateWordsSync(count, opts, language)
@@ -157,9 +157,9 @@ async function createWordsForConfig(config: TypingTestConfig, language: string):
     const quote = selectQuote(config.quoteLength)
     return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
   }
-  if (config.mode === 'custom') {
-    const data = await getCustomTextData(config.textId)
-    return data ? customTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+  if (config.mode === 'fileImport') {
+    const data = await getFileImportTextData(config.textId)
+    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
   }
   const { count, opts } = wordGenParams(config)
   const { words } = await generateWords(count, opts, language)
@@ -346,14 +346,14 @@ export function useTypingTest(
     setState(freshState(result))
   }, [])
 
-  // --- Memory mode (imported custom text only): pause / capture / restore ---
+  // --- Memory mode (imported fileImport text only): pause / capture / restore ---
 
   /** Snapshot the in-progress test so it can be persisted and resumed.
-   *  Returns null unless an imported custom text is active. */
+   *  Returns null unless an imported fileImport text is active. */
   const captureMemory = useCallback((): TypingTestMemory | null => {
     const s = stateRef.current
     const cfg = configRef.current
-    if (cfg.mode !== 'custom') return null
+    if (cfg.mode !== 'fileImport') return null
     return {
       textId: cfg.textId,
       runId: s.runId,
@@ -381,7 +381,7 @@ export function useTypingTest(
    *  before continuing. Returns false when the text can no longer be loaded
    *  (e.g. deleted) so the caller can fall back to a fresh test. */
   const restoreState = useCallback(async (memory: TypingTestMemory, resume: boolean): Promise<boolean> => {
-    const cfg: TypingTestConfig = { mode: 'custom', textId: memory.textId }
+    const cfg: TypingTestConfig = { mode: 'fileImport', textId: memory.textId }
     setConfigState(cfg)
     configRef.current = cfg
     const seq = ++seqRef.current
@@ -552,8 +552,8 @@ export function useTypingTest(
       if (s.status !== 'waiting' && s.status !== 'running') return s
 
       // Space and Enter both advance a word, but they are distinct: at a
-      // line-end word (imported custom text) Enter is expected, elsewhere
-      // Space. The non-matching key is a no-op. For every non-custom mode
+      // line-end word (imported fileImport text) Enter is expected, elsewhere
+      // Space. The non-matching key is a no-op. For every non-fileImport mode
       // `lineBreaks` is empty, so Space always advances and Enter is always
       // ignored — identical to the previous behaviour.
       if (isSubmitKey(key) || key === 'Enter') {
@@ -665,7 +665,7 @@ export function useTypingTest(
     return Math.round((state.correctChars / 5) / minutes)
   }, [state.startTime, state.endTime, state.correctChars, tick])
 
-  // Keystrokes per minute (correct chars / minute). Custom mode shows this
+  // Keystrokes per minute (correct chars / minute). FileImport mode shows this
   // instead of WPM, since imported code / CJK text has no meaningful "words".
   const kpm = useMemo(() => {
     if (!state.startTime) return 0

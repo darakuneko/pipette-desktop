@@ -38,9 +38,9 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }
-    case 'custom':
+    case 'fileImport':
       if (typeof obj.textId !== 'string' || obj.textId.length === 0) return undefined
-      return { mode: 'custom', textId: obj.textId }
+      return { mode: 'fileImport', textId: obj.textId }
     default:
       return undefined
   }
@@ -481,11 +481,11 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     const prev = typingTestConfigRef.current
     updateTypingTestConfig(cfg)
     // Remember the last normal (words/time/quote) config so it survives a
-    // switch into custom (imported text) and back. When entering custom,
+    // switch into fileImport (imported text) and back. When entering fileImport,
     // capture the outgoing normal config too — covers old prefs where
     // typingTestNormalConfig was never saved.
-    if (cfg.mode !== 'custom') updateTypingTestNormalConfig(cfg)
-    else if (prev && prev.mode !== 'custom') updateTypingTestNormalConfig(prev)
+    if (cfg.mode !== 'fileImport') updateTypingTestNormalConfig(cfg)
+    else if (prev && prev.mode !== 'fileImport') updateTypingTestNormalConfig(prev)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestNormalConfig])
 

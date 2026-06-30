@@ -25,11 +25,11 @@ describe('typingTestResultMaterialLabel', () => {
     expect(typingTestResultMaterialLabel({ ...base, mode: 'quote', language: 'japanese' }))
       .toBe('quote (japanese)')
   })
-  it('uses the snapshotted text name for custom mode', () => {
-    expect(typingTestResultMaterialLabel({ ...base, mode: 'custom', customTextName: 'novel.txt' }))
+  it('uses the snapshotted text name for fileImport mode', () => {
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'fileImport', fileImportTextName: 'novel.txt' }))
       .toBe('novel.txt')
-    // Falls back to 'custom' when the name wasn't captured.
-    expect(typingTestResultMaterialLabel({ ...base, mode: 'custom' })).toBe('custom')
+    // Falls back to 'fileImport' when the name wasn't captured.
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'fileImport' })).toBe('fileImport')
   })
 })
 
@@ -249,7 +249,7 @@ describe('buildResultNameChips', () => {
   const tStub = (k: string): string =>
     ({ 'editor.typingTest.wpm': 'WPM', 'editor.typingTest.kpm': 'KPM', 'editor.typingTest.accuracy': 'Accuracy' }[k] ?? k)
   it('builds material-label, timestamp and metric chips', () => {
-    const chips = buildResultNameChips({ ...base, mode: 'custom', customTextName: 'Scala - Test001' }, tStub)
+    const chips = buildResultNameChips({ ...base, mode: 'fileImport', fileImportTextName: 'Scala - Test001' }, tStub)
     expect(chips[0]).toBe('Scala - Test001')
     // compact local timestamp YYYYMMDDHHmmss (14 digits)
     expect(chips[1]).toMatch(/^\d{14}$/)
