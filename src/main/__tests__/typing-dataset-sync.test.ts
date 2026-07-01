@@ -105,8 +105,10 @@ describe('syncTypingDataset', () => {
   })
 
   it('writes an override and clears downloads when the Hub version differs', async () => {
-    // Seed a stale downloaded file that must be cleared on a version bump.
-    await writeFile(join(testDir, 'local', 'downloads', 'languages', 'german.json'), '{}', 'utf-8')
+    // Seed a stale downloaded file (under the provider's dir) that must be
+    // cleared on a version bump.
+    await mkdir(join(testDir, 'local', 'downloads', 'languages', 'monkeytype'), { recursive: true })
+    await writeFile(join(testDir, 'local', 'downloads', 'languages', 'monkeytype', 'german.json'), '{}', 'utf-8')
 
     const freshDataset = {
       provider: 'monkeytype',
@@ -132,7 +134,7 @@ describe('syncTypingDataset', () => {
     expect(written.monkeytype).toEqual(freshDataset)
 
     // Stale download removed.
-    const remaining = await readdir(join(testDir, 'local', 'downloads', 'languages'))
+    const remaining = await readdir(join(testDir, 'local', 'downloads', 'languages', 'monkeytype'))
     expect(remaining).not.toContain('german.json')
   })
 
@@ -173,5 +175,56 @@ describe('effective dataset after override', () => {
     mockNet.fetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('xxxx') } as unknown as Response)
     await handlers.get('lang:download')!({}, 'spanish')
     expect(mockNet.fetch).toHaveBeenCalledWith(`${NEW_DOWNLOAD_BASE}/spanish.json`)
+  })
+})
+
+describe('tatoeba Hub-only provider', () => {
+  const TATOEBA_VERSION = 'tatoeba-20260701-8e31452a1d44'
+  const TATOEBA_BASE = 'https://hub.example/datasets/tatoeba/packs'
+
+  function captureHandlers() {
+    return import('electron').then(({ ipcMain }) => {
+      const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+      vi.mocked(ipcMain).handle.mockImplementation(((c: string, h: (...a: unknown[]) => Promise<unknown>) => {
+        handlers.set(c, h)
+      }) as unknown as typeof ipcMain.handle)
+      mod.setupLanguageStore()
+      return handlers
+    })
+  }
+
+  it('lists nothing before a Hub override (nothing is bundled)', async () => {
+    const handlers = await captureHandlers()
+    const list = await handlers.get('lang:list')!({}, 'tatoeba') as unknown[]
+    expect(list).toEqual([])
+  })
+
+  it('after an override, lists + downloads packs into a provider-isolated dir', async () => {
+    // A tatoeba pack is a verbatim `{ name, words }` document of sentences.
+    const packText = JSON.stringify({ name: 'english', words: ['Hello there.', 'How are you?'] })
+    const fresh = {
+      provider: 'tatoeba',
+      version: TATOEBA_VERSION,
+      downloadUrlBase: TATOEBA_BASE,
+      languages: [{ name: 'english', wordCount: 2, rightToLeft: false, fileSize: Buffer.byteLength(packText, 'utf-8') }],
+    }
+    mockNet.fetch
+      .mockResolvedValueOnce(okJson({ provider: 'tatoeba', version: TATOEBA_VERSION }))
+      .mockResolvedValueOnce(okJson(fresh))
+    expect((await mod.syncTypingDataset('tatoeba')).changed).toBe(true)
+
+    const handlers = await captureHandlers()
+    const list = await handlers.get('lang:list')!({}, 'tatoeba') as Array<{ name: string }>
+    expect(list.map((l) => l.name)).toEqual(['english'])
+
+    // Pack download hits the tatoeba packs URL and lands in the tatoeba dir,
+    // never colliding with monkeytype's own 'english'.
+    mockNet.fetch.mockReset()
+    mockNet.fetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(packText) } as unknown as Response)
+    const dl = await handlers.get('lang:download')!({}, 'english', 'tatoeba') as { success: boolean }
+    expect(dl.success).toBe(true)
+    expect(mockNet.fetch).toHaveBeenCalledWith(`${TATOEBA_BASE}/english.json`)
+    const files = await readdir(join(testDir, 'local', 'downloads', 'languages', 'tatoeba'))
+    expect(files).toContain('english.json')
   })
 })
