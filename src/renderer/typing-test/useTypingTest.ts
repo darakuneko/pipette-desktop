@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync } from './word-generator'
+import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaQuote } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, Quote } from './types'
@@ -136,6 +136,15 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
   }
 }
 
+/** Build a word-flow config from a sampled Tatoeba quote (empty when the pack
+ *  is uncached / not downloaded). Reuses the quote path so counting and
+ *  rendering match quote mode. */
+function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
+  if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+  const quote = tatoebaQuote(pack)
+  return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+}
+
 function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
   if (config.mode === 'quote') {
     const quote = selectQuote(config.quoteLength)
@@ -146,6 +155,10 @@ function createWordsForConfigSync(config: TypingTestConfig, language: string): W
     // Cache miss — the async setConfig path fills words once the store
     // round-trip resolves. Return empty (never call sampleWords on []).
     return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+  }
+  if (config.mode === 'tatoeba') {
+    // Cache miss — the async path fills words once langGet resolves.
+    return tatoebaWordsForConfig(getTatoebaPackSync(config.language))
   }
   const { count, opts } = wordGenParams(config)
   const { words } = generateWordsSync(count, opts, language)
@@ -160,6 +173,9 @@ async function createWordsForConfig(config: TypingTestConfig, language: string):
   if (config.mode === 'fileImport') {
     const data = await getFileImportTextData(config.textId)
     return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
+  }
+  if (config.mode === 'tatoeba') {
+    return tatoebaWordsForConfig(await getTatoebaPack(config.language))
   }
   const { count, opts } = wordGenParams(config)
   const { words } = await generateWords(count, opts, language)
