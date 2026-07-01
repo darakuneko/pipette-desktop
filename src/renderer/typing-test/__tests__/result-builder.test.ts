@@ -31,6 +31,10 @@ describe('typingTestResultMaterialLabel', () => {
     // Falls back to 'fileImport' when the name wasn't captured.
     expect(typingTestResultMaterialLabel({ ...base, mode: 'fileImport' })).toBe('fileImport')
   })
+  it('uses tatoeba-<language> for tatoeba mode', () => {
+    expect(typingTestResultMaterialLabel({ ...base, mode: 'tatoeba', language: 'english' }))
+      .toBe('tatoeba-english')
+  })
 })
 
 describe('computeRawWpm', () => {
@@ -223,6 +227,26 @@ describe('buildTypingTestResult', () => {
     })
     expect(result.mode).toBe('quote')
     expect(result.mode2).toBe('medium')
+  })
+
+  it('stores the tatoeba pack language as language + mode2, not the input language', () => {
+    const config: TypingTestConfig = { mode: 'tatoeba', language: 'english' }
+    const result = buildTypingTestResult({
+      correctChars: 120,
+      incorrectChars: 4,
+      wordCount: 20,
+      wpm: 65,
+      accuracy: 97,
+      elapsedMs: 40000,
+      config,
+      // The top-level (MonkeyType) language is irrelevant for tatoeba.
+      language: 'german',
+      wpmHistory: [],
+    })
+    expect(result.mode).toBe('tatoeba')
+    expect(result.mode2).toBe('english')
+    expect(result.language).toBe('english')
+    expect(typingTestResultMaterialLabel(result)).toBe('tatoeba-english')
   })
 })
 

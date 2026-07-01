@@ -20,7 +20,11 @@ function typingTestAnalyticsLabel(
   language: string,
   currentQuote: { source: string } | null,
 ): string {
-  return materialLabel(config.mode, language, currentQuote?.source)
+  // Tatoeba's material label keys off the sentence-pack language (in the
+  // config), not the MonkeyType word language, so the recording side and the
+  // Analyze run filter still produce an identical join key.
+  const effectiveLanguage = config.mode === 'tatoeba' ? config.language : language
+  return materialLabel(config.mode, effectiveLanguage, currentQuote?.source)
 }
 
 export interface UseInputModesOptions {

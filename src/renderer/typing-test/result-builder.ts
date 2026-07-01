@@ -27,6 +27,9 @@ export function computeConsistency(wpmHistory: number[]): number {
  *  stays byte-identical on both ends. */
 export function materialLabel(mode: string, language: string, fileImportName: string | undefined): string {
   if (mode === 'fileImport') return fileImportName ?? 'fileImport'
+  // Tatoeba runs are sliced by their sentence-pack language, not the
+  // (irrelevant) MonkeyType word language, so they get a dedicated label.
+  if (mode === 'tatoeba') return `tatoeba-${language}`
   return `${mode} (${language})`
 }
 
@@ -95,6 +98,9 @@ export function deriveMode2(config: TypingTestConfig): number | string {
     case 'fileImport':
       // Group PBs per imported text via its id.
       return config.textId
+    case 'tatoeba':
+      // Group PBs per sentence-pack language.
+      return config.language
   }
 }
 
@@ -135,7 +141,9 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     mode: input.config.mode,
     mode2: deriveMode2(input.config),
     fileImportTextName: input.config.mode === 'fileImport' ? input.fileImportTextName : undefined,
-    language: input.language,
+    // Tatoeba stores its sentence-pack language (from the config) so the
+    // material label and PB grouping key it, not the MonkeyType word language.
+    language: input.config.mode === 'tatoeba' ? input.config.language : input.language,
     punctuation: hasPunctuation,
     numbers: hasNumbers,
     consistency,

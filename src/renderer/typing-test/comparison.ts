@@ -19,6 +19,9 @@ export interface ComparisonStats {
  *  pinnable choices stay in lockstep. */
 export function conditionKey(config: TypingTestConfig, language: string): string {
   if (config.mode === 'fileImport') return `fileImport|${String(deriveMode2(config) ?? '')}`
+  // Tatoeba is grouped by its sentence-pack language (mode2), independent of
+  // the MonkeyType word language — mirrors the fileImport short form.
+  if (config.mode === 'tatoeba') return `tatoeba|${String(deriveMode2(config) ?? '')}`
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   return configKey({
     mode: config.mode,
@@ -41,7 +44,9 @@ export function matchingResults<T extends TypingTestResult>(
   beforeMs?: number,
 ): T[] {
   const isFileImport = config.mode === 'fileImport'
-  const currentTextId = String(deriveMode2(config) ?? '')
+  const isTatoeba = config.mode === 'tatoeba'
+  // For fileImport this is the textId; for tatoeba, the pack language.
+  const currentMode2 = String(deriveMode2(config) ?? '')
   const hasToggles = config.mode === 'words' || config.mode === 'time'
   // configKey only reads these 5 fields, so a config-shaped partial is enough.
   const currentKey = configKey({
@@ -54,7 +59,8 @@ export function matchingResults<T extends TypingTestResult>(
 
   return pool.filter((r) => {
     if (beforeMs != null && new Date(r.date).getTime() >= beforeMs) return false
-    if (isFileImport) return r.mode === 'fileImport' && String(r.mode2 ?? '') === currentTextId
+    if (isFileImport) return r.mode === 'fileImport' && String(r.mode2 ?? '') === currentMode2
+    if (isTatoeba) return r.mode === 'tatoeba' && String(r.mode2 ?? '') === currentMode2
     return configKey(r) === currentKey
   })
 }
