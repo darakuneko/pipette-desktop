@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
-import { Check, Download, Trash2, Loader2, FileUp } from 'lucide-react'
+import { Check, Trash2, Loader2, FileUp } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
-import type { LanguageListEntry } from '../../shared/types/language-store'
+import { LanguagePackTab } from './LanguagePackTab'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
-type Tab = 'existing' | 'import'
+type Tab = 'existing' | 'tatoeba' | 'import'
 
 /** Store error code → i18n key for the Import tab error line. Unlisted
  *  codes fall back to the generic importFailed message. */
@@ -24,36 +24,38 @@ interface Props {
   currentLanguage: string
   /** Active imported text id, when the current config is in fileImport mode. */
   currentFileImportTextId?: string
+  /** Active tatoeba pack language, when the current config is in tatoeba mode. */
+  currentTatoebaLanguage?: string
   onSelectLanguage: (name: string) => void
   /** Called when an imported text is picked — switches to fileImport mode. */
   onSelectImport: (textId: string) => void
+  /** Called when a tatoeba pack is picked — switches to tatoeba mode. */
+  onSelectTatoeba: (language: string) => void
   /** Called on close when the currently-selected imported text was deleted
    *  (and nothing else was picked) so the caller can reset to the default. */
   onCurrentTextDeleted?: () => void
   onClose: () => void
 }
 
-function formatName(name: string): string {
-  return name.replace(/_/g, ' ')
+function initialTab(fileImportTextId?: string, tatoebaLanguage?: string): Tab {
+  if (fileImportTextId) return 'import'
+  if (tatoebaLanguage) return 'tatoeba'
+  return 'existing'
 }
 
 export function LanguageSelectorModal({
   currentLanguage,
   currentFileImportTextId,
+  currentTatoebaLanguage,
   onSelectLanguage,
   onSelectImport,
+  onSelectTatoeba,
   onCurrentTextDeleted,
   onClose,
 }: Props) {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<Tab>(currentFileImportTextId ? 'import' : 'existing')
-  const [languages, setLanguages] = useState<LanguageListEntry[]>([])
-  const [search, setSearch] = useState('')
-  const [downloading, setDownloading] = useState<Set<string>>(new Set())
-  const [updateAvailable, setUpdateAvailable] = useState(false)
-  const [updating, setUpdating] = useState(false)
+  const [tab, setTab] = useState<Tab>(() => initialTab(currentFileImportTextId, currentTatoebaLanguage))
   const backdropRef = useRef<HTMLDivElement>(null)
-  const searchRef = useRef<HTMLInputElement>(null)
   // Flipped true when the currently-selected imported text is deleted, so a
   // plain close (Esc / backdrop / X — not an explicit pick) resets to default.
   const deletedCurrentRef = useRef(false)
@@ -65,77 +67,9 @@ export function LanguageSelectorModal({
 
   useEscapeClose(handleClose)
 
-  useEffect(() => {
-    let alive = true
-    window.vialAPI.langList().then((list) => {
-      if (alive) setLanguages(list)
-    }).catch(() => {})
-    return () => { alive = false }
-  }, [])
-
-  useEffect(() => {
-    if (tab === 'existing') searchRef.current?.focus()
-  }, [tab])
-
-  // Version check only — no auto-download. Runs when the MonkeyType tab is
-  // shown; the main process caches the result for the app session, so reopening
-  // the modal or switching tabs won't re-hit the Hub.
-  useEffect(() => {
-    if (tab !== 'existing') return
-    let alive = true
-    window.vialAPI.checkTypingDatasetUpdate('monkeytype')
-      .then((r) => { if (alive) setUpdateAvailable(r.updateAvailable) })
-      .catch(() => {})
-    return () => { alive = false }
-  }, [tab])
-
-  const handleUpdateDataset = useCallback(async () => {
-    setUpdating(true)
-    try {
-      const result = await window.vialAPI.updateTypingDataset('monkeytype')
-      if (result.changed) {
-        // The manifest may have new/changed languages; refresh the list.
-        const list = await window.vialAPI.langList()
-        setLanguages(list)
-        setUpdateAvailable(false)
-      }
-      // On `changed:false` (Hub unreachable / invalid payload) the update was
-      // NOT applied — keep the banner so the user can retry.
-    } finally {
-      setUpdating(false)
-    }
-  }, [])
-
   const handleBackdropClick = useCallback((e: React.MouseEvent) => {
     if (e.target === backdropRef.current) handleClose()
   }, [handleClose])
-
-  const handleDownload = useCallback(async (name: string) => {
-    setDownloading((s) => new Set(s).add(name))
-    try {
-      const result = await window.vialAPI.langDownload(name)
-      if (result.success) {
-        setLanguages((prev) =>
-          prev.map((l) => (l.name === name ? { ...l, status: 'downloaded' as const } : l)),
-        )
-      }
-    } finally {
-      setDownloading((s) => {
-        const next = new Set(s)
-        next.delete(name)
-        return next
-      })
-    }
-  }, [])
-
-  const handleDelete = useCallback(async (name: string) => {
-    const result = await window.vialAPI.langDelete(name)
-    if (result.success) {
-      setLanguages((prev) =>
-        prev.map((l) => (l.name === name ? { ...l, status: 'not-downloaded' as const } : l)),
-      )
-    }
-  }, [])
 
   const handleSelect = useCallback((name: string) => {
     onSelectLanguage(name)
@@ -147,14 +81,10 @@ export function LanguageSelectorModal({
     onClose()
   }, [onSelectImport, onClose])
 
-  const filtered = useMemo(() => {
-    if (!search) return languages
-    const q = search.toLowerCase()
-    return languages.filter((l) => formatName(l.name).toLowerCase().includes(q))
-  }, [languages, search])
-
-  const downloaded = useMemo(() => filtered.filter((l) => l.status !== 'not-downloaded'), [filtered])
-  const available = useMemo(() => filtered.filter((l) => l.status === 'not-downloaded'), [filtered])
+  const handleSelectTatoeba = useCallback((language: string) => {
+    onSelectTatoeba(language)
+    onClose()
+  }, [onSelectTatoeba, onClose])
 
   return (
     <div
@@ -183,6 +113,16 @@ export function LanguageSelectorModal({
           <button
             type="button"
             role="tab"
+            aria-selected={tab === 'tatoeba'}
+            data-testid="language-tab-tatoeba"
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'tatoeba' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
+            onClick={() => setTab('tatoeba')}
+          >
+            {t('editor.typingTest.language.tabTatoeba')}
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={tab === 'import'}
             data-testid="language-tab-import"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'import' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
@@ -192,83 +132,23 @@ export function LanguageSelectorModal({
           </button>
         </div>
 
-        {tab === 'existing' ? (
-          <>
-            <div className="border-b border-edge px-4 py-2">
-              <input
-                ref={searchRef}
-                type="text"
-                className="w-full rounded-md border border-edge bg-surface-alt px-3 py-1.5 text-sm text-content placeholder:text-content-muted focus:border-accent focus:outline-none"
-                placeholder={t('editor.typingTest.language.searchPlaceholder')}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                data-testid="language-search"
-              />
-            </div>
+        {tab === 'existing' && (
+          <LanguagePackTab
+            provider="monkeytype"
+            currentSelected={currentFileImportTextId || currentTatoebaLanguage ? undefined : currentLanguage}
+            onSelect={handleSelect}
+          />
+        )}
 
-            {updateAvailable && (
-              <div
-                className="flex items-center justify-between gap-3 border-b border-edge bg-accent/5 px-4 py-2"
-                data-testid="typing-dataset-update-banner"
-              >
-                <span className="text-sm text-content-secondary">
-                  {t('editor.typingTest.language.datasetUpdateAvailable')}
-                </span>
-                <button
-                  type="button"
-                  data-testid="typing-dataset-update-button"
-                  disabled={updating}
-                  onClick={handleUpdateDataset}
-                  className="inline-flex h-8 items-center rounded-md border border-accent bg-accent/10 px-3 text-sm text-accent transition-colors hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {t(updating ? 'editor.typingTest.language.datasetUpdating' : 'editor.typingTest.language.datasetUpdate')}
-                </button>
-              </div>
-            )}
+        {tab === 'tatoeba' && (
+          <LanguagePackTab
+            provider="tatoeba"
+            currentSelected={currentTatoebaLanguage}
+            onSelect={handleSelectTatoeba}
+          />
+        )}
 
-            <div className="flex-1 overflow-y-auto">
-              {filtered.length === 0 && (
-                <p className="px-4 py-6 text-center text-sm text-content-muted">{t('editor.typingTest.language.noResults')}</p>
-              )}
-
-              {downloaded.length > 0 && (
-                <div>
-                  <div className="sticky top-0 bg-surface px-4 py-2 text-xs font-medium uppercase text-content-muted">
-                    {t('editor.typingTest.language.downloaded')}
-                  </div>
-                  {downloaded.map((lang) => (
-                    <LanguageRow
-                      key={lang.name}
-                      lang={lang}
-                      isCurrent={!currentFileImportTextId && lang.name === currentLanguage}
-                      isDownloading={downloading.has(lang.name)}
-                      onSelect={handleSelect}
-                      onDelete={handleDelete}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {available.length > 0 && (
-                <div>
-                  <div className="sticky top-0 bg-surface px-4 py-2 text-xs font-medium uppercase text-content-muted">
-                    {t('editor.typingTest.language.available')}
-                  </div>
-                  {available.map((lang) => (
-                    <LanguageRow
-                      key={lang.name}
-                      lang={lang}
-                      isCurrent={false}
-                      isDownloading={downloading.has(lang.name)}
-                      onSelect={handleSelect}
-                      onDownload={handleDownload}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          </>
-        ) : (
+        {tab === 'import' && (
           <ImportTab
             currentFileImportTextId={currentFileImportTextId}
             onSelect={handleSelectImport}
@@ -436,78 +316,3 @@ function ImportRow({ meta, isCurrent, onSelect, onDelete }: ImportRowProps) {
   )
 }
 
-interface LanguageRowProps {
-  lang: LanguageListEntry
-  isCurrent: boolean
-  isDownloading: boolean
-  onSelect: (name: string) => void
-  onDownload?: (name: string) => void
-  onDelete?: (name: string) => void
-}
-
-function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onDelete }: LanguageRowProps) {
-  const { t } = useTranslation()
-  const canSelect = lang.status !== 'not-downloaded'
-
-  let rowStyle = ''
-  if (isCurrent) {
-    rowStyle = 'bg-accent/10'
-  } else if (canSelect) {
-    rowStyle = 'cursor-pointer hover:bg-surface-alt'
-  }
-
-  return (
-    <div
-      data-testid={`language-row-${lang.name}`}
-      className={`flex items-center gap-2 px-4 py-2 text-sm transition-colors ${rowStyle}`}
-      onClick={canSelect ? () => onSelect(lang.name) : undefined}
-    >
-      <div className="flex min-w-0 flex-1 items-center gap-2">
-        {isCurrent && <Check size={ICON_SM} className="shrink-0 text-accent" aria-hidden="true" />}
-        <span className={`truncate ${isCurrent ? 'font-semibold text-accent' : 'text-content'}`}>
-          {formatName(lang.name)}
-        </span>
-        {lang.rightToLeft && (
-          <span className="shrink-0 rounded bg-surface-alt px-1 py-0.5 text-2xs text-content-muted">RTL</span>
-        )}
-      </div>
-
-      <span className="shrink-0 text-xs text-content-muted">
-        {t('editor.typingTest.language.words', { count: lang.wordCount })}
-      </span>
-
-      {lang.status === 'not-downloaded' && onDownload && (
-        <button
-          type="button"
-          data-testid={`language-download-${lang.name}`}
-          className="shrink-0 rounded p-1 text-content-muted hover:text-accent"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDownload(lang.name)
-          }}
-          disabled={isDownloading}
-        >
-          {isDownloading ? (
-            <Loader2 size={ICON_SM} className="animate-spin" aria-hidden="true" />
-          ) : (
-            <Download size={ICON_SM} aria-hidden="true" />
-          )}
-        </button>
-      )}
-
-      {lang.status === 'downloaded' && onDelete && (
-        <button
-          type="button"
-          data-testid={`language-delete-${lang.name}`}
-          className="shrink-0 rounded p-1 text-content-muted hover:text-danger"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(lang.name)
-          }}
-        >
-          <Trash2 size={ICON_SM} aria-hidden="true" />
-        </button>
-      )}
-    </div>
-  )
-}

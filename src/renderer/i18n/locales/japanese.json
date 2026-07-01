@@ -374,6 +374,7 @@
         "loadingLanguage": "言語を読み込み中...",
         "downloadFailed": "ダウンロードに失敗しました",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
         "tabFileImport": "ファイル取込",
         "import": "UTF-8 テキストをインポート",
         "importEmpty": "インポートされたテキストはありません",

@@ -374,6 +374,7 @@
         "loadingLanguage": "Loading language...",
         "downloadFailed": "Download failed",
         "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba",
         "tabFileImport": "File Import",
         "import": "Import UTF-8 text file",
         "importEmpty": "No imported texts yet",

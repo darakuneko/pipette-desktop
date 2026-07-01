@@ -485,14 +485,24 @@ export function TypingTestPane({
   // Mode / language. The mode kind (FileImport / Normal) goes in the label —
   // "Mode(FileImport):" — and the button shows just the source (file name or
   // language), truncated to one line; the full text is on the title.
-  const modeType = typingTest.config.mode === 'fileImport'
-    ? t('editor.typingTest.language.tabFileImport')
-    : t('editor.typingTest.language.tabMonkeytype')
-  const modeLabel = typingTest.isLanguageLoading
-    ? t('editor.typingTest.language.loadingLanguage')
-    : typingTest.config.mode === 'fileImport'
-    ? (typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.fileImportText'))
-    : typingTest.language.replace(/_/g, ' ')
+  let modeType: string
+  if (typingTest.config.mode === 'fileImport') {
+    modeType = t('editor.typingTest.language.tabFileImport')
+  } else if (typingTest.config.mode === 'tatoeba') {
+    modeType = t('editor.typingTest.language.tabTatoeba')
+  } else {
+    modeType = t('editor.typingTest.language.tabMonkeytype')
+  }
+  let modeLabel: string
+  if (typingTest.isLanguageLoading) {
+    modeLabel = t('editor.typingTest.language.loadingLanguage')
+  } else if (typingTest.config.mode === 'fileImport') {
+    modeLabel = typingTest.state.currentQuote?.source ?? t('editor.typingTest.language.fileImportText')
+  } else if (typingTest.config.mode === 'tatoeba') {
+    modeLabel = typingTest.config.language.replace(/_/g, ' ')
+  } else {
+    modeLabel = typingTest.language.replace(/_/g, ' ')
+  }
 
   // Config controls, pinned to the window's top-left as a sidebar in editor
   // mode (view-only has no config UI). Lifted out of the keymap row so it sits
@@ -530,14 +540,19 @@ export function TypingTestPane({
           <LanguageSelectorModal
             currentLanguage={typingTest.language}
             currentFileImportTextId={typingTest.config.mode === 'fileImport' ? typingTest.config.textId : undefined}
+            currentTatoebaLanguage={typingTest.config.mode === 'tatoeba' ? typingTest.config.language : undefined}
             onSelectLanguage={(name) => {
-              // Picking a language leaves fileImport mode — restore the last normal
-              // (words/time/quote) config so its Pattern/Units/Option settings
-              // survive the round trip; fall back to the default if none saved.
-              if (typingTest.config.mode === 'fileImport') onConfigChange(monkeytypeConfig ?? DEFAULT_CONFIG)
+              // Picking a MonkeyType language leaves fileImport / tatoeba mode —
+              // restore the last normal (words/time/quote) config so its
+              // Pattern/Units/Option settings survive the round trip; fall back
+              // to the default if none saved.
+              if (typingTest.config.mode === 'fileImport' || typingTest.config.mode === 'tatoeba') {
+                onConfigChange(monkeytypeConfig ?? DEFAULT_CONFIG)
+              }
               void onLanguageChange(name)
             }}
             onSelectImport={(textId) => onConfigChange({ mode: 'fileImport', textId })}
+            onSelectTatoeba={(language) => onConfigChange({ mode: 'tatoeba', language })}
             onCurrentTextDeleted={() => {
               // The selected imported text was deleted — fall back to
               // the default (words mode, English).
@@ -591,7 +606,7 @@ export function TypingTestPane({
             </select>
           </div>
         </div>
-        {typingTest.config.mode !== 'fileImport' && (
+        {typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba' && (
           <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} />
         )}
       </PanelSection>
