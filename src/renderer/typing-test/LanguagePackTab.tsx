@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, Download, Trash2, Loader2 } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
+import { clearTatoebaPackCache } from './word-generator'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 
 function formatName(name: string): string {
@@ -61,6 +62,9 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
     try {
       const result = await window.vialAPI.updateTypingDataset(provider)
       if (result.changed) {
+        // The update dropped the old downloaded files; forget any cached packs
+        // so the session doesn't keep playing stale sentences.
+        if (provider === 'tatoeba') clearTatoebaPackCache()
         // The manifest may have new/changed languages; refresh the list.
         const list = await window.vialAPI.langList(provider)
         setLanguages(list)
@@ -78,6 +82,8 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
     try {
       const result = await window.vialAPI.langDownload(name, provider)
       if (result.success) {
+        // Re-downloading replaces the file on disk; drop any cached copy.
+        if (provider === 'tatoeba') clearTatoebaPackCache(name)
         setLanguages((prev) =>
           prev.map((l) => (l.name === name ? { ...l, status: 'downloaded' as const } : l)),
         )
@@ -94,6 +100,8 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
   const handleDelete = useCallback(async (name: string) => {
     const result = await window.vialAPI.langDelete(name, provider)
     if (result.success) {
+      // The file is gone; forget any cached copy so it can't still be played.
+      if (provider === 'tatoeba') clearTatoebaPackCache(name)
       setLanguages((prev) =>
         prev.map((l) => (l.name === name ? { ...l, status: 'not-downloaded' as const } : l)),
       )

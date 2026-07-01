@@ -266,3 +266,49 @@ describe('language-store delete', () => {
     expect(result.success).toBe(false)
   })
 })
+
+describe('provider safety', () => {
+  it('falls back to the default provider for an unknown / traversal provider', async () => {
+    const monkeytypeDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
+    await mkdir(monkeytypeDir, { recursive: true })
+    await writeFile(join(monkeytypeDir, 'test_lang.json'), JSON.stringify({ name: 'test_lang', words: ['x'] }))
+    // A file a `../` provider could target if it were used verbatim as a path.
+    const outsideDir = join(testDir, 'local', 'downloads')
+    await writeFile(join(outsideDir, 'victim.json'), '{}')
+
+    // Unknown provider resolves to the default, so it reads the monkeytype file.
+    const got = await invoke('lang:get', 'test_lang', '../../') as { name: string } | null
+    expect(got?.name).toBe('test_lang')
+
+    // A traversal-style provider cannot escape the per-provider directory.
+    await invoke('lang:delete', 'victim', '../..')
+    const files = await readdir(outsideDir)
+    expect(files).toContain('victim.json')
+  })
+
+  it('lists the tatoeba provider (empty until a Hub override arrives)', async () => {
+    const result = await invoke('lang:list', 'tatoeba') as unknown[]
+    expect(result).toEqual([])
+  })
+})
+
+describe('legacy download migration', () => {
+  it('moves flat downloads into the monkeytype subdir on setup', async () => {
+    // Seed a download from before per-provider directories existed.
+    const flatDir = join(testDir, 'local', 'downloads', 'languages')
+    await mkdir(flatDir, { recursive: true })
+    await writeFile(join(flatDir, 'german.json'), JSON.stringify({ name: 'german', words: ['hallo'] }))
+
+    // Re-run setup so the (fire-and-forget) migration executes against it.
+    handlers = new Map()
+    setupLanguageStore()
+
+    await vi.waitFor(async () => {
+      const moved = await readdir(join(flatDir, 'monkeytype')).catch(() => [] as string[])
+      expect(moved).toContain('german.json')
+    })
+    // The flat copy is gone.
+    const flat = await readdir(flatDir)
+    expect(flat).not.toContain('german.json')
+  })
+})

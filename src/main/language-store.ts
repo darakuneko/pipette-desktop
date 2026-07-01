@@ -1,6 +1,6 @@
 import { app, net } from 'electron'
 import { dirname, join } from 'node:path'
-import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { LanguageListEntry, LanguageDownloadStatus, TypingTestDataset } from '../shared/types/language-store'
 import {
@@ -74,14 +74,39 @@ function isSafeName(name: string): boolean {
   return typeof name === 'string' && name.length > 0 && !/[/\\]/.test(name)
 }
 
-/** Resolve the provider arg from an IPC call, defaulting to the historical
- *  provider so pre-multi-provider callers keep working unchanged. */
+/** Resolve the provider arg from an IPC call. Only a registered provider is
+ *  accepted — since the provider becomes a filesystem path segment, an
+ *  unknown / malformed value (e.g. a `../` traversal attempt) must never reach
+ *  disk, so it falls back to the historical default instead. */
 function resolveProvider(provider?: string): string {
-  return typeof provider === 'string' && provider ? provider : DEFAULT_TYPING_TEST_PROVIDER
+  if (typeof provider === 'string' && getProviderDefault(provider)) return provider
+  return DEFAULT_TYPING_TEST_PROVIDER
 }
 
 function getLanguagePath(provider: string, name: string): string {
   return join(getLanguagesDir(provider), `${name}.json`)
+}
+
+/** Move pre-multi-provider downloads (flat `languages/*.json`) into the
+ *  monkeytype sub-directory they now live in, so a user who had downloaded
+ *  extra MonkeyType languages keeps them after upgrading — important offline,
+ *  where they could not simply be re-fetched. Best-effort and idempotent:
+ *  once the flat files are moved there is nothing left to migrate. */
+async function migrateLegacyDownloads(): Promise<void> {
+  const root = join(app.getPath('userData'), 'local', 'downloads', 'languages')
+  let entries
+  try {
+    entries = await readdir(root, { withFileTypes: true })
+  } catch {
+    return // no downloads directory yet
+  }
+  const legacy = entries.filter((e) => e.isFile() && e.name.endsWith('.json'))
+  if (legacy.length === 0) return
+  const dest = getLanguagesDir(DEFAULT_TYPING_TEST_PROVIDER)
+  await mkdir(dest, { recursive: true })
+  await Promise.all(
+    legacy.map((e) => rename(join(root, e.name), join(dest, e.name)).catch(() => {})),
+  )
 }
 
 async function getDownloadedSet(provider: string): Promise<Set<string>> {
@@ -136,6 +161,11 @@ function validateLanguageData(data: unknown): data is LanguageFileData {
 }
 
 export function setupLanguageStore(): void {
+  // One-time move of legacy flat downloads into the monkeytype sub-directory.
+  // Best-effort at startup; the tiny window before it resolves only makes a
+  // previously-downloaded language momentarily read as not-downloaded.
+  void migrateLegacyDownloads()
+
   secureHandle(
     IpcChannels.LANG_LIST,
     async (_event, provider?: string): Promise<LanguageListEntry[]> => {

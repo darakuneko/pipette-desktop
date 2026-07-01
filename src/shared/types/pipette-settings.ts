@@ -19,7 +19,7 @@ export interface TypingTestResult {
   incorrectChars: number
   durationSeconds: number
   rawWpm?: number
-  mode?: 'words' | 'time' | 'quote' | 'fileImport'
+  mode?: 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeba'
   mode2?: number | string
   /** Human-readable imported-text name, snapshotted at test time (fileImport
    *  mode only). `mode2` keeps the stable textId for PB grouping; this is

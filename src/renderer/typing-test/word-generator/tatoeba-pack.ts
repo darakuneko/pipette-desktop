@@ -39,6 +39,17 @@ export async function getTatoebaPack(language: string): Promise<TatoebaPack | un
   return data
 }
 
+/** Drop cached packs so the next read re-fetches from disk. Called after a
+ *  download / delete / dataset update changes the on-disk pack files, so a
+ *  stale copy is never played for the rest of the session. */
+export function clearTatoebaPackCache(language?: string): void {
+  if (language) {
+    packCache.delete(language)
+  } else {
+    packCache.clear()
+  }
+}
+
 /** Sample a batch of sentences and fold them into one quote for the word-flow
  *  path. `source` carries the pack name so the finished screen can label it. */
 export function tatoebaQuote(pack: TatoebaPack): Quote {

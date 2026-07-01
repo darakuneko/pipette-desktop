@@ -423,6 +423,46 @@ describe('useDevicePrefs', () => {
       }))
     })
 
+    it('restores a tatoeba typingTestConfig from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: { mode: 'tatoeba', language: 'english' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+    })
+
+    it('does not cache a tatoeba config as the MonkeyType fallback', async () => {
+      setupMocks()
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      // Set a normal config → it becomes the MonkeyType fallback.
+      act(() => {
+        result.current.setTypingTestConfig({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
+      })
+      // Switch to tatoeba → the fallback must stay the last normal config.
+      act(() => {
+        result.current.setTypingTestConfig({ mode: 'tatoeba', language: 'english' })
+      })
+
+      expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
+      expect(result.current.typingTestMonkeytypeConfig).toEqual({ mode: 'words', wordCount: 60, punctuation: false, numbers: false })
+    })
+
     it('setTypingTestLanguage saves via IPC', async () => {
       setupMocks()
       const { result } = renderHookWithConfig(() => useDevicePrefs())
