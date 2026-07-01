@@ -55,6 +55,14 @@ function isMonkeytypeMode(mode: TypingTestConfig['mode']): boolean {
   return mode === 'words' || mode === 'time' || mode === 'quote'
 }
 
+/** The MonkeyType fallback config must be a normal (words/time/quote) config.
+ *  Reject any fileImport / tatoeba value — including a stale one persisted by
+ *  an older build — so leaving those modes never restores them. */
+function validateMonkeytypeConfig(raw: unknown): TypingTestConfig | undefined {
+  const cfg = validateTypingTestConfig(raw)
+  return cfg && isMonkeytypeMode(cfg.mode) ? cfg : undefined
+}
+
 function validateTypingTestLanguage(raw: unknown): string | undefined {
   if (typeof raw !== 'string' || raw.length === 0) return undefined
   return raw
@@ -204,7 +212,7 @@ function validateIpcPrefs(
     layerNames,
     typingTestResults,
     typingTestConfig,
-    typingTestMonkeytypeConfig: validateTypingTestConfig(data.typingTestMonkeytypeConfig),
+    typingTestMonkeytypeConfig: validateMonkeytypeConfig(data.typingTestMonkeytypeConfig),
     typingTestLanguage: validateTypingTestLanguage(data.typingTestLanguage),
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),

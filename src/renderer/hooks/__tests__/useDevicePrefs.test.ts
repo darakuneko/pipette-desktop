@@ -442,6 +442,27 @@ describe('useDevicePrefs', () => {
       expect(result.current.typingTestConfig).toEqual({ mode: 'tatoeba', language: 'english' })
     })
 
+    it('rejects a stale tatoeba value persisted in the MonkeyType fallback', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        // An older build could have saved a tatoeba config here; it must not
+        // come back as the MonkeyType fallback.
+        typingTestMonkeytypeConfig: { mode: 'tatoeba', language: 'english' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestMonkeytypeConfig).toBeUndefined()
+    })
+
     it('does not cache a tatoeba config as the MonkeyType fallback', async () => {
       setupMocks()
       const { result } = renderHookWithConfig(() => useDevicePrefs())

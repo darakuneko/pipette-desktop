@@ -29,6 +29,11 @@ function getOverridePath(): string {
 // paths don't re-read disk on every call. Reset whenever the file changes.
 let overridesCache: Record<string, TypingTestDataset> | null = null
 
+// The one-time legacy-download migration, started at setup. Every handler that
+// touches the download directory awaits it first so a read never races the
+// in-flight move (which would momentarily hide a migrated language).
+let legacyMigration: Promise<void> = Promise.resolve()
+
 async function loadOverrides(): Promise<Record<string, TypingTestDataset>> {
   if (overridesCache) return overridesCache
   try {
@@ -102,11 +107,17 @@ async function migrateLegacyDownloads(): Promise<void> {
   }
   const legacy = entries.filter((e) => e.isFile() && e.name.endsWith('.json'))
   if (legacy.length === 0) return
-  const dest = getLanguagesDir(DEFAULT_TYPING_TEST_PROVIDER)
-  await mkdir(dest, { recursive: true })
-  await Promise.all(
-    legacy.map((e) => rename(join(root, e.name), join(dest, e.name)).catch(() => {})),
-  )
+  // Never reject: handlers await this promise, so a failed migration must fall
+  // through to a no-op rather than breaking every LANG_* call.
+  try {
+    const dest = getLanguagesDir(DEFAULT_TYPING_TEST_PROVIDER)
+    await mkdir(dest, { recursive: true })
+    await Promise.all(
+      legacy.map((e) => rename(join(root, e.name), join(dest, e.name)).catch(() => {})),
+    )
+  } catch (err) {
+    log('warn', `Legacy download migration failed: ${err}`)
+  }
 }
 
 async function getDownloadedSet(provider: string): Promise<Set<string>> {
@@ -162,13 +173,14 @@ function validateLanguageData(data: unknown): data is LanguageFileData {
 
 export function setupLanguageStore(): void {
   // One-time move of legacy flat downloads into the monkeytype sub-directory.
-  // Best-effort at startup; the tiny window before it resolves only makes a
-  // previously-downloaded language momentarily read as not-downloaded.
-  void migrateLegacyDownloads()
+  // Handlers await this before touching the download dir, so a migrated
+  // language is never momentarily reported as not-downloaded.
+  legacyMigration = migrateLegacyDownloads()
 
   secureHandle(
     IpcChannels.LANG_LIST,
     async (_event, provider?: string): Promise<LanguageListEntry[]> => {
+      await legacyMigration
       const p = resolveProvider(provider)
       const dataset = await getEffectiveDataset(p)
       const downloaded = await getDownloadedSet(p)
@@ -184,6 +196,7 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_GET,
     async (_event, name: string, provider?: string): Promise<LanguageFileData | null> => {
       if (!isSafeName(name)) return null
+      await legacyMigration
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return null
       try {
@@ -201,6 +214,7 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_DOWNLOAD,
     async (_event, name: string, provider?: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
+      await legacyMigration
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return { success: false, error: 'Language is bundled' }
       const dataset = await getEffectiveDataset(p)
@@ -239,6 +253,7 @@ export function setupLanguageStore(): void {
     IpcChannels.LANG_DELETE,
     async (_event, name: string, provider?: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
+      await legacyMigration
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return { success: false, error: 'Cannot delete bundled language' }
       try {

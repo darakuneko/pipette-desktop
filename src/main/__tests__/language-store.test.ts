@@ -299,14 +299,14 @@ describe('legacy download migration', () => {
     await mkdir(flatDir, { recursive: true })
     await writeFile(join(flatDir, 'german.json'), JSON.stringify({ name: 'german', words: ['hallo'] }))
 
-    // Re-run setup so the (fire-and-forget) migration executes against it.
+    // Re-run setup so the migration executes against the seeded file, then
+    // hit a handler that awaits it — guaranteeing the move has completed.
     handlers = new Map()
     setupLanguageStore()
+    await invoke('lang:list', 'monkeytype')
 
-    await vi.waitFor(async () => {
-      const moved = await readdir(join(flatDir, 'monkeytype')).catch(() => [] as string[])
-      expect(moved).toContain('german.json')
-    })
+    const moved = await readdir(join(flatDir, 'monkeytype'))
+    expect(moved).toContain('german.json')
     // The flat copy is gone.
     const flat = await readdir(flatDir)
     expect(flat).not.toContain('german.json')
