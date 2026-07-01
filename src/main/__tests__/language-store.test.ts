@@ -73,7 +73,7 @@ describe('language-store list', () => {
   })
 
   it('detects downloaded languages', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'german.json'), JSON.stringify({ name: 'german', words: ['hallo'] }))
 
@@ -96,7 +96,7 @@ describe('language-store get', () => {
   })
 
   it('returns language data for downloaded language', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     const data = { name: 'test_lang', words: ['hello', 'world'], rightToLeft: false }
     await writeFile(join(langDir, 'test_lang.json'), JSON.stringify(data))
@@ -118,7 +118,7 @@ describe('language-store get', () => {
   })
 
   it('returns null for invalid JSON', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'bad.json'), 'not json')
 
@@ -127,7 +127,7 @@ describe('language-store get', () => {
   })
 
   it('returns null for data missing words array', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'nowords.json'), JSON.stringify({ name: 'nowords' }))
 
@@ -177,7 +177,7 @@ describe('language-store download', () => {
     const result = await invoke('lang:download', 'german') as { success: boolean }
     expect(result.success).toBe(true)
 
-    const files = await readdir(join(testDir, 'local', 'downloads', 'languages'))
+    const files = await readdir(join(testDir, 'local', 'downloads', 'languages', 'monkeytype'))
     expect(files).toContain('german.json')
   })
 
@@ -209,7 +209,7 @@ describe('language-store download', () => {
     expect(result.error).toContain('size mismatch')
 
     // Verify no file was written
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     let files: string[] = []
     try { files = await readdir(langDir) } catch { /* dir may not exist */ }
     expect(files).not.toContain('german.json')
@@ -250,7 +250,7 @@ describe('language-store delete', () => {
   })
 
   it('deletes downloaded language', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'test.json'), '{}')
 
@@ -264,5 +264,51 @@ describe('language-store delete', () => {
   it('fails for non-existent file', async () => {
     const result = await invoke('lang:delete', 'nonexistent') as { success: boolean }
     expect(result.success).toBe(false)
+  })
+})
+
+describe('provider safety', () => {
+  it('falls back to the default provider for an unknown / traversal provider', async () => {
+    const monkeytypeDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
+    await mkdir(monkeytypeDir, { recursive: true })
+    await writeFile(join(monkeytypeDir, 'test_lang.json'), JSON.stringify({ name: 'test_lang', words: ['x'] }))
+    // A file a `../` provider could target if it were used verbatim as a path.
+    const outsideDir = join(testDir, 'local', 'downloads')
+    await writeFile(join(outsideDir, 'victim.json'), '{}')
+
+    // Unknown provider resolves to the default, so it reads the monkeytype file.
+    const got = await invoke('lang:get', 'test_lang', '../../') as { name: string } | null
+    expect(got?.name).toBe('test_lang')
+
+    // A traversal-style provider cannot escape the per-provider directory.
+    await invoke('lang:delete', 'victim', '../..')
+    const files = await readdir(outsideDir)
+    expect(files).toContain('victim.json')
+  })
+
+  it('lists the tatoeba provider (empty until a Hub override arrives)', async () => {
+    const result = await invoke('lang:list', 'tatoeba') as unknown[]
+    expect(result).toEqual([])
+  })
+})
+
+describe('legacy download migration', () => {
+  it('moves flat downloads into the monkeytype subdir on setup', async () => {
+    // Seed a download from before per-provider directories existed.
+    const flatDir = join(testDir, 'local', 'downloads', 'languages')
+    await mkdir(flatDir, { recursive: true })
+    await writeFile(join(flatDir, 'german.json'), JSON.stringify({ name: 'german', words: ['hallo'] }))
+
+    // Re-run setup so the migration executes against the seeded file, then
+    // hit a handler that awaits it — guaranteeing the move has completed.
+    handlers = new Map()
+    setupLanguageStore()
+    await invoke('lang:list', 'monkeytype')
+
+    const moved = await readdir(join(flatDir, 'monkeytype'))
+    expect(moved).toContain('german.json')
+    // The flat copy is gone.
+    const flat = await readdir(flatDir)
+    expect(flat).not.toContain('german.json')
   })
 })

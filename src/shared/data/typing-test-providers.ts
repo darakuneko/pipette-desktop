@@ -28,6 +28,19 @@ export const TYPING_TEST_PROVIDER_DEFAULTS: readonly TypingTestProviderDefault[]
     bundledLanguages: ['english'],
     languages: monkeytypeLanguages as LanguageManifestEntry[],
   },
+  // Tatoeba is a Hub-only provider: no data ships with the app. The bundled
+  // default is an empty placeholder — version, downloadUrlBase and the
+  // language list are all supplied by the Hub override at runtime
+  // (`GET /api/typing-test/datasets/tatoeba`). With an empty bundled version,
+  // the first version check always reports an update so packs are fetched to
+  // install. `bundledLanguages` is empty because nothing is baked in.
+  {
+    provider: 'tatoeba',
+    version: '',
+    downloadUrlBase: '',
+    bundledLanguages: [],
+    languages: [],
+  },
 ]
 
 export function getProviderDefault(provider: string): TypingTestProviderDefault | undefined {

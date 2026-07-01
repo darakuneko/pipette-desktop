@@ -25,6 +25,7 @@ function makeResult(overrides: Partial<TypingTestResult> = {}): TypingTestResult
 
 const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false } as TypingTestConfig
 const fileImportConfig: TypingTestConfig = { mode: 'fileImport', textId: 't1' } as TypingTestConfig
+const tatoebaConfig: TypingTestConfig = { mode: 'tatoeba', language: 'english' } as TypingTestConfig
 
 describe('matchingResults', () => {
   it('matches normal runs on mode + params + language + toggles', () => {
@@ -46,6 +47,17 @@ describe('matchingResults', () => {
     ]
     const out = matchingResults(pool, fileImportConfig, 'english')
     expect(out.map((r) => r.wpm).sort()).toEqual([40, 45])
+  })
+
+  it('matches tatoeba runs on the pack language (mode2), independent of word language', () => {
+    const pool = [
+      makeResult({ wpm: 40, mode: 'tatoeba', mode2: 'english', language: 'english' }),  // match
+      makeResult({ wpm: 45, mode: 'tatoeba', mode2: 'english', language: 'german' }),   // same pack, stray lang → still match
+      makeResult({ wpm: 99, mode: 'tatoeba', mode2: 'french' }),                        // different pack
+      makeResult({ wpm: 12, mode: 'words', mode2: 'english' }),                         // different mode
+    ]
+    const out = matchingResults(pool, tatoebaConfig, 'german')
+    expect(out.map((r) => r.wpm).sort((a, b) => a - b)).toEqual([40, 45])
   })
 
   it('excludes results at/after beforeMs (the in-flight run)', () => {
@@ -71,11 +83,17 @@ describe('conditionKey', () => {
     expect(conditionKey(fileImportConfig, 'japanese')).toBe('fileImport|t1')
   })
 
+  it('keys tatoeba on the pack language only (word-language-independent)', () => {
+    expect(conditionKey(tatoebaConfig, 'german')).toBe('tatoeba|english')
+    expect(conditionKey(tatoebaConfig, 'japanese')).toBe('tatoeba|english')
+  })
+
   it('distinguishes different conditions', () => {
     const a = conditionKey(wordsConfig, 'english')
     const b = conditionKey({ mode: 'time', duration: 10 } as TypingTestConfig, 'english')
     const c = conditionKey(fileImportConfig, 'english')
-    expect(new Set([a, b, c]).size).toBe(3)
+    const d = conditionKey(tatoebaConfig, 'english')
+    expect(new Set([a, b, c, d]).size).toBe(4)
   })
 })
 

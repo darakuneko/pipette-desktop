@@ -324,10 +324,10 @@ export interface VialAPI {
   syncOnPendingChange(callback: (pending: boolean) => void): () => void
 
   // Language Store
-  langList(): Promise<LanguageListEntry[]>
-  langGet(name: string): Promise<unknown>
-  langDownload(name: string): Promise<{ success: boolean; error?: string }>
-  langDelete(name: string): Promise<{ success: boolean; error?: string }>
+  langList(provider?: string): Promise<LanguageListEntry[]>
+  langGet(name: string, provider?: string): Promise<unknown>
+  langDownload(name: string, provider?: string): Promise<{ success: boolean; error?: string }>
+  langDelete(name: string, provider?: string): Promise<{ success: boolean; error?: string }>
   checkTypingDatasetUpdate(provider?: string): Promise<{ provider: string; updateAvailable: boolean }>
   updateTypingDataset(provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }>
 

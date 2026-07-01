@@ -1,6 +1,6 @@
 import { app, net } from 'electron'
 import { dirname, join } from 'node:path'
-import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { LanguageListEntry, LanguageDownloadStatus, TypingTestDataset } from '../shared/types/language-store'
 import {
@@ -11,8 +11,12 @@ import { fetchTypingDataset, fetchTypingDatasetVersion, isManifestEntry } from '
 import { log } from './logger'
 import { secureHandle } from './ipc-guard'
 
-function getLanguagesDir(): string {
-  return join(app.getPath('userData'), 'local', 'downloads', 'languages')
+// Downloaded language files are namespaced per provider so that two providers
+// exposing the same language name (e.g. both monkeytype and tatoeba ship an
+// 'english') never collide, and a version-change cleanup for one provider does
+// not wipe another's downloads.
+function getLanguagesDir(provider: string): string {
+  return join(app.getPath('userData'), 'local', 'downloads', 'languages', provider)
 }
 
 /** Persisted Hub overrides keyed by provider. Absent / partial → bundled
@@ -24,6 +28,11 @@ function getOverridePath(): string {
 // In-memory cache of the override file so the hot LANG_LIST / LANG_DOWNLOAD
 // paths don't re-read disk on every call. Reset whenever the file changes.
 let overridesCache: Record<string, TypingTestDataset> | null = null
+
+// The one-time legacy-download migration, started at setup. Every handler that
+// touches the download directory awaits it first so a read never races the
+// in-flight move (which would momentarily hide a migrated language).
+let legacyMigration: Promise<void> = Promise.resolve()
 
 async function loadOverrides(): Promise<Record<string, TypingTestDataset>> {
   if (overridesCache) return overridesCache
@@ -70,13 +79,50 @@ function isSafeName(name: string): boolean {
   return typeof name === 'string' && name.length > 0 && !/[/\\]/.test(name)
 }
 
-function getLanguagePath(name: string): string {
-  return join(getLanguagesDir(), `${name}.json`)
+/** Resolve the provider arg from an IPC call. Only a registered provider is
+ *  accepted — since the provider becomes a filesystem path segment, an
+ *  unknown / malformed value (e.g. a `../` traversal attempt) must never reach
+ *  disk, so it falls back to the historical default instead. */
+function resolveProvider(provider?: string): string {
+  if (typeof provider === 'string' && getProviderDefault(provider)) return provider
+  return DEFAULT_TYPING_TEST_PROVIDER
 }
 
-async function getDownloadedSet(): Promise<Set<string>> {
+function getLanguagePath(provider: string, name: string): string {
+  return join(getLanguagesDir(provider), `${name}.json`)
+}
+
+/** Move pre-multi-provider downloads (flat `languages/*.json`) into the
+ *  monkeytype sub-directory they now live in, so a user who had downloaded
+ *  extra MonkeyType languages keeps them after upgrading — important offline,
+ *  where they could not simply be re-fetched. Best-effort and idempotent:
+ *  once the flat files are moved there is nothing left to migrate. */
+async function migrateLegacyDownloads(): Promise<void> {
+  const root = join(app.getPath('userData'), 'local', 'downloads', 'languages')
+  let entries
   try {
-    const files = await readdir(getLanguagesDir())
+    entries = await readdir(root, { withFileTypes: true })
+  } catch {
+    return // no downloads directory yet
+  }
+  const legacy = entries.filter((e) => e.isFile() && e.name.endsWith('.json'))
+  if (legacy.length === 0) return
+  // Never reject: handlers await this promise, so a failed migration must fall
+  // through to a no-op rather than breaking every LANG_* call.
+  try {
+    const dest = getLanguagesDir(DEFAULT_TYPING_TEST_PROVIDER)
+    await mkdir(dest, { recursive: true })
+    await Promise.all(
+      legacy.map((e) => rename(join(root, e.name), join(dest, e.name)).catch(() => {})),
+    )
+  } catch (err) {
+    log('warn', `Legacy download migration failed: ${err}`)
+  }
+}
+
+async function getDownloadedSet(provider: string): Promise<Set<string>> {
+  try {
+    const files = await readdir(getLanguagesDir(provider))
     const names = files
       .filter((f) => f.endsWith('.json'))
       .map((f) => f.replace(/\.json$/, ''))
@@ -86,20 +132,21 @@ async function getDownloadedSet(): Promise<Set<string>> {
   }
 }
 
-/** Remove every downloaded language file. Called after a version change so
- *  stale files (fetched from the old version's URL, with a now-mismatched
- *  fileSize) are re-downloaded fresh on demand. */
-async function clearDownloadedLanguages(): Promise<void> {
+/** Remove every downloaded language file for a provider. Called after a
+ *  version change so stale files (fetched from the old version's URL, with a
+ *  now-mismatched fileSize) are re-downloaded fresh on demand. */
+async function clearDownloadedLanguages(provider: string): Promise<void> {
+  const dir = getLanguagesDir(provider)
   let files: string[]
   try {
-    files = await readdir(getLanguagesDir())
+    files = await readdir(dir)
   } catch {
     return
   }
   await Promise.all(
     files
       .filter((f) => f.endsWith('.json'))
-      .map((f) => unlink(join(getLanguagesDir(), f)).catch(() => {})),
+      .map((f) => unlink(join(dir, f)).catch(() => {})),
   )
 }
 
@@ -125,12 +172,19 @@ function validateLanguageData(data: unknown): data is LanguageFileData {
 }
 
 export function setupLanguageStore(): void {
+  // One-time move of legacy flat downloads into the monkeytype sub-directory.
+  // Handlers await this before touching the download dir, so a migrated
+  // language is never momentarily reported as not-downloaded.
+  legacyMigration = migrateLegacyDownloads()
+
   secureHandle(
     IpcChannels.LANG_LIST,
-    async (): Promise<LanguageListEntry[]> => {
-      const dataset = await getEffectiveDataset(DEFAULT_TYPING_TEST_PROVIDER)
-      const downloaded = await getDownloadedSet()
-      const bundled = bundledSet(DEFAULT_TYPING_TEST_PROVIDER)
+    async (_event, provider?: string): Promise<LanguageListEntry[]> => {
+      await legacyMigration
+      const p = resolveProvider(provider)
+      const dataset = await getEffectiveDataset(p)
+      const downloaded = await getDownloadedSet(p)
+      const bundled = bundledSet(p)
       return dataset.languages.map((entry) => ({
         ...entry,
         status: getStatus(entry.name, downloaded, bundled),
@@ -140,11 +194,13 @@ export function setupLanguageStore(): void {
 
   secureHandle(
     IpcChannels.LANG_GET,
-    async (_event, name: string): Promise<LanguageFileData | null> => {
+    async (_event, name: string, provider?: string): Promise<LanguageFileData | null> => {
       if (!isSafeName(name)) return null
-      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return null
+      await legacyMigration
+      const p = resolveProvider(provider)
+      if (bundledSet(p).has(name)) return null
       try {
-        const raw = await readFile(getLanguagePath(name), 'utf-8')
+        const raw = await readFile(getLanguagePath(p, name), 'utf-8')
         const data: unknown = JSON.parse(raw)
         if (!validateLanguageData(data)) return null
         return data
@@ -156,10 +212,12 @@ export function setupLanguageStore(): void {
 
   secureHandle(
     IpcChannels.LANG_DOWNLOAD,
-    async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
+    async (_event, name: string, provider?: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
-      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return { success: false, error: 'Language is bundled' }
-      const dataset = await getEffectiveDataset(DEFAULT_TYPING_TEST_PROVIDER)
+      await legacyMigration
+      const p = resolveProvider(provider)
+      if (bundledSet(p).has(name)) return { success: false, error: 'Language is bundled' }
+      const dataset = await getEffectiveDataset(p)
       const entry = dataset.languages.find((e) => e.name === name)
       if (!entry) return { success: false, error: 'Unknown language' }
 
@@ -173,19 +231,19 @@ export function setupLanguageStore(): void {
         const actualSize = Buffer.byteLength(text, 'utf-8')
         if (actualSize !== entry.fileSize) {
           const detail = `size mismatch (expected ${entry.fileSize}, got ${actualSize})`
-          log('warn', `Language ${name}: ${detail}`)
+          log('warn', `Language ${p}/${name}: ${detail}`)
           return { success: false, error: `Integrity check failed: ${detail}` }
         }
         const data: unknown = JSON.parse(text)
         if (!validateLanguageData(data)) {
           return { success: false, error: 'Invalid language data' }
         }
-        await mkdir(getLanguagesDir(), { recursive: true })
-        await writeFile(getLanguagePath(name), text, 'utf-8')
-        log('info', `Downloaded language: ${name}`)
+        await mkdir(getLanguagesDir(p), { recursive: true })
+        await writeFile(getLanguagePath(p, name), text, 'utf-8')
+        log('info', `Downloaded language: ${p}/${name}`)
         return { success: true }
       } catch (err) {
-        log('warn', `Failed to download language ${name}: ${err}`)
+        log('warn', `Failed to download language ${p}/${name}: ${err}`)
         return { success: false, error: String(err) }
       }
     },
@@ -193,12 +251,14 @@ export function setupLanguageStore(): void {
 
   secureHandle(
     IpcChannels.LANG_DELETE,
-    async (_event, name: string): Promise<{ success: boolean; error?: string }> => {
+    async (_event, name: string, provider?: string): Promise<{ success: boolean; error?: string }> => {
       if (!isSafeName(name)) return { success: false, error: 'Invalid language name' }
-      if (bundledSet(DEFAULT_TYPING_TEST_PROVIDER).has(name)) return { success: false, error: 'Cannot delete bundled language' }
+      await legacyMigration
+      const p = resolveProvider(provider)
+      if (bundledSet(p).has(name)) return { success: false, error: 'Cannot delete bundled language' }
       try {
-        await unlink(getLanguagePath(name))
-        log('info', `Deleted language: ${name}`)
+        await unlink(getLanguagePath(p, name))
+        log('info', `Deleted language: ${p}/${name}`)
         return { success: true }
       } catch (err) {
         return { success: false, error: String(err) }
@@ -283,7 +343,7 @@ export async function syncTypingDataset(
 
   // The new version's files live at a different URL and may differ in size,
   // so drop the old downloads; they re-fetch on demand against the new base.
-  await clearDownloadedLanguages()
+  await clearDownloadedLanguages(provider)
 
   // The update is applied, so the session no longer has one pending.
   updateCheckCache.set(provider, false)

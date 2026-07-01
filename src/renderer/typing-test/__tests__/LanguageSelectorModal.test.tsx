@@ -186,7 +186,66 @@ describe('LanguageSelectorModal', () => {
 
     fireEvent.click(screen.getByTestId('language-download-german'))
 
-    expect(window.vialAPI.langDownload).toHaveBeenCalledWith('german')
+    expect(window.vialAPI.langDownload).toHaveBeenCalledWith('german', 'monkeytype')
+  })
+
+  it('lists the tatoeba provider and version-checks it when its tab is shown', async () => {
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-tatoeba'))
+
+    await waitFor(() => {
+      expect(window.vialAPI.langList).toHaveBeenCalledWith('tatoeba')
+      expect(window.vialAPI.checkTypingDatasetUpdate).toHaveBeenCalledWith('tatoeba')
+    })
+  })
+
+  it('picks a tatoeba pack → onSelectTatoeba + onClose', async () => {
+    const onSelectTatoeba = vi.fn()
+    const onClose = vi.fn()
+
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={onSelectTatoeba}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-tatoeba'))
+    await waitFor(() => expect(screen.getByTestId('language-row-english_1k')).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId('language-row-english_1k'))
+
+    expect(onSelectTatoeba).toHaveBeenCalledWith('english_1k')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('opens on the tatoeba tab when a tatoeba pack is active', async () => {
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        currentTatoebaLanguage="english_1k"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onSelectTatoeba={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('language-tab-tatoeba')).toHaveAttribute('aria-selected', 'true'),
+    )
   })
 
   it('shows delete button for downloaded (non-bundled) languages', async () => {

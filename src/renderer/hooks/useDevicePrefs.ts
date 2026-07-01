@@ -41,9 +41,26 @@ function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
     case 'fileImport':
       if (typeof obj.textId !== 'string' || obj.textId.length === 0) return undefined
       return { mode: 'fileImport', textId: obj.textId }
+    case 'tatoeba':
+      if (typeof obj.language !== 'string' || obj.language.length === 0) return undefined
+      return { mode: 'tatoeba', language: obj.language }
     default:
       return undefined
   }
+}
+
+/** The MonkeyType-family modes whose config is remembered as the fallback
+ *  restored when leaving fileImport / tatoeba. */
+function isMonkeytypeMode(mode: TypingTestConfig['mode']): boolean {
+  return mode === 'words' || mode === 'time' || mode === 'quote'
+}
+
+/** The MonkeyType fallback config must be a normal (words/time/quote) config.
+ *  Reject any fileImport / tatoeba value — including a stale one persisted by
+ *  an older build — so leaving those modes never restores them. */
+function validateMonkeytypeConfig(raw: unknown): TypingTestConfig | undefined {
+  const cfg = validateTypingTestConfig(raw)
+  return cfg && isMonkeytypeMode(cfg.mode) ? cfg : undefined
 }
 
 function validateTypingTestLanguage(raw: unknown): string | undefined {
@@ -195,7 +212,7 @@ function validateIpcPrefs(
     layerNames,
     typingTestResults,
     typingTestConfig,
-    typingTestMonkeytypeConfig: validateTypingTestConfig(data.typingTestMonkeytypeConfig),
+    typingTestMonkeytypeConfig: validateMonkeytypeConfig(data.typingTestMonkeytypeConfig),
     typingTestLanguage: validateTypingTestLanguage(data.typingTestLanguage),
     typingTestViewOnly,
     typingTestViewOnlyWindowSize: validateWindowSize(data.typingTestViewOnlyWindowSize),
@@ -481,11 +498,12 @@ export function useDevicePrefs(): UseDevicePrefsReturn {
     const prev = typingTestConfigRef.current
     updateTypingTestConfig(cfg)
     // Remember the last normal (words/time/quote) config so it survives a
-    // switch into fileImport (imported text) and back. When entering fileImport,
-    // capture the outgoing normal config too — covers old prefs where
-    // typingTestMonkeytypeConfig was never saved.
-    if (cfg.mode !== 'fileImport') updateTypingTestMonkeytypeConfig(cfg)
-    else if (prev && prev.mode !== 'fileImport') updateTypingTestMonkeytypeConfig(prev)
+    // switch into a non-normal mode (fileImport / tatoeba) and back. When
+    // entering such a mode, capture the outgoing normal config too — covers old
+    // prefs where typingTestMonkeytypeConfig was never saved. tatoeba must NOT
+    // be cached here, else selecting a MonkeyType language would restore it.
+    if (isMonkeytypeMode(cfg.mode)) updateTypingTestMonkeytypeConfig(cfg)
+    else if (prev && isMonkeytypeMode(prev.mode)) updateTypingTestMonkeytypeConfig(prev)
     saveCurrentPrefs()
   }, [saveCurrentPrefs, updateTypingTestConfig, updateTypingTestMonkeytypeConfig])
 

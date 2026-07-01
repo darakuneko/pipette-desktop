@@ -588,14 +588,14 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_ANALYTICS_IMPORT),
 
   // --- Language Store (IPC to main) ---
-  langList: (): Promise<LanguageListEntry[]> =>
-    ipcRenderer.invoke(IpcChannels.LANG_LIST),
-  langGet: (name: string): Promise<unknown> =>
-    ipcRenderer.invoke(IpcChannels.LANG_GET, name),
-  langDownload: (name: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.LANG_DOWNLOAD, name),
-  langDelete: (name: string): Promise<{ success: boolean; error?: string }> =>
-    ipcRenderer.invoke(IpcChannels.LANG_DELETE, name),
+  langList: (provider?: string): Promise<LanguageListEntry[]> =>
+    ipcRenderer.invoke(IpcChannels.LANG_LIST, provider),
+  langGet: (name: string, provider?: string): Promise<unknown> =>
+    ipcRenderer.invoke(IpcChannels.LANG_GET, name, provider),
+  langDownload: (name: string, provider?: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.LANG_DOWNLOAD, name, provider),
+  langDelete: (name: string, provider?: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke(IpcChannels.LANG_DELETE, name, provider),
   checkTypingDatasetUpdate: (provider?: string): Promise<{ provider: string; updateAvailable: boolean }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_DATASET_CHECK, provider),
   updateTypingDataset: (provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }> =>

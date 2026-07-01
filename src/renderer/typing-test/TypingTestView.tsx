@@ -136,21 +136,22 @@ export function TypingTestView({
     [fontSize, displayLines],
   )
 
-  // Imported fileImport text counts progress by character (spaces included): each
-  // word-gap is one separator char, so total = Σ word lengths + (words - 1).
-  // Gated on the mode (not `lines`) so single-line imports count chars too.
-  const isFileImport = config.mode === 'fileImport'
+  // Char-progress modes (imported fileImport text; Tatoeba sentences) count
+  // progress by character (spaces included): each word-gap is one separator
+  // char, so total = Σ word lengths + (words - 1). Gated on the mode (not
+  // `lines`) so single-line / word-flow sources count chars too.
+  const charProgress = config.mode === 'fileImport' || config.mode === 'tatoeba'
   const totalChars = useMemo(
-    () => (isFileImport ? state.words.reduce((sum, w) => sum + w.length, 0) + Math.max(0, state.words.length - 1) : 0),
-    [isFileImport, state.words],
+    () => (charProgress ? state.words.reduce((sum, w) => sum + w.length, 0) + Math.max(0, state.words.length - 1) : 0),
+    [charProgress, state.words],
   )
   const typedChars = useMemo(() => {
-    if (!isFileImport) return 0
+    if (!charProgress) return 0
     let sum = state.currentInput.length
     for (let i = 0; i < state.currentWordIndex && i < state.words.length; i++) sum += state.words[i].length
     sum += Math.min(state.currentWordIndex, Math.max(0, state.words.length - 1)) // separators passed
     return Math.min(sum, totalChars)
-  }, [isFileImport, state.words, state.currentWordIndex, state.currentInput, totalChars])
+  }, [charProgress, state.words, state.currentWordIndex, state.currentInput, totalChars])
 
   function clearImeInput(): void {
     if (imeInputRef.current) imeInputRef.current.value = ''
@@ -439,13 +440,13 @@ export function TypingTestView({
             </span>
           </div>
           <div className="flex items-baseline gap-1.5">
-            {/* Imported fileImport text tracks character progress (spaces included);
-                everything else tracks words. */}
-            <span className="text-content-muted">{t(isFileImport ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
+            {/* Char-progress modes (fileImport / Tatoeba) track character
+                progress (spaces included); everything else tracks words. */}
+            <span className="text-content-muted">{t(charProgress ? 'editor.typingTest.chars' : 'editor.typingTest.words')}:</span>
             <span data-testid="typing-test-word-count" className="font-mono text-lg font-semibold tabular-nums">
               {!showStats
                 ? '-'
-                : isFileImport
+                : charProgress
                 ? t('editor.typingTest.wordCount', { current: typedChars, total: totalChars })
                 : t('editor.typingTest.wordCount', {
                     current: state.currentWordIndex,
