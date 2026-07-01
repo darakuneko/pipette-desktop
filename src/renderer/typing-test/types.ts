@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport'
+export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeba'
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
 
 export type TypingTestConfig =
@@ -10,6 +10,10 @@ export type TypingTestConfig =
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
   | { mode: 'fileImport'; textId: string }
+  // Tatoeba sentence pack (Hub-distributed). Sentences are played verbatim
+  // in order via the same char-count/word-flow path as fileImport. `language`
+  // selects the downloaded pack (e.g. 'english').
+  | { mode: 'tatoeba'; language: string }
 
 export interface Quote {
   id: number
