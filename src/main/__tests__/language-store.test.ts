@@ -73,7 +73,7 @@ describe('language-store list', () => {
   })
 
   it('detects downloaded languages', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'german.json'), JSON.stringify({ name: 'german', words: ['hallo'] }))
 
@@ -96,7 +96,7 @@ describe('language-store get', () => {
   })
 
   it('returns language data for downloaded language', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     const data = { name: 'test_lang', words: ['hello', 'world'], rightToLeft: false }
     await writeFile(join(langDir, 'test_lang.json'), JSON.stringify(data))
@@ -118,7 +118,7 @@ describe('language-store get', () => {
   })
 
   it('returns null for invalid JSON', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'bad.json'), 'not json')
 
@@ -127,7 +127,7 @@ describe('language-store get', () => {
   })
 
   it('returns null for data missing words array', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'nowords.json'), JSON.stringify({ name: 'nowords' }))
 
@@ -177,7 +177,7 @@ describe('language-store download', () => {
     const result = await invoke('lang:download', 'german') as { success: boolean }
     expect(result.success).toBe(true)
 
-    const files = await readdir(join(testDir, 'local', 'downloads', 'languages'))
+    const files = await readdir(join(testDir, 'local', 'downloads', 'languages', 'monkeytype'))
     expect(files).toContain('german.json')
   })
 
@@ -209,7 +209,7 @@ describe('language-store download', () => {
     expect(result.error).toContain('size mismatch')
 
     // Verify no file was written
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     let files: string[] = []
     try { files = await readdir(langDir) } catch { /* dir may not exist */ }
     expect(files).not.toContain('german.json')
@@ -250,7 +250,7 @@ describe('language-store delete', () => {
   })
 
   it('deletes downloaded language', async () => {
-    const langDir = join(testDir, 'local', 'downloads', 'languages')
+    const langDir = join(testDir, 'local', 'downloads', 'languages', 'monkeytype')
     await mkdir(langDir, { recursive: true })
     await writeFile(join(langDir, 'test.json'), '{}')
 
