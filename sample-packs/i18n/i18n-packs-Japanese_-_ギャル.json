@@ -1,5 +1,5 @@
 {
-  "version": "0.1.4",
+  "version": "0.1.5",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -249,19 +249,57 @@
       "switchToTypingMode": "タイピングテスト☆",
       "exitTypingMode": "テスト終わりっしょ！",
       "restart": "もう一回☆",
+      "nextTest": "次のテストいくよ☆",
+      "complete": "できたし！",
+      "collapseSettings": "設定閉じるっしょ",
+      "expandSettings": "設定開くっしょ",
+      "keymapToggle": "キーマップ☆",
+      "statsToggle": "計測っしょ",
+      "controlsToggle": "操作っしょ",
+      "hideKeymap": "キーマップ隠すっしょ",
+      "showKeymap": "キーマップ見せるっしょ",
+      "hideStats": "計測隠すっしょ",
+      "showStats": "計測見せるっしょ",
+      "hideControls": "操作隠すっしょ",
+      "showControls": "操作見せるっしょ",
+      "saveUnnamedToggle": "名前なしでも保存☆",
+      "enableSaveUnnamed": "名前なくても自動保存しちゃう☆",
+      "disableSaveUnnamed": "保存するには名前必須ってことで☆",
+      "section": {
+        "settings": "設定☆",
+        "data": "データ☆",
+        "view": "表示☆"
+      },
+      "compare": {
+        "button": "比較っしょ",
+        "title": "比較☆",
+        "previous": "前回っしょ",
+        "best": "ベスト☆",
+        "average": "平均っしょ",
+        "pinned": "結果☆",
+        "off": "オフっしょ",
+        "noResults": "ピンできる結果まだないじゃん",
+        "colName": "名前",
+        "colKeyboard": "キーボード",
+        "colTime": "タイム"
+      },
       "wpm": "WPM",
+      "kpm": "KPM",
       "accuracy": "ガチ度☆",
       "time": "タイム",
       "words": "単語",
+      "lines": "行っしょ",
+      "chars": "文字数☆",
+      "fontSize": "Font",
       "correct": "正解☆",
       "incorrect": "ミスったｗ",
-      "finished": "おわた☆",
       "loading": "読み込みちう…",
       "wordCount": "{{current}} / {{total}}",
       "mode": {
         "words": "単語っしょ",
         "time": "タイム☆",
-        "quote": "引用っしょ"
+        "quote": "引用っしょ",
+        "fileImport": "テキストっしょ"
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
@@ -272,6 +310,10 @@
         "all": "全部☆"
       },
       "quoteSource": "-- {{source}}",
+      "nameResult": "この結果に名前つけよ☆",
+      "nameModal": {
+        "title": "結果に名前つける☆"
+      },
       "viewOnly": "タイピングビュー☆",
       "exitViewOnly": "ビュー終わりっしょ！",
       "alwaysOnTop": "最前面☆",
@@ -293,6 +335,12 @@
       "resetSize": "初期サイズ☆",
       "fitSize": "フィット！",
       "baseLayer": "Base Layer",
+      "modeLabel": "Mode",
+      "pattern": "パターンっしょ",
+      "units": "単位っしょ",
+      "unitsWords": "単位(単語)☆",
+      "unitsSec": "単位(秒)☆",
+      "optionLabel": "オプションっしょ",
       "baseLayerShort": "Base",
       "heatmapWindow": "ヒートマップ表示（分）☆",
       "heatmapWindowShort": "HeatMap",
@@ -324,7 +372,40 @@
         "noResults": "そんな言語なくね？",
         "words": "{{count}} 単語☆",
         "loadingLanguage": "言語読み込みちう…",
-        "downloadFailed": "ダウンロード失敗…サゲ。。"
+        "downloadFailed": "ダウンロード失敗…サゲ。。",
+        "tabMonkeytype": "MonkeyType",
+        "tabTatoeba": "Tatoeba☆",
+        "tabFileImport": "ファイル取込っしょ",
+        "tabAozora": "青空文庫☆",
+        "import": "UTF-8のテキスト取り込むっしょ",
+        "importEmpty": "インポートしたテキストまだないじゃん",
+        "importFailed": "インポート失敗…サゲ",
+        "importErrorNotUtf8": "UTF-8のテキストファイルしか無理っしょ",
+        "importErrorTooLarge": "ファイルでかすぎ！（最大5MB）",
+        "importErrorEmpty": "打てるテキストないじゃん",
+        "importOverwritePrompt": "「{{name}}」もうあるっしょ。上書きする？",
+        "confirmOverwrite": "上書きっしょ",
+        "fileImportText": "インポートしたテキスト☆",
+        "datasetUpdateAvailable": "単語リストの更新あるよん☆",
+        "datasetUpdate": "更新っしょ",
+        "datasetUpdating": "更新中…",
+        "catalogSearchPlaceholder": "作品名とか著者名で検索☆...",
+        "catalogImportAction": "取り込むっしょ",
+        "estimatedChars": "だいたい{{count}}文字っしょ",
+        "catalogImportErrorDuplicate": "その作品名もう入れてあるじゃん",
+        "catalogImportErrorGeneric": "ダウンロード失敗（{{code}}）…サゲ",
+        "catalogLoadFailed": "カタログ読み込めなかったっしょ…ネット確認してもっかい試して☆",
+        "kanaRowLabel": "行",
+        "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込むっしょ",
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込むっしょ"
+      },
+      "memory": {
+        "pause": "一時停止っしょ",
+        "resumeButton": "再開っしょ",
+        "resumeTitle": "保存したテスト再開する？☆",
+        "resumeBody": "{{total}} 語中 {{current}} 語目で止まってるよ☆続きからいく？最初からやり直す？",
+        "resume": "続きから再開☆",
+        "restart": "最初からっしょ"
       },
       "history": {
         "title": "履歴☆",
@@ -334,11 +415,19 @@
         "totalTests": "テスト数☆",
         "avgAccuracy": "平均ガチ度",
         "date": "いつ？",
+        "name": "名前",
+        "unnamed": "名前なし☆",
         "mode": "モード☆",
+        "tabMonkeytype": "MonkeyType",
+        "tabFileImport": "ファイル取込っしょ",
+        "tabText": "テキスト",
         "noResults": "結果ないじゃん",
         "pb": "PB☆",
         "allModes": "全部",
-        "exportCsv": "CSV出すっしょ"
+        "filterMode": "モードで絞り込むっしょ",
+        "filterText": "テキストで絞り込むっしょ",
+        "exportCsv": "CSV出すっしょ",
+        "delete": "ポイっちょ☆"
       }
     }
   },
@@ -400,8 +489,12 @@
       "keyOverrideKeys": "Key",
       "altRepeatKeyKeys": "Key",
       "capsWord": "Caps Word",
+      "tappingTerm": "Dynamic Tapping Term",
+      "autocorrect": "Autocorrect",
+      "leader": "Leader",
       "boot": "Boot",
       "osm": "One-Shot Modifiers",
+      "oneShotControl": "One-Shot Control",
       "modMask": "Modifier Masks",
       "modTap": "Mod-Tap",
       "modSpecial": "Special",
@@ -501,7 +594,7 @@
     "saveFailed": "保存失敗したんだけど！",
     "loadFailed": "読み込み失敗…サゲ。。",
     "unsupportedVersion": "新しすぎて無理っしょ☆アプデして！",
-    "maxEntriesReached": "保存いっぱーい！古いのはポイっちょ☆",
+    "maxEntriesReached": "保存いっぱーい！（上限 {{max}} 件）古いのはポイっちょ☆",
     "csv": ".csv",
     "empty": "保存したのないっぽみ",
     "confirmOverwrite": "上書きしちゃう？♡"
@@ -1157,6 +1250,17 @@
         "none": "全部合わせちゃう☆",
         "multi": "{{first}} 他{{rest}}件っしょ"
       },
+      "typingTest": "TypingTestっしょ",
+      "typingTestOption": {
+        "none": "全部合わせちゃう☆",
+        "multi": "{{first}} 他{{rest}}件っしょ"
+      },
+      "run": "結果っしょ",
+      "runOption": {
+        "none": "全部合わせちゃう☆",
+        "multi": "{{first}} 他{{rest}}件っしょ"
+      },
+      "dimensionLabel": "App / TypingTestで絞り込みっしょ☆",
       "unit": "表示☆",
       "unitOption": {
         "sec": "秒っしょ",
@@ -1435,7 +1539,7 @@
     "errorGeneric": "失敗したｗ",
     "missingTitle": "ラベル見つかんないじゃん",
     "missingMessage": "「{{name}}」がないからQWERTYでいくっしょ☆",
-    "missingHint": "「{{name}}」は設定から落とせるよん☆",
+    "missingHint": "「{{name}}」は {{settings}} > {{tools}} > {{keyLabels}} か、キーピッカーの Edit ボタンから落とせるよん☆",
     "missingClose": "閉じるっしょ"
   },
   "themePacks": {
