@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Check, Download, Trash2, Loader2 } from 'lucide-react'
+import { Check, Download, Loader2 } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { clearTatoebaPackCache } from './word-generator'
 import { useTypingDatasetUpdate } from './useTypingDatasetUpdate'
 import { DatasetUpdateBanner } from './DatasetUpdateBanner'
+import { SectionHeader, RowDeleteButton } from './list-parts'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 
 function formatName(name: string): string {
@@ -124,9 +125,7 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
 
         {downloaded.length > 0 && (
           <div>
-            <div className="sticky top-0 bg-surface px-4 py-2 text-xs font-medium uppercase text-content-muted">
-              {t('editor.typingTest.language.downloaded')}
-            </div>
+            <SectionHeader label={t('editor.typingTest.language.downloaded')} />
             {downloaded.map((lang) => (
               <LanguageRow
                 key={lang.name}
@@ -142,9 +141,7 @@ export function LanguagePackTab({ provider, currentSelected, onSelect }: Props) 
 
         {available.length > 0 && (
           <div>
-            <div className="sticky top-0 bg-surface px-4 py-2 text-xs font-medium uppercase text-content-muted">
-              {t('editor.typingTest.language.available')}
-            </div>
+            <SectionHeader label={t('editor.typingTest.language.available')} />
             {available.map((lang) => (
               <LanguageRow
                 key={lang.name}
@@ -222,17 +219,7 @@ function LanguageRow({ lang, isCurrent, isDownloading, onSelect, onDownload, onD
       )}
 
       {lang.status === 'downloaded' && onDelete && (
-        <button
-          type="button"
-          data-testid={`language-delete-${lang.name}`}
-          className="shrink-0 rounded p-1 text-content-muted hover:text-danger"
-          onClick={(e) => {
-            e.stopPropagation()
-            onDelete(lang.name)
-          }}
-        >
-          <Trash2 size={ICON_SM} aria-hidden="true" />
-        </button>
+        <RowDeleteButton testId={`language-delete-${lang.name}`} onClick={() => onDelete(lang.name)} />
       )}
     </div>
   )

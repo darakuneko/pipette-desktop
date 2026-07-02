@@ -390,7 +390,6 @@
         "datasetUpdate": "Update",
         "datasetUpdating": "Updating…",
         "catalogSearchPlaceholder": "Search title or author...",
-        "catalogImported": "Imported",
         "catalogImportAction": "Import",
         "estimatedChars": "~{{count}} chars",
         "catalogImportErrorDuplicate": "A text with this title already exists",

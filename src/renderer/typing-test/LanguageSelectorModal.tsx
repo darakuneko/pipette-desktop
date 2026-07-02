@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_LG } from '../components/editors/store-modal-shared'
-import { Check, Trash2, Loader2, FileUp } from 'lucide-react'
+import { Check, Loader2, FileUp } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { LanguagePackTab } from './LanguagePackTab'
 import { AozoraCatalogTab } from './AozoraCatalogTab'
+import { RowDeleteButton } from './list-parts'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
 type Tab = 'existing' | 'tatoeba' | 'import' | 'aozora'
@@ -61,11 +62,37 @@ export function LanguageSelectorModal({
   // Flipped true when the currently-selected imported text is deleted, so a
   // plain close (Esc / backdrop / X — not an explicit pick) resets to default.
   const deletedCurrentRef = useRef(false)
+  // Flipped true on the first manual tab click so the async initial-tab
+  // correction below never overrides the user's own navigation.
+  const userNavigatedRef = useRef(false)
+  const { metas } = useTypingTestTexts()
+
+  // `initialTab`'s 'import' guess is wrong for catalog-managed texts: they
+  // are excluded from the File Import list (managed by their catalog tab),
+  // so the current selection would look missing. Metas load async, so the
+  // correction happens here once they resolve.
+  useEffect(() => {
+    if (userNavigatedRef.current || tab !== 'import' || !currentFileImportTextId) return
+    const source = metas.find((m) => m.id === currentFileImportTextId)?.source
+    if (source?.provider === 'aozora') setTab('aozora')
+  }, [metas, tab, currentFileImportTextId])
+
+  const selectTab = useCallback((next: Tab) => {
+    userNavigatedRef.current = true
+    setTab(next)
+  }, [])
 
   const handleClose = useCallback(() => {
     if (deletedCurrentRef.current) onCurrentTextDeleted?.()
     onClose()
   }, [onClose, onCurrentTextDeleted])
+
+  // Shared by both the Aozora and File Import tabs: only the deletion of the
+  // currently-selected imported text should flip deletedCurrentRef, so the
+  // current-or-not distinction lives here rather than in either tab.
+  const handleTextDeleted = useCallback((id: string) => {
+    if (id === currentFileImportTextId) deletedCurrentRef.current = true
+  }, [currentFileImportTextId])
 
   useEscapeClose(handleClose)
 
@@ -108,7 +135,7 @@ export function LanguageSelectorModal({
             aria-selected={tab === 'existing'}
             data-testid="language-tab-existing"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'existing' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
-            onClick={() => setTab('existing')}
+            onClick={() => selectTab('existing')}
           >
             {t('editor.typingTest.language.tabMonkeytype')}
           </button>
@@ -118,7 +145,7 @@ export function LanguageSelectorModal({
             aria-selected={tab === 'tatoeba'}
             data-testid="language-tab-tatoeba"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'tatoeba' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
-            onClick={() => setTab('tatoeba')}
+            onClick={() => selectTab('tatoeba')}
           >
             {t('editor.typingTest.language.tabTatoeba')}
           </button>
@@ -128,7 +155,7 @@ export function LanguageSelectorModal({
             aria-selected={tab === 'aozora'}
             data-testid="language-tab-aozora"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'aozora' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
-            onClick={() => setTab('aozora')}
+            onClick={() => selectTab('aozora')}
           >
             {t('editor.typingTest.language.tabAozora')}
           </button>
@@ -138,7 +165,7 @@ export function LanguageSelectorModal({
             aria-selected={tab === 'import'}
             data-testid="language-tab-import"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'import' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
-            onClick={() => setTab('import')}
+            onClick={() => selectTab('import')}
           >
             {t('editor.typingTest.language.tabFileImport')}
           </button>
@@ -164,6 +191,7 @@ export function LanguageSelectorModal({
           <AozoraCatalogTab
             currentTextId={currentFileImportTextId}
             onSelect={handleSelectImport}
+            onDeleted={handleTextDeleted}
           />
         )}
 
@@ -171,7 +199,7 @@ export function LanguageSelectorModal({
           <ImportTab
             currentFileImportTextId={currentFileImportTextId}
             onSelect={handleSelectImport}
-            onDeleteCurrent={() => { deletedCurrentRef.current = true }}
+            onDeleted={handleTextDeleted}
           />
         )}
       </div>
@@ -182,11 +210,11 @@ export function LanguageSelectorModal({
 interface ImportTabProps {
   currentFileImportTextId?: string
   onSelect: (id: string) => void
-  /** Fired when the currently-selected imported text is deleted. */
-  onDeleteCurrent?: () => void
+  /** Fired with the text id whenever an imported text is deleted. */
+  onDeleted?: (textId: string) => void
 }
 
-function ImportTab({ currentFileImportTextId, onSelect, onDeleteCurrent }: ImportTabProps) {
+function ImportTab({ currentFileImportTextId, onSelect, onDeleted }: ImportTabProps) {
   const { t } = useTranslation()
   const { metas, importFromFile, confirmImport, remove } = useTypingTestTexts()
   const [importing, setImporting] = useState(false)
@@ -194,11 +222,20 @@ function ImportTab({ currentFileImportTextId, onSelect, onDeleteCurrent }: Impor
   // Name of an import awaiting overwrite confirmation (null = none pending).
   const [overwriteName, setOverwriteName] = useState<string | null>(null)
 
+  // Catalog-managed texts (e.g. Aozora Bunko imports) are listed and
+  // deleted from their own catalog tab, not here. Excluded by the
+  // presence of `source` rather than a specific provider name, so any
+  // future catalog provider is excluded the same way.
+  const fileImportMetas = useMemo(() => metas.filter((meta) => !meta.source), [metas])
+
   const handleRemove = useCallback(async (id: string) => {
-    const result = await remove(id)
-    if (result.success && id === currentFileImportTextId) onDeleteCurrent?.()
-    return result
-  }, [remove, currentFileImportTextId, onDeleteCurrent])
+    // Optimistic: report before the IPC round-trip so closing the modal
+    // mid-delete still resets a deleted current text. A failed delete turns
+    // the reset into a harmless no-op rather than leaving the config
+    // pointing at a tombstoned text.
+    onDeleted?.(id)
+    return remove(id)
+  }, [remove, onDeleted])
 
   const handleImport = useCallback(async () => {
     setImporting(true)
@@ -279,10 +316,10 @@ function ImportTab({ currentFileImportTextId, onSelect, onDeleteCurrent }: Impor
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        {metas.length === 0 ? (
+        {fileImportMetas.length === 0 ? (
           <p className="px-4 py-6 text-center text-sm text-content-muted">{t('editor.typingTest.language.importEmpty')}</p>
         ) : (
-          metas.map((meta) => (
+          fileImportMetas.map((meta) => (
             <ImportRow
               key={meta.id}
               meta={meta}
@@ -319,18 +356,7 @@ function ImportRow({ meta, isCurrent, onSelect, onDelete }: ImportRowProps) {
       <span className="shrink-0 text-xs text-content-muted">
         {t('editor.typingTest.language.words', { count: meta.wordCount })}
       </span>
-      <button
-        type="button"
-        data-testid={`typing-text-delete-${meta.id}`}
-        aria-label={t('common.delete')}
-        className="shrink-0 rounded p-1 text-content-muted hover:text-danger"
-        onClick={(e) => {
-          e.stopPropagation()
-          void onDelete(meta.id)
-        }}
-      >
-        <Trash2 size={ICON_SM} aria-hidden="true" />
-      </button>
+      <RowDeleteButton testId={`typing-text-delete-${meta.id}`} onClick={() => { void onDelete(meta.id) }} />
     </div>
   )
 }

@@ -274,6 +274,15 @@ We are deeply grateful to the Vial team and contributors for making open-source 
 The Typing Test feature is based on [Monkeytype](https://github.com/monkeytypegame/monkeytype) (GPL-3.0).
 Thank you to the Monkeytype team for their excellent open-source typing test.
 
+Typing Test sentence packs are curated from the [Tatoeba Project](https://tatoeba.org) and its contributors.
+Most language packs are licensed under [CC BY 2.0 FR](https://creativecommons.org/licenses/by/2.0/fr/); some packs are dedicated to the public domain under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/).
+Thank you to the Tatoeba community for building an open corpus of example sentences.
+
+The Aozora Bunko catalog lets you type public-domain Japanese literature. Catalog metadata and work texts are
+sourced from [Aozora Bunko](https://www.aozora.gr.jp/) via the [aozorabunko GitHub mirror](https://github.com/aozorabunko/aozorabunko),
+with Aozora's ruby and editorial annotation markup cleaned during import.
+Thank you to the Aozora Bunko volunteers for decades of careful digitization.
+
 ## License
 
 [GPL-3.0-or-later](LICENSE)

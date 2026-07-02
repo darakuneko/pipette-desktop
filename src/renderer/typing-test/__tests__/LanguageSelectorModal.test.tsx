@@ -24,8 +24,16 @@ beforeEach(() => {
     langDelete: vi.fn().mockResolvedValue({ success: true }),
     checkTypingDatasetUpdate: vi.fn().mockResolvedValue({ provider: 'monkeytype', updateAvailable: false }),
     updateTypingDataset: vi.fn().mockResolvedValue({ provider: 'monkeytype', changed: false, fromVersion: '' }),
+    // The modal itself reads the text metas (initial-tab correction for
+    // catalog-managed texts), so every render needs a list mock.
+    typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: [] }),
+    typingTestTextStoreDelete: vi.fn().mockResolvedValue({ success: true }),
   } as unknown as typeof window.vialAPI
 })
+
+function textMeta(id: string, name: string, source?: { provider: string; workId: string }) {
+  return { id, name, wordCount: 10, filename: 'f.json', savedAt: '', updatedAt: '', source }
+}
 
 describe('LanguageSelectorModal', () => {
   it('renders with title and search input', async () => {
@@ -428,6 +436,93 @@ describe('LanguageSelectorModal', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
+  it('deleting a non-current aozora work then closing does not fire onCurrentTextDeleted', async () => {
+    const workId = '001257/files/59898.zip'
+    window.vialAPI = {
+      ...window.vialAPI,
+      langList: vi.fn((provider?: string) => {
+        if (provider === 'aozora') {
+          return Promise.resolve([
+            { name: workId, title: 'Sample Work', author: 'Sample Author', wordCount: 1000, rightToLeft: false, fileSize: 2000 },
+          ])
+        }
+        return Promise.resolve(mockLanguages)
+      }),
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [{
+          id: 'aozora-1',
+          name: 'Sample Work（Sample Author）',
+          wordCount: 1000,
+          filename: 'a.json',
+          savedAt: '',
+          updatedAt: '',
+          source: { provider: 'aozora', workId },
+        }],
+      }),
+      typingTestTextStoreDelete: vi.fn().mockResolvedValue({ success: true }),
+    } as unknown as typeof window.vialAPI
+
+    const onCurrentTextDeleted = vi.fn()
+    const onClose = vi.fn()
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        currentFileImportTextId="some-other-id"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onCurrentTextDeleted={onCurrentTextDeleted}
+        onClose={onClose}
+      />,
+    )
+
+    // currentFileImportTextId is set, so the modal opens on the Import tab;
+    // switch to Aozora to reach the deletable imported row.
+    fireEvent.click(screen.getByTestId('language-tab-aozora'))
+    await waitFor(() => expect(screen.getByTestId(`aozora-delete-${workId}`)).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId(`aozora-delete-${workId}`))
+    await waitFor(() => expect(window.vialAPI.typingTestTextStoreDelete).toHaveBeenCalledWith('aozora-1'))
+
+    fireEvent.click(screen.getByTestId('language-modal-close'))
+    expect(onCurrentTextDeleted).not.toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('excludes catalog-managed texts (with a `source`) from the File Import list', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [
+          { id: 'file-id', name: 'My File Import', wordCount: 5, filename: 'file.json', savedAt: '', updatedAt: '' },
+          {
+            id: 'catalog-id',
+            name: 'Aozora Work',
+            wordCount: 5,
+            filename: 'catalog.json',
+            savedAt: '',
+            updatedAt: '',
+            source: { provider: 'aozora', workId: 'works/0.zip' },
+          },
+        ],
+      }),
+    } as unknown as typeof window.vialAPI
+
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-import'))
+
+    await waitFor(() => expect(screen.getByTestId('typing-text-row-file-id')).toBeInTheDocument())
+    expect(screen.queryByTestId('typing-text-row-catalog-id')).not.toBeInTheDocument()
+  })
+
   it('does not fire onCurrentTextDeleted when nothing was deleted', async () => {
     const onCurrentTextDeleted = vi.fn()
     const onClose = vi.fn()
@@ -444,5 +539,44 @@ describe('LanguageSelectorModal', () => {
     fireEvent.click(screen.getByTestId('language-modal-close'))
     expect(onCurrentTextDeleted).not.toHaveBeenCalled()
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('hops from the File Import tab to Aozora when the current text is a catalog import', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+      success: true,
+      data: [textMeta('az-1', '船旅（アーヴィング ワシントン）', { provider: 'aozora', workId: 'works/az.zip' })],
+    })
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        currentFileImportTextId="az-1"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId('language-tab-aozora')).toHaveAttribute('aria-selected', 'true')
+    })
+  })
+
+  it('stays on the File Import tab when the current text is a plain file import', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue({
+      success: true,
+      data: [textMeta('file-1', 'My Notes')],
+    })
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        currentFileImportTextId="file-1"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await waitFor(() => expect(screen.getByText('My Notes')).toBeInTheDocument())
+    expect(screen.getByTestId('language-tab-import')).toHaveAttribute('aria-selected', 'true')
   })
 })
