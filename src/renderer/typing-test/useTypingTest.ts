@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaQuote } from './word-generator'
+import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaQuote, tatoebaQuoteToWords } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, Quote } from './types'
@@ -137,12 +137,15 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
 }
 
 /** Build a word-flow config from a sampled Tatoeba quote (empty when the pack
- *  is uncached / not downloaded). Reuses the quote path so counting and
- *  rendering match quote mode. */
+ *  is uncached / not downloaded). Reuses the quote path's rendering and
+ *  char-based counting, but tokenizes with `tatoebaQuoteToWords` (NOT
+ *  `quoteToWords`) — Tatoeba sentences span 72 languages in arbitrary
+ *  scripts, and `quoteToWords`'s ASCII whitelist would strip non-Latin text
+ *  down to almost nothing. */
 function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
   if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [] }
   const quote = tatoebaQuote(pack)
-  return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+  return { words: tatoebaQuoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
 }
 
 function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {

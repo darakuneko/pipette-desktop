@@ -6,6 +6,7 @@ import {
   getTatoebaPack,
   getTatoebaPackSync,
   tatoebaQuote,
+  tatoebaQuoteToWords,
   TATOEBA_SENTENCE_COUNT,
 } from '../tatoeba-pack'
 
@@ -83,5 +84,35 @@ describe('tatoebaQuote', () => {
     // Joined by single spaces; no sentence here contains a space, so token
     // count equals the sampled sentence count.
     expect(quote.text.split(' ')).toHaveLength(TATOEBA_SENTENCE_COUNT)
+  })
+})
+
+describe('tatoebaQuoteToWords', () => {
+  it('keeps non-ASCII characters intact — regression for the ASCII-strip bug', () => {
+    // Real sentences from the Tatoeba japanese pack (CC BY 2.0 FR). The old
+    // quoteToWords()-based tokenizer whitelist-stripped everything but ASCII,
+    // collapsing sentences like these down to a single stray digit.
+    const words = [
+      '「0℃！ やばい熱ある」「かわいそうな雪だるまさん」',
+      '「いい考えね」と思ったのは３名だけでした。',
+    ]
+    const quote = tatoebaQuote({ name: 'japanese', words })
+
+    const tokens = tatoebaQuoteToWords(quote)
+
+    expect(tokens.join('')).not.toBe('0')
+    expect(tokens.some((t) => t.includes('やばい'))).toBe(true)
+    expect(tokens.some((t) => t.includes('思ったのは３名だけでした。'))).toBe(true)
+  })
+
+  it('splits on whitespace without stripping punctuation/accents', () => {
+    const quote = tatoebaQuote({ name: 'french', words: ["C'est très bien.", 'Où est-il ?'] })
+    const tokens = tatoebaQuoteToWords(quote)
+    expect(tokens).toEqual(["C'est", 'très', 'bien.', 'Où', 'est-il', '?'])
+  })
+
+  it('returns no tokens for an empty quote', () => {
+    const quote = tatoebaQuote({ name: 'empty', words: [] })
+    expect(tatoebaQuoteToWords(quote)).toEqual([])
   })
 })
