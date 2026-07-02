@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Aozora Bunko catalog browser: search-first UI over the 10,468-entry
-// catalog manifest (rendered incrementally — see PAGE_SIZE). Picking an
-// unimported work downloads + cleans it into the typing-test-texts store;
-// an already-imported work is just selected like any other fileImport text.
+// catalog manifest (rendered incrementally — see PAGE_SIZE), split into
+// Imported / Available sections like LanguagePackTab's downloaded/available
+// packs. Picking an unimported work downloads + cleans it into the
+// typing-test-texts store; an already-imported work is just selected like
+// any other fileImport text, and can be deleted back into Available.
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,6 +14,7 @@ import { ICON_SM } from '../constants/ui-tokens'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { useTypingDatasetUpdate } from './useTypingDatasetUpdate'
 import { DatasetUpdateBanner } from './DatasetUpdateBanner'
+import { SectionHeader, RowDeleteButton } from './list-parts'
 import { KANA_ROWS, KANA_ROW_COLUMNS, KANA_COLUMN_TO_ROW, normalizeKanaInitial, type KanaRow } from './kana-initial'
 import type { LanguageListEntry } from '../../shared/types/language-store'
 import type { AozoraImportErrorCode } from '../../shared/types/aozora-import'
@@ -71,9 +74,11 @@ interface Props {
    *  (an imported Aozora work plays back through that same mode). */
   currentTextId?: string
   onSelect: (textId: string) => void
+  /** Fired with the text id whenever an imported work is deleted. */
+  onDeleted?: (textId: string) => void
 }
 
-export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
+export function AozoraCatalogTab({ currentTextId, onSelect, onDeleted }: Props) {
   const { t } = useTranslation()
   const [catalog, setCatalog] = useState<LanguageListEntry[]>(cachedCatalog ?? [])
   const [search, setSearch] = useState('')
@@ -88,7 +93,7 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
   const searchRef = useRef<HTMLInputElement>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const sentinelRef = useRef<HTMLDivElement>(null)
-  const { metas, refresh: refreshMetas } = useTypingTestTexts()
+  const { metas, refresh: refreshMetas, remove } = useTypingTestTexts()
   const { updateAvailable, updating, applyUpdate } = useTypingDatasetUpdate(AOZORA_PROVIDER)
 
   useEffect(() => {
@@ -106,7 +111,7 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
   useEffect(() => { searchRef.current?.focus() }, [])
 
   // A new query, a reloaded catalog (dataset update), or a changed kana
-  // filter all start the plain list back at the first page — otherwise a
+  // filter all start the Available list back at the first page — otherwise a
   // narrower filter could leave visibleCount pointing past the new,
   // shorter match set.
   useEffect(() => { setVisibleCount(PAGE_SIZE) }, [search, catalog, selectedRow, selectedColumn])
@@ -162,15 +167,16 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
   const query = search.trim().toLowerCase()
 
   // Single filter pass: partitions matches into the "Imported" section
-  // (already-downloaded works, only shown while browsing with no active
-  // query, so a work never appears twice on the page) and the plain list,
-  // while counting total matches for the empty-result state. The kana
-  // filter (row, or the narrower column once one is picked) combines with
-  // the text search as AND.
-  const { imported, plain, totalMatched } = useMemo(() => {
+  // (already-imported works) and the "Available" section (everything
+  // else), always both sectioned — mirrors LanguagePackTab's downloaded/
+  // available split — so an imported work never blends into the plain
+  // list mid-search. The empty-result state is derived from both lists
+  // being empty rather than a separate counter. The kana filter (row, or
+  // the narrower column once one is picked) combines with the text search
+  // as AND.
+  const { imported, available } = useMemo(() => {
     const imported: LanguageListEntry[] = []
-    const plain: LanguageListEntry[] = []
-    let totalMatched = 0
+    const available: LanguageListEntry[] = []
     for (const { entry, haystack, kanaInitial } of searchIndex) {
       if (query && !haystack.includes(query)) continue
       if (selectedColumn) {
@@ -178,22 +184,24 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
       } else if (selectedRow) {
         if (!kanaInitial || KANA_COLUMN_TO_ROW[kanaInitial] !== selectedRow) continue
       }
-      totalMatched++
-      if (!query && importedTextIdByWorkId.has(entry.name)) {
+      if (importedTextIdByWorkId.has(entry.name)) {
         imported.push(entry)
       } else {
-        plain.push(entry)
+        available.push(entry)
       }
     }
-    return { imported, plain, totalMatched }
+    return { imported, available }
   }, [searchIndex, query, importedTextIdByWorkId, selectedRow, selectedColumn])
 
-  const hasMore = visibleCount < plain.length
+  // Pagination only applies to the Available list — imported works are few
+  // enough (per-user) to render in full.
+  const hasMore = visibleCount < available.length
 
   // Infinite scroll: observes a sentinel placed after the last rendered
-  // plain-list row, using the scroll container itself as the intersection
-  // root. Re-created whenever hasMore flips (the sentinel mounts/unmounts)
-  // so a stale observer never lingers once every match is rendered.
+  // Available-list row, using the scroll container itself as the
+  // intersection root. Re-created whenever hasMore flips (the sentinel
+  // mounts/unmounts) so a stale observer never lingers once every match
+  // is rendered.
   useEffect(() => {
     if (!hasMore) return
     const sentinel = sentinelRef.current
@@ -232,9 +240,20 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
     }
   }, [refreshMetas, onSelect, t])
 
-  // Shared row renderer for both the "Imported" section and the plain list:
-  // an already-imported entry naturally hides its import button/spinner/
-  // error inside AozoraRow (see `imported` there), so passing the same
+  // Soft-deletes the imported text behind a catalog entry (same tombstone
+  // as ImportTab's remove). The metas refresh this triggers naturally moves
+  // the row from Imported back to Available. `onDeleted` is reported
+  // optimistically before the IPC round-trip so closing the modal
+  // mid-delete still resets a deleted current text; a failed delete turns
+  // the reset into a harmless no-op.
+  const handleDelete = useCallback(async (textId: string) => {
+    onDeleted?.(textId)
+    await remove(textId)
+  }, [remove, onDeleted])
+
+  // Shared row renderer for both the Imported and Available sections: an
+  // already-imported entry naturally swaps its import button for a delete
+  // button inside AozoraRow (see `imported` there), so passing the same
   // importing/error lookups to both sections is behavior-identical.
   const renderRow = useCallback((entry: LanguageListEntry) => {
     const textId = importedTextIdByWorkId.get(entry.name)
@@ -250,9 +269,10 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
         error={errors[entry.name]}
         onSelect={onSelect}
         onImport={handleImport}
+        onDelete={handleDelete}
       />
     )
-  }, [importedTextIdByWorkId, currentTextId, importing, errors, onSelect, handleImport])
+  }, [importedTextIdByWorkId, currentTextId, importing, errors, onSelect, handleImport, handleDelete])
 
   return (
     <>
@@ -311,20 +331,23 @@ export function AozoraCatalogTab({ currentTextId, onSelect }: Props) {
           <p className="px-4 py-6 text-center text-sm text-danger" data-testid="aozora-catalog-error">
             {t('editor.typingTest.language.catalogLoadFailed')}
           </p>
-        ) : totalMatched === 0 && (
+        ) : imported.length === 0 && available.length === 0 && (
           <p className="px-4 py-6 text-center text-sm text-content-muted">{t('editor.typingTest.language.noResults')}</p>
         )}
 
         {imported.length > 0 && (
           <div>
-            <div className="sticky top-0 bg-surface px-4 py-2 text-xs font-medium uppercase text-content-muted">
-              {t('editor.typingTest.language.catalogImported')}
-            </div>
+            <SectionHeader label={t('editor.typingTest.language.downloaded')} />
             {imported.map(renderRow)}
           </div>
         )}
 
-        {plain.slice(0, visibleCount).map(renderRow)}
+        {available.length > 0 && (
+          <div>
+            <SectionHeader label={t('editor.typingTest.language.available')} />
+            {available.slice(0, visibleCount).map(renderRow)}
+          </div>
+        )}
 
         {hasMore && <div ref={sentinelRef} className="h-px" data-testid="aozora-sentinel" />}
       </div>
@@ -341,9 +364,10 @@ interface AozoraRowProps {
   error?: string
   onSelect: (textId: string) => void
   onImport: (workId: string) => void
+  onDelete: (textId: string) => void
 }
 
-function AozoraRow({ entry, textId, isCurrent, isImporting, error, onSelect, onImport }: AozoraRowProps) {
+function AozoraRow({ entry, textId, isCurrent, isImporting, error, onSelect, onImport, onDelete }: AozoraRowProps) {
   const { t } = useTranslation()
   const imported = textId !== undefined
 
@@ -393,6 +417,10 @@ function AozoraRow({ entry, textId, isCurrent, isImporting, error, onSelect, onI
               <Download size={ICON_SM} aria-hidden="true" />
             )}
           </button>
+        )}
+
+        {imported && (
+          <RowDeleteButton testId={`aozora-delete-${entry.name}`} onClick={() => onDelete(textId)} />
         )}
       </div>
       {error && (

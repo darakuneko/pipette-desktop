@@ -55,6 +55,7 @@ beforeEach(() => {
     checkTypingDatasetUpdate: vi.fn().mockResolvedValue({ provider: 'aozora', updateAvailable: false }),
     updateTypingDataset: vi.fn().mockResolvedValue({ provider: 'aozora', changed: false, fromVersion: '' }),
     typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: emptyMetas }),
+    typingTestTextStoreDelete: vi.fn().mockResolvedValue({ success: true }),
     aozoraImport: vi.fn(),
   } as unknown as typeof window.vialAPI
 
@@ -245,6 +246,99 @@ describe('AozoraCatalogTab', () => {
     await waitFor(() => expect(screen.getByTestId('aozora-row-works/0.zip')).toBeInTheDocument())
     expect(screen.getByTestId('aozora-row-works/0.zip').className).toContain('bg-accent/10')
     expect(screen.getByTestId('aozora-row-works/1.zip').className).not.toContain('bg-accent/10')
+  })
+})
+
+function makeSearchPartitionCatalog(): LanguageListEntry[] {
+  return [
+    { name: 'works/imported.zip', title: 'Shared Term Imported', author: 'Author A', wordCount: 1000, rightToLeft: false, fileSize: 2000, status: 'not-downloaded' },
+    { name: 'works/avail.zip', title: 'Shared Term Available', author: 'Author B', wordCount: 1000, rightToLeft: false, fileSize: 2000, status: 'not-downloaded' },
+    { name: 'works/other.zip', title: 'Unrelated Title', author: 'Author C', wordCount: 1000, rightToLeft: false, fileSize: 2000, status: 'not-downloaded' },
+  ]
+}
+
+// Wraps a single imported meta (matching makeSearchPartitionCatalog's
+// "imported" entry) in the typingTestTextStoreList result shape, for the
+// tests below that only care about that one imported work.
+function importedListResult() {
+  return { success: true, data: [importedMeta('imported-id', 'Shared Term Imported（Author A）', 'works/imported.zip')] }
+}
+
+describe('AozoraCatalogTab sections and delete', () => {
+  beforeEach(() => {
+    window.vialAPI.langList = vi.fn().mockResolvedValue(makeSearchPartitionCatalog())
+  })
+
+  it('keeps an imported match under the Downloaded header instead of blending into Available during a search', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue(importedListResult())
+
+    renderWithI18n(<AozoraCatalogTab onSelect={vi.fn()} />)
+    await waitFor(() => expect(screen.getAllByTestId(/^aozora-row-/)).toHaveLength(3))
+
+    fireEvent.change(screen.getByTestId('aozora-search'), { target: { value: 'Shared Term' } })
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId(/^aozora-row-/)).toHaveLength(2)
+    })
+    // Unrelated title is filtered out entirely.
+    expect(screen.queryByTestId('aozora-row-works/other.zip')).not.toBeInTheDocument()
+
+    // Both sections render with their sticky headers even mid-search.
+    expect(screen.getByText('Downloaded')).toBeInTheDocument()
+    expect(screen.getByText('Available')).toBeInTheDocument()
+
+    // The imported match has no import button (it's already imported)...
+    expect(screen.queryByTestId('aozora-import-works/imported.zip')).not.toBeInTheDocument()
+    // ...while the non-imported match still offers one.
+    expect(screen.getByTestId('aozora-import-works/avail.zip')).toBeInTheDocument()
+  })
+
+  it('deletes an imported work, returning it to the Available section once metas refresh', async () => {
+    const emptyList = { success: true, data: emptyMetas }
+    window.vialAPI.typingTestTextStoreList = vi.fn()
+      .mockResolvedValueOnce(importedListResult())
+      .mockResolvedValue(emptyList)
+
+    renderWithI18n(<AozoraCatalogTab onSelect={vi.fn()} />)
+
+    await waitFor(() => expect(screen.getByTestId('aozora-delete-works/imported.zip')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('aozora-delete-works/imported.zip'))
+
+    await waitFor(() => {
+      expect(window.vialAPI.typingTestTextStoreDelete).toHaveBeenCalledWith('imported-id')
+    })
+    await waitFor(() => {
+      expect(screen.queryByTestId('aozora-delete-works/imported.zip')).not.toBeInTheDocument()
+      expect(screen.getByTestId('aozora-import-works/imported.zip')).toBeInTheDocument()
+    })
+  })
+
+  it('fires onDeleted with the deleted text id when the deleted work is the currently-selected text', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue(importedListResult())
+    const onDeleted = vi.fn()
+
+    renderWithI18n(
+      <AozoraCatalogTab currentTextId="imported-id" onSelect={vi.fn()} onDeleted={onDeleted} />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('aozora-delete-works/imported.zip')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('aozora-delete-works/imported.zip'))
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledWith('imported-id'))
+  })
+
+  it('fires onDeleted with the deleted text id even when it is not the currently-selected text', async () => {
+    window.vialAPI.typingTestTextStoreList = vi.fn().mockResolvedValue(importedListResult())
+    const onDeleted = vi.fn()
+
+    renderWithI18n(
+      <AozoraCatalogTab currentTextId="some-other-id" onSelect={vi.fn()} onDeleted={onDeleted} />,
+    )
+
+    await waitFor(() => expect(screen.getByTestId('aozora-delete-works/imported.zip')).toBeInTheDocument())
+    fireEvent.click(screen.getByTestId('aozora-delete-works/imported.zip'))
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalledWith('imported-id'))
   })
 })
 

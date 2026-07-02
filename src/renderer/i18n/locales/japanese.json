@@ -390,7 +390,6 @@
         "datasetUpdate": "更新",
         "datasetUpdating": "更新中…",
         "catalogSearchPlaceholder": "作品名・著者名で検索...",
-        "catalogImported": "取り込み済み",
         "catalogImportAction": "取り込む",
         "estimatedChars": "約 {{count}} 文字",
         "catalogImportErrorDuplicate": "同じ作品名のテキストが既に存在します",
