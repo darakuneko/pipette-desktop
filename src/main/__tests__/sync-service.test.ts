@@ -204,6 +204,26 @@ async function flushIO(): Promise<void> {
   }
 }
 
+/**
+ * Drains event-loop turns until `predicate` is true, then lets a couple
+ * more turns run so any bookkeeping chained after the awaited condition
+ * (e.g. remote-state updates that follow a download) settles too.
+ *
+ * `flushIO`'s fixed 10-turn drain assumes every awaited step resolves on
+ * the microtask/`setImmediate` queue. Polling paths that hit real fs I/O
+ * (the tests use a real mkdtemp userData dir) resolve via the libuv
+ * threadpool instead, so under load a fixed drain can come up short.
+ * This does not throw on timeout — it just falls through so the
+ * caller's own assertion produces the meaningful failure message.
+ */
+async function flushUntil(predicate: () => boolean, maxTurns = 500): Promise<void> {
+  for (let i = 0; i < maxTurns && !predicate(); i++) {
+    await new Promise<void>((resolve) => setImmediate(resolve))
+  }
+  await new Promise<void>((resolve) => setImmediate(resolve))
+  await new Promise<void>((resolve) => setImmediate(resolve))
+}
+
 function makeRemoteEnvelope(
   updatedAt: string,
   entries?: Array<{ id: string; label: string; filename: string; savedAt: string; updatedAt?: string }>,
@@ -535,6 +555,9 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'pc-1'))
+      // Settle the rest of the tick so a hypothetical late data-file
+      // download can't land after the count assertion below.
       await flushIO()
 
       // Password-check downloaded for validation, but data file NOT downloaded
@@ -553,10 +576,13 @@ describe('sync-service', () => {
       startPolling()
       // First poll: records state, no data download
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
       await flushIO()
 
       // Second poll: detects modifiedTime change, downloads
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'file-1'))
+      // Settle the tick before the exact listFiles count assertion.
       await flushIO()
 
       expect(mockListFiles).toHaveBeenCalledTimes(2)
@@ -569,12 +595,17 @@ describe('sync-service', () => {
       mockListFiles.mockResolvedValue([makeDriveFile('2025-01-01T00:00:00.000Z')])
 
       startPolling()
+      // Wait for the poll to actually run (listFiles fires at its start)
+      // before settling — a plain fixed drain could return before the
+      // tick completed and false-pass the negative count check below.
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 1)
       await flushIO()
 
       const downloadCallCount = mockDownloadFile.mock.calls.length
 
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+      await flushUntil(() => mockListFiles.mock.calls.length >= 2)
       await flushIO()
 
       expect(mockDownloadFile.mock.calls.length).toBe(downloadCallCount)
@@ -1404,8 +1435,21 @@ describe('sync-service', () => {
 
         await executeSync('download', 'favorites')
 
-        // Subsequent poll should detect changes to keyboard file
-        // because updateRemoteState was called with all files
+        // First poll with the UNCHANGED file list: the scoped sync must
+        // have recorded f2's remote state, so nothing should download.
+        // Without this step, a missing f2 state entry (the bug this test
+        // guards against) would be indistinguishable from a detected
+        // change on the next poll — both trigger a download.
+        mockDownloadFile.mockClear()
+        startPolling()
+        const listCallsAfterSync = mockListFiles.mock.calls.length
+        await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => mockListFiles.mock.calls.length > listCallsAfterSync)
+        await flushIO()
+        expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
+
+        // Second poll after the keyboard file's modifiedTime changes:
+        // now the download must happen for the locally-tracked keyboard.
         const updatedFiles = [
           { id: 'f1', name: 'favorites_tapDance.enc', modifiedTime: '2025-01-01T00:00:00.000Z' },
           { id: 'f2', name: 'keyboards_0x1234_settings.enc', modifiedTime: '2025-01-02T00:00:00.000Z' },
@@ -1414,11 +1458,9 @@ describe('sync-service', () => {
         mockListFiles.mockResolvedValue(updatedFiles)
         mockDownloadFile.mockResolvedValue(makeSettingsEnvelope('0x1234', '2025-01-02T00:00:00.000Z'))
 
-        startPolling()
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-        await flushIO()
+        await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'f2'))
 
-        // Polling should detect the keyboard file changed for the locally-tracked keyboard
         expect(mockDownloadFile).toHaveBeenCalledWith('f2')
 
         stopPolling()
@@ -1447,7 +1489,11 @@ describe('sync-service', () => {
 
         mockDownloadFile.mockClear()
         startPolling()
+        // Wait for the poll to actually run before the negative assertion,
+        // otherwise an under-drained tick could false-pass it.
+        const listCallsBeforePoll = mockListFiles.mock.calls.length
         await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+        await flushUntil(() => mockListFiles.mock.calls.length > listCallsBeforePoll)
         await flushIO()
 
         expect(mockDownloadFile).not.toHaveBeenCalledWith('f2')
@@ -1650,7 +1696,7 @@ describe('sync-service', () => {
 
       startPolling()
       await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-      await flushIO()
+      await flushUntil(() => mockDownloadFile.mock.calls.some((call) => call[0] === 'pc-1'))
 
       // Should have downloaded password-check for validation
       expect(mockDownloadFile).toHaveBeenCalledWith('pc-1')
