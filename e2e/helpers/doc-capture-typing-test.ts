@@ -40,6 +40,127 @@ async function waitForUnlockDialog(page: Page): Promise<void> {
   }
 }
 
+/** Applies the shared dataset-update banner on whichever Mode-modal tab is
+ *  currently open, if it is showing. A no-op when no update is available. */
+async function applyDatasetUpdateIfShown(page: Page): Promise<void> {
+  const banner = page.locator('[data-testid="typing-dataset-update-banner"]')
+  if (!(await banner.isVisible().catch(() => false))) return
+  await page.locator('[data-testid="typing-dataset-update-button"]').click()
+  await banner.waitFor({ state: 'detached', timeout: 20_000 }).catch(() => {
+    console.log('  [warn] dataset update banner did not clear in time')
+  })
+  await page.waitForTimeout(500)
+}
+
+/** Opens the typing-test Mode modal (MonkeyType / Tatoeba / Aozora Bunko /
+ *  File Import) and captures one screenshot per tab, plus a running-state
+ *  shot of a Tatoeba pack's per-sentence lines. Downloads the Tatoeba
+ *  `japanese` pack on demand for the shots and removes it again afterward if
+ *  this run was the one that downloaded it, leaving the app as it found it.
+ *  Requires the typing-test editor (not Typing View) to already be active. */
+async function captureModeModalScreenshots(page: Page): Promise<void> {
+  const languageSelector = page.locator('[data-testid="language-selector"]:not([disabled])')
+
+  // The Settings panel (containing the Mode row) can be collapsed from a
+  // prior session; expand it so the language-selector button is reachable.
+  const collapsedPanel = page.locator('[data-testid="typing-settings-panel-collapsed"]')
+  if (await collapsedPanel.isVisible().catch(() => false)) {
+    await page.locator('[data-testid="typing-settings-panel-toggle"]').click()
+    await page.waitForTimeout(300)
+  }
+
+  await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+  await languageSelector.click()
+  await page.waitForTimeout(500)
+
+  // MonkeyType tab (the modal may already open here if words/time/quote mode
+  // was active, but select it explicitly for a deterministic starting point).
+  await page.locator('[data-testid="language-tab-existing"]').click()
+  await page.waitForTimeout(300)
+  await capture(page, 'typing-test-mode-monkeytype')
+
+  // Tatoeba tab — apply the update banner (populates the pack list on a
+  // fresh profile, since Tatoeba ships no bundled languages) and make sure
+  // the `japanese` pack is downloaded for the running-state shot below.
+  await page.locator('[data-testid="language-tab-tatoeba"]').click()
+  await page.waitForTimeout(500)
+  await applyDatasetUpdateIfShown(page)
+
+  let downloadedTatoebaJapaneseForShot = false
+  const tatoebaJapaneseDownload = page.locator('[data-testid="language-download-japanese"]')
+  if (await tatoebaJapaneseDownload.isVisible().catch(() => false)) {
+    await tatoebaJapaneseDownload.click()
+    await page.locator('[data-testid="language-delete-japanese"]').waitFor({ state: 'visible', timeout: 20_000 }).catch(() => {
+      console.log('  [warn] tatoeba japanese pack did not finish downloading in time')
+    })
+    downloadedTatoebaJapaneseForShot = true
+    await page.waitForTimeout(300)
+  } else {
+    console.log('  [info] tatoeba japanese pack already downloaded (or not offered)')
+  }
+  // Clicking a mid-list download button auto-scrolls the pack list; snap it
+  // back to the top so the Downloaded section leads the shot.
+  await page.evaluate(() => {
+    const list = document.querySelector('[role="dialog"] .overflow-y-auto')
+    if (list) list.scrollTop = 0
+  })
+  await page.waitForTimeout(300)
+  await capture(page, 'typing-test-mode-tatoeba')
+
+  // Aozora Bunko tab — apply its own update banner (populates the ~10.5k
+  // work catalog), then search so the kana filter row and results both
+  // render in frame.
+  await page.locator('[data-testid="language-tab-aozora"]').click()
+  await page.waitForTimeout(500)
+  await applyDatasetUpdateIfShown(page)
+  await page.locator('[data-testid="aozora-search"]').fill('太宰')
+  await page.waitForTimeout(800)
+  await capture(page, 'typing-test-mode-aozora')
+
+  // Select the (now-downloaded) Tatoeba japanese pack so the reading window
+  // renders its per-sentence lines and ⏎ end-of-line markers. Picking a row
+  // switches mode and closes the modal — no explicit close needed. Keeping
+  // this to a plain pack selection (rather than importing an Aozora work)
+  // per the capture plan.
+  await page.locator('[data-testid="language-tab-tatoeba"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="language-row-japanese"]').click()
+  await page.waitForTimeout(800)
+  await capture(page, 'typing-test-tatoeba-running')
+
+  // Reopen the modal for the File Import tab shot.
+  await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+  await languageSelector.click()
+  await page.waitForTimeout(500)
+  await page.locator('[data-testid="language-tab-import"]').click()
+  await page.waitForTimeout(300)
+  await capture(page, 'typing-test-mode-import')
+
+  // Cleanup: restore MonkeyType / english (the pre-capture default mode).
+  await page.locator('[data-testid="language-tab-existing"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="language-row-english"]').click()
+  await page.waitForTimeout(500)
+
+  // Remove the tatoeba japanese pack again if this run was the one that
+  // downloaded it, so the machine is left as it was found. The dataset
+  // manifest updates applied above are left in place — they are a cache.
+  if (downloadedTatoebaJapaneseForShot) {
+    await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+    await languageSelector.click()
+    await page.waitForTimeout(400)
+    await page.locator('[data-testid="language-tab-tatoeba"]').click()
+    await page.waitForTimeout(300)
+    const deleteBtn = page.locator('[data-testid="language-delete-japanese"]')
+    if (await deleteBtn.isVisible().catch(() => false)) {
+      await deleteBtn.click()
+      await page.waitForTimeout(300)
+    }
+    await page.locator('[data-testid="language-modal-close"]').click()
+    await page.waitForTimeout(300)
+  }
+}
+
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
@@ -146,7 +267,11 @@ async function main(): Promise<void> {
     await page.waitForTimeout(500)
     await capture(page, 'typing-test-running')
 
-    // 6. Typing View — REC tab + Recording Consent modal
+    // 6. Mode modal — MonkeyType / Tatoeba / Aozora Bunko / File Import tabs
+    console.log('\n--- Typing Test Mode Modal ---')
+    await captureModeModalScreenshots(page)
+
+    // 7. Typing View — REC tab + Recording Consent modal
     console.log('\n--- Typing View REC Tab ---')
 
     // Exit typing test back to the editor so we can swap into Typing View

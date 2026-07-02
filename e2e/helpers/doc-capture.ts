@@ -170,6 +170,32 @@ async function connectDevice(page: Page): Promise<boolean> {
   await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
   await page.waitForTimeout(2000)
   console.log(`Connected to ${DEVICE_NAME}`)
+
+  // Per-keyboard view-mode auto-restore may reopen Typing View or Typing
+  // Test left behind by a prior helper run (doc-capture-typing-test.ts ends
+  // in Typing View). Reset back to the keymap editor so every phase starts
+  // from the same state — mirrors that helper's own startup recovery.
+  const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+  if (!(await typingTestBtn.isVisible().catch(() => false))) {
+    console.log('  [reset] Typing View detected on connect, exiting back to editor...')
+    // Open the menu pane (popup is closed by default after launch) so the
+    // view-only-toggle becomes interactive.
+    await page.locator('body').click({ position: { x: 400, y: 300 } })
+    await page.waitForTimeout(400)
+    const viewOnlyExit = page.locator('[data-testid="view-only-toggle"]')
+    if (await viewOnlyExit.isVisible().catch(() => false)) {
+      await viewOnlyExit.click({ force: true })
+      await page.waitForTimeout(800)
+    } else {
+      console.log('  [warn] view-only-toggle not found; continuing anyway')
+    }
+  }
+  const typingTestView = page.locator('[data-testid="typing-test-view"]')
+  if (await typingTestView.isVisible().catch(() => false)) {
+    console.log('  [reset] Typing Test detected on connect, exiting back to editor...')
+    await typingTestBtn.click().catch(() => {})
+    await page.waitForTimeout(800)
+  }
   return true
 }
 
