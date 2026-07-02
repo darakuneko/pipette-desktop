@@ -155,10 +155,13 @@ The left sidebar provides a **tree navigation** with the following structure:
 
 - **Local**
   - **Keyboards**: Browse saved keyboard snapshots. Click a keyboard to view, load, export, or delete entries
+  - **Typing**: Recorded typing-analytics data per keyboard — a per-day list (date, keystrokes, active time) with day selection for deleting, plus export / import of the recorded days
   - **Favorites**: Tap Dance, Macro, Combo, Key Override, Alt Repeat Key — each type shows its saved entries with rename, delete, export, and Hub actions
   - **Application**: Import/export local data or reset selected targets (keyboard data, favorites, app settings)
 - **Sync** (when Cloud Sync is configured): Lists keyboards that exist only in Google Drive (not yet downloaded on this device). Each entry is labeled with the keyboard's real name, resolved from the synced name index rather than from the raw UID. Click a remote-only keyboard to download it on demand — a spinner is shown while fetching, and a failure message appears inline if the download cannot complete. Once downloaded, the keyboard moves into the **Local › Keyboards** branch. To clean up orphaned encrypted files that can no longer be decrypted, use **Undecryptable Files** in the Settings **Data** tab instead (see §6.1)
 - **Hub** (when Hub is connected): Manage Hub posts grouped by keyboard name
+
+Keyboards are shown by display name everywhere in this panel: on connect, a keyboard that has no saved name yet is automatically named from its USB product name, so even keyboards that never saved anything show a real name instead of a raw uid — including in the **Sync** list. Every keyboard list is sorted A–Z by display name (case-insensitive).
 
 ![Data — Keyboard Saves](screenshots/data-sidebar-keyboard-saves.png)
 
@@ -173,7 +176,7 @@ A **breadcrumb navigation** at the top of the content area shows the current pat
 
 ### 1.4 Analyze
 
-The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data is recorded while you are in Typing View (the compact window opened from the status bar) and the Record toggle in the typing-test pane is set to Start. Typing-test results are recorded in the same stream.
+The Analyze page shows how you actually type — per-key heatmaps, WPM trends, inter-keystroke intervals, hour-by-day activity, per-finger load, key-pair (bigram) timing, and per-layer usage. Data comes from two sources feeding the same stream: typing tests run in the editor are always recorded (each keystroke tagged with the test material and run), while ambient typing is recorded only while you are in Typing View (the compact window opened from the status bar) with the REC toggle set to Start — the REC toggle gates the Typing View stream only, not typing tests.
 
 **Access**
 
@@ -212,13 +215,16 @@ The following filters are always available:
 - **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Bigrams Finger IKI / Layer activations) never mix two layouts in one view. Snapshots are listed on the Keymap snapshot timeline so you can flip between recorded keymap revisions and "Current keymap" without leaving the page
 - **From** / **To** — the time range to analyze. Both inputs are clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
 - **Device** — multi-select. Pick any combination of `This device` and remote-machine hashes to merge or isolate per-machine data. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
-- **App** — multi-select dropdown listing every active application name observed during the range. Defaults to **All apps** (no filter); selecting one or more apps narrows every chart except **By App** to minutes tagged with one of the chosen apps. The dropdown only populates after Monitor App has been enabled and at least one minute has been tagged with an app name. Persisted per keyboard
+- **App / TypingTest** — a segmented toggle switches this filter slot between two mutually exclusive dimensions (a typing test always runs inside some app, so only one dimension filters at a time):
+  - **App** — multi-select dropdown listing every active application name observed during the range. Defaults to **All apps** (no filter); selecting one or more apps narrows every chart except **By App** to minutes tagged with one of the chosen apps. The dropdown only populates after Monitor App has been enabled and at least one minute has been tagged with an app name. Persisted per keyboard
+  - **TypingTest** — multi-select dropdown listing the typing tests that produced data in the selected range and device scope. File Import tests are listed by their text name; MonkeyType tests as "mode (language)". Picking one or more tests narrows every chart to those runs, and a second **Results** select appears beside it to drill down to individual runs
+  - The **By App** tab keeps the toggle, but since that tab compares across apps, its App side simply means "all apps" (no app picker); the TypingTest side still narrows to a test
 
 Individual tabs add their own filters above the chart (view mode, granularity, unit, etc.); those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
 
 **Saved search conditions**
 
-The bookmark icon in the panel header opens the **Saved search conditions** side panel. Save the active filters under a label, restore a saved set later, rename / delete entries, or export the current condition's chart data as CSV. Each saved entry shows a one-line summary of the filters (devices, apps, snapshot, range) under its label.
+The bookmark icon in the panel header opens the **Saved search conditions** side panel. Save the active filters under a label, restore a saved set later, rename / delete entries, or export the current condition's chart data as CSV. Each saved entry shows a one-line summary of the filters (device, app, snapshot, range) under its label; the entry itself captures the full filter state — including the App / TypingTest dimension and its test / run selections — and restores all of it on Load.
 
 - Up to **50 entries per keyboard** — the panel surfaces a cap warning when you reach the limit; delete an existing entry to make room
 - Synced via Cloud Sync (when enabled) so the same set is available on other signed-in machines
@@ -748,9 +754,10 @@ Keycodes for modifier key combinations and tap behavior settings.
 
 ![Modifiers Tab](screenshots/tab-modifiers.png)
 
-- **One-Shot Modifier (OSM)**: Activate modifier for the next keypress only
+- **One-Shot Modifiers (OSM)**: Activate modifier for the next keypress only
+- **One-Shot Control**: Turn the one-shot feature itself on / off / toggle (distinct from OSM, which triggers a one-shot modifier)
 - **Mod-Tap**: Modifier on hold, regular key on tap
-- **Mod Mask**: Modifier key combinations
+- **Modifier Masks**: Modifier key combinations
 
 ### 3.4 System
 
@@ -877,8 +884,11 @@ Keycodes for advanced QMK behavior features.
 - **Magic**: Magic keycodes for swapping and toggling keyboard behaviors
 - **Mode**: NKRO toggle, mode switching keycodes
 - **Auto Shift**: Auto Shift toggle and configuration keycodes
+- **Autocorrect**: Autocorrect on / off / toggle
+- **Leader**: Begin a leader sequence (`QK_LEAD`)
 - **Swap Hands**: Swap Hands keycodes and Swap Hands Tap variants
 - **Caps Word**: Caps Word toggle
+- **Dynamic Tapping Term**: Print / increase / decrease the tapping term at runtime
 
 ### 3.12 User
 
@@ -994,9 +1004,39 @@ A typing practice feature. Test your typing with the current keymap while viewin
 
 Click the **Typing Test** button in the status bar to enter typing test mode.
 
-#### Modes
+#### Settings Panel
 
-Three test modes are available, selectable from the mode tabs at the top:
+The left side of the typing-test screen is a collapsible **Settings** panel. The chevron button at its bottom collapses it to a thin rail and expands it again; the state is saved per keyboard. The panel groups the test controls into three sections:
+
+- **Settings** — the **Mode** row (see below); **Layer** (the base layer used by the on-screen keymap, shown when the keyboard has more than one layer); and **Lines** / **Font** (line count and font size of the reading window — these two apply in every mode). With a MonkeyType language active, the **Pattern** / **Units** / **Option** rows described under **MonkeyType** also appear here
+- **Data** — **History** opens the saved-results modal: results are split into **MonkeyType** and **File Import** tabs, with a mode filter dropdown on the MonkeyType tab and a text filter dropdown on the File Import tab; the stats row (Best / Avg / Last 10 / Tests / Avg Acc), the sparkline, and **Export CSV** all follow the current filter, and each row can be renamed (via the same naming modal as the finished screen) or deleted. **Compare** picks the comparison baseline — **Previous**, **Best**, **Average**, a pinned **Result**, or **Off**; while a baseline is set, colored ▲ / ▼ deltas appear next to WPM / KPM / Accuracy in the stats row. The baseline choice is remembered per test condition (mode + settings + language, or per imported text). **Save Unnamed** (default on) auto-saves finished results even without a name; switched off, only named results are kept
+- **View** — three switches: **Operation** (the controls row below the reading window), **Measurement** (the live stats row), and **Keymap** (the keyboard pane). Each hides its area when switched off; a finished test always shows the controls and the results regardless
+
+#### Mode
+
+![Typing Test — Mode Modal (MonkeyType)](screenshots/typing-test-mode-monkeytype.png)
+
+The **Mode** row in the left Settings panel shows the active mode type and source (a MonkeyType language, a Tatoeba pack, or an imported text) — click the row to open the Mode modal. Four tabs select what you type against:
+
+- **MonkeyType** — random words, timed word bursts, or real-world quotes generated from a downloaded language pack
+- **Tatoeba** — real sentences sampled from a downloaded Tatoeba language pack
+- **Aozora Bunko** — public-domain Japanese literary works imported from the Aozora Bunko catalog
+- **File Import** — a plain-text `.txt` file you import yourself
+
+The modal opens on the tab matching the currently active mode. An Aozora Bunko import technically plays back as a File Import text, so opening the modal while one is active jumps straight to the **Aozora Bunko** tab instead of **File Import** — matching where the text is actually managed. Picking a row switches mode immediately and closes the modal; closing without picking (Escape, the X button, or clicking outside) leaves the current mode unchanged.
+
+The **MonkeyType** and **Tatoeba** tabs share the same language-pack list:
+
+- A search box filters the list by name
+- Packs are split into **Downloaded** and **Available** sections
+- Each row shows the pack name and its word count; right-to-left languages also show an **RTL** badge
+- Click the download icon on an Available row to download it. Rows you downloaded yourself show a trash icon to delete them; packs bundled with the app (such as MonkeyType's english) are also listed under Downloaded but cannot be deleted
+- If a newer dataset manifest is available, a banner reading "An update is available for the word lists." appears above the list with an **Update** button. This check runs automatically each time the tab is opened (a successful check is cached for the app session, so it won't repeatedly hit the network; a failed check — e.g. while offline — is not cached, and reopening the tab retries). Nothing downloads until you click **Update**
+- Applying an update replaces the pack manifest and also removes that provider's previously downloaded packs, since they belong to the old dataset version — download them again from the refreshed list as needed
+
+#### MonkeyType
+
+With a MonkeyType language selected, the Settings panel gains three rows: **Pattern** picks the test pattern (**words** / **time** / **quote**), **Units** picks the word count, duration, or quote length for it, and **Option** toggles Punctuation / Numbers (words and time patterns only). The three patterns:
 
 **Words Mode**
 
@@ -1019,16 +1059,57 @@ Three test modes are available, selectable from the mode tabs at the top:
 - Type a real-world quote (short / medium / long / all)
 - The quote source is shown after completion
 
-#### Options
+**Options**
 
 ![Typing Test — With Options](screenshots/typing-test-words-options.png)
 
-In Words and Time modes, you can toggle additional options:
+In the words and time patterns, the Settings panel's **Option** row adds toggles:
 
 - **Punctuation**: Adds punctuation marks (commas, periods, etc.) to the word list
 - **Numbers**: Adds numbers to the word list
 
-These toggles are not available in Quote mode, which uses the original text as-is.
+The Option row is hidden in the quote pattern (which uses the original text as-is) and in the Tatoeba / Aozora Bunko / File Import modes.
+
+#### Tatoeba
+
+![Typing Test — Mode Modal (Tatoeba)](screenshots/typing-test-mode-tatoeba.png)
+
+Pick a downloaded language pack from the **Tatoeba** tab (download it first if needed — see **Mode** above) to type real sentences sampled from the [Tatoeba Project](https://tatoeba.org). Each run samples 5 sentences.
+
+![Typing Test — Tatoeba Running](screenshots/typing-test-tatoeba-running.png)
+
+- Each sampled sentence renders on its own line
+- A **⏎** marker appears at the end of every line except the last; press **Enter** (not Space) there to advance to the next sentence. Elsewhere, Space still advances between words as usual
+- Attribution and license details for the Tatoeba packs are shown on the About / legal screen
+
+#### Aozora Bunko
+
+![Typing Test — Mode Modal (Aozora Bunko)](screenshots/typing-test-mode-aozora.png)
+
+Browse and import public-domain Japanese literary works from the [Aozora Bunko](https://www.aozora.gr.jp/) catalog (roughly 10,500 works, sourced via the aozorabunko GitHub mirror).
+
+- The search box filters by title or author
+- Below it, a two-tier gojūon (five-vowel kana) row filter narrows results by the first kana of the author's reading (ア / カ / サ / …); click a row to also reveal its column kana for a finer filter (e.g. the カ row → キ column). Click an active button again to clear it
+- Results are split into **Downloaded** and **Available** sections; the **Available** section renders 50 works at a time, revealing the next 50 automatically as you scroll (the catalog list is loaded once when the tab opens — scrolling does not hit the network)
+- Each row shows the title, author, and an estimated character count (`~N chars` — an estimate, not an exact figure)
+- Clicking the download icon on an Available row downloads the work's archive from the GitHub mirror, decodes it, and automatically strips Aozora-specific markup (ruby annotations, editorial notes, header/footer boilerplate) before saving it as a typing text — no manual cleanup needed. The newly imported work is selected immediately. A failed import shows an inline error under that row
+- A downloaded work is stored through the same normalization and 5,000-word cap as File Import texts (see below). Words are counted by whitespace, so in Japanese prose — which contains no spaces — each paragraph counts as one word, and the cap effectively allows around 5,000 paragraphs
+- A downloaded work plays back exactly like an imported File Import text, including the per-line Enter-to-advance behavior, but it is only listed and deleted from this **Aozora Bunko** tab — it does not appear in the **File Import** tab
+- Click the trash icon on a Downloaded row to remove it; it returns to Available and can be re-imported later
+- The dataset-update banner described under **Mode** also applies here — updating refreshes the catalog listing itself, not any already-imported works
+
+#### File Import
+
+![Typing Test — Mode Modal (File Import)](screenshots/typing-test-mode-import.png)
+
+Import your own plain-text `.txt` file (UTF-8 only) to type against it — useful for practicing code snippets, prose, or any custom text.
+
+- Click **Import UTF-8 text file** and choose a `.txt` file. Files must be UTF-8 encoded, no larger than 5 MB, and contain at least one typeable word — files that fail these checks are rejected with an inline error message
+- Text is capped at 5,000 words; anything beyond the cap is silently truncated on import
+- Non-empty line boundaries in the source file are preserved: a **⏎** marker appears at the end of every line except the last, and Enter (not Space) advances past it. Import normalizes the text — empty lines are dropped and runs of spaces or tabs within a line collapse to a single space. Leading indentation on each line is shown for reference but is not itself typed
+- Importing a file whose name matches an existing entry prompts for confirmation before overwriting it
+- Each row shows the text's name and word count; click a row to select it, or click the trash icon to delete it
+- This list only shows texts you imported directly here — Aozora Bunko imports are managed from the **Aozora Bunko** tab instead
 
 #### During a Test
 
@@ -1037,13 +1118,23 @@ These toggles are not available in Quote mode, which uses the original text as-i
 While typing, the following stats are displayed in real time:
 
 - **WPM**: Words Per Minute (current typing speed)
+- **KPM**: Keystrokes Per Minute (correct characters per minute)
 - **Accuracy**: Percentage of correctly typed characters
-- **Time**: Elapsed time (or remaining time in Time mode)
-- **Words**: Current word / total words
+- **Time**: Elapsed time (or remaining time in the time pattern)
+- **Words**: Current word / total words. In File Import and Tatoeba modes this becomes **Chars** — character progress through the text instead of a word count
+
+While a comparison baseline is set (Settings panel → Data → **Compare**), a colored ▲ / ▼ delta next to the WPM, KPM, and Accuracy values shows the difference against the baseline.
 
 Correctly typed words turn green. Incorrect characters are highlighted in red with an underline. The cursor advances as you type, and words scroll automatically.
 
-- Press the restart button (↺) to restart the test at any time
+The controls row below the reading window changes with the test state:
+
+- **Before a run starts**: **Next Test** generates a fresh test. When a paused File Import run is saved, a **Resume** button appears beside it
+- **While running or paused**: **Restart** starts the test over. In File Import mode a **Pause** (running) or **Resume** (paused) button joins it — pausing saves the run, and resuming asks whether to continue from the saved position or start over
+- **When finished**: a result-name field opens the naming modal, with quick-insert chips for the keyboard name, the test material, a timestamp, and the run's WPM / KPM / Accuracy; **Next Test** starts the next run
+
+Additional notes:
+
 - Press Escape to exit typing test mode
 - The status bar's Disconnect button is hidden while Typing Test is active. To disconnect, first return to the editor with Escape or the Typing Test button
 - The keyboard layout below the test area shows key presses in real time via the Vial matrix tester protocol
@@ -1508,7 +1599,7 @@ A language pack `.json` mirrors the structure of the built-in English pack. Expo
 | `version` | Yes | Semver string (e.g. `0.1.0`) |
 | (other keys) | Yes | Nested translation tree matching the English structure |
 
-Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains. Example language packs (including Japanese variants) are also available in the [`sample-packs/i18n/`](../sample-packs/i18n/) directory in the repository.
+Keys use dot-separated namespaces (e.g. `editor.keymap.title`). A pack that covers every key of the English baseline shows the version chip; partial packs show a "not set keys" link so translators can see what remains. A standard Japanese pack, plus several Japanese "persona" variants (different speaking styles, translated from the same baseline), are shipped as example packs in the [`sample-packs/i18n/`](../sample-packs/i18n/) directory in the repository.
 
 ### 6.4 Theme Packs Manage
 
