@@ -121,8 +121,8 @@ export function TypingTestView({
   // Guard: prevent duplicate space submission when both keydown and input fire
   const lastSpaceTimeRef = useRef(0)
 
-  // Imported fileImport text (line breaks present) renders as explicit line
-  // rows; every other mode keeps the flat word-flow layout. `null` = flat.
+  // Sources with line breaks render as explicit line rows; every other mode
+  // keeps the flat word-flow layout. `null` = flat.
   const lines = useMemo(
     () => (state.lineBreaks.size > 0 ? groupIntoLines(state.words, state.lineBreaks) : null),
     [state.words, state.lineBreaks],

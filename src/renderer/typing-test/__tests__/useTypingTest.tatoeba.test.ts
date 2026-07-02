@@ -95,4 +95,31 @@ describe('useTypingTest — tatoeba mode', () => {
     expect(result.current.state.words.join('')).not.toBe('0')
     expect(result.current.state.words.some((w) => w.includes('やばい'))).toBe(true)
   })
+
+  it('renders each sampled sentence as its own line and advances past a sentence-end word on Enter, not Space', async () => {
+    // Two sentences, both under TATOEBA_SENTENCE_COUNT, so the sampler keeps
+    // the whole list in order (deterministic): words = ['ab', 'cd', 'ef'],
+    // lineBreaks = [1] (after 'cd', the first sentence's last word).
+    mockLangGet.mockResolvedValue({ name: 'english-z', words: ['ab cd', 'ef'] })
+    await getTatoebaPack('english-z')
+
+    const { result } = renderHook(() => useTypingTest({ mode: 'tatoeba', language: 'english-z' }, 'english'))
+
+    expect(result.current.state.words).toEqual(['ab', 'cd', 'ef'])
+    expect([...result.current.state.lineBreaks]).toEqual([1])
+
+    // Word 0 ('ab') is not a sentence-end word: Space advances, Enter is a no-op.
+    type(result, 'a')
+    type(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(0)
+    type(result, ' ')
+    expect(result.current.state.currentWordIndex).toBe(1)
+
+    // Word 1 ('cd') is the sentence-end word: Space is a no-op, Enter advances.
+    type(result, 'c')
+    type(result, ' ')
+    expect(result.current.state.currentWordIndex).toBe(1)
+    type(result, 'Enter')
+    expect(result.current.state.currentWordIndex).toBe(2)
+  })
 })
