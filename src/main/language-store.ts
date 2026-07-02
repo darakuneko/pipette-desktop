@@ -1,4 +1,4 @@
-import { app, net } from 'electron'
+import { app } from 'electron'
 import { dirname, join } from 'node:path'
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from 'node:fs/promises'
 import { IpcChannels } from '../shared/ipc/channels'
@@ -7,7 +7,8 @@ import {
   DEFAULT_TYPING_TEST_PROVIDER,
   getProviderDefault,
 } from '../shared/data/typing-test-providers'
-import { fetchTypingDataset, fetchTypingDatasetVersion, isManifestEntry } from './hub/hub-typing-dataset'
+import { fetchTypingDataset, fetchTypingDatasetVersion, isManifestEntry, isValidModel } from './hub/hub-typing-dataset'
+import { fetchVerifiedBytes } from './download-util'
 import { log } from './logger'
 import { secureHandle } from './ipc-guard'
 
@@ -57,18 +58,34 @@ function isValidOverride(ov: unknown): ov is TypingTestDataset {
     typeof d.version === 'string' &&
     typeof d.downloadUrlBase === 'string' &&
     /^https:\/\//.test(d.downloadUrlBase) &&
+    // Absent `model` means 'pack' (see TypingTestDataset doc comment), so
+    // overrides persisted before this field existed stay valid.
+    isValidModel(d.model) &&
     Array.isArray(d.languages) &&
     d.languages.every(isManifestEntry)
   )
 }
 
-async function getEffectiveDataset(provider: string): Promise<TypingTestDataset> {
+export async function getEffectiveDataset(provider: string): Promise<TypingTestDataset> {
   const def = getProviderDefault(provider)
   const overrides = await loadOverrides()
   const ov = overrides[provider]
-  if (isValidOverride(ov)) return ov
+  if (isValidOverride(ov)) {
+    // A legacy override (or a Hub payload that omitted `model`) predates the
+    // field and must not be silently treated as pack-shaped when the
+    // provider's own default says otherwise — an aozora override missing
+    // `model` would fail every import closed instead of using the catalog
+    // flow. Fall back to the provider default's model in that case.
+    return { ...ov, model: ov.model ?? def?.model }
+  }
   if (!def) throw new Error(`Unknown typing-test provider: ${provider}`)
-  return { provider: def.provider, version: def.version, downloadUrlBase: def.downloadUrlBase, languages: def.languages }
+  return {
+    provider: def.provider,
+    version: def.version,
+    downloadUrlBase: def.downloadUrlBase,
+    model: def.model,
+    languages: def.languages,
+  }
 }
 
 function bundledSet(provider: string): Set<string> {
@@ -199,6 +216,8 @@ export function setupLanguageStore(): void {
       await legacyMigration
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return null
+      const dataset = await getEffectiveDataset(p)
+      if (dataset.model === 'catalog') return null
       try {
         const raw = await readFile(getLanguagePath(p, name), 'utf-8')
         const data: unknown = JSON.parse(raw)
@@ -218,22 +237,28 @@ export function setupLanguageStore(): void {
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return { success: false, error: 'Language is bundled' }
       const dataset = await getEffectiveDataset(p)
+      if (dataset.model === 'catalog') {
+        return { success: false, error: 'Dataset uses the catalog model; use the catalog import flow instead' }
+      }
       const entry = dataset.languages.find((e) => e.name === name)
       if (!entry) return { success: false, error: 'Unknown language' }
 
       const url = `${dataset.downloadUrlBase}/${name}.json`
-      try {
-        const response = await net.fetch(url)
-        if (!response.ok) {
-          return { success: false, error: `HTTP ${response.status}` }
+      const fetched = await fetchVerifiedBytes(url, entry.fileSize)
+      if (!fetched.ok) {
+        if (fetched.reason === 'http') {
+          return { success: false, error: `HTTP ${fetched.status}` }
         }
-        const text = await response.text()
-        const actualSize = Buffer.byteLength(text, 'utf-8')
-        if (actualSize !== entry.fileSize) {
-          const detail = `size mismatch (expected ${entry.fileSize}, got ${actualSize})`
+        if (fetched.reason === 'size-mismatch') {
+          const detail = `size mismatch (expected ${fetched.expected}, got ${fetched.actual})`
           log('warn', `Language ${p}/${name}: ${detail}`)
           return { success: false, error: `Integrity check failed: ${detail}` }
         }
+        log('warn', `Failed to download language ${p}/${name}: ${fetched.error}`)
+        return { success: false, error: String(fetched.error) }
+      }
+      try {
+        const text = new TextDecoder('utf-8').decode(fetched.bytes)
         const data: unknown = JSON.parse(text)
         if (!validateLanguageData(data)) {
           return { success: false, error: 'Invalid language data' }
@@ -256,6 +281,10 @@ export function setupLanguageStore(): void {
       await legacyMigration
       const p = resolveProvider(provider)
       if (bundledSet(p).has(name)) return { success: false, error: 'Cannot delete bundled language' }
+      const dataset = await getEffectiveDataset(p)
+      if (dataset.model === 'catalog') {
+        return { success: false, error: 'Dataset uses the catalog model; use the catalog import flow instead' }
+      }
       try {
         await unlink(getLanguagePath(p, name))
         log('info', `Deleted language: ${p}/${name}`)

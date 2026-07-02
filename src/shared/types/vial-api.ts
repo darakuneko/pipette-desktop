@@ -60,6 +60,7 @@ import type {
   TypingBigramAggregateView,
 } from './typing-analytics'
 import type { LanguageListEntry } from './language-store'
+import type { AozoraImportResult } from './aozora-import'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyKeyboardPostsResult, HubFetchMyPostsParams, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubUploadI18nPostParams, HubUpdateI18nPostParams, HubI18nListParams, HubI18nListResponse, HubI18nExportV1, HubI18nPackTimestampsResponse, HubUploadThemePostParams, HubUpdateThemePostParams, HubThemeListParams, HubThemeListResponse, HubThemePackBody, HubThemePackTimestampsResponse, HubPrivateUploadResult, HubPrivateKind, HubPrivateUploadPostParams, HubPrivateUploadFavoritePostParams, HubPrivateUploadAnalyticsPostParams } from './hub'
 import type { HubPrivateLink } from './hub-private'
 import type { NotificationFetchResult } from './notification'
@@ -330,6 +331,9 @@ export interface VialAPI {
   langDelete(name: string, provider?: string): Promise<{ success: boolean; error?: string }>
   checkTypingDatasetUpdate(provider?: string): Promise<{ provider: string; updateAvailable: boolean }>
   updateTypingDataset(provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }>
+
+  // Aozora Bunko catalog import
+  aozoraImport(workId: string): Promise<AozoraImportResult>
 
   // Data management
   listStoredKeyboards(): Promise<StoredKeyboardInfo[]>

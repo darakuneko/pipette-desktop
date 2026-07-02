@@ -171,7 +171,7 @@ describe('language-store download', () => {
     const langData = makeLangPayload('german', expected)
     mockNet.fetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve(langData),
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(langData).buffer),
     } as unknown as Response)
 
     const result = await invoke('lang:download', 'german') as { success: boolean }
@@ -186,7 +186,7 @@ describe('language-store download', () => {
     const langData = makeLangPayload('german', expected)
     mockNet.fetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve(langData),
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(langData).buffer),
     } as unknown as Response)
 
     await invoke('lang:download', 'german')
@@ -201,7 +201,7 @@ describe('language-store download', () => {
     const langData = makeLangPayload('german', expected * 2)
     mockNet.fetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve(langData),
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(langData).buffer),
     } as unknown as Response)
 
     const result = await invoke('lang:download', 'german') as { success: boolean; error?: string }
@@ -228,7 +228,7 @@ describe('language-store download', () => {
     const padded = padToBytes(JSON.stringify({ name: 'bad' }), expected)
     mockNet.fetch.mockResolvedValue({
       ok: true,
-      text: () => Promise.resolve(padded),
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(padded).buffer),
     } as unknown as Response)
 
     const result = await invoke('lang:download', 'german') as { success: boolean }

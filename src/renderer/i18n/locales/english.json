@@ -376,6 +376,7 @@
         "tabMonkeytype": "MonkeyType",
         "tabTatoeba": "Tatoeba",
         "tabFileImport": "File Import",
+        "tabAozora": "Aozora Bunko",
         "import": "Import UTF-8 text file",
         "importEmpty": "No imported texts yet",
         "importFailed": "Import failed",
@@ -387,7 +388,17 @@
         "fileImportText": "Imported text",
         "datasetUpdateAvailable": "An update is available for the word lists.",
         "datasetUpdate": "Update",
-        "datasetUpdating": "Updating…"
+        "datasetUpdating": "Updating…",
+        "catalogSearchPlaceholder": "Search title or author...",
+        "catalogImported": "Imported",
+        "catalogImportAction": "Import",
+        "estimatedChars": "~{{count}} chars",
+        "catalogImportErrorDuplicate": "A text with this title already exists",
+        "catalogImportErrorGeneric": "Download failed ({{code}})",
+        "catalogLoadFailed": "Failed to load the catalog. Check your connection and try again.",
+        "kanaRowLabel": "row",
+        "kanaRowGroupAriaLabel": "Filter by author reading, gojuon row",
+        "kanaColumnGroupAriaLabel": "Filter by author reading, gojuon column"
       },
       "memory": {
         "pause": "Pause",

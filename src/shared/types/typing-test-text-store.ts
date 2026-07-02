@@ -23,6 +23,11 @@ export interface TypingTestTextMeta {
   updatedAt: string
   /** Soft delete tombstone (ISO 8601). 30-day GC matches favorites. */
   deletedAt?: string
+  /** Set when this entry was imported from a catalog (e.g. the Aozora
+   *  Bunko browser) rather than a local file. `workId` is the catalog
+   *  entry's `name` path, used to detect already-imported works and avoid
+   *  duplicate imports. Absent for user file imports. */
+  source?: { provider: string; workId: string }
 }
 
 export interface TypingTestTextIndex {

@@ -5,12 +5,14 @@ import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { useTypingTestTexts } from '../hooks/useTypingTestTexts'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
+import { MODAL_LG } from '../components/editors/store-modal-shared'
 import { Check, Trash2, Loader2, FileUp } from 'lucide-react'
 import { ICON_SM } from '../constants/ui-tokens'
 import { LanguagePackTab } from './LanguagePackTab'
+import { AozoraCatalogTab } from './AozoraCatalogTab'
 import type { TypingTestTextMeta } from '../../shared/types/typing-test-text-store'
 
-type Tab = 'existing' | 'tatoeba' | 'import'
+type Tab = 'existing' | 'tatoeba' | 'import' | 'aozora'
 
 /** Store error code → i18n key for the Import tab error line. Unlisted
  *  codes fall back to the generic importFailed message. */
@@ -93,7 +95,7 @@ export function LanguageSelectorModal({
       role="dialog"
       onClick={handleBackdropClick}
     >
-      <div className="flex h-modal-80vh w-modal-typing flex-col rounded-2xl border border-edge bg-surface shadow-xl">
+      <div className={`flex h-modal-80vh ${MODAL_LG} flex-col rounded-2xl border border-edge bg-surface shadow-xl`}>
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 className="text-lg font-semibold text-content">{t('editor.typingTest.language.title')}</h2>
           <ModalCloseButton testid="language-modal-close" onClick={handleClose} />
@@ -123,6 +125,16 @@ export function LanguageSelectorModal({
           <button
             type="button"
             role="tab"
+            aria-selected={tab === 'aozora'}
+            data-testid="language-tab-aozora"
+            className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'aozora' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
+            onClick={() => setTab('aozora')}
+          >
+            {t('editor.typingTest.language.tabAozora')}
+          </button>
+          <button
+            type="button"
+            role="tab"
             aria-selected={tab === 'import'}
             data-testid="language-tab-import"
             className={`flex-1 px-4 py-2 text-sm font-medium transition-colors ${tab === 'import' ? 'border-b-2 border-accent text-accent' : 'text-content-secondary hover:text-content'}`}
@@ -145,6 +157,13 @@ export function LanguageSelectorModal({
             provider="tatoeba"
             currentSelected={currentTatoebaLanguage}
             onSelect={handleSelectTatoeba}
+          />
+        )}
+
+        {tab === 'aozora' && (
+          <AozoraCatalogTab
+            currentTextId={currentFileImportTextId}
+            onSelect={handleSelectImport}
           />
         )}
 

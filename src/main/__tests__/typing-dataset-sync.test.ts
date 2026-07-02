@@ -172,7 +172,10 @@ describe('effective dataset after override', () => {
 
     // Download must hit the overridden base URL, not the bundled default.
     mockNet.fetch.mockReset()
-    mockNet.fetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve('xxxx') } as unknown as Response)
+    mockNet.fetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode('xxxx').buffer),
+    } as unknown as Response)
     await handlers.get('lang:download')!({}, 'spanish')
     expect(mockNet.fetch).toHaveBeenCalledWith(`${NEW_DOWNLOAD_BASE}/spanish.json`)
   })
@@ -220,11 +223,167 @@ describe('tatoeba Hub-only provider', () => {
     // Pack download hits the tatoeba packs URL and lands in the tatoeba dir,
     // never colliding with monkeytype's own 'english'.
     mockNet.fetch.mockReset()
-    mockNet.fetch.mockResolvedValueOnce({ ok: true, text: () => Promise.resolve(packText) } as unknown as Response)
+    mockNet.fetch.mockResolvedValueOnce({
+      ok: true,
+      arrayBuffer: () => Promise.resolve(new TextEncoder().encode(packText).buffer),
+    } as unknown as Response)
     const dl = await handlers.get('lang:download')!({}, 'english', 'tatoeba') as { success: boolean }
     expect(dl.success).toBe(true)
     expect(mockNet.fetch).toHaveBeenCalledWith(`${TATOEBA_BASE}/english.json`)
     const files = await readdir(join(testDir, 'local', 'downloads', 'languages', 'tatoeba'))
     expect(files).toContain('english.json')
+  })
+})
+
+describe('aozora catalog provider', () => {
+  const AOZORA_VERSION = 'aozora-8e31452a1d44'
+  const AOZORA_BASE = 'https://hub.example/aozora/cards'
+  const catalogDataset = {
+    provider: 'aozora',
+    version: AOZORA_VERSION,
+    downloadUrlBase: AOZORA_BASE,
+    model: 'catalog' as const,
+    languages: [
+      {
+        name: '001257/files/59898_ruby_70679.zip',
+        title: 'ウェストミンスター寺院',
+        author: 'アーヴィング ワシントン（訳: 吉田 甲子太郎）',
+        wordCount: 9666,
+        rightToLeft: false,
+        fileSize: 12553,
+      },
+    ],
+  }
+
+  it('getProviderDefault returns the aozora catalog placeholder', async () => {
+    const { getProviderDefault } = await import('../../shared/data/typing-test-providers')
+    const def = getProviderDefault('aozora')
+    expect(def).toBeDefined()
+    expect(def?.model).toBe('catalog')
+    expect(def?.version).toBe('')
+    expect(def?.downloadUrlBase).toBe('')
+    expect(def?.bundledLanguages).toEqual([])
+    expect(def?.languages).toEqual([])
+  })
+
+  it('lists nothing before a Hub override (nothing is bundled)', async () => {
+    const electron = await import('electron')
+    const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+    vi.mocked(electron.ipcMain).handle.mockImplementation(((c: string, h: (...a: unknown[]) => Promise<unknown>) => {
+      handlers.set(c, h)
+    }) as unknown as typeof electron.ipcMain.handle)
+    mod.setupLanguageStore()
+    const list = await handlers.get('lang:list')!({}, 'aozora') as unknown[]
+    expect(list).toEqual([])
+  })
+
+  it('a catalog override with model + title/author round-trips through LANG_LIST', async () => {
+    mockNet.fetch
+      .mockResolvedValueOnce(okJson({ provider: 'aozora', version: AOZORA_VERSION }))
+      .mockResolvedValueOnce(okJson(catalogDataset))
+    const sync = await mod.syncTypingDataset('aozora')
+    expect(sync.changed).toBe(true)
+
+    // Persisted verbatim, including `model`.
+    const written = JSON.parse(await readFile(overridePath(), 'utf-8')) as Record<string, typeof catalogDataset>
+    expect(written.aozora).toEqual(catalogDataset)
+
+    const electron = await import('electron')
+    const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+    vi.mocked(electron.ipcMain).handle.mockImplementation(((c: string, h: (...a: unknown[]) => Promise<unknown>) => {
+      handlers.set(c, h)
+    }) as unknown as typeof electron.ipcMain.handle)
+    mod.setupLanguageStore()
+
+    const list = await handlers.get('lang:list')!({}, 'aozora') as Array<{ name: string; title?: string; author?: string }>
+    expect(list).toHaveLength(1)
+    expect(list[0].name).toBe('001257/files/59898_ruby_70679.zip')
+    expect(list[0].title).toBe('ウェストミンスター寺院')
+    expect(list[0].author).toBe('アーヴィング ワシントン（訳: 吉田 甲子太郎）')
+  })
+
+  it('LANG_DOWNLOAD fails closed for a catalog-model dataset (no fetch attempted)', async () => {
+    // A synthetic no-slash entry name isolates the `model` check from the
+    // pre-existing (coincidental) rejection of `/`-bearing names — real
+    // Aozora workIds are ZIP paths and would already be blocked by that
+    // check before ever reaching the model check this test targets.
+    const override = {
+      aozora: {
+        provider: 'aozora',
+        version: AOZORA_VERSION,
+        downloadUrlBase: AOZORA_BASE,
+        model: 'catalog' as const,
+        languages: [{ name: 'sample-work', wordCount: 100, rightToLeft: false, fileSize: 10 }],
+      },
+    }
+    await writeFile(overridePath(), JSON.stringify(override), 'utf-8')
+
+    const electron = await import('electron')
+    const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+    vi.mocked(electron.ipcMain).handle.mockImplementation(((c: string, h: (...a: unknown[]) => Promise<unknown>) => {
+      handlers.set(c, h)
+    }) as unknown as typeof electron.ipcMain.handle)
+    mod.setupLanguageStore()
+
+    const result = await handlers.get('lang:download')!(
+      {}, 'sample-work', 'aozora',
+    ) as { success: boolean; error?: string }
+
+    expect(result.success).toBe(false)
+    expect(result.error).toMatch(/catalog/i)
+    expect(mockNet.fetch).not.toHaveBeenCalled()
+  })
+
+  it('a legacy override without `model` (predating the field) still validates', async () => {
+    // Simulate a pre-existing persisted override that predates the `model`
+    // field entirely — must still be treated as valid (implicitly 'pack').
+    const legacyOverride = {
+      monkeytype: {
+        provider: 'monkeytype',
+        version: 'legacy-version',
+        downloadUrlBase: 'https://hub.example/legacy',
+        languages: [{ name: 'english', wordCount: 100, rightToLeft: false, fileSize: 42 }],
+      },
+    }
+    await writeFile(overridePath(), JSON.stringify(legacyOverride), 'utf-8')
+
+    const electron = await import('electron')
+    const handlers = new Map<string, (...a: unknown[]) => Promise<unknown>>()
+    vi.mocked(electron.ipcMain).handle.mockImplementation(((c: string, h: (...a: unknown[]) => Promise<unknown>) => {
+      handlers.set(c, h)
+    }) as unknown as typeof electron.ipcMain.handle)
+    mod.setupLanguageStore()
+
+    const list = await handlers.get('lang:list')!({}, 'monkeytype') as Array<{ name: string }>
+    expect(list.map((l) => l.name)).toEqual(['english'])
+  })
+
+  it('an aozora override without `model` falls back to the provider default (catalog), not pack', async () => {
+    // A persisted override that predates the `model` field (or a Hub payload
+    // that omitted it) must not be treated as pack-shaped for a catalog-only
+    // provider — that would fail every import closed.
+    const override = {
+      aozora: {
+        provider: 'aozora',
+        version: AOZORA_VERSION,
+        downloadUrlBase: AOZORA_BASE,
+        languages: catalogDataset.languages,
+      },
+    }
+    await writeFile(overridePath(), JSON.stringify(override), 'utf-8')
+
+    const effective = await mod.getEffectiveDataset('aozora')
+    expect(effective.model).toBe('catalog')
+  })
+
+  it('a Hub payload with an invalid `model` value is rejected end-to-end (no override written)', async () => {
+    mockNet.fetch
+      .mockResolvedValueOnce(okJson({ provider: 'aozora', version: AOZORA_VERSION }))
+      .mockResolvedValueOnce(okJson({ ...catalogDataset, model: 'bogus' }))
+
+    const result = await mod.syncTypingDataset('aozora')
+
+    expect(result.changed).toBe(false)
+    await expect(readFile(overridePath(), 'utf-8')).rejects.toThrow()
   })
 })

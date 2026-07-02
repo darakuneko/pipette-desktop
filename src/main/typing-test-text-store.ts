@@ -66,7 +66,12 @@ async function readIndex(): Promise<TypingTestTextIndex> {
   try {
     const raw = await readFile(getIndexPath(), 'utf-8')
     const parsed = JSON.parse(raw) as TypingTestTextIndex
-    if (Array.isArray(parsed?.entries)) return parsed
+    if (Array.isArray(parsed?.entries)) {
+      // Unknown/optional fields pass through untouched; `source` is the one
+      // field validated here since malformed values (e.g. a non-string
+      // workId) would otherwise reach catalog-matching logic unchecked.
+      return { entries: parsed.entries.map((e) => ({ ...e, source: sanitizeSource(e.source) })) }
+    }
   } catch {
     // missing / corrupt — return empty
   }
@@ -91,6 +96,13 @@ function validateName(value: unknown): TypingTestTextStoreResult<string> {
     return fail('INVALID_NAME', `name must be at most ${String(MAX_NAME_LENGTH)} characters`)
   }
   return ok(trimmed)
+}
+
+function sanitizeSource(value: unknown): TypingTestTextMeta['source'] {
+  if (!value || typeof value !== 'object') return undefined
+  const obj = value as Record<string, unknown>
+  if (typeof obj.provider !== 'string' || typeof obj.workId !== 'string') return undefined
+  return { provider: obj.provider, workId: obj.workId }
 }
 
 function normalizeFile(parsed: unknown): TypingTestTextEntryFile | null {
@@ -134,6 +146,9 @@ export interface SaveTextInput {
   name: string
   /** Raw text — normalized + word-capped here. */
   text: string
+  /** Set when saving a catalog import (e.g. Aozora Bunko). Renderer-facing
+   *  file imports never pass this — only main-process catalog importers do. */
+  source?: TypingTestTextMeta['source']
 }
 
 async function writeRecord(meta: TypingTestTextMeta, data: TypingTestTextEntryFile): Promise<void> {
@@ -167,6 +182,7 @@ export async function saveRecord(input: SaveTextInput): Promise<TypingTestTextSt
       filename,
       savedAt: now.toISOString(),
       updatedAt: now.toISOString(),
+      source: input.source,
     }
 
     await writeRecord(meta, data)

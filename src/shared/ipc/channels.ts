@@ -176,6 +176,9 @@ export const IpcChannels = {
   TYPING_DATASET_CHECK: 'typing-dataset:check',
   TYPING_DATASET_UPDATE: 'typing-dataset:update',
 
+  // Aozora Bunko catalog import (renderer → main → renderer)
+  AOZORA_IMPORT: 'aozora:import',
+
   // Data management (renderer → main → renderer)
   LIST_STORED_KEYBOARDS: 'data:list-stored-keyboards',
   // Record a keyboard's display name on connect, only when it has none yet.

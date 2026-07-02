@@ -376,6 +376,7 @@
         "tabMonkeytype": "MonkeyType",
         "tabTatoeba": "Tatoeba",
         "tabFileImport": "ファイル取込",
+        "tabAozora": "青空文庫",
         "import": "UTF-8 テキストをインポート",
         "importEmpty": "インポートされたテキストはありません",
         "importFailed": "インポートに失敗しました",
@@ -387,7 +388,17 @@
         "fileImportText": "インポートテキスト",
         "datasetUpdateAvailable": "単語リストの更新があります。",
         "datasetUpdate": "更新",
-        "datasetUpdating": "更新中…"
+        "datasetUpdating": "更新中…",
+        "catalogSearchPlaceholder": "作品名・著者名で検索...",
+        "catalogImported": "取り込み済み",
+        "catalogImportAction": "取り込む",
+        "estimatedChars": "約 {{count}} 文字",
+        "catalogImportErrorDuplicate": "同じ作品名のテキストが既に存在します",
+        "catalogImportErrorGeneric": "ダウンロードに失敗しました（{{code}}）",
+        "catalogLoadFailed": "カタログの読み込みに失敗しました。接続を確認して再度お試しください。",
+        "kanaRowLabel": "行",
+        "kanaRowGroupAriaLabel": "著者名の読みの行で絞り込む",
+        "kanaColumnGroupAriaLabel": "著者名の読みの段で絞り込む"
       },
       "memory": {
         "pause": "一時停止",

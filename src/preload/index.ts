@@ -79,6 +79,7 @@ import type {
   TypingBigramAggregateView,
 } from '../shared/types/typing-analytics'
 import type { LanguageListEntry } from '../shared/types/language-store'
+import type { AozoraImportResult } from '../shared/types/aozora-import'
 import type { HubUploadPostParams, HubUpdatePostParams, HubPatchPostParams, HubUploadResult, HubDeleteResult, HubFetchMyPostsResult, HubFetchMyPostsParams, HubFetchMyKeyboardPostsResult, HubUserResult, HubUploadFavoritePostParams, HubUpdateFavoritePostParams, HubUploadAnalyticsPostParams, HubUpdateAnalyticsPostParams, HubPreviewAnalyticsPostParams, HubAnalyticsPreview, HubI18nPackTimestampsResponse } from '../shared/types/hub'
 import type { NotificationFetchResult } from '../shared/types/notification'
 
@@ -600,6 +601,10 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.TYPING_DATASET_CHECK, provider),
   updateTypingDataset: (provider?: string): Promise<{ provider: string; changed: boolean; fromVersion: string; toVersion?: string }> =>
     ipcRenderer.invoke(IpcChannels.TYPING_DATASET_UPDATE, provider),
+
+  // --- Aozora Bunko catalog import (IPC to main) ---
+  aozoraImport: (workId: string): Promise<AozoraImportResult> =>
+    ipcRenderer.invoke(IpcChannels.AOZORA_IMPORT, workId),
 
   // --- App Config ---
   appConfigGetAll: (): Promise<AppConfig> =>

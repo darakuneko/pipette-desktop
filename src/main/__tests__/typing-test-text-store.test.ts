@@ -132,6 +132,53 @@ describe('typing-test-text-store', () => {
       expect(metas).toHaveLength(1)
       expect(metas[0].wordCount).toBe(5)
     })
+
+    it('persists a catalog source and round-trips it through the index', async () => {
+      const result = await saveRecord({
+        name: 'Catalog Work',
+        text: 'a b c',
+        source: { provider: 'aozora', workId: '001257/files/59898_ruby_70679.zip' },
+      })
+      expect(result.success).toBe(true)
+      expect(result.data?.source).toEqual({ provider: 'aozora', workId: '001257/files/59898_ruby_70679.zip' })
+
+      const metas = await listMetas()
+      expect(metas[0].source).toEqual({ provider: 'aozora', workId: '001257/files/59898_ruby_70679.zip' })
+    })
+
+    it('leaves source unset for a plain file-import-style save', async () => {
+      const result = await saveRecord({ name: 'Plain', text: 'a b c' })
+      expect(result.success).toBe(true)
+      expect(result.data?.source).toBeUndefined()
+
+      const metas = await listMetas()
+      expect(metas[0].source).toBeUndefined()
+    })
+  })
+
+  describe('index source validation', () => {
+    it('drops a malformed source (non-string workId) instead of crashing', async () => {
+      await saveRecord({ name: 'Corrupt', text: 'a b c' })
+      const indexPath = join(mockUserDataPath, 'sync', TYPING_TEST_TEXT_SYNC_UNIT, 'index.json')
+      const index = JSON.parse(await readFile(indexPath, 'utf-8')) as { entries: Record<string, unknown>[] }
+      index.entries[0].source = { provider: 'aozora', workId: 12345 }
+      await writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8')
+
+      const metas = await listMetas()
+      expect(metas).toHaveLength(1)
+      expect(metas[0].source).toBeUndefined()
+    })
+
+    it('drops a non-object source', async () => {
+      await saveRecord({ name: 'Corrupt2', text: 'a b c' })
+      const indexPath = join(mockUserDataPath, 'sync', TYPING_TEST_TEXT_SYNC_UNIT, 'index.json')
+      const index = JSON.parse(await readFile(indexPath, 'utf-8')) as { entries: Record<string, unknown>[] }
+      index.entries[0].source = 'aozora'
+      await writeFile(indexPath, JSON.stringify(index, null, 2), 'utf-8')
+
+      const metas = await listMetas()
+      expect(metas[0].source).toBeUndefined()
+    })
   })
 
   describe('getRecord', () => {

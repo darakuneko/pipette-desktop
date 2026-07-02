@@ -22,6 +22,17 @@ describe('LEGAL_SECTIONS', () => {
     expect(text).toMatch(/curated|modified/i)
   })
 
+  it('discloses the Aozora Bunko catalog source and its public-domain status', () => {
+    const section = LEGAL_SECTIONS.find((s) => s.title === 'Typing Test Text Sources')
+    expect(section).toBeDefined()
+
+    const text = section!.paragraphs.join(' ')
+    expect(text).toContain('Aozora Bunko')
+    expect(text).toContain('aozora.gr.jp')
+    expect(text).toContain('github.com/aozorabunko/aozorabunko')
+    expect(text).toMatch(/public domain/i)
+  })
+
   it('keeps the section ordered before Disclaimer (last section stays a catch-all)', () => {
     const titles = LEGAL_SECTIONS.map((s) => s.title)
     expect(titles[titles.length - 1]).toBe('Disclaimer')
