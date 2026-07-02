@@ -318,6 +318,9 @@ label:has(> input[type="radio"]:not(:disabled)) {
   /* Component sizing */
   --min-width-keycode: 60px;           /* PopoverTabKey, MacroActionItem */
   --min-width-dropdown: 200px;         /* AppSelect, AnalyzeExportModal dropdowns */
+  --max-width-dropdown: 320px;         /* MultiSelectPopover panel — long labels wrap instead of widening it */
+  --max-width-filter-trigger: 200px;   /* MultiSelectPopover trigger button (matches --min-width-dropdown) */
+  --max-width-filter-chip-segment: 240px; /* AnalyzeFilterSummaryChip per-segment truncation — chip owns the whole filter row now that the snapshot quick-select moved into the modal */
   --min-width-modifier: 140px;         /* AltRepeatKeyPanelModal, ModifierPicker, LayerPicker, TapDanceModal */
   --min-width-rgb-label: 100px;        /* RGBConfigurator form labels */
   --min-width-layout-label: 120px;     /* LayoutEditor form label */

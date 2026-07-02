@@ -412,4 +412,226 @@ describe('useAnalyzeFilters', () => {
     // Defaults still apply to fields the persisted shape didn't include.
     expect(result.current.filters.bigrams.topLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.topLimit)
   })
+
+  describe('applyBatch', () => {
+    it('applies several fields through a single state update and a single debounced save', async () => {
+      const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      patchSpy.mockClear()
+      getSpy.mockClear().mockResolvedValue(null)
+
+      act(() => {
+        result.current.applyBatch({
+          deviceScopes: ['all'],
+          filterDimension: 'typingTest',
+          typingTestScopes: ['words (english)'],
+          runIdScopes: ['run-1'],
+        })
+      })
+
+      // All fields land together — no need to wait for a second act/render.
+      expect(result.current.filters.deviceScopes).toEqual(['all'])
+      expect(result.current.filters.filterDimension).toBe('typingTest')
+      expect(result.current.filters.typingTestScopes).toEqual(['words (english)'])
+      expect(result.current.filters.runIdScopes).toEqual(['run-1'])
+
+      act(() => { vi.advanceTimersByTime(300) })
+      await flushMicrotasks()
+      await flushMicrotasks()
+
+      // One state transition means one debounced write, not one per field.
+      expect(patchSpy).toHaveBeenCalledTimes(1)
+      const [uid, prefs] = patchSpy.mock.calls[0]
+      expect(uid).toBe('uid-a')
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+      expect(prefs.analyze?.filters?.filterDimension).toBe('typingTest')
+      expect(prefs.analyze?.filters?.typingTestScopes).toEqual(['words (english)'])
+      expect(prefs.analyze?.filters?.runIdScopes).toEqual(['run-1'])
+    })
+
+    it('normalizes scope fields the same way the individual setters do', async () => {
+      const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+
+      act(() => {
+        result.current.applyBatch({ deviceScopes: ['own', 'all'] })
+      })
+      // 'all' is exclusive, same as setDeviceScopes' normalizer.
+      expect(result.current.filters.deviceScopes).toEqual(['all'])
+    })
+
+    it('keeps pane A and pane B writes routed to their own PipetteSettings field', async () => {
+      const { result: resultA } = renderHook(() => useAnalyzeFilters('uid-shared', 'A'))
+      const { result: resultB } = renderHook(() => useAnalyzeFilters('uid-shared', 'B'))
+      await waitFor(() => expect(resultA.current.ready).toBe(true))
+      await waitFor(() => expect(resultB.current.ready).toBe(true))
+      patchSpy.mockClear()
+      getSpy.mockClear().mockResolvedValue(null)
+
+      act(() => { resultA.current.applyBatch({ deviceScopes: ['all'] }) })
+      act(() => { vi.advanceTimersByTime(300) })
+      await flushMicrotasks()
+      await flushMicrotasks()
+
+      expect(patchSpy).toHaveBeenCalledTimes(1)
+      const [, prefs] = patchSpy.mock.calls[0]
+      // Pane A's write only ever touches the `filters` slot.
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+      expect(prefs.analyze?.compareFilters).toBeUndefined()
+      // Pane B never saw the update — its own state is untouched.
+      expect(resultB.current.filters.deviceScopes).toEqual(['own'])
+    })
+  })
+
+  describe('applyBatchForUid', () => {
+    it('loads the destination uid and merges the pending patch on top of its persisted filters', async () => {
+      const { result, rerender } = renderHook(
+        ({ uid }: { uid: string | null }) => useAnalyzeFilters(uid),
+        { initialProps: { uid: 'uid-a' as string | null } },
+      )
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      // An edit on uid-a that is NOT part of the patch — it must NOT
+      // travel to uid-b: the destination keyboard's own persisted
+      // settings win for every field the patch doesn't contain. Flush it
+      // so it doesn't count as a second write below.
+      act(() => { result.current.setWpm({ viewMode: 'timeOfDay' }) })
+      act(() => { vi.advanceTimersByTime(300) })
+      await flushMicrotasks()
+      await flushMicrotasks()
+      patchSpy.mockClear()
+      // The DESTINATION keyboard's persisted filters — its own layer
+      // pick must survive the switch even though the source keyboard
+      // and the patch both say nothing about it.
+      getSpy.mockClear().mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        analyze: {
+          filters: {
+            deviceScopes: ['own'],
+            layer: { baseLayer: 3 },
+          },
+        },
+      })
+
+      act(() => {
+        result.current.applyBatchForUid('uid-b', {
+          deviceScopes: ['all'],
+          filterDimension: 'typingTest',
+          typingTestScopes: ['quote (english)'],
+        })
+      })
+      rerender({ uid: 'uid-b' })
+
+      // The persisted load runs as normal for uid-b; the patch merges on
+      // top once it resolves.
+      await waitFor(() => expect(getSpy).toHaveBeenCalledWith('uid-b'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      // Patch fields win…
+      expect(result.current.filters.deviceScopes).toEqual(['all'])
+      expect(result.current.filters.filterDimension).toBe('typingTest')
+      expect(result.current.filters.typingTestScopes).toEqual(['quote (english)'])
+      // …every other field carries the DESTINATION's persisted values,
+      // not the source keyboard's in-memory ones.
+      expect(result.current.filters.layer.baseLayer).toBe(3)
+      expect(result.current.filters.wpm.viewMode).toBe('timeSeries')
+
+      act(() => { vi.advanceTimersByTime(300) })
+      await flushMicrotasks()
+      await flushMicrotasks()
+
+      expect(patchSpy).toHaveBeenCalledTimes(1)
+      const [uid, prefs] = patchSpy.mock.calls[0]
+      expect(uid).toBe('uid-b')
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+      expect(prefs.analyze?.filters?.layer?.baseLayer).toBe(3)
+      expect(prefs.analyze?.filters?.wpm?.viewMode).toBe('timeSeries')
+    })
+
+    it('merges the pending patch onto defaults when the destination load rejects', async () => {
+      const { result, rerender } = renderHook(
+        ({ uid }: { uid: string | null }) => useAnalyzeFilters(uid),
+        { initialProps: { uid: 'uid-a' as string | null } },
+      )
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      patchSpy.mockClear()
+      getSpy.mockClear().mockRejectedValue(new Error('read failed'))
+
+      act(() => {
+        result.current.applyBatchForUid('uid-b', { deviceScopes: ['all'] })
+      })
+      rerender({ uid: 'uid-b' })
+
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      expect(result.current.filters.deviceScopes).toEqual(['all'])
+      // Everything else falls back to defaults — never the source
+      // keyboard's in-memory state.
+      expect(result.current.filters.wpm.viewMode).toBe('timeSeries')
+    })
+
+    it('discards a stale registration that targets a different uid than the one that actually loads', async () => {
+      const { result, rerender } = renderHook(
+        ({ uid }: { uid: string | null }) => useAnalyzeFilters(uid),
+        { initialProps: { uid: 'uid-a' as string | null } },
+      )
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      patchSpy.mockClear()
+      getSpy.mockClear().mockResolvedValue(null)
+
+      // Registered for uid-c, but the caller actually switches to uid-b —
+      // the stale registration must not leak onto uid-b.
+      act(() => {
+        result.current.applyBatchForUid('uid-c', { deviceScopes: ['all'] })
+      })
+      rerender({ uid: 'uid-b' })
+
+      // The normal persisted load runs for uid-b since the pending entry
+      // didn't match.
+      await waitFor(() => expect(getSpy).toHaveBeenCalledWith('uid-b'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      expect(result.current.filters.deviceScopes).toEqual(['own'])
+    })
+
+    it('delegates to the immediate applyBatch path when the target is the current uid', async () => {
+      const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      patchSpy.mockClear()
+
+      act(() => {
+        result.current.applyBatchForUid('uid-a', { deviceScopes: ['all'] })
+      })
+      // No uid-change effect is coming to consume a registration, so the
+      // patch applies immediately (strict superset of `applyBatch` —
+      // callers don't need to know whether the uid is actually changing).
+      expect(result.current.filters.deviceScopes).toEqual(['all'])
+
+      act(() => { vi.advanceTimersByTime(300) })
+      await flushMicrotasks()
+      await flushMicrotasks()
+      expect(patchSpy).toHaveBeenCalledTimes(1)
+      const [uid, prefs] = patchSpy.mock.calls[0]
+      expect(uid).toBe('uid-a')
+      expect(prefs.analyze?.filters?.deviceScopes).toEqual(['all'])
+    })
+
+    it('does not leak a same-uid delegated patch onto a later uid switch', async () => {
+      const { result, rerender } = renderHook(
+        ({ uid }: { uid: string | null }) => useAnalyzeFilters(uid),
+        { initialProps: { uid: 'uid-a' as string | null } },
+      )
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      act(() => {
+        result.current.applyBatchForUid('uid-a', { deviceScopes: ['all'] })
+      })
+      getSpy.mockClear().mockResolvedValue(null)
+
+      // The delegated call must not have left a pending registration
+      // behind — switching to uid-b runs the normal persisted load.
+      rerender({ uid: 'uid-b' })
+      await waitFor(() => expect(getSpy).toHaveBeenCalledWith('uid-b'))
+      await waitFor(() => expect(result.current.ready).toBe(true))
+      expect(result.current.filters.deviceScopes).toEqual(['own'])
+    })
+  })
 })

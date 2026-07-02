@@ -14,6 +14,32 @@ import type { TypingKeymapSnapshotSummary } from '../../../shared/types/typing-a
 import { formatDateTime } from '../editors/store-modal-shared'
 import { FILTER_LABEL, FILTER_SELECT } from './analyze-filter-styles'
 
+/** Resolve the option list + effective selected value: the newest
+ * snapshot renders as "Current keymap", the rest newest-first below
+ * it. A `selectedSavedAt` that doesn't match any known snapshot
+ * (stale prop, list still loading) falls back to the newest — the
+ * option set must always contain the rendered value or the browser
+ * silently picks the first one and the select diverges from the
+ * parent's state. */
+function resolveSnapshotSelectOptions(
+  summaries: readonly TypingKeymapSnapshotSummary[],
+  selectedSavedAt: number | null,
+): {
+  latest: TypingKeymapSnapshotSummary | null
+  older: TypingKeymapSnapshotSummary[]
+  selectedValue: number | null
+} {
+  const sorted = [...summaries].sort((a, b) => a.savedAt - b.savedAt)
+  if (sorted.length === 0) return { latest: null, older: [], selectedValue: null }
+  const latest = sorted[sorted.length - 1]
+  const older = sorted.slice(0, -1).reverse()
+  const selectedValue =
+    selectedSavedAt !== null && sorted.some((s) => s.savedAt === selectedSavedAt)
+      ? selectedSavedAt
+      : latest.savedAt
+  return { latest, older, selectedValue }
+}
+
 interface Props {
   summaries: TypingKeymapSnapshotSummary[]
   /** Source of truth for which snapshot is currently selected.
@@ -22,53 +48,43 @@ interface Props {
    * the displayed value in sync with the available options. */
   selectedSavedAt: number | null
   onSelectSnapshot: (savedAt: number) => void
+  testId?: string
 }
 
-export function KeymapSnapshotTimeline({ summaries, selectedSavedAt, onSelectSnapshot }: Props) {
+export function KeymapSnapshotTimeline({
+  summaries,
+  selectedSavedAt,
+  onSelectSnapshot,
+  testId = 'analyze-snapshot-timeline',
+}: Props) {
   const { t } = useTranslation()
 
-  const sorted = useMemo(
-    () => [...summaries].sort((a, b) => a.savedAt - b.savedAt),
-    [summaries],
+  const { latest, older, selectedValue } = useMemo(
+    () => resolveSnapshotSelectOptions(summaries, selectedSavedAt),
+    [summaries, selectedSavedAt],
   )
-  // Options below "Current keymap" are the older snapshots newest-first.
-  // Memoised so the double-copy (slice + reverse) doesn't rerun on
-  // every snapshot-select rerender.
-  const olderSnapshots = useMemo(() => sorted.slice(0, -1).reverse(), [sorted])
 
-  if (sorted.length === 0) return null
-
-  const latest = sorted[sorted.length - 1]
-
-  // Fall back to the latest snapshot when the parent prop is stale —
-  // the option set must always contain the rendered value otherwise
-  // the browser silently picks the first one and the select diverges
-  // from `selectedSavedAt` in the parent.
-  const selectedValue =
-    selectedSavedAt !== null && sorted.some((s) => s.savedAt === selectedSavedAt)
-      ? String(selectedSavedAt)
-      : String(latest.savedAt)
+  if (latest === null) return null
 
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const savedAt = Number.parseInt(e.target.value, 10)
     if (!Number.isFinite(savedAt)) return
-    if (!sorted.some((s) => s.savedAt === savedAt)) return
     onSelectSnapshot(savedAt)
   }
 
   return (
-    <label className={FILTER_LABEL} data-testid="analyze-snapshot-timeline">
+    <label className={FILTER_LABEL} data-testid={testId}>
       <span>{t('analyze.snapshotTimeline.title')}</span>
       <select
         className={FILTER_SELECT}
-        value={selectedValue}
+        value={String(selectedValue)}
         onChange={handleChange}
-        data-testid="analyze-snapshot-timeline-select"
+        data-testid={`${testId}-select`}
       >
         <option value={String(latest.savedAt)}>
           {t('analyze.snapshotTimeline.current')}
         </option>
-        {olderSnapshots.map((s) => (
+        {older.map((s) => (
           <option key={s.savedAt} value={String(s.savedAt)}>
             {formatDateTime(s.savedAt)}
           </option>

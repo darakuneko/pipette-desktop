@@ -67,3 +67,42 @@ export async function dismissOverlay(
   }
   await page.waitForTimeout(500)
 }
+
+/**
+ * Pick a keymap snapshot through the Analyze staged filter modal — the
+ * modal's Keymap row is the only snapshot selector (the inline
+ * quick-select next to the summary chip was removed). `optionIndex`
+ * addresses the modal select's option list (0 = "Current keymap",
+ * 1 = newest older snapshot, ...).
+ *
+ * Returns false — after closing the modal untouched — when fewer than
+ * `minOptions` options exist (e.g. a keyboard without enough snapshots),
+ * so callers can fall back gracefully.
+ */
+export async function selectSnapshotViaFilterModal(
+  page: Page,
+  optionIndex: number,
+  opts: { minOptions?: number; settleMs?: number } = {},
+): Promise<boolean> {
+  const { minOptions = 2, settleMs = 800 } = opts
+  const chip = page.locator('[data-testid="analyze-filter-chip"]')
+  if (!(await isAvailable(chip))) {
+    console.log('  [skip] analyze-filter-chip not found — snapshot pivot skipped')
+    return false
+  }
+  await chip.click()
+  await page.waitForTimeout(400)
+  const select = page.locator('[data-testid="analyze-snapshot-timeline-select"]')
+  const optionCount = await select.locator('option').count().catch(() => 0)
+  if (optionCount < minOptions || optionIndex >= optionCount) {
+    const closeBtn = page.locator('[data-testid="analyze-filter-modal-close"]')
+    if (await isAvailable(closeBtn)) await closeBtn.click()
+    await page.waitForTimeout(200)
+    return false
+  }
+  await select.selectOption({ index: optionIndex })
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="analyze-filter-modal-apply"]').click()
+  await page.waitForTimeout(settleMs)
+  return true
+}

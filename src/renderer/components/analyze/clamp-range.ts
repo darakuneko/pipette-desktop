@@ -33,6 +33,21 @@ export function getSnapshotBoundaries(
   }
 }
 
+/** The full active window of `savedAt`'s snapshot as a chart range —
+ * the "jump to this snapshot" recipe shared by the pane's quick
+ * selector and the filter modal's Keymap row. Returns `null` when the
+ * snapshot can't be resolved (same contract as
+ * `getSnapshotBoundaries`); callers treat that as "ignore the pick". */
+export function rangeForSnapshot(
+  savedAt: number,
+  summaries: readonly TypingKeymapSnapshotSummary[],
+  nowMs: number,
+): RangeMs | null {
+  const bounds = getSnapshotBoundaries(savedAt, summaries, nowMs)
+  if (bounds === null) return null
+  return { fromMs: bounds.lo, toMs: bounds.hi }
+}
+
 /** Clamp `range` so both `fromMs` and `toMs` stay within `bounds`.
  * Returns the original reference when no clamping is needed so React
  * effects keyed on `range` don't re-fire on identity changes. When

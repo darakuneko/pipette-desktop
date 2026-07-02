@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -1342,7 +1342,12 @@
         "day3": "3日",
         "week1": "1週間",
         "month1": "1ヶ月"
-      }
+      },
+      "sourceLabel": "ソース",
+      "editConditions": "検索条件を編集",
+      "chipAriaLabel": "検索条件を編集",
+      "sourceDisabledByApp": "By App は全ソースを合算いたしますゆえ、この項目は使えません。",
+      "distributionDisabledNote": "分布ビューは常にこのデバイスのデータを用いますゆえ、この項目は使えません。"
     }
   },
   "dataModal": {

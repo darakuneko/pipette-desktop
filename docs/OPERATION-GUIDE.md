@@ -187,7 +187,7 @@ There are two entry points:
 
 **Keyboard selector**
 
-The Keyboards select at the top of the filter row lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).
+The **Keyboard** row inside the filter conditions modal (see **Filter conditions modal** below) lists every keyboard that has recorded typing data — pick one to populate the charts. Keyboards with no data never appear in the list. Switching keyboards there resets the Device / Source / Keymap / Period rows below it to that keyboard's own defaults, since a device or app picked for the previous keyboard may not even apply to the new one. The Back button at the bottom of the page returns to the previous view (e.g. the device selector).
 
 **Analysis tabs**
 
@@ -208,19 +208,24 @@ The tab bar above the chart groups ten analyses by intent — overview, performa
 
 The Heatmap, Ergonomics, Bigrams > Finger IKI, Layout Comparison, and Layer > Activations views need a keymap snapshot that overlaps the selected range. Pipette saves a snapshot automatically when typing recording is enabled on the keyboard; the empty state tells you when to start a recording session to capture one.
 
-**Common filters**
+**Filter summary chip**
 
-The following filters are always available:
+The filter row is a single collapsed chip — `keyboard · device · source · period`. Each segment truncates a long value with an ellipsis; hover the chip to see the full text. Click the chip to open the filter conditions modal — every common condition, including the keymap snapshot, is edited there (the modal's **Keymap** row is the only place to change snapshots).
 
-- **Keymap snapshots** — picks which recorded keymap to analyze against. Editing **From** / **To** stays inside the selected snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Bigrams Finger IKI / Layer activations) never mix two layouts in one view. Snapshots are listed on the Keymap snapshot timeline so you can flip between recorded keymap revisions and "Current keymap" without leaving the page
-- **From** / **To** — the time range to analyze. Both inputs are clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
-- **Device** — multi-select. Pick any combination of `This device` and remote-machine hashes to merge or isolate per-machine data. Hidden on the Interval tab when View is set to Distribution (distribution bins don't split by device)
-- **App / TypingTest** — a segmented toggle switches this filter slot between two mutually exclusive dimensions (a typing test always runs inside some app, so only one dimension filters at a time):
-  - **App** — multi-select dropdown listing every active application name observed during the range. Defaults to **All apps** (no filter); selecting one or more apps narrows every chart except **By App** to minutes tagged with one of the chosen apps. The dropdown only populates after Monitor App has been enabled and at least one minute has been tagged with an app name. Persisted per keyboard
+**Filter conditions modal**
+
+The modal edits a draft copy of the filters — nothing on the page changes until you press **Save**. **Reset** returns the Device and Source rows (and the App/TypingTest toggle) to their defaults — the Keyboard, Keymap, and Period rows keep their current draft values. Pressing Esc, the close button, or clicking outside the modal discards the whole draft instead. Rows, top to bottom:
+
+- **Keyboard** — see **Keyboard selector** above
+- **Device** — multi-select. Pick any combination of `This device` and remote-machine hashes to merge or isolate per-machine data. Replaced with an explanatory note when the Interval tab's View is set to Distribution (distribution bins are always computed from this device alone)
+- **Source** — a segmented **App / TypingTest** toggle switches this row between two mutually exclusive dimensions (a typing test always runs inside some app, so only one dimension filters at a time). Replaced with an explanatory note on the **By App** tab, whose charts aggregate across every source regardless of the App or TypingTest selection:
+  - **App** — multi-select dropdown listing every active application name observed during the range. Defaults to **All apps** (no filter); selecting one or more apps narrows every chart to minutes tagged with one of the chosen apps. The dropdown only populates after Monitor App has been enabled and at least one minute has been tagged with an app name. Persisted per keyboard
   - **TypingTest** — multi-select dropdown listing the typing tests that produced data in the selected range and device scope. File Import tests are listed by their text name; MonkeyType tests as "mode (language)". Picking one or more tests narrows every chart to those runs, and a second **Results** select appears beside it to drill down to individual runs
-  - The **By App** tab keeps the toggle, but since that tab compares across apps, its App side simply means "all apps" (no app picker); the TypingTest side still narrows to a test
+  - Typing-test names and other long option labels are ellipsized in both selects (and in the chip); hover to see the full text
+- **Keymap** — the snapshot timeline, shown only when the selected keyboard has recorded snapshots. Editing Period below stays inside the chosen snapshot's active window so charts that need a snapshot (Heatmap / Ergonomics / Bigrams Finger IKI / Layer activations) never mix two layouts in one view
+- **Period** — the **From** / **To** range to analyze, clamped to the active snapshot's window (or to the most recent 7 days when the keyboard has no snapshot recorded yet)
 
-Individual tabs add their own filters above the chart (view mode, granularity, unit, etc.); those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
+Individual tabs still add their own filters above the chart (view mode, granularity, unit, etc.), outside the modal; those are described per tab in the sections below. The Heatmap tab keeps its **Normalize** / **Aggregate** / **Group** / **Top N** controls with the ranking row underneath the keyboard itself.
 
 **Saved search conditions**
 

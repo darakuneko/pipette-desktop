@@ -20,7 +20,7 @@ import type {
 } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
-import { isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { distributionForcesOwnDevice, isHashScope, isOwnScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import { buildCsv } from '../../../shared/csv-export'
 import { LAYOUT_BY_ID } from '../../data/keyboard-layouts'
 
@@ -245,8 +245,8 @@ export async function buildIntervalCsv(args: ScopeArgs & {
 }): Promise<CsvBundleEntry> {
   const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], granularity, viewMode } = args
   // Distribution forces own scope to match the live chart's
-  // anti-meta-aggregate rule (see IntervalChart.tsx).
-  const effectiveScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
+  // anti-meta-aggregate rule (see `distributionForcesOwnDevice`).
+  const effectiveScope: DeviceScope = distributionForcesOwnDevice(viewMode) ? 'own' : deviceScope
   const rows = await listMinuteStatsForScope(uid, effectiveScope, range.fromMs, range.toMs, appScopes, typingTestScopes, runIdScopes).catch(() => [])
 
   if (viewMode === 'distribution') {

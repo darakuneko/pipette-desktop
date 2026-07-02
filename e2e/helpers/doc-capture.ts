@@ -6,7 +6,7 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { dismissNotificationModal, isAvailable } from './doc-capture-common'
+import { dismissNotificationModal, isAvailable, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
   DUMMY_SNAPSHOTS,
   DUMMY_TA_UID,
@@ -452,16 +452,33 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     return
   }
 
-  // Analyze only lists keyboards with recorded data — skip cleanly if none.
-  const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
-  const firstKbValue = (await isAvailable(firstKbOption))
-    ? await firstKbOption.getAttribute('value')
-    : null
-  if (firstKbValue) {
-    await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
-    await page.waitForTimeout(500)
+  // Keyboard selection lives in the staged filter modal behind the
+  // summary chip (chip -> keyboard select -> Apply). Analyze only lists
+  // keyboards with recorded data — skip cleanly if none.
+  const filterChip = page.locator('[data-testid="analyze-filter-chip"]')
+  if (await isAvailable(filterChip)) {
+    await filterChip.click()
+    await page.waitForTimeout(400)
+    // Options inside a native <select> don't report visible — poll count.
+    const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
+    const firstKbValue = (await firstKbOption.count().catch(() => 0)) > 0
+      ? await firstKbOption.getAttribute('value')
+      : null
+    if (firstKbValue) {
+      await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
+      await page.waitForTimeout(300)
+      await page.locator('[data-testid="analyze-filter-modal-apply"]').click()
+      await page.waitForTimeout(600)
+    } else {
+      console.log('  [warn] no keyboards listed — capturing overview only')
+      const modalClose = page.locator('[data-testid="analyze-filter-modal-close"]')
+      if (await isAvailable(modalClose)) {
+        await modalClose.click()
+        await page.waitForTimeout(300)
+      }
+    }
   } else {
-    console.log('  [warn] no keyboards listed — capturing overview only')
+    console.log('  [warn] analyze-filter-chip not found — capturing overview only')
   }
 
   // Summary: default landing tab. Capture the four-card overview, then
@@ -491,18 +508,31 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-tab-summary not found')
   }
 
-  // App filter popover — opens the multi-select dropdown for the App
-  // chip in the common filter row. Captured as a full-page screenshot
-  // so the open state and the row context land together.
-  const appFilter = page.locator('[data-testid="analyze-filter-app"]')
-  if (await isAvailable(appFilter)) {
-    await appFilter.click()
-    await page.waitForTimeout(300)
-    await captureNamed(page, 'analyze-app-filter', { fullPage: true })
-    await page.keyboard.press('Escape')
-    await page.waitForTimeout(200)
+  // App filter popover — the multi-select now lives in the staged filter
+  // modal behind the summary chip. Captured as a full-page screenshot so
+  // the open popover and the modal context land together, then both are
+  // closed (Escape may close popover+modal together depending on event
+  // propagation, so the modal close is guarded).
+  if (await isAvailable(filterChip)) {
+    await filterChip.click()
+    await page.waitForTimeout(400)
+    const appFilter = page.locator('[data-testid="analyze-filter-app"]')
+    if (await isAvailable(appFilter)) {
+      await appFilter.click()
+      await page.waitForTimeout(300)
+      await captureNamed(page, 'analyze-app-filter', { fullPage: true })
+      await page.keyboard.press('Escape')
+      await page.waitForTimeout(200)
+    } else {
+      console.log('  [skip] analyze-filter-app not found')
+    }
+    const modalClose = page.locator('[data-testid="analyze-filter-modal-close"]')
+    if (await isAvailable(modalClose)) {
+      await modalClose.click()
+      await page.waitForTimeout(300)
+    }
   } else {
-    console.log('  [skip] analyze-filter-app not found')
+    console.log('  [skip] analyze-filter-chip not found — app filter capture skipped')
   }
 
   // Filter Store side panel — toggle open, capture the panel as an
@@ -523,21 +553,10 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     console.log('  [skip] analyze-filter-store-toggle not found')
   }
 
-  // Snapshot timeline — focused element capture, no tab switch needed.
-  // The element is a `<label>` wrapper that Playwright may report as not
-  // visible when nothing is rendered inside; treat the failure as a skip
-  // so the rest of the Analyze captures keep running.
-  const snapTimeline = page.locator('[data-testid="analyze-snapshot-timeline"]')
-  if (await isAvailable(snapTimeline)) {
-    try {
-      await captureNamed(page, 'analyze-snapshot-timeline', { element: snapTimeline })
-    } catch (err) {
-      const msg = err instanceof Error ? err.message.split('\n')[0] : 'unknown'
-      console.log(`  [warn] analyze-snapshot-timeline capture failed — ${msg}`)
-    }
-  } else {
-    console.log('  [skip] analyze-snapshot-timeline not found')
-  }
+  // The standalone snapshot-timeline capture was removed with the inline
+  // quick-selector: the snapshot pick now lives in the filter modal's
+  // Keymap row and `analyze-snapshot-timeline.png` was never referenced
+  // by the operation guides.
 
   // Heatmap: requires a snapshot; empty state is captured if none exists.
   const heatmapTab = page.locator('[data-testid="analyze-tab-keyHeatmap"]')
@@ -635,24 +654,18 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     if (await isAvailable(viewModeSelect)) {
       await viewModeSelect.selectOption('learning')
       await page.waitForTimeout(800)
-      const snapshotSelect = page.locator('[data-testid="analyze-snapshot-timeline-select"]')
-      const optionCount = (await snapshotSelect.locator('option').count().catch(() => 0))
-      if (optionCount >= 2) {
-        const olderValue = await snapshotSelect.locator('option').nth(1).getAttribute('value')
-        if (olderValue) {
-          await snapshotSelect.selectOption(olderValue)
-          // Wait for the range update + matrix-cells-by-day re-fetch to settle.
-          await page.waitForTimeout(1500)
-        }
-      } else {
+      // Snapshot pivot goes through the staged filter modal (chip ->
+      // Keymap row -> Apply); settleMs covers the range update +
+      // matrix-cells-by-day re-fetch.
+      const pivoted = await selectSnapshotViaFilterModal(page, 1, { settleMs: 1500 })
+      if (!pivoted) {
         console.log('  [warn] only one snapshot present — learning curve may render empty')
       }
       await captureNamed(page, 'analyze-ergonomics-learning', { fullPage: true })
-      if (optionCount >= 2) {
+      if (pivoted) {
         // Reset to "Current keymap" (option index 0) so the captures
         // that follow keep the latest snapshot's 4-hour active window.
-        await snapshotSelect.selectOption({ index: 0 })
-        await page.waitForTimeout(800)
+        await selectSnapshotViaFilterModal(page, 0, { settleMs: 800 })
       }
       await viewModeSelect.selectOption('snapshot')
       await page.waitForTimeout(400)

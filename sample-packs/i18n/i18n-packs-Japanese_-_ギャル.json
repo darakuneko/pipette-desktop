@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -1342,7 +1342,12 @@
         "day3": "3日",
         "week1": "1週間",
         "month1": "1ヶ月"
-      }
+      },
+      "sourceLabel": "ソース☆",
+      "editConditions": "検索条件を編集っしょ☆",
+      "chipAriaLabel": "検索条件を編集っしょ☆",
+      "sourceDisabledByApp": "By Appだと全ソース合わせちゃうから、この項目は使えないっしょ☆",
+      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータ使うから、この項目は使えないっしょ☆"
     }
   },
   "dataModal": {
