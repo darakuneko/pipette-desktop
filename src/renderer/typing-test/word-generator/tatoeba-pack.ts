@@ -57,6 +57,17 @@ export function tatoebaQuote(pack: TatoebaPack): Quote {
   return { id: 0, text, source: pack.name, length: text.length }
 }
 
+/** Tokenize a Tatoeba quote into word-flow display units. Deliberately NOT
+ *  `quoteToWords` — that function whitelist-strips to ASCII, which is correct
+ *  for MonkeyType's English quotes but destroys Tatoeba sentences in any
+ *  non-ASCII script (Japanese, Cyrillic, accented Latin, etc. — most of the
+ *  72 Tatoeba languages). Splits on whitespace only and keeps every
+ *  character as-is, mirroring parseFileImportText's script-agnostic
+ *  tokenizer. */
+export function tatoebaQuoteToWords(quote: Quote): string[] {
+  return quote.text.split(/\s+/).filter((w) => w.length > 0)
+}
+
 /** Pick `count` sentences, avoiding an immediate repeat (mirrors sampleWords). */
 function sampleSentences(list: readonly string[], count: number): string[] {
   if (list.length === 0) return []

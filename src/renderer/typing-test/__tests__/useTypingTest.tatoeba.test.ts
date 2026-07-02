@@ -79,4 +79,20 @@ describe('useTypingTest — tatoeba mode', () => {
 
     expect(result.current.state.words).toEqual([])
   })
+
+  it('plays a Japanese pack without ASCII-stripping the sentences (regression)', async () => {
+    // Real sentence from the Tatoeba japanese pack (CC BY 2.0 FR). Before the
+    // tokenizer fix this collapsed to a single stray '0' via quoteToWords'
+    // ASCII whitelist.
+    mockLangGet.mockResolvedValue({
+      name: 'japanese',
+      words: ['「0℃！ やばい熱ある」「かわいそうな雪だるまさん」'],
+    })
+    await getTatoebaPack('japanese-regression')
+
+    const { result } = renderHook(() => useTypingTest({ mode: 'tatoeba', language: 'japanese-regression' }, 'english'))
+
+    expect(result.current.state.words.join('')).not.toBe('0')
+    expect(result.current.state.words.some((w) => w.includes('やばい'))).toBe(true)
+  })
 })
