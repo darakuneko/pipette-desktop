@@ -290,8 +290,8 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --width-modal-sm: 440px;     /* EditorSettingsModal, FavoriteStoreModal, LayoutStoreModal */
   --width-modal-md: 600px;     /* MissingKeyLabelDialog, UnlockDialog, QmkSettings, JsonEditor */
   --width-modal-notify: 560px; /* NotificationModal, AnalyzeExportModal */
-  --width-modal-typing: 480px; /* LanguageSelectorModal, TypingRecordingConsentModal */
-  --width-modal-lg: 760px;     /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal, SettingsModal */
+  --width-modal-typing: 480px; /* TypingRecordingConsentModal */
+  --width-modal-lg: 760px;     /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal, SettingsModal, LanguageSelectorModal */
   --width-modal-data: 860px;   /* DataModal */
   --width-modal-goal: 720px;   /* GoalAchievementsModal */
   --width-modal-app: 500px;    /* App toast, MacroTextEditor */

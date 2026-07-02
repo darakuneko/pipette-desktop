@@ -39,6 +39,7 @@
     "better-sqlite3": "^12.9.0",
     "date-fns": "^4.1.0",
     "electron-store": "^11.0.2",
+    "fflate": "^0.8.3",
     "i18next": "^25.8.4",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.564.0",

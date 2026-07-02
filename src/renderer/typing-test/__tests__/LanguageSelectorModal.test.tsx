@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { LanguageSelectorModal } from '../LanguageSelectorModal'
+import { clearAozoraCatalogCache } from '../AozoraCatalogTab'
 import type { LanguageListEntry } from '../../../shared/types/language-store'
 
 const mockLanguages: LanguageListEntry[] = [
@@ -13,6 +14,9 @@ const mockLanguages: LanguageListEntry[] = [
 ]
 
 beforeEach(() => {
+  // The Aozora catalog tab caches its fetched list at module scope so a tab
+  // remount doesn't re-fetch; each test needs a fresh fetch of its own mock.
+  clearAozoraCatalogCache()
   window.vialAPI = {
     langList: vi.fn().mockResolvedValue(mockLanguages),
     langGet: vi.fn().mockResolvedValue(null),
@@ -353,6 +357,75 @@ describe('LanguageSelectorModal', () => {
     fireEvent.click(screen.getByTestId('language-modal-close'))
     expect(onCurrentTextDeleted).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it('lists the aozora catalog and version-checks it when its tab is shown', async () => {
+    window.vialAPI = {
+      ...window.vialAPI,
+      typingTestTextStoreList: vi.fn().mockResolvedValue({ success: true, data: [] }),
+    } as unknown as typeof window.vialAPI
+
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-aozora'))
+
+    await waitFor(() => {
+      expect(window.vialAPI.langList).toHaveBeenCalledWith('aozora')
+      expect(window.vialAPI.checkTypingDatasetUpdate).toHaveBeenCalledWith('aozora')
+    })
+  })
+
+  it('picks an already-imported aozora work → onSelectImport + onClose', async () => {
+    const onSelectImport = vi.fn()
+    const onClose = vi.fn()
+    const workId = '001257/files/59898.zip'
+    window.vialAPI = {
+      ...window.vialAPI,
+      langList: vi.fn((provider?: string) => {
+        if (provider === 'aozora') {
+          return Promise.resolve([
+            { name: workId, title: 'Sample Work', author: 'Sample Author', wordCount: 1000, rightToLeft: false, fileSize: 2000 },
+          ])
+        }
+        return Promise.resolve(mockLanguages)
+      }),
+      typingTestTextStoreList: vi.fn().mockResolvedValue({
+        success: true,
+        data: [{
+          id: 'aozora-1',
+          name: 'Sample Work（Sample Author）',
+          wordCount: 1000,
+          filename: 'a.json',
+          savedAt: '',
+          updatedAt: '',
+          source: { provider: 'aozora', workId },
+        }],
+      }),
+    } as unknown as typeof window.vialAPI
+
+    render(
+      <LanguageSelectorModal
+        currentLanguage="english"
+        onSelectLanguage={vi.fn()}
+        onSelectImport={onSelectImport}
+        onClose={onClose}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('language-tab-aozora'))
+    await waitFor(() => expect(screen.getByTestId(`aozora-row-${workId}`)).toBeInTheDocument())
+
+    fireEvent.click(screen.getByTestId(`aozora-row-${workId}`))
+
+    expect(onSelectImport).toHaveBeenCalledWith('aozora-1')
+    expect(onClose).toHaveBeenCalled()
   })
 
   it('does not fire onCurrentTextDeleted when nothing was deleted', async () => {

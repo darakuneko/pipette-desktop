@@ -34,8 +34,18 @@ export function isManifestEntry(v: unknown): v is LanguageManifestEntry {
     typeof e.name === 'string' &&
     typeof e.wordCount === 'number' &&
     typeof e.rightToLeft === 'boolean' &&
-    typeof e.fileSize === 'number'
+    typeof e.fileSize === 'number' &&
+    // Catalog providers (aozora) carry title/author/authorKana; pack
+    // providers omit them. All three are optional, but when present must
+    // be strings.
+    (e.title === undefined || typeof e.title === 'string') &&
+    (e.author === undefined || typeof e.author === 'string') &&
+    (e.authorKana === undefined || typeof e.authorKana === 'string')
   )
+}
+
+export function isValidModel(v: unknown): v is 'pack' | 'catalog' | undefined {
+  return v === undefined || v === 'pack' || v === 'catalog'
 }
 
 /** Lightweight version probe. Returns the Hub's current `version` for the
@@ -70,6 +80,7 @@ export async function fetchTypingDataset(provider: string): Promise<TypingTestDa
       // The base URL is fetched from the main process, so reject anything
       // that isn't plain HTTPS to avoid an SSRF vector via a bad Hub payload.
       !/^https:\/\//.test(d.downloadUrlBase) ||
+      !isValidModel(d.model) ||
       !Array.isArray(d.languages) ||
       !d.languages.every(isManifestEntry)
     ) {
@@ -79,6 +90,7 @@ export async function fetchTypingDataset(provider: string): Promise<TypingTestDa
       provider: d.provider,
       version: d.version,
       downloadUrlBase: d.downloadUrlBase,
+      model: d.model,
       languages: d.languages,
     }
   } catch {

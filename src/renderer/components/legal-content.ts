@@ -31,6 +31,7 @@ export const LEGAL_SECTIONS: LegalSection[] = [
     paragraphs: [
       'Tatoeba-based Typing Test sentence packs are curated from the Tatoeba Project (https://tatoeba.org) and its contributors. Most language packs are licensed under CC BY 2.0 FR (https://creativecommons.org/licenses/by/2.0/fr/); the English, Bangla, Kabyle, and Russian packs are dedicated to the public domain under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).',
       'These packs are a curated, modified snapshot of the Tatoeba corpus (filtered, de-duplicated, and length-limited), not the original data.',
+      'Aozora Bunko catalog works are texts whose Japanese copyright has expired or been explicitly waived by the rights holder, and are in the public domain. Catalog metadata (titles, authors) and work texts are sourced from Aozora Bunko (https://www.aozora.gr.jp/) via the aozorabunko GitHub mirror (https://github.com/aozorabunko/aozorabunko); ruby and editorial annotation markup is programmatically cleaned during import.',
     ],
   },
   {

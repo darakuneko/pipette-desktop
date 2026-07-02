@@ -13,6 +13,7 @@ import { setupThemePackStore } from './theme-pack-ipc'
 import { setupHidIpc } from './hid-ipc'
 import { setupPipetteSettingsStore } from './pipette-settings-store'
 import { setupLanguageStore } from './language-store'
+import { setupAozoraIpc } from './aozora/aozora-ipc'
 import { setupSyncIpc } from './sync/sync-ipc'
 import { setupHubIpc } from './hub/hub-ipc'
 import { startI18nStartupSync } from './hub/i18n-startup-sync'
@@ -318,6 +319,7 @@ app.whenReady().then(() => {
   setupThemePackStore()
   setupPipetteSettingsStore()
   setupLanguageStore()
+  setupAozoraIpc()
   setupAppConfigIpc()
   setupSyncIpc()
   setupHubIpc()

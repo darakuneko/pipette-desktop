@@ -41,6 +41,21 @@ export const TYPING_TEST_PROVIDER_DEFAULTS: readonly TypingTestProviderDefault[]
     bundledLanguages: [],
     languages: [],
   },
+  // Aozora is a Hub-only catalog provider (see typing-test-datasets.ts on the
+  // Hub side): each language entry is a whole downloadable work rather than a
+  // sampled word/sentence pack, so `model: 'catalog'` is baked into the
+  // placeholder itself — resolveProvider() must never fall through to the
+  // pack-shaped monkeytype default for this provider. Otherwise mirrors the
+  // tatoeba placeholder: nothing ships with the app, everything comes from
+  // the Hub override at runtime.
+  {
+    provider: 'aozora',
+    version: '',
+    downloadUrlBase: '',
+    model: 'catalog',
+    bundledLanguages: [],
+    languages: [],
+  },
 ]
 
 export function getProviderDefault(provider: string): TypingTestProviderDefault | undefined {

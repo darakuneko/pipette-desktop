@@ -80,4 +80,71 @@ describe('fetchTypingDataset', () => {
     mockNet.fetch.mockResolvedValue(okJson({ ...validDataset, provider: 'evil' }))
     expect(await fetchTypingDataset('monkeytype')).toBeNull()
   })
+
+  const catalogDataset = {
+    provider: 'aozora',
+    version: 'aozora-abc123def456',
+    downloadUrlBase: 'https://example.test/cards',
+    model: 'catalog',
+    languages: [
+      {
+        name: '001257/files/59898_ruby_70679.zip',
+        title: 'ウェストミンスター寺院',
+        author: 'アーヴィング ワシントン（訳: 吉田 甲子太郎）',
+        wordCount: 9666,
+        rightToLeft: false,
+        fileSize: 12553,
+      },
+    ],
+  }
+
+  it('passes through a catalog dataset with model + title/author entries', async () => {
+    mockNet.fetch.mockResolvedValue(okJson(catalogDataset))
+    expect(await fetchTypingDataset('aozora')).toEqual(catalogDataset)
+  })
+
+  it('accepts a dataset payload with no model field (defaults to pack)', async () => {
+    mockNet.fetch.mockResolvedValue(okJson(validDataset))
+    const result = await fetchTypingDataset('monkeytype')
+    expect(result).not.toBeNull()
+    expect(result?.model).toBeUndefined()
+  })
+
+  it('rejects a dataset payload with an invalid model value', async () => {
+    mockNet.fetch.mockResolvedValue(okJson({ ...catalogDataset, model: 'bogus' }))
+    expect(await fetchTypingDataset('aozora')).toBeNull()
+  })
+
+  it('rejects a language entry with a non-string title', async () => {
+    mockNet.fetch.mockResolvedValue(okJson({
+      ...catalogDataset,
+      languages: [{ ...catalogDataset.languages[0], title: 123 }],
+    }))
+    expect(await fetchTypingDataset('aozora')).toBeNull()
+  })
+
+  it('rejects a language entry with a non-string author', async () => {
+    mockNet.fetch.mockResolvedValue(okJson({
+      ...catalogDataset,
+      languages: [{ ...catalogDataset.languages[0], author: 123 }],
+    }))
+    expect(await fetchTypingDataset('aozora')).toBeNull()
+  })
+
+  it('passes through a language entry carrying authorKana', async () => {
+    const withKana = {
+      ...catalogDataset,
+      languages: [{ ...catalogDataset.languages[0], authorKana: 'アーヴィング ワシントン' }],
+    }
+    mockNet.fetch.mockResolvedValue(okJson(withKana))
+    expect(await fetchTypingDataset('aozora')).toEqual(withKana)
+  })
+
+  it('rejects a language entry with a non-string authorKana', async () => {
+    mockNet.fetch.mockResolvedValue(okJson({
+      ...catalogDataset,
+      languages: [{ ...catalogDataset.languages[0], authorKana: 123 }],
+    }))
+    expect(await fetchTypingDataset('aozora')).toBeNull()
+  })
 })
