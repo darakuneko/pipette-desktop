@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 // Tatoeba sentence packs for the typing test. Distributed via the Hub-only
 // 'tatoeba' provider and cached per language, then played through the quote
-// path: a batch of sampled sentences is concatenated into a single quote so
-// the word-flow renderer and char-based counting are reused verbatim.
+// path: a batch of sampled sentences is folded into one quote (for char-based
+// counting and the finished-screen source label) while keeping each
+// sentence's word span, so line breaks can be placed at sentence boundaries.
 
+import { parseFileImportText } from '../../../shared/types/typing-test-text-store'
 import type { Quote } from '../types'
 import { randomInt } from './random'
 
@@ -50,22 +52,29 @@ export function clearTatoebaPackCache(language?: string): void {
   }
 }
 
-/** Sample a batch of sentences and fold them into one quote for the word-flow
- *  path. `source` carries the pack name so the finished screen can label it. */
-export function tatoebaQuote(pack: TatoebaPack): Quote {
-  const text = sampleSentences(pack.words, TATOEBA_SENTENCE_COUNT).join(' ')
-  return { id: 0, text, source: pack.name, length: text.length }
+/** A sampled batch of Tatoeba sentences, tokenized into word-flow units with
+ *  a line break recorded at every sentence boundary (same convention as
+ *  `parseFileImportText`: the index of each sentence's last word, except
+ *  the final sentence). */
+export interface TatoebaRun {
+  words: string[]
+  lineBreaks: number[]
+  quote: Quote
 }
 
-/** Tokenize a Tatoeba quote into word-flow display units. Deliberately NOT
- *  `quoteToWords` — that function whitelist-strips to ASCII, which is correct
- *  for MonkeyType's English quotes but destroys Tatoeba sentences in any
- *  non-ASCII script (Japanese, Cyrillic, accented Latin, etc. — most of the
- *  72 Tatoeba languages). Splits on whitespace only and keeps every
- *  character as-is, mirroring parseFileImportText's script-agnostic
- *  tokenizer. */
-export function tatoebaQuoteToWords(quote: Quote): string[] {
-  return quote.text.split(/\s+/).filter((w) => w.length > 0)
+/** Sample a batch of sentences and build a word-flow run that renders each
+ *  sentence on its own line. Encodes the sentences with `parseFileImportText`
+ *  (one sentence per line) — deliberately NOT `quoteToWords`, whose ASCII
+ *  whitelist would destroy Tatoeba sentences in any non-ASCII script
+ *  (Japanese, Cyrillic, accented Latin, etc. — most of the 72 Tatoeba
+ *  languages). `quote` folds every sampled sentence into one string so the
+ *  finished screen can label the source and char-based progress counting is
+ *  reused verbatim. */
+export function tatoebaRun(pack: TatoebaPack): TatoebaRun {
+  const sentences = sampleSentences(pack.words, TATOEBA_SENTENCE_COUNT)
+  const { words, lineBreaks } = parseFileImportText(sentences.join('\n'))
+  const text = words.join(' ')
+  return { words, lineBreaks, quote: { id: 0, text, source: pack.name, length: text.length } }
 }
 
 /** Pick `count` sentences, avoiding an immediate repeat (mirrors sampleWords). */

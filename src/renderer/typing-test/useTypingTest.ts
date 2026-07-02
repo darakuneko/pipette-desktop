@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaQuote, tatoebaQuoteToWords } from './word-generator'
+import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
 import type { TypingTestConfig, Quote } from './types'
@@ -117,7 +117,8 @@ function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): {
 interface WordsForConfig {
   words: string[]
   quote: Quote | null
-  /** Line-end word indices (fileImport mode only); empty otherwise. */
+  /** Line-end word indices — Enter advances past them; empty for flat
+   *  word-flow sources. */
   lineBreaks: number[]
   /** Per-line leading whitespace (fileImport mode only); empty otherwise. */
   lineIndents: string[]
@@ -136,16 +137,14 @@ function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
   }
 }
 
-/** Build a word-flow config from a sampled Tatoeba quote (empty when the pack
- *  is uncached / not downloaded). Reuses the quote path's rendering and
- *  char-based counting, but tokenizes with `tatoebaQuoteToWords` (NOT
- *  `quoteToWords`) — Tatoeba sentences span 72 languages in arbitrary
- *  scripts, and `quoteToWords`'s ASCII whitelist would strip non-Latin text
- *  down to almost nothing. */
+/** Build a word-flow config from a sampled Tatoeba run (empty when the pack
+ *  is uncached / not downloaded). Reuses the quote path's char-based
+ *  counting and carries the run's per-sentence `lineBreaks` through so each
+ *  sampled sentence renders on its own line, same as imported fileImport
+ *  text. */
 function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
   if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [] }
-  const quote = tatoebaQuote(pack)
-  return { words: tatoebaQuoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
+  return { ...tatoebaRun(pack), lineIndents: [] }
 }
 
 function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
@@ -571,10 +570,9 @@ export function useTypingTest(
       if (s.status !== 'waiting' && s.status !== 'running') return s
 
       // Space and Enter both advance a word, but they are distinct: at a
-      // line-end word (imported fileImport text) Enter is expected, elsewhere
-      // Space. The non-matching key is a no-op. For every non-fileImport mode
-      // `lineBreaks` is empty, so Space always advances and Enter is always
-      // ignored — identical to the previous behaviour.
+      // line-end word Enter is expected, elsewhere Space. The non-matching
+      // key is a no-op. Flat word-flow sources have no `lineBreaks`, so
+      // Space always advances and Enter is always ignored.
       if (isSubmitKey(key) || key === 'Enter') {
         if (s.status === 'waiting') {
           return { ...s, status: 'running', startTime: Date.now() }

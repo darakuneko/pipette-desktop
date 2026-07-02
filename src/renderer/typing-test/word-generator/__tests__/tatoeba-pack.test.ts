@@ -5,8 +5,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   getTatoebaPack,
   getTatoebaPackSync,
-  tatoebaQuote,
-  tatoebaQuoteToWords,
+  tatoebaRun,
   TATOEBA_SENTENCE_COUNT,
 } from '../tatoeba-pack'
 
@@ -52,67 +51,78 @@ describe('getTatoebaPack', () => {
   })
 })
 
-describe('tatoebaQuote', () => {
+describe('tatoebaRun', () => {
   it('folds sampled sentences into one quote labelled by the pack name', () => {
     const words = Array.from({ length: 50 }, (_, i) => `Sentence number ${i}.`)
-    const quote = tatoebaQuote({ name: 'english', words })
+    const run = tatoebaRun({ name: 'english', words })
 
-    expect(quote.source).toBe('english')
-    expect(quote.length).toBe(quote.text.length)
-    expect(quote.text.length).toBeGreaterThan(0)
-    // Every sampled sentence comes from the pack.
-    for (const sentence of quote.text.split('. ').map((s) => (s.endsWith('.') ? s : `${s}.`))) {
-      expect(words).toContain(sentence)
-    }
+    expect(run.quote.source).toBe('english')
+    expect(run.quote.length).toBe(run.quote.text.length)
+    expect(run.quote.text.length).toBeGreaterThan(0)
+    expect(run.quote.text).toBe(run.words.join(' '))
   })
 
   it('uses every sentence when the pack has fewer than the sample size', () => {
     const words = ['Only one.', 'And two.']
-    const quote = tatoebaQuote({ name: 'small', words })
-    expect(quote.text).toBe('Only one. And two.')
+    const run = tatoebaRun({ name: 'small', words })
+    expect(run.quote.text).toBe('Only one. And two.')
+    expect(run.words).toEqual(['Only', 'one.', 'And', 'two.'])
+    // Break after the first sentence's last word (index 1); none after the
+    // final sentence.
+    expect(run.lineBreaks).toEqual([1])
   })
 
-  it('returns an empty quote for an empty pack', () => {
-    const quote = tatoebaQuote({ name: 'empty', words: [] })
-    expect(quote.text).toBe('')
-    expect(quote.length).toBe(0)
+  it('returns an empty run for an empty pack', () => {
+    const run = tatoebaRun({ name: 'empty', words: [] })
+    expect(run.words).toEqual([])
+    expect(run.lineBreaks).toEqual([])
+    expect(run.quote.text).toBe('')
+    expect(run.quote.length).toBe(0)
   })
 
   it('samples exactly the configured number of sentences from a large pack', () => {
     const words = Array.from({ length: 100 }, (_, i) => `s${i}`)
-    const quote = tatoebaQuote({ name: 'big', words })
-    // Joined by single spaces; no sentence here contains a space, so token
-    // count equals the sampled sentence count.
-    expect(quote.text.split(' ')).toHaveLength(TATOEBA_SENTENCE_COUNT)
+    const run = tatoebaRun({ name: 'big', words })
+    // Every sentence here is a single space-free token, so word count
+    // equals the sampled sentence count.
+    expect(run.words).toHaveLength(TATOEBA_SENTENCE_COUNT)
   })
-})
 
-describe('tatoebaQuoteToWords', () => {
+  it('places a line break on every sentence boundary except the final one, across mixed scripts', () => {
+    // Mix of multi-word English sentences and space-free Japanese
+    // sentences (each Japanese sentence collapses to a single "word").
+    const words = ['One two three.', 'いい天気ですね。', 'Four five.', 'すぐに終わりますよ。']
+    const run = tatoebaRun({ name: 'mixed', words })
+
+    expect(run.words).toEqual(['One', 'two', 'three.', 'いい天気ですね。', 'Four', 'five.', 'すぐに終わりますよ。'])
+    // Sentence-last-word indices: 2 (three.), 3 (いい天気ですね。), 5 (five.) —
+    // the final sentence's break is dropped.
+    expect(run.lineBreaks).toEqual([2, 3, 5])
+  })
+
+  it('gives a single-sentence pack no line breaks', () => {
+    const run = tatoebaRun({ name: 'solo', words: ['ab cd'] })
+    expect(run.words).toEqual(['ab', 'cd'])
+    expect(run.lineBreaks).toEqual([])
+  })
+
   it('keeps non-ASCII characters intact — regression for the ASCII-strip bug', () => {
-    // Real sentences from the Tatoeba japanese pack (CC BY 2.0 FR). The old
-    // quoteToWords()-based tokenizer whitelist-stripped everything but ASCII,
-    // collapsing sentences like these down to a single stray digit.
+    // Real sentences from the Tatoeba japanese pack (CC BY 2.0 FR). A
+    // quoteToWords()-based tokenizer would whitelist-strip everything but
+    // ASCII, collapsing sentences like these down to a single stray digit.
     const words = [
       '「0℃！ やばい熱ある」「かわいそうな雪だるまさん」',
       '「いい考えね」と思ったのは３名だけでした。',
     ]
-    const quote = tatoebaQuote({ name: 'japanese', words })
+    const run = tatoebaRun({ name: 'japanese', words })
 
-    const tokens = tatoebaQuoteToWords(quote)
-
-    expect(tokens.join('')).not.toBe('0')
-    expect(tokens.some((t) => t.includes('やばい'))).toBe(true)
-    expect(tokens.some((t) => t.includes('思ったのは３名だけでした。'))).toBe(true)
+    expect(run.words.join('')).not.toBe('0')
+    expect(run.words.some((w) => w.includes('やばい'))).toBe(true)
+    expect(run.words.some((w) => w.includes('思ったのは３名だけでした。'))).toBe(true)
   })
 
   it('splits on whitespace without stripping punctuation/accents', () => {
-    const quote = tatoebaQuote({ name: 'french', words: ["C'est très bien.", 'Où est-il ?'] })
-    const tokens = tatoebaQuoteToWords(quote)
-    expect(tokens).toEqual(["C'est", 'très', 'bien.', 'Où', 'est-il', '?'])
-  })
-
-  it('returns no tokens for an empty quote', () => {
-    const quote = tatoebaQuote({ name: 'empty', words: [] })
-    expect(tatoebaQuoteToWords(quote)).toEqual([])
+    const run = tatoebaRun({ name: 'french', words: ["C'est très bien.", 'Où est-il ?'] })
+    expect(run.words).toEqual(["C'est", 'très', 'bien.', 'Où', 'est-il', '?'])
   })
 })

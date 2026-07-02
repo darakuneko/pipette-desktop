@@ -5,6 +5,6 @@ export { generateWords, generateWordsSync, getLanguageData, getLanguageDataSync,
 export { selectQuote, quoteToWords } from './quote-generator'
 export { getFileImportTextData, getFileImportTextDataSync, clearFileImportTextCache } from './file-import-text'
 export type { FileImportTextData } from './file-import-text'
-export { getTatoebaPack, getTatoebaPackSync, clearTatoebaPackCache, tatoebaQuote, tatoebaQuoteToWords, TATOEBA_SENTENCE_COUNT } from './tatoeba-pack'
+export { getTatoebaPack, getTatoebaPackSync, clearTatoebaPackCache, tatoebaRun, TATOEBA_SENTENCE_COUNT } from './tatoeba-pack'
 export type { TatoebaPack } from './tatoeba-pack'
 export type { LanguageData, GenerateOptions, GeneratedWords } from './types'
