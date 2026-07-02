@@ -27,6 +27,13 @@ export const LEGAL_SECTIONS: LegalSection[] = [
     ],
   },
   {
+    title: 'Typing Test Text Sources',
+    paragraphs: [
+      'Tatoeba-based Typing Test sentence packs are curated from the Tatoeba Project (https://tatoeba.org) and its contributors. Most language packs are licensed under CC BY 2.0 FR (https://creativecommons.org/licenses/by/2.0/fr/); the English, Bangla, Kabyle, and Russian packs are dedicated to the public domain under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).',
+      'These packs are a curated, modified snapshot of the Tatoeba corpus (filtered, de-duplicated, and length-limited), not the original data.',
+    ],
+  },
+  {
     title: 'Disclaimer',
     paragraphs: [
       'Pipette is provided as-is, without warranty of any kind. Use of the software is at your own risk.',
