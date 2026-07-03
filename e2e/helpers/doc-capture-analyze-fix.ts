@@ -15,7 +15,7 @@ import { _electron as electron } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { dismissNotificationModal, selectSnapshotViaFilterModal } from './doc-capture-common'
+import { dismissNotificationModal, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
   DUMMY_TA_UID,
   restoreTypingAnalytics,
@@ -56,37 +56,17 @@ async function openAnalyzePage(page: Page): Promise<boolean> {
   }
 
   // Keyboard selection lives in the staged filter modal behind the
-  // summary chip (chip -> keyboard select -> Apply). Poll for the option
-  // after opening the modal — the cache rebuild from JSONL masters can
-  // take a few seconds after launch, so a fixed waitFor isn't always
-  // enough. Options inside a <select> don't trigger Playwright's visible
-  // state, so check `count` directly.
-  const filterChip = page.locator('[data-testid="analyze-filter-chip"]')
-  if (!(await isAvailable(filterChip))) {
-    console.log('  [skip] analyze-filter-chip not found')
+  // summary chip (chip -> keyboard select -> Apply). Select the seeded
+  // dummy keyboard explicitly (not "whichever sorts first") — a real,
+  // thin "GPK60-63R" dataset on this machine would otherwise outrank the
+  // seeded "GPK60-63R (docs)" one alphabetically. The helper polls for
+  // the option since the cache rebuild from JSONL masters can take a
+  // few seconds after launch.
+  const selected = await selectKeyboardViaFilterModal(page, DUMMY_TA_UID)
+  if (!selected) {
+    console.log('  [warn] seeded keyboard not selectable in Analyze — abort')
     return false
   }
-  await filterChip.click()
-  await page.waitForTimeout(400)
-
-  const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
-  const deadline = Date.now() + 30_000
-  let firstKbValue: string | null = null
-  while (Date.now() < deadline) {
-    if ((await firstKbOption.count()) > 0) {
-      firstKbValue = await firstKbOption.getAttribute('value')
-      if (firstKbValue) break
-    }
-    await page.waitForTimeout(500)
-  }
-  if (!firstKbValue) {
-    console.log('  [warn] no keyboards listed in Analyze — abort')
-    return false
-  }
-  await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
-  await page.waitForTimeout(300)
-  await page.locator('[data-testid="analyze-filter-modal-apply"]').click()
-  await page.waitForTimeout(800)
   return true
 }
 

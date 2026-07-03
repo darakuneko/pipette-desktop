@@ -6,7 +6,7 @@ import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { dismissNotificationModal, isAvailable, selectSnapshotViaFilterModal } from './doc-capture-common'
+import { dismissNotificationModal, isAvailable, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
   DUMMY_SNAPSHOTS,
   DUMMY_TA_UID,
@@ -453,33 +453,16 @@ async function captureAnalyzePage(page: Page): Promise<void> {
   }
 
   // Keyboard selection lives in the staged filter modal behind the
-  // summary chip (chip -> keyboard select -> Apply). Analyze only lists
-  // keyboards with recorded data — skip cleanly if none.
-  const filterChip = page.locator('[data-testid="analyze-filter-chip"]')
-  if (await isAvailable(filterChip)) {
-    await filterChip.click()
-    await page.waitForTimeout(400)
-    // Options inside a native <select> don't report visible — poll count.
-    const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
-    const firstKbValue = (await firstKbOption.count().catch(() => 0)) > 0
-      ? await firstKbOption.getAttribute('value')
-      : null
-    if (firstKbValue) {
-      await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
-      await page.waitForTimeout(300)
-      await page.locator('[data-testid="analyze-filter-modal-apply"]').click()
-      await page.waitForTimeout(600)
-    } else {
-      console.log('  [warn] no keyboards listed — capturing overview only')
-      const modalClose = page.locator('[data-testid="analyze-filter-modal-close"]')
-      if (await isAvailable(modalClose)) {
-        await modalClose.click()
-        await page.waitForTimeout(300)
-      }
-    }
-  } else {
-    console.log('  [warn] analyze-filter-chip not found — capturing overview only')
+  // summary chip (chip -> keyboard select -> Apply). Every capture below
+  // must land on the seeded dummy keyboard (DUMMY_TA_UID) specifically —
+  // picking "whichever sorts first" can silently select a real, thin
+  // "GPK60-63R" dataset instead of the seeded "GPK60-63R (docs)" one,
+  // since the list is alphabetical and the plain name sorts first.
+  const selected = await selectKeyboardViaFilterModal(page, DUMMY_TA_UID)
+  if (!selected) {
+    console.log('  [warn] seeded keyboard not selectable — capturing overview only')
   }
+  const filterChip = page.locator('[data-testid="analyze-filter-chip"]')
 
   // Summary: default landing tab. Capture the four-card overview, then
   // surface the Goal Achievements modal from the Streak / Goal card.
