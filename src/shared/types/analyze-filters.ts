@@ -153,6 +153,16 @@ export type IntervalUnit = typeof INTERVAL_UNITS[number]
 export const INTERVAL_VIEW_MODES = ['timeSeries', 'distribution'] as const
 export type IntervalViewMode = typeof INTERVAL_VIEW_MODES[number]
 
+/** Distribution mode needs per-scope raw quartiles — the cross-scope
+ * `all` query already aggregates MIN / AVG / MAX over contributing
+ * scopes, so redistributing those meta-aggregates as "four samples per
+ * minute" would muddy the histogram. The chart, the CSV builder, and
+ * the filter modal's disabled rows all force `'own'` through this one
+ * predicate so the three surfaces can't drift. */
+export function distributionForcesOwnDevice(viewMode: IntervalViewMode): boolean {
+  return viewMode === 'distribution'
+}
+
 export const ACTIVITY_METRICS = ['keystrokes', 'wpm', 'sessions'] as const
 export type ActivityMetric = typeof ACTIVITY_METRICS[number]
 

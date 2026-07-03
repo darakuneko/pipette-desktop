@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -1352,7 +1352,12 @@
         "day3": "3日",
         "week1": "1週間",
         "month1": "1ヶ月"
-      }
+      },
+      "sourceLabel": "ソース",
+      "editConditions": "検索条件を編集",
+      "chipAriaLabel": "検索条件を編集",
+      "sourceDisabledByApp": "By App は全ソースを合算するため、この項目は無効です。",
+      "distributionDisabledNote": "分布ビューは常にこのデバイスのデータを使うため、この項目は無効です。"
     }
   },
   "dataModal": {

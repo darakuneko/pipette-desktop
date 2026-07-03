@@ -15,7 +15,7 @@ import { _electron as electron } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { dismissNotificationModal } from './doc-capture-common'
+import { dismissNotificationModal, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
   DUMMY_TA_UID,
   restoreTypingAnalytics,
@@ -55,26 +55,18 @@ async function openAnalyzePage(page: Page): Promise<boolean> {
     return false
   }
 
-  // Poll for the keyboard option — the cache rebuild from JSONL masters
-  // can take a few seconds after launch, so a fixed waitFor isn't always
-  // enough. Options inside a <select> don't trigger Playwright's visible
-  // state, so check `count` directly.
-  const firstKbOption = page.locator('[data-testid^="analyze-kb-"]').first()
-  const deadline = Date.now() + 30_000
-  let firstKbValue: string | null = null
-  while (Date.now() < deadline) {
-    if ((await firstKbOption.count()) > 0) {
-      firstKbValue = await firstKbOption.getAttribute('value')
-      if (firstKbValue) break
-    }
-    await page.waitForTimeout(500)
-  }
-  if (!firstKbValue) {
-    console.log('  [warn] no keyboards listed in Analyze — abort')
+  // Keyboard selection lives in the staged filter modal behind the
+  // summary chip (chip -> keyboard select -> Apply). Select the seeded
+  // dummy keyboard explicitly (not "whichever sorts first") — a real,
+  // thin "GPK60-63R" dataset on this machine would otherwise outrank the
+  // seeded "GPK60-63R (docs)" one alphabetically. The helper polls for
+  // the option since the cache rebuild from JSONL masters can take a
+  // few seconds after launch.
+  const selected = await selectKeyboardViaFilterModal(page, DUMMY_TA_UID)
+  if (!selected) {
+    console.log('  [warn] seeded keyboard not selectable in Analyze — abort')
     return false
   }
-  await page.locator('[data-testid="analyze-filter-keyboard"]').selectOption(firstKbValue)
-  await page.waitForTimeout(800)
   return true
 }
 
@@ -108,26 +100,19 @@ async function captureErgonomicsLearning(page: Page): Promise<void> {
   await viewModeSelect.selectOption('learning')
   await page.waitForTimeout(800)
 
-  // Pivot to the older snapshot so the range expands to cover the
-  // historical matrix-minute rows seeded by analyze-seed.ts. Without
-  // this the chart renders the empty state.
-  const snapshotSelect = page.locator('[data-testid="analyze-snapshot-timeline-select"]')
-  const optionCount = await snapshotSelect.locator('option').count().catch(() => 0)
-  if (optionCount >= 2) {
-    const olderValue = await snapshotSelect.locator('option').nth(1).getAttribute('value')
-    if (olderValue) {
-      await snapshotSelect.selectOption(olderValue)
-      await page.waitForTimeout(1500)
-    }
-  } else {
+  // Pivot to the older snapshot through the staged filter modal (chip ->
+  // Keymap row -> Apply) so the range expands to cover the historical
+  // matrix-minute rows seeded by analyze-seed.ts. Without this the chart
+  // renders the empty state.
+  const pivoted = await selectSnapshotViaFilterModal(page, 1, { settleMs: 1500 })
+  if (!pivoted) {
     console.log('  [warn] only one snapshot present — learning curve may render empty')
   }
 
   await capture(page, 'analyze-ergonomics-learning')
 
-  if (optionCount >= 2) {
-    await snapshotSelect.selectOption({ index: 0 })
-    await page.waitForTimeout(400)
+  if (pivoted) {
+    await selectSnapshotViaFilterModal(page, 0, { settleMs: 400 })
   }
   await viewModeSelect.selectOption('snapshot').catch(() => { /* best effort */ })
 }

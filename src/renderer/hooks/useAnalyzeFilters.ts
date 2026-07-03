@@ -169,6 +169,30 @@ function restoreFilters(saved: AnalyzeFilterSettings | undefined): AnalyzeFilter
   }
 }
 
+/** Partial patch consumed by `applyBatch` / `applyBatchForUid`. Deliberately
+ * a shallow `Partial<AnalyzeFiltersState>` (not deep-partial) — the nested
+ * per-tab filter shapes (`heatmap`, `wpm`, ...) are replaced wholesale when
+ * present, matching how the existing per-tab setters already require a full
+ * `Required<...>` shape internally. The staged filter modal only ever
+ * patches the flat scope/dimension fields (`deviceScopes`, `filterDimension`,
+ * `appScopes`, `typingTestScopes`, `runIdScopes`), so the nested shapes are
+ * expected to stay absent from real callers. */
+export type AnalyzeFiltersBatchPatch = Partial<AnalyzeFiltersState>
+
+/** Run the same normalizers the individual setters apply, but only for the
+ * scope-shaped fields present in `patch`. Keeps `applyBatch` /
+ * `applyBatchForUid` from smuggling a malformed scope array into state or
+ * persistence — the single source of truth for "what counts as a valid
+ * scope tuple" stays the shared normalizer functions. */
+function normalizeBatchPatch(patch: AnalyzeFiltersBatchPatch): AnalyzeFiltersBatchPatch {
+  const next: AnalyzeFiltersBatchPatch = { ...patch }
+  if (patch.deviceScopes !== undefined) next.deviceScopes = normalizeDeviceScopes(patch.deviceScopes)
+  if (patch.appScopes !== undefined) next.appScopes = normalizeAppScopes(patch.appScopes)
+  if (patch.typingTestScopes !== undefined) next.typingTestScopes = normalizeAppScopes(patch.typingTestScopes)
+  if (patch.runIdScopes !== undefined) next.runIdScopes = normalizeAppScopes(patch.runIdScopes)
+  return next
+}
+
 function serializeFilters(state: AnalyzeFiltersState): AnalyzeFilterSettings {
   return {
     deviceScopes: state.deviceScopes,
@@ -214,6 +238,58 @@ export interface UseAnalyzeFiltersReturn {
   setErgonomics: (patch: Partial<ErgonomicsFilters>) => void
   setBigrams: (patch: Partial<BigramFilters>) => void
   setLayoutComparison: (patch: Partial<LayoutComparisonFilters>) => void
+  /** Apply several fields at once through a single state transition and a
+   * single debounced save — for the staged filter modal's Apply action when
+   * the keyboard (uid) is NOT changing. Prefer this over calling multiple
+   * individual setters back-to-back: each setter is its own `update()` call,
+   * so N setters would still coalesce into one save (the debounce timer
+   * absorbs that), but would also cause N re-renders of every filter
+   * consumer before the timer fires. `applyBatch` merges the whole patch in
+   * one `setState` call so consumers only re-render once.
+   *
+   * For an Apply that also switches keyboards, use `applyBatchForUid`
+   * instead — calling `applyBatch` then `onSelectUid` would target the
+   * write at the *old* uid and then get silently discarded by the uid-change
+   * reload. */
+  applyBatch: (patch: AnalyzeFiltersBatchPatch) => void
+  /** Register a patch to apply to `forUid` the moment this hook's `uid` prop
+   * actually becomes `forUid`. Call this immediately before the parent's
+   * `onSelectUid(forUid)` (same tick) — e.g.:
+   * ```
+   * applyBatchForUid(nextUid, patch)
+   * onSelectUid(nextUid)
+   * ```
+   *
+   * Why this exists: a plain uid switch triggers the hook's uid-change
+   * effect, which asynchronously loads `forUid`'s *persisted* filters and
+   * overwrites state once the load resolves. If the modal had already
+   * written `patch` (e.g. via `applyBatch`) before switching, that write
+   * targets the keyboard being left, and the incoming load for `forUid`
+   * would then clobber the just-applied values with whatever was last
+   * saved for `forUid` — the two writers race and the modal's Apply loses.
+   *
+   * The uid-change effect performs the persisted load for `forUid` as
+   * normal, then merges the registered patch ON TOP of the loaded filters
+   * in the same resolution (patch wins only for the fields it contains).
+   * Fields the patch doesn't touch (tab-specific view settings like
+   * `heatmap` / `wpm` / ...) therefore keep the DESTINATION keyboard's
+   * persisted values — the patch must never clobber settings the user
+   * saved on the keyboard being switched to. The race the mechanism
+   * exists for stays solved because the merge happens atop the load
+   * inside the same effect: the load result can never land *after* the
+   * patch and overwrite it. The merged result is then scheduled for save
+   * exactly like a normal edit, so it persists to `forUid`'s file.
+   *
+   * A registration is single-shot and keyed to `forUid`: if the uid that
+   * actually lands doesn't match (the caller changed its mind, or never
+   * followed up with `onSelectUid`), the pending entry is discarded on the
+   * next uid change rather than silently applying to the wrong keyboard.
+   *
+   * Calling this with the *current* uid delegates straight to `applyBatch`
+   * (there is no uid-change effect coming to consume a registration), so
+   * the API is a strict superset of `applyBatch` and safe to call without
+   * knowing whether the uid is actually changing. */
+  applyBatchForUid: (forUid: string, patch: AnalyzeFiltersBatchPatch) => void
 }
 
 /** Drive the Analyze filter state for a single keyboard uid.
@@ -253,6 +329,9 @@ export function useAnalyzeFilters(
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingUidRef = useRef<string | null>(null)
   const pendingFiltersRef = useRef<AnalyzeFiltersState | null>(null)
+  // Single-shot registration consumed by the uid-change effect — see
+  // `applyBatchForUid`'s doc comment on `UseAnalyzeFiltersReturn`.
+  const pendingUidApplyRef = useRef<{ uid: string; patch: AnalyzeFiltersBatchPatch } | null>(null)
   const field = fieldForPane(paneKey)
 
   const flushPending = useCallback(() => {
@@ -280,43 +359,6 @@ export function useAnalyzeFilters(
     })()
   }, [field])
 
-  // Load on uid change (and flush the previous uid's pending write).
-  useEffect(() => {
-    const prevUid = uidRef.current
-    if (prevUid && prevUid !== uid) {
-      flushPending()
-    }
-    uidRef.current = uid
-
-    if (uid === null) {
-      setFilters(DEFAULT_ANALYZE_FILTERS)
-      setReady(true)
-      return
-    }
-
-    const seq = ++applySeqRef.current
-    setReady(false)
-    void window.vialAPI
-      .pipetteSettingsGet(uid)
-      .then((prefs) => {
-        if (applySeqRef.current !== seq) return
-        setFilters(restoreFilters(prefs?.analyze?.[field]))
-        setReady(true)
-      })
-      .catch(() => {
-        if (applySeqRef.current !== seq) return
-        setFilters(DEFAULT_ANALYZE_FILTERS)
-        setReady(true)
-      })
-  }, [uid, flushPending, field])
-
-  // Flush once more on unmount for the final in-flight edit.
-  useEffect(() => {
-    return () => {
-      flushPending()
-    }
-  }, [flushPending])
-
   const scheduleSave = useCallback((next: AnalyzeFiltersState) => {
     const currentUid = uidRef.current
     if (!currentUid) return
@@ -326,6 +368,68 @@ export function useAnalyzeFilters(
     timerRef.current = setTimeout(() => {
       flushPending()
     }, DEBOUNCE_MS)
+  }, [flushPending])
+
+  // Load on uid change (and flush the previous uid's pending write).
+  useEffect(() => {
+    const prevUid = uidRef.current
+    if (prevUid && prevUid !== uid) {
+      flushPending()
+    }
+    uidRef.current = uid
+
+    if (uid === null) {
+      pendingUidApplyRef.current = null
+      setFilters(DEFAULT_ANALYZE_FILTERS)
+      setReady(true)
+      return
+    }
+
+    // `applyBatchForUid` registered a patch for exactly this uid: run the
+    // persisted load as normal, then merge the patch ON TOP of the loaded
+    // filters in the same resolution (patch wins only for the fields it
+    // contains) so the DESTINATION keyboard's saved per-tab settings
+    // survive the switch. Merging atop the load — instead of skipping the
+    // load — still solves the writer race this mechanism exists for: the
+    // load result can never land after the patch and clobber it, because
+    // the two are applied in one `setFilters` call. Discard a registration
+    // that targets a *different* uid — it's stale (the caller never
+    // followed through with a matching `onSelectUid`) and must not leak
+    // onto whichever keyboard happens to load next.
+    const pendingApply = pendingUidApplyRef.current
+    pendingUidApplyRef.current = null
+    const pendingPatch = pendingApply && pendingApply.uid === uid ? pendingApply.patch : null
+
+    const applyLoaded = (loaded: AnalyzeFiltersState): void => {
+      if (pendingPatch) {
+        const merged: AnalyzeFiltersState = { ...loaded, ...pendingPatch }
+        setFilters(merged)
+        scheduleSave(merged)
+      } else {
+        setFilters(loaded)
+      }
+      setReady(true)
+    }
+
+    const seq = ++applySeqRef.current
+    setReady(false)
+    void window.vialAPI
+      .pipetteSettingsGet(uid)
+      .then((prefs) => {
+        if (applySeqRef.current !== seq) return
+        applyLoaded(restoreFilters(prefs?.analyze?.[field]))
+      })
+      .catch(() => {
+        if (applySeqRef.current !== seq) return
+        applyLoaded(DEFAULT_ANALYZE_FILTERS)
+      })
+  }, [uid, flushPending, field, scheduleSave])
+
+  // Flush once more on unmount for the final in-flight edit.
+  useEffect(() => {
+    return () => {
+      flushPending()
+    }
   }, [flushPending])
 
   const update = useCallback((updater: (prev: AnalyzeFiltersState) => AnalyzeFiltersState) => {
@@ -417,6 +521,27 @@ export function useAnalyzeFilters(
     update((prev) => ({ ...prev, layoutComparison: { ...prev.layoutComparison, ...patch } }))
   }, [update])
 
+  // See the doc comment on `UseAnalyzeFiltersReturn.applyBatch`.
+  const applyBatch = useCallback((patch: AnalyzeFiltersBatchPatch) => {
+    const normalized = normalizeBatchPatch(patch)
+    update((prev) => ({ ...prev, ...normalized }))
+  }, [update])
+
+  // See the doc comment on `UseAnalyzeFiltersReturn.applyBatchForUid`. The
+  // actual apply happens inside the uid-change effect above; this just
+  // stages the patch for it to pick up. When `forUid` is already the
+  // current uid there is no uid-change effect coming to consume the
+  // registration, so delegate to the immediate `applyBatch` path — the
+  // API is a strict superset of `applyBatch` and calling it without a
+  // following `onSelectUid` is harmless rather than a silent no-op.
+  const applyBatchForUid = useCallback((forUid: string, patch: AnalyzeFiltersBatchPatch) => {
+    if (forUid === uidRef.current) {
+      applyBatch(patch)
+      return
+    }
+    pendingUidApplyRef.current = { uid: forUid, patch: normalizeBatchPatch(patch) }
+  }, [applyBatch])
+
   // Zero the inactive dimension so charts only ever query the dimension
   // the user is driving (the toggle's stored `filterDimension`). State
   // keeps both raw selections for the toggle. The By App tab groups across
@@ -465,5 +590,7 @@ export function useAnalyzeFilters(
     setErgonomics,
     setBigrams,
     setLayoutComparison,
+    applyBatch,
+    applyBatchForUid,
   }
 }

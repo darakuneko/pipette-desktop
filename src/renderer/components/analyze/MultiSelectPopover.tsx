@@ -75,11 +75,12 @@ export function MultiSelectPopover({ options, value, onChange, i18nPrefix, ariaL
       <button
         ref={triggerRef}
         type="button"
-        className={`${FILTER_SELECT} text-left`}
+        className={`${FILTER_SELECT} max-w-filter-trigger truncate text-left`}
         onClick={() => setOpen((prev) => !prev)}
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
+        title={buttonLabel}
         data-testid={testId}
       >
         {buttonLabel}
@@ -88,7 +89,14 @@ export function MultiSelectPopover({ options, value, onChange, i18nPrefix, ariaL
         anchorRef={triggerRef}
         open={open}
         onClose={handleClose}
-        className="z-20 max-h-72 min-w-dropdown overflow-y-auto rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
+        // The trigger sits at the right side of the filter rows, so align
+        // the panel's right edge to it and let it grow leftward — a fixed
+        // max width plus wrapping labels keeps it inside the viewport.
+        align="right"
+        // z-60 (see --z-60): the panel portals to document.body, so inside
+        // the z-50 filter modal it must sit above the modal overlay — same
+        // tier as the AnalyzeExportModal dropdown overlay.
+        className="z-60 max-h-72 min-w-dropdown max-w-dropdown overflow-y-auto rounded-md border border-edge bg-surface p-1 text-xs shadow-lg"
         role="listbox"
         aria-multiselectable
       >
@@ -110,7 +118,7 @@ export function MultiSelectPopover({ options, value, onChange, i18nPrefix, ariaL
           return (
             <label
               key={o.value}
-              className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
+              className="flex w-full cursor-pointer items-start gap-2 rounded px-2 py-1 text-content transition-colors hover:bg-surface-dim"
               data-testid={`${testId}-option-${o.value}`}
             >
               <input
@@ -119,7 +127,9 @@ export function MultiSelectPopover({ options, value, onChange, i18nPrefix, ariaL
                 checked={checked}
                 onChange={() => toggle(o.value)}
               />
-              <span className="flex-1 truncate">{o.label}</span>
+              {/* Long labels wrap inside the fixed-width panel (no ellipsis —
+                  the full name must stay readable when picking a test). */}
+              <span className="min-w-0 flex-1 break-words">{o.label}</span>
             </label>
           )
         })}

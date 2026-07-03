@@ -136,7 +136,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
       <div className="flex flex-1 min-h-0 min-w-0 gap-4">
         <AnalyzePane
           paneKey="A"
-          splitMode={splitVisible}
           keyboards={keyboards}
           loading={loading}
           selectedUid={selectedUidA}
@@ -146,7 +145,6 @@ export function TypingAnalyticsView({ initialUid, onBack }: TypingAnalyticsViewP
         {splitVisible && (
           <AnalyzePane
             paneKey="B"
-            splitMode
             keyboards={keyboards}
             loading={loading}
             selectedUid={selectedUidB}

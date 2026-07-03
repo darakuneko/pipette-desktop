@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PeakRecords, TypingMinuteStatsRow } from '../../../shared/types/typing-analytics'
-import { isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
+import { distributionForcesOwnDevice, isHashScope, isOwnScope, primaryDeviceScope, scopeToSelectValue } from '../../../shared/types/analyze-filters'
 import type { DeviceScope, GranularityChoice, IntervalUnit, IntervalViewMode, RangeMs } from './analyze-types'
 import { bucketMinuteStats, pickBucketMs } from './analyze-bucket'
 import { listMinuteStatsForScope } from './analyze-fetch'
@@ -100,14 +100,10 @@ export function IntervalChart({ uid, range, deviceScopes, appScopes, typingTestS
 
   const deviceScope = primaryDeviceScope(deviceScopes)
 
-  // Distribution mode needs per-scope raw quartiles — the cross-scope
-  // `all` query already aggregates MIN / AVG / MAX over contributing
-  // scopes, so redistributing those meta-aggregates as "four samples
-  // per minute" would muddy the histogram. Force `own` for distribution
-  // regardless of the outer scope (including per-hash selections) and
-  // hide the device filter at the parent when the user picks
-  // Distribution.
-  const effectiveDeviceScope: DeviceScope = viewMode === 'distribution' ? 'own' : deviceScope
+  // See `distributionForcesOwnDevice` — Distribution forces `own`
+  // regardless of the outer scope (including per-hash selections); the
+  // filter modal disables the Device row when this rule is active.
+  const effectiveDeviceScope: DeviceScope = distributionForcesOwnDevice(viewMode) ? 'own' : deviceScope
   const scopeKey = scopeToSelectValue(effectiveDeviceScope)
 
   useEffect(() => {

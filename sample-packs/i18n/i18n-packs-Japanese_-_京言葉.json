@@ -1,5 +1,5 @@
 {
-  "version": "0.1.5",
+  "version": "0.1.6",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -1342,7 +1342,12 @@
         "day3": "3日",
         "week1": "1週間",
         "month1": "1ヶ月"
-      }
+      },
+      "sourceLabel": "ソース",
+      "editConditions": "検索条件を編集しますえ",
+      "chipAriaLabel": "検索条件を編集しますえ",
+      "sourceDisabledByApp": "By App は全ソースを合算しますよって、この項目は使えまへんえ。",
+      "distributionDisabledNote": "分布ビューはいつもこのデバイスのデータを使いますよって、この項目は使えまへんえ。"
     }
   },
   "dataModal": {

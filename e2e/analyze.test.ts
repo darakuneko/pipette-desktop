@@ -53,9 +53,13 @@ test.beforeAll(async () => {
   const analyzePage = page.locator('[data-testid="analyze-page"]')
   await expect(analyzePage).toBeVisible({ timeout: 10_000 })
 
+  // Keyboard selection lives in the staged filter modal behind the
+  // summary chip (Plan-analyze-filter-modal): chip -> select -> Apply.
+  await openFilterModal()
   const kbSelect = page.locator('[data-testid="analyze-filter-keyboard"]')
   await expect(kbSelect).toBeVisible({ timeout: 15_000 })
   await kbSelect.selectOption(DUMMY_TA_UID)
+  await applyFilterModal()
 })
 
 test.afterAll(async () => {
@@ -70,15 +74,38 @@ async function switchTab(tabKey: string): Promise<void> {
   await tab.click()
 }
 
+// The common filters (Keyboard / Device / Source / Keymap / Period) moved
+// into a staged modal opened from the filter summary chip; interactions
+// go chip -> control -> Apply (or Close to discard).
+async function openFilterModal(): Promise<void> {
+  await expect(page.locator('[data-testid="analyze-filter-chip"]')).toBeVisible({ timeout: 15_000 })
+  await page.locator('[data-testid="analyze-filter-chip"]').click()
+  await expect(page.locator('[data-testid="analyze-filter-modal"]')).toBeVisible({ timeout: 10_000 })
+}
+
+async function applyFilterModal(): Promise<void> {
+  await page.locator('[data-testid="analyze-filter-modal-apply"]').click()
+  await expect(page.locator('[data-testid="analyze-filter-modal"]')).toBeHidden()
+}
+
+async function closeFilterModal(): Promise<void> {
+  await page.locator('[data-testid="analyze-filter-modal-close"]').click()
+  await expect(page.locator('[data-testid="analyze-filter-modal"]')).toBeHidden()
+}
+
 test.describe('Analyze keyboard list', () => {
   test('the keyboard select lists the seeded keyboard', async () => {
+    await openFilterModal()
     const option = page.locator(`[data-testid="analyze-kb-${DUMMY_TA_UID}"]`)
     await expect(option).toBeAttached()
+    await closeFilterModal()
   })
 
-  test('common filters (Period / Device) are rendered', async () => {
+  test('common filters (Period / Device) are rendered in the modal', async () => {
+    await openFilterModal()
     await expect(page.locator('[data-testid="analyze-filter-range"]')).toBeVisible()
     await expect(page.locator('[data-testid="analyze-filter-device"]')).toBeVisible()
+    await closeFilterModal()
   })
 })
 
@@ -127,13 +154,18 @@ test.describe('Interval tab', () => {
     await expect(page.locator('[data-testid="analyze-interval-empty"]')).toHaveCount(0)
   })
 
-  test('switching to distribution hides the device filter', async () => {
+  test('switching to distribution disables the Device row in the filter modal', async () => {
     await switchTab('interval')
-    await expect(page.locator('[data-testid="analyze-filter-device"]')).toBeVisible()
     const viewMode = page.locator('[data-testid="analyze-filter-interval-view-mode"]')
     await viewMode.selectOption('distribution')
     await expect(page.locator('[data-testid="analyze-interval-distribution"]')).toBeVisible({ timeout: 10_000 })
+    await openFilterModal()
+    await expect(page.locator('[data-testid="analyze-filter-device-disabled-note"]')).toBeVisible()
     await expect(page.locator('[data-testid="analyze-filter-device"]')).toBeHidden()
+    // Distribution only forces the device scope — Source stays editable.
+    await expect(page.locator('[data-testid="analyze-filter-dimension"]')).toBeVisible()
+    await closeFilterModal()
+    await viewMode.selectOption('timeSeries')
   })
 })
 
