@@ -1636,9 +1636,17 @@ async function main(): Promise<void> {
   // and the already-deleted sync_state.json together.
   console.log('Launching Electron app (virtual device) to resolve userData...')
   const primerApp = await launchCaptureApp()
-  const userDataPath = await primerApp.evaluate(async ({ app: a }) => a.getPath('userData'))
+  let userDataPath: string
+  try {
+    userDataPath = await primerApp.evaluate(async ({ app: a }) => a.getPath('userData'))
+  } finally {
+    // Fail closed: a primer that refuses to die could still run its
+    // fire-and-forget analytics rebuild and recreate sync_state.json AFTER
+    // the seeding below deletes it, silently reintroducing the boot race
+    // this primer exists to prevent. Aborting is safer than continuing.
+    await primerApp.close()
+  }
   console.log(`userData: ${userDataPath}`)
-  await primerApp.close().catch((err: unknown) => console.error('  [primer] close failed:', err))
 
   const favBase = join(userDataPath, 'sync', 'favorites')
 
