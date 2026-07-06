@@ -110,14 +110,19 @@ async function waitForUnlockDialog(app: ElectronApplication, page: Page): Promis
     })
     await unlockHeading.waitFor({ state: 'detached', timeout: 15_000 })
     console.log('  Keyboard unlocked!')
-    await app.evaluate(() => {
-      const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
-      controller.releaseAll()
-    })
-    await page.waitForTimeout(500)
   } catch {
     console.log('  [warn] Unlock timed out')
+  } finally {
+    // Always release the combo — a timeout above would otherwise leave the
+    // virtual keys held down for the rest of the capture session.
+    await app
+      .evaluate(() => {
+        const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+        controller.releaseAll()
+      })
+      .catch(() => { /* app may be gone */ })
   }
+  await page.waitForTimeout(500)
 }
 
 async function ensureOverlayOpen(page: Page): Promise<boolean> {
@@ -1023,15 +1028,17 @@ async function captureSidebarTools(app: ElectronApplication, page: Page): Promis
     await typingTestBtn.click()
     await waitForUnlockDialog(app, page)
     // The test starts in a 3s "countdown" state that renders a Loading...
-    // placeholder instead of the word list. Wait for that state to end
-    // (element detaches) so the screenshot shows the actual words. If the
-    // countdown already finished (or never rendered) this resolves at once.
-    await page
-      .locator('[data-testid="typing-test-countdown"]')
-      .waitFor({ state: 'detached', timeout: 10000 })
-      .catch(() => {
-        console.log('  [warn] typing-test countdown did not end within 10s')
-      })
+    // placeholder instead of the word list. Waiting for 'detached' alone
+    // races: it resolves immediately while the countdown has not mounted
+    // yet. So first wait for it to appear (tolerating that it may already
+    // be gone), then wait for it to detach so the screenshot shows words.
+    const countdown = page.locator('[data-testid="typing-test-countdown"]')
+    await countdown.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {
+      /* countdown already over, or view skipped it */
+    })
+    await countdown.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {
+      console.log('  [warn] typing-test countdown did not end within 10s')
+    })
     await page.waitForTimeout(500)
     await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
@@ -1628,23 +1635,33 @@ async function main(): Promise<void> {
   const favBase = join(userDataPath, 'sync', 'favorites')
   console.log(`userData: ${userDataPath}`)
 
-  // Move aside keyboard dirs this session does not own, then seed dummy data
-  const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
-  const favBackups = seedDummyFavorites(favBase)
+  // Move aside keyboard dirs this session does not own. From this point on
+  // the try/finally below owns putting them back: every seed/capture step —
+  // including the seeding itself — runs inside the try, and each cleanup
+  // step in the finally is guarded independently so no single failure can
+  // strand user data in the backup dir.
   const kbBase = join(userDataPath, 'sync', 'keyboards')
-  const snapBackups = seedDummySnapshots(kbBase)
-  const taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
-  const filterStoreBackups = seedDummyFilterStore(kbBase)
-  console.log(
-    `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
-  )
+  const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
 
-  const page = await app.firstWindow()
-  await page.waitForLoadState('domcontentloaded')
-  await page.setViewportSize({ width: 1320, height: 960 })
-  await page.waitForTimeout(3000)
+  let favBackups: Map<string, string | null> | null = null
+  let snapBackups: Map<string, string | null> | null = null
+  let taBackup: Awaited<ReturnType<typeof seedDummyTypingAnalytics>> | null = null
+  let filterStoreBackups: Map<string, string | null> | null = null
 
   try {
+    favBackups = seedDummyFavorites(favBase)
+    snapBackups = seedDummySnapshots(kbBase)
+    taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
+    filterStoreBackups = seedDummyFilterStore(kbBase)
+    console.log(
+      `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
+    )
+
+    const page = await app.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+    await page.setViewportSize({ width: 1320, height: 960 })
+    await page.waitForTimeout(3000)
+
     // First post-launch call: wait a bit for the async startup-notification
     // fetch to land so we don't race past it and capture a later screen with
     // the modal still up.
@@ -1680,16 +1697,24 @@ async function main(): Promise<void> {
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
-    await app.close()
-    restoreFavorites(favBackups, favBase)
-    restoreSnapshots(snapBackups)
-    restoreTypingAnalytics(taBackup)
-    restoreFilterStore(filterStoreBackups)
-    // Last (mirror of isolating first): the foreign dirs are disjoint from
-    // every seeded path above, and the cache/sync_state deletion inside
-    // restoreTypingAnalytics only forces a rebuild on next boot — moving the
-    // dirs back around it is safe in either order.
-    restoreForeignKeyboardDirs(foreignKbIsolation)
+    // Each cleanup step is guarded on its own: a failure is logged but never
+    // prevents the remaining steps from running.
+    const cleanup = (label: string, fn: () => void): void => {
+      try {
+        fn()
+      } catch (err) {
+        console.error(`  [cleanup] ${label} failed:`, err)
+      }
+    }
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    // User data first: foreign dirs are disjoint from every seeded path, and
+    // the cache/sync_state deletion inside restoreTypingAnalytics only forces
+    // a rebuild on next boot — order relative to it is safe.
+    cleanup('restore foreign keyboard dirs', () => restoreForeignKeyboardDirs(foreignKbIsolation))
+    cleanup('restore favorites', () => { if (favBackups) restoreFavorites(favBackups, favBase) })
+    cleanup('restore snapshots', () => { if (snapBackups) restoreSnapshots(snapBackups) })
+    cleanup('restore typing analytics', () => { if (taBackup) restoreTypingAnalytics(taBackup) })
+    cleanup('restore filter store', () => { if (filterStoreBackups) restoreFilterStore(filterStoreBackups) })
   }
 }
 
