@@ -89,6 +89,19 @@ describe('getVirtualDeviceController', () => {
     controller.releaseAll()
   })
 
+  it('setUnlockCounterMax clamps a countdown already in progress', async () => {
+    await openVirtualDevice()
+    const controller = getVirtualDeviceController()
+    controller.reset()
+
+    // unlock start (0xFE 0x06) arms the countdown at the default max of 50
+    handleVirtualReport([0xfe, 0x06])
+    expect(controller.getState().unlockCounter).toBe(50)
+
+    controller.setUnlockCounterMax(3)
+    expect(controller.getState().unlockCounter).toBe(3)
+  })
+
   it('reset() restores factory defaults (relocked, empty matrix)', async () => {
     await openVirtualDevice()
     const controller = getVirtualDeviceController()

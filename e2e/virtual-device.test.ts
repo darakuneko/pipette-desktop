@@ -60,6 +60,14 @@ test('enabling the matrix tester while locked prompts the unlock dialog, which c
   const toolsTab = page.locator('[data-testid="overlay-tab-tools"]')
   await toolsTab.click()
 
+  // Shorten the unlock countdown BEFORE the dialog's unlockStart() fires, so
+  // the sequence completes in a few 200ms polls instead of the firmware's
+  // default 50 (~10s of continuous holding).
+  await app.evaluate(() => {
+    const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+    controller.setUnlockCounterMax(3)
+  })
+
   const matrixToggle = page.locator('[data-testid="overlay-matrix-toggle"]')
   await matrixToggle.click()
 
@@ -68,11 +76,15 @@ test('enabling the matrix tester while locked prompts the unlock dialog, which c
 
   await app.evaluate(() => {
     const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
-    controller.setUnlockCounterMax(3)
     controller.holdKeys([[0, 0], [0, 1]])
   })
 
   await expect(unlockDialog).not.toBeVisible({ timeout: UNLOCK_TIMEOUT_MS })
+
+  await app.evaluate(() => {
+    const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+    controller.releaseAll()
+  })
 })
 
 test('pressing a key through the controller reflects in the matrix tester UI', async () => {
@@ -81,7 +93,7 @@ test('pressing a key through the controller reflects in the matrix tester UI', a
     controller.pressKey(2, 3)
   })
 
-  const pressedKey = page.locator('[data-testid="keyboard-key"][data-pos="2,3"]')
+  const pressedKey = page.locator('[data-key-pos="2,3"]').first()
   await expect(pressedKey).toHaveAttribute('data-pressed', 'true', { timeout: 5_000 })
 
   await app.evaluate(() => {

@@ -123,7 +123,11 @@ export function getVirtualDeviceController(): VirtualDeviceController {
       for (const [row, col] of pairs) pressKey(s, row, col)
     },
     setUnlockCounterMax(n) {
-      ensureState().unlockCounterMax = n
+      const s = ensureState()
+      s.unlockCounterMax = n
+      // Clamp a countdown already in progress so tests shortening the
+      // sequence take effect immediately instead of after a combo release.
+      if (s.unlockCounter > n) s.unlockCounter = n
     },
     getState() {
       const s = ensureState()
