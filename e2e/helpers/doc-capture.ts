@@ -4,7 +4,7 @@
 // Usage: pnpm build && pnpm doc:screenshots
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { dismissNotificationModal, isAvailable, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
@@ -262,6 +262,11 @@ const DUMMY_FAVORITES: Record<string, { type: string; entries: { id: string; lab
       { id: 'doc-mc-2', label: 'Git Commit', filename: 'doc-mc-2.json', savedAt: '2026-02-22T16:00:00.000Z' },
     ],
   },
+  // Seeded empty so favorites saved locally on the capture machine cannot
+  // leak into the combo / key-override / alt-repeat detail screenshots.
+  combo: { type: 'combo', entries: [] },
+  keyOverride: { type: 'keyOverride', entries: [] },
+  altRepeatKey: { type: 'altRepeatKey', entries: [] },
 }
 
 // Playwright's electron.launch() uses a different userData path than the installed app.
@@ -298,6 +303,61 @@ function restoreFavorites(backups: Map<string, string | null>, favBase: string):
       try { unlinkSync(fp) } catch { /* ignore */ }
     }
   }
+}
+
+// --- Foreign keyboard-dir isolation (File tab reproducibility) ---
+
+// The virtual device's uid as the app stores it on disk: u64 LE hex of
+// VIRTUAL_DEVICE_UID_BYTES ("VIRTGPK\0") — see src/main/virtual-device/gpk60-63r.ts
+// and readLE64Hex in src/preload/protocol.ts.
+const VIRTUAL_DEVICE_UID = '0x004b504754524956'
+
+interface ForeignKeyboardIsolation {
+  backupBase: string
+  moves: Array<{ from: string; to: string }>
+}
+
+// Any sync/keyboards/{uid} directory this capture session does not own is
+// leftover local user data (e.g. saves from a real keyboard once plugged into
+// the workstation). The File tab lists every keyboard with saved files that
+// is not currently connected, so such dirs would leak machine-specific
+// entries into file-tab.png. Move them aside for the session; moved back in
+// the cleanup path (also on failure — it runs in main()'s finally).
+function isolateForeignKeyboardDirs(userDataPath: string): ForeignKeyboardIsolation {
+  const kbBase = join(userDataPath, 'sync', 'keyboards')
+  const backupBase = join(userDataPath, `doc-capture-kb-backup-${process.pid}`)
+  const isolation: ForeignKeyboardIsolation = { backupBase, moves: [] }
+  if (!existsSync(kbBase)) return isolation
+
+  const allowed = new Set<string>([
+    ...DUMMY_SNAPSHOTS.map((kb) => kb.uid),
+    DUMMY_TA_UID,
+    VIRTUAL_DEVICE_UID,
+  ])
+  for (const name of readdirSync(kbBase)) {
+    if (allowed.has(name)) continue
+    const from = join(kbBase, name)
+    if (!statSync(from).isDirectory()) continue
+    mkdirSync(backupBase, { recursive: true })
+    const to = join(backupBase, name)
+    renameSync(from, to)
+    isolation.moves.push({ from, to })
+  }
+  if (isolation.moves.length > 0) {
+    console.log(`Isolated ${isolation.moves.length} foreign keyboard dir(s): ${isolation.moves.map((m) => m.from.split('/').pop()).join(', ')}`)
+  }
+  return isolation
+}
+
+function restoreForeignKeyboardDirs(isolation: ForeignKeyboardIsolation): void {
+  for (const { from, to } of isolation.moves) {
+    try {
+      renameSync(to, from)
+    } catch (err) {
+      console.error(`  [restore] failed to move ${to} back to ${from}:`, err)
+    }
+  }
+  try { rmdirSync(isolation.backupBase) } catch { /* absent or non-empty (failed restore) — keep it */ }
 }
 
 async function captureDataModal(page: Page): Promise<void> {
@@ -962,7 +1022,17 @@ async function captureSidebarTools(app: ElectronApplication, page: Page): Promis
   if (await isAvailable(typingTestBtn)) {
     await typingTestBtn.click()
     await waitForUnlockDialog(app, page)
-    await page.waitForTimeout(1000)
+    // The test starts in a 3s "countdown" state that renders a Loading...
+    // placeholder instead of the word list. Wait for that state to end
+    // (element detaches) so the screenshot shows the actual words. If the
+    // countdown already finished (or never rendered) this resolves at once.
+    await page
+      .locator('[data-testid="typing-test-countdown"]')
+      .waitFor({ state: 'detached', timeout: 10000 })
+      .catch(() => {
+        console.log('  [warn] typing-test countdown did not end within 10s')
+      })
+    await page.waitForTimeout(500)
     await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
     // Forcefully remove all fixed overlay/modal elements that block interaction
@@ -1463,11 +1533,24 @@ async function captureMacroEditModal(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 
   // Prefer an already-configured macro so the screenshot reflects a real list/edit UI
-  // without mutating device state. If none are configured we skip.
-  const configuredTile = page.locator('[data-testid^="macro-tile-"][data-configured]').first()
-  if (!(await isAvailable(configuredTile))) {
+  // without mutating device state. If none are configured we skip. Macro tile 0 is
+  // seeded as a text-only macro ("Hello") with no keycode field, so the edit-mode
+  // capture below would find nothing to click — skip it in favor of another
+  // configured tile (e.g. macro tile 1, seeded as a tap-KC_A action) whenever one
+  // exists.
+  const configuredTiles = page.locator('[data-testid^="macro-tile-"][data-configured]')
+  const configuredCount = await configuredTiles.count()
+  if (configuredCount === 0) {
     console.log('  [skip] No configured macro tile found — configure a macro on the device first')
     return
+  }
+  let configuredTile = configuredTiles.first()
+  for (let i = 0; i < configuredCount; i++) {
+    const candidate = configuredTiles.nth(i)
+    if ((await candidate.getAttribute('data-testid')) !== 'macro-tile-0') {
+      configuredTile = candidate
+      break
+    }
   }
 
   // Deselect any keymap key left selected by earlier phases; otherwise clicking a
@@ -1523,8 +1606,9 @@ async function main(): Promise<void> {
   console.log('Launching Electron app (virtual device)...')
   // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
   // dev-server env var left over from another run can't leak into this
-  // production-build capture. PIPETTE_VIRTUAL_DEVICE swaps in the software
-  // GPK60-63R Virtual emulator so no real hardware is required.
+  // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
+  // software GPK60-63R Virtual emulator and hides real HID hardware, so the
+  // device-selection screenshot is reproducible on any workstation.
   const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   const app = await electron.launch({
     args: [
@@ -1535,7 +1619,7 @@ async function main(): Promise<void> {
     cwd: PROJECT_ROOT,
     env: {
       ...cleanEnv,
-      PIPETTE_VIRTUAL_DEVICE: '1',
+      PIPETTE_VIRTUAL_DEVICE: 'only',
     },
   })
 
@@ -1544,7 +1628,8 @@ async function main(): Promise<void> {
   const favBase = join(userDataPath, 'sync', 'favorites')
   console.log(`userData: ${userDataPath}`)
 
-  // Seed dummy data into the correct directories
+  // Move aside keyboard dirs this session does not own, then seed dummy data
+  const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
   const favBackups = seedDummyFavorites(favBase)
   const kbBase = join(userDataPath, 'sync', 'keyboards')
   const snapBackups = seedDummySnapshots(kbBase)
@@ -1600,6 +1685,11 @@ async function main(): Promise<void> {
     restoreSnapshots(snapBackups)
     restoreTypingAnalytics(taBackup)
     restoreFilterStore(filterStoreBackups)
+    // Last (mirror of isolating first): the foreign dirs are disjoint from
+    // every seeded path above, and the cache/sync_state deletion inside
+    // restoreTypingAnalytics only forces a rebuild on next boot — moving the
+    // dirs back around it is safe in either order.
+    restoreForeignKeyboardDirs(foreignKbIsolation)
   }
 }
 
