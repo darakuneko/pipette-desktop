@@ -1620,13 +1620,27 @@ async function captureMacroEditModal(page: Page): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app (virtual device)...')
-  const app = await launchCaptureApp()
-
-  // Resolve actual userData path from the running Electron process
-  const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
-  const favBase = join(userDataPath, 'sync', 'favorites')
+  // Resolve the real userData path with a throwaway launch, then close it
+  // before seeding. `ensureCacheIsFresh` (typing-analytics' SQLite cache
+  // rebuild) runs once, fire-and-forget, during this same process's
+  // `app.whenReady()` — it races the seed writes below whenever they land in
+  // the same process's boot window, and there is no periodic recheck
+  // afterward (see analyze-seed.ts: sync_state.json is only consulted "on
+  // next launch"). If that boot-time rebuild wins the race, it captures an
+  // empty JSONL snapshot and the seeded keyboard never appears in this
+  // process's cache for the rest of its life, no matter what we write to
+  // disk afterward — this is what silently emptied the Analyze screenshots.
+  // Closing this throwaway app and relaunching fresh (below) after every
+  // seed file is already on disk removes the race entirely: the real
+  // capture session's own boot is guaranteed to see the seeded JSONL files
+  // and the already-deleted sync_state.json together.
+  console.log('Launching Electron app (virtual device) to resolve userData...')
+  const primerApp = await launchCaptureApp()
+  const userDataPath = await primerApp.evaluate(async ({ app: a }) => a.getPath('userData'))
   console.log(`userData: ${userDataPath}`)
+  await primerApp.close().catch((err: unknown) => console.error('  [primer] close failed:', err))
+
+  const favBase = join(userDataPath, 'sync', 'favorites')
 
   // Move aside keyboard dirs this session does not own. From this point on
   // the try/finally below owns putting them back: every seed/capture step —
@@ -1648,6 +1662,7 @@ async function main(): Promise<void> {
   let snapBackups: Map<string, string | null> | null = null
   let taBackup: Awaited<ReturnType<typeof seedDummyTypingAnalytics>> | null = null
   let filterStoreBackups: Map<string, string | null> | null = null
+  let app: ElectronApplication | null = null
 
   try {
     favBackups = seedDummyFavorites(favBase)
@@ -1657,6 +1672,13 @@ async function main(): Promise<void> {
     console.log(
       `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
     )
+
+    // Every seed file (including the deleted sync_state.json) is on disk
+    // now, so this launch's own `ensureCacheIsFresh` deterministically
+    // rebuilds the typing-analytics cache from it before the renderer
+    // queries the keyboard list — no race with the seed writes above.
+    console.log('Launching Electron app (virtual device) for capture...')
+    app = await launchCaptureApp()
 
     const page = await app.firstWindow()
     await page.waitForLoadState('domcontentloaded')
@@ -1707,7 +1729,7 @@ async function main(): Promise<void> {
         console.error(`  [cleanup] ${label} failed:`, err)
       }
     }
-    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    if (app) await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
     // User data first: foreign dirs are disjoint from every seeded path, and
     // the cache/sync_state deletion inside restoreTypingAnalytics only forces
     // a rebuild on next boot — order relative to it is safe.
