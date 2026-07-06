@@ -112,13 +112,13 @@ describe('preload protocol against the virtual device emulator', () => {
     expect(status.keys).toEqual(VIRTUAL_DEVICE_UNLOCK_COMBO)
   })
 
-  it('getDefinitionSize/getDefinitionRaw decompress to the GPK60-63R Virtual definition', async () => {
+  it('getDefinitionSize/getDefinitionRaw decompress to the Virtual Keyboard definition', async () => {
     const size = await getDefinitionSize()
     const raw = await getDefinitionRaw(size)
     const jsonStr = await decompressLzma(Array.from(raw))
     expect(jsonStr).not.toBeNull()
     const definition = JSON.parse(jsonStr as string) as { name: string }
-    expect(definition.name).toBe('GPK60-63R Virtual')
+    expect(definition.name).toBe('Virtual Keyboard')
   })
 
   it('getDynamicEntryCount reports the 32-entry tier and caps-word/layer-lock feature flags', async () => {

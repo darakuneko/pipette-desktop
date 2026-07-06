@@ -21,7 +21,7 @@ import definitionJson from './gpk60-63r-definition.json'
 
 export const VIRTUAL_DEVICE_VID = 0x7a79
 export const VIRTUAL_DEVICE_PID = 0xf063
-export const VIRTUAL_DEVICE_NAME = 'GPK60-63R Virtual'
+export const VIRTUAL_DEVICE_NAME = 'Virtual Keyboard'
 export const VIRTUAL_DEVICE_SERIAL = 'vial:f64c2b3c:virtual'
 export const VIRTUAL_DEVICE_UID_BYTES = new Uint8Array([0x56, 0x49, 0x52, 0x54, 0x47, 0x50, 0x4b, 0x00])
 /** (row, col) pairs — hold both to unlock, matching the firmware's vial unlock combo. */
