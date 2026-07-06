@@ -3,7 +3,7 @@
 [日本語版はこちら](OPERATION-GUIDE.ja.md)
 
 This document explains how to use the Pipette desktop application.
-Screenshots were taken using a GPK60-63R keyboard unless otherwise noted.
+Screenshots were taken using the software-emulated GPK60-63R Virtual keyboard unless otherwise noted.
 
 ---
 
