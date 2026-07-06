@@ -1,0 +1,159 @@
+{
+  "name": "GPK60-63R Virtual",
+  "vendorId": "0x7A79",
+  "productId": "0xF063",
+  "lighting": "vialrgb",
+  "matrix": {
+    "rows": 5,
+    "cols": 14
+  },
+  "customKeycodes": [
+    {
+      "shortName": "START\nCOLOR\nLAYER",
+      "title": "START COLOR LAYER",
+      "name": "START_COLOR_LAYER"
+    },
+    {
+      "shortName": "SET\nCOLOR\nLAYER0",
+      "title": "SET COLOR LAYER0",
+      "name": "SET_COLOR_LAYER0"
+    },
+    {
+      "shortName": "SET\nCOLOR\nLAYER1",
+      "title": "SET COLOR LAYER1",
+      "name": "SET_COLOR_LAYER1"
+    },
+    {
+      "shortName": "SET\nCOLOR\nLAYER2",
+      "title": "SET COLOR LAYER2",
+      "name": "SET_COLOR_LAYER2"
+    },
+    {
+      "shortName": "SET\nCOLOR\nLAYER3",
+      "title": "SET COLOR LAYER3",
+      "name": "SET_COLOR_LAYER3"
+    }
+  ],
+  "layouts": {
+    "keymap": [
+      [
+        "0,0",
+        "0,1",
+        "0,2",
+        "0,3",
+        "0,4",
+        "0,5",
+        "0,6",
+        "0,7",
+        "0,8",
+        "0,9",
+        "0,10",
+        "0,11",
+        "0,12",
+        {
+          "w": 2
+        },
+        "0,13"
+      ],
+      [
+        {
+          "w": 1.5
+        },
+        "1,0",
+        "1,1",
+        "1,2",
+        "1,3",
+        "1,4",
+        "1,5",
+        "1,6",
+        "1,7",
+        "1,8",
+        "1,9",
+        "1,10",
+        "1,11",
+        "1,12",
+        {
+          "w": 1.5
+        },
+        "1,13"
+      ],
+      [
+        {
+          "w": 1.75
+        },
+        "2,0",
+        "2,1",
+        "2,2",
+        "2,3",
+        "2,4",
+        "2,5",
+        "2,6",
+        "2,7",
+        "2,8",
+        "2,9",
+        "2,10",
+        "2,11",
+        {
+          "w": 2.25
+        },
+        "2,12"
+      ],
+      [
+        {
+          "w": 2.25
+        },
+        "3,0",
+        "3,1",
+        "3,2",
+        "3,3",
+        "3,4",
+        "3,5",
+        "3,6",
+        "3,7",
+        "3,8",
+        "3,9",
+        "3,10",
+        {
+          "w": 2.75
+        },
+        "3,11"
+      ],
+      [
+        {
+          "w": 1.25
+        },
+        "4,0",
+        {
+          "w": 1.25
+        },
+        "4,1",
+        {
+          "w": 1.5
+        },
+        "4,2",
+        {
+          "w": 2.75
+        },
+        "4,4",
+        {
+          "w": 2.25
+        },
+        "4,6",
+        {
+          "w": 1.25
+        },
+        "4,7",
+        "4,8",
+        {
+          "w": 1.25
+        },
+        "4,9",
+        {
+          "w": 1.5
+        },
+        "4,10",
+        "4,11"
+      ]
+    ]
+  }
+}
