@@ -31,6 +31,7 @@ import type { DeviceInfo, DeviceType, KeyboardDefinition, ProbeResult } from '..
 import { decompressLzma, decompressXz, hasXzMagic } from './lzma'
 import {
   isVirtualDeviceEnabled,
+  isVirtualDeviceExclusive,
   getVirtualDeviceInfo,
   matchesVirtualDevice,
   openVirtualDevice,
@@ -102,6 +103,12 @@ function normalizeResponse(buf: Buffer, expectedLen: number): number[] {
  * Filters by usage page 0xFF60 and usage 0x61.
  */
 export async function listDevices(): Promise<DeviceInfo[]> {
+  // 'only' mode: hide real hardware so device lists (and doc screenshots)
+  // are reproducible regardless of what is plugged into the workstation.
+  if (isVirtualDeviceExclusive()) {
+    return [getVirtualDeviceInfo()]
+  }
+
   const devices = await HID.devicesAsync()
   const result: DeviceInfo[] = []
 
