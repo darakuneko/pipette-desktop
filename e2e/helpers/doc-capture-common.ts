@@ -7,7 +7,8 @@
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join, resolve } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 
@@ -52,6 +53,49 @@ export function escapeRegex(str: string): string {
 // VIRTUAL_DEVICE_UID_BYTES ("VIRTGPK\0") — see src/main/virtual-device/gpk60-63r.ts
 // and readLE64Hex in src/preload/protocol.ts.
 export const VIRTUAL_DEVICE_UID = '0x004b504754524956'
+
+// The virtual device's device-selector display name — mirrors
+// VIRTUAL_DEVICE_NAME in src/main/virtual-device/gpk60-63r.ts. Centralized
+// here since every doc-capture helper (and the virtual-device e2e test) that
+// connects to the emulator needs the same string.
+export const VIRTUAL_DEVICE_DISPLAY_NAME = 'Virtual Keyboard'
+
+/** Snapshot of the virtual device's PipetteSettings file, as found on disk
+ *  before a capture run touches it (or an absent-file marker). */
+export interface VirtualDeviceSettingsBackup {
+  path: string
+  content: string | null
+}
+
+/**
+ * Snapshot `sync/keyboards/{VIRTUAL_DEVICE_UID}/pipette_settings.json` before
+ * a capture helper enters Typing Test / Typing View / View-Only mode on the
+ * virtual device. Those modes persist `viewMode` (and related fields) into
+ * this file via the same PipetteSettings store a real keyboard uses, and the
+ * virtual device's uid is shared across every doc-capture helper and
+ * e2e/virtual-device.test.ts (all launch through the same default userData).
+ * Without restoring this file, a later test run auto-restores the leaked
+ * view mode on connect and can hit its unlock gate unexpectedly. Call this
+ * once userData is resolved, before the helper starts clicking mode toggles,
+ * and pass the result to `restoreVirtualDeviceSettings` in a `finally` block.
+ */
+export function backupVirtualDeviceSettings(userDataPath: string): VirtualDeviceSettingsBackup {
+  const path = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
+  const content = existsSync(path) ? readFileSync(path, 'utf-8') : null
+  return { path, content }
+}
+
+/** Restores the file snapshotted by `backupVirtualDeviceSettings`: writes
+ *  back the original content, or removes the file if it did not exist
+ *  beforehand. Call after the app has closed so no further debounced save
+ *  from the running app can race with (and undo) the restore. */
+export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup): void {
+  if (backup.content != null) {
+    writeFileSync(backup.path, backup.content, 'utf-8')
+  } else {
+    try { unlinkSync(backup.path) } catch { /* absent already */ }
+  }
+}
 
 /** The e2e-facing surface of `globalThis.__pipetteVirtualDevice` (see
  *  src/main/virtual-device) — shared by every helper/test that drives the

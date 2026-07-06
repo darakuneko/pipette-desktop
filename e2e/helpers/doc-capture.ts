@@ -3,9 +3,10 @@
 // Screenshot capture script for Pipette operation guide documentation.
 // Usage: pnpm build && pnpm doc:screenshots
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync, copyFileSync, constants as fsConstants } from 'node:fs'
 import { resolve, join } from 'node:path'
 import {
+  backupVirtualDeviceSettings,
   clickThroughUnlock,
   connectToDevice,
   dismissNotificationModal,
@@ -13,8 +14,10 @@ import {
   isAvailable,
   launchCaptureApp,
   resetToEditorMode,
+  restoreVirtualDeviceSettings,
   selectKeyboardViaFilterModal,
   selectSnapshotViaFilterModal,
+  VIRTUAL_DEVICE_DISPLAY_NAME,
   VIRTUAL_DEVICE_UID,
   waitForTypingTestCountdown,
   waitForUnlockDialog,
@@ -32,7 +35,7 @@ import {
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R Virtual'
+const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 
 // Click a tree-nav branch button only when it reports aria-expanded=false, so
 // repeat runs don't collapse an already-expanded branch via the toggle handler.
@@ -274,12 +277,105 @@ function isolateForeignKeyboardDirs(userDataPath: string): ForeignKeyboardIsolat
   return isolation
 }
 
+// Move the contents of `src` (a backup dir) into `dest` (the restored
+// original location), merging entry-by-entry when `dest` already exists.
+// This happens when cloud sync recreated `sync/keyboards/{uid}/` mid-run and
+// wrote a fresh file into it — a plain directory-level renameSync would then
+// fail with ENOTEMPTY and strand the whole backup.
+//
+// - `dest` absent → fast-path rename the whole tree.
+// - `dest` present → for each entry in `src`: move it in if `dest` has no
+//   same-named entry; if both are directories, recurse one level so nested
+//   partial conflicts (e.g. `snapshots/`, `devices/`) get the same
+//   per-entry treatment; otherwise leave the entry in `src` (sync's copy is
+//   newer) and log the leftover path prominently so the user can reconcile.
+// `src` is removed only once fully emptied; a non-empty leftover is logged
+// so it is never silently stranded.
+function mergeDirInto(src: string, dest: string): void {
+  // Fast-path rename when `dest` is absent. The existsSync check is not a
+  // clobber guard — it only picks the cheap path. If `dest` races into
+  // existence between the check and the rename, renameSync on a *directory*
+  // fails safely rather than overwriting data: POSIX rename() over an
+  // existing non-empty dir → ENOTEMPTY, over a file → ENOTDIR; only an
+  // existing *empty* dir is replaced, which loses nothing. On such a
+  // failure we fall through to the per-entry merge.
+  if (!existsSync(dest)) {
+    try {
+      renameSync(src, dest)
+      return
+    } catch (err) {
+      if (!existsSync(dest)) {
+        console.error(`  [restore] failed to move ${src} to ${dest}:`, err)
+        return
+      }
+      // dest appeared concurrently — merge entry by entry below.
+    }
+  }
+
+  let entries: string[]
+  try {
+    entries = readdirSync(src)
+  } catch (err) {
+    console.error(`  [restore] failed to read backup dir ${src}:`, err)
+    return
+  }
+
+  for (const name of entries) {
+    const srcEntry = join(src, name)
+    const destEntry = join(dest, name)
+
+    if (statSync(srcEntry).isDirectory()) {
+      if (existsSync(destEntry) && !statSync(destEntry).isDirectory()) {
+        console.error(
+          `  [restore][conflict] ${destEntry} already exists as a file (written during this run) — kept it; your prior directory is preserved at ${srcEntry}, reconcile manually`,
+        )
+        continue
+      }
+      // Recurse: mergeDirInto's own fast path covers the absent-dest rename,
+      // and its directory renameSync cannot silently clobber (see above).
+      mergeDirInto(srcEntry, destEntry)
+      try {
+        if (readdirSync(srcEntry).length === 0) rmdirSync(srcEntry)
+      } catch { /* moved wholesale, or still holds unresolved conflicts */ }
+    } else {
+      // File entry: atomic no-clobber move. COPYFILE_EXCL makes the copy
+      // fail with EEXIST instead of overwriting, closing the TOCTOU window
+      // an existsSync-then-rename would leave open (rename() silently
+      // replaces an existing destination file, so a sync/app write landing
+      // between check and move would be lost). The backup copy is only
+      // unlinked after the copy succeeded.
+      try {
+        copyFileSync(srcEntry, destEntry, fsConstants.COPYFILE_EXCL)
+        unlinkSync(srcEntry)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+          console.error(
+            `  [restore][conflict] ${destEntry} already exists (written during this run) — kept the newer destination copy; your prior data is preserved at ${srcEntry}, reconcile manually`,
+          )
+        } else {
+          console.error(`  [restore] failed to move ${srcEntry} to ${destEntry}:`, err)
+        }
+      }
+    }
+  }
+
+  let remaining: string[] = []
+  try {
+    remaining = readdirSync(src)
+  } catch { /* already gone */ }
+  if (remaining.length === 0) {
+    try { rmdirSync(src) } catch { /* ignore */ }
+  } else {
+    console.error(`  [restore] ${remaining.length} unresolved conflict(s) left at ${src} — reconcile manually`)
+  }
+}
+
 function restoreForeignKeyboardDirs(isolation: ForeignKeyboardIsolation): void {
   for (const { from, to } of isolation.moves) {
     try {
-      renameSync(to, from)
+      mergeDirInto(to, from)
     } catch (err) {
-      console.error(`  [restore] failed to move ${to} back to ${from}:`, err)
+      console.error(`  [restore] failed to merge ${to} back into ${from}:`, err)
     }
   }
   try { rmdirSync(isolation.backupBase) } catch { /* absent or non-empty (failed restore) — keep it */ }
@@ -904,8 +1000,14 @@ async function captureKeyboardTab(page: Page): Promise<void> {
   // Capture device list view
   await captureNamed(page, 'keyboard-tab-device-list', { fullPage: true })
 
-  // Click the connected device to show its keymap
-  const deviceBtn = editorContent.locator('button', { hasText: new RegExp(escapeRegex(DEVICE_NAME)) })
+  // Click the connected device to show its keymap. The tile's text is
+  // "{productName}›" (name span + chevron span), so an anchored regex on the
+  // whole button would never match — anchor the exact name against the inner
+  // `.font-medium` name span instead, mirroring connectToDevice's structure,
+  // so a device whose name merely contains DEVICE_NAME can't match.
+  const deviceBtn = editorContent
+    .locator('button')
+    .filter({ has: page.locator('.font-medium', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
   if (await isAvailable(deviceBtn)) {
     await deviceBtn.first().click()
     await page.waitForTimeout(500)
@@ -1534,6 +1636,14 @@ async function main(): Promise<void> {
   const kbBase = join(userDataPath, 'sync', 'keyboards')
   const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
 
+  // The virtual device's uid is allowlisted above (never isolated), so this
+  // is independent of foreignKbIsolation. Phase 5 (captureSidebarTools)
+  // toggles Typing Test on the virtual device and persists `viewMode` into
+  // its pipette_settings.json; e2e/virtual-device.test.ts shares the same
+  // default userData and would otherwise auto-restore that leaked mode on
+  // its next connect. Snapshot it now and restore in the finally below.
+  const virtualDeviceSettingsBackup = backupVirtualDeviceSettings(userDataPath)
+
   let favBackups: Map<string, string | null> | null = null
   let snapBackups: Map<string, string | null> | null = null
   let taBackup: Awaited<ReturnType<typeof seedDummyTypingAnalytics>> | null = null
@@ -1602,6 +1712,7 @@ async function main(): Promise<void> {
     // the cache/sync_state deletion inside restoreTypingAnalytics only forces
     // a rebuild on next boot — order relative to it is safe.
     cleanup('restore foreign keyboard dirs', () => restoreForeignKeyboardDirs(foreignKbIsolation))
+    cleanup('restore virtual device settings', () => restoreVirtualDeviceSettings(virtualDeviceSettingsBackup))
     cleanup('restore favorites', () => { if (favBackups) restoreFavorites(favBackups, favBase) })
     cleanup('restore snapshots', () => { if (snapBackups) restoreSnapshots(snapBackups) })
     cleanup('restore typing analytics', () => { if (taBackup) restoreTypingAnalytics(taBackup) })

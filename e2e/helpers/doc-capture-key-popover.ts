@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Re-capture Key Popover screenshots for the operation guide.
-// Connects to the virtual "GPK60-63R Virtual" device (PIPETTE_VIRTUAL_DEVICE=only)
+// Connects to the virtual "Virtual Keyboard" device (PIPETTE_VIRTUAL_DEVICE=only)
 // and captures popover screenshots with sequential numbering matching the
 // existing guide. No real hardware required.
 //
@@ -16,12 +16,13 @@ import {
   isAvailable,
   launchCaptureApp,
   resetToEditorMode,
+  VIRTUAL_DEVICE_DISPLAY_NAME,
   waitForUnlockDialog,
 } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R Virtual'
+const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)

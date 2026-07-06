@@ -108,7 +108,7 @@ describe('getCompressedDefinition', () => {
     const jsonStr = await decompressLzma(Array.from(compressed))
     expect(jsonStr).not.toBeNull()
     const parsed = JSON.parse(jsonStr!) as { name: string; matrix: { rows: number; cols: number } }
-    expect(parsed.name).toBe('GPK60-63R Virtual')
+    expect(parsed.name).toBe('Virtual Keyboard')
     expect(parsed.matrix.rows).toBe(5)
     expect(parsed.matrix.cols).toBe(14)
   })

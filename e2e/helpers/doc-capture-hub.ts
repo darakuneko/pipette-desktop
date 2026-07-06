@@ -3,7 +3,7 @@
 // Screenshot capture script for Hub workflow documentation.
 // Launches app directly (not via Playwright electron.launch) to preserve safeStorage/keyring,
 // then connects Playwright via remote debugging to capture screenshots. The
-// device-connected phases (3-5) use the virtual "GPK60-63R Virtual" device
+// device-connected phases (3-5) use the virtual "Virtual Keyboard" device
 // (PIPETTE_VIRTUAL_DEVICE=only) — no real hardware required. The Hub/Google
 // auth-gated captures still depend on real credentials on this machine and
 // degrade to their documented "not configured" screenshots without them.
@@ -14,11 +14,11 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { connectToDevice, dismissOverlay, escapeRegex, isAvailable, resetToEditorMode, unlockDialogHeading } from './doc-capture-common'
+import { connectToDevice, dismissOverlay, escapeRegex, isAvailable, resetToEditorMode, unlockDialogHeading, VIRTUAL_DEVICE_DISPLAY_NAME } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R Virtual'
+const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 const DEBUG_PORT = 19222
 
 // Resolve real userData path for the installed app (Linux: ~/.config/pipette-desktop/)
@@ -142,7 +142,7 @@ function launchElectronApp(): ReturnType<typeof spawn> {
   // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
   // dev-server env var left over from another run can't leak into this
   // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
-  // software GPK60-63R Virtual emulator and hides real HID hardware.
+  // software Virtual Keyboard (GPK60-63R) emulator and hides real HID hardware.
   const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   return spawn(electronPath, [
     '.',

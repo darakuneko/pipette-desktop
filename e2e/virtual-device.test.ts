@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
-// Drives the software-emulated GPK60-63R Virtual device (no real hardware
-// required). Does NOT use connectTestDevice() — that helper targets the
-// physical GPK60-63R test device, a different vid/pid from the virtual one.
+// Drives the software-emulated Virtual Keyboard device (a GPK60-63R
+// emulator, no real hardware required). Does NOT use connectTestDevice() —
+// that helper targets the physical GPK60-63R test device, a different
+// vid/pid from the virtual one.
 //
 // `app.evaluate()` callbacks run inside Electron's main process and must be
 // self-contained (no closures over outer test-file variables) since
@@ -11,10 +12,10 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { launchApp } from './helpers/electron'
-import { dismissNotificationModal } from './helpers/doc-capture-common'
+import { dismissNotificationModal, escapeRegex, VIRTUAL_DEVICE_DISPLAY_NAME } from './helpers/doc-capture-common'
 import type { VirtualDeviceController } from './helpers/doc-capture-common'
 
-const VIRTUAL_DEVICE_NAME = 'GPK60-63R Virtual'
+const VIRTUAL_DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 const CONNECT_TIMEOUT_MS = 15_000
 const UNLOCK_TIMEOUT_MS = 10_000
 
@@ -33,9 +34,12 @@ test.afterAll(async () => {
 })
 
 test('virtual device appears in the device list and connects to the editor', async () => {
+  // Anchored exact match (same form as connectToDevice) — a plain string
+  // hasText is substring matching and could hit a device whose name merely
+  // contains VIRTUAL_DEVICE_NAME.
   const deviceButton = page
     .locator('[data-testid="device-button"]')
-    .filter({ has: page.locator('.font-semibold', { hasText: VIRTUAL_DEVICE_NAME }) })
+    .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(VIRTUAL_DEVICE_NAME)}$`) }) })
 
   await expect(deviceButton).toBeVisible({ timeout: CONNECT_TIMEOUT_MS })
   await deviceButton.click()
