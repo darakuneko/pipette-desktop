@@ -20,7 +20,7 @@ import {
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
+const DEVICE_NAME = 'GPK60-63R Virtual'
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
@@ -87,16 +87,33 @@ async function captureNamed(
   await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
-async function waitForUnlockDialog(page: Page): Promise<void> {
-  // The unlock dialog has no close button — it requires physical key presses.
-  // Wait up to 60 seconds for the dialog to disappear (user unlocks).
+interface VirtualDeviceController {
+  releaseAll(): void
+  holdKeys(pairs: [number, number][]): void
+  setUnlockCounterMax(n: number): void
+}
+
+// The unlock dialog has no close button — it clears once the firmware sees the
+// unlock combo held long enough. The virtual device exposes a controller on
+// globalThis in the main process (see e2e/virtual-device.test.ts) so the combo
+// can be driven programmatically instead of waiting on a human at the keyboard.
+async function waitForUnlockDialog(app: ElectronApplication, page: Page): Promise<void> {
   const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
   if (!(await isAvailable(unlockHeading))) return
 
-  console.log('  Unlock dialog detected — waiting for physical unlock (up to 60s)...')
+  console.log('  Unlock dialog detected — unlocking via virtual device controller...')
   try {
-    await unlockHeading.waitFor({ state: 'detached', timeout: 60_000 })
+    await app.evaluate(() => {
+      const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+      controller.setUnlockCounterMax(3)
+      controller.holdKeys([[0, 0], [0, 1]])
+    })
+    await unlockHeading.waitFor({ state: 'detached', timeout: 15_000 })
     console.log('  Keyboard unlocked!')
+    await app.evaluate(() => {
+      const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+      controller.releaseAll()
+    })
     await page.waitForTimeout(500)
   } catch {
     console.log('  [warn] Unlock timed out')
@@ -920,7 +937,7 @@ async function captureKeyboardTab(page: Page): Promise<void> {
 
 // --- Phase 5: Toolbar / Sidebar ---
 
-async function captureSidebarTools(page: Page): Promise<void> {
+async function captureSidebarTools(app: ElectronApplication, page: Page): Promise<void> {
   console.log('\n--- Phase 5: Toolbar ---')
 
   await captureNamed(page, 'toolbar', { fullPage: true })
@@ -944,7 +961,7 @@ async function captureSidebarTools(page: Page): Promise<void> {
   const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
   if (await isAvailable(typingTestBtn)) {
     await typingTestBtn.click()
-    await waitForUnlockDialog(page)
+    await waitForUnlockDialog(app, page)
     await page.waitForTimeout(1000)
     await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
@@ -1503,7 +1520,12 @@ async function captureMacroEditModal(page: Page): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app...')
+  console.log('Launching Electron app (virtual device)...')
+  // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
+  // dev-server env var left over from another run can't leak into this
+  // production-build capture. PIPETTE_VIRTUAL_DEVICE swaps in the software
+  // GPK60-63R Virtual emulator so no real hardware is required.
+  const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   const app = await electron.launch({
     args: [
       resolve(PROJECT_ROOT, 'out/main/index.js'),
@@ -1511,6 +1533,10 @@ async function main(): Promise<void> {
       '--disable-gpu-sandbox',
     ],
     cwd: PROJECT_ROOT,
+    env: {
+      ...cleanEnv,
+      PIPETTE_VIRTUAL_DEVICE: '1',
+    },
   })
 
   // Resolve actual userData path from the running Electron process
@@ -1554,7 +1580,7 @@ async function main(): Promise<void> {
     await captureLayerNavigation(page)       // 04-06
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
     await captureKeyboardTab(page)           // keyboard-tab-device-list, keyboard-tab-keymap
-    await captureSidebarTools(page)          // toolbar, zoom, typing-test
+    await captureSidebarTools(app, page)     // toolbar, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
     await captureJsonEditors(page)           // json-editor-tap-dance, json-editor-macro
     await captureEditorSettings(page)        // editor-settings-save
