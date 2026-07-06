@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Re-capture Key Popover screenshots for the operation guide.
-// Connects to a real device and captures popover screenshots
-// with sequential numbering matching the existing guide.
+// Connects to the virtual "GPK60-63R Virtual" device (PIPETTE_VIRTUAL_DEVICE=only)
+// and captures popover screenshots with sequential numbering matching the
+// existing guide. No real hardware required.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-key-popover.ts
 
-import { _electron as electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal, isAvailable } from './doc-capture-common'
+import {
+  connectToDevice,
+  dismissNotificationModal,
+  isAvailable,
+  launchCaptureApp,
+  resetToEditorMode,
+  waitForUnlockDialog,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
+const DEVICE_NAME = 'GPK60-63R Virtual'
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
@@ -29,15 +32,8 @@ async function capture(page: Page, name: string): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app...')
-  const app = await electron.launch({
-    args: [
-      resolve(PROJECT_ROOT, 'out/main/index.js'),
-      '--no-sandbox',
-      '--disable-gpu-sandbox',
-    ],
-    cwd: PROJECT_ROOT,
-  })
+  console.log('Launching Electron app (virtual device)...')
+  const app = await launchCaptureApp()
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -48,43 +44,17 @@ async function main(): Promise<void> {
     await dismissNotificationModal(page, { waitForAppearMs: 3000 })
 
     // Connect to device
-    const deviceList = page.locator('[data-testid="device-list"]')
-    try {
-      await deviceList.waitFor({ state: 'visible', timeout: 10_000 })
-    } catch {
-      throw new Error('Device list not found')
-    }
-
-    const targetBtn = page
-      .locator('[data-testid="device-button"]')
-      .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
-
-    if (!(await isAvailable(targetBtn))) {
-      throw new Error(`Device "${DEVICE_NAME}" not found`)
-    }
-
-    await targetBtn.click()
-    await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
-    await page.waitForTimeout(2000)
+    const connected = await connectToDevice(page, DEVICE_NAME)
+    if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
     console.log(`Connected to ${DEVICE_NAME}`)
 
     await dismissNotificationModal(page)
-
-    // Exit Typing Test view-only / typing test mode if persisted from prior run
-    const viewOnlyToggle = page.locator('[data-testid="view-only-toggle"]')
-    if (await isAvailable(viewOnlyToggle)) {
-      console.log('  [reset] Exiting Typing Test view-only mode')
-      await viewOnlyToggle.evaluate((el: HTMLElement) => el.click())
-      await page.waitForTimeout(2000)
-      await page.setViewportSize({ width: 1320, height: 960 })
-      await page.waitForTimeout(1000)
-    }
-    const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
-    if (await isAvailable(typingTestBtn) && (await typingTestBtn.getAttribute('data-active')) === 'true') {
-      console.log('  [reset] Exiting Typing Test mode')
-      await typingTestBtn.click()
-      await page.waitForTimeout(500)
-    }
+    // The virtual device resets to locked on every launch, so a viewMode
+    // persisted from a prior helper run can surface the Unlock dialog via
+    // the auto-restore effect before we interact with anything ourselves.
+    await waitForUnlockDialog(app, page)
+    await dismissNotificationModal(page)
+    await resetToEditorMode(page)
 
     // Ensure layer 0 and Basic tab
     const editorContent = page.locator('[data-testid="editor-content"]')
