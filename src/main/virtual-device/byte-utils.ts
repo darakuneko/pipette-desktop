@@ -27,6 +27,10 @@ export function readLE16(buf: Uint8Array, offset: number): number {
   return buf[offset] | (buf[offset + 1] << 8)
 }
 
+export function readLE32(buf: Uint8Array, offset: number): number {
+  return (buf[offset] | (buf[offset + 1] << 8) | (buf[offset + 2] << 16) | (buf[offset + 3] << 24)) >>> 0
+}
+
 export function writeLE16(buf: Uint8Array, offset: number, value: number): void {
   buf[offset] = value & 0xff
   buf[offset + 1] = (value >> 8) & 0xff

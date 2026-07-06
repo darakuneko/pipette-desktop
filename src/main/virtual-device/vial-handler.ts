@@ -17,7 +17,7 @@ import {
   CMD_VIAL_DYNAMIC_ENTRY_OP,
   DYNAMIC_VIAL_GET_NUMBER_OF_ENTRIES,
 } from '../../shared/constants/protocol'
-import { writeLE32 } from './byte-utils'
+import { readLE32, writeLE32 } from './byte-utils'
 import { VIAL_PROTOCOL, VIRTUAL_DEVICE_UID_BYTES, VIRTUAL_DEVICE_UNLOCK_COMBO } from './gpk60-63r'
 import type { VirtualDeviceState } from './state'
 import { unlockPollTick } from './state'
@@ -42,7 +42,7 @@ function handleDefinitionSize(compressedLength: number): Uint8Array {
 
 function handleDefinitionBlock(req: Uint8Array, compressed: Uint8Array): Uint8Array {
   const resp = new Uint8Array(MSG_LEN)
-  const block = req[2] | (req[3] << 8) | (req[4] << 16) | (req[5] << 24)
+  const block = readLE32(req, 2)
   const start = block * MSG_LEN
   const copyLen = Math.max(0, Math.min(MSG_LEN, compressed.length - start))
   for (let i = 0; i < copyLen; i++) {
@@ -60,10 +60,8 @@ function handleUnlockStatus(state: VirtualDeviceState): Uint8Array {
     if (pair) {
       resp[2 + i * 2] = pair[0]
       resp[3 + i * 2] = pair[1]
-    } else {
-      resp[2 + i * 2] = 0xff
-      resp[3 + i * 2] = 0xff
     }
+    // Empty slots keep the 0xff sentinel from the pre-fill, matching firmware.
   }
   return resp
 }
