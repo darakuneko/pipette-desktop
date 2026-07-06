@@ -27,6 +27,7 @@ vi.mock('../../main/logger', () => ({
 
 import { listDevices, openHidDevice, closeHidDevice, sendReceive, isDeviceOpen } from '../hid-service'
 import { VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID, VIRTUAL_DEVICE_NAME } from '../virtual-device/gpk60-63r'
+import { isVirtualDeviceOpen } from '../virtual-device'
 
 function createMockDeviceInfo(overrides?: Record<string, unknown>) {
   return {
@@ -119,5 +120,17 @@ describe('virtual device enabled', () => {
     mockRead.mockResolvedValue(Buffer.alloc(MSG_LEN))
     await sendReceive([0x01])
     expect(mockWrite).toHaveBeenCalledTimes(1)
+  })
+
+  it('closeHidDevice clears the virtual-open flag even after the env flag is cleared', async () => {
+    await openHidDevice(VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID)
+    expect(isVirtualDeviceOpen()).toBe(true)
+
+    // Simulate the env flag being cleared out from under an already-open virtual device.
+    vi.stubEnv('PIPETTE_VIRTUAL_DEVICE', '0')
+    await closeHidDevice()
+
+    expect(isVirtualDeviceOpen()).toBe(false)
+    await expect(sendReceive([0x01])).rejects.toThrow('No HID device is open')
   })
 })

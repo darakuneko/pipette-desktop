@@ -192,9 +192,11 @@ export async function closeHidDevice(): Promise<void> {
   openDevice = null
   openDevicePath = null
 
-  if (isVirtualDeviceEnabled()) {
-    closeVirtualDevice()
-  }
+  // Always clear the virtual-open flag, not just when the feature flag is
+  // currently set: sendReceive()/send()/isDeviceOpen() route on
+  // isVirtualDeviceOpen() alone, so a stale open flag would keep hijacking
+  // HID calls if the env var changes between open and close.
+  closeVirtualDevice()
 }
 
 /**

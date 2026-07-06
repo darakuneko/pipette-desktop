@@ -101,17 +101,20 @@ describe('unlockPollTick', () => {
     expect(state.unlockInProgress).toBe(false)
   })
 
-  it('does not decrement when polls are spaced less than 100ms apart', () => {
+  it('resets the counter to max when a held poll arrives less than 100ms after the last decrement', () => {
     const state = createVirtualDeviceState()
     state.unlockCounterMax = 5
-    state.unlockCounter = 5
+    state.unlockCounter = 3 // already decremented from a prior qualifying tick
     state.unlockInProgress = true
     state.unlockTimer = 0
     pressKey(state, 0, 0)
     pressKey(state, 0, 1)
 
+    // Still holding, but only 50ms since the last decrementing tick: firmware
+    // treats this as a non-qualifying poll and throws away all progress.
     unlockPollTick(state, 50)
     expect(state.unlockCounter).toBe(5)
+    expect(state.unlocked).toBe(false)
   })
 
   it('resets the counter to max when a combo key is released mid-sequence', () => {
@@ -125,6 +128,32 @@ describe('unlockPollTick', () => {
 
     unlockPollTick(state, 200)
     expect(state.unlockCounter).toBe(5)
+    expect(state.unlocked).toBe(false)
+  })
+
+  it('does not carry progress from before a release once the combo is re-pressed', () => {
+    const state = createVirtualDeviceState()
+    state.unlockCounterMax = 5
+    state.unlockCounter = 5
+    state.unlockInProgress = true
+    state.unlockTimer = 0
+    pressKey(state, 0, 0)
+    pressKey(state, 0, 1)
+
+    // Held long enough: one qualifying decrement, counter -> max - 1.
+    unlockPollTick(state, 200)
+    expect(state.unlockCounter).toBe(4)
+
+    // Release resets the counter back to max (unlockTimer is left stale at 200).
+    releaseKey(state, 0, 1)
+    unlockPollTick(state, 210)
+    expect(state.unlockCounter).toBe(5)
+
+    // Re-press and poll shortly after — relative to the stale timer this is
+    // still < 100ms, so it must not decrement further, let alone unlock.
+    pressKey(state, 0, 1)
+    unlockPollTick(state, 260)
+    expect(state.unlockCounter).toBeGreaterThanOrEqual(4)
     expect(state.unlocked).toBe(false)
   })
 

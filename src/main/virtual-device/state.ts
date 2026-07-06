@@ -87,24 +87,26 @@ export function isHoldingUnlockCombo(state: VirtualDeviceState): boolean {
 /**
  * Advance the unlock state machine by one poll tick, given the current
  * clock time (injected for testability — no Date.now() inside).
- * Ported from vial-qmk's vial_unlock_poll():
- *   - no-op if an unlock sequence isn't in progress
- *   - if the combo is held and >= 100ms elapsed since the last tick,
- *     decrement the counter; reaching 0 unlocks the keyboard
- *   - releasing any combo key resets the counter back to its max
+ * Ported from vial-qmk's vial_unlock_poll(), which uses a single if/else:
+ * the counter only decrements when the combo is held AND >= 100ms elapsed
+ * since the last decrementing tick; every other case — combo not held, or
+ * held but polled too soon — resets the counter back to its max. This
+ * enforces a *continuous* hold: any qualifying poll that doesn't land on a
+ * held+elapsed tick throws away all prior progress, so a stale unlockTimer
+ * left over from before a release can never grant free progress once the
+ * combo is re-pressed (the release's own poll already reset the counter).
+ * Reaching 0 unlocks the keyboard.
  */
 export function unlockPollTick(state: VirtualDeviceState, now: number): void {
   if (!state.unlockInProgress) return
 
-  if (isHoldingUnlockCombo(state)) {
-    if (now - state.unlockTimer >= UNLOCK_POLL_MIN_INTERVAL_MS) {
-      state.unlockTimer = now
-      state.unlockCounter--
-      if (state.unlockCounter <= 0) {
-        state.unlockCounter = 0
-        state.unlocked = true
-        state.unlockInProgress = false
-      }
+  if (isHoldingUnlockCombo(state) && now - state.unlockTimer >= UNLOCK_POLL_MIN_INTERVAL_MS) {
+    state.unlockTimer = now
+    state.unlockCounter--
+    if (state.unlockCounter <= 0) {
+      state.unlockCounter = 0
+      state.unlocked = true
+      state.unlockInProgress = false
     }
   } else {
     state.unlockCounter = state.unlockCounterMax
