@@ -12,14 +12,7 @@ import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { launchApp } from './helpers/electron'
 import { dismissNotificationModal } from './helpers/doc-capture-common'
-
-interface VirtualDeviceController {
-  pressKey(row: number, col: number): void
-  releaseKey(row: number, col: number): void
-  releaseAll(): void
-  holdKeys(pairs: [number, number][]): void
-  setUnlockCounterMax(n: number): void
-}
+import type { VirtualDeviceController } from './helpers/doc-capture-common'
 
 const VIRTUAL_DEVICE_NAME = 'GPK60-63R Virtual'
 const CONNECT_TIMEOUT_MS = 15_000

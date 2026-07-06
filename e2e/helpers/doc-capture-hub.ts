@@ -2,7 +2,11 @@
 
 // Screenshot capture script for Hub workflow documentation.
 // Launches app directly (not via Playwright electron.launch) to preserve safeStorage/keyring,
-// then connects Playwright via remote debugging to capture screenshots.
+// then connects Playwright via remote debugging to capture screenshots. The
+// device-connected phases (3-5) use the virtual "GPK60-63R Virtual" device
+// (PIPETTE_VIRTUAL_DEVICE=only) — no real hardware required. The Hub/Google
+// auth-gated captures still depend on real credentials on this machine and
+// degrade to their documented "not configured" screenshots without them.
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-hub.ts
 import { chromium } from '@playwright/test'
 import type { Locator, Page } from '@playwright/test'
@@ -10,11 +14,11 @@ import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { dismissOverlay, isAvailable } from './doc-capture-common'
+import { connectToDevice, dismissOverlay, escapeRegex, isAvailable, resetToEditorMode, unlockDialogHeading } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
+const DEVICE_NAME = 'GPK60-63R Virtual'
 const DEBUG_PORT = 19222
 
 // Resolve real userData path for the installed app (Linux: ~/.config/pipette-desktop/)
@@ -94,10 +98,6 @@ function restoreDocFavorites({ indexBackups, createdFiles }: SeedBackup): void {
   }
 }
 
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
-
 async function dismissOverlays(page: Page): Promise<void> {
   await dismissOverlay(page, 'settings-backdrop', 'settings-close', () => page.keyboard.press('Escape'))
   await dismissOverlay(page, 'notification-modal-backdrop', 'notification-modal-close', () =>
@@ -106,30 +106,24 @@ async function dismissOverlays(page: Page): Promise<void> {
 }
 
 async function connectDevice(page: Page): Promise<boolean> {
-  const deviceList = page.locator('[data-testid="device-list"]')
-  const noDeviceMsg = page.locator('[data-testid="no-device-message"]')
-
-  try {
-    await Promise.race([
-      deviceList.waitFor({ state: 'visible', timeout: 10_000 }),
-      noDeviceMsg.waitFor({ state: 'visible', timeout: 10_000 }),
-    ])
-  } catch {
-    console.log('Timed out waiting for device list.')
+  if (!(await connectToDevice(page, DEVICE_NAME, { raceNoDeviceMessage: true }))) {
     return false
   }
 
-  if (!(await deviceList.isVisible())) return false
-
-  const targetBtn = page
-    .locator('[data-testid="device-button"]')
-    .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
-
-  if (!(await isAvailable(targetBtn))) return false
-
-  await targetBtn.click()
-  await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
-  await page.waitForTimeout(2000)
+  // This script never triggers unlock-gated actions itself, and its userData
+  // (~/.config/pipette-desktop, from `electron .`) is disjoint from the
+  // Playwright-launched helpers' userData (~/.config/Electron), so no foreign
+  // persisted viewMode can auto-restore into a locked mode here. Should the
+  // Unlock dialog ever appear anyway, this script cannot clear it — the
+  // virtual device's unlock controller lives on the main process globalThis
+  // and needs an ElectronApplication handle (app.evaluate), while this script
+  // only has a CDP-attached Page (see the module comment on why). Surface
+  // that clearly instead of failing later with an opaque "element intercepts
+  // pointer events" timeout.
+  if (await isAvailable(unlockDialogHeading(page))) {
+    console.log('  [warn] Unlock dialog is showing and this script cannot drive the unlock combo (no ElectronApplication handle). Device-dependent captures below will likely fail.')
+  }
+  await resetToEditorMode(page)
   return true
 }
 
@@ -145,6 +139,11 @@ async function capture(page: Page, name: string, opts?: { element?: Locator; ful
 
 function launchElectronApp(): ReturnType<typeof spawn> {
   const electronPath = resolve(PROJECT_ROOT, 'node_modules/.bin/electron')
+  // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
+  // dev-server env var left over from another run can't leak into this
+  // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
+  // software GPK60-63R Virtual emulator and hides real HID hardware.
+  const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   return spawn(electronPath, [
     '.',
     '--no-sandbox',
@@ -154,6 +153,10 @@ function launchElectronApp(): ReturnType<typeof spawn> {
     cwd: PROJECT_ROOT,
     stdio: 'ignore',
     detached: false,
+    env: {
+      ...cleanEnv,
+      PIPETTE_VIRTUAL_DEVICE: 'only',
+    },
   })
 }
 
@@ -412,7 +415,7 @@ async function main(): Promise<void> {
   console.log('Seeding dummy favorites...')
   const favBackups = seedDocFavorites()
 
-  console.log('Launching Electron app with remote debugging...')
+  console.log('Launching Electron app with remote debugging (virtual device)...')
   const child = launchElectronApp()
 
   let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | undefined

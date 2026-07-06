@@ -2,11 +2,23 @@
 
 // Screenshot capture script for Pipette operation guide documentation.
 // Usage: pnpm build && pnpm doc:screenshots
-import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
 import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
-import { dismissNotificationModal, isAvailable, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
+import {
+  clickThroughUnlock,
+  connectToDevice,
+  dismissNotificationModal,
+  escapeRegex,
+  isAvailable,
+  launchCaptureApp,
+  resetToEditorMode,
+  selectKeyboardViaFilterModal,
+  selectSnapshotViaFilterModal,
+  VIRTUAL_DEVICE_UID,
+  waitForTypingTestCountdown,
+  waitForUnlockDialog,
+} from './doc-capture-common'
 import {
   DUMMY_SNAPSHOTS,
   DUMMY_TA_UID,
@@ -21,10 +33,6 @@ import {
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
 const DEVICE_NAME = 'GPK60-63R Virtual'
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
 
 // Click a tree-nav branch button only when it reports aria-expanded=false, so
 // repeat runs don't collapse an already-expanded branch via the toggle handler.
@@ -87,44 +95,6 @@ async function captureNamed(
   await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
-interface VirtualDeviceController {
-  releaseAll(): void
-  holdKeys(pairs: [number, number][]): void
-  setUnlockCounterMax(n: number): void
-}
-
-// The unlock dialog has no close button — it clears once the firmware sees the
-// unlock combo held long enough. The virtual device exposes a controller on
-// globalThis in the main process (see e2e/virtual-device.test.ts) so the combo
-// can be driven programmatically instead of waiting on a human at the keyboard.
-async function waitForUnlockDialog(app: ElectronApplication, page: Page): Promise<void> {
-  const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
-  if (!(await isAvailable(unlockHeading))) return
-
-  console.log('  Unlock dialog detected — unlocking via virtual device controller...')
-  try {
-    await app.evaluate(() => {
-      const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
-      controller.setUnlockCounterMax(3)
-      controller.holdKeys([[0, 0], [0, 1]])
-    })
-    await unlockHeading.waitFor({ state: 'detached', timeout: 15_000 })
-    console.log('  Keyboard unlocked!')
-  } catch {
-    console.log('  [warn] Unlock timed out')
-  } finally {
-    // Always release the combo — a timeout above would otherwise leave the
-    // virtual keys held down for the rest of the capture session.
-    await app
-      .evaluate(() => {
-        const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
-        controller.releaseAll()
-      })
-      .catch(() => { /* app may be gone */ })
-  }
-  await page.waitForTimeout(500)
-}
-
 async function ensureOverlayOpen(page: Page): Promise<boolean> {
   const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
   if (!(await isAvailable(toggle))) return false
@@ -159,65 +129,20 @@ async function switchOverlayTab(page: Page, tabTestId: string): Promise<boolean>
   return true
 }
 
-async function connectDevice(page: Page): Promise<boolean> {
-
-  const deviceList = page.locator('[data-testid="device-list"]')
-  const noDeviceMsg = page.locator('[data-testid="no-device-message"]')
-
-  try {
-    await Promise.race([
-      deviceList.waitFor({ state: 'visible', timeout: 10_000 }),
-      noDeviceMsg.waitFor({ state: 'visible', timeout: 10_000 }),
-    ])
-  } catch {
-    console.log('Timed out waiting for device list.')
+async function connectDevice(app: ElectronApplication, page: Page): Promise<boolean> {
+  if (!(await connectToDevice(page, DEVICE_NAME, { raceNoDeviceMessage: true }))) {
     return false
   }
-
-  if (!(await deviceList.isVisible())) {
-    console.log('No devices found.')
-    return false
-  }
-
-  const targetBtn = page
-    .locator('[data-testid="device-button"]')
-    .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
-
-  if (!(await isAvailable(targetBtn))) {
-    console.log(`Device "${DEVICE_NAME}" not found.`)
-    return false
-  }
-
-  await targetBtn.click()
-  await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
-  await page.waitForTimeout(2000)
   console.log(`Connected to ${DEVICE_NAME}`)
 
   // Per-keyboard view-mode auto-restore may reopen Typing View or Typing
   // Test left behind by a prior helper run (doc-capture-typing-test.ts ends
-  // in Typing View). Reset back to the keymap editor so every phase starts
-  // from the same state — mirrors that helper's own startup recovery.
-  const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
-  if (!(await typingTestBtn.isVisible().catch(() => false))) {
-    console.log('  [reset] Typing View detected on connect, exiting back to editor...')
-    // Open the menu pane (popup is closed by default after launch) so the
-    // view-only-toggle becomes interactive.
-    await page.locator('body').click({ position: { x: 400, y: 300 } })
-    await page.waitForTimeout(400)
-    const viewOnlyExit = page.locator('[data-testid="view-only-toggle"]')
-    if (await viewOnlyExit.isVisible().catch(() => false)) {
-      await viewOnlyExit.click({ force: true })
-      await page.waitForTimeout(800)
-    } else {
-      console.log('  [warn] view-only-toggle not found; continuing anyway')
-    }
-  }
-  const typingTestView = page.locator('[data-testid="typing-test-view"]')
-  if (await typingTestView.isVisible().catch(() => false)) {
-    console.log('  [reset] Typing Test detected on connect, exiting back to editor...')
-    await typingTestBtn.click().catch(() => {})
-    await page.waitForTimeout(800)
-  }
+  // in Typing View). The virtual device resets to *locked* on every launch,
+  // so that persisted viewMode can also surface the Unlock dialog before the
+  // auto-restore can complete — clear it first, then reset back to the
+  // keymap editor so every phase starts from the same state.
+  await waitForUnlockDialog(app, page)
+  await resetToEditorMode(page)
   return true
 }
 
@@ -311,11 +236,6 @@ function restoreFavorites(backups: Map<string, string | null>, favBase: string):
 }
 
 // --- Foreign keyboard-dir isolation (File tab reproducibility) ---
-
-// The virtual device's uid as the app stores it on disk: u64 LE hex of
-// VIRTUAL_DEVICE_UID_BYTES ("VIRTGPK\0") — see src/main/virtual-device/gpk60-63r.ts
-// and readLE64Hex in src/preload/protocol.ts.
-const VIRTUAL_DEVICE_UID = '0x004b504754524956'
 
 interface ForeignKeyboardIsolation {
   backupBase: string
@@ -1025,20 +945,8 @@ async function captureSidebarTools(app: ElectronApplication, page: Page): Promis
 
   const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
   if (await isAvailable(typingTestBtn)) {
-    await typingTestBtn.click()
-    await waitForUnlockDialog(app, page)
-    // The test starts in a 3s "countdown" state that renders a Loading...
-    // placeholder instead of the word list. Waiting for 'detached' alone
-    // races: it resolves immediately while the countdown has not mounted
-    // yet. So first wait for it to appear (tolerating that it may already
-    // be gone), then wait for it to detach so the screenshot shows words.
-    const countdown = page.locator('[data-testid="typing-test-countdown"]')
-    await countdown.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {
-      /* countdown already over, or view skipped it */
-    })
-    await countdown.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {
-      console.log('  [warn] typing-test countdown did not end within 10s')
-    })
+    await clickThroughUnlock(app, page, typingTestBtn)
+    await waitForTypingTestCountdown(page)
     await page.waitForTimeout(500)
     await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
@@ -1611,24 +1519,7 @@ async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
   console.log('Launching Electron app (virtual device)...')
-  // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
-  // dev-server env var left over from another run can't leak into this
-  // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
-  // software GPK60-63R Virtual emulator and hides real HID hardware, so the
-  // device-selection screenshot is reproducible on any workstation.
-  const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
-  const app = await electron.launch({
-    args: [
-      resolve(PROJECT_ROOT, 'out/main/index.js'),
-      '--no-sandbox',
-      '--disable-gpu-sandbox',
-    ],
-    cwd: PROJECT_ROOT,
-    env: {
-      ...cleanEnv,
-      PIPETTE_VIRTUAL_DEVICE: 'only',
-    },
-  })
+  const app = await launchCaptureApp()
 
   // Resolve actual userData path from the running Electron process
   const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
@@ -1671,7 +1562,7 @@ async function main(): Promise<void> {
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
     await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
-    const connected = await connectDevice(page)
+    const connected = await connectDevice(app, page)
     if (!connected) {
       console.log('Failed to connect. Only device selection screenshots captured.')
       return

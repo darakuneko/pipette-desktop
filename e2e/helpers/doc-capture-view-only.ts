@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Screenshot capture script for View-Only mode documentation.
-// Connects to a real device, enters view-only mode, and captures
-// screenshots of each UI state. Requires a GPK60-63R to be connected.
+// Connects to the virtual "GPK60-63R Virtual" device (PIPETTE_VIRTUAL_DEVICE=only),
+// enters view-only mode, and captures screenshots of each UI state. No real
+// hardware required.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-view-only.ts
 
-import { _electron as electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal } from './doc-capture-common'
+import {
+  clickThroughUnlock,
+  connectToDevice,
+  dismissNotificationModal,
+  launchCaptureApp,
+  resetToEditorMode,
+  waitForUnlockDialog,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
+const DEVICE_NAME = 'GPK60-63R Virtual'
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
@@ -26,32 +29,11 @@ async function capture(page: Page, name: string): Promise<void> {
   console.log(`  [ok] ${name}.png`)
 }
 
-async function waitForUnlockDialog(page: Page): Promise<void> {
-  const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
-  if ((await unlockHeading.count()) === 0) return
-
-  console.log('  Unlock dialog detected — waiting for physical unlock (up to 60s)...')
-  try {
-    await unlockHeading.waitFor({ state: 'detached', timeout: 60_000 })
-    console.log('  Keyboard unlocked!')
-    await page.waitForTimeout(500)
-  } catch {
-    console.log('  [warn] Unlock timed out')
-  }
-}
-
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app...')
-  const app = await electron.launch({
-    args: [
-      resolve(PROJECT_ROOT, 'out/main/index.js'),
-      '--no-sandbox',
-      '--disable-gpu-sandbox',
-    ],
-    cwd: PROJECT_ROOT,
-  })
+  console.log('Launching Electron app (virtual device)...')
+  const app = await launchCaptureApp()
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -63,25 +45,25 @@ async function main(): Promise<void> {
 
     // Connect to device
     console.log(`Looking for ${DEVICE_NAME}...`)
-    const deviceBtn = page
-      .locator('[data-testid="device-button"]')
-      .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
-    await deviceBtn.waitFor({ state: 'visible', timeout: 30_000 })
-    await deviceBtn.click()
-
-    await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
-    await page.waitForTimeout(2000)
+    const connected = await connectToDevice(page, DEVICE_NAME)
+    if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
+    console.log(`Connected to ${DEVICE_NAME}`)
 
     await dismissNotificationModal(page)
-    await waitForUnlockDialog(page)
+    // The virtual device resets to locked on every launch, so a viewMode
+    // persisted from a prior helper run can surface the Unlock dialog via
+    // the auto-restore effect before we click view-only-button ourselves.
+    await waitForUnlockDialog(app, page)
     await dismissNotificationModal(page)
+    await resetToEditorMode(page)
 
     console.log('\n--- View-Only Mode Screenshots ---')
 
-    // Enter view-only mode via status bar button
+    // Enter view-only mode via status bar button. Once unlocked, the app's
+    // own pending-view-only effect completes the transition automatically.
     const viewOnlyBtn = page.locator('[data-testid="view-only-button"]')
     await viewOnlyBtn.waitFor({ state: 'visible', timeout: 10_000 })
-    await viewOnlyBtn.click()
+    await clickThroughUnlock(app, page, viewOnlyBtn)
     await page.waitForTimeout(2000)
 
     // Wait for compact mode transition

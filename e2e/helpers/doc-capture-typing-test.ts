@@ -1,43 +1,33 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Screenshot capture script for Typing Test documentation.
-// Connects to a real device and captures screenshots of each typing test
-// mode and state. Requires a GPK60-63R to be connected.
+// Connects to the virtual "GPK60-63R Virtual" device (PIPETTE_VIRTUAL_DEVICE=only)
+// and captures screenshots of each typing test mode and state. No real hardware
+// required.
 //
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-typing-test.ts
 
-import { _electron as electron } from '@playwright/test'
 import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { dismissNotificationModal } from './doc-capture-common'
+import {
+  clickThroughUnlock,
+  connectToDevice,
+  dismissNotificationModal,
+  launchCaptureApp,
+  resetToEditorMode,
+  waitForTypingTestCountdown,
+  waitForUnlockDialog,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
-
-function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
-}
+const DEVICE_NAME = 'GPK60-63R Virtual'
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   await page.screenshot({ path, fullPage: true })
   console.log(`  [ok] ${name}.png`)
-}
-
-async function waitForUnlockDialog(page: Page): Promise<void> {
-  const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
-  if ((await unlockHeading.count()) === 0) return
-
-  console.log('  Unlock dialog detected — waiting for physical unlock (up to 60s)...')
-  try {
-    await unlockHeading.waitFor({ state: 'detached', timeout: 60_000 })
-    console.log('  Keyboard unlocked!')
-    await page.waitForTimeout(500)
-  } catch {
-    console.log('  [warn] Unlock timed out')
-  }
 }
 
 /** Applies the shared dataset-update banner on whichever Mode-modal tab is
@@ -164,15 +154,8 @@ async function captureModeModalScreenshots(page: Page): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app...')
-  const app = await electron.launch({
-    args: [
-      resolve(PROJECT_ROOT, 'out/main/index.js'),
-      '--no-sandbox',
-      '--disable-gpu-sandbox',
-    ],
-    cwd: PROJECT_ROOT,
-  })
+  console.log('Launching Electron app (virtual device)...')
+  const app = await launchCaptureApp()
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -184,55 +167,35 @@ async function main(): Promise<void> {
 
     // Connect to device
     console.log(`Looking for ${DEVICE_NAME}...`)
-    const deviceBtn = page
-      .locator('[data-testid="device-button"]')
-      .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
-    await deviceBtn.waitFor({ state: 'visible', timeout: 30_000 })
-    await deviceBtn.click()
-
-    await page.locator('[data-testid="editor-content"]').waitFor({ state: 'visible', timeout: 20_000 })
-    await page.waitForTimeout(2000)
+    const connected = await connectToDevice(page, DEVICE_NAME)
+    if (!connected) throw new Error(`Device "${DEVICE_NAME}" not found`)
+    console.log(`Connected to ${DEVICE_NAME}`)
 
     await dismissNotificationModal(page)
-    await waitForUnlockDialog(page)
+    // The virtual device resets to locked on every launch, so a viewMode
+    // persisted from a prior helper run (e.g. this script's own Typing View
+    // ending state) can surface the Unlock dialog via the auto-restore
+    // effect before we ever click anything ourselves.
+    await waitForUnlockDialog(app, page)
     await dismissNotificationModal(page)
+    await resetToEditorMode(page)
 
     console.log('\n--- Typing Test Screenshots ---')
 
-    // View-mode auto-restore may have launched directly into Typing View
-    // from a prior screenshot run. The status bar's typing-test-button
-    // is hidden in that mode, so detect and exit back to the editor
-    // before the typing-test-button waitFor below.
-    const typingTestBtnEarly = page.locator('[data-testid="typing-test-button"]')
-    if (!(await typingTestBtnEarly.isVisible().catch(() => false))) {
-      console.log('  [reset] Typing View detected on startup, exiting back to editor...')
-      // Open the menu pane (popup is closed by default after launch) so
-      // the view-only-toggle becomes interactive.
-      await page.locator('body').click({ position: { x: 400, y: 300 } })
-      await page.waitForTimeout(400)
-      const viewOnlyExit = page.locator('[data-testid="view-only-toggle"]')
-      if (await viewOnlyExit.isVisible().catch(() => false)) {
-        await viewOnlyExit.click({ force: true })
-        await page.waitForTimeout(800)
-      } else {
-        console.log('  [warn] view-only-toggle not found; aborting')
-      }
-    }
-
-    // Per-keyboard view mode auto-restore may have entered typing test already.
-    // Only click the button when we are still in the editor.
+    // resetToEditorMode above guarantees we start from the editor, so enter
+    // Typing Test unconditionally.
     const typingTestView = page.locator('[data-testid="typing-test-view"]')
-    const alreadyInTypingTest = await typingTestView.isVisible().catch(() => false)
-    if (!alreadyInTypingTest) {
-      const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
-      await typingTestBtn.waitFor({ state: 'visible', timeout: 10_000 })
-      await typingTestBtn.click()
-      await page.waitForTimeout(1000)
-      await dismissNotificationModal(page)
-    }
+    const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
+    await typingTestBtn.waitFor({ state: 'visible', timeout: 10_000 })
+    await clickThroughUnlock(app, page, typingTestBtn)
+    await page.waitForTimeout(1000)
+    await dismissNotificationModal(page)
 
     // 1. Words mode — waiting state (explicitly select to avoid persisted config)
     await typingTestView.waitFor({ state: 'visible', timeout: 10_000 })
+    // Entering Typing Test starts with a 3s countdown placeholder before the
+    // word list renders; wait it out so mode clicks below land on real controls.
+    await waitForTypingTestCountdown(page)
     await page.locator('[data-testid="mode-words"]').click()
     await page.waitForTimeout(500)
     await capture(page, 'typing-test-words-waiting')
@@ -275,7 +238,6 @@ async function main(): Promise<void> {
     console.log('\n--- Typing View REC Tab ---')
 
     // Exit typing test back to the editor so we can swap into Typing View
-    const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
     if (await typingTestBtn.isVisible().catch(() => false)) {
       await typingTestBtn.click()
       await page.waitForTimeout(500)
