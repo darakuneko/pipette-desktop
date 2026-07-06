@@ -23,18 +23,11 @@ import {
   VIA_LAYOUT_OPTIONS,
   VIA_SWITCH_MATRIX_STATE,
 } from '../../shared/constants/protocol'
-import { setProtocolValue } from '../../shared/keycodes/keycodes'
-import { resolve } from '../../shared/keycodes/keycodes-utils'
 import { readBE16, writeBE16, readBE32, writeBE32 } from './byte-utils'
-import { VIAL_PROTOCOL, LAYERS, ROWS, COLS, MACRO_COUNT, MACRO_BUFFER_SIZE } from './gpk60-63r'
+import { LAYERS, ROWS, COLS, MACRO_COUNT, MACRO_BUFFER_SIZE, isBootKeycode } from './gpk60-63r'
 import type { VirtualDeviceState } from './state'
 import { isValidKeymapPosition, keymapIndex, packMatrixState } from './state'
 import { getLightingValue, setLightingValue } from './vialrgb-handler'
-
-function isBootKeycode(keycode: number): boolean {
-  setProtocolValue(VIAL_PROTOCOL)
-  return keycode === resolve('QK_BOOT')
-}
 
 export function handleViaReport(state: VirtualDeviceState, req: Uint8Array): Uint8Array {
   const resp = new Uint8Array(req)

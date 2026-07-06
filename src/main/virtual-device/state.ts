@@ -4,6 +4,7 @@
 // keyboard only unlocks after the combo has been held continuously for
 // unlockCounterMax poll ticks spaced >= 100ms apart.
 
+import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../shared/types/protocol'
 import {
   LAYERS,
   ROWS,
@@ -12,7 +13,19 @@ import {
   VIALRGB_SUPPORTED_EFFECTS,
   buildDefaultKeymap,
   buildDefaultMacroBuffer,
+  buildSampleTapDance,
+  buildSampleCombo,
+  buildSampleKeyOverride,
+  buildSampleAltRepeatKey,
 } from './gpk60-63r'
+import {
+  createDefaultTapDanceEntries,
+  createDefaultComboEntries,
+  createDefaultKeyOverrideEntries,
+  createDefaultAltRepeatKeyEntries,
+} from './dynamic-entries'
+import { createDefaultQmkSettings } from './qmk-settings'
+import type { QmkSettingsStore } from './qmk-settings'
 
 export interface VialRGBState {
   mode: number
@@ -35,6 +48,11 @@ export interface VirtualDeviceState {
   /** Timestamp (ms) of the last unlock poll tick that made progress. */
   unlockTimer: number
   rgb: VialRGBState
+  tapDanceEntries: TapDanceEntry[]
+  comboEntries: ComboEntry[]
+  keyOverrideEntries: KeyOverrideEntry[]
+  altRepeatKeyEntries: AltRepeatKeyEntry[]
+  qmkSettings: QmkSettingsStore
 }
 
 const UNLOCK_COUNTER_MAX_DEFAULT = 50
@@ -45,6 +63,17 @@ function createMatrix(): boolean[][] {
 }
 
 export function createVirtualDeviceState(): VirtualDeviceState {
+  const tapDanceEntries = createDefaultTapDanceEntries()
+  const comboEntries = createDefaultComboEntries()
+  const keyOverrideEntries = createDefaultKeyOverrideEntries()
+  const altRepeatKeyEntries = createDefaultAltRepeatKeyEntries()
+  // Seed index 0 of each store with a sample so a fresh device (and the doc
+  // screenshots) show a configured tile, mirroring the sample macros below.
+  tapDanceEntries[0] = buildSampleTapDance()
+  comboEntries[0] = buildSampleCombo()
+  keyOverrideEntries[0] = buildSampleKeyOverride()
+  altRepeatKeyEntries[0] = buildSampleAltRepeatKey()
+
   return {
     keymap: buildDefaultKeymap(),
     macroBuffer: buildDefaultMacroBuffer(),
@@ -62,6 +91,11 @@ export function createVirtualDeviceState(): VirtualDeviceState {
       sat: 255,
       val: 128,
     },
+    tapDanceEntries,
+    comboEntries,
+    keyOverrideEntries,
+    altRepeatKeyEntries,
+    qmkSettings: createDefaultQmkSettings(),
   }
 }
 
