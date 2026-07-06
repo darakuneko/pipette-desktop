@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Screenshot capture script for Typing Test documentation.
-// Connects to the virtual "GPK60-63R Virtual" device (PIPETTE_VIRTUAL_DEVICE=only)
+// Connects to the virtual "Virtual Keyboard" device (PIPETTE_VIRTUAL_DEVICE=only)
 // and captures screenshots of each typing test mode and state. No real hardware
 // required.
 //
@@ -11,18 +11,21 @@ import type { Page } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import { resolve } from 'node:path'
 import {
+  backupVirtualDeviceSettings,
   clickThroughUnlock,
   connectToDevice,
   dismissNotificationModal,
   launchCaptureApp,
   resetToEditorMode,
+  restoreVirtualDeviceSettings,
+  VIRTUAL_DEVICE_DISPLAY_NAME,
   waitForTypingTestCountdown,
   waitForUnlockDialog,
 } from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R Virtual'
+const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
 
 async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
@@ -156,6 +159,13 @@ async function main(): Promise<void> {
 
   console.log('Launching Electron app (virtual device)...')
   const app = await launchCaptureApp()
+
+  // Snapshot the virtual device's PipetteSettings before this script enters
+  // Typing Test / Typing View — those modes persist `viewMode` into the same
+  // userData tree e2e/virtual-device.test.ts reads on connect, and this
+  // helper's viewMode is not the state a later test run should inherit.
+  const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
+  const settingsBackup = backupVirtualDeviceSettings(userDataPath)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -306,7 +316,14 @@ async function main(): Promise<void> {
 
     console.log(`\nScreenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
-    await app.close()
+    // Close the app first so no further debounced save can race with (and
+    // undo) the settings restore below.
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    try {
+      restoreVirtualDeviceSettings(settingsBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore virtual device settings failed:', err)
+    }
   }
 }
 
