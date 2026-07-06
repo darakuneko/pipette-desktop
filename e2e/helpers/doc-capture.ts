@@ -4,7 +4,7 @@
 // Usage: pnpm build && pnpm doc:screenshots
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync } from 'node:fs'
 import { resolve, join } from 'node:path'
 import { dismissNotificationModal, isAvailable, selectKeyboardViaFilterModal, selectSnapshotViaFilterModal } from './doc-capture-common'
 import {
@@ -20,7 +20,7 @@ import {
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
-const DEVICE_NAME = 'GPK60-63R'
+const DEVICE_NAME = 'GPK60-63R Virtual'
 
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\\/]/g, '\\$&')
@@ -87,20 +87,42 @@ async function captureNamed(
   await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
-async function waitForUnlockDialog(page: Page): Promise<void> {
-  // The unlock dialog has no close button — it requires physical key presses.
-  // Wait up to 60 seconds for the dialog to disappear (user unlocks).
+interface VirtualDeviceController {
+  releaseAll(): void
+  holdKeys(pairs: [number, number][]): void
+  setUnlockCounterMax(n: number): void
+}
+
+// The unlock dialog has no close button — it clears once the firmware sees the
+// unlock combo held long enough. The virtual device exposes a controller on
+// globalThis in the main process (see e2e/virtual-device.test.ts) so the combo
+// can be driven programmatically instead of waiting on a human at the keyboard.
+async function waitForUnlockDialog(app: ElectronApplication, page: Page): Promise<void> {
   const unlockHeading = page.locator('h2', { hasText: /Unlock|unlock|アンロック/ })
   if (!(await isAvailable(unlockHeading))) return
 
-  console.log('  Unlock dialog detected — waiting for physical unlock (up to 60s)...')
+  console.log('  Unlock dialog detected — unlocking via virtual device controller...')
   try {
-    await unlockHeading.waitFor({ state: 'detached', timeout: 60_000 })
+    await app.evaluate(() => {
+      const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+      controller.setUnlockCounterMax(3)
+      controller.holdKeys([[0, 0], [0, 1]])
+    })
+    await unlockHeading.waitFor({ state: 'detached', timeout: 15_000 })
     console.log('  Keyboard unlocked!')
-    await page.waitForTimeout(500)
   } catch {
     console.log('  [warn] Unlock timed out')
+  } finally {
+    // Always release the combo — a timeout above would otherwise leave the
+    // virtual keys held down for the rest of the capture session.
+    await app
+      .evaluate(() => {
+        const controller = (globalThis as unknown as { __pipetteVirtualDevice: VirtualDeviceController }).__pipetteVirtualDevice
+        controller.releaseAll()
+      })
+      .catch(() => { /* app may be gone */ })
   }
+  await page.waitForTimeout(500)
 }
 
 async function ensureOverlayOpen(page: Page): Promise<boolean> {
@@ -245,6 +267,11 @@ const DUMMY_FAVORITES: Record<string, { type: string; entries: { id: string; lab
       { id: 'doc-mc-2', label: 'Git Commit', filename: 'doc-mc-2.json', savedAt: '2026-02-22T16:00:00.000Z' },
     ],
   },
+  // Seeded empty so favorites saved locally on the capture machine cannot
+  // leak into the combo / key-override / alt-repeat detail screenshots.
+  combo: { type: 'combo', entries: [] },
+  keyOverride: { type: 'keyOverride', entries: [] },
+  altRepeatKey: { type: 'altRepeatKey', entries: [] },
 }
 
 // Playwright's electron.launch() uses a different userData path than the installed app.
@@ -281,6 +308,61 @@ function restoreFavorites(backups: Map<string, string | null>, favBase: string):
       try { unlinkSync(fp) } catch { /* ignore */ }
     }
   }
+}
+
+// --- Foreign keyboard-dir isolation (File tab reproducibility) ---
+
+// The virtual device's uid as the app stores it on disk: u64 LE hex of
+// VIRTUAL_DEVICE_UID_BYTES ("VIRTGPK\0") — see src/main/virtual-device/gpk60-63r.ts
+// and readLE64Hex in src/preload/protocol.ts.
+const VIRTUAL_DEVICE_UID = '0x004b504754524956'
+
+interface ForeignKeyboardIsolation {
+  backupBase: string
+  moves: Array<{ from: string; to: string }>
+}
+
+// Any sync/keyboards/{uid} directory this capture session does not own is
+// leftover local user data (e.g. saves from a real keyboard once plugged into
+// the workstation). The File tab lists every keyboard with saved files that
+// is not currently connected, so such dirs would leak machine-specific
+// entries into file-tab.png. Move them aside for the session; moved back in
+// the cleanup path (also on failure — it runs in main()'s finally).
+function isolateForeignKeyboardDirs(userDataPath: string): ForeignKeyboardIsolation {
+  const kbBase = join(userDataPath, 'sync', 'keyboards')
+  const backupBase = join(userDataPath, `doc-capture-kb-backup-${process.pid}`)
+  const isolation: ForeignKeyboardIsolation = { backupBase, moves: [] }
+  if (!existsSync(kbBase)) return isolation
+
+  const allowed = new Set<string>([
+    ...DUMMY_SNAPSHOTS.map((kb) => kb.uid),
+    DUMMY_TA_UID,
+    VIRTUAL_DEVICE_UID,
+  ])
+  for (const name of readdirSync(kbBase)) {
+    if (allowed.has(name)) continue
+    const from = join(kbBase, name)
+    if (!statSync(from).isDirectory()) continue
+    mkdirSync(backupBase, { recursive: true })
+    const to = join(backupBase, name)
+    renameSync(from, to)
+    isolation.moves.push({ from, to })
+  }
+  if (isolation.moves.length > 0) {
+    console.log(`Isolated ${isolation.moves.length} foreign keyboard dir(s): ${isolation.moves.map((m) => m.from.split('/').pop()).join(', ')}`)
+  }
+  return isolation
+}
+
+function restoreForeignKeyboardDirs(isolation: ForeignKeyboardIsolation): void {
+  for (const { from, to } of isolation.moves) {
+    try {
+      renameSync(to, from)
+    } catch (err) {
+      console.error(`  [restore] failed to move ${to} back to ${from}:`, err)
+    }
+  }
+  try { rmdirSync(isolation.backupBase) } catch { /* absent or non-empty (failed restore) — keep it */ }
 }
 
 async function captureDataModal(page: Page): Promise<void> {
@@ -920,7 +1002,7 @@ async function captureKeyboardTab(page: Page): Promise<void> {
 
 // --- Phase 5: Toolbar / Sidebar ---
 
-async function captureSidebarTools(page: Page): Promise<void> {
+async function captureSidebarTools(app: ElectronApplication, page: Page): Promise<void> {
   console.log('\n--- Phase 5: Toolbar ---')
 
   await captureNamed(page, 'toolbar', { fullPage: true })
@@ -944,8 +1026,20 @@ async function captureSidebarTools(page: Page): Promise<void> {
   const typingTestBtn = page.locator('[data-testid="typing-test-button"]')
   if (await isAvailable(typingTestBtn)) {
     await typingTestBtn.click()
-    await waitForUnlockDialog(page)
-    await page.waitForTimeout(1000)
+    await waitForUnlockDialog(app, page)
+    // The test starts in a 3s "countdown" state that renders a Loading...
+    // placeholder instead of the word list. Waiting for 'detached' alone
+    // races: it resolves immediately while the countdown has not mounted
+    // yet. So first wait for it to appear (tolerating that it may already
+    // be gone), then wait for it to detach so the screenshot shows words.
+    const countdown = page.locator('[data-testid="typing-test-countdown"]')
+    await countdown.waitFor({ state: 'visible', timeout: 3000 }).catch(() => {
+      /* countdown already over, or view skipped it */
+    })
+    await countdown.waitFor({ state: 'detached', timeout: 10000 }).catch(() => {
+      console.log('  [warn] typing-test countdown did not end within 10s')
+    })
+    await page.waitForTimeout(500)
     await captureNamed(page, 'typing-test', { fullPage: true })
     await dismissNotificationModal(page)
     // Forcefully remove all fixed overlay/modal elements that block interaction
@@ -1446,11 +1540,24 @@ async function captureMacroEditModal(page: Page): Promise<void> {
   await page.waitForTimeout(300)
 
   // Prefer an already-configured macro so the screenshot reflects a real list/edit UI
-  // without mutating device state. If none are configured we skip.
-  const configuredTile = page.locator('[data-testid^="macro-tile-"][data-configured]').first()
-  if (!(await isAvailable(configuredTile))) {
+  // without mutating device state. If none are configured we skip. Macro tile 0 is
+  // seeded as a text-only macro ("Hello") with no keycode field, so the edit-mode
+  // capture below would find nothing to click — skip it in favor of another
+  // configured tile (e.g. macro tile 1, seeded as a tap-KC_A action) whenever one
+  // exists.
+  const configuredTiles = page.locator('[data-testid^="macro-tile-"][data-configured]')
+  const configuredCount = await configuredTiles.count()
+  if (configuredCount === 0) {
     console.log('  [skip] No configured macro tile found — configure a macro on the device first')
     return
+  }
+  let configuredTile = configuredTiles.first()
+  for (let i = 0; i < configuredCount; i++) {
+    const candidate = configuredTiles.nth(i)
+    if ((await candidate.getAttribute('data-testid')) !== 'macro-tile-0') {
+      configuredTile = candidate
+      break
+    }
   }
 
   // Deselect any keymap key left selected by earlier phases; otherwise clicking a
@@ -1503,7 +1610,13 @@ async function captureMacroEditModal(page: Page): Promise<void> {
 async function main(): Promise<void> {
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  console.log('Launching Electron app...')
+  console.log('Launching Electron app (virtual device)...')
+  // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
+  // dev-server env var left over from another run can't leak into this
+  // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
+  // software GPK60-63R Virtual emulator and hides real HID hardware, so the
+  // device-selection screenshot is reproducible on any workstation.
+  const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   const app = await electron.launch({
     args: [
       resolve(PROJECT_ROOT, 'out/main/index.js'),
@@ -1511,6 +1624,10 @@ async function main(): Promise<void> {
       '--disable-gpu-sandbox',
     ],
     cwd: PROJECT_ROOT,
+    env: {
+      ...cleanEnv,
+      PIPETTE_VIRTUAL_DEVICE: 'only',
+    },
   })
 
   // Resolve actual userData path from the running Electron process
@@ -1518,22 +1635,33 @@ async function main(): Promise<void> {
   const favBase = join(userDataPath, 'sync', 'favorites')
   console.log(`userData: ${userDataPath}`)
 
-  // Seed dummy data into the correct directories
-  const favBackups = seedDummyFavorites(favBase)
+  // Move aside keyboard dirs this session does not own. From this point on
+  // the try/finally below owns putting them back: every seed/capture step —
+  // including the seeding itself — runs inside the try, and each cleanup
+  // step in the finally is guarded independently so no single failure can
+  // strand user data in the backup dir.
   const kbBase = join(userDataPath, 'sync', 'keyboards')
-  const snapBackups = seedDummySnapshots(kbBase)
-  const taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
-  const filterStoreBackups = seedDummyFilterStore(kbBase)
-  console.log(
-    `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
-  )
+  const foreignKbIsolation = isolateForeignKeyboardDirs(userDataPath)
 
-  const page = await app.firstWindow()
-  await page.waitForLoadState('domcontentloaded')
-  await page.setViewportSize({ width: 1320, height: 960 })
-  await page.waitForTimeout(3000)
+  let favBackups: Map<string, string | null> | null = null
+  let snapBackups: Map<string, string | null> | null = null
+  let taBackup: Awaited<ReturnType<typeof seedDummyTypingAnalytics>> | null = null
+  let filterStoreBackups: Map<string, string | null> | null = null
 
   try {
+    favBackups = seedDummyFavorites(favBase)
+    snapBackups = seedDummySnapshots(kbBase)
+    taBackup = await seedDummyTypingAnalytics(userDataPath, Date.now())
+    filterStoreBackups = seedDummyFilterStore(kbBase)
+    console.log(
+      `Seeded dummy data: fav=${favBackups.size} entries, snap=${DUMMY_SNAPSHOTS.length} keyboards, typing-analytics=${DUMMY_TA_UID}, filter-store=${filterStoreBackups.size} files`,
+    )
+
+    const page = await app.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
+    await page.setViewportSize({ width: 1320, height: 960 })
+    await page.waitForTimeout(3000)
+
     // First post-launch call: wait a bit for the async startup-notification
     // fetch to land so we don't race past it and capture a later screen with
     // the modal still up.
@@ -1554,7 +1682,7 @@ async function main(): Promise<void> {
     await captureLayerNavigation(page)       // 04-06
     await captureKeycodeCategories(page)     // 07+ (count varies by keyboard features)
     await captureKeyboardTab(page)           // keyboard-tab-device-list, keyboard-tab-keymap
-    await captureSidebarTools(page)          // toolbar, zoom, typing-test
+    await captureSidebarTools(app, page)     // toolbar, zoom, typing-test
     await captureModalEditors(page)          // lighting, combo, ko, ar (when available)
     await captureJsonEditors(page)           // json-editor-tap-dance, json-editor-macro
     await captureEditorSettings(page)        // editor-settings-save
@@ -1569,11 +1697,24 @@ async function main(): Promise<void> {
 
     console.log(`\nAll screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
-    await app.close()
-    restoreFavorites(favBackups, favBase)
-    restoreSnapshots(snapBackups)
-    restoreTypingAnalytics(taBackup)
-    restoreFilterStore(filterStoreBackups)
+    // Each cleanup step is guarded on its own: a failure is logged but never
+    // prevents the remaining steps from running.
+    const cleanup = (label: string, fn: () => void): void => {
+      try {
+        fn()
+      } catch (err) {
+        console.error(`  [cleanup] ${label} failed:`, err)
+      }
+    }
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    // User data first: foreign dirs are disjoint from every seeded path, and
+    // the cache/sync_state deletion inside restoreTypingAnalytics only forces
+    // a rebuild on next boot — order relative to it is safe.
+    cleanup('restore foreign keyboard dirs', () => restoreForeignKeyboardDirs(foreignKbIsolation))
+    cleanup('restore favorites', () => { if (favBackups) restoreFavorites(favBackups, favBase) })
+    cleanup('restore snapshots', () => { if (snapBackups) restoreSnapshots(snapBackups) })
+    cleanup('restore typing analytics', () => { if (taBackup) restoreTypingAnalytics(taBackup) })
+    cleanup('restore filter store', () => { if (filterStoreBackups) restoreFilterStore(filterStoreBackups) })
   }
 }
 

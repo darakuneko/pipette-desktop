@@ -87,6 +87,14 @@ describe('virtual device enabled', () => {
     expect(result[0].productId).toBe(VIRTUAL_DEVICE_PID)
   })
 
+  it('listDevices appends the virtual device after real devices', async () => {
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    const result = await listDevices()
+    expect(result).toHaveLength(2)
+    expect(result[0].productName).toBe('Real Test Keyboard')
+    expect(result[1].productName).toBe(VIRTUAL_DEVICE_NAME)
+  })
+
   it('opens the virtual device without any node-hid calls', async () => {
     const result = await openHidDevice(VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID)
     expect(result).toBe(true)
@@ -120,6 +128,22 @@ describe('virtual device enabled', () => {
     mockRead.mockResolvedValue(Buffer.alloc(MSG_LEN))
     await sendReceive([0x01])
     expect(mockWrite).toHaveBeenCalledTimes(1)
+  })
+
+  it('exclusive mode ("only") lists exactly the virtual device even with real devices present', async () => {
+    vi.stubEnv('PIPETTE_VIRTUAL_DEVICE', 'only')
+    mockDevicesAsync.mockResolvedValue([createMockDeviceInfo()])
+    const result = await listDevices()
+    expect(result).toHaveLength(1)
+    expect(result[0].productName).toBe(VIRTUAL_DEVICE_NAME)
+    expect(mockDevicesAsync).not.toHaveBeenCalled()
+  })
+
+  it('exclusive mode ("only") still opens the virtual device', async () => {
+    vi.stubEnv('PIPETTE_VIRTUAL_DEVICE', 'only')
+    const result = await openHidDevice(VIRTUAL_DEVICE_VID, VIRTUAL_DEVICE_PID)
+    expect(result).toBe(true)
+    expect(mockHIDAsyncOpen).not.toHaveBeenCalled()
   })
 
   it('closeHidDevice clears the virtual-open flag even after the env flag is cleared', async () => {

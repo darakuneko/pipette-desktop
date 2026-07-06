@@ -15,9 +15,22 @@ let state: VirtualDeviceState | null = null
 let compressedDefinition: Uint8Array | null = null
 let open = false
 
-/** Read live (not cached at module load) so tests can toggle the env var per-case. */
+/**
+ * Read live (not cached at module load) so tests can toggle the env var
+ * per-case. PIPETTE_VIRTUAL_DEVICE accepts two values:
+ * - '1'    — append the virtual device to the real HID enumeration
+ * - 'only' — expose the virtual device exclusively (real devices hidden),
+ *            so doc screenshots don't depend on whatever hardware happens
+ *            to be plugged into the workstation
+ */
 export function isVirtualDeviceEnabled(): boolean {
-  return process.env.PIPETTE_VIRTUAL_DEVICE === '1'
+  const v = process.env.PIPETTE_VIRTUAL_DEVICE
+  return v === '1' || v === 'only'
+}
+
+/** True only for PIPETTE_VIRTUAL_DEVICE='only' — list the virtual device alone. */
+export function isVirtualDeviceExclusive(): boolean {
+  return process.env.PIPETTE_VIRTUAL_DEVICE === 'only'
 }
 
 export function getVirtualDeviceInfo(): DeviceInfo {
