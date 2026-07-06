@@ -28,7 +28,7 @@ describe('createDefaultQmkSettings', () => {
     expect(store.mousekeyWheelInterval).toBe(80)
     expect(store.mousekeyWheelMaxSpeed).toBe(8)
     expect(store.mousekeyWheelTimeToMax).toBe(40)
-    expect(store.tapCodeDelay).toBe(10)
+    expect(store.tapCodeDelay).toBe(0)
     expect(store.tapHoldCapsDelay).toBe(80)
     expect(store.tappingToggle).toBe(5)
     expect(store.quickTapTerm).toBe(200)

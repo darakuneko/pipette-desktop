@@ -204,6 +204,26 @@ describe('handleVialReport', () => {
     expect(readLE16(getResp, 1)).toBe(0) // QK_BOOT replaced with KC_NO while locked
   })
 
+  it('tap dance set stores QK_BOOT unchanged once unlocked', () => {
+    const state = createVirtualDeviceState()
+    state.unlocked = true
+    const setPkt = new Uint8Array(MSG_LEN)
+    setPkt[0] = 0xfe
+    setPkt[1] = 0x0d
+    setPkt[2] = 0x02
+    setPkt[3] = 6
+    writeLE16(setPkt, 4, 0x7c00) // QK_BOOT (protocol v6)
+    writeLE16(setPkt, 6, 0)
+    writeLE16(setPkt, 8, 0)
+    writeLE16(setPkt, 10, 0)
+    writeLE16(setPkt, 12, 200)
+    const setResp = handleVialReport(state, setPkt, FAKE_COMPRESSED, 0)
+    expect(setResp[0]).toBe(0)
+
+    const getResp = handleVialReport(state, req(0xfe, 0x0d, 0x01, 6), FAKE_COMPRESSED, 0)
+    expect(readLE16(getResp, 1)).toBe(0x7c00) // QK_BOOT stored unchanged once unlocked
+  })
+
   it('combo set/get round-trips and out-of-range index is rejected', () => {
     const state = createVirtualDeviceState()
     const setPkt = new Uint8Array(MSG_LEN)
@@ -227,6 +247,26 @@ describe('handleVialReport', () => {
     expect(handleVialReport(state, badIdx, FAKE_COMPRESSED, 0)[0]).toBe(0xff)
   })
 
+  it('combo set blocks QK_BOOT in output while locked, condition keys untouched', () => {
+    const state = createVirtualDeviceState()
+    expect(state.unlocked).toBe(false)
+    const setPkt = new Uint8Array(MSG_LEN)
+    setPkt[0] = 0xfe
+    setPkt[1] = 0x0d
+    setPkt[2] = 0x04
+    setPkt[3] = 2
+    writeLE16(setPkt, 4, 1)
+    writeLE16(setPkt, 6, 2)
+    writeLE16(setPkt, 8, 0)
+    writeLE16(setPkt, 10, 0)
+    writeLE16(setPkt, 12, 0x7c00) // QK_BOOT output
+    expect(handleVialReport(state, setPkt, FAKE_COMPRESSED, 0)[0]).toBe(0)
+
+    const getResp = handleVialReport(state, req(0xfe, 0x0d, 0x03, 2), FAKE_COMPRESSED, 0)
+    expect(readLE16(getResp, 9)).toBe(0) // output replaced with KC_NO while locked
+    expect(readLE16(getResp, 1)).toBe(1) // condition keycodes are not gated by vial.c's firewall
+  })
+
   it('key override get exposes the seeded sample enabled bit and combined options byte', () => {
     const state = createVirtualDeviceState()
     const resp = handleVialReport(state, req(0xfe, 0x0d, 0x05, 0x00), FAKE_COMPRESSED, 0)
@@ -234,6 +274,28 @@ describe('handleVialReport', () => {
     const optionsByte = resp[10]
     expect((optionsByte & 0x80) !== 0).toBe(true) // enabled
     expect(optionsByte & 0x7f).toBe(0x07)
+  })
+
+  it('key override set blocks QK_BOOT in replacement while locked, trigger key untouched', () => {
+    const state = createVirtualDeviceState()
+    expect(state.unlocked).toBe(false)
+    const setPkt = new Uint8Array(MSG_LEN)
+    setPkt[0] = 0xfe
+    setPkt[1] = 0x0d
+    setPkt[2] = 0x06
+    setPkt[3] = 1
+    writeLE16(setPkt, 4, 4) // triggerKey
+    writeLE16(setPkt, 6, 0x7c00) // replacementKey = QK_BOOT
+    writeLE16(setPkt, 8, 0) // layers
+    setPkt[10] = 0 // triggerMods
+    setPkt[11] = 0 // negativeMods
+    setPkt[12] = 0 // suppressedMods
+    setPkt[13] = 0x80 // enabled bit only
+    expect(handleVialReport(state, setPkt, FAKE_COMPRESSED, 0)[0]).toBe(0)
+
+    const getResp = handleVialReport(state, req(0xfe, 0x0d, 0x05, 1), FAKE_COMPRESSED, 0)
+    expect(readLE16(getResp, 3)).toBe(0) // replacement replaced with KC_NO while locked
+    expect(readLE16(getResp, 1)).toBe(4) // trigger key is not gated by vial.c's firewall
   })
 
   it('alt repeat key set/get round-trips through the 6-byte wire entry', () => {
@@ -253,6 +315,25 @@ describe('handleVialReport', () => {
     expect(readLE16(getResp, 1)).toBe(4)
     expect(readLE16(getResp, 3)).toBe(5)
     expect((getResp[6] & 0x08) !== 0).toBe(true)
+  })
+
+  it('alt repeat key set blocks QK_BOOT in both keycode and alt keycode while locked', () => {
+    const state = createVirtualDeviceState()
+    expect(state.unlocked).toBe(false)
+    const setPkt = new Uint8Array(MSG_LEN)
+    setPkt[0] = 0xfe
+    setPkt[1] = 0x0d
+    setPkt[2] = 0x08
+    setPkt[3] = 3
+    writeLE16(setPkt, 4, 0x7c00) // lastKey = QK_BOOT
+    writeLE16(setPkt, 6, 0x7c00) // altKey = QK_BOOT
+    setPkt[8] = 0
+    setPkt[9] = 0x08 // enabled bit only
+    expect(handleVialReport(state, setPkt, FAKE_COMPRESSED, 0)[0]).toBe(0)
+
+    const getResp = handleVialReport(state, req(0xfe, 0x0d, 0x07, 3), FAKE_COMPRESSED, 0)
+    expect(readLE16(getResp, 1)).toBe(0) // lastKey replaced with KC_NO while locked
+    expect(readLE16(getResp, 3)).toBe(0) // altKey replaced with KC_NO while locked
   })
 
   it('encoder get (sub 0x03) is a pure echo', () => {

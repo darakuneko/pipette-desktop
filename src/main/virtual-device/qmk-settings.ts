@@ -99,7 +99,7 @@ export function createDefaultQmkSettings(): QmkSettingsStore {
     mousekeyWheelInterval: 80, // MOUSEKEY_WHEEL_INTERVAL
     mousekeyWheelMaxSpeed: 8, // MOUSEKEY_WHEEL_MAX_SPEED
     mousekeyWheelTimeToMax: 40, // MOUSEKEY_WHEEL_TIME_TO_MAX
-    tapCodeDelay: 10, // qmk_settings.h TAP_CODE_DELAY
+    tapCodeDelay: 0, // quantum/action.h TAP_CODE_DELAY (included by qmk_settings.h before its own #ifndef guard, so action.h's 0 wins over qmk_settings.h's fallback 10)
     tapHoldCapsDelay: 80, // qmk_settings.h TAP_HOLD_CAPS_DELAY
     tappingToggle: 5, // quantum/action_tapping.h TAPPING_TOGGLE
     magicFlags: 0,
