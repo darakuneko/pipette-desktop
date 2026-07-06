@@ -33,6 +33,7 @@ import {
 } from './typing-analytics/typing-analytics-service'
 import { registerPreSyncQuitFinalizer, notifyChange } from './sync/sync-service'
 import { secureHandle, secureOn } from './ipc-guard'
+import { isVirtualDeviceEnabled, getVirtualDeviceController } from './virtual-device'
 
 const isDev = !!process.env.ELECTRON_RENDERER_URL
 
@@ -309,6 +310,10 @@ app.whenReady().then(() => {
   log('info', 'Pipette starting')
   setupCsp()
   setupHidIpc()
+  if (isVirtualDeviceEnabled()) {
+    const globalWithVirtualDevice = globalThis as Record<string, unknown>
+    globalWithVirtualDevice.__pipetteVirtualDevice = getVirtualDeviceController()
+  }
   setupFileIO()
   setupSnapshotStore()
   setupAnalyzeFilterStore()

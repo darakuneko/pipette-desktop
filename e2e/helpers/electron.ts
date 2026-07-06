@@ -15,6 +15,8 @@ export interface LaunchAppOptions {
    * SQLite cache from them as the renderer loads.
    */
   onMainReady?: (ctx: { app: ElectronApplication; userDataPath: string }) => Promise<void>
+  /** Extra environment variables for the launched process, merged in last (override shell env). */
+  env?: Record<string, string>
 }
 
 /**
@@ -47,6 +49,7 @@ export async function launchApp(opts: LaunchAppOptions = {}): Promise<{
     env: {
       ...cleanEnv,
       ...(isDev ? { ELECTRON_RENDERER_URL: rendererUrl } : {}),
+      ...opts.env,
     },
   })
 

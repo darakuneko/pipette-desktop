@@ -255,6 +255,8 @@ function KeyWidgetInner({
   return (
     <g
       transform={groupTransform}
+      data-key-pos={kleKey.row >= 0 && kleKey.col >= 0 ? `${kleKey.row},${kleKey.col}` : undefined}
+      data-pressed={pressed ? 'true' : undefined}
       onClick={handleClick}
       onDoubleClick={handleDoubleClick}
       onMouseEnter={(e) => {
