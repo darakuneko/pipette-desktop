@@ -12,7 +12,7 @@
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
 import { launchApp } from './helpers/electron'
-import { dismissNotificationModal, VIRTUAL_DEVICE_DISPLAY_NAME } from './helpers/doc-capture-common'
+import { dismissNotificationModal, escapeRegex, VIRTUAL_DEVICE_DISPLAY_NAME } from './helpers/doc-capture-common'
 import type { VirtualDeviceController } from './helpers/doc-capture-common'
 
 const VIRTUAL_DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
@@ -34,9 +34,12 @@ test.afterAll(async () => {
 })
 
 test('virtual device appears in the device list and connects to the editor', async () => {
+  // Anchored exact match (same form as connectToDevice) — a plain string
+  // hasText is substring matching and could hit a device whose name merely
+  // contains VIRTUAL_DEVICE_NAME.
   const deviceButton = page
     .locator('[data-testid="device-button"]')
-    .filter({ has: page.locator('.font-semibold', { hasText: VIRTUAL_DEVICE_NAME }) })
+    .filter({ has: page.locator('.font-semibold', { hasText: new RegExp(`^${escapeRegex(VIRTUAL_DEVICE_NAME)}$`) }) })
 
   await expect(deviceButton).toBeVisible({ timeout: CONNECT_TIMEOUT_MS })
   await deviceButton.click()

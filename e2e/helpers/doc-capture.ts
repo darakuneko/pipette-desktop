@@ -3,7 +3,7 @@
 // Screenshot capture script for Pipette operation guide documentation.
 // Usage: pnpm build && pnpm doc:screenshots
 import type { ElectronApplication, Page, Locator } from '@playwright/test'
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, readdirSync, renameSync, rmdirSync, statSync, copyFileSync, constants as fsConstants } from 'node:fs'
 import { resolve, join } from 'node:path'
 import {
   backupVirtualDeviceSettings,
@@ -292,9 +292,24 @@ function isolateForeignKeyboardDirs(userDataPath: string): ForeignKeyboardIsolat
 // `src` is removed only once fully emptied; a non-empty leftover is logged
 // so it is never silently stranded.
 function mergeDirInto(src: string, dest: string): void {
+  // Fast-path rename when `dest` is absent. The existsSync check is not a
+  // clobber guard — it only picks the cheap path. If `dest` races into
+  // existence between the check and the rename, renameSync on a *directory*
+  // fails safely rather than overwriting data: POSIX rename() over an
+  // existing non-empty dir → ENOTEMPTY, over a file → ENOTDIR; only an
+  // existing *empty* dir is replaced, which loses nothing. On such a
+  // failure we fall through to the per-entry merge.
   if (!existsSync(dest)) {
-    renameSync(src, dest)
-    return
+    try {
+      renameSync(src, dest)
+      return
+    } catch (err) {
+      if (!existsSync(dest)) {
+        console.error(`  [restore] failed to move ${src} to ${dest}:`, err)
+        return
+      }
+      // dest appeared concurrently — merge entry by entry below.
+    }
   }
 
   let entries: string[]
@@ -309,26 +324,38 @@ function mergeDirInto(src: string, dest: string): void {
     const srcEntry = join(src, name)
     const destEntry = join(dest, name)
 
-    if (!existsSync(destEntry)) {
-      try {
-        renameSync(srcEntry, destEntry)
-      } catch (err) {
-        console.error(`  [restore] failed to move ${srcEntry} to ${destEntry}:`, err)
+    if (statSync(srcEntry).isDirectory()) {
+      if (existsSync(destEntry) && !statSync(destEntry).isDirectory()) {
+        console.error(
+          `  [restore][conflict] ${destEntry} already exists as a file (written during this run) — kept it; your prior directory is preserved at ${srcEntry}, reconcile manually`,
+        )
+        continue
       }
-      continue
-    }
-
-    const srcIsDir = statSync(srcEntry).isDirectory()
-    const destIsDir = statSync(destEntry).isDirectory()
-    if (srcIsDir && destIsDir) {
+      // Recurse: mergeDirInto's own fast path covers the absent-dest rename,
+      // and its directory renameSync cannot silently clobber (see above).
       mergeDirInto(srcEntry, destEntry)
       try {
         if (readdirSync(srcEntry).length === 0) rmdirSync(srcEntry)
-      } catch { /* not empty (unresolved nested conflict) or already gone */ }
+      } catch { /* moved wholesale, or still holds unresolved conflicts */ }
     } else {
-      console.error(
-        `  [restore][conflict] ${destEntry} already exists (written during this run) — kept the newer destination copy; your prior data is preserved at ${srcEntry}, reconcile manually`,
-      )
+      // File entry: atomic no-clobber move. COPYFILE_EXCL makes the copy
+      // fail with EEXIST instead of overwriting, closing the TOCTOU window
+      // an existsSync-then-rename would leave open (rename() silently
+      // replaces an existing destination file, so a sync/app write landing
+      // between check and move would be lost). The backup copy is only
+      // unlinked after the copy succeeded.
+      try {
+        copyFileSync(srcEntry, destEntry, fsConstants.COPYFILE_EXCL)
+        unlinkSync(srcEntry)
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === 'EEXIST') {
+          console.error(
+            `  [restore][conflict] ${destEntry} already exists (written during this run) — kept the newer destination copy; your prior data is preserved at ${srcEntry}, reconcile manually`,
+          )
+        } else {
+          console.error(`  [restore] failed to move ${srcEntry} to ${destEntry}:`, err)
+        }
+      }
     }
   }
 
@@ -973,8 +1000,14 @@ async function captureKeyboardTab(page: Page): Promise<void> {
   // Capture device list view
   await captureNamed(page, 'keyboard-tab-device-list', { fullPage: true })
 
-  // Click the connected device to show its keymap
-  const deviceBtn = editorContent.locator('button', { hasText: new RegExp(escapeRegex(DEVICE_NAME)) })
+  // Click the connected device to show its keymap. The tile's text is
+  // "{productName}›" (name span + chevron span), so an anchored regex on the
+  // whole button would never match — anchor the exact name against the inner
+  // `.font-medium` name span instead, mirroring connectToDevice's structure,
+  // so a device whose name merely contains DEVICE_NAME can't match.
+  const deviceBtn = editorContent
+    .locator('button')
+    .filter({ has: page.locator('.font-medium', { hasText: new RegExp(`^${escapeRegex(DEVICE_NAME)}$`) }) })
   if (await isAvailable(deviceBtn)) {
     await deviceBtn.first().click()
     await page.waitForTimeout(500)
