@@ -33,7 +33,14 @@ import {
   getDefinitionSize,
   getDefinitionRaw,
   getDynamicEntryCount,
+  getTapDance,
+  getCombo,
+  getKeyOverride,
+  getAltRepeatKey,
   qmkSettingsQuery,
+  qmkSettingsGet,
+  qmkSettingsSet,
+  qmkSettingsReset,
   getVialRGBInfo,
   getVialRGBMode,
   getVialRGBSupported,
@@ -114,20 +121,56 @@ describe('preload protocol against the virtual device emulator', () => {
     expect(definition.name).toBe('GPK60-63R Virtual')
   })
 
-  it('getDynamicEntryCount returns all zeros without throwing echo-detected', async () => {
+  it('getDynamicEntryCount reports the 32-entry tier and caps-word/layer-lock feature flags', async () => {
     await expect(getDynamicEntryCount()).resolves.toEqual({
-      tapDance: 0,
-      combo: 0,
-      keyOverride: 0,
-      altRepeatKey: 0,
-      featureFlags: 0,
+      tapDance: 32,
+      combo: 32,
+      keyOverride: 32,
+      altRepeatKey: 32,
+      featureFlags: 0x03,
     })
   })
 
-  it('qmkSettingsQuery yields an all-0xFF (unsupported / empty) qsid list', async () => {
+  it('getTapDance/getCombo/getKeyOverride/getAltRepeatKey parse the seeded sample at index 0', async () => {
+    const tapDance = await getTapDance(0)
+    expect(tapDance.onTap).not.toBe(0)
+    expect(tapDance.onHold).not.toBe(0)
+
+    const combo = await getCombo(0)
+    expect(combo.key1).not.toBe(0)
+    expect(combo.key2).not.toBe(0)
+    expect(combo.output).not.toBe(0)
+
+    const keyOverride = await getKeyOverride(0)
+    expect(keyOverride.enabled).toBe(true)
+    expect(keyOverride.triggerKey).not.toBe(0)
+    expect(keyOverride.replacementKey).not.toBe(0)
+
+    const altRepeatKey = await getAltRepeatKey(0)
+    expect(altRepeatKey.enabled).toBe(true)
+    expect(altRepeatKey.lastKey).not.toBe(0)
+    expect(altRepeatKey.altKey).not.toBe(0)
+  })
+
+  it('qmkSettingsQuery yields a non-empty ascending qsid list (not the all-0xFF placeholder)', async () => {
     const result = await qmkSettingsQuery(0)
     expect(result).toHaveLength(MSG_LEN)
-    expect(result.every((b) => b === 0xff)).toBe(true)
+    expect(result.every((b) => b === 0xff)).toBe(false)
+    // First entry (LE16) should be qsid 1 (grave_esc_override).
+    expect(result[0] | (result[1] << 8)).toBe(1)
+  })
+
+  it('qmkSettingsGet/qmkSettingsSet/qmkSettingsReset round-trip a known default (qsid 7 = tapping_term)', async () => {
+    const before = await qmkSettingsGet(7)
+    expect(before[0] | (before[1] << 8)).toBe(200)
+
+    await qmkSettingsSet(7, [44, 1]) // 300 LE16
+    const after = await qmkSettingsGet(7)
+    expect(after[0] | (after[1] << 8)).toBe(300)
+
+    await qmkSettingsReset()
+    const reset = await qmkSettingsGet(7)
+    expect(reset[0] | (reset[1] << 8)).toBe(200)
   })
 
   it('getVialRGBInfo/getVialRGBMode/getVialRGBSupported parse cleanly', async () => {

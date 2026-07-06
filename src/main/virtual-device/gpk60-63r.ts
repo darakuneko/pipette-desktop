@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
-// Static dataset for the virtual GPK60-63R emulator.
-// Keymap layers, macro sample data, and identity constants mirror the
-// firmware source (keymaps/vial/keymap.c, keymaps/vial/vial.json) so the
-// emulator's protocol responses are shaped exactly like a physical device.
+// Dataset and keycode-resolution helpers for the virtual GPK60-63R emulator.
+// Keymap layers, macro/dynamic-entry sample data, and identity constants
+// mirror the firmware source (keymaps/vial/keymap.c, keymaps/vial/vial.json)
+// so the emulator's protocol responses are shaped exactly like a physical
+// device. Small protocol-behavior helpers derived from the dataset (e.g. the
+// QK_BOOT firewall check) also live here, since this is the one module that
+// owns protocol-version-aware keycode resolution.
 
 import * as lzmaModule from 'lzma'
 // `keycodes.ts` must load before `keycodes-utils.ts` — the latter imports
@@ -13,6 +16,7 @@ import * as lzmaModule from 'lzma'
 import { setProtocolValue } from '../../shared/keycodes/keycodes'
 import { resolve, deserialize } from '../../shared/keycodes/keycodes-utils'
 import { SS_QMK_PREFIX, SS_TAP_CODE } from '../../shared/constants/protocol'
+import type { TapDanceEntry, ComboEntry, KeyOverrideEntry, AltRepeatKeyEntry } from '../../shared/types/protocol'
 import definitionJson from './gpk60-63r-definition.json'
 
 export const VIRTUAL_DEVICE_VID = 0x7a79
@@ -108,6 +112,14 @@ function kc(token: string): number {
   return token.includes('(') ? deserialize(token) : resolve(token)
 }
 
+/** True for the QK_BOOT keycode — vial-qmk's vial_keycode_firewall() blocks writing this
+ *  value into any dynamic store (keymap, tap dance, combo, key override, alt-repeat-key)
+ *  while the board is locked. */
+export function isBootKeycode(keycode: number): boolean {
+  setProtocolValue(VIAL_PROTOCOL)
+  return keycode === resolve('QK_BOOT')
+}
+
 /** Build the flat 4x5x14 keymap (layer-major, row-major, col order) as raw BE16-ready keycode values. */
 export function buildDefaultKeymap(): Uint16Array {
   setProtocolValue(VIAL_PROTOCOL)
@@ -150,6 +162,47 @@ export function buildDefaultMacroBuffer(): Uint8Array {
   buffer[offset++] = 0x00 // macro 1 terminator
 
   return buffer
+}
+
+/**
+ * Sample dynamic entries seeded at index 0 of each store so the doc
+ * screenshots (and a fresh app run) show a configured tile instead of an
+ * empty one, mirroring how buildDefaultMacroBuffer() seeds sample macros.
+ */
+export function buildSampleTapDance(): TapDanceEntry {
+  setProtocolValue(VIAL_PROTOCOL)
+  return {
+    onTap: resolve('KC_A'),
+    onHold: resolve('KC_LCTRL'),
+    onDoubleTap: 0,
+    onTapHold: 0,
+    tappingTerm: 200,
+  }
+}
+
+export function buildSampleCombo(): ComboEntry {
+  setProtocolValue(VIAL_PROTOCOL)
+  return { key1: resolve('KC_J'), key2: resolve('KC_K'), key3: 0, key4: 0, output: resolve('KC_ESCAPE') }
+}
+
+export function buildSampleKeyOverride(): KeyOverrideEntry {
+  setProtocolValue(VIAL_PROTOCOL)
+  const shift = resolve('MOD_LSFT')
+  return {
+    triggerKey: resolve('KC_BSPACE'),
+    replacementKey: resolve('KC_DELETE'),
+    layers: 0xffff,
+    triggerMods: shift,
+    negativeMods: 0,
+    suppressedMods: shift,
+    options: 0x07, // trigger-down + required-mod-down + negative-mod-up activation
+    enabled: true,
+  }
+}
+
+export function buildSampleAltRepeatKey(): AltRepeatKeyEntry {
+  setProtocolValue(VIAL_PROTOCOL)
+  return { lastKey: resolve('KC_C'), altKey: resolve('KC_V'), allowedMods: 0, options: 0, enabled: true }
 }
 
 function compressLzma(text: string): Promise<Uint8Array> {

@@ -29,6 +29,31 @@ describe('createVirtualDeviceState', () => {
     expect(state.matrix[0].length).toBe(COLS)
     expect(state.matrix.every((row) => row.every((v) => v === false))).toBe(true)
   })
+
+  it('seeds a sample entry at index 0 of every dynamic-entry store', () => {
+    const state = createVirtualDeviceState()
+    expect(state.tapDanceEntries).toHaveLength(32)
+    expect(state.tapDanceEntries[0].onTap).not.toBe(0)
+    expect(state.tapDanceEntries[1]).toEqual({ onTap: 0, onHold: 0, onDoubleTap: 0, onTapHold: 0, tappingTerm: 200 })
+
+    expect(state.comboEntries).toHaveLength(32)
+    expect(state.comboEntries[0].key1).not.toBe(0)
+    expect(state.comboEntries[0].output).not.toBe(0)
+
+    expect(state.keyOverrideEntries).toHaveLength(32)
+    expect(state.keyOverrideEntries[0].enabled).toBe(true)
+    expect(state.keyOverrideEntries[0].triggerKey).not.toBe(0)
+
+    expect(state.altRepeatKeyEntries).toHaveLength(32)
+    expect(state.altRepeatKeyEntries[0].enabled).toBe(true)
+    expect(state.altRepeatKeyEntries[0].lastKey).not.toBe(0)
+  })
+
+  it('starts with default QMK settings', () => {
+    const state = createVirtualDeviceState()
+    expect(state.qmkSettings.tappingTerm).toBe(200)
+    expect(state.qmkSettings.comboTerm).toBe(50)
+  })
 })
 
 describe('pressKey / releaseKey / releaseAll', () => {
