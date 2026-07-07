@@ -127,6 +127,27 @@ describe('hub-base', () => {
       expect(getHubTestAccount()).toBe('tester@example.com')
     })
 
+    it('rejects lookalike hosts that merely start with localhost', () => {
+      vi.stubEnv('PIPETTE_HUB_TEST', '1')
+      vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost.evil.com:8787')
+      vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', 'tester@example.com')
+      expect(getHubTestAccount()).toBeNull()
+    })
+
+    it('rejects userinfo tricks that put localhost before the real host', () => {
+      vi.stubEnv('PIPETTE_HUB_TEST', '1')
+      vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost@evil.com:8787')
+      vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', 'tester@example.com')
+      expect(getHubTestAccount()).toBeNull()
+    })
+
+    it('rejects IPv6 loopback (only localhost/127.0.0.1 are allowed)', () => {
+      vi.stubEnv('PIPETTE_HUB_TEST', '1')
+      vi.stubEnv('PIPETTE_HUB_URL', 'http://[::1]:8787')
+      vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', 'tester@example.com')
+      expect(getHubTestAccount()).toBeNull()
+    })
+
     it('accepts 127.0.0.1 as a local host', () => {
       vi.stubEnv('PIPETTE_HUB_TEST', '1')
       vi.stubEnv('PIPETTE_HUB_URL', 'http://127.0.0.1:8787')
