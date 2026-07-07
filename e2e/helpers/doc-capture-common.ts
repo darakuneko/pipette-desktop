@@ -7,7 +7,7 @@
 
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Locator, Page } from '@playwright/test'
-import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
@@ -28,8 +28,13 @@ export async function isAvailable(locator: Locator): Promise<boolean> {
  *
  * Returns the app only — callers own firstWindow/viewport setup because
  * some (doc-capture.ts) must seed userData files before the renderer loads.
+ *
+ * `opts.env` is merged last so a helper can add capture-specific vars
+ * (e.g. the local-hub test triple in doc-capture-hub.ts).
  */
-export async function launchCaptureApp(): Promise<ElectronApplication> {
+export async function launchCaptureApp(
+  opts: { env?: Record<string, string> } = {},
+): Promise<ElectronApplication> {
   const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
   return electron.launch({
     args: [
@@ -41,6 +46,7 @@ export async function launchCaptureApp(): Promise<ElectronApplication> {
     env: {
       ...cleanEnv,
       PIPETTE_VIRTUAL_DEVICE: 'only',
+      ...opts.env,
     },
   })
 }
@@ -94,6 +100,97 @@ export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup
     writeFileSync(backup.path, backup.content, 'utf-8')
   } else {
     try { unlinkSync(backup.path) } catch { /* absent already */ }
+  }
+}
+
+// --- Local Hub test mode ----------------------------------------------------
+
+/** Default URL of a local Hub started with `pnpm run dev:test`. */
+export const HUB_LOCAL_URL = 'http://localhost:8787'
+
+/** How to bring the local Hub up, for skip/abort messages. */
+export const HUB_LOCAL_START_HINT =
+  'cd ../pipette-hub && pnpm run db:migrate:local && pnpm run dev:test'
+
+/** Probe the local Hub with an anonymous list request. */
+export async function isLocalHubUp(hubUrl: string = HUB_LOCAL_URL): Promise<boolean> {
+  try {
+    const res = await fetch(`${hubUrl}/api/files?page=1`)
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+/** Snapshot of the `hubEnabled` key in userData/config.json (electron-store). */
+export interface HubEnabledBackup {
+  path: string
+  original: boolean | undefined
+}
+
+/**
+ * Force `hubEnabled: true` in the electron-store config file. electron-store
+ * reads the file on every access, but the renderer fetches the app config
+ * once on mount — callers must `page.reload()` after seeding (or seed
+ * before the renderer loads) for the flag to take effect.
+ */
+export function seedHubEnabledConfig(userDataPath: string): HubEnabledBackup {
+  const path = join(userDataPath, 'config.json')
+  const config = existsSync(path)
+    ? (JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>)
+    : {}
+  const backup: HubEnabledBackup = { path, original: config.hubEnabled as boolean | undefined }
+  config.hubEnabled = true
+  writeFileSync(path, JSON.stringify(config, null, '\t'), 'utf-8')
+  return backup
+}
+
+/** Restore the original `hubEnabled` value. Call after the app has closed
+ *  (window-state saves on quit rewrite config.json) and read-modify-write
+ *  so those late writes are preserved. */
+export function restoreHubEnabledConfig(backup: HubEnabledBackup): void {
+  if (!existsSync(backup.path)) return
+  const config = JSON.parse(readFileSync(backup.path, 'utf-8')) as Record<string, unknown>
+  if (backup.original === undefined) {
+    delete config.hubEnabled
+  } else {
+    config.hubEnabled = backup.original
+  }
+  writeFileSync(backup.path, JSON.stringify(config, null, '\t'), 'utf-8')
+}
+
+/** Snapshot of the virtual device's saved-layout store, taken before a
+ *  run that creates entries (Save + Hub upload flows). */
+export interface VirtualDeviceSnapshotsBackup {
+  dir: string
+  indexPath: string
+  indexContent: string | null
+  preexisting: Set<string>
+}
+
+export function backupVirtualDeviceSnapshots(userDataPath: string): VirtualDeviceSnapshotsBackup {
+  const dir = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'snapshots')
+  const indexPath = join(dir, 'index.json')
+  return {
+    dir,
+    indexPath,
+    indexContent: existsSync(indexPath) ? readFileSync(indexPath, 'utf-8') : null,
+    preexisting: new Set(existsSync(dir) ? readdirSync(dir) : []),
+  }
+}
+
+/** Delete files the run created and restore the original index, so repeat
+ *  runs don't accumulate "Default" entries. Call after the app has closed. */
+export function restoreVirtualDeviceSnapshots(backup: VirtualDeviceSnapshotsBackup): void {
+  if (!existsSync(backup.dir)) return
+  for (const name of readdirSync(backup.dir)) {
+    if (backup.preexisting.has(name)) continue
+    try { unlinkSync(join(backup.dir, name)) } catch { /* ignore */ }
+  }
+  if (backup.indexContent != null) {
+    writeFileSync(backup.indexPath, backup.indexContent, 'utf-8')
+  } else {
+    try { unlinkSync(backup.indexPath) } catch { /* absent already */ }
   }
 }
 

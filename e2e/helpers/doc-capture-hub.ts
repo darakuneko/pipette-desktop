@@ -1,29 +1,40 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 // Screenshot capture script for Hub workflow documentation.
-// Launches app directly (not via Playwright electron.launch) to preserve safeStorage/keyring,
-// then connects Playwright via remote debugging to capture screenshots. The
-// device-connected phases (3-5) use the virtual "Virtual Keyboard" device
-// (PIPETTE_VIRTUAL_DEVICE=only) — no real hardware required. The Hub/Google
-// auth-gated captures still depend on real credentials on this machine and
-// degrade to their documented "not configured" screenshots without them.
+// Launches the production build via Playwright (launchCaptureApp) with the
+// virtual "Virtual Keyboard" device and the local-Hub test mode
+// (PIPETTE_HUB_TEST), so the authed upload flow is captured without real
+// hardware, a Google account, or keyring credentials. Requires a local Hub
+// running in test mode:
+//   cd ../pipette-hub && pnpm run db:migrate:local && pnpm run dev:test
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-hub.ts
-import { chromium } from '@playwright/test'
-import type { Locator, Page } from '@playwright/test'
-import { spawn } from 'node:child_process'
+import type { ElectronApplication, Locator, Page } from '@playwright/test'
 import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { homedir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { connectToDevice, dismissOverlay, escapeRegex, isAvailable, resetToEditorMode, unlockDialogHeading, VIRTUAL_DEVICE_DISPLAY_NAME } from './doc-capture-common'
+import {
+  connectToDevice,
+  dismissOverlay,
+  escapeRegex,
+  HUB_LOCAL_START_HINT,
+  HUB_LOCAL_URL,
+  isAvailable,
+  isLocalHubUp,
+  launchCaptureApp,
+  resetToEditorMode,
+  restoreHubEnabledConfig,
+  restoreVirtualDeviceSnapshots,
+  seedHubEnabledConfig,
+  VIRTUAL_DEVICE_DISPLAY_NAME,
+  waitForUnlockDialog,
+  backupVirtualDeviceSnapshots,
+  type HubEnabledBackup,
+  type VirtualDeviceSnapshotsBackup,
+} from './doc-capture-common'
 
 const PROJECT_ROOT = resolve(import.meta.dirname, '../..')
 const SCREENSHOT_DIR = resolve(PROJECT_ROOT, 'docs/screenshots')
 const DEVICE_NAME = VIRTUAL_DEVICE_DISPLAY_NAME
-const DEBUG_PORT = 19222
-
-// Resolve real userData path for the installed app (Linux: ~/.config/pipette-desktop/)
-const USER_DATA_PATH = join(homedir(), '.config', 'pipette-desktop')
-const FAV_BASE = join(USER_DATA_PATH, 'sync', 'favorites')
+const HUB_TEST_ACCOUNT = 'doc@example.com'
 
 interface FavoriteEntry {
   id: string
@@ -62,12 +73,14 @@ const DUMMY_FAVORITES: Record<string, FavoriteIndex> = {
   },
 }
 
-function seedDocFavorites(): SeedBackup {
+// Favorites are read at request time (opening the Data modal / a TD modal),
+// so seeding right after launch — before any modal is opened — is safe.
+function seedDocFavorites(favBase: string): SeedBackup {
   const indexBackups = new Map<string, string | null>()
   const createdFiles = new Set<string>()
 
   for (const [type, index] of Object.entries(DUMMY_FAVORITES)) {
-    const dir = join(FAV_BASE, type)
+    const dir = join(favBase, type)
     mkdirSync(dir, { recursive: true })
 
     const indexPath = join(dir, 'index.json')
@@ -105,24 +118,14 @@ async function dismissOverlays(page: Page): Promise<void> {
   )
 }
 
-async function connectDevice(page: Page): Promise<boolean> {
+async function connectDevice(app: ElectronApplication, page: Page): Promise<boolean> {
   if (!(await connectToDevice(page, DEVICE_NAME, { raceNoDeviceMessage: true }))) {
     return false
   }
-
-  // This script never triggers unlock-gated actions itself, and its userData
-  // (~/.config/pipette-desktop, from `electron .`) is disjoint from the
-  // Playwright-launched helpers' userData (~/.config/Electron), so no foreign
-  // persisted viewMode can auto-restore into a locked mode here. Should the
-  // Unlock dialog ever appear anyway, this script cannot clear it — the
-  // virtual device's unlock controller lives on the main process globalThis
-  // and needs an ElectronApplication handle (app.evaluate), while this script
-  // only has a CDP-attached Page (see the module comment on why). Surface
-  // that clearly instead of failing later with an opaque "element intercepts
-  // pointer events" timeout.
-  if (await isAvailable(unlockDialogHeading(page))) {
-    console.log('  [warn] Unlock dialog is showing and this script cannot drive the unlock combo (no ElectronApplication handle). Device-dependent captures below will likely fail.')
-  }
+  // The virtual device relocks on every launch; a persisted viewMode from a
+  // prior helper run can surface the Unlock dialog on connect. Clear it via
+  // the virtual-device controller, then reset back to the keymap editor.
+  await waitForUnlockDialog(app, page)
   await resetToEditorMode(page)
   return true
 }
@@ -135,41 +138,6 @@ async function capture(page: Page, name: string, opts?: { element?: Locator; ful
     await page.screenshot({ path, fullPage: opts?.fullPage ?? false })
   }
   console.log(`  Saved: ${name}.png`)
-}
-
-function launchElectronApp(): ReturnType<typeof spawn> {
-  const electronPath = resolve(PROJECT_ROOT, 'node_modules/.bin/electron')
-  // Strip ELECTRON_RENDERER_URL like e2e/helpers/electron.ts does, so a stray
-  // dev-server env var left over from another run can't leak into this
-  // production-build capture. PIPETTE_VIRTUAL_DEVICE='only' swaps in the
-  // software Virtual Keyboard (GPK60-63R) emulator and hides real HID hardware.
-  const { ELECTRON_RENDERER_URL: _stripped, ...cleanEnv } = process.env
-  return spawn(electronPath, [
-    '.',
-    '--no-sandbox',
-    '--disable-gpu-sandbox',
-    `--remote-debugging-port=${DEBUG_PORT}`,
-  ], {
-    cwd: PROJECT_ROOT,
-    stdio: 'ignore',
-    detached: false,
-    env: {
-      ...cleanEnv,
-      PIPETTE_VIRTUAL_DEVICE: 'only',
-    },
-  })
-}
-
-async function waitForDebugPort(port: number, timeoutMs = 15_000): Promise<void> {
-  const start = Date.now()
-  while (Date.now() - start < timeoutMs) {
-    try {
-      const res = await fetch(`http://127.0.0.1:${port}/json/version`)
-      if (res.ok) return
-    } catch {}
-    await new Promise((r) => setTimeout(r, 500))
-  }
-  throw new Error(`Debug port ${port} not available after ${timeoutMs}ms`)
 }
 
 // --- Phase 1: Global Settings (Data tab) ---
@@ -219,7 +187,18 @@ async function captureDataModalHub(page: Page): Promise<void> {
     return
   }
 
-  // Wait for favorite entries to load (default tab: Tap Dance)
+  // The Data modal opens on the sidebar tree with everything collapsed —
+  // drill into Local > Favorites > Tap Dance to reach the seeded entries.
+  for (const nav of ['nav-local', 'nav-local-favorites', 'nav-fav-tapDance']) {
+    const navBtn = page.locator(`[data-testid="${nav}"]`)
+    if (!(await isAvailable(navBtn))) {
+      console.log(`  [warn] ${nav} not found in the Data modal tree`)
+      break
+    }
+    await navBtn.click()
+  }
+
+  // Wait for the seeded Tap Dance favorite entries to load
   const entries = page.locator('[data-testid="data-modal-fav-entry"]')
   try {
     await entries.first().waitFor({ state: 'visible', timeout: 5000 })
@@ -408,30 +387,83 @@ async function captureEditorDataTab(page: Page): Promise<void> {
 
 // --- Main ---
 
+/**
+ * Delete the doc test account's posts left on the local Hub by a previous
+ * run. The script restores local snapshots on exit but cannot restore the
+ * Hub side, and a leftover same-title post would make the next run's saved
+ * entry match it as an orphan — rendering "Upload?" instead of the plain
+ * Upload button that hub-03 documents.
+ */
+async function cleanupHubTestAccountPosts(): Promise<void> {
+  const authRes = await fetch(`${HUB_LOCAL_URL}/api/auth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id_token: `test:${HUB_TEST_ACCOUNT}` }),
+  })
+  if (!authRes.ok) {
+    console.log(`  [warn] Hub cleanup auth failed (${authRes.status}) — continuing`)
+    return
+  }
+  const { data: auth } = await authRes.json() as { data: { token: string } }
+  const listRes = await fetch(`${HUB_LOCAL_URL}/api/files/me?per_page=100`, {
+    headers: { Authorization: `Bearer ${auth.token}` },
+  })
+  if (!listRes.ok) {
+    console.log(`  [warn] Hub cleanup list failed (${listRes.status}) — continuing`)
+    return
+  }
+  const { data: posts } = await listRes.json() as { data: { items: { id: string; title: string }[] } }
+  for (const post of posts.items) {
+    const delRes = await fetch(`${HUB_LOCAL_URL}/api/files/${encodeURIComponent(post.id)}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+    console.log(`  Deleted leftover post "${post.title}" (${delRes.ok ? 'ok' : delRes.status})`)
+  }
+}
+
 async function main(): Promise<void> {
+  if (!(await isLocalHubUp())) {
+    console.error(`Local Hub is not reachable at ${HUB_LOCAL_URL}.`)
+    console.error('Start it in test mode first:')
+    console.error(`  ${HUB_LOCAL_START_HINT}`)
+    process.exit(1)
+  }
+
+  console.log('Cleaning up leftover test-account posts on the local Hub...')
+  await cleanupHubTestAccountPosts()
+
   mkdirSync(SCREENSHOT_DIR, { recursive: true })
 
-  // Seed dummy favorites with hubPostId before launching
-  console.log('Seeding dummy favorites...')
-  const favBackups = seedDocFavorites()
+  console.log('Launching Electron app (virtual device + local Hub test mode)...')
+  const app = await launchCaptureApp({
+    env: {
+      PIPETTE_HUB_TEST: '1',
+      PIPETTE_HUB_URL: HUB_LOCAL_URL,
+      PIPETTE_HUB_TEST_ACCOUNT: HUB_TEST_ACCOUNT,
+    },
+  })
 
-  console.log('Launching Electron app with remote debugging (virtual device)...')
-  const child = launchElectronApp()
-
-  let browser: Awaited<ReturnType<typeof chromium.connectOverCDP>> | undefined
+  let favBackups: SeedBackup | null = null
+  let hubEnabledBackup: HubEnabledBackup | null = null
+  let snapshotsBackup: VirtualDeviceSnapshotsBackup | null = null
   try {
-    await waitForDebugPort(DEBUG_PORT)
-    console.log('Connected to debug port')
+    const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
+    console.log(`userData: ${userDataPath}`)
 
-    browser = await chromium.connectOverCDP(`http://127.0.0.1:${DEBUG_PORT}`)
-    const contexts = browser.contexts()
-    if (contexts.length === 0) throw new Error('No browser contexts found')
+    console.log('Seeding dummy favorites + hubEnabled config...')
+    favBackups = seedDocFavorites(join(userDataPath, 'sync', 'favorites'))
+    hubEnabledBackup = seedHubEnabledConfig(userDataPath)
+    snapshotsBackup = backupVirtualDeviceSnapshots(userDataPath)
 
-    const pages = contexts[0].pages()
-    if (pages.length === 0) throw new Error('No pages found')
-
-    const page = pages[0]
+    const page = await app.firstWindow()
+    await page.waitForLoadState('domcontentloaded')
     await page.setViewportSize({ width: 1320, height: 960 })
+    // The renderer reads the app config once on mount and may have loaded
+    // before the hubEnabled seed landed — reload so it picks the flag up
+    // deterministically.
+    await page.reload()
+    await page.waitForLoadState('domcontentloaded')
     await page.waitForTimeout(3000)
 
     await dismissOverlays(page)
@@ -439,7 +471,7 @@ async function main(): Promise<void> {
     await captureDataModalHub(page)
 
     console.log('\n--- Phase 3: Connect device ---')
-    const connected = await connectDevice(page)
+    const connected = await connectDevice(app, page)
     if (!connected) {
       console.log('Failed to connect to device.')
       return
@@ -450,10 +482,11 @@ async function main(): Promise<void> {
 
     console.log(`\nHub screenshots saved to: ${SCREENSHOT_DIR}`)
   } finally {
-    await browser?.close()
-    child.kill()
-    restoreDocFavorites(favBackups)
-    console.log('Restored original favorites')
+    await app.close().catch((err: unknown) => console.error('  [cleanup] app.close failed:', err))
+    if (favBackups) restoreDocFavorites(favBackups)
+    if (snapshotsBackup) restoreVirtualDeviceSnapshots(snapshotsBackup)
+    if (hubEnabledBackup) restoreHubEnabledConfig(hubEnabledBackup)
+    console.log('Restored original favorites, snapshots, and config')
   }
 }
 
