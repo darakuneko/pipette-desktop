@@ -61,6 +61,10 @@ vi.stubGlobal('fetch', mockFetch)
 describe('google-auth', () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    // Ensure Hub test-mode env vars don't leak from the developer's shell
+    delete process.env.PIPETTE_HUB_TEST
+    delete process.env.PIPETTE_HUB_URL
+    delete process.env.PIPETTE_HUB_TEST_ACCOUNT
     const fs = await import('node:fs/promises')
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(fs as any)._testStore.clear()
@@ -362,6 +366,43 @@ describe('google-auth', () => {
 
       const token = await getIdToken()
       expect(token).toBe(validJwt)
+    })
+  })
+
+  describe('Hub local test mode', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+    })
+
+    function enableHubTestMode(email: string): void {
+      vi.stubEnv('PIPETTE_HUB_TEST', '1')
+      vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost:8787')
+      vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', email)
+    }
+
+    it('getIdToken returns the sentinel token without touching stored tokens', async () => {
+      enableHubTestMode('tester@example.com')
+      const token = await getIdToken()
+      expect(token).toBe('test:tester@example.com')
+      expect(mockFetch).not.toHaveBeenCalled()
+    })
+
+    it('getAuthStatus reports authenticated in test mode', async () => {
+      enableHubTestMode('tester@example.com')
+      const status = await getAuthStatus()
+      expect(status.authenticated).toBe(true)
+    })
+
+    it('getAccessToken stays null in test mode (Drive sync remains disabled)', async () => {
+      enableHubTestMode('tester@example.com')
+      const token = await getAccessToken()
+      expect(token).toBeNull()
+    })
+
+    it('ignores the test account when the Hub base is the prod default (fail-closed)', async () => {
+      vi.stubEnv('PIPETTE_HUB_TEST_ACCOUNT', 'tester@example.com')
+      expect(await getIdToken()).toBeNull()
+      expect((await getAuthStatus()).authenticated).toBe(false)
     })
   })
 

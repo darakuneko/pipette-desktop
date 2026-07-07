@@ -7,6 +7,7 @@ import { createServer, type Server } from 'node:http'
 import { writeFile, readFile, unlink, mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { SyncAuthStatus } from '../../shared/types/sync'
+import { getHubTestAccount } from '../hub/hub-base'
 
 const GOOGLE_AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
@@ -216,6 +217,13 @@ function isJwtStale(jwt: string, maxAgeSeconds: number): boolean {
 const ID_TOKEN_MAX_AGE = 300 // refresh if older than 5 min (Hub allows 10 min)
 
 export async function getIdToken(): Promise<string | null> {
+  // Local Hub test mode: a Hub running with TEST_MODE (pnpm run dev:test)
+  // accepts the `test:<email>` sentinel in place of a Google id_token.
+  // Only Hub auth is faked — Google Drive sync deliberately keeps its
+  // real behavior (no access tokens exist, so sync stays disabled).
+  const testAccount = getHubTestAccount()
+  if (testAccount) return `test:${testAccount}`
+
   const tokens = await loadTokens()
   if (!tokens) return null
 
@@ -238,6 +246,9 @@ export async function getIdToken(): Promise<string | null> {
 }
 
 export async function getAuthStatus(): Promise<SyncAuthStatus> {
+  // Local Hub test mode reports authenticated so hub-gated UI opens.
+  // Drive access tokens stay null, so sync itself remains disabled.
+  if (getHubTestAccount()) return { authenticated: true }
   const tokens = await loadTokens()
   return { authenticated: tokens !== null }
 }

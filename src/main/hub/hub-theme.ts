@@ -16,9 +16,8 @@ import type {
   HubThemeListParams,
   HubThemeListResponse,
 } from '../../shared/types/hub'
-const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
-const isDev = !!process.env.ELECTRON_RENDERER_URL
-const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT
+import { getHubApiBase } from './hub-base'
+
 const MAX_RETRY_AFTER_S = 60
 
 const THEME_PACKS_ROUTE = '/api/theme-packs'
@@ -102,7 +101,7 @@ export async function fetchThemePostList(query: HubThemeListParams): Promise<Hub
   if (query.page != null) qs.set('page', String(query.page))
   if (query.perPage != null) qs.set('per_page', String(query.perPage))
   const search = qs.toString()
-  const url = `${HUB_API_BASE}${THEME_PACKS_ROUTE}${search ? `?${search}` : ''}`
+  const url = `${getHubApiBase()}${THEME_PACKS_ROUTE}${search ? `?${search}` : ''}`
   const raw = await hubFetchJson<HubThemePackPaginatedRaw>(url, { method: 'GET' }, 'Hub theme list failed')
   return {
     items: raw.items.map((item) => ({
@@ -122,7 +121,7 @@ export async function fetchThemePostList(query: HubThemeListParams): Promise<Hub
 
 export async function downloadThemePostBody(postId: string): Promise<HubThemePackBody> {
   return hubFetchJson<HubThemePackBody>(
-    `${HUB_API_BASE}${themePackDownloadRoute(postId)}`,
+    `${getHubApiBase()}${themePackDownloadRoute(postId)}`,
     { method: 'GET' },
     'Hub theme download failed',
   )
@@ -132,7 +131,7 @@ export async function fetchThemePackTimestamps(
   ids: string[],
 ): Promise<HubThemePackTimestampsResponse> {
   return hubFetchJson<HubThemePackTimestampsResponse>(
-    `${HUB_API_BASE}${THEME_PACKS_ROUTE}/timestamps`,
+    `${getHubApiBase()}${THEME_PACKS_ROUTE}/timestamps`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -173,7 +172,7 @@ async function submitThemePack(
 ): Promise<HubPostResponse> {
   const { body, boundary } = buildThemeMultipartBody(buildThemeJsonFile(pack))
   return hubFetchJson<HubPostResponse>(
-    `${HUB_API_BASE}${path}`,
+    `${getHubApiBase()}${path}`,
     {
       method,
       headers: {
@@ -200,7 +199,7 @@ export function updateThemePostOnHub(
 
 export async function deleteThemePostFromHub(jwt: string, postId: string): Promise<void> {
   await hubFetchJson<unknown>(
-    `${HUB_API_BASE}${themePackRoute(postId)}`,
+    `${getHubApiBase()}${themePackRoute(postId)}`,
     {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${jwt}` },

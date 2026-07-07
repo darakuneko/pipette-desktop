@@ -22,9 +22,8 @@ import type {
   HubI18nPackTimestampsResponse,
   HubI18nPostListItem,
 } from '../../shared/types/hub'
-const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
-const isDev = !!process.env.ELECTRON_RENDERER_URL
-const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT
+import { getHubApiBase } from './hub-base'
+
 const MAX_RETRY_AFTER_S = 60
 
 const I18N_PACKS_ROUTE = '/api/i18n-packs'
@@ -165,7 +164,7 @@ export async function fetchI18nPostList(query: HubI18nListParams): Promise<HubI1
   if (query.page != null) qs.set('page', String(query.page))
   if (query.perPage != null) qs.set('per_page', String(query.perPage))
   const search = qs.toString()
-  const url = `${HUB_API_BASE}${I18N_PACKS_ROUTE}${search ? `?${search}` : ''}`
+  const url = `${getHubApiBase()}${I18N_PACKS_ROUTE}${search ? `?${search}` : ''}`
   const raw = await hubFetchJson<HubI18nPackPaginatedRaw>(url, { method: 'GET' }, 'Hub i18n list failed')
   return {
     items: raw.items.map((item) => ({
@@ -184,7 +183,7 @@ export async function fetchI18nPostList(query: HubI18nListParams): Promise<HubI1
 }
 
 export async function downloadI18nPostBody(postId: string): Promise<HubI18nExportV1> {
-  const url = `${HUB_API_BASE}${i18nPackDownloadRoute(postId)}`
+  const url = `${getHubApiBase()}${i18nPackDownloadRoute(postId)}`
   const response = await fetch(url, { method: 'GET' })
   if (!response.ok) {
     const text = await response.text()
@@ -210,7 +209,7 @@ export async function fetchI18nPackTimestamps(
   ids: string[],
 ): Promise<HubI18nPackTimestampsResponse> {
   return hubFetchJson<HubI18nPackTimestampsResponse>(
-    `${HUB_API_BASE}${I18N_PACKS_ROUTE}/timestamps`,
+    `${getHubApiBase()}${I18N_PACKS_ROUTE}/timestamps`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -260,7 +259,7 @@ async function submitI18nPack(
 ): Promise<HubPostResponse> {
   const { body, boundary } = buildI18nMultipartBody(buildI18nJsonFile(pack))
   return hubFetchJson<HubPostResponse>(
-    `${HUB_API_BASE}${path}`,
+    `${getHubApiBase()}${path}`,
     {
       method,
       headers: {
@@ -287,7 +286,7 @@ export function updateI18nPostOnHub(
 
 export async function deleteI18nPostFromHub(jwt: string, postId: string): Promise<void> {
   await hubFetchJson<unknown>(
-    `${HUB_API_BASE}${i18nPackRoute(postId)}`,
+    `${getHubApiBase()}${i18nPackRoute(postId)}`,
     {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${jwt}` },
