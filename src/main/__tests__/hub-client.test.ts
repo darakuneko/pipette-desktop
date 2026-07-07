@@ -8,62 +8,63 @@ vi.stubGlobal('fetch', mockFetch)
 
 describe('hub-client', () => {
   beforeAll(() => {
-    // Ensure env var doesn't leak from the developer's shell
+    // Ensure env vars don't leak from the developer's shell
     delete process.env.PIPETTE_HUB_URL
     delete process.env.ELECTRON_RENDERER_URL
+    delete process.env.PIPETTE_HUB_TEST
+    delete process.env.PIPETTE_HUB_TEST_ACCOUNT
   })
 
   beforeEach(() => {
     mockFetch.mockReset()
   })
 
-  it('uses PIPETTE_HUB_URL env var in dev mode', async () => {
-    process.env.PIPETTE_HUB_URL = 'http://localhost:8788'
-    process.env.ELECTRON_RENDERER_URL = 'http://localhost:5173'
-    try {
-      vi.resetModules()
-      const { authenticateWithHub: authFn } = await import('../hub/hub-client')
-      mockFetch.mockResolvedValueOnce({
+  afterEach(() => {
+    vi.unstubAllEnvs()
+  })
+
+  // The base URL is resolved live per request (hub-base.ts), so these
+  // gate tests stub the env in place — no vi.resetModules needed.
+  function mockAuthOk(): void {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
         ok: true,
-        json: async () => ({
-          ok: true,
-          data: { token: 't', user: { id: '1', email: 'a@b.c', display_name: null } },
-        }),
-      })
-      await authFn('token')
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:8788/api/auth/token',
-        expect.anything(),
-      )
-    } finally {
-      delete process.env.PIPETTE_HUB_URL
-      delete process.env.ELECTRON_RENDERER_URL
-      vi.resetModules()
-    }
+        data: { token: 't', user: { id: '1', email: 'a@b.c', display_name: null } },
+      }),
+    })
+  }
+
+  it('uses PIPETTE_HUB_URL env var in dev mode', async () => {
+    vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost:8788')
+    vi.stubEnv('ELECTRON_RENDERER_URL', 'http://localhost:5173')
+    mockAuthOk()
+    await authenticateWithHub('token')
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:8788/api/auth/token',
+      expect.anything(),
+    )
   })
 
   it('ignores PIPETTE_HUB_URL in production mode', async () => {
-    process.env.PIPETTE_HUB_URL = 'http://localhost:8788'
-    delete process.env.ELECTRON_RENDERER_URL
-    try {
-      vi.resetModules()
-      const { authenticateWithHub: authFn } = await import('../hub/hub-client')
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          ok: true,
-          data: { token: 't', user: { id: '1', email: 'a@b.c', display_name: null } },
-        }),
-      })
-      await authFn('token')
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://pipette-hub-worker.keymaps.workers.dev/api/auth/token',
-        expect.anything(),
-      )
-    } finally {
-      delete process.env.PIPETTE_HUB_URL
-      vi.resetModules()
-    }
+    vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost:8788')
+    mockAuthOk()
+    await authenticateWithHub('token')
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://pipette-hub-worker.keymaps.workers.dev/api/auth/token',
+      expect.anything(),
+    )
+  })
+
+  it('uses PIPETTE_HUB_URL in a production build when PIPETTE_HUB_TEST=1', async () => {
+    vi.stubEnv('PIPETTE_HUB_URL', 'http://localhost:8787')
+    vi.stubEnv('PIPETTE_HUB_TEST', '1')
+    mockAuthOk()
+    await authenticateWithHub('token')
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:8787/api/auth/token',
+      expect.anything(),
+    )
   })
 
   describe('authenticateWithHub', () => {

@@ -12,10 +12,7 @@
 
 import { net } from 'electron'
 import type { LanguageManifestEntry, TypingTestDataset } from '../../shared/types/language-store'
-
-const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
-const isDev = !!process.env.ELECTRON_RENDERER_URL
-const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT
+import { getHubApiBase } from './hub-base'
 
 interface HubApiResponse<T> {
   ok: boolean
@@ -24,7 +21,7 @@ interface HubApiResponse<T> {
 }
 
 function datasetRoute(provider: string): string {
-  return `${HUB_API_BASE}/api/typing-test/datasets/${encodeURIComponent(provider)}`
+  return `${getHubApiBase()}/api/typing-test/datasets/${encodeURIComponent(provider)}`
 }
 
 export function isManifestEntry(v: unknown): v is LanguageManifestEntry {

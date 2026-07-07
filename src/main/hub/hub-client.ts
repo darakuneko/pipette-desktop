@@ -3,10 +3,10 @@
 
 import type { HubMyPost, HubUser, HubFetchMyPostsParams } from '../../shared/types/hub'
 import type { HubPrivateKind, HubPrivateUploadResponse } from '../../shared/types/hub-private'
+import { getHubApiBase } from './hub-base'
 
-const HUB_API_DEFAULT = 'https://pipette-hub-worker.keymaps.workers.dev'
-const isDev = !!process.env.ELECTRON_RENDERER_URL
-const HUB_API_BASE = (isDev && process.env.PIPETTE_HUB_URL) || HUB_API_DEFAULT
+// Re-exported so hub-ipc (and tests) keep importing it from here.
+export { getHubOrigin } from './hub-base'
 
 export interface HubAuthResult {
   token: string
@@ -121,7 +121,7 @@ export async function authenticateWithHub(
 ): Promise<HubAuthResult> {
   const payload: Record<string, string> = { id_token: idToken }
   if (displayName) payload.display_name = displayName
-  return hubFetch<HubAuthResult>(`${HUB_API_BASE}/api/auth/token`, {
+  return hubFetch<HubAuthResult>(`${getHubApiBase()}/api/auth/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -178,14 +178,14 @@ function buildMultipartBody(
 }
 
 export async function fetchAuthMe(jwt: string): Promise<HubUser> {
-  return hubFetch<HubUser>(`${HUB_API_BASE}/api/auth/me`, {
+  return hubFetch<HubUser>(`${getHubApiBase()}/api/auth/me`, {
     method: 'GET',
     headers: { Authorization: `Bearer ${jwt}` },
   }, 'Hub fetch auth me failed')
 }
 
 export async function patchAuthMe(jwt: string, displayName: string): Promise<HubUser> {
-  return hubFetch<HubUser>(`${HUB_API_BASE}/api/auth/me`, {
+  return hubFetch<HubUser>(`${getHubApiBase()}/api/auth/me`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -210,7 +210,7 @@ export async function fetchMyPosts(
   if (params?.page != null) qs.set('page', String(params.page))
   if (params?.per_page != null) qs.set('per_page', String(params.per_page))
   const query = qs.toString()
-  const url = `${HUB_API_BASE}/api/files/me${query ? `?${query}` : ''}`
+  const url = `${getHubApiBase()}/api/files/me${query ? `?${query}` : ''}`
   return hubFetch<HubMyPostsPage>(url, {
     method: 'GET',
     headers: { Authorization: `Bearer ${jwt}` },
@@ -219,7 +219,7 @@ export async function fetchMyPosts(
 
 export async function fetchMyPostsByKeyboard(jwt: string, keyboardName: string): Promise<HubMyPost[]> {
   return hubFetch<HubMyPost[]>(
-    `${HUB_API_BASE}/api/files/me/keyboard?name=${encodeURIComponent(keyboardName)}`,
+    `${getHubApiBase()}/api/files/me/keyboard?name=${encodeURIComponent(keyboardName)}`,
     {
       method: 'GET',
       headers: { Authorization: `Bearer ${jwt}` },
@@ -229,7 +229,7 @@ export async function fetchMyPostsByKeyboard(jwt: string, keyboardName: string):
 }
 
 export async function patchPostOnHub(jwt: string, postId: string, fields: { title?: string }): Promise<void> {
-  await hubFetch<unknown>(`${HUB_API_BASE}/api/files/${encodeURIComponent(postId)}`, {
+  await hubFetch<unknown>(`${getHubApiBase()}/api/files/${encodeURIComponent(postId)}`, {
     method: 'PATCH',
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -240,7 +240,7 @@ export async function patchPostOnHub(jwt: string, postId: string, fields: { titl
 }
 
 export async function deletePostFromHub(jwt: string, postId: string): Promise<void> {
-  await hubFetch<unknown>(`${HUB_API_BASE}/api/files/${encodeURIComponent(postId)}`, {
+  await hubFetch<unknown>(`${getHubApiBase()}/api/files/${encodeURIComponent(postId)}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${jwt}` },
   }, 'Hub delete failed')
@@ -256,7 +256,7 @@ async function submitPost(
   label: string,
 ): Promise<HubPostResponse> {
   const { body, boundary } = buildMultipartBody(title, keyboardName, files)
-  return hubFetch<HubPostResponse>(`${HUB_API_BASE}${path}`, {
+  return hubFetch<HubPostResponse>(`${getHubApiBase()}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -293,7 +293,7 @@ export async function uploadPrivatePostToHub(
   expiresInDays: number | null,
 ): Promise<HubPrivateUploadResponse> {
   const { body, boundary } = buildMultipartBody(title, keyboardName, files, expiresInDays)
-  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+  return hubFetch<HubPrivateUploadResponse>(`${getHubApiBase()}/api/private/files`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -312,7 +312,7 @@ export async function deletePrivatePostFromHub(
   kind: HubPrivateKind,
   id: string,
 ): Promise<void> {
-  await hubFetch<unknown>(`${HUB_API_BASE}/api/private/${kind}/${encodeURIComponent(id)}`, {
+  await hubFetch<unknown>(`${getHubApiBase()}/api/private/${kind}/${encodeURIComponent(id)}`, {
     method: 'DELETE',
     headers: { Authorization: `Bearer ${jwt}` },
   }, 'Hub private delete failed')
@@ -349,7 +349,7 @@ async function submitFeaturePost(
   label: string,
 ): Promise<HubPostResponse> {
   const { body, boundary } = buildFeatureMultipartBody(title, postType, jsonFile)
-  return hubFetch<HubPostResponse>(`${HUB_API_BASE}${path}`, {
+  return hubFetch<HubPostResponse>(`${getHubApiBase()}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -386,7 +386,7 @@ export async function uploadPrivateFeaturePostToHub(
   expiresInDays: number | null,
 ): Promise<HubPrivateUploadResponse> {
   const { body, boundary } = buildFeatureMultipartBody(title, postType, jsonFile, expiresInDays)
-  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+  return hubFetch<HubPrivateUploadResponse>(`${getHubApiBase()}/api/private/files`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -428,7 +428,7 @@ async function submitAnalyticsPost(
   label: string,
 ): Promise<HubPostResponse> {
   const { body, boundary } = buildAnalyticsMultipartBody(title, jsonFile, thumbnail)
-  return hubFetch<HubPostResponse>(`${HUB_API_BASE}${path}`, {
+  return hubFetch<HubPostResponse>(`${getHubApiBase()}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -465,7 +465,7 @@ export async function uploadPrivateAnalyticsPostToHub(
   expiresInDays: number | null,
 ): Promise<HubPrivateUploadResponse> {
   const { body, boundary } = buildAnalyticsMultipartBody(title, jsonFile, thumbnail, expiresInDays)
-  return hubFetch<HubPrivateUploadResponse>(`${HUB_API_BASE}/api/private/files`, {
+  return hubFetch<HubPrivateUploadResponse>(`${getHubApiBase()}/api/private/files`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${jwt}`,
@@ -473,8 +473,4 @@ export async function uploadPrivateAnalyticsPostToHub(
     },
     body,
   }, 'Hub private analytics upload failed')
-}
-
-export function getHubOrigin(): string {
-  return HUB_API_BASE
 }
