@@ -8,8 +8,8 @@
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-typing-test.ts
 
 import type { Page } from '@playwright/test'
-import { mkdirSync, writeFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import {
   backupVirtualDeviceSettings,
   clickThroughUnlock,
@@ -61,6 +61,82 @@ function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): 
     mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
   }))
   writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
+}
+
+// The romaji-engine test suite's canonical multi-pattern word (accepts
+// dhi/deli/dexi for でぃ, plus the ー long-vowel passthrough) — reused here so
+// the Romaji input screenshot demonstrates the same digraph the tests cover.
+const ROMAJI_DEMO_WORD = 'でぃなーにいく'
+
+/** Snapshot of a downloaded-language-pack cache file, or an absent-file
+ *  marker if none was there before this script ran. */
+interface LanguagePackBackup {
+  path: string
+  content: string | null
+}
+
+/** Seeds `japanese_hiragana` as an already-downloaded MonkeyType pack (a
+ *  single-word list built from `ROMAJI_DEMO_WORD`, so every word offered in
+ *  the reading window is the digraph demo word — deterministic for the
+ *  screenshot) so the Romaji input capture never depends on network access.
+ *  `LANG_GET`/`LANG_LIST` (`src/main/language-store.ts`) read this file
+ *  straight off disk with no fileSize/manifest cross-check, so a hand-written
+ *  fixture is sufficient; the real MonkeyType download (`LANG_DOWNLOAD`)
+ *  fetches from GitHub and is not exercised here. Call once userData is
+ *  resolved, before the app enters Typing Test; pass the result to
+ *  `restoreLanguagePack` in a `finally` block. */
+function seedKanaLanguagePack(userDataPath: string): LanguagePackBackup {
+  const path = join(userDataPath, 'local', 'downloads', 'languages', 'monkeytype', 'japanese_hiragana.json')
+  const content = existsSync(path) ? readFileSync(path, 'utf-8') : null
+  mkdirSync(dirname(path), { recursive: true })
+  writeFileSync(path, JSON.stringify({ name: 'japanese_hiragana', words: [ROMAJI_DEMO_WORD] }), 'utf-8')
+  return { path, content }
+}
+
+/** Restores the file snapshotted by `seedKanaLanguagePack`. */
+function restoreLanguagePack(backup: LanguagePackBackup): void {
+  if (backup.content != null) {
+    writeFileSync(backup.path, backup.content, 'utf-8')
+  } else {
+    try { unlinkSync(backup.path) } catch { /* absent already */ }
+  }
+}
+
+/** Selects the (seeded) hiragana pack, enables Romaji input, and types a
+ *  partial spelling of `ROMAJI_DEMO_WORD` so the reading window shows both
+ *  the per-kana progress coloring and the typed/remaining guide line mid-word.
+ *  Leaves Romaji input in that partially-typed state; the caller switches the
+ *  language back to reset it (dropping `romajiInput` — see
+ *  `clearRomajiInputForLanguage` in `useTypingTest.ts`) before continuing
+ *  with unrelated captures. */
+async function captureRomajiInputScreenshot(page: Page): Promise<void> {
+  const collapsedPanel = page.locator('[data-testid="typing-settings-panel-collapsed"]')
+  if (await collapsedPanel.isVisible().catch(() => false)) {
+    await page.locator('[data-testid="typing-settings-panel-toggle"]').click()
+    await page.waitForTimeout(300)
+  }
+
+  const languageSelector = page.locator('[data-testid="language-selector"]:not([disabled])')
+  await languageSelector.waitFor({ state: 'visible', timeout: 10_000 })
+  await languageSelector.click()
+  await page.waitForTimeout(500)
+  await page.locator('[data-testid="language-tab-existing"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="language-row-japanese_hiragana"]').click()
+  await page.waitForTimeout(500)
+
+  // The language switch preserves whatever pattern was active; force words
+  // mode so the Romaji toggle (words/time only) is available.
+  await page.locator('[data-testid="mode-words"]').click()
+  await page.waitForTimeout(300)
+  await page.locator('[data-testid="toggle-romaji"]').click()
+  await page.waitForTimeout(300)
+
+  // "dhina-" commits でぃ + な + ー (the '-' key types the ー long-vowel mark
+  // directly), leaving "にいく" as the canonical remaining guide.
+  await page.keyboard.type('dhina-', { delay: 100 })
+  await page.waitForTimeout(500)
+  await capture(page, 'typing-test-romaji')
 }
 
 /** Applies the shared dataset-update banner on whichever Mode-modal tab is
@@ -197,6 +273,7 @@ async function main(): Promise<void> {
   const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
   seedAccuracyTrendHistory(settingsBackup)
+  const kanaPackBackup = seedKanaLanguagePack(userDataPath)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -286,6 +363,20 @@ async function main(): Promise<void> {
     await page.waitForTimeout(500)
     await capture(page, 'typing-test-running')
 
+    // 5b. Romaji input — hiragana pack, Romaji toggle on, mid-word guide line
+    console.log('\n--- Typing Test Romaji Input ---')
+    await captureRomajiInputScreenshot(page)
+
+    // Reset back to english/words so the language switch also drops the
+    // seeded run's romajiInput flag (see clearRomajiInputForLanguage) before
+    // the Mode Modal captures below reuse the same language selector.
+    await page.locator('[data-testid="language-selector"]:not([disabled])').click()
+    await page.waitForTimeout(400)
+    await page.locator('[data-testid="language-tab-existing"]').click()
+    await page.waitForTimeout(300)
+    await page.locator('[data-testid="language-row-english"]').click()
+    await page.waitForTimeout(500)
+
     // 6. Mode modal — MonkeyType / Tatoeba / Aozora Bunko / File Import tabs
     console.log('\n--- Typing Test Mode Modal ---')
     await captureModeModalScreenshots(page)
@@ -369,6 +460,11 @@ async function main(): Promise<void> {
       restoreVirtualDeviceSettings(settingsBackup)
     } catch (err) {
       console.error('  [cleanup] restore virtual device settings failed:', err)
+    }
+    try {
+      restoreLanguagePack(kanaPackBackup)
+    } catch (err) {
+      console.error('  [cleanup] restore kana language pack failed:', err)
     }
   }
 }

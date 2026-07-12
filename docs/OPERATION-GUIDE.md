@@ -1095,6 +1095,18 @@ In the words and time patterns, the Settings panel's **Option** row adds toggles
 
 The Option row is hidden in the quote pattern (which uses the original text as-is) and in the Tatoeba / Aozora Bunko / File Import modes.
 
+**Romaji Input**
+
+![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
+
+With the **hiragana** or **katakana** language pack selected, the Option row also gains a **Romaji** toggle (words and time patterns only). Turning it on switches judging from literal text matching to sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its accepted spellings is accepted interchangeably — for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you happen to type.
+
+- The current word's kana are colored per confirmed segment, and a guide line below the reading window shows the romaji accepted so far plus the canonical spelling for the rest of the word — both update on every keystroke, including when a mid-word branch (like でぃ above) narrows down which spelling you're typing
+- **Turn off your OS IME before typing.** Romaji input judges direct keystrokes, and an active IME composition intercepts them before they ever reach the matcher. If a composition event is detected while Romaji input is active, a hint appears below the guide line reminding you to turn the IME off
+- A rejected keystroke does not advance the guide, and it stays counted against Accuracy — Backspace cannot undo it, so keep typing the current kana until it's accepted
+- Words advance automatically as soon as their kana are complete; Space is not needed
+- Because WPM tracks keystroke rate rather than confirmed word length in this mode, Romaji runs get their own personal best and history grouping (labeled with a `+romaji` suffix, e.g. "30 words (japanese_hiragana) +romaji") instead of being compared against non-Romaji runs
+
 #### Tatoeba
 
 ![Typing Test — Mode Modal (Tatoeba)](screenshots/typing-test-mode-tatoeba.png)
