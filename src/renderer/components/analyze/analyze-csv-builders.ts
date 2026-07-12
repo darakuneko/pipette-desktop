@@ -415,7 +415,7 @@ export async function buildBigramsCsv(args: ScopeArgs & {
   const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], gram = 2 } = args
   const result = await fetchBigramAggregateForRange(
     uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT, gram }, appScopes, typingTestScopes, runIdScopes,
-  ).catch(() => ({ view: 'top' as const, entries: [] }))
+  ).catch(() => ({ view: 'top' as const, entries: [], truncated: false }))
   const entries = result.view === 'top' ? result.entries : []
   const rows = entries.map((e) => [
     e.ngramId,

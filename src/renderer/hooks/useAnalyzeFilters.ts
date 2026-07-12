@@ -88,6 +88,7 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     aggregateMode: 'cell',
     normalization: 'absolute',
     keyGroupFilter: 'all',
+    mode: 'count',
   },
   wpm: {
     viewMode: 'timeSeries',

@@ -5,27 +5,41 @@
 // keyboard keeps its own keymap visible. i18n-labelled border states
 // highlight which keyboards are currently bonded.
 
-import { memo, useEffect, useMemo, useState } from 'react'
-import type { Dispatch, SetStateAction } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
-import type { TypingHeatmapByCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { TypingBigramTopEntry, TypingHeatmapByCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
 import type { HeatmapFilters } from '../../../shared/types/analyze-filters'
 import { HEATMAP_NORMALIZATIONS, scopeToSelectValue } from '../../../shared/types/analyze-filters'
-import { KeyboardWidget } from '../keyboard/KeyboardWidget'
 import { LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
-import type { DeviceScope, HeatmapNormalization, RangeMs } from './analyze-types'
+import { fetchBigramAggregateForRange } from './analyze-fetch'
+import { ALL_PAIRS_LIMIT } from './analyze-constants'
+import { useEffectiveTheme } from '../../hooks/useEffectiveTheme'
+import type { DeviceScope, RangeMs } from './analyze-types'
+import {
+  HeatmapModeToggle,
+  LayerKeyboard,
+  RankingTable,
+  SpeedRankingTable,
+  groupOf,
+} from './key-heatmap-panels'
 import {
   AGGREGATE_MODES,
   KEY_GROUPS,
+  MIN_SPEED_SAMPLE_COUNT,
   buildGroupRankings,
+  buildKeycodeSpeedMap,
   buildLayerKeycodes,
-  filterCellsByGroup,
+  buildSpeedFillByPos,
+  buildSpeedRanking,
   layoutPositions,
-  sumAndNormalizeGroupCells,
+  normalizeKeySpeedIntensity,
 } from './key-heatmap-helpers'
-import type { AggregateMode, KeyGroupFilter, LayerKeycodes, RankingEntry } from './key-heatmap-helpers'
+import type {
+  AggregateMode,
+  KeyGroupFilter,
+  LayerKeycodes,
+} from './key-heatmap-helpers'
 
 const MAX_LAYERS = 4
 
@@ -46,228 +60,10 @@ interface Props {
   onHeatmapChange: (patch: Partial<HeatmapFilters>) => void
 }
 
-interface LayerKeyboardProps {
-  layer: number
-  groupIdx: number
-  layerCells: Map<number, TypingHeatmapByCell>
-  layerKeycodes: Map<number, LayerKeycodes>
-  layout: KeyboardLayout
-  range: RangeMs
-  normalization: HeatmapNormalization
-  keyGroupFilter: KeyGroupFilter
-  highlightedCells?: Set<string>
-  isMergeCandidate: boolean
-  isBonded: boolean
-  scale: number
-  onClick: () => void
-  t: TFunction
-}
-
-const LayerKeyboard = memo(function LayerKeyboard({
-  layer,
-  groupIdx,
-  layerCells,
-  layerKeycodes,
-  layout,
-  range,
-  normalization,
-  keyGroupFilter,
-  highlightedCells,
-  isMergeCandidate,
-  isBonded,
-  scale,
-  onClick,
-  t,
-}: LayerKeyboardProps) {
-  const layerKc = layerKeycodes.get(layer)
-  const keycodes = layerKc?.keycodes ?? new Map<string, string>()
-  const labelOverrides = layerKc?.labelOverrides ?? new Map()
-  const singletonGroup = useMemo(() => [layer], [layer])
-  const groupHeatmapCells = useMemo(
-    () => sumAndNormalizeGroupCells(singletonGroup, layerCells, range, normalization),
-    [singletonGroup, layerCells, range, normalization],
-  )
-  const filteredHeatmapCells = useMemo(
-    () => filterCellsByGroup(groupHeatmapCells, keycodes, keyGroupFilter),
-    [groupHeatmapCells, keycodes, keyGroupFilter],
-  )
-  // A single unified max drives the outer rect colour so masked cells
-  // (painted by `hold`) and non-masked cells (painted by `total`) share
-  // the same scale. Otherwise an LT1 hovering at its own peak looks as
-  // red as a character key at its peak despite having a much smaller
-  // absolute count.
-  const { heatmapMaxOuter, heatmapMaxTap } = useMemo(() => {
-    let outer = 0
-    let tap = 0
-    for (const cell of filteredHeatmapCells.values()) {
-      const outerVal = cell.hold > 0 ? cell.hold : cell.total
-      if (outerVal > outer) outer = outerVal
-      if (cell.tap > tap) tap = cell.tap
-    }
-    return { heatmapMaxOuter: outer, heatmapMaxTap: tap }
-  }, [filteredHeatmapCells])
-
-  const borderClass = isMergeCandidate
-    ? 'border-accent bg-accent/5'
-    : isBonded
-      ? 'border-accent'
-      : 'border-edge'
-
-  return (
-    <button
-      type="button"
-      className={`flex shrink-0 flex-col items-center gap-1 rounded-md border-2 p-1 transition-colors ${borderClass}`}
-      onClick={onClick}
-      aria-pressed={isMergeCandidate}
-      aria-label={t('analyze.keyHeatmap.bondToggle', { i: layer })}
-      data-testid={`analyze-keyheatmap-layer-panel-${layer}`}
-      data-group-idx={groupIdx}
-    >
-      <KeyboardWidget
-        keys={layout.keys}
-        keycodes={keycodes}
-        labelOverrides={labelOverrides}
-        heatmapCells={filteredHeatmapCells}
-        heatmapMaxTotal={heatmapMaxOuter}
-        heatmapMaxTap={heatmapMaxTap}
-        heatmapMaxHold={heatmapMaxOuter}
-        highlightedKeys={highlightedCells}
-        readOnly
-        scale={scale}
-      />
-      <span className="text-xs font-semibold uppercase tracking-widest text-content-muted">
-        {t('analyze.keyHeatmap.layerOption', { i: layer })}
-      </span>
-    </button>
-  )
-})
-
-interface RankingTableProps {
-  groups: number[][]
-  groupRankings: RankingEntry[][]
-  frequentUsedN: number
-  hoveredKey: string | null
-  setHoveredKey: Dispatch<SetStateAction<string | null>>
-  formatCount: (n: number) => string
-  t: TFunction
-}
-
-// Fixed sub-column widths so header and data rows align. The `Layer`
-// sub-column is dropped when no group contains multiple layers — the
-// group header already pins the layer in that case.
-const SUB_GRID_WITH_LAYER = {
-  gridTemplateColumns: 'minmax(0, 7rem) 4.5rem 8rem 5rem',
-}
-const SUB_GRID_NO_LAYER = {
-  gridTemplateColumns: 'minmax(0, 7rem) 8rem 5rem',
-}
-
-const RankingTable = memo(function RankingTable({
-  groups,
-  groupRankings,
-  frequentUsedN,
-  hoveredKey,
-  setHoveredKey,
-  formatCount,
-  t,
-}: RankingTableProps) {
-  const maxRank = Math.max(1, ...groupRankings.map((r) => r.length))
-  const rows = Math.min(frequentUsedN, maxRank)
-  const showLayerCol = groups.some((g) => g.length > 1)
-  const subGrid = showLayerCol ? SUB_GRID_WITH_LAYER : SUB_GRID_NO_LAYER
-  // Each group cell is `sub-grid content + px-2 padding` wide; plus the
-  // rank column. Compute the explicit total so the grid rows don't grow
-  // to fill the parent's extra space.
-  const perGroupRem = showLayerCol ? 27 : 22
-  const totalWidthRem = 2.5 + groups.length * perGroupRem
-  const outerGrid = {
-    gridTemplateColumns: `2.5rem repeat(${groups.length}, auto)`,
-    width: `${totalWidthRem}rem`,
-  }
-  const groupLabelFor = (group: number[]): string => group.length === 1
-    ? t('analyze.keyHeatmap.layerOption', { i: group[0] })
-    : t('analyze.keyHeatmap.layerOptionMulti', { layers: group.join(', ') })
-  const anyEntry = rows > 0 && groupRankings.some((r) => r.length > 0)
-  return (
-    <div className="flex min-h-0 w-fit flex-1 flex-col" data-testid="analyze-keyheatmap-ranking">
-      <div className="flex min-h-0 flex-1 flex-col overflow-auto">
-        <div className="sticky top-0 z-10 bg-surface">
-          <div
-            className="grid text-xs font-semibold text-content-muted"
-            style={outerGrid}
-          >
-            <div />
-            {groups.map((group, i) => (
-              <div key={group.join('-')} className="truncate px-2 py-1" data-testid={`analyze-keyheatmap-ranking-head-${i}`}>
-                {groupLabelFor(group)}
-              </div>
-            ))}
-          </div>
-          <div
-            className="grid border-b border-edge text-2xs font-semibold uppercase tracking-wider text-content-muted"
-            style={outerGrid}
-          >
-            <div />
-            {groups.map((group) => (
-              <div key={group.join('-')} className="grid items-center gap-2 px-2 py-1" style={subGrid}>
-                <span className="truncate">{t('analyze.keyHeatmap.ranking.colKey')}</span>
-                {showLayerCol && <span>{t('analyze.keyHeatmap.ranking.colLayer')}</span>}
-                <span>{t('analyze.keyHeatmap.ranking.colMatrix')}</span>
-                <span className="text-right">{t('analyze.keyHeatmap.ranking.colCount')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        {!anyEntry ? (
-          <div className="py-2 text-xs text-content-muted">
-            {t('analyze.keyHeatmap.ranking.emptyFrequentUsed')}
-          </div>
-        ) : (
-          Array.from({ length: rows }, (_, rankIdx) => (
-            <div
-              key={rankIdx}
-              className={`grid text-xs ${rankIdx % 2 === 1 ? 'bg-surface-dim/40' : ''}`}
-              style={outerGrid}
-            >
-              <span className="px-2 py-1 text-right text-content-muted">{rankIdx + 1}</span>
-              {groups.map((group, gIdx) => {
-                const entry = groupRankings[gIdx]?.[rankIdx]
-                if (!entry) return <span key={group.join('-')} />
-                const key = `${gIdx}:${entry.displayLabel}`
-                return (
-                  <div
-                    key={group.join('-')}
-                    className={`grid cursor-pointer items-center gap-2 px-2 py-1 ${
-                      hoveredKey === key ? 'bg-accent/10' : ''
-                    }`}
-                    style={subGrid}
-                    onMouseEnter={() => setHoveredKey(() => key)}
-                    onMouseLeave={() => setHoveredKey((prev) => (prev === key ? null : prev))}
-                  >
-                    <span className="min-w-0 truncate font-mono text-content">{entry.keyLabel}</span>
-                    {showLayerCol && (
-                      <span className="font-mono text-xs text-content-muted">{entry.layerLabel}</span>
-                    )}
-                    <span className="font-mono text-xs text-content-muted">{entry.matrixLabel}</span>
-                    <span className="text-right font-mono text-content-secondary">{formatCount(entry.count)}</span>
-                  </div>
-                )
-              })}
-            </div>
-          ))
-        )}
-      </div>
-    </div>
-  )
-})
-
-function groupOf(groups: number[][], layer: number): number {
-  return groups.findIndex((g) => g.includes(layer))
-}
-
 export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTestScopes, runIdScopes, snapshot, heatmap, onHeatmapChange }: Props) {
   const { t } = useTranslation()
-  const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter } = heatmap
+  const { selectedLayers, groups, frequentUsedN, aggregateMode, normalization, keyGroupFilter, mode } = heatmap
+  const effectiveTheme = useEffectiveTheme()
   const [layerCells, setLayerCells] = useState<Map<number, TypingHeatmapByCell>>(new Map())
   const [loading, setLoading] = useState(true)
   // `mergeCandidate` and `hoveredKey` stay component-local — they're
@@ -275,11 +71,44 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
   // belong in per-keyboard persisted filters.
   const [mergeCandidate, setMergeCandidate] = useState<number | null>(null)
   const [hoveredKey, setHoveredKey] = useState<string | null>(null)
+  // Speed mode's own fetch — the bigram aggregate, not the matrix
+  // heatmap. Kept separate from `layerCells` above so switching modes
+  // doesn't force a refetch of whichever data the other mode already
+  // has cached.
+  const [bigramEntries, setBigramEntries] = useState<TypingBigramTopEntry[]>([])
+  const [bigramTruncated, setBigramTruncated] = useState(false)
+  const [speedLoading, setSpeedLoading] = useState(true)
 
   const scopeKey = scopeToSelectValue(deviceScope)
-
   const selectedLayersKey = selectedLayers.join(',')
+
+  // Axes shared by both fetches (uid / range / device scope / app
+  // filter). The matrix fetch additionally depends on which layers are
+  // selected; the bigram (speed) fetch doesn't, since the aggregate
+  // carries no layer tag. Tracking "have I already fetched for this
+  // key" per mode lets a Count↔Speed toggle skip re-fetching data it
+  // already has, while a filter change made while parked in the other
+  // mode still triggers a fresh fetch the next time that mode is
+  // entered (see the two effects below). JSON keeps the array parts
+  // collision-free — a delimiter join would give ['a|b'] and
+  // ['a','b'] the same key and wrongly reuse stale data.
+  const axesKey = JSON.stringify([
+    uid, range.fromMs, range.toMs, scopeKey,
+    appScopes, typingTestScopes, runIdScopes,
+  ])
+  const matrixFetchKey = `${axesKey}~${selectedLayersKey}`
+  // Each ref holds the key of the data currently in state, or null when
+  // that data came from a failed fetch — null forces a retry the next
+  // time the owning mode is entered instead of caching the failure.
+  const matrixFetchKeyRef = useRef<string | null>(null)
+  const speedFetchKeyRef = useRef<string | null>(null)
+
   useEffect(() => {
+    if (mode !== 'count') return
+    if (matrixFetchKeyRef.current === matrixFetchKey) {
+      setLoading(false)
+      return
+    }
     // Fetch every selected layer in lock-step whenever any axis
     // changes (uid / range / device scope / app filter / selected
     // layer set). Splitting the cache-clear from the fetch into two
@@ -289,22 +118,56 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     // to fetch" and exits — leaving the rendered Map empty until the
     // user touches another input. Recompute the whole map atomically.
     let cancelled = false
+    let anyFailed = false
     setLoading(true)
     void Promise.all(selectedLayers.map((layer) =>
       window.vialAPI
         .typingAnalyticsGetMatrixHeatmapForRange(uid, layer, range.fromMs, range.toMs, deviceScope, appScopes, typingTestScopes, runIdScopes)
-        .catch(() => ({} as TypingHeatmapByCell)),
+        .catch(() => {
+          anyFailed = true
+          return {} as TypingHeatmapByCell
+        }),
     )).then((results) => {
       if (cancelled) return
       const next = new Map<number, TypingHeatmapByCell>()
       selectedLayers.forEach((layer, i) => next.set(layer, results[i] ?? {}))
       setLayerCells(next)
+      matrixFetchKeyRef.current = anyFailed ? null : matrixFetchKey
       setLoading(false)
     })
     return () => { cancelled = true }
     // selectedLayersKey carries the layer-set identity (joined string)
     // so an unchanged array doesn't refire on every render.
-  }, [uid, range, scopeKey, selectedLayersKey, appScopes, typingTestScopes, runIdScopes])
+  }, [mode, uid, range, scopeKey, selectedLayersKey, appScopes, typingTestScopes, runIdScopes, matrixFetchKey])
+
+  useEffect(() => {
+    if (mode !== 'speed') return
+    if (speedFetchKeyRef.current === axesKey) {
+      setSpeedLoading(false)
+      return
+    }
+    let cancelled = false
+    setSpeedLoading(true)
+    fetchBigramAggregateForRange(
+      uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: ALL_PAIRS_LIMIT, gram: 2 },
+      appScopes, typingTestScopes, runIdScopes,
+    )
+      .then((result) => {
+        if (cancelled) return
+        setBigramEntries(result.entries)
+        setBigramTruncated(result.truncated)
+        speedFetchKeyRef.current = axesKey
+        setSpeedLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setBigramEntries([])
+        setBigramTruncated(false)
+        speedFetchKeyRef.current = null
+        setSpeedLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [mode, uid, range, scopeKey, appScopes, typingTestScopes, runIdScopes, axesKey])
 
   const layout = snapshot.layout as KeyboardLayout | null
 
@@ -321,12 +184,43 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     [layout],
   )
 
+  // Speed mode: fold the bigram aggregate into a per-keycode avgIki map,
+  // then resolve it into per-position fills for each selected layer's
+  // own keymap (a keycode can sit at a different position — or not
+  // exist at all — on another layer, so the fill map is per layer even
+  // though the underlying speed stats are shared).
+  const speedMap = useMemo(
+    () => (mode === 'speed' ? buildKeycodeSpeedMap(bigramEntries) : new Map()),
+    [mode, bigramEntries],
+  )
+  const speedIntensityByCode = useMemo(
+    () => normalizeKeySpeedIntensity(speedMap),
+    [speedMap],
+  )
+  const speedFillsByLayer = useMemo(() => {
+    const result = new Map<number, Map<string, string>>()
+    if (mode !== 'speed') return result
+    for (const layer of selectedLayers) {
+      const layerKc = layerKeycodes.get(layer)
+      if (!layerKc) continue
+      result.set(layer, buildSpeedFillByPos(layerKc, positions, speedIntensityByCode, keyGroupFilter, effectiveTheme, snapshot.vialProtocol))
+    }
+    return result
+  }, [mode, selectedLayers, layerKeycodes, positions, speedIntensityByCode, keyGroupFilter, effectiveTheme, snapshot.vialProtocol])
+  const speedRanking = useMemo(
+    () => buildSpeedRanking(speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol),
+    [speedMap, keyGroupFilter, frequentUsedN, snapshot.vialProtocol],
+  )
+
+  // Only Count mode renders the group ranking table — skip the
+  // computation entirely in Speed mode instead of building rankings
+  // no one reads.
   const groupRankings = useMemo(
-    () => groups.map((group) => buildGroupRankings(
+    () => mode === 'count' ? groups.map((group) => buildGroupRankings(
       group, layerCells, layerKeycodes, positions, range, normalization,
       aggregateMode, keyGroupFilter, frequentUsedN,
-    )),
-    [groups, layerCells, layerKeycodes, positions, range, normalization, aggregateMode, keyGroupFilter, frequentUsedN],
+    )) : [],
+    [mode, groups, layerCells, layerKeycodes, positions, range, normalization, aggregateMode, keyGroupFilter, frequentUsedN],
   )
 
   const hoveredCellsByLayer = useMemo<Map<number, Set<string>>>(() => {
@@ -434,7 +328,10 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
     )
   }
 
-  if (loading && layerCells.size === 0) {
+  const showLoading = mode === 'speed'
+    ? speedLoading && bigramEntries.length === 0
+    : loading && layerCells.size === 0
+  if (showLoading) {
     return (
       <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-keyheatmap-loading">
         {t('common.loading')}
@@ -451,6 +348,9 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3" data-testid="analyze-keyheatmap-chart">
+      <div className="flex shrink-0 justify-end">
+        <HeatmapModeToggle value={mode} onChange={(next) => onHeatmapChange({ mode: next })} />
+      </div>
       <div className="shrink-0" data-testid="analyze-keyheatmap-panels">
         <div
           className={`grid justify-center gap-2 ${
@@ -465,8 +365,10 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
               key={layer}
               layer={layer}
               groupIdx={gIdx}
+              mode={mode}
               layerCells={layerCells}
               layerKeycodes={layerKeycodes}
+              speedFillByPos={speedFillsByLayer.get(layer)}
               layout={layout}
               range={range}
               normalization={normalization}
@@ -516,28 +418,32 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
           {t('analyze.keyHeatmap.ranking.frequentUsed')}
         </h3>
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
-            value={normalization}
-            onChange={(e) => onHeatmapChange({ normalization: e.target.value as HeatmapNormalization })}
-            aria-label={t('analyze.filters.normalization')}
-            data-testid="analyze-keyheatmap-normalization"
-          >
-            {HEATMAP_NORMALIZATIONS.map((n) => (
-              <option key={n} value={n}>{t(`analyze.filters.normalizationOption.${n}`)}</option>
-            ))}
-          </select>
-          <select
-            className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
-            value={aggregateMode}
-            onChange={(e) => onHeatmapChange({ aggregateMode: e.target.value as AggregateMode })}
-            aria-label={t('analyze.keyHeatmap.ranking.aggregate')}
-            data-testid="analyze-keyheatmap-aggregate"
-          >
-            {AGGREGATE_MODES.map((m) => (
-              <option key={m} value={m}>{t(`analyze.keyHeatmap.ranking.aggregateOption.${m}`)}</option>
-            ))}
-          </select>
+          {mode === 'count' && (
+            <>
+              <select
+                className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
+                value={normalization}
+                onChange={(e) => onHeatmapChange({ normalization: e.target.value as HeatmapNormalization })}
+                aria-label={t('analyze.filters.normalization')}
+                data-testid="analyze-keyheatmap-normalization"
+              >
+                {HEATMAP_NORMALIZATIONS.map((n) => (
+                  <option key={n} value={n}>{t(`analyze.filters.normalizationOption.${n}`)}</option>
+                ))}
+              </select>
+              <select
+                className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
+                value={aggregateMode}
+                onChange={(e) => onHeatmapChange({ aggregateMode: e.target.value as AggregateMode })}
+                aria-label={t('analyze.keyHeatmap.ranking.aggregate')}
+                data-testid="analyze-keyheatmap-aggregate"
+              >
+                {AGGREGATE_MODES.map((m) => (
+                  <option key={m} value={m}>{t(`analyze.keyHeatmap.ranking.aggregateOption.${m}`)}</option>
+                ))}
+              </select>
+            </>
+          )}
           <select
             className="rounded-md border border-edge bg-surface px-2 py-1 text-xs text-content focus:border-accent focus:outline-none"
             value={keyGroupFilter}
@@ -562,15 +468,31 @@ export function KeyHeatmapChart({ uid, range, deviceScope, appScopes, typingTest
           </select>
         </div>
       </div>
-      <RankingTable
-        groups={groups}
-        groupRankings={groupRankings}
-        frequentUsedN={frequentUsedN}
-        hoveredKey={hoveredKey}
-        setHoveredKey={setHoveredKey}
-        formatCount={formatCount}
-        t={t}
-      />
+      {mode === 'speed' && (
+        <div className="shrink-0 flex flex-col gap-0.5 text-2xs text-content-muted">
+          <div data-testid="analyze-keyheatmap-speed-min-sample-note">
+            {t('analyze.keyHeatmap.speed.minSampleNote', { n: MIN_SPEED_SAMPLE_COUNT })}
+          </div>
+          {bigramTruncated && (
+            <div data-testid="analyze-keyheatmap-speed-capped-notice">
+              {t('analyze.keyHeatmap.speed.cappedNotice', { limit: ALL_PAIRS_LIMIT })}
+            </div>
+          )}
+        </div>
+      )}
+      {mode === 'speed' ? (
+        <SpeedRankingTable entries={speedRanking} />
+      ) : (
+        <RankingTable
+          groups={groups}
+          groupRankings={groupRankings}
+          frequentUsedN={frequentUsedN}
+          hoveredKey={hoveredKey}
+          setHoveredKey={setHoveredKey}
+          formatCount={formatCount}
+          t={t}
+        />
+      )}
     </div>
   )
 }
