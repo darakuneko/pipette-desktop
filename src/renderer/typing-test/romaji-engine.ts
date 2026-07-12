@@ -24,15 +24,7 @@
 // following character with a one-keystroke lookahead ("retroactive
 // commit" below), instead of hard-coding the ambiguity into the table.
 
-const KATAKANA_START = 0x30a1 // ァ
-const KATAKANA_END = 0x30f6 // ヶ
-const KATAKANA_TO_HIRAGANA_OFFSET = 0x60
-
-function toHiragana(char: string): string {
-  const code = char.codePointAt(0)
-  if (code === undefined || code < KATAKANA_START || code > KATAKANA_END) return char
-  return String.fromCodePoint(code - KATAKANA_TO_HIRAGANA_OFFSET)
-}
+import { toHiragana } from './kana-script'
 
 // Kana segment -> valid romaji spellings, ordered with the canonical
 // (preferred / guide-representative) spelling first. Pure data: ん and っ
@@ -373,6 +365,47 @@ function canonicalGuideFrom(kana: readonly string[], index: number): string {
   return winner.pattern + canonicalGuideFrom(kana, index + winner.length)
 }
 
+/** The winning pattern that exactly matches `buffer` as a full spelling at
+ *  `index`, or null when nothing does. Shared by the retroactive-commit
+ *  path in `stepAt`/`tryConsume` and by `isComplete`, both of which need to
+ *  know whether the in-progress buffer already spells a complete segment
+ *  (ん's bare "n" pending a possible second "n" is the only real case). */
+function exactWinnerAt(kana: readonly string[], index: number, buffer: string): FlatPattern | null {
+  const flat = flattenOptions(getSegmentOptions(kana, index))
+  const exact = flat.filter((f) => f.pattern === buffer)
+  return exact.length > 0 ? pickWinner(exact) : null
+}
+
+interface StepResult {
+  status: 'accept' | 'complete'
+  position: number
+  buffer: string
+  /** The pattern just committed, set only when `status === 'complete'`. */
+  committed?: string
+}
+
+/** Feeds `char` onto `buffer` at `index` and resolves it against the live
+ *  pattern list: 'accept' when the extended buffer is still a live prefix
+ *  of at least one pattern, 'complete' when it exactly (and unambiguously)
+ *  finishes one, or null when it isn't a live continuation at all. Used by
+ *  `tryConsume` both for the current typing position and — after a
+ *  retroactive commit — for the position immediately after it, so the two
+ *  call sites share one prefix/exact/pickWinner resolution instead of each
+ *  re-deriving it. */
+function stepAt(kana: readonly string[], index: number, buffer: string, char: string): StepResult | null {
+  const flat = flattenOptions(getSegmentOptions(kana, index))
+  const newBuffer = buffer + char
+  const alive = flat.filter((f) => f.pattern.startsWith(newBuffer))
+  if (alive.length === 0) return null
+  const exact = alive.filter((f) => f.pattern === newBuffer)
+  const hasLonger = alive.some((f) => f.pattern.length > newBuffer.length)
+  if (exact.length > 0 && !hasLonger) {
+    const winner = pickWinner(exact)
+    return { status: 'complete', position: index + winner.length, buffer: '', committed: winner.pattern }
+  }
+  return { status: 'accept', position: index, buffer: newBuffer }
+}
+
 export type RomajiAcceptResult = 'accept' | 'reject' | 'complete'
 
 export interface RomajiMatcher {
@@ -413,22 +446,11 @@ export function createRomajiMatcher(word: string): RomajiMatcher {
   function tryConsume(char: string): ConsumeResult | null {
     if (position >= kana.length) return null
 
-    const flat = flattenOptions(getSegmentOptions(kana, position))
-    const newBuffer = buffer + char
-    const alive = flat.filter((f) => f.pattern.startsWith(newBuffer))
-    if (alive.length > 0) {
-      const exact = alive.filter((f) => f.pattern === newBuffer)
-      const hasLonger = alive.some((f) => f.pattern.length > newBuffer.length)
-      if (exact.length > 0 && !hasLonger) {
-        const winner = pickWinner(exact)
-        return {
-          status: 'complete',
-          position: position + winner.length,
-          buffer: '',
-          typed: typed + winner.pattern,
-        }
-      }
-      return { status: 'accept', position, buffer: newBuffer, typed }
+    const step = stepAt(kana, position, buffer, char)
+    if (step) {
+      return step.status === 'complete'
+        ? { status: 'complete', position: step.position, buffer: '', typed: typed + (step.committed ?? '') }
+        : { status: 'accept', position: step.position, buffer: step.buffer, typed }
     }
 
     // Not a live continuation of the current segment. If the buffer typed
@@ -436,30 +458,19 @@ export function createRomajiMatcher(word: string): RomajiMatcher {
     // possible second "n"), retroactively commit that segment and retry
     // this keystroke fresh against the next kana position.
     if (buffer === '') return null
-    const priorExact = flat.filter((f) => f.pattern === buffer)
-    if (priorExact.length === 0) return null
+    const winner = exactWinnerAt(kana, position, buffer)
+    if (!winner) return null
 
-    const winner = pickWinner(priorExact)
     const nextPosition = position + winner.length
     const nextTyped = typed + winner.pattern
     if (nextPosition >= kana.length) return null
 
-    const nextFlat = flattenOptions(getSegmentOptions(kana, nextPosition))
-    const nextAlive = nextFlat.filter((f) => f.pattern.startsWith(char))
-    if (nextAlive.length === 0) return null
+    const nextStep = stepAt(kana, nextPosition, '', char)
+    if (!nextStep) return null
 
-    const nextExact = nextAlive.filter((f) => f.pattern === char)
-    const nextHasLonger = nextAlive.some((f) => f.pattern.length > char.length)
-    if (nextExact.length > 0 && !nextHasLonger) {
-      const winner2 = pickWinner(nextExact)
-      return {
-        status: 'complete',
-        position: nextPosition + winner2.length,
-        buffer: '',
-        typed: nextTyped + winner2.pattern,
-      }
-    }
-    return { status: 'accept', position: nextPosition, buffer: char, typed: nextTyped }
+    return nextStep.status === 'complete'
+      ? { status: 'complete', position: nextStep.position, buffer: '', typed: nextTyped + (nextStep.committed ?? '') }
+      : { status: 'accept', position: nextStep.position, buffer: nextStep.buffer, typed: nextTyped }
   }
 
   return {
@@ -489,11 +500,8 @@ export function createRomajiMatcher(word: string): RomajiMatcher {
       // A pending exact match (ん's bare "n") already finished the word
       // even though a longer alternative ("nn") is still theoretically
       // typeable — word-final ん must be completable with a single tap.
-      const flat = flattenOptions(getSegmentOptions(kana, position))
-      const exact = flat.filter((f) => f.pattern === buffer)
-      if (exact.length === 0) return false
-      const winner = pickWinner(exact)
-      return position + winner.length >= kana.length
+      const winner = exactWinnerAt(kana, position, buffer)
+      return winner !== null && position + winner.length >= kana.length
     },
 
     completedKanaCount(): number {

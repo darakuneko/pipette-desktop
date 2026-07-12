@@ -6,6 +6,8 @@
 // characters themselves are linguistic data, not translatable UI text, so
 // they live here as constants rather than i18n keys.
 
+import { toKatakana } from './kana-script'
+
 /** The ten gojuon row headers, in reading order. */
 export const KANA_ROWS = ['ア', 'カ', 'サ', 'タ', 'ナ', 'ハ', 'マ', 'ヤ', 'ラ', 'ワ'] as const
 
@@ -45,18 +47,6 @@ const SMALL_FOLD: Record<string, string> = {
   ッ: 'ツ',
   ャ: 'ヤ', ュ: 'ユ', ョ: 'ヨ',
   ヮ: 'ワ',
-}
-
-// Hiragana ぁ..ゖ maps onto katakana ァ..ヶ at a constant +0x60 codepoint
-// offset — the standard Unicode block relationship between the two scripts.
-const HIRAGANA_START = 0x3041 // ぁ
-const HIRAGANA_END = 0x3096 // ゖ
-const HIRAGANA_TO_KATAKANA_OFFSET = 0x60
-
-function toKatakana(char: string): string {
-  const code = char.codePointAt(0)
-  if (code === undefined || code < HIRAGANA_START || code > HIRAGANA_END) return char
-  return String.fromCodePoint(code + HIRAGANA_TO_KATAKANA_OFFSET)
 }
 
 /** Normalizes a reading/name string down to a single base gojuon kana: the

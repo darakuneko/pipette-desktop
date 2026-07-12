@@ -66,12 +66,36 @@ export const VIRTUAL_DEVICE_UID = '0x004b504754524956'
 // connects to the emulator needs the same string.
 export const VIRTUAL_DEVICE_DISPLAY_NAME = 'Virtual Keyboard'
 
-/** Snapshot of the virtual device's PipetteSettings file, as found on disk
- *  before a capture run touches it (or an absent-file marker). */
-export interface VirtualDeviceSettingsBackup {
+/** Snapshot of a single file's content, as found on disk before a capture
+ *  helper seeds or modifies it (or an absent-file marker). The shared
+ *  backup/restore shape behind every doc-capture seed helper that needs to
+ *  leave a file exactly as it found it (virtual-device settings, a
+ *  downloaded language pack, ...). */
+export interface FileBackup {
   path: string
   content: string | null
 }
+
+/** Snapshots `path`'s content (or records that it didn't exist yet) before
+ *  a capture helper seeds or modifies it. Pass the result to `restoreFile`
+ *  in a `finally` block once the capture run is done. */
+export function backupFile(path: string): FileBackup {
+  return { path, content: existsSync(path) ? readFileSync(path, 'utf-8') : null }
+}
+
+/** Restores the file snapshotted by `backupFile`: writes back the original
+ *  content, or removes the file if it did not exist beforehand. */
+export function restoreFile(backup: FileBackup): void {
+  if (backup.content != null) {
+    writeFileSync(backup.path, backup.content, 'utf-8')
+  } else {
+    try { unlinkSync(backup.path) } catch { /* absent already */ }
+  }
+}
+
+/** Snapshot of the virtual device's PipetteSettings file, as found on disk
+ *  before a capture run touches it (or an absent-file marker). */
+export type VirtualDeviceSettingsBackup = FileBackup
 
 /**
  * Snapshot `sync/keyboards/{VIRTUAL_DEVICE_UID}/pipette_settings.json` before
@@ -86,21 +110,14 @@ export interface VirtualDeviceSettingsBackup {
  * and pass the result to `restoreVirtualDeviceSettings` in a `finally` block.
  */
 export function backupVirtualDeviceSettings(userDataPath: string): VirtualDeviceSettingsBackup {
-  const path = join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json')
-  const content = existsSync(path) ? readFileSync(path, 'utf-8') : null
-  return { path, content }
+  return backupFile(join(userDataPath, 'sync', 'keyboards', VIRTUAL_DEVICE_UID, 'pipette_settings.json'))
 }
 
-/** Restores the file snapshotted by `backupVirtualDeviceSettings`: writes
- *  back the original content, or removes the file if it did not exist
- *  beforehand. Call after the app has closed so no further debounced save
- *  from the running app can race with (and undo) the restore. */
+/** Restores the file snapshotted by `backupVirtualDeviceSettings`. Call
+ *  after the app has closed so no further debounced save from the running
+ *  app can race with (and undo) the restore. */
 export function restoreVirtualDeviceSettings(backup: VirtualDeviceSettingsBackup): void {
-  if (backup.content != null) {
-    writeFileSync(backup.path, backup.content, 'utf-8')
-  } else {
-    try { unlinkSync(backup.path) } catch { /* absent already */ }
-  }
+  restoreFile(backup)
 }
 
 // --- Local Hub test mode ----------------------------------------------------

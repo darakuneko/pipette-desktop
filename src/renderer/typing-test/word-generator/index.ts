@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Based on Monkeytype (https://github.com/monkeytypegame/monkeytype)
 
-export { generateWords, generateWordsSync, getLanguageData, getLanguageDataSync, injectPunctuation, injectNumbers } from './word-generator'
+export { generateWords, generateWordsSync, getLanguageData, getLanguageDataSync, clearLanguageCache, injectPunctuation, injectNumbers } from './word-generator'
 export { selectQuote, quoteToWords } from './quote-generator'
 export { getFileImportTextData, getFileImportTextDataSync, clearFileImportTextCache } from './file-import-text'
 export type { FileImportTextData } from './file-import-text'

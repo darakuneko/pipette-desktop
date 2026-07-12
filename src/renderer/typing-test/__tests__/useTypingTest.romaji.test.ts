@@ -4,8 +4,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useTypingTest } from '../useTypingTest'
-import { getLanguageData } from '../word-generator'
+import { clearLanguageCache, getLanguageData } from '../word-generator'
 import type { TypingTestConfig } from '../types'
+
+// A real kana pack id (see ROMAJI_INPUT_LANGUAGES) is required everywhere a
+// test mounts with `romajiInput: true` already set: useTypingTest now
+// normalizes that pairing at mount (clearRomajiInputForLanguage), so an
+// arbitrary language name would have the flag dropped before the test body
+// runs. Every case below reseeds this same id with its own single-word
+// list via `seedKanaLanguage`, which evicts the previous entry first.
+const KANA_LANGUAGE = 'japanese_hiragana'
 
 const mockLangGet = vi.fn()
 const originalVialAPI = window.vialAPI
@@ -37,8 +45,13 @@ function type(result: Pressable, keys: string): void {
 /** Pre-warm the word-generator language cache with a single-word list so
  *  `sampleWords` deterministically returns that one word `wordCount` times
  *  (its no-repeat-last-word logic only applies to lists with 2+ entries) —
- *  giving each test full control over the kana the matcher judges against. */
+ *  giving each test full control over the kana the matcher judges against.
+ *  Evicts any entry already cached under `name` first: tests reuse the
+ *  same real kana id (see `KANA_LANGUAGE`) with different word lists, and
+ *  `getLanguageData` otherwise returns whatever is already cached without
+ *  re-fetching. */
 async function seedKanaLanguage(name: string, words: string[]): Promise<void> {
+  clearLanguageCache(name)
   mockLangGet.mockResolvedValueOnce({
     name,
     rightToLeft: false,
@@ -67,8 +80,8 @@ const timeConfig = (duration: number): TypingTestConfig => ({
 
 describe('useTypingTest — romaji input mode', () => {
   it('completes a word via its digraph spelling, counting every keystroke as correct', async () => {
-    await seedKanaLanguage('romaji-digraph', ['でぃなーにいく'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-digraph'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['でぃなーにいく'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
     expect(result.current.state.words).toEqual(['でぃなーにいく'])
 
     type(result, 'dhina-niiku')
@@ -82,8 +95,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('completes the same word via a decomposed small-kana spelling (dexi)', async () => {
-    await seedKanaLanguage('romaji-decomposed', ['でぃなーにいく'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-decomposed'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['でぃなーにいく'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
     type(result, 'dexina-niiku')
 
@@ -93,8 +106,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('rejects an invalid keystroke without advancing the matcher, then continues correctly', async () => {
-    await seedKanaLanguage('romaji-reject', ['か'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-reject'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['か'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
     press(result, 'x') // not a valid start for か (ka/ca)
     expect(result.current.state.incorrectChars).toBe(1)
@@ -108,8 +121,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('auto-advances to the next word on completion, without a space press', async () => {
-    await seedKanaLanguage('romaji-multi', ['あ'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(3), 'romaji-multi'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(3), KANA_LANGUAGE))
     expect(result.current.state.words).toEqual(['あ', 'あ', 'あ'])
 
     press(result, 'a')
@@ -124,8 +137,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('time mode refills the word supply once fewer than 10 words remain', async () => {
-    await seedKanaLanguage('romaji-time', ['あ'])
-    const { result } = renderHook(() => useTypingTest(timeConfig(120), 'romaji-time'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
+    const { result } = renderHook(() => useTypingTest(timeConfig(120), KANA_LANGUAGE))
     expect(result.current.state.words).toHaveLength(60)
 
     for (let i = 0; i < 51; i++) press(result, 'a')
@@ -136,8 +149,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('ignores the submit key while waiting; a printable keystroke starts the run', async () => {
-    await seedKanaLanguage('romaji-waiting', ['あ'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(2), 'romaji-waiting'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(2), KANA_LANGUAGE))
 
     press(result, ' ')
     expect(result.current.state.status).toBe('waiting')
@@ -148,8 +161,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('Backspace is a no-op and is not counted', async () => {
-    await seedKanaLanguage('romaji-backspace', ['あい'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-backspace'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
     press(result, 'a')
     expect(result.current.state.correctChars).toBe(1)
@@ -164,8 +177,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('ignores IME composition input entirely', async () => {
-    await seedKanaLanguage('romaji-composition', ['あい'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-composition'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
     act(() => result.current.processCompositionEnd('あ'))
 
@@ -175,8 +188,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('exposes kanaCompleted alongside typed/remaining in the guide, advancing per committed segment', async () => {
-    await seedKanaLanguage('romaji-guide-kana', ['でぃなー'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-guide-kana'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['でぃなー'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
 
     expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0 })
 
@@ -187,8 +200,8 @@ describe('useTypingTest — romaji input mode', () => {
   })
 
   it('clears romajiInput when the language switches off a kana pack', async () => {
-    await seedKanaLanguage('romaji-lang-switch', ['あ'])
-    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-lang-switch'))
+    await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
     expect(result.current.config.mode === 'words' && result.current.config.romajiInput).toBe(true)
 
     await act(async () => {
@@ -202,6 +215,39 @@ describe('useTypingTest — romaji input mode', () => {
     }
     // The cleared flag also takes matching out of romaji mode immediately —
     // a submitted word now goes through verbatim comparison, not the matcher.
+    expect(result.current.romajiGuide).toBeNull()
+  })
+
+  it('normalizes a persisted romajiInput=true + non-kana language pair on mount', () => {
+    // Mirrors a persisted config/language pair restored from device prefs
+    // (e.g. via sync) that is already out of sync — setLanguage was never
+    // the one that paired these two values, so the mount-time normalization
+    // has to catch it instead. See clearRomajiInputForLanguage.
+    const persistedConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    const { result } = renderHook(() => useTypingTest(persistedConfig, 'english'))
+
+    expect(result.current.language).toBe('english')
+    expect(result.current.config.mode).toBe('words')
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(false)
+    }
+    expect(result.current.romajiGuide).toBeNull()
+  })
+
+  it('normalizes a config pushed in via setConfig against whichever language is already active', async () => {
+    // Mirrors useInputModes.ts's device-prefs sync effect, which calls
+    // setConfig directly with a persisted config rather than going through
+    // setLanguage.
+    const { result } = renderHook(() => useTypingTest(undefined, 'english'))
+
+    await act(async () => {
+      await result.current.setConfig({ mode: 'words', wordCount: 10, punctuation: false, numbers: false, romajiInput: true })
+    })
+
+    expect(result.current.config.mode).toBe('words')
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(false)
+    }
     expect(result.current.romajiGuide).toBeNull()
   })
 

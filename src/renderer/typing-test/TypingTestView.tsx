@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { SquarePen, Pause, Play, CircleCheck } from 'lucide-react'
 import { ICON_SM, ICON_LG } from '../constants/ui-tokens'
 import type { TypingTestState } from './useTypingTest'
-import type { TypingTestConfig } from './types'
+import type { RomajiGuide, TypingTestConfig } from './types'
 import type { ComparisonStats } from './comparison'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE } from './types'
 import { WordDisplay } from './WordDisplay'
@@ -38,7 +38,7 @@ interface Props {
    *  null otherwise. Drives both the current word's kana coloring
    *  (forwarded to `WordDisplay`) and the typed/remaining romaji guide line
    *  shown below the reading window. */
-  romajiGuide?: { typed: string; remaining: string; kanaCompleted: number } | null
+  romajiGuide?: RomajiGuide | null
   /** Called when Space is input via IME (keydown swallowed by the IME layer). */
   onImeSpaceKey?: () => void
   /** Imported-text display: visible line count + font size (px). Ignored

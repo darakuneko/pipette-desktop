@@ -28,12 +28,11 @@ interface Props {
   config: TypingTestConfig
   onConfigChange: (config: TypingTestConfig) => void
   /** Currently selected word-language pack. Gates the Romaji toggle, which
-   *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). Optional
-   *  so callers that never touch a kana pack can omit it. */
-  language?: string
+   *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
+  language: string
 }
 
-export function TypingTestSettingsBar({ config, onConfigChange, language = '' }: Props) {
+export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
   const { t } = useTranslation()
 
   // Remember toggle state so it persists through quote modes (which have no toggles).

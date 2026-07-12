@@ -13,6 +13,7 @@ function renderBar(props: Partial<Parameters<typeof TypingTestSettingsBar>[0]> =
   const defaults = {
     config: DEFAULT_CONFIG,
     onConfigChange: vi.fn(),
+    language: 'english',
   }
   return render(
     <I18nextProvider i18n={i18n}>
@@ -134,8 +135,8 @@ describe('TypingTestSettingsBar romaji toggle', () => {
     expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
   })
 
-  it('hides the romaji toggle when no language is provided', () => {
-    renderBar()
+  it('hides the romaji toggle for an empty language string', () => {
+    renderBar({ language: '' })
     expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
   })
 
@@ -182,7 +183,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: true, numbers: true }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} />
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" />
       </I18nextProvider>,
     )
 
@@ -194,7 +195,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     onConfigChange.mockClear()
     rerender(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} />
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" />
       </I18nextProvider>,
     )
 
