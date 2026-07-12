@@ -4,8 +4,11 @@ export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeb
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
 
 export type TypingTestConfig =
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean }
+  // `romajiInput` opts into sequential romaji-keystroke judging for kana
+  // packs (japanese_hiragana / japanese_katakana); undefined/false keeps
+  // the existing verbatim-string matching behaviour.
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
