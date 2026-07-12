@@ -35,6 +35,7 @@ describe('matchingResults', () => {
       makeResult({ wpm: 80, mode2: 60 }),                   // different wordCount
       makeResult({ wpm: 90, language: 'japanese' }),        // different language
       makeResult({ wpm: 50, punctuation: true }),           // different toggle
+      makeResult({ wpm: 55, romajiInput: true }),           // different toggle (romaji)
     ]
     const out = matchingResults(pool, wordsConfig, 'english')
     expect(out.map((r) => r.wpm)).toEqual([70])
@@ -74,9 +75,9 @@ describe('matchingResults', () => {
 
 describe('conditionKey', () => {
   it('keys normal modes on mode + params + language + toggles', () => {
-    expect(conditionKey(wordsConfig, 'english')).toBe('words|30|english|false|false')
+    expect(conditionKey(wordsConfig, 'english')).toBe('words|30|english|false|false|false')
     const timeConfig = { mode: 'time', duration: 10 } as TypingTestConfig
-    expect(conditionKey(timeConfig, 'english')).toBe('time|10|english|false|false')
+    expect(conditionKey(timeConfig, 'english')).toBe('time|10|english|false|false|false')
   })
 
   it('keys fileImport on the imported text id only (language-independent)', () => {
@@ -96,13 +97,20 @@ describe('conditionKey', () => {
     const d = conditionKey(tatoebaConfig, 'english')
     expect(new Set([a, b, c, d]).size).toBe(4)
   })
+
+  it('distinguishes a romaji run from a verbatim run of the same kana pack', () => {
+    const romajiConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    const a = conditionKey(wordsConfig, 'japanese_hiragana')
+    const b = conditionKey(romajiConfig, 'japanese_hiragana')
+    expect(a).not.toBe(b)
+  })
 })
 
 describe('resultConditionKey', () => {
   it('keys normal modes on mode + params + language + toggles', () => {
-    expect(resultConditionKey(makeResult())).toBe('words|30|english|false|false')
+    expect(resultConditionKey(makeResult())).toBe('words|30|english|false|false|false')
     expect(resultConditionKey(makeResult({ mode: 'time', mode2: 30 })))
-      .toBe('time|30|english|false|false')
+      .toBe('time|30|english|false|false|false')
   })
 
   it('distinguishes different word counts, languages and toggles', () => {
@@ -110,7 +118,8 @@ describe('resultConditionKey', () => {
     const b = resultConditionKey(makeResult({ mode2: 60 }))
     const c = resultConditionKey(makeResult({ language: 'japanese' }))
     const d = resultConditionKey(makeResult({ punctuation: true }))
-    expect(new Set([a, b, c, d]).size).toBe(4)
+    const e = resultConditionKey(makeResult({ romajiInput: true }))
+    expect(new Set([a, b, c, d, e]).size).toBe(5)
   })
 
   it('keys fileImport on the imported text id only (language-independent)', () => {
@@ -132,7 +141,7 @@ describe('resultConditionKey', () => {
       date: '2025-01-01T00:00:00.000Z', wpm: 50, accuracy: 90, wordCount: 10,
       correctChars: 50, incorrectChars: 2, durationSeconds: 20,
     }
-    expect(resultConditionKey(legacy)).toBe('words|||false|false')
+    expect(resultConditionKey(legacy)).toBe('words|||false|false|false')
   })
 })
 
@@ -158,6 +167,7 @@ describe('conditionKey / resultConditionKey agreement', () => {
     const configs: TypingTestConfig[] = [
       { mode: 'words', wordCount: 30, punctuation: false, numbers: false },
       { mode: 'words', wordCount: 30, punctuation: true, numbers: true },
+      { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true },
       { mode: 'time', duration: 30, punctuation: false, numbers: false },
       { mode: 'quote', quoteLength: 'medium' },
       { mode: 'fileImport', textId: 't1' },

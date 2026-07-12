@@ -29,6 +29,14 @@ export const WORD_COUNT_OPTIONS = [15, 30, 60, 120] as const
 export const TIME_DURATION_OPTIONS = [15, 30, 60, 120] as const
 export const DEFAULT_LANGUAGE = 'english'
 
+/** Word-language packs the romaji-keystroke matcher supports (kana word
+ *  lists only). Drives both the SettingsBar toggle's visibility and, in
+ *  `useTypingTest`, whether `romajiInput: true` is actually honored — a
+ *  config can carry the flag while the selected language is something
+ *  else (e.g. after switching away from a kana pack), in which case the
+ *  flag stays saved but has no effect until a kana pack is selected again. */
+export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_katakana'])
+
 // Imported file-import-text display preferences (fileImport mode only).
 export const DISPLAY_LINES_MIN = 2
 export const DISPLAY_LINES_MAX = 10

@@ -142,6 +142,12 @@ describe('isPbForConfig', () => {
     const result = { ...makeResult(60), numbers: false }
     expect(isPbForConfig(result, history)).toBe(true)
   })
+
+  it('distinguishes by romajiInput', () => {
+    const history = [{ ...makeResult(100), romajiInput: true }]
+    const result = { ...makeResult(60), romajiInput: false }
+    expect(isPbForConfig(result, history)).toBe(true)
+  })
 })
 
 describe('trimResults', () => {
@@ -193,6 +199,22 @@ describe('buildTypingTestResult', () => {
     expect(result.consistency).toBeTypeOf('number')
     expect(result.wpmHistory).toEqual([55, 58, 60, 62])
     expect(result.date).toBeTruthy()
+  })
+
+  it('stores romajiInput for words/time modes, and omits it for quote', () => {
+    const wordsConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    const withRomaji = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: wordsConfig, language: 'japanese_hiragana', wpmHistory: [],
+    })
+    expect(withRomaji.romajiInput).toBe(true)
+
+    const quoteConfig: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
+    const quoteResult = buildTypingTestResult({
+      correctChars: 20, incorrectChars: 1, wordCount: 5, wpm: 40, accuracy: 95, elapsedMs: 20000,
+      config: quoteConfig, language: 'english', wpmHistory: [],
+    })
+    expect(quoteResult.romajiInput).toBeUndefined()
   })
 
   it('derives mode2 from time config', () => {

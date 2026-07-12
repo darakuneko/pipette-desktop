@@ -28,6 +28,12 @@ export interface TypingTestResult {
   language?: string
   punctuation?: boolean
   numbers?: boolean
+  /** Sequential romaji-keystroke judging was on for this run (words/time
+   *  kana packs only — see `ROMAJI_INPUT_LANGUAGES`). Kept alongside
+   *  punctuation/numbers so PB grouping (`configKey`) and condition
+   *  grouping (`resultConditionKey`) never mix romaji and verbatim runs of
+   *  the same kana pack. */
+  romajiInput?: boolean
   consistency?: number
   isPb?: boolean
   wpmHistory?: number[]

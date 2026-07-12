@@ -174,6 +174,52 @@ describe('useTypingTest — romaji input mode', () => {
     expect(result.current.state.romajiKeystrokes).toBe('')
   })
 
+  it('exposes kanaCompleted alongside typed/remaining in the guide, advancing per committed segment', async () => {
+    await seedKanaLanguage('romaji-guide-kana', ['でぃなー'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-guide-kana'))
+
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'dhina-', kanaCompleted: 0 })
+
+    press(result, 'd')
+    press(result, 'h')
+    press(result, 'i') // commits でぃ as one 2-kana digraph segment
+    expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2 })
+  })
+
+  it('clears romajiInput when the language switches off a kana pack', async () => {
+    await seedKanaLanguage('romaji-lang-switch', ['あ'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'romaji-lang-switch'))
+    expect(result.current.config.mode === 'words' && result.current.config.romajiInput).toBe(true)
+
+    await act(async () => {
+      await result.current.setLanguage('english')
+    })
+
+    expect(result.current.language).toBe('english')
+    expect(result.current.config.mode).toBe('words')
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(false)
+    }
+    // The cleared flag also takes matching out of romaji mode immediately —
+    // a submitted word now goes through verbatim comparison, not the matcher.
+    expect(result.current.romajiGuide).toBeNull()
+  })
+
+  it('preserves romajiInput when switching between two kana languages', async () => {
+    await seedKanaLanguage('japanese_hiragana', ['あ'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), 'japanese_hiragana'))
+    await seedKanaLanguage('japanese_katakana', ['ア'])
+
+    await act(async () => {
+      await result.current.setLanguage('japanese_katakana')
+    })
+
+    expect(result.current.language).toBe('japanese_katakana')
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(true)
+    }
+  })
+
   it('leaves non-romaji words-mode behaviour unchanged', () => {
     const { result } = renderHook(() => useTypingTest({ mode: 'words', wordCount: 2, punctuation: false, numbers: false }, 'english'))
     const firstWord = result.current.state.words[0]

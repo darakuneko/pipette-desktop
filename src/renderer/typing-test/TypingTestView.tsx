@@ -34,6 +34,11 @@ interface Props {
   onCompositionStart?: () => void
   onCompositionUpdate?: (data: string) => void
   onCompositionEnd?: (data: string) => void
+  /** Current word's romaji-keystroke progress (romajiInput mode only), or
+   *  null otherwise. Drives both the current word's kana coloring
+   *  (forwarded to `WordDisplay`) and the typed/remaining romaji guide line
+   *  shown below the reading window. */
+  romajiGuide?: { typed: string; remaining: string; kanaCompleted: number } | null
   /** Called when Space is input via IME (keydown swallowed by the IME layer). */
   onImeSpaceKey?: () => void
   /** Imported-text display: visible line count + font size (px). Ignored
@@ -103,6 +108,7 @@ export function TypingTestView({
   onCompositionStart,
   onCompositionUpdate,
   onCompositionEnd,
+  romajiGuide = null,
   onImeSpaceKey,
   displayLines = DEFAULT_DISPLAY_LINES,
   fontSize = DEFAULT_FONT_SIZE,
@@ -120,6 +126,14 @@ export function TypingTestView({
   const isComposingRef = useRef(false)
   // Guard: prevent duplicate space submission when both keydown and input fire
   const lastSpaceTimeRef = useRef(0)
+  // Romaji mode is direct-keystroke only, so an active OS IME composition
+  // means input silently isn't landing — surfaced as a one-line hint once
+  // detected. Sticky for the run (not per-keystroke) so it doesn't flicker;
+  // cleared on the next run via the runId-keyed effect below.
+  const [imeDetected, setImeDetected] = useState(false)
+  useEffect(() => {
+    setImeDetected(false)
+  }, [state.runId])
 
   // Sources with line breaks render as explicit line rows; every other mode
   // keeps the flat word-flow layout. `null` = flat.
@@ -240,6 +254,7 @@ export function TypingTestView({
       wordResults={state.wordResults}
       cursorBlink={state.status === 'waiting'}
       compositionText={wordIdx === state.currentWordIndex ? state.compositionText : ''}
+      romajiGuide={wordIdx === state.currentWordIndex ? romajiGuide : null}
     />
   )
 
@@ -265,6 +280,11 @@ export function TypingTestView({
           aria-label="IME input"
           onCompositionStart={() => {
             isComposingRef.current = true
+            // An IME composition starting during romaji mode means the OS
+            // IME is on — direct keystrokes won't reach processKeyEvent
+            // (see isRomajiInputActive's composition-blocking in
+            // useTypingTest). Surface the hint once detected.
+            if (romajiGuide) setImeDetected(true)
             onCompositionStart?.()
           }}
           onCompositionUpdate={(e) => onCompositionUpdate?.(e.data)}
@@ -332,6 +352,27 @@ export function TypingTestView({
           </div>
         )}
       </div>
+
+      {/* Romaji guide — the current word's confirmed/remaining romaji
+          spelling, plus an IME-on hint once a composition event proves
+          direct keystrokes aren't reaching the matcher. Rendered as its own
+          row below the reading window rather than inline per-word: the
+          words row is a single flex-wrap flow (word-flow modes have no
+          per-line rows to anchor an inline guide under), so a fixed row
+          here avoids overlapping whatever wraps below the current word. */}
+      {romajiGuide && (
+        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono text-sm">
+          <p className="break-all">
+            <span className="text-success">{romajiGuide.typed}</span>
+            <span className="text-content-muted">{romajiGuide.remaining}</span>
+          </p>
+          {imeDetected && (
+            <p data-testid="typing-test-romaji-ime-hint" className="text-xs text-warning">
+              {t('editor.typingTest.romaji.imeHint')}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* State-based controls row, below the reading window:
           - not started (waiting / countdown): Next Test (+ Resume if a run is

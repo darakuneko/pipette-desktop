@@ -13,9 +13,16 @@ interface WordDisplayProps {
   wordResults: WordResult[]
   cursorBlink: boolean
   compositionText?: string
+  /** Romaji-keystroke progress for this word (romajiInput mode only), or
+   *  null/undefined for every other word and every other mode. When set,
+   *  the current word renders kana-by-kana success/muted coloring driven by
+   *  `kanaCompleted` instead of the usual `currentInput` comparison — romaji
+   *  mode never writes to `currentInput` (see `handleRomajiChar`), and
+   *  rejected keystrokes never appear anywhere (no per-char error color). */
+  romajiGuide?: { typed: string; remaining: string; kanaCompleted: number } | null
 }
 
-export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '' }: WordDisplayProps) {
+export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '', romajiGuide = null }: WordDisplayProps) {
   const testId = `word-${wordIndex}`
 
   // Completed word — per-character coloring
@@ -36,6 +43,34 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
             {displayChar(char, charIdx, result.typed)}
           </span>
         ))}
+      </span>
+    )
+  }
+
+  // Current word, romaji input mode -- kana colored by confirmed segments
+  // rather than by comparing against currentInput (always empty in this
+  // mode). No per-char error color: a rejected keystroke never advances the
+  // matcher, so there's nothing to mark wrong on the kana itself.
+  if (wordIndex === currentWordIndex && romajiGuide) {
+    const kanaCompleted = romajiGuide.kanaCompleted
+    const kanaClass = (charIdx: number): string => (charIdx < kanaCompleted ? 'text-success' : 'text-content-muted')
+    return (
+      <span data-testid={testId} className="min-w-0 break-all">
+        {word.split('').map((char, charIdx) =>
+          charIdx === kanaCompleted ? (
+            <span key={charIdx} className="relative">
+              <Cursor blink={cursorBlink} />
+              <span className={kanaClass(charIdx)}>{char}</span>
+            </span>
+          ) : (
+            <span key={charIdx} className={kanaClass(charIdx)}>{char}</span>
+          ),
+        )}
+        {kanaCompleted >= word.length && (
+          <span className="relative">
+            <Cursor blink={cursorBlink} />
+          </span>
+        )}
       </span>
     )
   }

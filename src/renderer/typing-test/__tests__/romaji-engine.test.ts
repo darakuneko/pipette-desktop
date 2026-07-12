@@ -212,3 +212,49 @@ describe('reject leaves state untouched', () => {
     expect(matcher.remainingGuide()).toBe('')
   })
 })
+
+describe('completedKanaCount', () => {
+  it('starts at 0 before any keystroke', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    expect(matcher.completedKanaCount()).toBe(0)
+  })
+
+  it('does not advance while a segment is only partially typed', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    expect(matcher.completedKanaCount()).toBe(0)
+  })
+
+  it('advances by the segment length once a segment commits, tracking a mid-word digraph split (dhi = 2 kana)', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    matcher.acceptChar('h')
+    matcher.acceptChar('i') // commits でぃ as one 2-kana digraph segment
+    expect(matcher.completedKanaCount()).toBe(2)
+  })
+
+  it('advances by 1 kana at a time for the decomposed (de + xi) spelling', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    matcher.acceptChar('d')
+    matcher.acceptChar('e') // commits で alone (1 kana)
+    expect(matcher.completedKanaCount()).toBe(1)
+    matcher.acceptChar('x')
+    matcher.acceptChar('i') // commits ぃ (1 more kana)
+    expect(matcher.completedKanaCount()).toBe(2)
+  })
+
+  it('rejects never advance the count', () => {
+    const matcher = createRomajiMatcher('あい')
+    matcher.acceptChar('a')
+    expect(matcher.completedKanaCount()).toBe(1)
+    expect(matcher.acceptChar('z')).toBe('reject')
+    expect(matcher.completedKanaCount()).toBe(1)
+  })
+
+  it('reaches the full kana length once the word completes', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく')
+    for (const key of 'dhina-niiku') matcher.acceptChar(key)
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.completedKanaCount()).toBe([...'でぃなーにいく'].length)
+  })
+})

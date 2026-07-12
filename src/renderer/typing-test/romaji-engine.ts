@@ -388,6 +388,13 @@ export interface RomajiMatcher {
    *  typing once earlier alternatives fall out of contention. */
   remainingGuide(): string
   isComplete(): boolean
+  /** Number of kana characters fully confirmed so far — i.e. committed
+   *  segments only, excluding whatever's in the in-progress keystroke
+   *  buffer for the segment currently being typed. Romaji spelling length
+   *  varies per kana (で = "de", でぃ = "dhi"), so `typedRomaji().length`
+   *  can't be mapped back to a kana count; the UI uses this instead to
+   *  color the word's kana characters up through what's actually locked in. */
+  completedKanaCount(): number
 }
 
 interface ConsumeResult {
@@ -487,6 +494,10 @@ export function createRomajiMatcher(word: string): RomajiMatcher {
       if (exact.length === 0) return false
       const winner = pickWinner(exact)
       return position + winner.length >= kana.length
+    },
+
+    completedKanaCount(): number {
+      return position
     },
   }
 }
