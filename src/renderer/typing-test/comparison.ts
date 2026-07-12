@@ -11,19 +11,33 @@ export interface ComparisonStats {
   accuracy: number
 }
 
+/** Stable key identifying the test condition a saved result was run under,
+ *  reconstructed entirely from fields already stored on every history entry
+ *  — no dedicated field needed, and it works for legacy rows too. This is
+ *  the single source of truth for condition grouping:
+ *  - fileImport: the imported text id (`mode2`), language-independent
+ *  - tatoeba: the sentence-pack language (`mode2`), word-language-independent
+ *  - normal (words/time/quote): mode + params + language + toggles (`configKey`)
+ *  Rows missing some of these fields fall back the same way `configKey`
+ *  already does for PB grouping, so old history entries group sensibly
+ *  without a migration. */
+export function resultConditionKey(result: TypingTestResult): string {
+  const mode = result.mode ?? 'words'
+  if (mode === 'fileImport') return `fileImport|${String(result.mode2 ?? '')}`
+  if (mode === 'tatoeba') return `tatoeba|${String(result.mode2 ?? '')}`
+  return configKey(result)
+}
+
 /** Stable key identifying the current test condition, used both to group
- *  same-condition history and to remember the per-condition baseline:
- *  - fileImport: the imported text id (`fileImport|textId`)
- *  - normal: mode + params + language + toggles (mirrors `configKey`)
+ *  same-condition history and to remember the per-condition baseline.
+ *  Builds a result-shaped partial from the live config and delegates to
+ *  {@link resultConditionKey}, so the two definitions can never drift.
  *  This must agree with {@link matchingResults} so the saved baseline and the
  *  pinnable choices stay in lockstep. */
 export function conditionKey(config: TypingTestConfig, language: string): string {
-  if (config.mode === 'fileImport') return `fileImport|${String(deriveMode2(config) ?? '')}`
-  // Tatoeba is grouped by its sentence-pack language (mode2), independent of
-  // the MonkeyType word language — mirrors the fileImport short form.
-  if (config.mode === 'tatoeba') return `tatoeba|${String(deriveMode2(config) ?? '')}`
   const hasToggles = config.mode === 'words' || config.mode === 'time'
-  return configKey({
+  // resultConditionKey only reads these 5 fields, so a config-shaped partial is enough.
+  return resultConditionKey({
     mode: config.mode,
     mode2: deriveMode2(config),
     language,
@@ -32,36 +46,21 @@ export function conditionKey(config: TypingTestConfig, language: string): string
   } as TypingTestResult)
 }
 
-/** Results from the pool sharing the current test's condition:
- *  - fileImport: the same imported text (matched on `mode2` = textId)
- *  - normal: same mode + params + language + punctuation/numbers (`configKey`)
- *  `beforeMs`, when given, drops results at/after that time so the in-flight
- *  run (saved on finish) never compares against itself. */
+/** Results from the pool sharing the current test's condition — same
+ *  grouping as {@link resultConditionKey}/{@link conditionKey} (see those for
+ *  the exact per-mode rules). `beforeMs`, when given, drops results at/after
+ *  that time so the in-flight run (saved on finish) never compares against
+ *  itself. */
 export function matchingResults<T extends TypingTestResult>(
   pool: T[],
   config: TypingTestConfig,
   language: string,
   beforeMs?: number,
 ): T[] {
-  const isFileImport = config.mode === 'fileImport'
-  const isTatoeba = config.mode === 'tatoeba'
-  // For fileImport this is the textId; for tatoeba, the pack language.
-  const currentMode2 = String(deriveMode2(config) ?? '')
-  const hasToggles = config.mode === 'words' || config.mode === 'time'
-  // configKey only reads these 5 fields, so a config-shaped partial is enough.
-  const currentKey = configKey({
-    mode: config.mode,
-    mode2: deriveMode2(config),
-    language,
-    punctuation: hasToggles ? config.punctuation : undefined,
-    numbers: hasToggles ? config.numbers : undefined,
-  } as TypingTestResult)
-
+  const currentKey = conditionKey(config, language)
   return pool.filter((r) => {
     if (beforeMs != null && new Date(r.date).getTime() >= beforeMs) return false
-    if (isFileImport) return r.mode === 'fileImport' && String(r.mode2 ?? '') === currentMode2
-    if (isTatoeba) return r.mode === 'tatoeba' && String(r.mode2 ?? '') === currentMode2
-    return configKey(r) === currentKey
+    return resultConditionKey(r) === currentKey
   })
 }
 

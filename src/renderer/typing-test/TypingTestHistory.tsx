@@ -8,7 +8,8 @@ import type { TypingTestResult } from '../../shared/types/pipette-settings'
 import { buildCsv } from '../../shared/csv-export'
 import { computeStats } from './history-stats'
 import { WpmSparkline } from './WpmSparkline'
-import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN } from '../components/editors/store-modal-shared'
+import { AccuracyTrendSection } from './AccuracyTrendSection'
+import { formatDate, ACTION_BTN, DELETE_BTN, CONFIRM_DELETE_BTN, FILTER_SELECT_CLASS } from '../components/editors/store-modal-shared'
 import { resultKpm, buildResultNameChips } from './result-builder'
 import { ResultNameModal } from './ResultNameModal'
 import { Tooltip } from '../components/ui/Tooltip'
@@ -35,7 +36,6 @@ interface Props {
 
 const MAX_TABLE_ROWS = 20
 
-const FILTER_SELECT_CLASS = 'h-8 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none'
 const EXPORT_BTN_CLASS = 'inline-flex h-8 items-center rounded-md border border-edge px-2.5 text-xs text-content-secondary transition-colors hover:text-content'
 
 const MAX_SPARKLINE_RESULTS = 50
@@ -266,6 +266,8 @@ export function TypingTestHistory({ results, onExportCsv, onRename, onDelete, de
           <WpmSparkline results={sparklineResults} width={400} height={50} />
         </div>
       )}
+
+      <AccuracyTrendSection results={tabResults} />
 
       {/* Results table — fills remaining height */}
       <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-edge">

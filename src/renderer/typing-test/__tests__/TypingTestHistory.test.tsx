@@ -311,4 +311,70 @@ describe('TypingTestHistory', () => {
     // The name shows in the cell (and again in its hover tooltip bubble).
     expect(screen.getAllByText('kept').length).toBeGreaterThan(0)
   })
+
+  describe('Accuracy Trend condition selector', () => {
+    it('defaults to the latest run\'s condition and hides the chart below 2 same-condition runs', () => {
+      // Newest-first, mirroring the real prop order (useDevicePrefs prepends
+      // new runs) that the condition grouping relies on.
+      const results = [
+        makeResult({ wpm: 80, accuracy: 96, mode: 'time', mode2: 30, language: 'english', date: '2026-01-03T00:00:00.000Z' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      const select = screen.getByTestId('history-condition-filter') as HTMLSelectElement
+      expect(select.options.length).toBe(2)
+      // The latest run (2026-01-03) is 'time', so it's the default selection.
+      expect(select.value).toContain('time')
+      // Its condition only has 1 run, so the chart doesn't render yet.
+      expect(screen.queryByTestId('accuracy-trend-chart')).toBeNull()
+    })
+
+    it('renders the trend chart once the selected condition has 2+ runs', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
+    })
+
+    it('switches the trend chart series when a different condition is selected', () => {
+      // Newest-first, mirroring the real prop order (useDevicePrefs prepends
+      // new runs) that the condition grouping relies on.
+      const results = [
+        makeResult({ wpm: 70, accuracy: 88, mode: 'time', mode2: 60, language: 'english', date: '2026-01-04T00:00:00.000Z' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      // Default (latest = time|60) has only 1 run → no chart yet.
+      expect(screen.queryByTestId('accuracy-trend-chart')).toBeNull()
+
+      const select = screen.getByTestId('history-condition-filter')
+      const wordsOption = Array.from((select as HTMLSelectElement).options).find((o) => o.value.startsWith('words|'))
+      expect(wordsOption).toBeTruthy()
+      fireEvent.change(select, { target: { value: wordsOption!.value } })
+      expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
+    })
+
+    it('is independent of the mode filter dropdown (coarse filter above it)', () => {
+      const results = [
+        makeResult({ wpm: 60, accuracy: 90, mode: 'words', mode2: 30, language: 'english', date: '2026-01-01T00:00:00.000Z' }),
+        makeResult({ wpm: 65, accuracy: 92, mode: 'words', mode2: 30, language: 'english', date: '2026-01-02T00:00:00.000Z' }),
+      ]
+      renderWithI18n(<TypingTestHistory results={results} />)
+      expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
+      // Switching the table's mode filter to a mode with zero matching rows
+      // must not affect the condition selector/chart, which is scoped to
+      // the whole tab's results, not the mode-filtered table.
+      fireEvent.change(screen.getByTestId('history-filter-mode'), { target: { value: 'time' } })
+      expect(screen.getByTestId('accuracy-trend-chart')).toBeTruthy()
+    })
+
+    it('is not shown when the active tab has no results', () => {
+      renderWithI18n(<TypingTestHistory results={[]} />)
+      expect(screen.queryByTestId('history-condition-filter')).toBeNull()
+    })
+  })
 })

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect } from 'vitest'
-import { computeComparison, matchingResults, conditionKey } from '../comparison'
+import { computeComparison, matchingResults, conditionKey, resultConditionKey } from '../comparison'
+import { buildTypingTestResult } from '../result-builder'
 import type { TypingTestResult } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../types'
 
@@ -94,6 +95,78 @@ describe('conditionKey', () => {
     const c = conditionKey(fileImportConfig, 'english')
     const d = conditionKey(tatoebaConfig, 'english')
     expect(new Set([a, b, c, d]).size).toBe(4)
+  })
+})
+
+describe('resultConditionKey', () => {
+  it('keys normal modes on mode + params + language + toggles', () => {
+    expect(resultConditionKey(makeResult())).toBe('words|30|english|false|false')
+    expect(resultConditionKey(makeResult({ mode: 'time', mode2: 30 })))
+      .toBe('time|30|english|false|false')
+  })
+
+  it('distinguishes different word counts, languages and toggles', () => {
+    const a = resultConditionKey(makeResult())
+    const b = resultConditionKey(makeResult({ mode2: 60 }))
+    const c = resultConditionKey(makeResult({ language: 'japanese' }))
+    const d = resultConditionKey(makeResult({ punctuation: true }))
+    expect(new Set([a, b, c, d]).size).toBe(4)
+  })
+
+  it('keys fileImport on the imported text id only (language-independent)', () => {
+    const r1 = makeResult({ mode: 'fileImport', mode2: 't1', language: 'english' })
+    const r2 = makeResult({ mode: 'fileImport', mode2: 't1', language: 'japanese' })
+    expect(resultConditionKey(r1)).toBe(resultConditionKey(r2))
+    expect(resultConditionKey(r1)).toBe('fileImport|t1')
+  })
+
+  it('keys tatoeba on the pack language (mode2) only', () => {
+    const r1 = makeResult({ mode: 'tatoeba', mode2: 'japanese', language: 'japanese' })
+    const r2 = makeResult({ mode: 'tatoeba', mode2: 'japanese', language: 'german' })
+    expect(resultConditionKey(r1)).toBe(resultConditionKey(r2))
+    expect(resultConditionKey(r1)).toBe('tatoeba|japanese')
+  })
+
+  it('falls back sensibly for legacy rows missing mode/mode2/language', () => {
+    const legacy: TypingTestResult = {
+      date: '2025-01-01T00:00:00.000Z', wpm: 50, accuracy: 90, wordCount: 10,
+      correctChars: 50, incorrectChars: 2, durationSeconds: 20,
+    }
+    expect(resultConditionKey(legacy)).toBe('words|||false|false')
+  })
+})
+
+describe('conditionKey / resultConditionKey agreement', () => {
+  // Guards against the two definitions drifting apart: conditionKey derives
+  // its key from a live TypingTestConfig, resultConditionKey from a saved
+  // TypingTestResult — they must key every mode identically since
+  // matchingResults compares one against the other.
+  const buildInput = (config: TypingTestConfig) => ({
+    correctChars: 100,
+    incorrectChars: 5,
+    wordCount: 20,
+    wpm: 60,
+    accuracy: 95,
+    elapsedMs: 20_000,
+    config,
+    language: 'english',
+    wpmHistory: [60],
+    fileImportTextName: 'novel.txt',
+  })
+
+  it('agrees for every mode', () => {
+    const configs: TypingTestConfig[] = [
+      { mode: 'words', wordCount: 30, punctuation: false, numbers: false },
+      { mode: 'words', wordCount: 30, punctuation: true, numbers: true },
+      { mode: 'time', duration: 30, punctuation: false, numbers: false },
+      { mode: 'quote', quoteLength: 'medium' },
+      { mode: 'fileImport', textId: 't1' },
+      { mode: 'tatoeba', language: 'japanese' },
+    ]
+    for (const config of configs) {
+      const result = buildTypingTestResult(buildInput(config))
+      expect(conditionKey(config, 'english')).toBe(resultConditionKey(result))
+    }
   })
 })
 

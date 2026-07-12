@@ -427,7 +427,12 @@
         "filterMode": "Filter by mode",
         "filterText": "Filter by text",
         "exportCsv": "Export CSV",
-        "delete": "Delete"
+        "delete": "Delete",
+        "accuracyTrendTitle": "Accuracy Trend",
+        "conditionFilterLabel": "Filter by condition",
+        "conditionPunctuation": "+punct",
+        "conditionNumbers": "+nums",
+        "conditionTatoeba": "Tatoeba"
       }
     }
   },

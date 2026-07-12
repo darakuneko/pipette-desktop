@@ -8,8 +8,8 @@
 // Usage: pnpm build && npx tsx e2e/helpers/doc-capture-typing-test.ts
 
 import type { Page } from '@playwright/test'
-import { mkdirSync } from 'node:fs'
-import { resolve } from 'node:path'
+import { mkdirSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import {
   backupVirtualDeviceSettings,
   clickThroughUnlock,
@@ -19,6 +19,7 @@ import {
   resetToEditorMode,
   restoreVirtualDeviceSettings,
   VIRTUAL_DEVICE_DISPLAY_NAME,
+  VirtualDeviceSettingsBackup,
   waitForTypingTestCountdown,
   waitForUnlockDialog,
 } from './doc-capture-common'
@@ -31,6 +32,35 @@ async function capture(page: Page, name: string): Promise<void> {
   const path = resolve(SCREENSHOT_DIR, `${name}.png`)
   await page.screenshot({ path, fullPage: true })
   console.log(`  [ok] ${name}.png`)
+}
+
+// [daysAgo, wpm, accuracy, correctChars, incorrectChars] for each seeded run — all
+// share the same `words` (30, english, no toggles) condition with rising accuracy.
+const ACCURACY_TREND_SEED_RUNS: [number, number, number, number, number][] = [
+  [6, 58, 88, 145, 20],
+  [3, 64, 92, 148, 13],
+  [1, 71, 96, 154, 6],
+]
+
+/** Seeds the Accuracy Trend seed runs above into the virtual device's
+ *  pipette_settings.json, so the Accuracy Trend chart (History → Data
+ *  section) has a real trend line to screenshot. Merged onto whatever the
+ *  file already has — `settingsBackup` (the snapshot `backupVirtualDeviceSettings`
+ *  took before this call) restores the pre-seed content (or removes the
+ *  file) once the script is done, independent of this seed. */
+function seedAccuracyTrendHistory(settingsBackup: VirtualDeviceSettingsBackup): void {
+  mkdirSync(dirname(settingsBackup.path), { recursive: true })
+  const existing = settingsBackup.content != null
+    ? (JSON.parse(settingsBackup.content) as Record<string, unknown>)
+    : {}
+  const now = Date.now()
+  const DAY_MS = 24 * 60 * 60 * 1000
+  existing.typingTestResults = ACCURACY_TREND_SEED_RUNS.map(([daysAgo, wpm, accuracy, correctChars, incorrectChars]) => ({
+    date: new Date(now - daysAgo * DAY_MS).toISOString(),
+    wpm, accuracy, wordCount: 30, correctChars, incorrectChars, durationSeconds: 24,
+    mode: 'words', mode2: 30, language: 'english', punctuation: false, numbers: false,
+  }))
+  writeFileSync(settingsBackup.path, JSON.stringify(existing), 'utf-8')
 }
 
 /** Applies the shared dataset-update banner on whichever Mode-modal tab is
@@ -166,6 +196,7 @@ async function main(): Promise<void> {
   // helper's viewMode is not the state a later test run should inherit.
   const userDataPath = await app.evaluate(async ({ app: a }) => a.getPath('userData'))
   const settingsBackup = backupVirtualDeviceSettings(userDataPath)
+  seedAccuracyTrendHistory(settingsBackup)
 
   const page = await app.firstWindow()
   await page.waitForLoadState('domcontentloaded')
@@ -209,6 +240,21 @@ async function main(): Promise<void> {
     await page.locator('[data-testid="mode-words"]').click()
     await page.waitForTimeout(500)
     await capture(page, 'typing-test-words-waiting')
+
+    // 1b. History modal — Data section, showing the Accuracy Trend chart
+    // populated by seedAccuracyTrendHistory above (3 same-condition `words`
+    // runs, so both the sparkline and the trend chart have real data).
+    const settingsPanelCollapsed = page.locator('[data-testid="typing-settings-panel-collapsed"]')
+    if (await settingsPanelCollapsed.isVisible().catch(() => false)) {
+      await page.locator('[data-testid="typing-settings-panel-toggle"]').click()
+      await page.waitForTimeout(300)
+    }
+    await page.locator('[data-testid="typing-test-history-toggle"]').click()
+    await page.locator('[data-testid="history-modal"]').waitFor({ state: 'visible', timeout: 5_000 })
+    await page.waitForTimeout(300)
+    await capture(page, 'typing-test-accuracy-trend')
+    await page.locator('[data-testid="history-modal-close"]').click()
+    await page.waitForTimeout(300)
 
     // 2. Time mode
     await page.locator('[data-testid="mode-time"]').click()
