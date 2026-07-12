@@ -320,13 +320,38 @@ function recentTailOffsetsMinutes(): number[] {
   return [50, 40, 30, 20, 10, 6, 4, 2, 1]
 }
 
+// Bucket centers mirror BIGRAM_BUCKET_CENTERS_MS in bigram-bucket.ts —
+// treating every sample as sitting at its bucket center is the same
+// estimate the histogram-only avgIki approximation already uses, so
+// `s` / `sq` (see `sumsFromHist`) read as a natural companion to Avg
+// IKI rather than an unrelated number.
+const BUCKET_CENTERS_MS = [30, 80, 125, 175, 250, 400, 750, 1500] as const
+
+/** Derives the sum and sum-of-squares of raw IKI a histogram implies,
+ * by weighting each bucket's center by its count — see the module
+ * comment above. Lets the bigram/trigram fixtures below carry only
+ * `hist` instead of hand-computed `s` / `sq` duplicates. */
+function sumsFromHist(hist: readonly number[]): { s: number; sq: number } {
+  let s = 0
+  let sq = 0
+  hist.forEach((count, i) => {
+    const center = BUCKET_CENTERS_MS[i]
+    s += count * center
+    sq += count * center * center
+  })
+  return { s, sq }
+}
+
 // Representative bigram pairs for the Bigrams tab. Histogram bucket
 // boundaries (ms): [60, 100, 150, 200, 300, 500, 1000, Inf]. Each entry
 // is replayed every minute so the Top quadrant shows count-leaders, the
 // Slow quadrant ranks high-IKI pairs, and Finger / Pair quadrants show
 // a varied avgIki distribution. Keycodes 4-9 are KC_A-KC_F; the alpha
 // row in the dummy keymap pins them to layer-0 row 1 columns 0-5 so
-// `buildKeycodeFingerMap` can resolve them to distinct fingers.
+// `buildKeycodeFingerMap` can resolve them to distinct fingers. `s` /
+// `sq` are derived from `hist` via `sumsFromHist` at write time (see
+// `buildMinuteRows`) so every entry gets a value — the SD column always
+// shows a value instead of "—" in the seeded current window.
 const DUMMY_TA_BIGRAM_PER_MINUTE: ReadonlyArray<{
   prev: number
   curr: number
@@ -366,6 +391,26 @@ const DUMMY_TA_BIGRAM_PER_MINUTE: ReadonlyArray<{
   { prev: 13, curr: 14, c: 5, hist: [1, 2, 2, 0, 0, 0, 0, 0] },
   { prev: 14, curr: 15, c: 4, hist: [0, 1, 2, 1, 0, 0, 0, 0] },
   { prev: 15, curr: 13, c: 2, hist: [0, 0, 0, 0, 1, 1, 0, 0] },
+]
+
+// Representative trigram triples for the 3-gram Bigrams-tab view.
+// Reuses the same alpha-row keycodes (4-9 = KC_A-KC_F, 13-15 = KC_J-L)
+// as the bigram set above so the trigram pair labels resolve through
+// the same dummy keymap. `s` / `sq` are derived the same way as
+// `DUMMY_TA_BIGRAM_PER_MINUTE`; trigram IKI values are already the
+// 2-interval average by the time they reach the histogram (see
+// MinuteBuffer.recordNgramChain), so no extra scaling is needed here.
+const DUMMY_TA_TRIGRAM_PER_MINUTE: ReadonlyArray<{
+  k1: number
+  k2: number
+  k3: number
+  c: number
+  hist: readonly number[]
+}> = [
+  { k1: 4, k2: 5, k3: 6, c: 7, hist: [2, 3, 2, 0, 0, 0, 0, 0] },
+  { k1: 5, k2: 6, k3: 7, c: 5, hist: [0, 2, 2, 1, 0, 0, 0, 0] },
+  { k1: 13, k2: 14, k3: 15, c: 4, hist: [1, 2, 1, 0, 0, 0, 0, 0] },
+  { k1: 6, k2: 5, k3: 4, c: 3, hist: [0, 0, 1, 1, 1, 0, 0, 0] },
 ]
 
 // --- Current-window seed (21 days, full minute-stats) ---
@@ -574,15 +619,26 @@ function buildMinuteRows(
     },
   })
 
-  const bigrams: Record<string, { c: number; h: readonly number[] }> = {}
+  const bigrams: Record<string, { c: number; h: readonly number[]; s: number; sq: number }> = {}
   for (const pair of DUMMY_TA_BIGRAM_PER_MINUTE) {
-    bigrams[`${pair.prev}_${pair.curr}`] = { c: pair.c, h: pair.hist }
+    bigrams[`${pair.prev}_${pair.curr}`] = { c: pair.c, h: pair.hist, ...sumsFromHist(pair.hist) }
   }
   rows.push({
     id: `bigram|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,
     kind: 'bigram-minute',
     updated_at: nowMs,
     payload: { scopeId: DUMMY_TA_SCOPE_ID, minuteTs, bigrams, appName, ...tag },
+  })
+
+  const trigrams: Record<string, { c: number; h: readonly number[]; s: number; sq: number }> = {}
+  for (const triple of DUMMY_TA_TRIGRAM_PER_MINUTE) {
+    trigrams[`${triple.k1}_${triple.k2}_${triple.k3}`] = { c: triple.c, h: triple.hist, ...sumsFromHist(triple.hist) }
+  }
+  rows.push({
+    id: `trigram|${encodeURIComponent(DUMMY_TA_SCOPE_ID)}|${minuteTs}`,
+    kind: 'trigram-minute',
+    updated_at: nowMs,
+    payload: { scopeId: DUMMY_TA_SCOPE_ID, minuteTs, trigrams, appName, ...tag },
   })
 
   return rows

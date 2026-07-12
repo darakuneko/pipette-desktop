@@ -177,6 +177,17 @@ describe('isValidAnalyzeFilterSettings', () => {
     expect(isValidAnalyzeFilterSettings({ filterDimension: 1 })).toBe(false)
   })
 
+  it('accepts heatmap.mode as count or speed, and absent (back-compat)', () => {
+    expect(isValidAnalyzeFilterSettings({ heatmap: { mode: 'count' } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ heatmap: { mode: 'speed' } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ heatmap: {} })).toBe(true)
+  })
+
+  it('rejects heatmap.mode values other than count or speed', () => {
+    expect(isValidAnalyzeFilterSettings({ heatmap: { mode: 'bogus' } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ heatmap: { mode: 1 } })).toBe(false)
+  })
+
   it('accepts a valid bigrams slot', () => {
     expect(
       isValidAnalyzeFilterSettings({

@@ -1042,6 +1042,7 @@
         "slow": "ペア間隔",
         "fingerIki": "指間隔"
       },
+      "cappedNotice": "頻度上位 {{limit}} 件のペアから算出しています — 低頻度のペアは含まれない場合があります",
       "gramToggle": {
         "ariaLabel": "N-gram の粒度",
         "bigram": "2-gram",
@@ -1078,6 +1079,17 @@
       "bondToggle": "レイヤー {{i}} を別グループと結合",
       "noLayout": "このスナップショットにレイアウトデータがありません",
       "noSnapshot": "この期間のキーマップスナップショットが記録されていません。record を開始すると取得されます。",
+      "modeToggle": {
+        "ariaLabel": "ヒートマップの着彩モード",
+        "count": "回数",
+        "speed": "速度"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKI",
+        "empty": "この期間の到達速度データはまだありません",
+        "minSampleNote": "到達回数が {{n}} 回未満のキーは着彩されません",
+        "cappedNotice": "頻度上位 {{limit}} 件のペアから算出しています — 低頻度のペアは含まれない場合があります"
+      },
       "ranking": {
         "frequentUsedN": "上位",
         "frequentUsed": "よく使うキー",

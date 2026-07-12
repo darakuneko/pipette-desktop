@@ -138,6 +138,13 @@ export function normalizeDeviceScopes(input: readonly DeviceScope[] | null | und
 export const HEATMAP_NORMALIZATIONS = ['absolute', 'perHour', 'shareOfTotal'] as const
 export type HeatmapNormalization = typeof HEATMAP_NORMALIZATIONS[number]
 
+/** `'count'` (default) keeps the historical press-count colouring;
+ * `'speed'` recolours the same keyboard by each key's reach IKI
+ * (average interval between the preceding key and this one), derived
+ * from the bigram aggregate rather than the matrix heatmap. */
+export const HEATMAP_MODES = ['count', 'speed'] as const
+export type HeatmapMode = typeof HEATMAP_MODES[number]
+
 export const AGGREGATE_MODES = ['cell', 'char'] as const
 export type AggregateMode = typeof AGGREGATE_MODES[number]
 
@@ -223,6 +230,11 @@ export interface HeatmapFilters {
   aggregateMode?: AggregateMode
   normalization?: HeatmapNormalization
   keyGroupFilter?: KeyGroupFilter
+  /** Count vs. Speed colouring — see `HeatmapMode`. Absent (older
+   * persisted settings) normalizes to `'count'` via the same
+   * `{ ...DEFAULT, ...saved }` merge every other optional field here
+   * goes through. */
+  mode?: HeatmapMode
 }
 
 export interface WpmFilters {
@@ -422,6 +434,7 @@ function isValidHeatmapFilters(value: unknown): boolean {
   if (o.aggregateMode !== undefined && !includesAs(AGGREGATE_MODES, o.aggregateMode)) return false
   if (o.normalization !== undefined && !includesAs(HEATMAP_NORMALIZATIONS, o.normalization)) return false
   if (o.keyGroupFilter !== undefined && !includesAs(KEY_GROUPS, o.keyGroupFilter)) return false
+  if (o.mode !== undefined && !includesAs(HEATMAP_MODES, o.mode)) return false
   return true
 }
 

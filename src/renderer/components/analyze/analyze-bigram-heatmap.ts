@@ -7,7 +7,32 @@
 
 import type { TypingBigramTopEntry } from '../../../shared/types/typing-analytics'
 
-const HIST_BUCKETS = 8
+/** Histogram bucket count carried by every bigram/trigram wire entry
+ * (`TypingBigramTopEntry.hist`) — always length 8. Exported so the
+ * other renderer-side bigram helpers (finger pairs, Heatmap Speed
+ * mode) share one source instead of re-declaring the constant. */
+export const HIST_BUCKETS = 8
+
+/** Parses a `_`-joined 2-part ngram id ("prevCode_currCode") into its
+ * numeric halves, or `null` when the id is malformed (wrong part
+ * count, non-numeric). Shared by every renderer helper that folds
+ * bigram entries by their from/to keycode. */
+export function parseBigramId(ngramId: string): { prev: number; curr: number } | null {
+  const parts = ngramId.split('_')
+  if (parts.length !== 2) return null
+  const prev = Number(parts[0])
+  const curr = Number(parts[1])
+  if (!Number.isFinite(prev) || !Number.isFinite(curr)) return null
+  return { prev, curr }
+}
+
+/** Adds `src` onto `target` element-wise across `HIST_BUCKETS`
+ * buckets, treating a short/missing `src` bucket as 0. Shared by every
+ * renderer helper that accumulates bigram histograms into a coarser
+ * bucket (key, finger pair, or keycode). */
+export function foldHist(target: number[], src: readonly number[]): void {
+  for (let i = 0; i < HIST_BUCKETS; i += 1) target[i] += src[i] ?? 0
+}
 
 export interface BigramHeatmapCell {
   count: number
@@ -34,14 +59,11 @@ export function aggregateKeyHeatmap(
   const totals = new Map<number, number>()
   const parsed: { prev: number; curr: number; entry: TypingBigramTopEntry }[] = []
   for (const entry of entries) {
-    const parts = entry.ngramId.split('_')
-    if (parts.length !== 2) continue
-    const prev = Number(parts[0])
-    const curr = Number(parts[1])
-    if (!Number.isFinite(prev) || !Number.isFinite(curr)) continue
-    parsed.push({ prev, curr, entry })
-    totals.set(prev, (totals.get(prev) ?? 0) + entry.count)
-    totals.set(curr, (totals.get(curr) ?? 0) + entry.count)
+    const pair = parseBigramId(entry.ngramId)
+    if (!pair) continue
+    parsed.push({ ...pair, entry })
+    totals.set(pair.prev, (totals.get(pair.prev) ?? 0) + entry.count)
+    totals.set(pair.curr, (totals.get(pair.curr) ?? 0) + entry.count)
   }
 
   const keys = [...totals.entries()]
@@ -66,9 +88,7 @@ export function aggregateKeyHeatmap(
       cells[i][j] = cell
     }
     cell.count += entry.count
-    for (let h = 0; h < HIST_BUCKETS; h += 1) {
-      cell.hist[h] += entry.hist[h] ?? 0
-    }
+    foldHist(cell.hist, entry.hist)
   }
 
   return { keys, cells }
