@@ -4,13 +4,14 @@
 
 import type { TypingBigramTopEntry, TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
-import { resolveSnapshotLabel, keycodeGroup, deserialize, serialize, codeToLabel, getProtocol, setProtocol } from '../../../shared/keycodes/keycodes'
+import { resolveSnapshotLabel, keycodeGroup, deserialize, serialize, codeToLabel } from '../../../shared/keycodes/keycodes'
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import { posKey } from '../../../shared/kle/pos-key'
 import { avgIkiFromHist, foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
 import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-palette'
 import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
+import { withSnapshotProtocol } from './analyze-protocol'
 
 export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
 export type { AggregateMode, KeyGroupFilter, HeatmapMode } from '../../../shared/types/analyze-filters'
@@ -346,26 +347,6 @@ export function normalizeKeySpeedIntensity(
     result.set(code, PALETTE_MIN_T + (1 - PALETTE_MIN_T) * normalized)
   }
   return result
-}
-
-/** Run `body` with `getProtocol()` temporarily set to `protocol` so
- * keycode string↔number conversion resolves against the snapshot's own
- * protocol version, then restore. Protocol-dependent keycodes (macros,
- * tap dance, QK_BOOT, …) map to different numeric values in v5 and v6,
- * and the bigram aggregate stores the numeric codes recorded under the
- * snapshot's protocol — resolving with the current global protocol
- * would mismatch a v5 snapshot viewed in a v6 session. Mirrors
- * `withImportProtocol` in `src/main/favorite-store.ts`; `undefined`
- * (older snapshots without `vialProtocol`) keeps the current default. */
-function withSnapshotProtocol<T>(protocol: number | undefined, body: () => T): T {
-  if (protocol === undefined) return body()
-  const prev = getProtocol()
-  setProtocol(protocol)
-  try {
-    return body()
-  } finally {
-    setProtocol(prev)
-  }
 }
 
 /** Resolves the Speed-mode fill for every physical position on one

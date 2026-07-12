@@ -17,6 +17,7 @@ import type {
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
 import { foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
+import { withSnapshotProtocol } from './analyze-protocol'
 
 /** Build a numeric-keycode → finger lookup from the snapshot's layer-0
  * keymap, honouring user finger overrides keyed by `${row},${col}`.
@@ -24,36 +25,46 @@ import { foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
  * positions, the earliest (top-left first by KleKey order) wins. The
  * approximation is OK for typical layouts where alphas live on a single
  * spot; modifiers may hit either hand but the visualization treats
- * them as a single finger anyway. */
+ * them as a single finger anyway.
+ *
+ * Keycodes decode under `vialProtocol` (the snapshot's own protocol —
+ * see `withSnapshotProtocol`) so the resulting numeric codes match the
+ * ones the bigram aggregate stores. Callers should pass
+ * `snapshot.vialProtocol` so protocol-dependent codes (QK_BOOT, macros,
+ * ...) resolve to the value recorded at capture time rather than the
+ * current session's default. */
 export function buildKeycodeFingerMap(
   snapshot: TypingKeymapSnapshot,
   keys: readonly KleKey[],
   fingerOverrides?: Record<string, FingerType>,
+  vialProtocol?: number,
 ): Map<number, FingerType> {
-  const result = new Map<number, FingerType>()
-  if (snapshot.keymap.length === 0) return result
-  const layer0 = snapshot.keymap[0]
-  if (!layer0) return result
-  const ergonomicsByPos = buildErgonomicsByPos([...keys])
-  for (const key of keys) {
-    const row = layer0[key.row]
-    if (!row) continue
-    const qmkId = row[key.col]
-    if (typeof qmkId !== 'string' || qmkId.length === 0) continue
-    let code: number
-    try {
-      code = deserialize(qmkId)
-    } catch {
-      continue
+  return withSnapshotProtocol(vialProtocol, () => {
+    const result = new Map<number, FingerType>()
+    if (snapshot.keymap.length === 0) return result
+    const layer0 = snapshot.keymap[0]
+    if (!layer0) return result
+    const ergonomicsByPos = buildErgonomicsByPos([...keys])
+    for (const key of keys) {
+      const row = layer0[key.row]
+      if (!row) continue
+      const qmkId = row[key.col]
+      if (typeof qmkId !== 'string' || qmkId.length === 0) continue
+      let code: number
+      try {
+        code = deserialize(qmkId)
+      } catch {
+        continue
+      }
+      if (!Number.isFinite(code)) continue
+      if (result.has(code)) continue
+      const pos = posKey(key.row, key.col)
+      const override = fingerOverrides?.[pos]
+      const finger = override ?? ergonomicsByPos.get(pos)?.finger
+      if (finger) result.set(code, finger)
     }
-    if (!Number.isFinite(code)) continue
-    if (result.has(code)) continue
-    const pos = posKey(key.row, key.col)
-    const override = fingerOverrides?.[pos]
-    const finger = override ?? ergonomicsByPos.get(pos)?.finger
-    if (finger) result.set(code, finger)
-  }
-  return result
+    return result
+  })
 }
 
 export interface FingerPairTotal {
