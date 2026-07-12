@@ -21,6 +21,6 @@ export function useKeycodeFingerMap(
     const layout = snapshot.layout as KeyboardLayout | null
     const keys = layout?.keys ?? []
     if (keys.length === 0) return new Map<number, FingerType>()
-    return buildKeycodeFingerMap(snapshot, keys, fingerOverrides)
+    return buildKeycodeFingerMap(snapshot, keys, fingerOverrides, snapshot.vialProtocol)
   }, [snapshot, fingerOverrides])
 }
