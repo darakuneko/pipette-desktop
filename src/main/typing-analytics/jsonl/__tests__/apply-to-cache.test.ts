@@ -12,6 +12,7 @@ import {
   minuteStatsRowId,
   scopeRowId,
   sessionRowId,
+  trigramMinuteRowId,
   type JsonlRow,
 } from '../jsonl-row'
 import { applyRowsToCache } from '../apply-to-cache'
@@ -99,10 +100,22 @@ function bigramRow(
   bigrams: Record<string, { c: number; h: number[] }>,
 ): JsonlRow {
   return {
-    id: bigramMinuteRowId(SCOPE_ID, 60_000),
+    id: bigramMinuteRowId(SCOPE_ID, 60_000, ''),
     kind: 'bigram-minute',
     updated_at: updatedAt,
     payload: { scopeId: SCOPE_ID, minuteTs: 60_000, bigrams },
+  }
+}
+
+function trigramRow(
+  updatedAt: number,
+  trigrams: Record<string, { c: number; h: number[] }>,
+): JsonlRow {
+  return {
+    id: trigramMinuteRowId(SCOPE_ID, 60_000, ''),
+    kind: 'trigram-minute',
+    updated_at: updatedAt,
+    payload: { scopeId: SCOPE_ID, minuteTs: 60_000, trigrams },
   }
 }
 
@@ -136,6 +149,7 @@ describe('applyRowsToCache', () => {
       minuteStats: 1,
       sessions: 1,
       bigramMinutes: 0,
+      trigramMinutes: 0,
     })
     const conn = db.getConnection()
     expect(conn.prepare('SELECT COUNT(*) AS n FROM typing_scopes').get()).toEqual({ n: 1 })
@@ -224,6 +238,37 @@ describe('applyRowsToCache', () => {
     expect(row.count).toBe(5)
   })
 
+  it('expands a trigram-minute row into per-triple rows in typing_trigram_minute', () => {
+    const rows: JsonlRow[] = [
+      scopeRow(1_000),
+      trigramRow(1_000, {
+        '4_11_7': { c: 3, h: [0, 1, 2, 0, 0, 0, 0, 0] },
+      }),
+    ]
+    const result = applyRowsToCache(db, rows)
+    expect(result.trigramMinutes).toBe(1)
+    const conn = db.getConnection()
+    const dbRows = conn
+      .prepare('SELECT trigram_id, count, hist FROM typing_trigram_minute')
+      .all() as { trigram_id: string; count: number; hist: Uint8Array }[]
+    expect(dbRows).toHaveLength(1)
+    expect(dbRows[0].trigram_id).toBe('4_11_7')
+    expect(dbRows[0].count).toBe(3)
+  })
+
+  it('LWW: a stale trigram-minute row does not override a newer aggregate', () => {
+    applyRowsToCache(db, [
+      scopeRow(1_000),
+      trigramRow(2_000, { '4_11_7': { c: 5, h: [0, 5, 0, 0, 0, 0, 0, 0] } }),
+    ])
+    applyRowsToCache(db, [
+      trigramRow(1_500, { '4_11_7': { c: 999, h: [9, 0, 0, 0, 0, 0, 0, 0] } }),
+    ])
+    const conn = db.getConnection()
+    const row = conn.prepare('SELECT count FROM typing_trigram_minute WHERE trigram_id = ?').get('4_11_7') as { count: number }
+    expect(row.count).toBe(5)
+  })
+
   it('returns zero counters when given an empty batch', () => {
     expect(applyRowsToCache(db, [])).toEqual({
       scopes: 0,
@@ -232,6 +277,7 @@ describe('applyRowsToCache', () => {
       minuteStats: 0,
       sessions: 0,
       bigramMinutes: 0,
+      trigramMinutes: 0,
     })
   })
 })

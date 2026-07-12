@@ -251,6 +251,60 @@ describe('useAnalyzeFilters', () => {
     expect(result.current.filters.bigrams.fingerLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.fingerLimit)
   })
 
+  it('defaults bigrams.gram to 2 and persists gram through setBigrams', async () => {
+    const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(result.current.ready).toBe(true))
+    expect(result.current.filters.bigrams.gram).toBe(2)
+    patchSpy.mockClear()
+    getSpy.mockClear().mockResolvedValue(null)
+
+    act(() => { result.current.setBigrams({ gram: 3 }) })
+    act(() => { vi.advanceTimersByTime(300) })
+    await flushMicrotasks()
+    await flushMicrotasks()
+
+    expect(patchSpy).toHaveBeenCalledTimes(1)
+    expect(patchSpy.mock.calls[0][1].analyze?.filters?.bigrams?.gram).toBe(3)
+    expect(result.current.filters.bigrams.gram).toBe(3)
+    // Sibling defaults must survive the partial patch.
+    expect(result.current.filters.bigrams.topLimit).toBe(DEFAULT_ANALYZE_FILTERS.bigrams.topLimit)
+  })
+
+  it('restores a persisted gram of 3 on mount, and normalizes an absent gram to 2', async () => {
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          bigrams: { gram: 3 },
+        },
+      },
+    })
+    const { result: withGram } = renderHook(() => useAnalyzeFilters('uid-a'))
+    await waitFor(() => expect(withGram.current.ready).toBe(true))
+    expect(withGram.current.filters.bigrams.gram).toBe(3)
+
+    // Pre-trigram persisted settings never wrote `gram` at all — absence
+    // must normalize to 2, not `undefined`, so downstream consumers
+    // (BigramsChart, the IPC options) never see a non-literal value.
+    getSpy.mockResolvedValueOnce({
+      _rev: 1,
+      keyboardLayout: 'qwerty',
+      autoAdvance: true,
+      layerNames: [],
+      analyze: {
+        filters: {
+          bigrams: { topLimit: 20 },
+        },
+      },
+    })
+    const { result: withoutGram } = renderHook(() => useAnalyzeFilters('uid-b'))
+    await waitFor(() => expect(withoutGram.current.ready).toBe(true))
+    expect(withoutGram.current.filters.bigrams.gram).toBe(2)
+  })
+
   it('defaults filterDimension to app', async () => {
     const { result } = renderHook(() => useAnalyzeFilters('uid-a'))
     await waitFor(() => expect(result.current.ready).toBe(true))

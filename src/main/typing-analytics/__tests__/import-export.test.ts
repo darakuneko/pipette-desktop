@@ -51,6 +51,18 @@ function minuteStatsRow(day: string): string {
   })
 }
 
+function bigramMinuteRow(day: string): string {
+  return rowLine(day, 'bigram-minute', {
+    scopeId: 's1', minuteTs: dayStartMs(day), bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+  })
+}
+
+function trigramMinuteRow(day: string): string {
+  return rowLine(day, 'trigram-minute', {
+    scopeId: 's1', minuteTs: dayStartMs(day), trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+  })
+}
+
 function scopeRow(day: string): string {
   return rowLine(day, 'scope', {
     id: 's1', machineHash: HASH, osPlatform: 'linux', osRelease: '6.8',
@@ -213,6 +225,44 @@ describe('importTypingDataFiles', () => {
     expect(out.rejections[0]).toMatchObject({ fileName: name, reason: 'rows-outside-day-window' })
     // Original local file is untouched.
     expect(readFileSync(deviceDayJsonlPath(userData, UID, HASH, '2026-04-19'), 'utf-8')).toBe('{"id":"existing"}\n')
+  })
+
+  it('rejects a bigram-minute row whose minuteTs falls outside the day window', async () => {
+    // Regression coverage: rowTimestamp() used to fall through to
+    // default:null for 'bigram-minute' (and now 'trigram-minute'),
+    // which made rowsFallInsideDay() skip the check entirely — a
+    // bigram/trigram row from a completely different day would have
+    // silently passed validation instead of being rejected.
+    seedDay(userData, HASH, '2026-04-19', '{"id":"existing"}\n')
+    const name = exportFileNameFor(UID, HASH, '2026-04-19')
+    const wrongDayBody = bigramMinuteRow('2026-04-21')
+    const path = writeImport(name, wrongDayBody)
+
+    const out = await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+    expect(out.imported).toBe(0)
+    expect(out.rejections[0]).toMatchObject({ fileName: name, reason: 'rows-outside-day-window' })
+  })
+
+  it('rejects a trigram-minute row whose minuteTs falls outside the day window', async () => {
+    seedDay(userData, HASH, '2026-04-19', '{"id":"existing"}\n')
+    const name = exportFileNameFor(UID, HASH, '2026-04-19')
+    const wrongDayBody = trigramMinuteRow('2026-04-21')
+    const path = writeImport(name, wrongDayBody)
+
+    const out = await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+    expect(out.imported).toBe(0)
+    expect(out.rejections[0]).toMatchObject({ fileName: name, reason: 'rows-outside-day-window' })
+  })
+
+  it('accepts a bigram-minute row whose minuteTs falls inside the day window', async () => {
+    seedDay(userData, HASH, '2026-04-19', '{"id":"existing"}\n')
+    const name = exportFileNameFor(UID, HASH, '2026-04-19')
+    const body = bigramMinuteRow('2026-04-19')
+    const path = writeImport(name, body)
+
+    const out = await importTypingDataFiles(userData, [path], { cloudHasFile: null, now: FIXED_NOW })
+    expect(out.imported).toBe(1)
+    expect(out.rejections).toEqual([])
   })
 
   it('accepts a cloud-only target match when local does not have the file', async () => {

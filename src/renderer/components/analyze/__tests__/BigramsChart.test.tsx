@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { BigramsChart } from '../BigramsChart'
 import type { TypingBigramAggregateResult } from '../../../../shared/types/typing-analytics'
 
@@ -32,14 +32,18 @@ function renderChart(overrides: Partial<Parameters<typeof BigramsChart>[0]> = {}
       range={range}
       deviceScopes={['own']}
       appScopes={[]}
+      typingTestScopes={[]}
+      runIdScopes={[]}
       topLimit={10}
       slowLimit={10}
       fingerLimit={10}
       pairIntervalThresholdMs={0}
+      gram={2}
       onTopLimitChange={noop}
       onSlowLimitChange={noop}
       onFingerLimitChange={noop}
       onPairIntervalThresholdChange={noop}
+      onGramChange={noop}
       snapshot={null}
       {...overrides}
     />,
@@ -75,7 +79,7 @@ describe('BigramsChart', () => {
     fetchSpy.mockResolvedValue({
       view: 'top',
       entries: [
-        { bigramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100 },
+        { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
       ],
     })
     renderChart()
@@ -94,7 +98,7 @@ describe('BigramsChart', () => {
     fetchSpy.mockResolvedValue({
       view: 'top',
       entries: [
-        { bigramId: '4_11', count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30 },
+        { ngramId: '4_11', count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 0 },
       ],
     })
     const onTopLimitChange = vi.fn()
@@ -112,7 +116,7 @@ describe('BigramsChart', () => {
     fetchSpy.mockResolvedValue({
       view: 'top',
       entries: [
-        { bigramId: '4_11', count: 5, hist: [0, 0, 5, 0, 0, 0, 0, 0], avgIki: 125 },
+        { ngramId: '4_11', count: 5, hist: [0, 0, 5, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 },
       ],
     })
     const onSlowLimitChange = vi.fn()
@@ -141,8 +145,8 @@ describe('BigramsChart', () => {
   // (slow), so any threshold in (30, 400] hides the fast one without
   // touching the slow one.
   const thresholdEntries = [
-    { bigramId: '4_11', count: 3, hist: [3, 0, 0, 0, 0, 0, 0, 0], avgIki: 30 },
-    { bigramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400 },
+    { ngramId: '4_11', count: 3, hist: [3, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 4 },
+    { ngramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400, sd: 40 },
   ]
 
   it('renders both rows in the Slow ranking when the threshold is 0', async () => {
@@ -242,14 +246,18 @@ describe('BigramsChart', () => {
         range={range}
         deviceScopes={['own']}
         appScopes={[]}
+        typingTestScopes={[]}
+        runIdScopes={[]}
         topLimit={10}
         slowLimit={10}
         fingerLimit={10}
         pairIntervalThresholdMs={0}
+        gram={2}
         onTopLimitChange={noop}
         onSlowLimitChange={noop}
         onFingerLimitChange={noop}
         onPairIntervalThresholdChange={noop}
+        onGramChange={noop}
         snapshot={null}
       />,
     )
@@ -264,14 +272,18 @@ describe('BigramsChart', () => {
         range={range}
         deviceScopes={['own']}
         appScopes={[]}
+        typingTestScopes={[]}
+        runIdScopes={[]}
         topLimit={10}
         slowLimit={10}
         fingerLimit={10}
         pairIntervalThresholdMs={250}
+        gram={2}
         onTopLimitChange={noop}
         onSlowLimitChange={noop}
         onFingerLimitChange={noop}
         onPairIntervalThresholdChange={noop}
+        onGramChange={noop}
         snapshot={null}
       />,
     )
@@ -280,4 +292,137 @@ describe('BigramsChart', () => {
     expect(fingerInput.value).toBe('250')
     expect(slowInput.value).toBe('250')
   })
+
+  it('fires onGramChange when the 3-gram toggle button is clicked', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    const onGramChange = vi.fn()
+    renderChart({ onGramChange })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-gram-toggle-3')).toBeTruthy()
+    })
+    fireEvent.click(screen.getByTestId('analyze-bigrams-gram-toggle-3'))
+    expect(onGramChange).toHaveBeenCalledWith(3)
+  })
+
+  it('passes gram through to the fetch options', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    renderChart({ gram: 3 })
+    await waitFor(() => {
+      expect(fetchSpy).toHaveBeenCalledTimes(1)
+    })
+    const options = fetchSpy.mock.calls[0]?.[5] as { gram?: number } | undefined
+    expect(options?.gram).toBe(3)
+  })
+
+  it('re-fetches when gram changes', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    const { rerender } = render(<BigramsChartHarness gram={2} />)
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
+    rerender(<BigramsChartHarness gram={3} />)
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(2))
+    expect(fetchSpy.mock.calls[1]?.[5]).toMatchObject({ gram: 3 })
+  })
+
+  it('hides the Finger IKI quadrant and switches to a single-row grid for trigrams', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: '4_11_42', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
+      ],
+    })
+    renderChart({ gram: 3 })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+    })
+    expect(screen.getByText('analyze.bigrams.quadrant.top')).toBeTruthy()
+    expect(screen.getByText('analyze.bigrams.quadrant.slow')).toBeTruthy()
+    expect(screen.queryByText('analyze.bigrams.quadrant.fingerIki')).toBeNull()
+    expect(screen.getByTestId('analyze-bigrams-content').className).toContain('grid-rows-1')
+  })
+
+  it('shows the Finger IKI quadrant for bigrams', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
+      ],
+    })
+    renderChart({ gram: 2 })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+    })
+    expect(screen.getByText('analyze.bigrams.quadrant.fingerIki')).toBeTruthy()
+    expect(screen.getByTestId('analyze-bigrams-content').className).toContain('grid-rows-2')
+  })
+
+  it('renders the SD column with a value and falls back to "—" for null', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
+        { ngramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400, sd: null },
+      ],
+    })
+    renderChart()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-top-ranking')).toBeTruthy()
+    })
+    const topTable = screen.getByTestId('analyze-bigrams-top-ranking')
+    expect(topTable.textContent).toContain('25 ms')
+    // The row with sd === null renders the "—" fallback rather than a
+    // stray "null ms" or crashing.
+    const cells = Array.from(topTable.querySelectorAll('td')).map((td) => td.textContent)
+    expect(cells).toContain('—')
+  })
+
+  it('sorts the Top ranking by SD when the SD header is clicked', async () => {
+    fetchSpy.mockResolvedValue({
+      view: 'top',
+      entries: [
+        { ngramId: '4_11', count: 10, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 5 },
+        { ngramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400, sd: 40 },
+      ],
+    })
+    renderChart()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-top-ranking')).toBeTruthy()
+    })
+    const topTable = screen.getByTestId('analyze-bigrams-top-ranking')
+    const sdHeader = within(topTable).getByText('analyze.bigrams.column.sd')
+    fireEvent.click(sdHeader)
+    // Default click direction is descending — highest SD (40) first.
+    let rows = topTable.querySelectorAll('tbody tr')
+    expect(rows[0]?.textContent).toContain('40 ms')
+    fireEvent.click(sdHeader)
+    rows = topTable.querySelectorAll('tbody tr')
+    expect(rows[0]?.textContent).toContain('5 ms')
+  })
 })
+
+/** Minimal wrapper so the "re-fetches when gram changes" test can
+ * rerender with a new `gram` prop through React's normal update path
+ * (a raw `renderChart` call can't be rerun with different overrides on
+ * an existing render). */
+function BigramsChartHarness({ gram }: { gram: 2 | 3 }): JSX.Element {
+  return (
+    <BigramsChart
+      uid="0xAABB"
+      range={range}
+      deviceScopes={['own']}
+      appScopes={[]}
+      typingTestScopes={[]}
+      runIdScopes={[]}
+      topLimit={10}
+      slowLimit={10}
+      fingerLimit={10}
+      pairIntervalThresholdMs={0}
+      gram={gram}
+      onTopLimitChange={noop}
+      onSlowLimitChange={noop}
+      onFingerLimitChange={noop}
+      onPairIntervalThresholdChange={noop}
+      onGramChange={noop}
+      snapshot={null}
+    />
+  )
+}

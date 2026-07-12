@@ -35,6 +35,7 @@ export type JsonlRowKind =
   | 'minute-stats'
   | 'session'
   | 'bigram-minute'
+  | 'trigram-minute'
 
 export interface JsonlScopePayload {
   id: string
@@ -98,10 +99,18 @@ export interface JsonlSessionPayload {
 
 /** Per-bigram aggregate within a single minute. `c` = count of pair
  * occurrences. `h` = 8-bucket IKI histogram (log-scale buckets, see
- * Plan-analyze-bigram.md). */
+ * Plan-analyze-bigram.md). `s` / `sq` are the sum and sum-of-squares of
+ * the raw IKI values that fed `h`, kept alongside the histogram so a
+ * range aggregate can compute a true standard deviation instead of a
+ * bucket-midpoint approximation. Optional and always a pair: rows
+ * written before this field existed (or merged from an older peer)
+ * omit both, and SD then reads as null rather than an approximation —
+ * see isBigramMinuteEntry / isNgramMinuteEntry. */
 export interface JsonlBigramMinuteEntry {
   c: number
   h: number[]
+  s?: number
+  sq?: number
 }
 
 export interface JsonlBigramMinutePayload {
@@ -110,6 +119,24 @@ export interface JsonlBigramMinutePayload {
   /** Pair key format: `${prevKeycode}_${currKeycode}` (numeric keycodes
    * joined by underscore). One row per minute aggregates all bigrams. */
   bigrams: Record<string, JsonlBigramMinuteEntry>
+  appName?: AppNameField
+  typingTest?: TypingTestField
+  runId?: RunIdField
+}
+
+/** Per-trigram aggregate within a single minute. Same shape as
+ * {@link JsonlBigramMinuteEntry} (count / histogram / optional sum
+ * pair) — trigram IKI values are already the 2-interval average by the
+ * time they reach this layer (see MinuteBuffer.recordTrigram), so the
+ * same histogram bucketing and sum/sumSq accumulation apply unchanged. */
+export type JsonlTrigramMinuteEntry = JsonlBigramMinuteEntry
+
+export interface JsonlTrigramMinutePayload {
+  scopeId: string
+  minuteTs: number
+  /** Triple key format: `${k1}_${k2}_${k3}` (numeric keycodes joined by
+   * underscore). One row per minute aggregates all trigrams. */
+  trigrams: Record<string, JsonlTrigramMinuteEntry>
   appName?: AppNameField
   typingTest?: TypingTestField
   runId?: RunIdField
@@ -155,6 +182,11 @@ export interface JsonlBigramMinuteRow extends JsonlRowBase {
   payload: JsonlBigramMinutePayload
 }
 
+export interface JsonlTrigramMinuteRow extends JsonlRowBase {
+  kind: 'trigram-minute'
+  payload: JsonlTrigramMinutePayload
+}
+
 export type JsonlRow =
   | JsonlScopeRow
   | JsonlCharMinuteRow
@@ -162,6 +194,7 @@ export type JsonlRow =
   | JsonlMinuteStatsRow
   | JsonlSessionRow
   | JsonlBigramMinuteRow
+  | JsonlTrigramMinuteRow
 
 const KNOWN_KINDS: ReadonlySet<string> = new Set<JsonlRowKind>([
   'scope',
@@ -170,6 +203,7 @@ const KNOWN_KINDS: ReadonlySet<string> = new Set<JsonlRowKind>([
   'minute-stats',
   'session',
   'bigram-minute',
+  'trigram-minute',
 ])
 
 function enc(value: string | number): string {
@@ -210,6 +244,10 @@ export function sessionRowId(sessionId: string): string {
 
 export function bigramMinuteRowId(scopeId: string, minuteTs: number, runId: string): string {
   return `bigram|${enc(scopeId)}|${minuteTs}|${enc(runId)}`
+}
+
+export function trigramMinuteRowId(scopeId: string, minuteTs: number, runId: string): string {
+  return `trigram|${enc(scopeId)}|${minuteTs}|${enc(runId)}`
 }
 
 /** Serialize a single row as a newline-terminated JSON line. */
@@ -338,23 +376,48 @@ function isBigramHist(value: unknown): boolean {
   return true
 }
 
-function isBigramMinuteEntry(value: unknown): boolean {
-  if (typeof value !== 'object' || value === null) return false
-  const o = value as Record<string, unknown>
-  return typeof o.c === 'number' && Number.isFinite(o.c) && isBigramHist(o.h)
+/** `s` / `sq` are optional but must appear as a pair: both absent is a
+ * legacy row (valid), both present must be finite numbers, and exactly
+ * one present is malformed (rejected). This keeps the DB layer's "only
+ * a complete sum pair yields a real SD" invariant enforceable straight
+ * off the wire. */
+function hasValidSumPair(o: Record<string, unknown>): boolean {
+  const hasS = 's' in o
+  const hasSq = 'sq' in o
+  if (!hasS && !hasSq) return true
+  if (!hasS || !hasSq) return false
+  return typeof o.s === 'number' && Number.isFinite(o.s) && typeof o.sq === 'number' && Number.isFinite(o.sq)
 }
 
-function isBigramMinutePayload(p: Record<string, unknown>): boolean {
+/** Shared validator for bigram and trigram minute entries — both use
+ * the identical `{c, h, s?, sq?}` shape (see JsonlTrigramMinuteEntry). */
+function isNgramMinuteEntry(value: unknown): boolean {
+  if (typeof value !== 'object' || value === null) return false
+  const o = value as Record<string, unknown>
+  return typeof o.c === 'number' && Number.isFinite(o.c) && isBigramHist(o.h) && hasValidSumPair(o)
+}
+
+/** Shared validator for bigram-minute / trigram-minute payloads — same
+ * shape except for the entries field name (`bigrams` vs `trigrams`). */
+function isNgramMinutePayload(p: Record<string, unknown>, field: 'bigrams' | 'trigrams'): boolean {
   if (!hasStringField(p, 'scopeId') || !hasNumberField(p, 'minuteTs')) return false
   if (!isOptionalAppName(p)) return false
   if (!isOptionalTypingTest(p)) return false
   if (!isOptionalRunId(p)) return false
-  const bigrams = p.bigrams
-  if (typeof bigrams !== 'object' || bigrams === null) return false
-  for (const value of Object.values(bigrams as Record<string, unknown>)) {
-    if (!isBigramMinuteEntry(value)) return false
+  const entries = p[field]
+  if (typeof entries !== 'object' || entries === null) return false
+  for (const value of Object.values(entries as Record<string, unknown>)) {
+    if (!isNgramMinuteEntry(value)) return false
   }
   return true
+}
+
+function isBigramMinutePayload(p: Record<string, unknown>): boolean {
+  return isNgramMinutePayload(p, 'bigrams')
+}
+
+function isTrigramMinutePayload(p: Record<string, unknown>): boolean {
+  return isNgramMinutePayload(p, 'trigrams')
 }
 
 /** Parse one JSONL line into a typed row. Returns `null` for malformed
@@ -396,6 +459,9 @@ export function parseRow(line: string): JsonlRow | null {
       break
     case 'bigram-minute':
       if (!isBigramMinutePayload(payloadObj)) return null
+      break
+    case 'trigram-minute':
+      if (!isTrigramMinutePayload(payloadObj)) return null
       break
   }
 

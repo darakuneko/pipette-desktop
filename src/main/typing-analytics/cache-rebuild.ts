@@ -23,6 +23,8 @@ export interface CacheRebuildResult {
   matrixMinutes: number
   minuteStats: number
   sessions: number
+  bigramMinutes: number
+  trigramMinutes: number
   jsonlFilesRead: number
 }
 
@@ -53,6 +55,8 @@ export async function rebuildCacheFromMasterFiles(
     matrixMinutes: 0,
     minuteStats: 0,
     sessions: 0,
+    bigramMinutes: 0,
+    trigramMinutes: 0,
     jsonlFilesRead: 0,
   }
 
@@ -65,6 +69,8 @@ export async function rebuildCacheFromMasterFiles(
     result.matrixMinutes += applied.matrixMinutes
     result.minuteStats += applied.minuteStats
     result.sessions += applied.sessions
+    result.bigramMinutes += applied.bigramMinutes
+    result.trigramMinutes += applied.trigramMinutes
     result.jsonlFilesRead += 1
   }
 

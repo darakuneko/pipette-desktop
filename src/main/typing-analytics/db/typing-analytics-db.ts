@@ -12,8 +12,10 @@ import {
   BIGRAM_HIST_BUCKETS,
   type JsonlBigramMinuteEntry,
   type JsonlBigramMinutePayload,
+  type JsonlTrigramMinuteEntry,
+  type JsonlTrigramMinutePayload,
 } from '../jsonl/jsonl-row'
-import { TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
+import { emptyTombstoneResult, TYPING_APP_UNKNOWN_NAME } from '../../../shared/types/typing-analytics'
 
 export interface TypingScopeRow {
   id: string
@@ -100,20 +102,31 @@ export interface SessionRow {
  * row shape so the merge / parse layers share a single source of
  * truth. `bigramId` follows the `${prevKeycode}_${currKeycode}` format;
  * `h` is the decoded 8-bucket histogram that the merge layer encodes
- * to a compact BLOB for storage. */
+ * to a compact BLOB for storage. `s` / `sq` are the optional raw-IKI
+ * sum / sum-of-squares pair (see JsonlBigramMinuteEntry). */
 export type BigramMinuteEntry = JsonlBigramMinuteEntry
 export type BigramMinuteRow = JsonlBigramMinutePayload
 
-/** Row shape returned by range queries against typing_bigram_minute.
+/** Same shape as {@link BigramMinuteEntry} / {@link BigramMinuteRow} for
+ * trigrams — see JsonlTrigramMinuteEntry / JsonlTrigramMinutePayload. */
+export type TrigramMinuteEntry = JsonlTrigramMinuteEntry
+export type TrigramMinuteRow = JsonlTrigramMinutePayload
+
+/** Row shape returned by range queries against typing_bigram_minute or
+ * typing_trigram_minute — both tables project their id column as
+ * `ngramId` so a single shape covers 2-gram and 3-gram callers alike.
  * `hist` is decoded from the on-disk BLOB so callers don't depend on
- * better-sqlite3's binary representation. One row per (scope, minute,
- * bigram) — the aggregation layer (range / view IPC) sums these into
- * pair-totals. */
-export interface BigramMinuteCellRow {
-  bigramId: string
+ * better-sqlite3's binary representation. `sumIki` / `sumSqIki` are
+ * null when the row predates the sum columns (see schema.ts). One row
+ * per (scope, minute, ngram) — the aggregation layer (range / view
+ * IPC) sums these into pair-totals. */
+export interface NgramMinuteCellRow {
+  ngramId: string
   minuteTs: number
   count: number
   hist: number[]
+  sumIki: number | null
+  sumSqIki: number | null
 }
 
 /** Row shapes carried across sync bundles. Live columns plus the
@@ -135,6 +148,10 @@ export interface SessionExportRow extends SessionRow {
   isDeleted: boolean
 }
 export interface BigramMinuteExportRow extends BigramMinuteRow {
+  updatedAt: number
+  isDeleted: boolean
+}
+export interface TrigramMinuteExportRow extends TrigramMinuteRow {
   updatedAt: number
   isDeleted: boolean
 }
@@ -244,6 +261,149 @@ function runIdFilterClause(column: string): string {
   return `AND (json_array_length(@runIdsJson) = 0 OR ${column} IN (SELECT value FROM json_each(@runIdsJson)))`
 }
 
+// Tombstone range deletes only flip live rows (is_deleted = 0) so existing
+// tombstones keep their original updated_at for GC purposes. Shared by
+// every per-table tombstone statement (char/matrix/minute_stats/session
+// plus the bigram/trigram pair prepared by prepareNgramStatements below) —
+// the WHERE clause itself carries no table-specific column, only the FK.
+const TOMBSTONE_RANGE_WHERE = `
+  scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
+    AND is_deleted = 0
+`
+
+// Hash-scoped variant — Sync-delete of another device's day removes only
+// that device's rows while keeping same-day contributions from other
+// hashes intact.
+const TOMBSTONE_HASH_RANGE_WHERE = `
+  scope_id IN (
+    SELECT id FROM typing_scopes
+     WHERE keyboard_uid = @uid AND machine_hash = @machineHash
+  )
+    AND is_deleted = 0
+`
+
+/** Prepared statements for one n-gram table (typing_bigram_minute or
+ * typing_trigram_minute). Both tables are structurally identical aside
+ * from their id column name, so every statement here is generated from
+ * the same template with `table` / `idColumn` interpolated — see
+ * {@link prepareNgramStatements}. */
+interface NgramStatements {
+  merge: Statement
+  selectInRangeForUid: Statement
+  selectInRangeForUidAndHash: Statement
+  tombstoneForHashInRange: Statement
+  tombstoneInRange: Statement
+  tombstoneAll: Statement
+  deleteBefore: Statement
+}
+
+/** Build the seven prepared statements one n-gram table needs. `table`
+ * and `idColumn` are always hard-coded literals from the call sites
+ * below (never user input), so interpolating them directly into the SQL
+ * text is safe — every value-level parameter still goes through
+ * better-sqlite3's `@name` binding. */
+function prepareNgramStatements(
+  db: DatabaseType,
+  table: 'typing_bigram_minute' | 'typing_trigram_minute',
+  idColumn: 'bigram_id' | 'trigram_id',
+): NgramStatements {
+  return {
+    // Authoritative LWW upsert for sync merge — replaces the target row
+    // wholesale, respects the incoming is_deleted flag, and only fires
+    // when excluded.updated_at is strictly newer than the existing row.
+    merge: db.prepare(`
+      INSERT INTO ${table} (
+        scope_id, minute_ts, ${idColumn}, count, hist, sum_iki, sumsq_iki, app_name, typing_test, run_id, updated_at, is_deleted
+      )
+      VALUES (
+        @scopeId, @minuteTs, @ngramId, @count, @hist, @sumIki, @sumSqIki, @appName, @typingTest, @runId, @updatedAt, @isDeleted
+      )
+      ON CONFLICT(scope_id, minute_ts, run_id, ${idColumn}) DO UPDATE SET
+        count = excluded.count,
+        hist = excluded.hist,
+        sum_iki = excluded.sum_iki,
+        sumsq_iki = excluded.sumsq_iki,
+        app_name = excluded.app_name,
+        typing_test = excluded.typing_test,
+        updated_at = excluded.updated_at,
+        is_deleted = excluded.is_deleted
+      WHERE excluded.updated_at > ${table}.updated_at
+    `),
+
+    // Per-(scope, minute, ngram) rows in range for the Analyze n-gram
+    // view. The aggregation layer sums each pair's count + hist across
+    // rows; SQL keeps the per-minute / per-ngram granularity so the
+    // caller can also emit time-series data (e.g. peak detection)
+    // without re-querying. ORDER BY ngramId groups rows for the same
+    // pair together so the aggregator can accumulate without an
+    // intermediate Map sort.
+    selectInRangeForUid: db.prepare(`
+      SELECT t.${idColumn} AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki
+        FROM ${table} t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
+       ORDER BY t.${idColumn} ASC, t.minute_ts ASC
+    `),
+
+    // Same as selectInRangeForUid but restricted to a single machine_hash
+    // for the Analyze "This device" scope.
+    selectInRangeForUidAndHash: db.prepare(`
+      SELECT t.${idColumn} AS ngramId,
+             t.minute_ts AS minuteTs,
+             t.count AS count,
+             t.hist AS hist,
+             t.sum_iki AS sumIki,
+             t.sumsq_iki AS sumSqIki
+        FROM ${table} t
+        JOIN typing_scopes s ON s.id = t.scope_id
+       WHERE s.keyboard_uid = @uid
+         AND s.machine_hash = @machineHash
+         AND s.is_deleted = 0
+         AND t.is_deleted = 0
+         AND t.minute_ts >= @sinceMs
+         AND t.minute_ts < @untilMs
+         ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
+       ORDER BY t.${idColumn} ASC, t.minute_ts ASC
+    `),
+
+    tombstoneForHashInRange: db.prepare(`
+      UPDATE ${table}
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `),
+
+    tombstoneInRange: db.prepare(`
+      UPDATE ${table}
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_RANGE_WHERE}
+         AND minute_ts >= @startMs AND minute_ts < @endMs
+    `),
+
+    tombstoneAll: db.prepare(`
+      UPDATE ${table}
+         SET is_deleted = 1, updated_at = @updatedAt
+       WHERE ${TOMBSTONE_RANGE_WHERE}
+    `),
+
+    deleteBefore: db.prepare(`
+      DELETE FROM ${table}
+       WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
+         AND minute_ts < @cutoffMs
+    `),
+  }
+}
+
 export class TypingAnalyticsDB {
   private readonly db: DatabaseType
   private readonly upsertScopeStmt: Statement
@@ -256,7 +416,10 @@ export class TypingAnalyticsDB {
   private readonly mergeMatrixMinuteStmt: Statement
   private readonly mergeMinuteStatsStmt: Statement
   private readonly mergeSessionStmt: Statement
-  private readonly mergeBigramMinuteStmt: Statement
+  // Bigram/trigram merge, range-select, tombstone and delete-before
+  // statements live behind this map (keyed by gram size) instead of 14
+  // separate fields — see prepareNgramStatements above.
+  private readonly ngramStmts: { readonly 2: NgramStatements; readonly 3: NgramStatements }
   private readonly selectScopesForUidStmt: Statement
   private readonly selectCharMinutesForUidStmt: Statement
   private readonly selectMatrixMinutesForUidStmt: Statement
@@ -281,8 +444,6 @@ export class TypingAnalyticsDB {
   private readonly selectMatrixCellsByDayForUidAndHashStmt: Statement
   private readonly selectMinuteStatsInRangeForUidStmt: Statement
   private readonly selectMinuteStatsInRangeForUidAndHashStmt: Statement
-  private readonly selectBigramMinutesInRangeForUidStmt: Statement
-  private readonly selectBigramMinutesInRangeForUidAndHashStmt: Statement
   private readonly selectSessionsInRangeForUidStmt: Statement
   private readonly selectSessionsInRangeForUidAndHashStmt: Statement
   private readonly selectBksMinuteInRangeForUidStmt: Statement
@@ -505,6 +666,11 @@ export class TypingAnalyticsDB {
          AND minute_ts < @cutoffMs
     `)
 
+    this.ngramStmts = {
+      2: prepareNgramStatements(this.db, 'typing_bigram_minute', 'bigram_id'),
+      3: prepareNgramStatements(this.db, 'typing_trigram_minute', 'trigram_id'),
+    }
+
     this.deleteSessionsBeforeStmt = this.db.prepare(`
       DELETE FROM typing_sessions
        WHERE scope_id IN (SELECT id FROM typing_scopes WHERE machine_hash = @machineHash)
@@ -631,22 +797,9 @@ export class TypingAnalyticsDB {
       WHERE excluded.updated_at > typing_sessions.updated_at
     `)
 
-    this.mergeBigramMinuteStmt = this.db.prepare(`
-      INSERT INTO typing_bigram_minute (
-        scope_id, minute_ts, bigram_id, count, hist, app_name, typing_test, run_id, updated_at, is_deleted
-      )
-      VALUES (
-        @scopeId, @minuteTs, @bigramId, @count, @hist, @appName, @typingTest, @runId, @updatedAt, @isDeleted
-      )
-      ON CONFLICT(scope_id, minute_ts, run_id, bigram_id) DO UPDATE SET
-        count = excluded.count,
-        hist = excluded.hist,
-        app_name = excluded.app_name,
-        typing_test = excluded.typing_test,
-        updated_at = excluded.updated_at,
-        is_deleted = excluded.is_deleted
-      WHERE excluded.updated_at > typing_bigram_minute.updated_at
-    `)
+    // this.ngramStmts (built earlier in this constructor) owns the
+    // bigram/trigram merge, range-select, tombstone and delete-before
+    // statements — see prepareNgramStatements above.
 
     // Sync export selects. Live rows within the live window or tombstones
     // within the longer tombstone window. typing_scopes is selected without
@@ -1226,44 +1379,8 @@ export class TypingAnalyticsDB {
        ORDER BY keystrokes DESC
     `)
 
-    // Bigram per-pair rows in range. The aggregation layer sums each
-    // pair's count + hist across rows; SQL keeps the per-minute / per-
-    // bigram granularity so the caller can also emit time-series data
-    // (e.g. peak detection) without re-querying. ORDER BY bigramId
-    // groups rows for the same pair together so the aggregator can
-    // accumulate without an intermediate Map sort.
-    this.selectBigramMinutesInRangeForUidStmt = this.db.prepare(`
-      SELECT t.bigram_id AS bigramId,
-             t.minute_ts AS minuteTs,
-             t.count AS count,
-             t.hist AS hist
-        FROM typing_bigram_minute t
-        JOIN typing_scopes s ON s.id = t.scope_id
-       WHERE s.keyboard_uid = @uid
-         AND s.is_deleted = 0
-         AND t.is_deleted = 0
-         AND t.minute_ts >= @sinceMs
-         AND t.minute_ts < @untilMs
-         ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
-       ORDER BY t.bigram_id ASC, t.minute_ts ASC
-    `)
-
-    this.selectBigramMinutesInRangeForUidAndHashStmt = this.db.prepare(`
-      SELECT t.bigram_id AS bigramId,
-             t.minute_ts AS minuteTs,
-             t.count AS count,
-             t.hist AS hist
-        FROM typing_bigram_minute t
-        JOIN typing_scopes s ON s.id = t.scope_id
-       WHERE s.keyboard_uid = @uid
-         AND s.machine_hash = @machineHash
-         AND s.is_deleted = 0
-         AND t.is_deleted = 0
-         AND t.minute_ts >= @sinceMs
-         AND t.minute_ts < @untilMs
-         ${appFilterClause('t.app_name')} ${typingTestFilterClause('t.typing_test')} ${runIdFilterClause('t.run_id')}
-       ORDER BY t.bigram_id ASC, t.minute_ts ASC
-    `)
+    // Bigram/trigram per-pair range-select statements live in
+    // this.ngramStmts[gram] — see prepareNgramStatements above.
 
     // Sessions whose start falls inside [@sinceMs, @untilMs). We filter
     // on `start_ms` so "last 24 hours" captures every session the user
@@ -1649,26 +1766,24 @@ export class TypingAnalyticsDB {
 
     // Tombstone range deletes. Only flips live rows (is_deleted = 0) so
     // existing tombstones keep their original updated_at for GC purposes.
-    const tombstoneRangeWhere = `
-      scope_id IN (SELECT id FROM typing_scopes WHERE keyboard_uid = @uid)
-        AND is_deleted = 0
-    `
+    // Bigram/trigram range/all-tombstone statements live in
+    // this.ngramStmts[gram] — see prepareNgramStatements above.
     this.tombstoneCharMinutesInRangeStmt = this.db.prepare(`
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     this.tombstoneMatrixMinutesInRangeStmt = this.db.prepare(`
       UPDATE typing_matrix_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     this.tombstoneMinuteStatsInRangeStmt = this.db.prepare(`
       UPDATE typing_minute_stats
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     // Sessions use overlap semantics instead of start_ms-containment so a
@@ -1678,64 +1793,57 @@ export class TypingAnalyticsDB {
     this.tombstoneSessionsInRangeStmt = this.db.prepare(`
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
          AND end_ms > @startMs AND start_ms < @endMs
     `)
 
     // Hash-scoped range variants — Sync-delete of another device's day
     // removes only that device's rows while keeping same-day contributions
     // from other hashes intact.
-    const tombstoneHashRangeWhere = `
-      scope_id IN (
-        SELECT id FROM typing_scopes
-         WHERE keyboard_uid = @uid AND machine_hash = @machineHash
-      )
-        AND is_deleted = 0
-    `
     this.tombstoneCharMinutesForHashInRangeStmt = this.db.prepare(`
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneHashRangeWhere}
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     this.tombstoneMatrixMinutesForHashInRangeStmt = this.db.prepare(`
       UPDATE typing_matrix_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneHashRangeWhere}
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     this.tombstoneMinuteStatsForHashInRangeStmt = this.db.prepare(`
       UPDATE typing_minute_stats
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneHashRangeWhere}
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
          AND minute_ts >= @startMs AND minute_ts < @endMs
     `)
     this.tombstoneSessionsForHashInRangeStmt = this.db.prepare(`
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneHashRangeWhere}
+       WHERE ${TOMBSTONE_HASH_RANGE_WHERE}
          AND end_ms > @startMs AND start_ms < @endMs
     `)
 
     this.tombstoneAllCharMinutesStmt = this.db.prepare(`
       UPDATE typing_char_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
     `)
     this.tombstoneAllMatrixMinutesStmt = this.db.prepare(`
       UPDATE typing_matrix_minute
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
     `)
     this.tombstoneAllMinuteStatsStmt = this.db.prepare(`
       UPDATE typing_minute_stats
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
     `)
     this.tombstoneAllSessionsStmt = this.db.prepare(`
       UPDATE typing_sessions
          SET is_deleted = 1, updated_at = @updatedAt
-       WHERE ${tombstoneRangeWhere}
+       WHERE ${TOMBSTONE_RANGE_WHERE}
     `)
   }
 
@@ -1838,6 +1946,8 @@ export class TypingAnalyticsDB {
       this.deleteCharMinuteBeforeStmt.run({ machineHash, cutoffMs })
       this.deleteMatrixMinuteBeforeStmt.run({ machineHash, cutoffMs })
       this.deleteMinuteStatsBeforeStmt.run({ machineHash, cutoffMs })
+      this.ngramStmts[2].deleteBefore.run({ machineHash, cutoffMs })
+      this.ngramStmts[3].deleteBefore.run({ machineHash, cutoffMs })
       this.deleteSessionsBeforeStmt.run({ machineHash, cutoffMs })
     })
     tx()
@@ -2212,33 +2322,36 @@ export class TypingAnalyticsDB {
     }[]
   }
 
-  /** Per-(scope, minute, bigram) rows in `[sinceMs, untilMs)` for the
-   * Analyze Bigrams view. Hist is decoded from the BLOB so the
-   * aggregation layer stays independent of the on-disk encoding. Rows
-   * are ordered by `bigramId, minuteTs` so a streaming aggregator can
-   * accumulate per-pair totals without sorting. */
-  listBigramMinutesInRangeForUid(
+  /** Per-(scope, minute, ngram) rows in `[sinceMs, untilMs)` for the
+   * Analyze Bigrams / n-gram view. `gram` selects `typing_bigram_minute`
+   * (2) or `typing_trigram_minute` (3) via {@link ngramStmts}. Hist is
+   * decoded from the BLOB so the aggregation layer stays independent of
+   * the on-disk encoding. Rows are ordered by `ngramId, minuteTs` so a
+   * streaming aggregator can accumulate per-pair totals without sorting. */
+  listNgramMinutesInRangeForUid(
+    gram: 2 | 3,
     uid: string,
     sinceMs: number,
     untilMs: number,
     appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
-  ): BigramMinuteCellRow[] {
-    return this.toBigramMinuteCellRows(
-      this.selectBigramMinutesInRangeForUidStmt.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes) }),
+  ): NgramMinuteCellRow[] {
+    return this.toNgramMinuteCellRows(
+      this.ngramStmts[gram].selectInRangeForUid.all({ uid, sinceMs, untilMs, appNamesJson: JSON.stringify(appScopes), typingTestsJson: JSON.stringify(typingTestScopes), runIdsJson: JSON.stringify(runIdScopes) }),
     )
   }
 
-  /** Same as {@link listBigramMinutesInRangeForUid} but restricted to
-   * a single machine_hash for the Analyze "This device" scope. */
-  listBigramMinutesInRangeForUidAndHash(
+  /** Same as {@link listNgramMinutesInRangeForUid} but restricted to a
+   * single machine_hash for the Analyze "This device" scope. */
+  listNgramMinutesInRangeForUidAndHash(
+    gram: 2 | 3,
     uid: string,
     machineHash: string,
     sinceMs: number,
     untilMs: number,
     appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
-  ): BigramMinuteCellRow[] {
-    return this.toBigramMinuteCellRows(
-      this.selectBigramMinutesInRangeForUidAndHashStmt.all({
+  ): NgramMinuteCellRow[] {
+    return this.toNgramMinuteCellRows(
+      this.ngramStmts[gram].selectInRangeForUidAndHash.all({
         uid,
         machineHash,
         sinceMs,
@@ -2248,13 +2361,58 @@ export class TypingAnalyticsDB {
     )
   }
 
-  private toBigramMinuteCellRows(raws: unknown): BigramMinuteCellRow[] {
-    return (raws as { bigramId: string; minuteTs: number; count: number; hist: Uint8Array }[]).map((r) => ({
-      bigramId: r.bigramId,
+  private toNgramMinuteCellRows(raws: unknown): NgramMinuteCellRow[] {
+    return (raws as { ngramId: string; minuteTs: number; count: number; hist: Uint8Array; sumIki: number | null; sumSqIki: number | null }[]).map((r) => ({
+      ngramId: r.ngramId,
       minuteTs: r.minuteTs,
       count: r.count,
       hist: decodeHistBuffer(r.hist),
+      sumIki: r.sumIki,
+      sumSqIki: r.sumSqIki,
     }))
+  }
+
+  /** @deprecated thin gram=2 wrapper kept for existing call sites
+   * (hub-analytics.ts, tests) — prefer {@link listNgramMinutesInRangeForUid}. */
+  listBigramMinutesInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): NgramMinuteCellRow[] {
+    return this.listNgramMinutesInRangeForUid(2, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes)
+  }
+
+  /** @deprecated thin gram=2 wrapper — see {@link listBigramMinutesInRangeForUid}. */
+  listBigramMinutesInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): NgramMinuteCellRow[] {
+    return this.listNgramMinutesInRangeForUidAndHash(2, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes)
+  }
+
+  /** @deprecated thin gram=3 wrapper — see {@link listBigramMinutesInRangeForUid}. */
+  listTrigramMinutesInRangeForUid(
+    uid: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): NgramMinuteCellRow[] {
+    return this.listNgramMinutesInRangeForUid(3, uid, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes)
+  }
+
+  /** @deprecated thin gram=3 wrapper — see {@link listBigramMinutesInRangeForUid}. */
+  listTrigramMinutesInRangeForUidAndHash(
+    uid: string,
+    machineHash: string,
+    sinceMs: number,
+    untilMs: number,
+    appScopes: readonly string[] = [], typingTestScopes: readonly string[] = [], runIdScopes: readonly string[] = [],
+  ): NgramMinuteCellRow[] {
+    return this.listNgramMinutesInRangeForUidAndHash(3, uid, machineHash, sinceMs, untilMs, appScopes, typingTestScopes, runIdScopes)
   }
 
   /** Live sessions that intersect `[sinceMs, untilMs)` for a keyboard
@@ -2384,11 +2542,13 @@ export class TypingAnalyticsDB {
     endMs: number,
     updatedAt: number,
   ): TypingTombstoneResult {
-    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const result = emptyTombstoneResult()
     const tx = this.db.transaction(() => {
       result.charMinutes = this.tombstoneCharMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
       result.matrixMinutes = this.tombstoneMatrixMinutesForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
       result.minuteStats = this.tombstoneMinuteStatsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      result.bigramMinutes = this.ngramStmts[2].tombstoneForHashInRange.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
+      result.trigramMinutes = this.ngramStmts[3].tombstoneForHashInRange.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
       result.sessions = this.tombstoneSessionsForHashInRangeStmt.run({ uid, machineHash, startMs, endMs, updatedAt }).changes
     })
     tx()
@@ -2401,11 +2561,13 @@ export class TypingAnalyticsDB {
     endMs: number,
     updatedAt: number,
   ): TypingTombstoneResult {
-    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const result = emptyTombstoneResult()
     const tx = this.db.transaction(() => {
       result.charMinutes = this.tombstoneCharMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
       result.matrixMinutes = this.tombstoneMatrixMinutesInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
       result.minuteStats = this.tombstoneMinuteStatsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
+      result.bigramMinutes = this.ngramStmts[2].tombstoneInRange.run({ uid, startMs, endMs, updatedAt }).changes
+      result.trigramMinutes = this.ngramStmts[3].tombstoneInRange.run({ uid, startMs, endMs, updatedAt }).changes
       result.sessions = this.tombstoneSessionsInRangeStmt.run({ uid, startMs, endMs, updatedAt }).changes
     })
     tx()
@@ -2416,11 +2578,13 @@ export class TypingAnalyticsDB {
    * themselves are left intact so the next recording session reuses
    * them without a fresh fingerprint build. */
   tombstoneAllRowsForUid(uid: string, updatedAt: number): TypingTombstoneResult {
-    const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    const result = emptyTombstoneResult()
     const tx = this.db.transaction(() => {
       result.charMinutes = this.tombstoneAllCharMinutesStmt.run({ uid, updatedAt }).changes
       result.matrixMinutes = this.tombstoneAllMatrixMinutesStmt.run({ uid, updatedAt }).changes
       result.minuteStats = this.tombstoneAllMinuteStatsStmt.run({ uid, updatedAt }).changes
+      result.bigramMinutes = this.ngramStmts[2].tombstoneAll.run({ uid, updatedAt }).changes
+      result.trigramMinutes = this.ngramStmts[3].tombstoneAll.run({ uid, updatedAt }).changes
       result.sessions = this.tombstoneAllSessionsStmt.run({ uid, updatedAt }).changes
     })
     tx()
@@ -2564,7 +2728,10 @@ export class TypingAnalyticsDB {
 
   /** Apply a single JSONL bigram-minute row by expanding each pair into
    * its own SQLite upsert. The caller is expected to wrap the batch in
-   * a transaction (see {@link applyRowsToCache}). */
+   * a transaction (see {@link applyRowsToCache}). LWW-replace, same as
+   * every other merge* method — the incoming row already holds the full
+   * per-minute total for its pair, not a delta to accumulate. `s`/`sq`
+   * fall back to null when the source row predates the sum columns. */
   mergeBigramMinute(row: BigramMinuteExportRow): void {
     const isDeleted = row.isDeleted ? 1 : 0
     const appName = row.appName ?? null
@@ -2572,12 +2739,39 @@ export class TypingAnalyticsDB {
     const runId = row.runId ?? ''
     for (const bigramId of Object.keys(row.bigrams)) {
       const entry = row.bigrams[bigramId]
-      this.mergeBigramMinuteStmt.run({
+      this.ngramStmts[2].merge.run({
         scopeId: row.scopeId,
         minuteTs: row.minuteTs,
-        bigramId,
+        ngramId: bigramId,
         count: entry.c,
         hist: encodeHistBuffer(entry.h),
+        sumIki: entry.s ?? null,
+        sumSqIki: entry.sq ?? null,
+        appName,
+        typingTest,
+        runId,
+        updatedAt: row.updatedAt,
+        isDeleted,
+      })
+    }
+  }
+
+  /** Same as {@link mergeBigramMinute} for trigram-minute rows. */
+  mergeTrigramMinute(row: TrigramMinuteExportRow): void {
+    const isDeleted = row.isDeleted ? 1 : 0
+    const appName = row.appName ?? null
+    const typingTest = row.typingTest ?? null
+    const runId = row.runId ?? ''
+    for (const trigramId of Object.keys(row.trigrams)) {
+      const entry = row.trigrams[trigramId]
+      this.ngramStmts[3].merge.run({
+        scopeId: row.scopeId,
+        minuteTs: row.minuteTs,
+        ngramId: trigramId,
+        count: entry.c,
+        hist: encodeHistBuffer(entry.h),
+        sumIki: entry.s ?? null,
+        sumSqIki: entry.sq ?? null,
         appName,
         typingTest,
         runId,
@@ -2650,6 +2844,22 @@ export class TypingAnalyticsDB {
         DROP TABLE IF EXISTS typing_bigram_minute;
       `)
       this.cacheNeedsRebuild = true
+    }
+    // v6 -> v7: Add sum_iki / sumsq_iki to typing_bigram_minute (nullable —
+    // see Plan-trigram-and-iki-variance.md) and introduce typing_trigram_minute.
+    // The new table is handled by CREATE_SCHEMA_SQL's unconditional
+    // `CREATE TABLE IF NOT EXISTS`, same as any fresh install, so nothing to
+    // do here for it. The ALTER below only applies when typing_bigram_minute
+    // still has the pre-v7 shape: a DB migrating up from before v6 already
+    // dropped that table in the branch above and CREATE_SCHEMA_SQL recreates
+    // it with these columns built in, so re-altering here would hit "no such
+    // table". No cache rebuild: existing rows just gain nullable columns —
+    // there is nothing to replay from the JSONL masters.
+    if (fromVersion === 6) {
+      this.db.exec(`
+        ALTER TABLE typing_bigram_minute ADD COLUMN sum_iki REAL;
+        ALTER TABLE typing_bigram_minute ADD COLUMN sumsq_iki REAL;
+      `)
     }
   }
 

@@ -21,7 +21,7 @@ import type {
 } from '../../../../shared/types/typing-analytics'
 
 function bigram(prev: number, curr: number, count: number): TypingBigramTopEntry {
-  return { bigramId: `${prev}_${curr}`, count, hist: new Array(8).fill(0), avgIki: null }
+  return { ngramId: `${prev}_${curr}`, count, hist: new Array(8).fill(0), avgIki: null }
 }
 
 function minute(minuteMs: number, keystrokes: number, activeMs: number): TypingMinuteStatsRow {

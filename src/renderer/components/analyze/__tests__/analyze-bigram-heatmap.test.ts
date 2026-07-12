@@ -7,8 +7,8 @@ import {
 } from '../analyze-bigram-heatmap'
 import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
 
-function entry(bigramId: string, count: number, hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0]): TypingBigramTopEntry {
-  return { bigramId, count, hist, avgIki: null }
+function entry(ngramId: string, count: number, hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0]): TypingBigramTopEntry {
+  return { ngramId, count, hist, avgIki: null }
 }
 
 describe('aggregateKeyHeatmap', () => {

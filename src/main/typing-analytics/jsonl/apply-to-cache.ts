@@ -16,6 +16,7 @@ export interface ApplyRowsResult {
   minuteStats: number
   sessions: number
   bigramMinutes: number
+  trigramMinutes: number
 }
 
 export function applyRowsToCache(
@@ -29,6 +30,7 @@ export function applyRowsToCache(
     minuteStats: 0,
     sessions: 0,
     bigramMinutes: 0,
+    trigramMinutes: 0,
   }
   if (rows.length === 0) return result
 
@@ -67,6 +69,10 @@ export function applyRowsToCache(
         case 'bigram-minute':
           db.mergeBigramMinute({ ...row.payload, ...common })
           result.bigramMinutes += 1
+          break
+        case 'trigram-minute':
+          db.mergeTrigramMinute({ ...row.payload, ...common })
+          result.trigramMinutes += 1
           break
       }
     }

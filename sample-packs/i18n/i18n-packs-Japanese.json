@@ -1042,10 +1042,17 @@
         "slow": "ペア間隔",
         "fingerIki": "指間隔"
       },
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "ペア",
         "count": "回数",
         "avgIki": "平均間隔",
+        "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均です。3キー全体の所要時間ではありません",
+        "sd": "SD",
         "p95": "p95 間隔"
       },
       "fingerIki": {

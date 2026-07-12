@@ -125,6 +125,7 @@ export const DEFAULT_ANALYZE_FILTERS: AnalyzeFiltersState = {
     slowLimit: 10,
     fingerLimit: 20,
     pairIntervalThresholdMs: 0,
+    gram: 2,
   },
   layoutComparison: {
     sourceLayoutId: 'qwerty',

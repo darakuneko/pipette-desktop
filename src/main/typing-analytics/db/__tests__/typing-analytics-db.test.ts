@@ -134,6 +134,79 @@ describe('TypingAnalyticsDB', () => {
     }
   })
 
+  it('upgrades a v6 DB to v7: adds sum_iki/sumsq_iki and typing_trigram_minute without a cache rebuild', () => {
+    db.close()
+    rmSync(tmpDir, { recursive: true, force: true })
+    tmpDir = mkdtempSync(join(tmpdir(), 'pipette-typing-analytics-db-upgrade67-'))
+    const dbPath = join(tmpDir, 'typing-analytics.db')
+
+    const v6 = new Database(dbPath)
+    v6.exec(`
+      CREATE TABLE typing_analytics_meta (
+        key TEXT PRIMARY KEY, value TEXT NOT NULL
+      );
+      CREATE TABLE typing_scopes (
+        id TEXT PRIMARY KEY,
+        machine_hash TEXT NOT NULL, os_platform TEXT NOT NULL,
+        os_release TEXT NOT NULL, os_arch TEXT NOT NULL,
+        keyboard_uid TEXT NOT NULL,
+        keyboard_vendor_id INTEGER NOT NULL,
+        keyboard_product_id INTEGER NOT NULL,
+        keyboard_product_name TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE typing_bigram_minute (
+        scope_id TEXT NOT NULL, minute_ts INTEGER NOT NULL,
+        bigram_id TEXT NOT NULL, count INTEGER NOT NULL,
+        hist BLOB NOT NULL,
+        app_name TEXT, typing_test TEXT,
+        run_id TEXT NOT NULL DEFAULT '',
+        updated_at INTEGER NOT NULL,
+        is_deleted INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (scope_id, minute_ts, run_id, bigram_id)
+      );
+      INSERT INTO typing_scopes (
+        id, machine_hash, os_platform, os_release, os_arch,
+        keyboard_uid, keyboard_vendor_id, keyboard_product_id, keyboard_product_name,
+        updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 'hash-abc', 'linux', '6.8.0', 'x64',
+        '0xAABB', 65261, 0, 'Pipette', 1000, 0
+      );
+      INSERT INTO typing_bigram_minute (
+        scope_id, minute_ts, bigram_id, count, hist, app_name, typing_test, run_id, updated_at, is_deleted
+      ) VALUES (
+        'scope-1', 60000, '4_11', 3, X'0300000000000000000000000000000000000000000000000000000000', NULL, NULL, '', 2000, 0
+      );
+      INSERT INTO typing_analytics_meta (key, value) VALUES ('schema_version', '6');
+    `)
+    v6.close()
+
+    db = new TypingAnalyticsDB(dbPath)
+    expect(db.getMeta('schema_version')).toBe(String(SCHEMA_VERSION))
+    expect(db.cacheNeedsRebuild).toBe(false)
+
+    const conn = db.getConnection()
+    const bigramCols = conn.prepare('PRAGMA table_info(typing_bigram_minute)').all() as { name: string }[]
+    expect(bigramCols.some((c) => c.name === 'sum_iki')).toBe(true)
+    expect(bigramCols.some((c) => c.name === 'sumsq_iki')).toBe(true)
+
+    // Existing count/hist row survives the migration untouched, with the
+    // new sum columns reading as NULL (no source data to backfill from).
+    const row = conn.prepare('SELECT count, sum_iki, sumsq_iki FROM typing_bigram_minute WHERE bigram_id = ?').get('4_11') as {
+      count: number
+      sum_iki: number | null
+      sumsq_iki: number | null
+    }
+    expect(row.count).toBe(3)
+    expect(row.sum_iki).toBeNull()
+    expect(row.sumsq_iki).toBeNull()
+
+    const trigramTable = conn.prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'typing_trigram_minute'`).get()
+    expect(trigramTable).toBeDefined()
+  })
+
   it('upserts a scope row and keeps the newest updatedAt', () => {
     db.upsertScope(sampleScope({ updatedAt: 1_000 }))
     db.upsertScope(sampleScope({ updatedAt: 500, keyboardProductName: 'stale' }))
@@ -298,6 +371,45 @@ describe('TypingAnalyticsDB', () => {
     expect(remoteSessions).toEqual([{ id: 'remote-new' }, { id: 'remote-old' }])
   })
 
+  it('retainOwnData also removes bigram/trigram rows before the cutoff for the local machine only', () => {
+    const localScope = sampleScope({ id: 'local', machineHash: MACHINE_HASH })
+    const remoteScope = sampleScope({ id: 'remote', machineHash: 'other-machine' })
+    db.upsertScope(localScope)
+    db.upsertScope(remoteScope)
+
+    for (const scopeId of ['local', 'remote'] as const) {
+      db.mergeBigramMinute({
+        scopeId, minuteTs: 50_000, bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      db.mergeBigramMinute({
+        scopeId, minuteTs: 200_000, bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 2_000, isDeleted: false,
+      })
+      db.mergeTrigramMinute({
+        scopeId, minuteTs: 50_000, trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      db.mergeTrigramMinute({
+        scopeId, minuteTs: 200_000, trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 2_000, isDeleted: false,
+      })
+    }
+
+    db.retainOwnData(MACHINE_HASH, 100_000)
+
+    const conn = db.getConnection()
+    const localBigrams = conn.prepare('SELECT minute_ts FROM typing_bigram_minute WHERE scope_id = ? ORDER BY minute_ts').all('local') as Array<{ minute_ts: number }>
+    expect(localBigrams).toEqual([{ minute_ts: 200_000 }])
+    const remoteBigrams = conn.prepare('SELECT minute_ts FROM typing_bigram_minute WHERE scope_id = ? ORDER BY minute_ts').all('remote') as Array<{ minute_ts: number }>
+    expect(remoteBigrams).toEqual([{ minute_ts: 50_000 }, { minute_ts: 200_000 }])
+
+    const localTrigrams = conn.prepare('SELECT minute_ts FROM typing_trigram_minute WHERE scope_id = ? ORDER BY minute_ts').all('local') as Array<{ minute_ts: number }>
+    expect(localTrigrams).toEqual([{ minute_ts: 200_000 }])
+    const remoteTrigrams = conn.prepare('SELECT minute_ts FROM typing_trigram_minute WHERE scope_id = ? ORDER BY minute_ts').all('remote') as Array<{ minute_ts: number }>
+    expect(remoteTrigrams).toEqual([{ minute_ts: 50_000 }, { minute_ts: 200_000 }])
+  })
+
   it('reopens an existing database file without error', () => {
     db.upsertScope(sampleScope())
     const path = join(tmpDir, 'typing-analytics.db')
@@ -451,6 +563,81 @@ describe('TypingAnalyticsDB', () => {
         isDeleted: false,
       })
       const count = db.getConnection().prepare('SELECT COUNT(*) AS n FROM typing_bigram_minute').get() as { n: number }
+      expect(count.n).toBe(0)
+    })
+
+    it('mergeBigramMinute stores sum_iki / sumsq_iki when present and NULL when absent', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        bigrams: {
+          'with-sum': { c: 2, h: [0, 2, 0, 0, 0, 0, 0, 0], s: 240, sq: 28_800 },
+          'without-sum': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] },
+        },
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      const rows = db.getConnection()
+        .prepare('SELECT bigram_id, sum_iki, sumsq_iki FROM typing_bigram_minute ORDER BY bigram_id')
+        .all() as { bigram_id: string; sum_iki: number | null; sumsq_iki: number | null }[]
+      expect(rows).toEqual([
+        { bigram_id: 'with-sum', sum_iki: 240, sumsq_iki: 28_800 },
+        { bigram_id: 'without-sum', sum_iki: null, sumsq_iki: null },
+      ])
+    })
+
+    it('mergeTrigramMinute fans a payload into per-triple rows with packed hist BLOB', () => {
+      db.mergeTrigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        trigrams: {
+          '4_11_7': { c: 3, h: [0, 1, 2, 0, 0, 0, 0, 0], s: 450, sq: 67_500 },
+        },
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      const conn = db.getConnection()
+      const rows = conn
+        .prepare('SELECT trigram_id, count, hist, sum_iki, sumsq_iki FROM typing_trigram_minute')
+        .all() as { trigram_id: string; count: number; hist: Uint8Array; sum_iki: number; sumsq_iki: number }[]
+      expect(rows).toHaveLength(1)
+      expect(rows[0].trigram_id).toBe('4_11_7')
+      expect(rows[0].count).toBe(3)
+      expect(rows[0].sum_iki).toBe(450)
+      expect(rows[0].sumsq_iki).toBe(67_500)
+      expect(rows[0].hist.byteLength).toBe(32)
+      const histBuf = Buffer.from(rows[0].hist.buffer, rows[0].hist.byteOffset, rows[0].hist.byteLength)
+      expect(histBuf.readUInt32LE(2 * 4)).toBe(2)
+    })
+
+    it('mergeTrigramMinute follows LWW: stale updated_at does not overwrite', () => {
+      db.mergeTrigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        trigrams: { '4_11_7': { c: 5, h: [0, 5, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      db.mergeTrigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        trigrams: { '4_11_7': { c: 999, h: [9, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 2_500,
+        isDeleted: false,
+      })
+      const row = db.getConnection().prepare('SELECT count FROM typing_trigram_minute WHERE trigram_id = ?').get('4_11_7') as { count: number }
+      expect(row.count).toBe(5)
+    })
+
+    it('mergeTrigramMinute is a no-op for an empty trigrams payload', () => {
+      db.mergeTrigramMinute({
+        scopeId: 'scope-1',
+        minuteTs: 60_000,
+        trigrams: {},
+        updatedAt: 3_000,
+        isDeleted: false,
+      })
+      const count = db.getConnection().prepare('SELECT COUNT(*) AS n FROM typing_trigram_minute').get() as { n: number }
       expect(count.n).toBe(0)
     })
   })
@@ -674,6 +861,38 @@ describe('TypingAnalyticsDB', () => {
       expect(ccdd.is_deleted).toBe(0)
     })
 
+    it('tombstoneRowsForUidInRange also tombstones bigram/trigram rows in range and leaves out-of-range ones live', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-aabb-local', minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      db.mergeTrigramMinute({
+        scopeId: 'scope-aabb-local', minuteTs: 60_000,
+        trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      // Outside the [0, 90_000) tombstone window — must stay live.
+      db.mergeBigramMinute({
+        scopeId: 'scope-ccdd-local', minuteTs: 120_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+
+      const result = db.tombstoneRowsForUidInRange('0xAABB', 0, 90_000, 5_000)
+      expect(result.bigramMinutes).toBe(1)
+      expect(result.trigramMinutes).toBe(1)
+
+      const conn = db.getConnection()
+      const bigram = conn.prepare('SELECT is_deleted FROM typing_bigram_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number }
+      expect(bigram.is_deleted).toBe(1)
+      const trigram = conn.prepare('SELECT is_deleted FROM typing_trigram_minute WHERE scope_id = ?').get('scope-aabb-local') as { is_deleted: number }
+      expect(trigram.is_deleted).toBe(1)
+      // ccdd's uid ('0xCCDD') isn't touched by a tombstone scoped to '0xAABB'.
+      const untouched = conn.prepare('SELECT is_deleted FROM typing_bigram_minute WHERE scope_id = ?').get('scope-ccdd-local') as { is_deleted: number }
+      expect(untouched.is_deleted).toBe(0)
+    })
+
     it('tombstoneRowsForUidHashInRange restricts the tombstone to a single machine_hash', () => {
       const result = db.tombstoneRowsForUidHashInRange('0xAABB', MACHINE_HASH, 0, 90_000, 5_000)
       expect(result.charMinutes).toBe(1) // only scope-aabb-local
@@ -704,6 +923,23 @@ describe('TypingAnalyticsDB', () => {
       // Re-run listKeyboardsWithTypingData — 0xAABB no longer has live rows so it drops out.
       const remaining = db.listKeyboardsWithTypingData().map((r) => r.uid)
       expect(remaining).toEqual(['0xCCDD'])
+    })
+
+    it('tombstoneAllRowsForUid also tombstones every bigram/trigram row for the uid', () => {
+      db.mergeBigramMinute({
+        scopeId: 'scope-aabb-local', minuteTs: 60_000,
+        bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+      db.mergeTrigramMinute({
+        scopeId: 'scope-aabb-local', minuteTs: 60_000,
+        trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 1_000, isDeleted: false,
+      })
+
+      const result = db.tombstoneAllRowsForUid('0xAABB', 6_000)
+      expect(result.bigramMinutes).toBe(1)
+      expect(result.trigramMinutes).toBe(1)
     })
 
     it('listDailySummariesForUid ignores tombstoned rows', () => {
@@ -1004,7 +1240,7 @@ describe('TypingAnalyticsDB', () => {
       bigramRow('scope-local', 60_000, '4_11', 3, [0, 2, 1, 0, 0, 0, 0, 0])
       const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
       expect(rows).toEqual([
-        { bigramId: '4_11', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0] },
+        { ngramId: '4_11', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null },
       ])
     })
 
@@ -1021,21 +1257,96 @@ describe('TypingAnalyticsDB', () => {
       })
       bigramRow('scope-local', 120_000, 'C', 4, [0, 0, 0, 4, 0, 0, 0, 0]) // in
       const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 240_000)
-      expect(rows.map((r) => r.bigramId).sort()).toEqual(['C'])
+      expect(rows.map((r) => r.ngramId).sort()).toEqual(['C'])
     })
 
     it('excludes other keyboards on the same machine', () => {
       bigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
       bigramRow('scope-other-uid', 60_000, 'dropped', 99, [0, 0, 0, 99, 0, 0, 0, 0])
       const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
-      expect(rows.map((r) => r.bigramId)).toEqual(['kept'])
+      expect(rows.map((r) => r.ngramId)).toEqual(['kept'])
     })
 
     it('listBigramMinutesInRangeForUidAndHash restricts to one machine_hash', () => {
       bigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
       bigramRow('scope-other-machine', 60_000, 'remote', 1, [1, 0, 0, 0, 0, 0, 0, 0])
       const rows = db.listBigramMinutesInRangeForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
-      expect(rows.map((r) => r.bigramId)).toEqual(['kept'])
+      expect(rows.map((r) => r.ngramId)).toEqual(['kept'])
+    })
+
+    it('returns sumIki / sumSqIki when the row has them, null otherwise', () => {
+      bigramRow('scope-local', 60_000, 'with-sum', 2, [0, 2, 0, 0, 0, 0, 0, 0])
+      db.mergeBigramMinute({
+        scopeId: 'scope-local', minuteTs: 60_000,
+        bigrams: { 'with-sum': { c: 2, h: [0, 2, 0, 0, 0, 0, 0, 0], s: 240, sq: 28_800 } },
+        updatedAt: 2_000, isDeleted: false,
+      })
+      const rows = db.listBigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([
+        { ngramId: 'with-sum', minuteTs: 60_000, count: 2, hist: [0, 2, 0, 0, 0, 0, 0, 0], sumIki: 240, sumSqIki: 28_800 },
+      ])
+    })
+  })
+
+  describe('listTrigramMinutesInRangeForUid (Analyze > n-gram)', () => {
+    function trigramRow(
+      scopeId: string,
+      minuteTs: number,
+      trigramId: string,
+      count: number,
+      h: number[],
+      updatedAt = 1_000,
+    ): void {
+      db.mergeTrigramMinute({
+        scopeId,
+        minuteTs,
+        trigrams: { [trigramId]: { c: count, h } },
+        updatedAt,
+        isDeleted: false,
+      })
+    }
+
+    beforeEach(() => {
+      db.upsertScope(sampleScope({ id: 'scope-local', machineHash: MACHINE_HASH, keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-machine', machineHash: 'other', keyboardUid: '0xAABB' }))
+      db.upsertScope(sampleScope({ id: 'scope-other-uid', machineHash: MACHINE_HASH, keyboardUid: '0xCCDD' }))
+    })
+
+    it('returns rows in range with hist decoded back to a number array', () => {
+      trigramRow('scope-local', 60_000, '4_11_7', 3, [0, 2, 1, 0, 0, 0, 0, 0])
+      const rows = db.listTrigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(rows).toEqual([
+        { ngramId: '4_11_7', minuteTs: 60_000, count: 3, hist: [0, 2, 1, 0, 0, 0, 0, 0], sumIki: null, sumSqIki: null },
+      ])
+    })
+
+    it('drops rows outside the window and respects tombstones', () => {
+      trigramRow('scope-local', 30_000, 'A_B_C', 1, [1, 0, 0, 0, 0, 0, 0, 0]) // before window
+      trigramRow('scope-local', 60_000, 'B_C_D', 2, [0, 2, 0, 0, 0, 0, 0, 0]) // in
+      db.mergeTrigramMinute({
+        scopeId: 'scope-local',
+        minuteTs: 60_000,
+        trigrams: { 'B_C_D': { c: 0, h: [0, 0, 0, 0, 0, 0, 0, 0] } },
+        updatedAt: 5_000,
+        isDeleted: true,
+      })
+      trigramRow('scope-local', 120_000, 'C_D_E', 4, [0, 0, 0, 4, 0, 0, 0, 0]) // in
+      const rows = db.listTrigramMinutesInRangeForUid('0xAABB', 60_000, 240_000)
+      expect(rows.map((r) => r.ngramId).sort()).toEqual(['C_D_E'])
+    })
+
+    it('excludes other keyboards on the same machine', () => {
+      trigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      trigramRow('scope-other-uid', 60_000, 'dropped', 99, [0, 0, 0, 99, 0, 0, 0, 0])
+      const rows = db.listTrigramMinutesInRangeForUid('0xAABB', 60_000, 120_000)
+      expect(rows.map((r) => r.ngramId)).toEqual(['kept'])
+    })
+
+    it('listTrigramMinutesInRangeForUidAndHash restricts to one machine_hash', () => {
+      trigramRow('scope-local', 60_000, 'kept', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      trigramRow('scope-other-machine', 60_000, 'remote', 1, [1, 0, 0, 0, 0, 0, 0, 0])
+      const rows = db.listTrigramMinutesInRangeForUidAndHash('0xAABB', MACHINE_HASH, 60_000, 120_000)
+      expect(rows.map((r) => r.ngramId)).toEqual(['kept'])
     })
   })
 

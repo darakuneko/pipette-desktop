@@ -311,7 +311,15 @@ export interface TypingTombstoneResult {
   charMinutes: number
   matrixMinutes: number
   minuteStats: number
+  bigramMinutes: number
+  trigramMinutes: number
   sessions: number
+}
+
+/** All-zero {@link TypingTombstoneResult}, for call sites that need to
+ * return early (invalid input, empty range) before any table is touched. */
+export function emptyTombstoneResult(): TypingTombstoneResult {
+  return { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, bigramMinutes: 0, trigramMinutes: 0, sessions: 0 }
 }
 
 /** Sub-view requested from the bigram aggregate IPC. `top` ranks by
@@ -328,16 +336,25 @@ export interface TypingBigramAggregateOptions {
   /** Maximum number of pairs returned. Defaults to 30 at the handler
    * level if absent. */
   limit?: number
+  /** 2 = bigram (`typing_bigram_minute`), 3 = trigram
+   * (`typing_trigram_minute`). Defaults to 2 at the handler level if
+   * absent or invalid. */
+  gram?: 2 | 3
 }
 
-/** Per-pair entry in a `top` view response. `avgIki` is null when the
- * pair has no recorded IKI samples (count = 0 — usually filtered
- * upstream but kept defensive). */
+/** Per-pair entry in a `top` view response. `ngramId` is the
+ * `_`-joined keycode chain — 2 codes for a bigram, 3 for a trigram
+ * (see `gram` on {@link TypingBigramAggregateOptions}). `avgIki` is
+ * null when the pair has no recorded IKI samples (count = 0 — usually
+ * filtered upstream but kept defensive). `sd` is null when any
+ * contributing row predates the sum/sumSq columns — see
+ * aggregatePairTotals. */
 export interface TypingBigramTopEntry {
-  bigramId: string
+  ngramId: string
   count: number
   hist: number[]
   avgIki: number | null
+  sd: number | null
 }
 
 /** Per-pair entry in a `slow` view response. Adds `p95` so the UI can

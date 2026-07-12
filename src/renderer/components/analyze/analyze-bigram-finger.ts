@@ -75,7 +75,7 @@ export function aggregateFingerPairs(
 ): Map<string, FingerPairTotal> {
   const totals = new Map<string, FingerPairTotal>()
   for (const entry of entries) {
-    const parts = entry.bigramId.split('_')
+    const parts = entry.ngramId.split('_')
     if (parts.length !== 2) continue
     const prev = Number(parts[0])
     const curr = Number(parts[1])

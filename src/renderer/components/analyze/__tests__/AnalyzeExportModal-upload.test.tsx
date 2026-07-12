@@ -44,6 +44,8 @@ const CTX: AnalyzeExportContext = {
   range: { fromMs: 0, toMs: 86_400_000 },
   deviceScope: 'all',
   appScopes: [],
+  typingTestScopes: [],
+  runIdScopes: [],
   snapshot: SNAPSHOT as unknown as AnalyzeExportContext['snapshot'],
   heatmap: {
     selectedLayers: [0],
@@ -57,6 +59,7 @@ const CTX: AnalyzeExportContext = {
   interval: { viewMode: 'timeSeries', granularity: 'auto' },
   activity: { metric: 'keystrokes', minActiveMs: 60_000 },
   layer: { baseLayer: 0 },
+  bigrams: { gram: 2 },
   layoutComparison: { sourceLayoutId: '', targetLayoutId: null },
   fingerOverrides: {},
   conditions: { device: 'All', app: 'All', keymap: '—', range: '7 days' },

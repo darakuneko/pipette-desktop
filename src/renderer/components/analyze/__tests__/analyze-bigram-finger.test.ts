@@ -8,11 +8,11 @@ import type { FingerType } from '../../../../shared/kle/kle-ergonomics'
 import type { TypingBigramTopEntry } from '../../../../shared/types/typing-analytics'
 
 function entry(
-  bigramId: string,
+  ngramId: string,
   count: number,
   hist: number[] = [0, 0, 0, 0, 0, 0, 0, 0],
 ): TypingBigramTopEntry {
-  return { bigramId, count, hist, avgIki: null }
+  return { ngramId, count, hist, avgIki: null }
 }
 
 describe('aggregateFingerPairs', () => {

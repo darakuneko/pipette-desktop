@@ -234,6 +234,18 @@ describe('isValidAnalyzeFilterSettings', () => {
       isValidAnalyzeFilterSettings({ bigrams: { pairIntervalThresholdMs: '200' } }),
     ).toBe(false)
   })
+
+  it('accepts gram as 2 or 3, and absent (back-compat with pre-trigram settings)', () => {
+    expect(isValidAnalyzeFilterSettings({ bigrams: { gram: 2 } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ bigrams: { gram: 3 } })).toBe(true)
+    expect(isValidAnalyzeFilterSettings({ bigrams: {} })).toBe(true)
+  })
+
+  it('rejects gram values other than 2 or 3', () => {
+    expect(isValidAnalyzeFilterSettings({ bigrams: { gram: 4 } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ bigrams: { gram: 0 } })).toBe(false)
+    expect(isValidAnalyzeFilterSettings({ bigrams: { gram: '2' } })).toBe(false)
+  })
 })
 
 describe('normalizeDeviceScopes', () => {

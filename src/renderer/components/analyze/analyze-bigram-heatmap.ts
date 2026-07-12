@@ -34,7 +34,7 @@ export function aggregateKeyHeatmap(
   const totals = new Map<number, number>()
   const parsed: { prev: number; curr: number; entry: TypingBigramTopEntry }[] = []
   for (const entry of entries) {
-    const parts = entry.bigramId.split('_')
+    const parts = entry.ngramId.split('_')
     if (parts.length !== 2) continue
     const prev = Number(parts[0])
     const curr = Number(parts[1])

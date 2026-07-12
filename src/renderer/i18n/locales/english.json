@@ -1042,10 +1042,17 @@
         "slow": "Pair interval",
         "fingerIki": "Finger IKI"
       },
+      "gramToggle": {
+        "ariaLabel": "N-gram size",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "Pair",
         "count": "Count",
         "avgIki": "Avg IKI",
+        "avgIkiTrigramTooltip": "Average of the two intervals between the three keystrokes — not the total time across all three.",
+        "sd": "SD",
         "p95": "p95 IKI"
       },
       "fingerIki": {

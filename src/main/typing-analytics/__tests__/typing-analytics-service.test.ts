@@ -244,6 +244,64 @@ describe('typing-analytics-service', () => {
       ])
     })
 
+    it('emits sum_iki / sumsq_iki alongside the bigram histogram', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      // Same 3 events as above: iki(4->11)=120, iki(11->7)=160.
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const rows = conn
+        .prepare('SELECT bigram_id, sum_iki, sumsq_iki FROM typing_bigram_minute ORDER BY bigram_id')
+        .all() as { bigram_id: string; sum_iki: number; sumsq_iki: number }[]
+      expect(rows).toEqual([
+        { bigram_id: '11_7', sum_iki: 160, sumsq_iki: 160 * 160 },
+        { bigram_id: '4_11', sum_iki: 120, sumsq_iki: 120 * 120 },
+      ])
+    })
+
+    it('emits a trigram-minute row when 3 consecutive matrix events flush', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      // iki(4->11)=120, iki(11->7)=160 -> trigram value = (120+160)/2 = 140.
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 2, layer: 0, keycode: 0x07, ts: ts + 280, keyboard: sampleKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const rows = conn
+        .prepare('SELECT trigram_id, count, sum_iki, sumsq_iki FROM typing_trigram_minute')
+        .all() as { trigram_id: string; count: number; sum_iki: number; sumsq_iki: number }[]
+      expect(rows).toEqual([
+        { trigram_id: '4_11_7', count: 1, sum_iki: 140, sumsq_iki: 140 * 140 },
+      ])
+    })
+
+    it('does not emit a trigram-minute row when fewer than 3 consecutive matrix events flush', async () => {
+      setupTypingAnalyticsIpc()
+      const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+
+      const ts = Date.UTC(2026, 3, 14, 10, 0, 0)
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+      await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 120, keyboard: sampleKeyboard })
+
+      await flushTypingAnalyticsNowForTests()
+
+      const conn = getTypingAnalyticsDB().getConnection()
+      const count = conn.prepare('SELECT COUNT(*) AS n FROM typing_trigram_minute').get() as { n: number }
+      expect(count.n).toBe(0)
+    })
+
     it('does not emit a bigram-minute row when only char events flush', async () => {
       setupTypingAnalyticsIpc()
       const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
@@ -471,7 +529,7 @@ describe('typing-analytics-service', () => {
         notifier.mockClear() // forget the seed's own flush notification
 
         const result = await deleteTypingDailySummaries(sampleKeyboard.uid, [])
-        expect(result).toEqual({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 })
+        expect(result).toEqual({ charMinutes: 0, matrixMinutes: 0, minuteStats: 0, bigramMinutes: 0, trigramMinutes: 0, sessions: 0 })
         expect(notifier).not.toHaveBeenCalled()
         expect(listTypingDailySummaries(sampleKeyboard.uid)).toHaveLength(1)
       })
@@ -547,7 +605,7 @@ describe('typing-analytics-service', () => {
         const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
         const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
         expect(result.view).toBe('top')
-        expect(result.entries.map((e: { bigramId: string }) => e.bigramId).sort()).toEqual(['11_7', '4_11'])
+        expect(result.entries.map((e: { ngramId: string }) => e.ngramId).sort()).toEqual(['11_7', '4_11'])
         expect(result.entries.every((e: { count: number }) => e.count === 1)).toBe(true)
       })
 
@@ -601,6 +659,61 @@ describe('typing-analytics-service', () => {
         expect(result.view).toBe('top')
         // The own machineHash is the only one in test data — same as 'all'.
         expect(result.entries).toHaveLength(2)
+      })
+
+      it('attaches sd to top/slow entries once IKI sums are recorded', async () => {
+        const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+        await ingestThree(ts)
+        const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+        const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+        // Each bigram in ingestThree has exactly one row (n=1) so sd is
+        // undefined-for-variance (n < 2) → null, but the field must be
+        // present and typed, not just missing.
+        expect(result.entries.every((e: { sd: number | null }) => e.sd === null)).toBe(true)
+      })
+
+      describe('gram option', () => {
+        it('defaults to bigram results identical to an explicit gram: 2 request', async () => {
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          await ingestThree(ts)
+          const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+          const omitted = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+          const explicit = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', { gram: 2 })
+          expect(omitted).toEqual(explicit)
+          expect(omitted.entries.map((e: { ngramId: string }) => e.ngramId).sort()).toEqual(['11_7', '4_11'])
+        })
+
+        it.each([0, 5, 'x', null, {}])('falls back to gram=2 for an invalid gram value (%s)', async (badGram) => {
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          await ingestThree(ts)
+          const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+          const baseline = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', undefined)
+          const withBadGram = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', { gram: badGram })
+          expect(withBadGram).toEqual(baseline)
+        })
+
+        it('aggregates from the trigram table when gram: 3 is requested', async () => {
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          await ingestThree(ts)
+          const handler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+          const result = await handler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', { gram: 3 })
+          expect(result.view).toBe('top')
+          expect(result.entries.map((e: { ngramId: string }) => e.ngramId)).toEqual(['4_11_7'])
+          expect(result.entries[0].count).toBe(1)
+        })
+
+        it('returns an empty result for gram: 3 when fewer than 3 consecutive keystrokes were recorded', async () => {
+          setupTypingAnalyticsIpc()
+          const handler = getHandler(IpcChannels.TYPING_ANALYTICS_EVENT)
+          const ts = Date.UTC(2026, 3, 14, 12, 0, 0)
+          await handler(fakeEvent, { kind: 'matrix', row: 0, col: 0, layer: 0, keycode: 0x04, ts, keyboard: sampleKeyboard })
+          await handler(fakeEvent, { kind: 'matrix', row: 0, col: 1, layer: 0, keycode: 0x0B, ts: ts + 80, keyboard: sampleKeyboard })
+          await flushTypingAnalyticsNowForTests()
+
+          const aggHandler = getHandler(IpcChannels.TYPING_ANALYTICS_GET_BIGRAM_AGGREGATE_FOR_RANGE)
+          const result = await aggHandler(fakeEvent, sampleKeyboard.uid, ts - 60_000, ts + 60_000, 'top', 'all', { gram: 3 })
+          expect(result.entries).toEqual([])
+        })
       })
     })
 

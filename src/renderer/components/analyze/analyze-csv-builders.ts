@@ -117,6 +117,7 @@ const SLUG = {
   layer: 'analyze-layer',
   ergonomics: 'analyze-ergonomics',
   bigrams: 'analyze-bigrams',
+  trigrams: 'analyze-trigrams',
   layoutComparison: 'analyze-layout-comparison',
 } as const
 
@@ -403,20 +404,28 @@ export async function buildErgonomicsCsv(args: ScopeArgs & {
 // user sees on screen instead of cutting off at the 30-row default.
 const BIGRAMS_EXPORT_LIMIT = 5000
 
-export async function buildBigramsCsv(args: ScopeArgs): Promise<CsvBundleEntry> {
-  const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [] } = args
+export async function buildBigramsCsv(args: ScopeArgs & {
+  /** 2 = bigram (default, matches the historical export shape), 3 =
+   * trigram. Only changes the id column header and output filename —
+   * the row shape (id, count, avg, sd) is the same for both, since
+   * `ngramId` already carries however many `_`-joined key codes the
+   * selected gram produces. */
+  gram?: 2 | 3
+}): Promise<CsvBundleEntry> {
+  const { uid, range, deviceScope, appScopes = [], typingTestScopes = [], runIdScopes = [], gram = 2 } = args
   const result = await fetchBigramAggregateForRange(
-    uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT }, appScopes, typingTestScopes, runIdScopes,
+    uid, deviceScope, range.fromMs, range.toMs, 'top', { limit: BIGRAMS_EXPORT_LIMIT, gram }, appScopes, typingTestScopes, runIdScopes,
   ).catch(() => ({ view: 'top' as const, entries: [] }))
   const entries = result.view === 'top' ? result.entries : []
   const rows = entries.map((e) => [
-    e.bigramId,
+    e.ngramId,
     e.count,
     e.avgIki === null ? '' : Math.round(e.avgIki),
+    e.sd === null ? '' : Math.round(e.sd),
   ])
   return {
-    slug: SLUG.bigrams,
-    content: buildCsv(['bigram_id', 'count', 'avg_iki_ms'], rows),
+    slug: gram === 3 ? SLUG.trigrams : SLUG.bigrams,
+    content: buildCsv([gram === 3 ? 'trigram_id' : 'bigram_id', 'count', 'avg_iki_ms', 'sd_iki_ms'], rows),
   }
 }
 

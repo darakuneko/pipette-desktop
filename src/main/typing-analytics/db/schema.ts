@@ -2,7 +2,7 @@
 // SQLite schema for the typing analytics database. See
 // .claude/plans/typing-analytics.md for the design rationale.
 
-export const SCHEMA_VERSION = 6
+export const SCHEMA_VERSION = 7
 
 /** User-data tables in the order a rebuild should truncate them. Listed
  * child-before-parent so any future FK_ON delete won't trip itself. */
@@ -11,6 +11,7 @@ export const DATA_TABLE_NAMES = [
   'typing_matrix_minute',
   'typing_minute_stats',
   'typing_bigram_minute',
+  'typing_trigram_minute',
   'typing_sessions',
   'typing_scopes',
 ] as const
@@ -152,6 +153,14 @@ CREATE TABLE IF NOT EXISTS typing_bigram_minute (
   -- are log-scale (see Plan-analyze-bigram.md); count is the sum across
   -- buckets and is denormalized for fast top-N ranking.
   hist BLOB NOT NULL,
+  -- Sum / sum-of-squares of the raw IKI values (ms) that fed the hist
+  -- column, for a true standard deviation instead of a histogram bucket
+  -- approximation.
+  -- NULL for rows written before this field existed — a range that mixes
+  -- such rows with sum-bearing ones reports SD as null rather than an
+  -- approximation (see Plan-trigram-and-iki-variance.md).
+  sum_iki REAL,
+  sumsq_iki REAL,
   -- See typing_char_minute.app_name comment.
   app_name TEXT,
   -- See typing_char_minute.typing_test comment.
@@ -171,6 +180,42 @@ CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_test_ts
   ON typing_bigram_minute(scope_id, typing_test, minute_ts);
 CREATE INDEX IF NOT EXISTS idx_bigram_minute_scope_run_ts
   ON typing_bigram_minute(scope_id, run_id, minute_ts);
+
+CREATE TABLE IF NOT EXISTS typing_trigram_minute (
+  scope_id TEXT NOT NULL,
+  minute_ts INTEGER NOT NULL,
+  -- Triple key in the form "\${k1}_\${k2}_\${k3}". See
+  -- typing_bigram_minute.bigram_id comment.
+  trigram_id TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  -- See typing_bigram_minute.hist comment.
+  hist BLOB NOT NULL,
+  -- See typing_bigram_minute.sum_iki / sumsq_iki comment.
+  sum_iki REAL,
+  sumsq_iki REAL,
+  -- See typing_char_minute.app_name comment.
+  app_name TEXT,
+  -- See typing_char_minute.typing_test comment.
+  typing_test TEXT,
+  -- See typing_char_minute.run_id comment.
+  run_id TEXT NOT NULL DEFAULT '',
+  updated_at INTEGER NOT NULL,
+  is_deleted INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (scope_id, minute_ts, run_id, trigram_id),
+  FOREIGN KEY (scope_id) REFERENCES typing_scopes(id)
+);
+-- No (scope_id, minute_ts) index here: it would be a strict prefix of
+-- the PRIMARY KEY (scope_id, minute_ts, run_id, trigram_id) above and
+-- SQLite can already use that for range scans. typing_bigram_minute
+-- carries the equivalent index (idx_bigram_minute_scope_minute) because
+-- it predates this table and is left untouched rather than risking an
+-- unrelated migration.
+CREATE INDEX IF NOT EXISTS idx_trigram_minute_scope_app_ts
+  ON typing_trigram_minute(scope_id, app_name, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_trigram_minute_scope_test_ts
+  ON typing_trigram_minute(scope_id, typing_test, minute_ts);
+CREATE INDEX IF NOT EXISTS idx_trigram_minute_scope_run_ts
+  ON typing_trigram_minute(scope_id, run_id, minute_ts);
 
 CREATE TABLE IF NOT EXISTS typing_sessions (
   id TEXT PRIMARY KEY,

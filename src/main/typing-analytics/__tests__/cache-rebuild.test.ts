@@ -12,9 +12,11 @@ import {
 import { TypingAnalyticsDB } from '../db/typing-analytics-db'
 import { SCHEMA_VERSION } from '../db/schema'
 import {
+  bigramMinuteRowId,
   charMinuteRowId,
   minuteStatsRowId,
   scopeRowId,
+  trigramMinuteRowId,
   type JsonlRow,
 } from '../jsonl/jsonl-row'
 import { appendRowsToFile } from '../jsonl/jsonl-writer'
@@ -82,6 +84,26 @@ function stats(machineHash: string, keystrokes: number, updatedAt = 1_000): Json
   }
 }
 
+function bigram(machineHash: string, updatedAt = 1_000): JsonlRow {
+  const scopeId = `${machineHash}|linux|${UID_A}`
+  return {
+    id: bigramMinuteRowId(scopeId, 60_000, ''),
+    kind: 'bigram-minute',
+    updated_at: updatedAt,
+    payload: { scopeId, minuteTs: 60_000, bigrams: { '4_11': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } } },
+  }
+}
+
+function trigram(machineHash: string, updatedAt = 1_000): JsonlRow {
+  const scopeId = `${machineHash}|linux|${UID_A}`
+  return {
+    id: trigramMinuteRowId(scopeId, 60_000, ''),
+    kind: 'trigram-minute',
+    updated_at: updatedAt,
+    payload: { scopeId, minuteTs: 60_000, trigrams: { '4_11_7': { c: 1, h: [1, 0, 0, 0, 0, 0, 0, 0] } } },
+  }
+}
+
 describe('truncateCache', () => {
   let tmpDir: string
   let db: TypingAnalyticsDB
@@ -146,6 +168,27 @@ describe('rebuildCacheFromMasterFiles', () => {
   afterEach(() => {
     db.close()
     rmSync(tmpDir, { recursive: true, force: true })
+  })
+
+  it('propagates bigram/trigram counters, which were previously dropped from the result', async () => {
+    // Regression coverage: rebuildCacheFromMasterFiles used to sum
+    // scopes/charMinutes/matrixMinutes/minuteStats/sessions but silently
+    // discarded applyRowsToCache's bigramMinutes (and now trigramMinutes)
+    // counts, so a bigram/trigram-only file looked like a no-op in the
+    // rebuild report even though rows were actually applied.
+    await appendRowsToFile(deviceDayJsonlPath(tmpDir, UID_A, MY_HASH, SAMPLE_DAY), [
+      scope(MY_HASH),
+      bigram(MY_HASH),
+      trigram(MY_HASH),
+    ])
+
+    const result = await rebuildCacheFromMasterFiles(db, tmpDir)
+    expect(result.bigramMinutes).toBe(1)
+    expect(result.trigramMinutes).toBe(1)
+
+    const conn = db.getConnection()
+    expect((conn.prepare('SELECT COUNT(*) AS n FROM typing_bigram_minute').get() as { n: number }).n).toBe(1)
+    expect((conn.prepare('SELECT COUNT(*) AS n FROM typing_trigram_minute').get() as { n: number }).n).toBe(1)
   })
 
   it('replays every local and remote device file into the cache', async () => {

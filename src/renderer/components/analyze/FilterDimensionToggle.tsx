@@ -6,7 +6,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { FILTER_DIMENSIONS, type FilterDimension } from '../../../shared/types/analyze-filters'
-import { SEGMENT_TOGGLE_ACTIVE, SEGMENT_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
+import { SegmentedToggle } from './SegmentedToggle'
 
 interface Props {
   value: FilterDimension
@@ -22,27 +22,13 @@ const LABEL_KEY: Record<FilterDimension, string> = {
 export function FilterDimensionToggle({ value, onChange, testId = 'analyze-filter-dimension' }: Props) {
   const { t } = useTranslation()
   return (
-    <div
-      className="inline-flex items-center gap-0.5 rounded-md border border-edge p-0.5"
-      role="group"
-      aria-label={t('analyze.filters.dimensionLabel')}
-      data-testid={testId}
-    >
-      {FILTER_DIMENSIONS.map((dim) => {
-        const active = value === dim
-        return (
-          <button
-            key={dim}
-            type="button"
-            className={active ? SEGMENT_TOGGLE_ACTIVE : SEGMENT_TOGGLE_INACTIVE}
-            aria-pressed={active}
-            onClick={() => onChange(dim)}
-            data-testid={`${testId}-${dim}`}
-          >
-            {t(LABEL_KEY[dim])}
-          </button>
-        )
-      })}
-    </div>
+    <SegmentedToggle
+      options={FILTER_DIMENSIONS}
+      value={value}
+      onChange={onChange}
+      labelFor={(dim) => t(LABEL_KEY[dim])}
+      ariaLabel={t('analyze.filters.dimensionLabel')}
+      testId={testId}
+    />
   )
 }
