@@ -8,6 +8,7 @@ function toggleSuffix(result: TypingTestResult, t: (key: string) => string): str
   const parts: string[] = []
   if (result.punctuation) parts.push(t('editor.typingTest.history.conditionPunctuation'))
   if (result.numbers) parts.push(t('editor.typingTest.history.conditionNumbers'))
+  if (result.romajiInput) parts.push(t('editor.typingTest.history.conditionRomaji'))
   return parts.length > 0 ? ` ${parts.join(' ')}` : ''
 }
 

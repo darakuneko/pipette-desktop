@@ -37,6 +37,16 @@ describe('formatConditionLabel', () => {
       .toBe('30s (english) editor.typingTest.history.conditionPunctuation')
   })
 
+  it('appends the romaji suffix for a romajiInput run', () => {
+    expect(formatConditionLabel(makeResult({ mode2: 30, language: 'japanese_hiragana', romajiInput: true }), identityT))
+      .toBe('30 editor.typingTest.mode.words (japanese_hiragana) editor.typingTest.history.conditionRomaji')
+  })
+
+  it('combines the romaji suffix with punctuation/numbers, in order', () => {
+    expect(formatConditionLabel(makeResult({ mode2: 30, punctuation: true, numbers: true, romajiInput: true }), identityT))
+      .toBe('30 editor.typingTest.mode.words (english) editor.typingTest.history.conditionPunctuation editor.typingTest.history.conditionNumbers editor.typingTest.history.conditionRomaji')
+  })
+
   it('formats quote with the length label and no toggle suffix', () => {
     expect(formatConditionLabel(makeResult({ mode: 'quote', mode2: 'medium', punctuation: undefined, numbers: undefined }), identityT))
       .toBe('editor.typingTest.quoteLength.medium editor.typingTest.mode.quote (english)')

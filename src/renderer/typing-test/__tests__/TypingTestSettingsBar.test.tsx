@@ -13,6 +13,7 @@ function renderBar(props: Partial<Parameters<typeof TypingTestSettingsBar>[0]> =
   const defaults = {
     config: DEFAULT_CONFIG,
     onConfigChange: vi.fn(),
+    language: 'english',
   }
   return render(
     <I18nextProvider i18n={i18n}>
@@ -128,6 +129,53 @@ describe('TypingTestSettingsBar toggles', () => {
   })
 })
 
+describe('TypingTestSettingsBar romaji toggle', () => {
+  it('hides the romaji toggle for a non-kana language', () => {
+    renderBar({ language: 'english' })
+    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+  })
+
+  it('hides the romaji toggle for an empty language string', () => {
+    renderBar({ language: '' })
+    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+  })
+
+  it('shows the romaji toggle for japanese_hiragana in words mode', () => {
+    renderBar({ language: 'japanese_hiragana' })
+    expect(screen.getByTestId('toggle-romaji')).toBeInTheDocument()
+  })
+
+  it('shows the romaji toggle for japanese_katakana in time mode', () => {
+    const config: TypingTestConfig = { mode: 'time', duration: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_katakana' })
+    expect(screen.getByTestId('toggle-romaji')).toBeInTheDocument()
+  })
+
+  it('hides the romaji toggle in quote mode even for a kana language', () => {
+    const config: TypingTestConfig = { mode: 'quote', quoteLength: 'medium' }
+    renderBar({ config, language: 'japanese_hiragana' })
+    expect(screen.queryByTestId('toggle-romaji')).not.toBeInTheDocument()
+  })
+
+  it('highlights the romaji toggle when active', () => {
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    renderBar({ config, language: 'japanese_hiragana' })
+    expect(screen.getByTestId('toggle-romaji').className).toContain('text-accent')
+  })
+
+  it('calls onConfigChange with romajiInput toggled on click', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false }
+    renderBar({ config, language: 'japanese_hiragana', onConfigChange })
+    fireEvent.click(screen.getByTestId('toggle-romaji'))
+    expect(onConfigChange).toHaveBeenCalledTimes(1)
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') {
+      expect(arg.romajiInput).toBe(true)
+    }
+  })
+})
+
 describe('TypingTestSettingsBar toggle preservation', () => {
   it('preserves punctuation/numbers when switching words -> quote -> time', () => {
     const onConfigChange = vi.fn()
@@ -135,7 +183,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: true, numbers: true }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} />
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="english" />
       </I18nextProvider>,
     )
 
@@ -147,7 +195,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     onConfigChange.mockClear()
     rerender(
       <I18nextProvider i18n={i18n}>
-        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} />
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="english" />
       </I18nextProvider>,
     )
 

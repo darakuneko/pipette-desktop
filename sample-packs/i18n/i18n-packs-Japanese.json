@@ -303,6 +303,10 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "romaji": {
+        "toggle": "ローマ字",
+        "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"
+      },
       "quoteLength": {
         "short": "短い",
         "medium": "普通",
@@ -432,6 +436,7 @@
         "conditionFilterLabel": "条件で絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
+        "conditionRomaji": "+ローマ字",
         "conditionTatoeba": "Tatoeba"
       }
     }

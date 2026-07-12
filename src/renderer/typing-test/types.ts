@@ -4,8 +4,11 @@ export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeb
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
 
 export type TypingTestConfig =
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean }
+  // `romajiInput` opts into sequential romaji-keystroke judging for kana
+  // packs (japanese_hiragana / japanese_katakana); undefined/false keeps
+  // the existing verbatim-string matching behaviour.
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
@@ -25,6 +28,29 @@ export interface Quote {
 export const WORD_COUNT_OPTIONS = [15, 30, 60, 120] as const
 export const TIME_DURATION_OPTIONS = [15, 30, 60, 120] as const
 export const DEFAULT_LANGUAGE = 'english'
+
+/** Word-language packs the romaji-keystroke matcher supports (kana word
+ *  lists only). Drives the SettingsBar toggle's visibility, and — via
+ *  `clearRomajiInputForLanguage` in `useTypingTest` — whether `romajiInput`
+ *  is ever allowed to stay `true`: the flag is dropped the moment the
+ *  active language isn't in this set, whether that happens by switching
+ *  languages, restoring a persisted config/language pair on mount, or any
+ *  other direct `setConfig` call. `isRomajiInputActive` therefore trusts
+ *  `romajiInput: true` at face value without re-checking the language
+ *  itself. */
+export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_katakana'])
+
+/** Current word's confirmed romaji + canonical remaining spelling, plus the
+ *  count of kana characters fully confirmed so far (romajiInput mode only).
+ *  Produced by `useTypingTest`'s `romajiGuide` selector from a
+ *  `RomajiMatcher` (see romaji-engine.ts), consumed by `WordDisplay` (kana
+ *  coloring) and `TypingTestView` (the guide line below the reading
+ *  window). */
+export interface RomajiGuide {
+  typed: string
+  remaining: string
+  kanaCompleted: number
+}
 
 // Imported file-import-text display preferences (fileImport mode only).
 export const DISPLAY_LINES_MIN = 2

@@ -303,6 +303,10 @@
       },
       "punctuation": "punctuation",
       "numbers": "numbers",
+      "romaji": {
+        "toggle": "Romaji",
+        "imeHint": "Turn off your OS IME to type in romaji input mode"
+      },
       "quoteLength": {
         "short": "short",
         "medium": "medium",
@@ -432,6 +436,7 @@
         "conditionFilterLabel": "Filter by condition",
         "conditionPunctuation": "+punct",
         "conditionNumbers": "+nums",
+        "conditionRomaji": "+romaji",
         "conditionTatoeba": "Tatoeba"
       }
     }

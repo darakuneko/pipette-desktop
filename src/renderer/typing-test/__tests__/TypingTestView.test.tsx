@@ -456,6 +456,59 @@ describe('TypingTestView IME space key', () => {
   })
 })
 
+describe('TypingTestView romaji guide', () => {
+  it('does not render the guide row when romajiGuide is null', () => {
+    renderView({ state: makeState({ status: 'running', words: ['あい'] }) })
+    expect(screen.queryByTestId('typing-test-romaji-guide')).toBeNull()
+  })
+
+  it('renders typed and remaining romaji, and rewrites on prop changes', () => {
+    const { rerender } = renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+    })
+    let guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(guide.textContent).toBe('ai')
+
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestView
+          state={makeState({ status: 'running', words: ['あい'] })}
+          wpm={0}
+          accuracy={100}
+          elapsedSeconds={0}
+          remainingSeconds={null}
+          config={DEFAULT_CONFIG}
+          paused={false}
+          romajiGuide={{ typed: 'a', remaining: 'i', kanaCompleted: 1 }}
+        />
+      </I18nextProvider>,
+    )
+    guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(guide.textContent).toBe('ai')
+    expect(guide.querySelector('.text-success')?.textContent).toBe('a')
+    expect(guide.querySelector('.text-content-muted')?.textContent).toBe('i')
+  })
+
+  it('shows the IME hint once a composition event fires in romaji mode', () => {
+    renderView({
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+    })
+    expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
+    const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
+    fireEvent.compositionStart(textarea)
+    expect(screen.getByTestId('typing-test-romaji-ime-hint')).toBeInTheDocument()
+  })
+
+  it('does not show the IME hint outside romaji mode', () => {
+    renderView({ state: makeState({ status: 'running', words: ['hello'] }) })
+    const textarea = screen.getByLabelText('IME input') as HTMLTextAreaElement
+    fireEvent.compositionStart(textarea)
+    expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
+  })
+})
+
 describe('TypingTestView paused overlay', () => {
   it('shows paused overlay when paused and running', () => {
     renderView({

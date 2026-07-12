@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import type { WordResult } from './useTypingTest'
+import type { RomajiGuide } from './types'
 
 const COMPOSITION_CHAR_CLASS = 'text-accent/60 underline decoration-accent/30'
 const ERROR_CHAR_CLASS = 'text-danger underline decoration-danger/50 decoration-2 underline-offset-2'
@@ -13,9 +14,18 @@ interface WordDisplayProps {
   wordResults: WordResult[]
   cursorBlink: boolean
   compositionText?: string
+  /** Romaji-keystroke progress for this word (romajiInput mode only), or
+   *  null/undefined for every other word and every other mode. When set,
+   *  the current word's confirmed input is derived as `word.slice(0,
+   *  kanaCompleted)` instead of using `currentInput` directly — romaji mode
+   *  never writes to `currentInput` (see `handleRomajiChar`), and composition
+   *  is treated as empty even if the OS IME fired a stray composition event
+   *  (rejected keystrokes never appear anywhere, so there is no per-char
+   *  error color either). */
+  romajiGuide?: RomajiGuide | null
 }
 
-export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '' }: WordDisplayProps) {
+export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, wordResults, cursorBlink, compositionText = '', romajiGuide = null }: WordDisplayProps) {
   const testId = `word-${wordIndex}`
 
   // Completed word — per-character coloring
@@ -40,10 +50,20 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
     )
   }
 
-  // Current word -- per-character coloring with cursor and composition text
+  // Current word -- per-character coloring with cursor and composition text.
+  // Romaji input mode reuses this same rendering rather than a parallel
+  // implementation: its confirmed input is exactly `word.slice(0,
+  // kanaCompleted)` (a committed segment always matches the kana it
+  // replaces one-for-one here), and composition is forced empty since
+  // romaji mode never feeds composition data into currentInput (see
+  // `processCompositionEnd`'s composition gate in useTypingTest) — so there
+  // is nothing to show and no per-char error color either, matching the
+  // dedicated romaji branch this replaced.
   if (wordIndex === currentWordIndex) {
-    const typedLength = currentInput.length
-    const compositionChars = Array.from(compositionText)
+    const effectiveInput = romajiGuide ? word.slice(0, romajiGuide.kanaCompleted) : currentInput
+    const effectiveComposition = romajiGuide ? '' : compositionText
+    const typedLength = effectiveInput.length
+    const compositionChars = Array.from(effectiveComposition)
     const compositionLength = compositionChars.length
     const isComposing = compositionLength > 0
     const cursorBlinks = !isComposing && cursorBlink
@@ -53,8 +73,8 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
           // Already typed characters
           if (charIdx < typedLength) {
             return (
-              <span key={charIdx} className={charClassName(char, charIdx, currentInput)}>
-                {displayChar(char, charIdx, currentInput)}
+              <span key={charIdx} className={charClassName(char, charIdx, effectiveInput)}>
+                {displayChar(char, charIdx, effectiveInput)}
               </span>
             )
           }
@@ -75,8 +95,8 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
             return (
               <span key={charIdx} className="relative">
                 <Cursor blink={cursorBlinks} />
-                <span className={charClassName(char, charIdx, currentInput)}>
-                  {displayChar(char, charIdx, currentInput)}
+                <span className={charClassName(char, charIdx, effectiveInput)}>
+                  {displayChar(char, charIdx, effectiveInput)}
                 </span>
               </span>
             )
@@ -91,8 +111,8 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
           }
           // Remaining untyped characters
           return (
-            <span key={charIdx} className={charClassName(char, charIdx, currentInput)}>
-              {displayChar(char, charIdx, currentInput)}
+            <span key={charIdx} className={charClassName(char, charIdx, effectiveInput)}>
+              {displayChar(char, charIdx, effectiveInput)}
             </span>
           )
         })}
@@ -107,7 +127,7 @@ export function WordDisplay({ word, wordIndex, currentWordIndex, currentInput, w
             ))}
         {/* Extra typed chars beyond word length */}
         {typedLength > word.length &&
-          currentInput
+          effectiveInput
             .slice(word.length)
             .split('')
             .map((char, i) => (

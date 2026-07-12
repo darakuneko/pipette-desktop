@@ -607,7 +607,7 @@ export function TypingTestPane({
           </div>
         </div>
         {typingTest.config.mode !== 'fileImport' && typingTest.config.mode !== 'tatoeba' && (
-          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} />
+          <TypingTestSettingsBar config={typingTest.config} onConfigChange={onConfigChange} language={typingTest.language} />
         )}
       </PanelSection>
 
@@ -720,6 +720,7 @@ export function TypingTestPane({
           onCompositionStart={typingTest.processCompositionStart}
           onCompositionUpdate={typingTest.processCompositionUpdate}
           onCompositionEnd={typingTest.processCompositionEnd}
+          romajiGuide={typingTest.romajiGuide}
           onImeSpaceKey={() => typingTest.processKeyEvent(' ', false, false, false)}
           displayLines={displayLines}
           fontSize={fontSize}

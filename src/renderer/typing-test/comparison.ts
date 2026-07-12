@@ -43,6 +43,7 @@ export function conditionKey(config: TypingTestConfig, language: string): string
     language,
     punctuation: hasToggles ? config.punctuation : undefined,
     numbers: hasToggles ? config.numbers : undefined,
+    romajiInput: hasToggles ? config.romajiInput : undefined,
   } as TypingTestResult)
 }
 

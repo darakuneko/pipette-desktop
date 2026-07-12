@@ -5,8 +5,9 @@ import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './
 import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
-import type { TypingTestConfig, Quote } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE } from './types'
+import type { TypingTestConfig, Quote, RomajiGuide } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, ROMAJI_INPUT_LANGUAGES } from './types'
+import { createRomajiMatcher, type RomajiMatcher } from './romaji-engine'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
 
@@ -42,6 +43,53 @@ function isSubmitKey(key: string): boolean {
   return key === ' ' || key === '\u3000'
 }
 
+/** True when the config opts into sequential romaji-keystroke judging
+ *  (only meaningful for the words/time kana packs — see types.ts).
+ *  Language is deliberately not re-checked here: every path that can
+ *  (re)pair `config` with `language` — `setLanguage`, `setConfig`, and the
+ *  initial mount — runs the result through `clearRomajiInputForLanguage`,
+ *  so by the time this runs `romajiInput: true` already implies a kana pack
+ *  is selected. */
+function isRomajiInputActive(config: TypingTestConfig): boolean {
+  return (config.mode === 'words' || config.mode === 'time') && config.romajiInput === true
+}
+
+/** Config transform applied whenever `romajiInput` could end up paired with
+ *  a non-kana language: quietly drops the flag so a stale value can't keep
+ *  judging keystrokes against a word list the matcher no longer applies to.
+ *  Called from every point that can (re)pair config with language —
+ *  `setLanguage` (language changes on its own), `setConfig` (a new config
+ *  arrives against whichever language is already active, including a
+ *  persisted config pushed in from outside), and the initial mount (a
+ *  persisted config/language pair can already be out of sync when it
+ *  arrives) — so `isRomajiInputActive` can trust `romajiInput: true` at
+ *  face value rather than re-checking the language itself, same as how the
+ *  SettingsBar toggle simply disappears (gated on the same
+ *  `ROMAJI_INPUT_LANGUAGES` check) instead of persisting hidden state.
+ *  Re-enabling it requires opting back in once a kana pack is selected
+ *  again, matching how the toggle is never restored automatically after
+ *  leaving quote mode either. */
+function clearRomajiInputForLanguage(config: TypingTestConfig, language: string): TypingTestConfig {
+  if (ROMAJI_INPUT_LANGUAGES.has(language)) return config
+  if ((config.mode === 'words' || config.mode === 'time') && config.romajiInput) {
+    return { ...config, romajiInput: false }
+  }
+  return config
+}
+
+/** Rebuilds a matcher for `word` by replaying every keystroke accepted so
+ *  far for it. Called fresh on each read/write instead of keeping a live
+ *  `RomajiMatcher` instance in React state, so state transitions (and the
+ *  read-only `romajiGuide` selector) stay pure \u2014 mutation is local to this
+ *  call and never escapes it, even under StrictMode's double-invoked
+ *  updater functions. Word lengths are short (a handful of kana), so the
+ *  replay cost is negligible. */
+function buildRomajiMatcher(word: string, keystrokes: string): RomajiMatcher {
+  const matcher = createRomajiMatcher(word)
+  for (const key of keystrokes) matcher.acceptChar(key)
+  return matcher
+}
+
 const MAX_WPM_HISTORY = 300
 
 export interface WordResult {
@@ -75,12 +123,21 @@ export interface TypingTestState {
   /** Leading whitespace per logical line (imported fileImport text, display only).
    *  Indexed by line order; empty for every other mode. */
   lineIndents: string[]
+  /** Romaji keystrokes accepted so far for the current word (romajiInput
+   *  mode only). Rejected keystrokes are never appended. Replayed through
+   *  a fresh `createRomajiMatcher` on every read/write instead of holding
+   *  a live matcher instance, so state transitions stay pure — see
+   *  `buildRomajiMatcher`. Reset to '' whenever the word advances. */
+  romajiKeystrokes: string
 }
 
 export interface UseTypingTestReturn {
   state: TypingTestState
   wpm: number
   accuracy: number
+  /** Current word's romaji progress (romajiInput mode only); null otherwise
+   *  or once all words are done. */
+  romajiGuide: RomajiGuide | null
   elapsedSeconds: number
   remainingSeconds: number | null
   config: TypingTestConfig
@@ -205,6 +262,7 @@ function freshState({ words, quote, lineBreaks, lineIndents }: WordsForConfig, s
     wpmHistory: [],
     lineBreaks: new Set(lineBreaks),
     lineIndents,
+    romajiKeystrokes: '',
   }
 }
 
@@ -263,13 +321,24 @@ export function useTypingTest(
   initialLanguage?: string,
   options?: UseTypingTestOptions,
 ): UseTypingTestReturn {
-  const [config, setConfigState] = useState<TypingTestConfig>(() => initialConfig ?? DEFAULT_CONFIG)
+  // A persisted config/language pair (e.g. restored from device prefs) can
+  // arrive already out of sync — romajiInput true against a non-kana
+  // language — so normalize it here too, not just in setLanguage/setConfig.
+  // See clearRomajiInputForLanguage.
+  const [config, setConfigState] = useState<TypingTestConfig>(() =>
+    clearRomajiInputForLanguage(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE),
+  )
   const [language, setLanguageState] = useState<string>(() => initialLanguage ?? DEFAULT_LANGUAGE)
   const [isLanguageLoading, setIsLanguageLoading] = useState(false)
   const [baseLayer, setBaseLayerState] = useState(0)
   const [effectiveLayer, setEffectiveLayer] = useState(0)
   const [windowFocused, setWindowFocusedState] = useState(true)
-  const [state, setState] = useState<TypingTestState>(() => createInitialState(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE))
+  const [state, setState] = useState<TypingTestState>(() =>
+    createInitialState(
+      clearRomajiInputForLanguage(initialConfig ?? DEFAULT_CONFIG, initialLanguage ?? DEFAULT_LANGUAGE),
+      initialLanguage ?? DEFAULT_LANGUAGE,
+    ),
+  )
   const configRef = useRef(config)
   const stateRef = useRef(state)
   const languageRef = useRef(language)
@@ -320,17 +389,36 @@ export function useTypingTest(
   }, [state.status])
 
   const setConfig = useCallback(async (newConfig: TypingTestConfig) => {
-    setConfigState(newConfig)
-    configRef.current = newConfig
+    // Normalize against whatever language is already active — a caller can
+    // push a config carrying a stale romajiInput straight in (e.g. a
+    // persisted config restored from device prefs), bypassing setLanguage
+    // entirely. See clearRomajiInputForLanguage.
+    const normalized = clearRomajiInputForLanguage(newConfig, languageRef.current)
+    setConfigState(normalized)
+    configRef.current = normalized
     const seq = ++seqRef.current
-    const result = await createWordsForConfig(newConfig, languageRef.current)
+    const result = await createWordsForConfig(normalized, languageRef.current)
     if (seqRef.current !== seq) return
     setState(freshState(result))
+  }, [])
+
+  // Applies clearRomajiInputForLanguage against `newLanguage` and, if it
+  // actually changed configRef.current, pushes the result into both the
+  // ref and React state. Shared by setLanguage's two config/language
+  // re-pairing points below: the normal switch, and the error-path
+  // fallback to DEFAULT_LANGUAGE.
+  const applyClearedConfigForLanguage = useCallback((newLanguage: string) => {
+    const cleared = clearRomajiInputForLanguage(configRef.current, newLanguage)
+    if (cleared !== configRef.current) {
+      configRef.current = cleared
+      setConfigState(cleared)
+    }
   }, [])
 
   const setLanguage = useCallback(async (newLanguage: string): Promise<string> => {
     setLanguageState(newLanguage)
     languageRef.current = newLanguage
+    applyClearedConfigForLanguage(newLanguage)
 
     setIsLanguageLoading(true)
     const seq = ++seqRef.current
@@ -345,6 +433,7 @@ export function useTypingTest(
       if (seqRef.current !== seq) return languageRef.current
       languageRef.current = DEFAULT_LANGUAGE
       setLanguageState(DEFAULT_LANGUAGE)
+      applyClearedConfigForLanguage(DEFAULT_LANGUAGE)
       setState(createInitialState(configRef.current, DEFAULT_LANGUAGE))
       return DEFAULT_LANGUAGE
     } finally {
@@ -352,7 +441,7 @@ export function useTypingTest(
         setIsLanguageLoading(false)
       }
     }
-  }, [])
+  }, [applyClearedConfigForLanguage])
 
   const setBaseLayer = useCallback(async (layer: number) => {
     setBaseLayerState(layer)
@@ -427,6 +516,7 @@ export function useTypingTest(
       wpmHistory: memory.wpmHistory,
       lineBreaks: new Set(lineBreaks),
       lineIndents,
+      romajiKeystrokes: '',
     })
     return true
   }, [])
@@ -569,6 +659,14 @@ export function useTypingTest(
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
 
+      // Romaji mode has its own key semantics for every key kind handled
+      // below (submit/Backspace no-ops, printable dispatched to the
+      // matcher) — dispatch once here instead of re-checking
+      // isRomajiInputActive in each branch.
+      if (isRomajiInputActive(configRef.current)) {
+        return processRomajiKeyEvent(s, key, configRef.current, languageRef.current)
+      }
+
       // Space and Enter both advance a word, but they are distinct: at a
       // line-end word Enter is expected, elsewhere Space. The non-matching
       // key is a no-op. Flat word-flow sources have no `lineBreaks`, so
@@ -625,6 +723,10 @@ export function useTypingTest(
   const processCompositionEnd = useCallback((data: string) => {
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
+      // Romaji mode is direct-keystroke only; IME composition input (which
+      // implies IME is on, contrary to the mode's requirement) is ignored
+      // entirely rather than fed into currentInput.
+      if (isRomajiInputActive(configRef.current)) return s
       if (!data) {
         return { ...s, compositionText: '' }
       }
@@ -712,11 +814,23 @@ export function useTypingTest(
     return Math.max(0, config.duration - elapsed)
   }, [config, state.startTime, state.endTime, tick])
 
+  // Current word's romaji progress (romajiInput mode only), re-derived from
+  // the accepted keystroke history on every change rather than stored on
+  // state directly — see `buildRomajiMatcher`.
+  const romajiGuide = useMemo(() => {
+    if (!isRomajiInputActive(config)) return null
+    if (state.currentWordIndex >= state.words.length) return null
+    const word = state.words[state.currentWordIndex]
+    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes)
+    return { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
+  }, [config, state.words, state.currentWordIndex, state.romajiKeystrokes])
+
   return {
     state,
     wpm,
     kpm,
     accuracy,
+    romajiGuide,
     elapsedSeconds,
     remainingSeconds,
     config,
@@ -773,6 +887,34 @@ function tryFinishLastWord(state: TypingTestState): TypingTestState | null {
   }
 }
 
+/** Shared word-advance tail, run after a word has just been finalized into
+ *  `base.wordResults` and `base.currentWordIndex` moved past it. Used by
+ *  both the Space/Enter submit path (`handleSpace`) and the romaji
+ *  auto-advance path (`handleRomajiChar`) so the time-mode word-supply
+ *  refill and the words/quote finish transition stay in one place. */
+function advanceAfterWord(base: TypingTestState, config: TypingTestConfig, language: string): TypingTestState {
+  const nextIndex = base.currentWordIndex
+
+  // Time mode: extend words if running low, never finish from words
+  if (config.mode === 'time') {
+    const wordsRemaining = base.words.length - nextIndex
+    if (wordsRemaining < TIME_MODE_EXTEND_THRESHOLD) {
+      const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, {
+        punctuation: config.punctuation,
+        numbers: config.numbers,
+      }, language)
+      return { ...base, words: [...base.words, ...moreWords] }
+    }
+    return base
+  }
+
+  // Words and quote modes: finish when all words typed
+  if (nextIndex >= base.words.length) {
+    return { ...base, status: 'finished', endTime: Date.now() }
+  }
+  return base
+}
+
 function handleSpace(state: TypingTestState, config: TypingTestConfig, language: string): TypingTestState {
   if (state.currentWordIndex >= state.words.length) return state
 
@@ -792,24 +934,63 @@ function handleSpace(state: TypingTestState, config: TypingTestConfig, language:
     incorrectChars: state.incorrectChars + charCounts.incorrect,
   }
 
-  // Time mode: extend words if running low, never finish from words
-  if (config.mode === 'time') {
-    const wordsRemaining = state.words.length - nextIndex
-    if (wordsRemaining < TIME_MODE_EXTEND_THRESHOLD) {
-      const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, {
-        punctuation: config.punctuation,
-        numbers: config.numbers,
-      }, language)
-      return { ...base, words: [...state.words, ...moreWords] }
-    }
-    return base
+  return advanceAfterWord(base, config, language)
+}
+
+/** Romaji-mode key semantics, dispatched once from `processKeyEvent`'s
+ *  updater instead of checking `isRomajiInputActive` separately at each key
+ *  kind. Submit keys (Space/Enter) and Backspace are no-ops in this mode —
+ *  romaji mode auto-advances on completion and rejected keystrokes never
+ *  entered the buffer, so there is nothing to submit or undo (see
+ *  `handleRomajiChar`). A printable character starts the run from
+ *  'waiting' before being fed to the matcher; every other key (multi-char
+ *  names like Shift/Control) passes through untouched, matching the
+ *  non-romaji fallback. IME composition input is gated separately in
+ *  `processCompositionEnd`, not here. */
+function processRomajiKeyEvent(state: TypingTestState, key: string, config: TypingTestConfig, language: string): TypingTestState {
+  if (isSubmitKey(key) || key === 'Enter') return state
+  if (key === 'Backspace') return state
+  if (key.length === 1) {
+    const current = state.status === 'waiting' ? { ...state, status: 'running' as const, startTime: Date.now() } : state
+    return handleRomajiChar(current, key, config, language)
+  }
+  return state
+}
+
+/** Sequential romaji-keystroke judging (romajiInput mode). Unlike
+ *  `handleChar`, correctness is counted per keystroke rather than per word:
+ *  an accepted keystroke (including the one that completes a kana segment)
+ *  is a correct char, a rejected one is an incorrect char and leaves the
+ *  matcher's position untouched (nothing is appended to currentInput or
+ *  the keystroke buffer). Completing the whole word auto-advances — the
+ *  submit key is blocked in this mode (see `processKeyEvent`), so there is
+ *  no separate Space-triggered finalize path to keep in sync. */
+function handleRomajiChar(state: TypingTestState, char: string, config: TypingTestConfig, language: string): TypingTestState {
+  if (state.currentWordIndex >= state.words.length) return state
+
+  const word = state.words[state.currentWordIndex]
+  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes)
+  const result = matcher.acceptChar(char)
+
+  if (result === 'reject') {
+    return { ...state, incorrectChars: state.incorrectChars + 1 }
   }
 
-  // Words and quote modes: finish when all words typed
-  if (nextIndex >= state.words.length) {
-    return { ...base, status: 'finished', endTime: Date.now() }
+  const correctChars = state.correctChars + 1
+
+  if (result === 'complete' && matcher.isComplete()) {
+    const base: TypingTestState = {
+      ...state,
+      currentWordIndex: state.currentWordIndex + 1,
+      currentInput: '',
+      romajiKeystrokes: '',
+      wordResults: [...state.wordResults, { word, typed: matcher.typedRomaji(), correct: true }],
+      correctChars,
+    }
+    return advanceAfterWord(base, config, language)
   }
-  return base
+
+  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars }
 }
 
 function handleBackspace(state: TypingTestState): TypingTestState {

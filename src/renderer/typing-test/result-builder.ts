@@ -71,7 +71,7 @@ export function buildResultNameChips(result: TypingTestResult, t: (key: string) 
 }
 
 export function configKey(result: TypingTestResult): string {
-  return `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}`
+  return `${result.mode ?? 'words'}|${result.mode2 ?? ''}|${result.language ?? ''}|${result.punctuation ?? false}|${result.numbers ?? false}|${result.romajiInput ?? false}`
 }
 
 export function isPbForConfig(result: TypingTestResult, history: TypingTestResult[]): boolean {
@@ -127,6 +127,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
   const hasToggles = input.config.mode === 'words' || input.config.mode === 'time'
   const hasPunctuation = hasToggles ? input.config.punctuation : undefined
   const hasNumbers = hasToggles ? input.config.numbers : undefined
+  const hasRomajiInput = hasToggles ? input.config.romajiInput : undefined
 
   return {
     date: new Date().toISOString(),
@@ -146,6 +147,7 @@ export function buildTypingTestResult(input: BuildTypingTestResultInput): Typing
     language: input.config.mode === 'tatoeba' ? input.config.language : input.language,
     punctuation: hasPunctuation,
     numbers: hasNumbers,
+    romajiInput: hasRomajiInput,
     consistency,
     wpmHistory: input.wpmHistory,
   }

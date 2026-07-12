@@ -7,7 +7,7 @@
 import { useRef, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
-import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS } from './types'
+import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES } from './types'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
@@ -27,9 +27,12 @@ const LABEL = 'text-sm text-content-muted'
 interface Props {
   config: TypingTestConfig
   onConfigChange: (config: TypingTestConfig) => void
+  /** Currently selected word-language pack. Gates the Romaji toggle, which
+   *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
+  language: string
 }
 
-export function TypingTestSettingsBar({ config, onConfigChange }: Props) {
+export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
   const { t } = useTranslation()
 
   // Remember toggle state so it persists through quote modes (which have no toggles).
@@ -54,6 +57,9 @@ export function TypingTestSettingsBar({ config, onConfigChange }: Props) {
   }, [config, onConfigChange])
 
   const hasPunctuationNumbers = config.mode === 'words' || config.mode === 'time'
+  // Romaji input only judges kana word packs — hidden for every other
+  // language, and for quote mode (no toggles row at all).
+  const showRomajiToggle = hasPunctuationNumbers && ROMAJI_INPUT_LANGUAGES.has(language)
 
   // The unit lives on the label so the buttons stay compact numbers.
   const unitsLabel = config.mode === 'words'
@@ -154,6 +160,16 @@ export function TypingTestSettingsBar({ config, onConfigChange }: Props) {
             >
               {t('editor.typingTest.numbers')}
             </button>
+            {showRomajiToggle && (
+              <button
+                type="button"
+                data-testid="toggle-romaji"
+                className={optionButtonClass(config.romajiInput === true, 'px-2.5')}
+                onClick={() => onConfigChange({ ...config, romajiInput: !config.romajiInput })}
+              >
+                {t('editor.typingTest.romaji.toggle')}
+              </button>
+            )}
           </div>
         </div>
       )}

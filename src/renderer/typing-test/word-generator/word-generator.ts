@@ -26,6 +26,19 @@ export async function getLanguageData(name: string): Promise<LanguageData> {
   return languageCache.get('english')!
 }
 
+/** Evicts a single cached language entry, forcing the next `getLanguageData`
+ *  call for `name` to re-fetch. `languageCache` is private to this module,
+ *  so anything that needs to reseed a name with different word data —
+ *  currently only tests that reuse a real language id across cases — goes
+ *  through this rather than reaching into module internals. Unlike
+ *  `clearTatoebaPackCache`/`clearFileImportTextCache`, this doesn't support
+ *  clearing the whole cache: the built-in `'english'` entry is the fallback
+ *  `getLanguageData` itself falls back to, so evicting it would break that
+ *  fallback. */
+export function clearLanguageCache(name: string): void {
+  languageCache.delete(name)
+}
+
 function sampleWords(
   wordList: readonly string[],
   count: number,

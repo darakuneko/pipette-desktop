@@ -79,8 +79,8 @@ describe('getPersonalBests', () => {
     ]
     const pbs = getPersonalBests(results)
     expect(pbs.size).toBe(2)
-    expect(pbs.get('words|30|english|false|false')?.wpm).toBe(100)
-    expect(pbs.get('time|60|english|false|false')?.wpm).toBe(90)
+    expect(pbs.get('words|30|english|false|false|false')?.wpm).toBe(100)
+    expect(pbs.get('time|60|english|false|false|false')?.wpm).toBe(90)
   })
 
   it('distinguishes by mode2', () => {
@@ -90,7 +90,7 @@ describe('getPersonalBests', () => {
     ]
     const pbs = getPersonalBests(results)
     expect(pbs.size).toBe(2)
-    expect(pbs.get('words|30|english|false|false')?.wpm).toBe(80)
-    expect(pbs.get('words|60|english|false|false')?.wpm).toBe(90)
+    expect(pbs.get('words|30|english|false|false|false')?.wpm).toBe(80)
+    expect(pbs.get('words|60|english|false|false|false')?.wpm).toBe(90)
   })
 })
