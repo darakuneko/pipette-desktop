@@ -294,6 +294,11 @@ export interface BigramFilters {
    * approximation, not exact ms (see Task-P3-bigrams-pair-interval-
    * threshold.md for rationale). */
   pairIntervalThresholdMs?: number
+  /** 2 = bigram, 3 = trigram — matches `TypingBigramAggregateOptions.gram`.
+   * Absent (older persisted settings) normalizes to `2` via the
+   * `{ ...DEFAULT, ...saved }` merge in `restoreFilters`, same as every
+   * other optional field on this shape. */
+  gram?: 2 | 3
 }
 
 export interface LayoutComparisonFilters {
@@ -489,6 +494,7 @@ function isValidBigramFilters(value: unknown): boolean {
   if (o.slowLimit !== undefined && !isPositiveInt(o.slowLimit)) return false
   if (o.fingerLimit !== undefined && !isPositiveInt(o.fingerLimit)) return false
   if (o.pairIntervalThresholdMs !== undefined && !isNonNegativeInt(o.pairIntervalThresholdMs)) return false
+  if (o.gram !== undefined && o.gram !== 2 && o.gram !== 3) return false
   return true
 }
 

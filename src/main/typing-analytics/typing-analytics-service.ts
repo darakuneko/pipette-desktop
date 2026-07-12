@@ -26,7 +26,7 @@ import type {
   TypingBigramAggregateView,
 } from '../../shared/types/typing-analytics'
 import type { KleKey } from '../../shared/kle/types'
-import { canonicalScopeKey } from '../../shared/types/typing-analytics'
+import { canonicalScopeKey, emptyTombstoneResult } from '../../shared/types/typing-analytics'
 import { isHashScope, isOwnScope, normalizeAppScopes, parseDeviceScope } from '../../shared/types/analyze-filters'
 import { log } from '../logger'
 import { getCurrentAppName } from './app-monitor'
@@ -68,10 +68,12 @@ import {
   minuteStatsRowId,
   scopeRowId,
   sessionRowId,
+  trigramMinuteRowId,
+  type JsonlBigramMinuteEntry,
   type JsonlRow,
 } from './jsonl/jsonl-row'
 import { appendRowsToFile } from './jsonl/jsonl-writer'
-import { bucketizeIki } from './bigram-bucket'
+import { bucketizeIki, sumAndSumSquares } from './bigram-bucket'
 import {
   aggregatePairTotals,
   rankBigramsByCount,
@@ -207,7 +209,7 @@ export function setupTypingAnalyticsIpc(): void {
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_DELETE_ITEMS,
     async (_event, uid: unknown, dates: unknown): Promise<TypingTombstoneResult> => {
-      const empty: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+      const empty = emptyTombstoneResult()
       if (typeof uid !== 'string' || uid.length === 0) return empty
       if (!Array.isArray(dates)) return empty
       const validDates = dates.filter((d): d is string => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))
@@ -219,7 +221,7 @@ export function setupTypingAnalyticsIpc(): void {
   secureHandle(
     IpcChannels.TYPING_ANALYTICS_DELETE_ALL,
     async (_event, uid: unknown): Promise<TypingTombstoneResult> => {
-      const empty: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+      const empty = emptyTombstoneResult()
       if (typeof uid !== 'string' || uid.length === 0) return empty
       return deleteAllTypingForKeyboard(uid)
     },
@@ -761,6 +763,7 @@ export function setupTypingAnalyticsIpc(): void {
       const opts = parseBigramAggregateOptions(options)
       const limit = opts.limit ?? 30
       const minSample = opts.minSampleCount ?? 5
+      const gram = opts.gram ?? 2
       const apps = normalizeAppScopes(appScopes)
       const typingTests = normalizeAppScopes(typingTestScopes)
       const runIds = normalizeAppScopes(runIdScopes)
@@ -772,8 +775,8 @@ export function setupTypingAnalyticsIpc(): void {
           ? parsedScope.machineHash
           : undefined
       const rows = machineHash === undefined
-        ? db.listBigramMinutesInRangeForUid(uid, sinceMs, untilMs, apps, typingTests, runIds)
-        : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, sinceMs, untilMs, apps, typingTests, runIds)
+        ? db.listNgramMinutesInRangeForUid(gram, uid, sinceMs, untilMs, apps, typingTests, runIds)
+        : db.listNgramMinutesInRangeForUidAndHash(gram, uid, machineHash, sinceMs, untilMs, apps, typingTests, runIds)
       const totals = aggregatePairTotals(rows)
       if (parsedView === 'slow') {
         return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit) }
@@ -1244,7 +1247,7 @@ export async function deleteTypingDailySummaries(
     if (range) ranges.push(range)
   }
   if (ranges.length === 0) {
-    return { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+    return emptyTombstoneResult()
   }
   const machineHash = await getMachineHash()
   const userDataDir = app.getPath('userData')
@@ -1265,12 +1268,14 @@ export async function deleteTypingDailySummaries(
   }
   const db = getTypingAnalyticsDB()
   const updatedAt = Date.now()
-  const result: TypingTombstoneResult = { charMinutes: 0, matrixMinutes: 0, minuteStats: 0, sessions: 0 }
+  const result = emptyTombstoneResult()
   for (const range of ranges) {
     const r = db.tombstoneRowsForUidInRange(uid, range.startMs, range.endMs, updatedAt)
     result.charMinutes += r.charMinutes
     result.matrixMinutes += r.matrixMinutes
     result.minuteStats += r.minuteStats
+    result.bigramMinutes += r.bigramMinutes
+    result.trigramMinutes += r.trigramMinutes
     result.sessions += r.sessions
   }
   await notifySyncIfTouched(uid, result, [...utcDays])
@@ -1330,7 +1335,9 @@ async function notifySyncIfTouched(
   result: TypingTombstoneResult,
   days: readonly UtcDay[],
 ): Promise<void> {
-  const touched = result.charMinutes + result.matrixMinutes + result.minuteStats + result.sessions
+  const touched =
+    result.charMinutes + result.matrixMinutes + result.minuteStats +
+    result.bigramMinutes + result.trigramMinutes + result.sessions
   if (touched === 0 || days.length === 0) return
   const notifier = syncNotifier
   if (!notifier) return
@@ -1443,6 +1450,9 @@ function parseBigramAggregateOptions(value: unknown): TypingBigramAggregateOptio
   if (typeof o.limit === 'number' && Number.isFinite(o.limit) && o.limit > 0) {
     out.limit = Math.floor(o.limit)
   }
+  if (o.gram === 2 || o.gram === 3) {
+    out.gram = o.gram
+  }
   return out
 }
 
@@ -1549,10 +1559,6 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
     })
   }
   if (snapshot.bigrams.size > 0) {
-    const bigrams: Record<string, { c: number; h: number[] }> = {}
-    for (const [pairKey, ikis] of snapshot.bigrams) {
-      bigrams[pairKey] = { c: ikis.length, h: bucketizeIki(ikis) }
-    }
     rows.push({
       id: bigramMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId),
       kind: 'bigram-minute',
@@ -1560,7 +1566,22 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
       payload: {
         scopeId: snapshot.scopeId,
         minuteTs: snapshot.minuteTs,
-        bigrams,
+        bigrams: toNgramEntries(snapshot.bigrams),
+        appName,
+        typingTest,
+        runId,
+      },
+    })
+  }
+  if (snapshot.trigrams.size > 0) {
+    rows.push({
+      id: trigramMinuteRowId(snapshot.scopeId, snapshot.minuteTs, runId),
+      kind: 'trigram-minute',
+      updated_at: updatedAt,
+      payload: {
+        scopeId: snapshot.scopeId,
+        minuteTs: snapshot.minuteTs,
+        trigrams: toNgramEntries(snapshot.trigrams),
         appName,
         typingTest,
         runId,
@@ -1568,6 +1589,18 @@ function buildSnapshotRows(snapshot: MinuteSnapshot, updatedAt: number): JsonlRo
     })
   }
   return rows
+}
+
+/** Bucketize each pair/triple's raw IKI samples into the JSONL entry
+ * shape (`c`/`h`/`s`/`sq`) shared by bigram-minute and trigram-minute
+ * rows — see {@link buildSnapshotRows}. */
+function toNgramEntries(ikisByKey: ReadonlyMap<string, number[]>): Record<string, JsonlBigramMinuteEntry> {
+  const entries: Record<string, JsonlBigramMinuteEntry> = {}
+  for (const [key, ikis] of ikisByKey) {
+    const { sum, sumSq } = sumAndSumSquares(ikis)
+    entries[key] = { c: ikis.length, h: bucketizeIki(ikis), s: sum, sq: sumSq }
+  }
+  return entries
 }
 
 function buildSessionRow(

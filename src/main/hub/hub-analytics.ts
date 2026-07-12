@@ -307,12 +307,17 @@ async function collectData(
       ? db.listBigramMinutesInRangeForUid(uid, fromMs, toMs, appScopes)
       : db.listBigramMinutesInRangeForUidAndHash(uid, machineHash, fromMs, toMs, appScopes)
     const bigramTotals = aggregatePairTotals(bigramRows)
+    // Hub's wire field is `bigramId` (see HUB-ANALYTICS-API.md); map it
+    // explicitly from the aggregator's `ngramId` instead of relying on
+    // structural assignability, so a future ngramId-only shape can't
+    // silently break this export.
     bigramTop = rankBigramsByCount(bigramTotals, ANALYTICS_BIGRAM_TOP_LIMIT)
+      .map(({ ngramId, count, hist, avgIki }) => ({ bigramId: ngramId, count, hist, avgIki }))
     bigramSlow = rankBigramsBySlow(
       bigramTotals,
       ANALYTICS_BIGRAM_SLOW_MIN_SAMPLE,
       ANALYTICS_BIGRAM_SLOW_LIMIT,
-    )
+    ).map(({ ngramId, count, hist, avgIki, p95 }) => ({ bigramId: ngramId, count, hist, avgIki, p95 }))
   }
 
   const layoutComparison = needsLayoutComparison

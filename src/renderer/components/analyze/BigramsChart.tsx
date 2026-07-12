@@ -35,6 +35,7 @@ import {
   percentileFromHist,
 } from './analyze-bigram-heatmap'
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
+import { SegmentedToggle } from './SegmentedToggle'
 import type { RangeMs } from './analyze-types'
 import { Stat, TooltipShell } from './analyze-tooltip'
 import { CHART_TICK_FONT_SIZE } from '../../utils/chart-palette'
@@ -56,10 +57,16 @@ interface BigramsChartProps {
    * components rename this to `minAvgIkiMs` to make the avgIki bucket
    * approximation explicit at the predicate site. */
   pairIntervalThresholdMs: number
+  /** 2 = bigram, 3 = trigram — forwarded to the IPC as
+   * `options.gram`. The Finger IKI quadrant only exists for bigrams
+   * (a 3-key finger-pair isn't a defined concept), so it's hidden
+   * whenever `gram === 3`. */
+  gram: 2 | 3
   onTopLimitChange: (next: number) => void
   onSlowLimitChange: (next: number) => void
   onFingerLimitChange: (next: number) => void
   onPairIntervalThresholdChange: (next: number) => void
+  onGramChange: (next: 2 | 3) => void
   snapshot: TypingKeymapSnapshot | null
   fingerOverrides?: Record<string, FingerType>
 }
@@ -81,10 +88,12 @@ export function BigramsChart({
   slowLimit,
   fingerLimit,
   pairIntervalThresholdMs,
+  gram,
   onTopLimitChange,
   onSlowLimitChange,
   onFingerLimitChange,
   onPairIntervalThresholdChange,
+  onGramChange,
   snapshot,
   fingerOverrides,
 }: BigramsChartProps): JSX.Element {
@@ -106,6 +115,7 @@ export function BigramsChart({
     setError(false)
     fetchBigramAggregateForRange(uid, scope, range.fromMs, range.toMs, 'top', {
       limit: ALL_PAIRS_LIMIT,
+      gram,
     }, appScopes, typingTestScopes, runIdScopes)
       .then((next) => {
         if (cancelled) return
@@ -123,37 +133,33 @@ export function BigramsChart({
     }
     // scope is captured inside the effect via closure but not listed —
     // scopeKey is the stable identity proxy.
-  }, [uid, range.fromMs, range.toMs, scopeKey, appScopes.join('|')])
+  }, [uid, range.fromMs, range.toMs, scopeKey, appScopes.join('|'), gram])
 
   const entries = result.entries
 
-  if (loading) {
-    return (
-      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-loading">
-        {t('analyze.bigrams.loading')}
-      </div>
-    )
-  }
-  if (error) {
-    return (
-      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-error">
-        {t('analyze.bigrams.error')}
-      </div>
-    )
-  }
-  if (entries.length === 0) {
-    return (
-      <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-empty">
-        {t('analyze.bigrams.empty')}
-      </div>
-    )
-  }
+  // Finger IKI has no defined meaning for trigrams (a 3-key finger pair
+  // isn't a thing), so gram === 3 renders Top + Slow only. Dropping to a
+  // single row keeps the two quadrants full-height instead of leaving an
+  // empty grid cell where Finger IKI used to sit.
+  const showFingerIki = gram === 2
+  const gridClass = showFingerIki
+    ? 'grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-3'
+    : 'grid h-full min-h-0 grid-cols-2 grid-rows-1 gap-3'
 
-  return (
-    <div
-      className="grid h-full min-h-0 grid-cols-2 grid-rows-2 gap-3"
-      data-testid="analyze-bigrams-content"
-    >
+  const body = loading ? (
+    <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-loading">
+      {t('analyze.bigrams.loading')}
+    </div>
+  ) : error ? (
+    <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-error">
+      {t('analyze.bigrams.error')}
+    </div>
+  ) : entries.length === 0 ? (
+    <div className="py-4 text-center text-sm text-content-muted" data-testid="analyze-bigrams-empty">
+      {t('analyze.bigrams.empty')}
+    </div>
+  ) : (
+    <div className={gridClass} data-testid="analyze-bigrams-content">
       <Quadrant
         title={t('analyze.bigrams.quadrant.top')}
         controls={
@@ -164,44 +170,46 @@ export function BigramsChart({
           />
         }
       >
-        <TopRanking entries={entries} listLimit={topLimit} />
+        <TopRanking entries={entries} listLimit={topLimit} gram={gram} />
       </Quadrant>
-      <Quadrant
-        title={t('analyze.bigrams.quadrant.fingerIki')}
-        controls={
-          <>
-            <PairIntervalThresholdInput
-              value={pairIntervalThresholdMs}
-              onChange={onPairIntervalThresholdChange}
-              testId="analyze-bigrams-finger-threshold-input"
-            />
-            <select
-              value={fingerSort}
-              onChange={(e) => setFingerSort(e.target.value as FingerSort)}
-              className={FILTER_SELECT}
-              data-testid="analyze-bigrams-finger-sort-select"
-              aria-label={t('analyze.bigrams.fingerIki.sortLabel')}
-            >
-              <option value="desc">{t('analyze.bigrams.fingerIki.sort.desc')}</option>
-              <option value="asc">{t('analyze.bigrams.fingerIki.sort.asc')}</option>
-            </select>
-            <LimitSelect
-              value={fingerLimit}
-              onChange={onFingerLimitChange}
-              testId="analyze-bigrams-finger-limit-select"
-            />
-          </>
-        }
-      >
-        <BigramFingerBarChart
-          entries={entries}
-          snapshot={snapshot}
-          fingerOverrides={fingerOverrides}
-          listLimit={fingerLimit}
-          sort={fingerSort}
-          minAvgIkiMs={pairIntervalThresholdMs}
-        />
-      </Quadrant>
+      {showFingerIki && (
+        <Quadrant
+          title={t('analyze.bigrams.quadrant.fingerIki')}
+          controls={
+            <>
+              <PairIntervalThresholdInput
+                value={pairIntervalThresholdMs}
+                onChange={onPairIntervalThresholdChange}
+                testId="analyze-bigrams-finger-threshold-input"
+              />
+              <select
+                value={fingerSort}
+                onChange={(e) => setFingerSort(e.target.value as FingerSort)}
+                className={FILTER_SELECT}
+                data-testid="analyze-bigrams-finger-sort-select"
+                aria-label={t('analyze.bigrams.fingerIki.sortLabel')}
+              >
+                <option value="desc">{t('analyze.bigrams.fingerIki.sort.desc')}</option>
+                <option value="asc">{t('analyze.bigrams.fingerIki.sort.asc')}</option>
+              </select>
+              <LimitSelect
+                value={fingerLimit}
+                onChange={onFingerLimitChange}
+                testId="analyze-bigrams-finger-limit-select"
+              />
+            </>
+          }
+        >
+          <BigramFingerBarChart
+            entries={entries}
+            snapshot={snapshot}
+            fingerOverrides={fingerOverrides}
+            listLimit={fingerLimit}
+            sort={fingerSort}
+            minAvgIkiMs={pairIntervalThresholdMs}
+          />
+        </Quadrant>
+      )}
       <Quadrant
         title={t('analyze.bigrams.quadrant.slow')}
         controls={
@@ -223,9 +231,49 @@ export function BigramsChart({
           entries={entries}
           listLimit={slowLimit}
           minAvgIkiMs={pairIntervalThresholdMs}
+          gram={gram}
         />
       </Quadrant>
     </div>
+  )
+
+  return (
+    <div className="flex h-full min-h-0 flex-col gap-2" data-testid="analyze-bigrams-root">
+      <div className="flex shrink-0 justify-end">
+        <GramToggle value={gram} onChange={onGramChange} />
+      </div>
+      <div className="min-h-0 flex-1">{body}</div>
+    </div>
+  )
+}
+
+const GRAM_OPTIONS: readonly (2 | 3)[] = [2, 3]
+
+const GRAM_LABEL_KEY: Record<2 | 3, string> = {
+  2: 'analyze.bigrams.gramToggle.bigram',
+  3: 'analyze.bigrams.gramToggle.trigram',
+}
+
+interface GramToggleProps {
+  value: 2 | 3
+  onChange: (next: 2 | 3) => void
+}
+
+/** Segmented 2-gram / 3-gram switch — built from the same
+ * `SegmentedToggle` primitive as `FilterDimensionToggle` so the Bigrams
+ * tab's own toggle reads as the same control family as the rest of the
+ * Analyze filter row. */
+function GramToggle({ value, onChange }: GramToggleProps): JSX.Element {
+  const { t } = useTranslation()
+  return (
+    <SegmentedToggle
+      options={GRAM_OPTIONS}
+      value={value}
+      onChange={onChange}
+      labelFor={(option) => t(GRAM_LABEL_KEY[option])}
+      ariaLabel={t('analyze.bigrams.gramToggle.ariaLabel')}
+      testId="analyze-bigrams-gram-toggle"
+    />
   )
 }
 
@@ -329,7 +377,7 @@ function PairIntervalThresholdInput({
   )
 }
 
-type SortKey = 'count' | 'avgIki' | 'p95'
+type SortKey = 'count' | 'avgIki' | 'sd' | 'p95'
 interface SortState<K extends SortKey> {
   key: K
   dir: 'asc' | 'desc'
@@ -342,25 +390,44 @@ function compareNumeric(a: number | null, b: number | null, dir: 'asc' | 'desc')
   return dir === 'asc' ? a - b : b - a
 }
 
+/** Compares two ranking rows on the currently active sort field. Every
+ * sortable field is `number | null`, so a field lookup plus
+ * `compareNumeric` replaces a per-field switch for both `TopRanking`
+ * and `SlowRanking`. */
+function compareBySortKey<K extends SortKey>(
+  a: Record<K, number | null>,
+  b: Record<K, number | null>,
+  sort: SortState<K>,
+): number {
+  return compareNumeric(a[sort.key], b[sort.key], sort.dir)
+}
+
+/** Toggles direction when the clicked column is already active,
+ * otherwise switches to that column defaulting to `desc`. */
+function toggleSort<K extends SortKey>(prev: SortState<K>, key: K): SortState<K> {
+  return prev.key === key
+    ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+    : { key, dir: 'desc' }
+}
+
+function fmtMs(value: number | null): string {
+  return value !== null ? `${Math.round(value)} ms` : '—'
+}
+
 interface TopRankingProps {
   entries: readonly TypingBigramTopEntry[]
   listLimit: number
+  gram: 2 | 3
 }
 
-function TopRanking({ entries, listLimit }: TopRankingProps): JSX.Element {
+function TopRanking({ entries, listLimit, gram }: TopRankingProps): JSX.Element {
   const { t } = useTranslation()
-  const [sort, setSort] = useState<SortState<'count' | 'avgIki'>>({ key: 'count', dir: 'desc' })
+  const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'sd'>>({ key: 'count', dir: 'desc' })
+  const toggle = (key: 'count' | 'avgIki' | 'sd'): void => setSort((prev) => toggleSort(prev, key))
 
   const sliced = useMemo(() => {
     const arr = [...entries].slice(0, Math.max(listLimit, 0))
-    arr.sort((a, b) => {
-      switch (sort.key) {
-        case 'count':
-          return sort.dir === 'asc' ? a.count - b.count : b.count - a.count
-        case 'avgIki':
-          return compareNumeric(a.avgIki, b.avgIki, sort.dir)
-      }
-    })
+    arr.sort((a, b) => compareBySortKey(a, b, sort))
     return arr
   }, [entries, listLimit, sort])
 
@@ -368,7 +435,7 @@ function TopRanking({ entries, listLimit }: TopRankingProps): JSX.Element {
     return <EmptyQuadrant text={t('analyze.bigrams.empty')} />
   }
   return (
-    <table className="w-full text-xs">
+    <table className="w-full text-xs" data-testid="analyze-bigrams-top-ranking">
       <thead className="text-content-muted">
         <tr>
           <th className="px-1 py-1 text-right font-medium">#</th>
@@ -378,34 +445,33 @@ function TopRanking({ entries, listLimit }: TopRankingProps): JSX.Element {
             label={t('analyze.bigrams.column.count')}
             active={sort.key === 'count'}
             indicator={sortIndicator(sort, 'count')}
-            onClick={() =>
-              setSort((prev) => (prev.key === 'count'
-                ? { key: 'count', dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                : { key: 'count', dir: 'desc' }))
-            }
+            onClick={() => toggle('count')}
           />
           <SortHeader
             align="right"
             label={t('analyze.bigrams.column.avgIki')}
+            title={gram === 3 ? t('analyze.bigrams.column.avgIkiTrigramTooltip') : undefined}
             active={sort.key === 'avgIki'}
             indicator={sortIndicator(sort, 'avgIki')}
-            onClick={() =>
-              setSort((prev) => (prev.key === 'avgIki'
-                ? { key: 'avgIki', dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                : { key: 'avgIki', dir: 'desc' }))
-            }
+            onClick={() => toggle('avgIki')}
+          />
+          <SortHeader
+            align="right"
+            label={t('analyze.bigrams.column.sd')}
+            active={sort.key === 'sd'}
+            indicator={sortIndicator(sort, 'sd')}
+            onClick={() => toggle('sd')}
           />
         </tr>
       </thead>
       <tbody>
         {sliced.map((entry, i) => (
-          <tr key={entry.bigramId} className="border-t border-surface-dim">
+          <tr key={entry.ngramId} className="border-t border-surface-dim">
             <td className="px-1 py-1 text-right tabular-nums text-content-muted">{i + 1}</td>
-            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.bigramId)}</td>
+            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.ngramId)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
-            <td className="px-2 py-1 text-right tabular-nums">
-              {entry.avgIki !== null ? `${Math.round(entry.avgIki)} ms` : '—'}
-            </td>
+            <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
+            <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>
           </tr>
         ))}
       </tbody>
@@ -414,10 +480,11 @@ function TopRanking({ entries, listLimit }: TopRankingProps): JSX.Element {
 }
 
 interface SlowEntry {
-  bigramId: string
+  ngramId: string
   count: number
   hist: number[]
   avgIki: number | null
+  sd: number | null
   p95: number | null
 }
 
@@ -427,11 +494,13 @@ interface SlowRankingProps {
   /** Shared threshold from `pairIntervalThresholdMs` — see
    * `avgIkiAtOrAboveThreshold` for the bucket-center caveat. */
   minAvgIkiMs: number
+  gram: 2 | 3
 }
 
-function SlowRanking({ entries, listLimit, minAvgIkiMs }: SlowRankingProps): JSX.Element {
+function SlowRanking({ entries, listLimit, minAvgIkiMs, gram }: SlowRankingProps): JSX.Element {
   const { t } = useTranslation()
-  const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'p95'>>({ key: 'avgIki', dir: 'desc' })
+  const [sort, setSort] = useState<SortState<'count' | 'avgIki' | 'sd' | 'p95'>>({ key: 'avgIki', dir: 'desc' })
+  const toggle = (key: 'count' | 'avgIki' | 'sd' | 'p95'): void => setSort((prev) => toggleSort(prev, key))
 
   const slowEntries = useMemo<SlowEntry[]>(() => {
     const eligible: SlowEntry[] = []
@@ -439,23 +508,15 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs }: SlowRankingProps): JSX
       const avg = avgIkiAtOrAboveThreshold(entry.hist, minAvgIkiMs)
       if (avg === null) continue
       eligible.push({
-        bigramId: entry.bigramId,
+        ngramId: entry.ngramId,
         count: entry.count,
         hist: entry.hist,
         avgIki: avg,
+        sd: entry.sd,
         p95: percentileFromHist(entry.hist, 0.95),
       })
     }
-    eligible.sort((a, b) => {
-      switch (sort.key) {
-        case 'count':
-          return sort.dir === 'asc' ? a.count - b.count : b.count - a.count
-        case 'avgIki':
-          return compareNumeric(a.avgIki, b.avgIki, sort.dir)
-        case 'p95':
-          return compareNumeric(a.p95, b.p95, sort.dir)
-      }
-    })
+    eligible.sort((a, b) => compareBySortKey(a, b, sort))
     return eligible.slice(0, Math.max(listLimit, 0))
   }, [entries, listLimit, minAvgIkiMs, sort])
 
@@ -473,48 +534,41 @@ function SlowRanking({ entries, listLimit, minAvgIkiMs }: SlowRankingProps): JSX
             label={t('analyze.bigrams.column.count')}
             active={sort.key === 'count'}
             indicator={sortIndicator(sort, 'count')}
-            onClick={() =>
-              setSort((prev) => (prev.key === 'count'
-                ? { key: 'count', dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                : { key: 'count', dir: 'desc' }))
-            }
+            onClick={() => toggle('count')}
           />
           <SortHeader
             align="right"
             label={t('analyze.bigrams.column.avgIki')}
+            title={gram === 3 ? t('analyze.bigrams.column.avgIkiTrigramTooltip') : undefined}
             active={sort.key === 'avgIki'}
             indicator={sortIndicator(sort, 'avgIki')}
-            onClick={() =>
-              setSort((prev) => (prev.key === 'avgIki'
-                ? { key: 'avgIki', dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                : { key: 'avgIki', dir: 'desc' }))
-            }
+            onClick={() => toggle('avgIki')}
+          />
+          <SortHeader
+            align="right"
+            label={t('analyze.bigrams.column.sd')}
+            active={sort.key === 'sd'}
+            indicator={sortIndicator(sort, 'sd')}
+            onClick={() => toggle('sd')}
           />
           <SortHeader
             align="right"
             label={t('analyze.bigrams.column.p95')}
             active={sort.key === 'p95'}
             indicator={sortIndicator(sort, 'p95')}
-            onClick={() =>
-              setSort((prev) => (prev.key === 'p95'
-                ? { key: 'p95', dir: prev.dir === 'asc' ? 'desc' : 'asc' }
-                : { key: 'p95', dir: 'desc' }))
-            }
+            onClick={() => toggle('p95')}
           />
         </tr>
       </thead>
       <tbody>
         {slowEntries.map((entry, i) => (
-          <tr key={entry.bigramId} className="border-t border-surface-dim">
+          <tr key={entry.ngramId} className="border-t border-surface-dim">
             <td className="px-1 py-1 text-right tabular-nums text-content-muted">{i + 1}</td>
-            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.bigramId)}</td>
+            <td className="px-2 py-1 font-mono">{bigramPairLabel(entry.ngramId)}</td>
             <td className="px-2 py-1 text-right tabular-nums">{entry.count.toLocaleString()}</td>
-            <td className="px-2 py-1 text-right tabular-nums">
-              {entry.avgIki !== null ? `${Math.round(entry.avgIki)} ms` : '—'}
-            </td>
-            <td className="px-2 py-1 text-right tabular-nums">
-              {entry.p95 !== null ? `${Math.round(entry.p95)} ms` : '—'}
-            </td>
+            <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.avgIki)}</td>
+            <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.sd)}</td>
+            <td className="px-2 py-1 text-right tabular-nums">{fmtMs(entry.p95)}</td>
           </tr>
         ))}
       </tbody>
@@ -533,11 +587,17 @@ interface SortHeaderProps {
   align: 'left' | 'right'
   active: boolean
   onClick: () => void
+  /** Header tooltip (native `title`). Absent by default — only the
+   * trigram Avg IKI header sets one today. */
+  title?: string
 }
 
-function SortHeader({ label, indicator, align, active, onClick }: SortHeaderProps): JSX.Element {
+function SortHeader({ label, indicator, align, active, onClick, title }: SortHeaderProps): JSX.Element {
   return (
-    <th className={`select-none px-2 py-1 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}>
+    <th
+      className={`select-none px-2 py-1 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
+      title={title}
+    >
       <button
         type="button"
         onClick={onClick}

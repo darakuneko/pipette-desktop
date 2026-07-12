@@ -60,3 +60,18 @@ export function bucketizeIki(ikis: readonly number[]): number[] {
   }
   return buckets
 }
+
+/** Sum and sum-of-squares of raw IKI values, persisted alongside the
+ * histogram so the range-aggregate layer can compute a true (non
+ * histogram-approximated) standard deviation. Used for both bigram and
+ * trigram emission — trigram values are already interval averages by
+ * the time they reach here, so the same accumulation applies. */
+export function sumAndSumSquares(values: readonly number[]): { sum: number; sumSq: number } {
+  let sum = 0
+  let sumSq = 0
+  for (const v of values) {
+    sum += v
+    sumSq += v * v
+  }
+  return { sum, sumSq }
+}

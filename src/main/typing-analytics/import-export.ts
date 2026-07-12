@@ -243,6 +243,8 @@ function rowTimestamp(row: JsonlRow): number | null {
     case 'char-minute':
     case 'matrix-minute':
     case 'minute-stats':
+    case 'bigram-minute':
+    case 'trigram-minute':
       return row.payload.minuteTs
     case 'session':
       return row.payload.startMs

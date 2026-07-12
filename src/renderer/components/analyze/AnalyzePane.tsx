@@ -621,13 +621,14 @@ export function AnalyzePane({
         minActiveMs: wpmFilter.minActiveMs,
       },
       layer: { baseLayer: layerFilter.baseLayer },
+      bigrams: { gram: bigramsFilter.gram },
       layoutComparison: layoutComparisonFilter,
       fingerOverrides: fingerAssignments,
       conditions: { device: deviceLabel, app: appLabel, keymap: keymapLabel, range: rangeLabel },
     }
   }, [
     selected, deviceScopes, appScopes, typingTestScopes, runIdScopes, deviceInfos, range, effectiveSnapshot, selectedSnapshotSavedAt,
-    snapshotSummaries, heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter,
+    snapshotSummaries, heatmapFilter, wpmFilter, intervalFilter, activityFilter, layerFilter, bigramsFilter.gram,
     layoutComparisonFilter, fingerAssignments, t,
   ])
 
@@ -1348,10 +1349,12 @@ export function AnalyzePane({
                   slowLimit={bigramsFilter.slowLimit}
                   fingerLimit={bigramsFilter.fingerLimit}
                   pairIntervalThresholdMs={bigramsFilter.pairIntervalThresholdMs}
+                  gram={bigramsFilter.gram}
                   onTopLimitChange={(topLimit) => setBigrams({ topLimit })}
                   onSlowLimitChange={(slowLimit) => setBigrams({ slowLimit })}
                   onFingerLimitChange={(fingerLimit) => setBigrams({ fingerLimit })}
                   onPairIntervalThresholdChange={(pairIntervalThresholdMs) => setBigrams({ pairIntervalThresholdMs })}
+                  onGramChange={(gram) => setBigrams({ gram })}
                   snapshot={effectiveSnapshot}
                   fingerOverrides={fingerAssignments}
                 />

@@ -6,19 +6,19 @@
 
 import { codeToLabel } from '../../../shared/keycodes/keycodes'
 
-/** Convert a stored bigram pair id like `"4_11"` into a display label
- * such as `"A → H"`. Falls back to the raw id when either side is not
- * a finite number, so the renderer never throws on schema drift. */
+/** Convert a stored n-gram id — `"4_11"` (bigram) or `"4_11_42"`
+ * (trigram) — into a display label such as `"A → H"` or
+ * `"A → H → Bksp"`. Falls back to the raw id when the part count isn't
+ * 2 or 3, any part is empty, or any part is not a finite number, so
+ * the renderer never throws on schema drift. */
 export function bigramPairLabel(bigramId: string): string {
   const parts = bigramId.split('_')
-  if (parts.length !== 2) return bigramId
-  const [prevStr, currStr] = parts
-  // Reject empty halves explicitly: `Number('')` coerces to 0 rather
+  if (parts.length !== 2 && parts.length !== 3) return bigramId
+  // Reject empty parts explicitly: `Number('')` coerces to 0 rather
   // than NaN, which would otherwise label `"4_"` as `"A → "` instead
   // of returning the raw id.
-  if (prevStr.length === 0 || currStr.length === 0) return bigramId
-  const prev = Number(prevStr)
-  const curr = Number(currStr)
-  if (!Number.isFinite(prev) || !Number.isFinite(curr)) return bigramId
-  return `${codeToLabel(prev)} → ${codeToLabel(curr)}`
+  if (parts.some((p) => p.length === 0)) return bigramId
+  const codes = parts.map(Number)
+  if (codes.some((n) => !Number.isFinite(n))) return bigramId
+  return codes.map((n) => codeToLabel(n)).join(' → ')
 }

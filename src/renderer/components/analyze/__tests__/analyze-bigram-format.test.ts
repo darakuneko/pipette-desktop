@@ -16,13 +16,20 @@ describe('bigramPairLabel', () => {
 
   it('falls back to the raw id when the format is malformed', () => {
     expect(bigramPairLabel('not-a-bigram')).toBe('not-a-bigram')
-    expect(bigramPairLabel('4_11_22')).toBe('4_11_22')
+    expect(bigramPairLabel('4_11_42_11')).toBe('4_11_42_11')
     expect(bigramPairLabel('4_')).toBe('4_')
+    expect(bigramPairLabel('4__42')).toBe('4__42')
   })
 
-  it('falls back to the raw id when either side is non-numeric', () => {
+  it('falls back to the raw id when any side is non-numeric', () => {
     expect(bigramPairLabel('foo_11')).toBe('foo_11')
     expect(bigramPairLabel('4_bar')).toBe('4_bar')
+    expect(bigramPairLabel('4_11_bar')).toBe('4_11_bar')
+  })
+
+  it('decodes a trigram id (k1_k2_k3) into prev → mid → curr labels', () => {
+    // KC_A = 4, KC_H = 11, KC_BSPC = 42.
+    expect(bigramPairLabel('4_11_42')).toBe('A → H → Bksp')
   })
 
   it('decodes layer-tap mask codes via the static template fallback', () => {

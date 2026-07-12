@@ -301,6 +301,189 @@ describe('MinuteBuffer', () => {
     })
   })
 
+  describe('trigram tracking', () => {
+    it('records a triple after 3 consecutive matrix events as the average of the two intervals', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp) // KC_A
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_120), fp) // KC_H, iki1=120
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_300), fp) // KC_D, iki2=180
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([['4_11_7', [150]]]) // (120+180)/2
+    })
+
+    it('forms a rolling window of triples across 4+ events', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp) // iki=100
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_250), fp) // iki=150 -> triple 4_11_7 = 125
+      buffer.addEvent(matrixEvent(0, 3, 0, 5, 1_450), fp) // iki=200 -> triple 11_7_5 = 175
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([
+        ['4_11_7', [125]],
+        ['11_7_5', [175]],
+      ])
+    })
+
+    it('does not pair across char events but stays transparent to the chain', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(charEvent('a', 1_050), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp)
+      buffer.addEvent(charEvent('b', 1_150), fp)
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_300), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([['4_11_7', [150]]]) // (100+200)/2
+    })
+
+    it('drops the triple and resets the chain when the trailing interval exceeds the session gap', () => {
+      // SESSION_IDLE_GAP_MS = 5 minutes.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp) // valid iki=100, chain=[4,11]
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_100 + 6 * 60_000), fp) // gap > 5min: no triple, chain resets to [7]
+      buffer.addEvent(matrixEvent(0, 3, 0, 5, 1_100 + 6 * 60_000 + 120), fp) // chain=[7,5], still no triple (only 2 deep)
+
+      const snaps = buffer.drainAll()
+      const allTrigrams = new Map(snaps.flatMap((s) => [...s.trigrams]))
+      expect(allTrigrams.size).toBe(0)
+    })
+
+    it('drops the triple entirely when only the leading interval is too slow', () => {
+      // First interval spans a session gap; second interval (last->curr) is
+      // fine on its own, but the stale k1 must not feed a triple.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_000 + 6 * 60_000), fp) // gap too large -> chain resets to [11]
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_000 + 6 * 60_000 + 100), fp) // chain=[11,7], only 2 deep, no triple yet
+
+      const snaps = buffer.drainAll()
+      const allTrigrams = new Map(snaps.flatMap((s) => [...s.trigrams]))
+      expect(allTrigrams.size).toBe(0)
+    })
+
+    it('does not advance the chain on tied timestamps', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp) // chain=[4,11]
+      // Tie ts — discarded, chain stays at [4,11]
+      buffer.addEvent(matrixEvent(0, 2, 0, 99, 1_100), fp)
+      // Forward ts — pairs against the un-advanced chain [4,11]
+      buffer.addEvent(matrixEvent(0, 3, 0, 7, 1_250), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([['4_11_7', [125]]]) // (100+150)/2
+    })
+
+    it('drops the cross-minute triple after drainClosed resets the chain', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 20_000), fp) // minute 0
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 40_000), fp) // minute 0, chain=[4,11]
+      const closed = buffer.drainClosed(60_000)
+      expect(closed).toHaveLength(1)
+      expect(closed[0].trigrams.size).toBe(0) // only 2 events so far, no triple yet
+
+      // Chain was cleared by drainClosed, so this event starts fresh.
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 90_000), fp) // minute 1
+      buffer.addEvent(matrixEvent(0, 3, 0, 5, 90_150), fp) // minute 1, chain=[7,5]
+      buffer.addEvent(matrixEvent(0, 4, 0, 6, 90_300), fp) // minute 1, first valid triple
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([['7_5_6', [150]]])
+    })
+
+    it('clears the chain after drainAll so a fresh batch does not bridge', () => {
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fp)
+      buffer.drainAll()
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_500), fp)
+      buffer.addEvent(matrixEvent(0, 3, 0, 5, 1_650), fp)
+      buffer.addEvent(matrixEvent(0, 4, 0, 6, 1_800), fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.trigrams.entries()]).toEqual([['7_5_6', [150]]])
+    })
+  })
+
+  describe('n-gram chain scope/run isolation', () => {
+    it('does not pair interleaved events from two different scopes', () => {
+      // Two keyboards typing in parallel interleave their matrix events;
+      // every scope switch restarts the chain, so no pair or triple may
+      // cross the boundary — and here no two consecutive events share a
+      // scope, so nothing is recorded at all.
+      const fpA = fingerprint({ uid: '0xAAAA' })
+      const fpB = fingerprint({ uid: '0xBBBB' })
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fpA)
+      buffer.addEvent(matrixEvent(0, 0, 0, 20, 1_050), fpB)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fpA)
+      buffer.addEvent(matrixEvent(0, 1, 0, 21, 1_150), fpB)
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_200), fpA)
+
+      const snaps = buffer.drainAll()
+      expect(snaps).toHaveLength(2)
+      for (const snap of snaps) {
+        expect(snap.bigrams.size).toBe(0)
+        expect(snap.trigrams.size).toBe(0)
+      }
+    })
+
+    it('pairs consecutive same-scope events after an interleaved foreign event reset the chain', () => {
+      const fpA = fingerprint({ uid: '0xAAAA' })
+      const fpB = fingerprint({ uid: '0xBBBB' })
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fpA)
+      // Foreign scope restarts the chain, so 4 can no longer head a pair.
+      buffer.addEvent(matrixEvent(0, 0, 0, 20, 1_050), fpB)
+      buffer.addEvent(matrixEvent(0, 1, 0, 11, 1_100), fpA)
+      buffer.addEvent(matrixEvent(0, 2, 0, 7, 1_250), fpA)
+
+      const snaps = buffer.drainAll()
+      const snapA = snaps.find((s) => s.scopeId === canonicalScopeKey(fpA))
+      const snapB = snaps.find((s) => s.scopeId === canonicalScopeKey(fpB))
+      expect([...(snapA?.bigrams.entries() ?? [])]).toEqual([['11_7', [150]]])
+      // Chain is only 2 deep after the reset — no triple, and certainly
+      // not 4_11_7 through the foreign event.
+      expect(snapA?.trigrams.size).toBe(0)
+      expect(snapB?.bigrams.size).toBe(0)
+      expect(snapB?.trigrams.size).toBe(0)
+    })
+
+    it('resets the chain when the run id changes within one scope', () => {
+      // REC input followed by a typing-test run: the run boundary must
+      // not produce a cross-run pair even though scope and timing both
+      // look continuous.
+      const fp = fingerprint()
+      buffer.addEvent(matrixEvent(0, 0, 0, 4, 1_000), fp)
+      buffer.addEvent({ ...matrixEvent(0, 1, 0, 11, 1_100), runId: 'run-1' }, fp)
+      buffer.addEvent({ ...matrixEvent(0, 2, 0, 7, 1_250), runId: 'run-1' }, fp)
+
+      const snaps = buffer.drainAll()
+      const recSnap = snaps.find((s) => s.runId === '')
+      const runSnap = snaps.find((s) => s.runId === 'run-1')
+      expect(recSnap?.bigrams.size).toBe(0)
+      // Only the within-run pair survives; no 4_11 across the boundary
+      // and no 4_11_7 triple through it.
+      expect([...(runSnap?.bigrams.entries() ?? [])]).toEqual([['11_7', [150]]])
+      expect(runSnap?.trigrams.size).toBe(0)
+    })
+
+    it('keeps recording pairs and triples for an uninterrupted same-scope same-run stream', () => {
+      const fp = fingerprint()
+      buffer.addEvent({ ...matrixEvent(0, 0, 0, 4, 1_000), runId: 'run-1' }, fp)
+      buffer.addEvent({ ...matrixEvent(0, 1, 0, 11, 1_100), runId: 'run-1' }, fp)
+      buffer.addEvent({ ...matrixEvent(0, 2, 0, 7, 1_250), runId: 'run-1' }, fp)
+
+      const [snap] = buffer.drainAll()
+      expect([...snap.bigrams.entries()]).toEqual([
+        ['4_11', [100]],
+        ['11_7', [150]],
+      ])
+      expect([...snap.trigrams.entries()]).toEqual([['4_11_7', [125]]]) // (100+150)/2
+    })
+  })
+
   it('exposes an empty bigrams map when no matrix events arrived', () => {
     // Sanity check: the Map exists on every snapshot (downstream emit
     // layer relies on snapshot.bigrams.size, not optional access).
@@ -308,6 +491,7 @@ describe('MinuteBuffer', () => {
     buffer.addEvent(charEvent('a', 1_000), fp)
     const [snap] = buffer.drainAll()
     expect(snap.bigrams.size).toBe(0)
+    expect(snap.trigrams.size).toBe(0)
   })
 
   describe('app-name tagging', () => {

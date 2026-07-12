@@ -67,6 +67,7 @@ export interface AnalyzeExportContext {
   interval: { viewMode: IntervalViewMode; granularity: GranularityChoice }
   activity: { metric: ActivityMetric; minActiveMs: number }
   layer: { baseLayer: number }
+  bigrams: { gram: 2 | 3 }
   // `Required<>` only strips the `?`, so `targetLayoutId` is still
   // `string | null`. The runtime guard in pickBuilders (and
   // isCategoryAvailable) narrows it before passing to the builder.
@@ -318,7 +319,7 @@ function pickBuilders(
     out.push(buildByAppCsv(scope))
   }
   if (selected.bigrams) {
-    out.push(buildBigramsCsv(scope))
+    out.push(buildBigramsCsv({ ...scope, gram: ctx.bigrams.gram }))
   }
   if (selected.layoutComparison && ctx.snapshot !== null && ctx.layoutComparison.targetLayoutId !== null) {
     out.push(buildLayoutComparisonCsv({
