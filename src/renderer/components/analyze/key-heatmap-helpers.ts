@@ -2,15 +2,18 @@
 // Pure helpers for the Analyze > Heatmap tab. Keeps the component file
 // readable and the math covered by dedicated tests.
 
-import type { TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
+import type { TypingBigramTopEntry, TypingHeatmapByCell, TypingHeatmapCell, TypingKeymapSnapshot } from '../../../shared/types/typing-analytics'
 import type { KeyboardLayout } from '../../../shared/kle/types'
-import { resolveSnapshotLabel, keycodeGroup } from '../../../shared/keycodes/keycodes'
+import { resolveSnapshotLabel, keycodeGroup, deserialize, serialize, codeToLabel, getProtocol, setProtocol } from '../../../shared/keycodes/keycodes'
 import type { KeycodeGroup } from '../../../shared/keycodes/keycodes'
 import { posKey } from '../../../shared/kle/pos-key'
+import { avgIkiFromHist, foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
+import { PALETTE_MIN_T, paletteColorFromIntensity } from '../../utils/chart-palette'
+import type { EffectiveTheme } from '../../hooks/useEffectiveTheme'
 import type { HeatmapNormalization, RangeMs } from './analyze-types'
 
-export { AGGREGATE_MODES, KEY_GROUPS } from '../../../shared/types/analyze-filters'
-export type { AggregateMode, KeyGroupFilter } from '../../../shared/types/analyze-filters'
+export { AGGREGATE_MODES, KEY_GROUPS, HEATMAP_MODES } from '../../../shared/types/analyze-filters'
+export type { AggregateMode, KeyGroupFilter, HeatmapMode } from '../../../shared/types/analyze-filters'
 
 const MASK_INNER_RE = /\((.+)\)$/
 const COMPACT_LAYER_OP_RE = /^(LT|LM|MO|DF|PDF|TG|TT|OSL|TO)\s(\d+)$/
@@ -264,4 +267,171 @@ export function buildGroupRankings(
     })
   }
   return [...entries].sort((a, b) => b.count - a.count).slice(0, frequentUsedN)
+}
+
+// --- Speed mode ----------------------------------------------------------
+// Colours the same keyboard by "how slow is the average reach into this
+// key" instead of press count. Reuses the bigram aggregate (already
+// fetched by the Bigrams tab) rather than a dedicated per-key query: each
+// bigram's "to" keycode gets its histogram folded into a per-keycode
+// total, mirroring `aggregateFingerPairs` in analyze-bigram-finger.ts but
+// keyed by a single keycode instead of a (from, to) finger pair.
+
+/** Minimum accumulated reach count for a keycode's average IKI to be
+ * considered reliable enough to paint or rank. Below this the key
+ * renders exactly like a key with zero data — no fill, no ranking row. */
+export const MIN_SPEED_SAMPLE_COUNT = 5
+
+export interface KeySpeedStat {
+  avgIki: number
+  count: number
+}
+
+/** Accumulate every bigram pair's histogram onto its "to" (second)
+ * keycode, then resolve each keycode's count-weighted average reach
+ * IKI. Folding histograms first and running `avgIkiFromHist` once is
+ * mathematically identical to a count-weighted average of the
+ * individual pairs' `avgIki` values (both reduce to
+ * `sum(bucket_count * bucket_center) / sum(bucket_count)`), so this
+ * reuses the existing bucket-center estimator instead of re-deriving
+ * the weighting. Keycodes below `MIN_SPEED_SAMPLE_COUNT` are dropped
+ * entirely. */
+export function buildKeycodeSpeedMap(
+  entries: readonly TypingBigramTopEntry[],
+): Map<number, KeySpeedStat> {
+  const accByCode = new Map<number, { hist: number[]; count: number }>()
+  for (const entry of entries) {
+    const pair = parseBigramId(entry.ngramId)
+    if (!pair) continue
+    let acc = accByCode.get(pair.curr)
+    if (!acc) {
+      acc = { hist: new Array<number>(HIST_BUCKETS).fill(0), count: 0 }
+      accByCode.set(pair.curr, acc)
+    }
+    foldHist(acc.hist, entry.hist)
+    acc.count += entry.count
+  }
+  const result = new Map<number, KeySpeedStat>()
+  for (const [code, acc] of accByCode) {
+    if (acc.count < MIN_SPEED_SAMPLE_COUNT) continue
+    const avgIki = avgIkiFromHist(acc.hist)
+    if (avgIki === null) continue
+    result.set(code, { avgIki, count: acc.count })
+  }
+  return result
+}
+
+/** Min-max normalizes each qualifying keycode's avgIki to a
+ * [`PALETTE_MIN_T`, 1] intensity (floor = fastest reach, 1 = slowest)
+ * for `paletteColorFromIntensity`. The lower bound matters: the palette
+ * skips fills below its visibility floor, but every key that cleared
+ * `MIN_SPEED_SAMPLE_COUNT` must stay distinguishable from a no-data
+ * key, so the fastest key is pinned at the floor instead of 0. When
+ * every qualifying key ties, everything renders at the remapped range's
+ * midpoint instead of dividing by zero. */
+export function normalizeKeySpeedIntensity(
+  speedMap: ReadonlyMap<number, KeySpeedStat>,
+): Map<number, number> {
+  const result = new Map<number, number>()
+  if (speedMap.size === 0) return result
+  let min = Infinity
+  let max = -Infinity
+  for (const stat of speedMap.values()) {
+    if (stat.avgIki < min) min = stat.avgIki
+    if (stat.avgIki > max) max = stat.avgIki
+  }
+  const range = max - min
+  for (const [code, stat] of speedMap) {
+    const normalized = range > 0 ? (stat.avgIki - min) / range : 0.5
+    result.set(code, PALETTE_MIN_T + (1 - PALETTE_MIN_T) * normalized)
+  }
+  return result
+}
+
+/** Run `body` with `getProtocol()` temporarily set to `protocol` so
+ * keycode string↔number conversion resolves against the snapshot's own
+ * protocol version, then restore. Protocol-dependent keycodes (macros,
+ * tap dance, QK_BOOT, …) map to different numeric values in v5 and v6,
+ * and the bigram aggregate stores the numeric codes recorded under the
+ * snapshot's protocol — resolving with the current global protocol
+ * would mismatch a v5 snapshot viewed in a v6 session. Mirrors
+ * `withImportProtocol` in `src/main/favorite-store.ts`; `undefined`
+ * (older snapshots without `vialProtocol`) keeps the current default. */
+function withSnapshotProtocol<T>(protocol: number | undefined, body: () => T): T {
+  if (protocol === undefined) return body()
+  const prev = getProtocol()
+  setProtocol(protocol)
+  try {
+    return body()
+  } finally {
+    setProtocol(prev)
+  }
+}
+
+/** Resolves the Speed-mode fill for every physical position on one
+ * layer: look up that position's keycode on the layer's keymap, decode
+ * it to the numeric code the bigram aggregate uses (under the
+ * snapshot's own protocol — see `withSnapshotProtocol`), then paint
+ * from the shared intensity map. Positions whose keycode has no
+ * qualifying speed data (below `MIN_SPEED_SAMPLE_COUNT`, or never seen
+ * as the "to" side of a bigram) are omitted so the caller's default key
+ * fill shows through — same "no data" convention as the Count-mode
+ * heatmap. */
+export function buildSpeedFillByPos(
+  layerKeycodes: LayerKeycodes,
+  positions: readonly string[],
+  intensityByCode: ReadonlyMap<number, number>,
+  keyGroupFilter: KeyGroupFilter,
+  theme: EffectiveTheme,
+  vialProtocol?: number,
+): Map<string, string> {
+  return withSnapshotProtocol(vialProtocol, () => {
+    const result = new Map<string, string>()
+    for (const pos of positions) {
+      const qmkId = layerKeycodes.keycodes.get(pos) ?? ''
+      if (!qmkId) continue
+      if (keyGroupFilter !== 'all' && keycodeGroup(qmkId) !== keyGroupFilter) continue
+      let code: number
+      try {
+        code = deserialize(qmkId)
+      } catch {
+        continue
+      }
+      if (!Number.isFinite(code)) continue
+      const intensity = intensityByCode.get(code)
+      if (intensity === undefined) continue
+      const fill = paletteColorFromIntensity(intensity, theme)
+      if (fill) result.set(pos, fill)
+    }
+    return result
+  })
+}
+
+export interface SpeedRankingEntry {
+  keyLabel: string
+  avgIki: number
+  count: number
+}
+
+/** Ranks qualifying keycodes slowest-reach-first for the Speed
+ * ranking table. Unlike the Count ranking, this isn't scoped to a
+ * layer group — the bigram aggregate carries no layer tag, so one flat
+ * ranking covers every selected layer. Labels and group filtering run
+ * under the snapshot's protocol (see `withSnapshotProtocol`) since the
+ * numeric codes were recorded under it. */
+export function buildSpeedRanking(
+  speedMap: ReadonlyMap<number, KeySpeedStat>,
+  keyGroupFilter: KeyGroupFilter,
+  limit: number,
+  vialProtocol?: number,
+): SpeedRankingEntry[] {
+  return withSnapshotProtocol(vialProtocol, () => {
+    const entries: SpeedRankingEntry[] = []
+    for (const [code, stat] of speedMap) {
+      if (keyGroupFilter !== 'all' && keycodeGroup(serialize(code)) !== keyGroupFilter) continue
+      entries.push({ keyLabel: codeToLabel(code), avgIki: stat.avgIki, count: stat.count })
+    }
+    entries.sort((a, b) => b.avgIki - a.avgIki)
+    return entries.slice(0, Math.max(limit, 0))
+  })
 }

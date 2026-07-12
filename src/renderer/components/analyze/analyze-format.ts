@@ -93,6 +93,13 @@ export function median(values: readonly number[]): number | null {
   return (sorted[mid - 1] + sorted[mid]) / 2
 }
 
+/** `123 ms` for a finite value, `'—'` (em dash) for `null`. Shared by
+ * the Bigrams rankings and the Heatmap Speed ranking so the two
+ * null-handling paths can't drift. */
+export function fmtMs(value: number | null): string {
+  return value !== null ? `${Math.round(value)} ms` : '—'
+}
+
 /** Generic bucket-lookup for bin tables whose upper edge is `toMs`
  * (exclusive) or `null` for the unbounded tail. Non-finite / negative
  * inputs clamp to the first bucket so bad data stays visible. */

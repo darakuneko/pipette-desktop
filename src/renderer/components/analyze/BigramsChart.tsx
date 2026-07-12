@@ -34,6 +34,8 @@ import {
   avgIkiAtOrAboveThreshold,
   percentileFromHist,
 } from './analyze-bigram-heatmap'
+import { ALL_PAIRS_LIMIT } from './analyze-constants'
+import { fmtMs } from './analyze-format'
 import { FILTER_SELECT, LIST_LIMIT_OPTIONS } from './analyze-filter-styles'
 import { SegmentedToggle } from './SegmentedToggle'
 import type { RangeMs } from './analyze-types'
@@ -71,10 +73,6 @@ interface BigramsChartProps {
   fingerOverrides?: Record<string, FingerType>
 }
 
-// Pull a high limit so the renderer can derive Top / Slow / Finger
-// sub-views from a single fetch instead of 3 round-trips.
-const ALL_PAIRS_LIMIT = 5000
-
 type FingerSort = 'desc' | 'asc'
 
 export function BigramsChart({
@@ -98,7 +96,7 @@ export function BigramsChart({
   fingerOverrides,
 }: BigramsChartProps): JSX.Element {
   const { t } = useTranslation()
-  const [result, setResult] = useState<TypingBigramAggregateResult>({ view: 'top', entries: [] })
+  const [result, setResult] = useState<TypingBigramAggregateResult>({ view: 'top', entries: [], truncated: false })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(false)
   // Finger interval sort direction. Local UI state only — defaults to
@@ -136,6 +134,23 @@ export function BigramsChart({
   }, [uid, range.fromMs, range.toMs, scopeKey, appScopes.join('|'), gram])
 
   const entries = result.entries
+
+  // The server truncates `view:'top'` to the count-ranked top
+  // `ALL_PAIRS_LIMIT` distinct n-grams. When the period has that many
+  // distinct pairs/triples, low-frequency-but-slow entries can fall
+  // outside the fetched set — Top pairs stays accurate (it's count
+  // order), but Pair interval and Finger IKI (which re-rank by avgIki)
+  // may be missing entries. `result.truncated` is computed server-side
+  // from the full pair universe, so this reads the real signal instead
+  // of guessing from `entries.length` (which false-positives whenever
+  // the period has exactly `ALL_PAIRS_LIMIT` distinct pairs).
+  const cappedNoticeText = t('analyze.bigrams.cappedNotice', { limit: ALL_PAIRS_LIMIT })
+  const cappedNotice = (testId: string): React.ReactNode =>
+    result.truncated ? (
+      <div className="text-xs text-content-muted" data-testid={testId}>
+        {cappedNoticeText}
+      </div>
+    ) : undefined
 
   // Finger IKI has no defined meaning for trigrams (a 3-key finger pair
   // isn't a thing), so gram === 3 renders Top + Slow only. Dropping to a
@@ -175,6 +190,7 @@ export function BigramsChart({
       {showFingerIki && (
         <Quadrant
           title={t('analyze.bigrams.quadrant.fingerIki')}
+          notice={cappedNotice('analyze-bigrams-finger-capped-notice')}
           controls={
             <>
               <PairIntervalThresholdInput
@@ -212,6 +228,7 @@ export function BigramsChart({
       )}
       <Quadrant
         title={t('analyze.bigrams.quadrant.slow')}
+        notice={cappedNotice('analyze-bigrams-slow-capped-notice')}
         controls={
           <>
             <PairIntervalThresholdInput
@@ -280,16 +297,20 @@ function GramToggle({ value, onChange }: GramToggleProps): JSX.Element {
 interface QuadrantProps {
   title: string
   controls?: React.ReactNode
+  /** Optional single-line notice rendered under the title/controls row
+   * (e.g. the top-N cap warning). Absent by default. */
+  notice?: React.ReactNode
   children: React.ReactNode
 }
 
-function Quadrant({ title, controls, children }: QuadrantProps): JSX.Element {
+function Quadrant({ title, controls, notice, children }: QuadrantProps): JSX.Element {
   return (
     <div className="flex min-h-0 min-w-0 flex-col gap-2 rounded border border-edge p-2">
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-xs font-medium text-content">{title}</div>
         {controls}
       </div>
+      {notice}
       <div className="min-h-0 flex-1 overflow-auto pr-1">{children}</div>
     </div>
   )
@@ -408,10 +429,6 @@ function toggleSort<K extends SortKey>(prev: SortState<K>, key: K): SortState<K>
   return prev.key === key
     ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
     : { key, dir: 'desc' }
-}
-
-function fmtMs(value: number | null): string {
-  return value !== null ? `${Math.round(value)} ms` : '—'
 }
 
 interface TopRankingProps {

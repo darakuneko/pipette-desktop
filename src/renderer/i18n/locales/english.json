@@ -1042,6 +1042,7 @@
         "slow": "Pair interval",
         "fingerIki": "Finger IKI"
       },
+      "cappedNotice": "Computed from the {{limit}} most frequent pairs — rare pairs may be missing.",
       "gramToggle": {
         "ariaLabel": "N-gram size",
         "bigram": "2-gram",
@@ -1078,6 +1079,17 @@
       "bondToggle": "Bond Layer {{i}} with another group",
       "noLayout": "Layout data not available for this snapshot.",
       "noSnapshot": "No keymap snapshot recorded for this range. Start a record session to capture one.",
+      "modeToggle": {
+        "ariaLabel": "Heatmap colouring mode",
+        "count": "Count",
+        "speed": "Speed"
+      },
+      "speed": {
+        "colAvgIki": "Avg IKI",
+        "empty": "No reach-speed data in this range yet.",
+        "minSampleNote": "Keys reached fewer than {{n}} times are left uncoloured.",
+        "cappedNotice": "Computed from the {{limit}} most frequent pairs — rare pairs may be missing."
+      },
       "ranking": {
         "frequentUsedN": "Top N",
         "frequentUsed": "Frequently Used",

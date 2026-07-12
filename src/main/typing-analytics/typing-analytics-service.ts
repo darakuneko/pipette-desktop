@@ -167,6 +167,14 @@ const emptyPeakRecords = (): PeakRecords => ({
   longestSession: null,
 })
 
+/** "No result" sentinel for the bigram-aggregate IPC — every validation
+ * failure before the DB query returns this, so `truncated` always has
+ * a defined value regardless of how far the handler got. */
+const emptyBigramResult = (view: TypingBigramAggregateView): TypingBigramAggregateResult =>
+  view === 'slow'
+    ? { view: 'slow', entries: [], truncated: false }
+    : { view: 'top', entries: [], truncated: false }
+
 /**
  * Register typing-analytics IPC handlers. Called synchronously at startup so
  * the handler is in place before the renderer creates the first BrowserWindow;
@@ -750,16 +758,16 @@ export function setupTypingAnalyticsIpc(): void {
       // Reject unknown views up front so parsedView is the trusted union
       // and downstream branches can return literal-typed empty results.
       if (view !== 'top' && view !== 'slow') {
-        return { view: 'top', entries: [] }
+        return emptyBigramResult('top')
       }
       const parsedView: TypingBigramAggregateView = view
-      if (typeof uid !== 'string' || uid.length === 0) return { view: parsedView, entries: [] }
-      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return { view: parsedView, entries: [] }
+      if (typeof uid !== 'string' || uid.length === 0) return emptyBigramResult(parsedView)
+      if (typeof sinceMs !== 'number' || !Number.isFinite(sinceMs)) return emptyBigramResult(parsedView)
       if (typeof untilMs !== 'number' || !Number.isFinite(untilMs) || untilMs <= sinceMs) {
-        return { view: parsedView, entries: [] }
+        return emptyBigramResult(parsedView)
       }
       const parsedScope = parseDeviceScope(scope)
-      if (parsedScope === null) return { view: parsedView, entries: [] }
+      if (parsedScope === null) return emptyBigramResult(parsedView)
       const opts = parseBigramAggregateOptions(options)
       const limit = opts.limit ?? 30
       const minSample = opts.minSampleCount ?? 5
@@ -778,10 +786,16 @@ export function setupTypingAnalyticsIpc(): void {
         ? db.listNgramMinutesInRangeForUid(gram, uid, sinceMs, untilMs, apps, typingTests, runIds)
         : db.listNgramMinutesInRangeForUidAndHash(gram, uid, machineHash, sinceMs, untilMs, apps, typingTests, runIds)
       const totals = aggregatePairTotals(rows)
+      // Ranking always slices to `limit`; when the period holds more
+      // distinct pairs than that, low-frequency-but-slow entries can
+      // fall outside both the top-N and the avgIki re-ranking. Computed
+      // here (against the full pair universe) rather than left for the
+      // renderer to infer from `entries.length`.
+      const truncated = totals.size > limit
       if (parsedView === 'slow') {
-        return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit) }
+        return { view: 'slow', entries: rankBigramsBySlow(totals, minSample, limit), truncated }
       }
-      return { view: 'top', entries: rankBigramsByCount(totals, limit) }
+      return { view: 'top', entries: rankBigramsByCount(totals, limit), truncated }
     },
   )
 

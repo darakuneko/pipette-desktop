@@ -4,7 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { BigramsChart } from '../BigramsChart'
-import type { TypingBigramAggregateResult } from '../../../../shared/types/typing-analytics'
+import { ALL_PAIRS_LIMIT } from '../analyze-constants'
+import type {
+  TypingBigramAggregateResult,
+  TypingBigramTopEntry,
+} from '../../../../shared/types/typing-analytics'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -24,6 +28,22 @@ Object.defineProperty(window, 'vialAPI', {
 
 const range = { fromMs: 0, toMs: 60_000 }
 const noop = (): void => {}
+
+/** Builds `count` distinct entries without hand-writing each fixture.
+ * `hist` mirrors the shape used elsewhere in this file (one bucket
+ * populated) so `avgIkiAtOrAboveThreshold` resolves a real value. The
+ * capped-notice tests drive the notice off the mocked `truncated` flag
+ * directly, so `count` only needs to be a few rows, not
+ * `ALL_PAIRS_LIMIT`. */
+function buildEntries(count: number): TypingBigramTopEntry[] {
+  return Array.from({ length: count }, (_, i) => ({
+    ngramId: `${i}_${i + 1}`,
+    count: count - i,
+    hist: [0, 0, 1, 0, 0, 0, 0, 0],
+    avgIki: 125,
+    sd: 10,
+  }))
+}
 
 function renderChart(overrides: Partial<Parameters<typeof BigramsChart>[0]> = {}): void {
   render(
@@ -56,7 +76,7 @@ describe('BigramsChart', () => {
   })
 
   it('renders the empty state when the IPC returns no entries', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [], truncated: false })
     renderChart()
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-empty')).toBeTruthy()
@@ -64,7 +84,7 @@ describe('BigramsChart', () => {
   })
 
   it('fires a single fetch with view=top and a high limit', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [], truncated: false })
     renderChart()
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledTimes(1)
@@ -72,7 +92,7 @@ describe('BigramsChart', () => {
     const call = fetchSpy.mock.calls[0]
     expect(call?.[3]).toBe('top')
     const options = call?.[5] as { limit?: number } | undefined
-    expect(options?.limit).toBeGreaterThan(100)
+    expect(options?.limit).toBe(ALL_PAIRS_LIMIT)
   })
 
   it('renders all three quadrants with their own limit selects', async () => {
@@ -81,6 +101,7 @@ describe('BigramsChart', () => {
       entries: [
         { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
       ],
+      truncated: false,
     })
     renderChart()
     await waitFor(() => {
@@ -100,6 +121,7 @@ describe('BigramsChart', () => {
       entries: [
         { ngramId: '4_11', count: 1, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 0 },
       ],
+      truncated: false,
     })
     const onTopLimitChange = vi.fn()
     renderChart({ onTopLimitChange })
@@ -118,6 +140,7 @@ describe('BigramsChart', () => {
       entries: [
         { ngramId: '4_11', count: 5, hist: [0, 0, 5, 0, 0, 0, 0, 0], avgIki: 125, sd: 10 },
       ],
+      truncated: false,
     })
     const onSlowLimitChange = vi.fn()
     renderChart({ onSlowLimitChange })
@@ -150,7 +173,7 @@ describe('BigramsChart', () => {
   ]
 
   it('renders both rows in the Slow ranking when the threshold is 0', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     renderChart({ pairIntervalThresholdMs: 0, slowLimit: 10 })
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-slow-ranking')).toBeTruthy()
@@ -160,7 +183,7 @@ describe('BigramsChart', () => {
   })
 
   it('hides Slow ranking rows whose avgIki is below the threshold', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     renderChart({ pairIntervalThresholdMs: 200, slowLimit: 10 })
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-slow-ranking')).toBeTruthy()
@@ -171,7 +194,7 @@ describe('BigramsChart', () => {
   })
 
   it('shows the empty state when the threshold filters every row out', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     renderChart({ pairIntervalThresholdMs: 1000, slowLimit: 10 })
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
@@ -180,7 +203,7 @@ describe('BigramsChart', () => {
   })
 
   it('commits an empty threshold input as 0', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     const onPairIntervalThresholdChange = vi.fn()
     renderChart({
       pairIntervalThresholdMs: 200,
@@ -196,7 +219,7 @@ describe('BigramsChart', () => {
   })
 
   it('commits the threshold input on blur with the parsed integer', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     const onPairIntervalThresholdChange = vi.fn()
     renderChart({
       pairIntervalThresholdMs: 0,
@@ -212,7 +235,7 @@ describe('BigramsChart', () => {
   })
 
   it('renders the threshold input in both fingerIki and slow quadrants', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     renderChart()
     await waitFor(() => {
       expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
@@ -222,7 +245,7 @@ describe('BigramsChart', () => {
   })
 
   it('commits the threshold input on Enter without losing focus first', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     const onPairIntervalThresholdChange = vi.fn()
     renderChart({
       pairIntervalThresholdMs: 0,
@@ -239,7 +262,7 @@ describe('BigramsChart', () => {
   })
 
   it('mirrors a committed threshold to the sibling quadrant input', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: thresholdEntries, truncated: false })
     const { rerender } = render(
       <BigramsChart
         uid="0xAABB"
@@ -294,7 +317,7 @@ describe('BigramsChart', () => {
   })
 
   it('fires onGramChange when the 3-gram toggle button is clicked', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [], truncated: false })
     const onGramChange = vi.fn()
     renderChart({ onGramChange })
     await waitFor(() => {
@@ -305,7 +328,7 @@ describe('BigramsChart', () => {
   })
 
   it('passes gram through to the fetch options', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [], truncated: false })
     renderChart({ gram: 3 })
     await waitFor(() => {
       expect(fetchSpy).toHaveBeenCalledTimes(1)
@@ -315,7 +338,7 @@ describe('BigramsChart', () => {
   })
 
   it('re-fetches when gram changes', async () => {
-    fetchSpy.mockResolvedValue({ view: 'top', entries: [] })
+    fetchSpy.mockResolvedValue({ view: 'top', entries: [], truncated: false })
     const { rerender } = render(<BigramsChartHarness gram={2} />)
     await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(1))
     rerender(<BigramsChartHarness gram={3} />)
@@ -329,6 +352,7 @@ describe('BigramsChart', () => {
       entries: [
         { ngramId: '4_11_42', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
       ],
+      truncated: false,
     })
     renderChart({ gram: 3 })
     await waitFor(() => {
@@ -346,6 +370,7 @@ describe('BigramsChart', () => {
       entries: [
         { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
       ],
+      truncated: false,
     })
     renderChart({ gram: 2 })
     await waitFor(() => {
@@ -362,6 +387,7 @@ describe('BigramsChart', () => {
         { ngramId: '4_11', count: 10, hist: [1, 2, 3, 1, 1, 1, 1, 0], avgIki: 100, sd: 25 },
         { ngramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400, sd: null },
       ],
+      truncated: false,
     })
     renderChart()
     await waitFor(() => {
@@ -382,6 +408,7 @@ describe('BigramsChart', () => {
         { ngramId: '4_11', count: 10, hist: [1, 0, 0, 0, 0, 0, 0, 0], avgIki: 30, sd: 5 },
         { ngramId: '7_22', count: 5, hist: [0, 0, 0, 0, 0, 5, 0, 0], avgIki: 400, sd: 40 },
       ],
+      truncated: false,
     })
     renderChart()
     await waitFor(() => {
@@ -396,6 +423,37 @@ describe('BigramsChart', () => {
     fireEvent.click(sdHeader)
     rows = topTable.querySelectorAll('tbody tr')
     expect(rows[0]?.textContent).toContain('5 ms')
+  })
+
+  it('shows the capped notice in Pair interval and Finger IKI when the server reports truncated', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: buildEntries(3), truncated: true })
+    renderChart()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+    })
+    expect(screen.getByTestId('analyze-bigrams-slow-capped-notice')).toBeTruthy()
+    expect(screen.getByTestId('analyze-bigrams-finger-capped-notice')).toBeTruthy()
+  })
+
+  it('hides the capped notice when the server reports truncated: false', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: buildEntries(3), truncated: false })
+    renderChart()
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+    })
+    expect(screen.queryByTestId('analyze-bigrams-slow-capped-notice')).toBeNull()
+    expect(screen.queryByTestId('analyze-bigrams-finger-capped-notice')).toBeNull()
+  })
+
+  it('shows the capped notice in Slow but never renders it for Finger IKI when gram is 3', async () => {
+    fetchSpy.mockResolvedValue({ view: 'top', entries: buildEntries(3), truncated: true })
+    renderChart({ gram: 3 })
+    await waitFor(() => {
+      expect(screen.getByTestId('analyze-bigrams-content')).toBeTruthy()
+    })
+    expect(screen.getByTestId('analyze-bigrams-slow-capped-notice')).toBeTruthy()
+    expect(screen.queryByTestId('analyze-bigrams-finger-capped-notice')).toBeNull()
+    expect(screen.queryByText('analyze.bigrams.quadrant.fingerIki')).toBeNull()
   })
 })
 

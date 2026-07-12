@@ -16,11 +16,7 @@ import type {
   TypingBigramTopEntry,
   TypingKeymapSnapshot,
 } from '../../../shared/types/typing-analytics'
-
-// Hist bucket count is part of the IPC wire contract (TypingBigramTopEntry.hist)
-// — always length 8. Hard-coded here to keep the renderer-side helpers
-// independent of the main-process bucket module.
-const HIST_BUCKETS = 8
+import { foldHist, HIST_BUCKETS, parseBigramId } from './analyze-bigram-heatmap'
 
 /** Build a numeric-keycode → finger lookup from the snapshot's layer-0
  * keymap, honouring user finger overrides keyed by `${row},${col}`.
@@ -75,13 +71,10 @@ export function aggregateFingerPairs(
 ): Map<string, FingerPairTotal> {
   const totals = new Map<string, FingerPairTotal>()
   for (const entry of entries) {
-    const parts = entry.ngramId.split('_')
-    if (parts.length !== 2) continue
-    const prev = Number(parts[0])
-    const curr = Number(parts[1])
-    if (!Number.isFinite(prev) || !Number.isFinite(curr)) continue
-    const f1 = keycodeFinger.get(prev)
-    const f2 = keycodeFinger.get(curr)
+    const pair = parseBigramId(entry.ngramId)
+    if (!pair) continue
+    const f1 = keycodeFinger.get(pair.prev)
+    const f2 = keycodeFinger.get(pair.curr)
     if (!f1 || !f2) continue
     const key = `${f1}_${f2}`
     let agg = totals.get(key)
@@ -90,9 +83,7 @@ export function aggregateFingerPairs(
       totals.set(key, agg)
     }
     agg.count += entry.count
-    for (let i = 0; i < HIST_BUCKETS; i += 1) {
-      agg.hist[i] += entry.hist[i] ?? 0
-    }
+    foldHist(agg.hist, entry.hist)
   }
   return totals
 }

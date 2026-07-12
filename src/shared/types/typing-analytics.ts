@@ -366,10 +366,15 @@ export interface TypingBigramSlowEntry extends TypingBigramTopEntry {
 
 /** Discriminated result for the bigram aggregate IPC. The view tag
  * matches the request so the renderer can narrow without inspecting
- * fields. */
+ * fields. `truncated` is true when the period holds more distinct
+ * pairs than the requested `limit`, so `entries` (which is always
+ * count-ranked before any avgIki re-ranking) may be missing low-
+ * frequency-but-slow pairs. Computed server-side from the full pair
+ * universe rather than guessed from `entries.length` on the renderer,
+ * so a period with exactly `limit` distinct pairs isn't misreported. */
 export type TypingBigramAggregateResult =
-  | { view: 'top'; entries: TypingBigramTopEntry[] }
-  | { view: 'slow'; entries: TypingBigramSlowEntry[] }
+  | { view: 'top'; entries: TypingBigramTopEntry[]; truncated: boolean }
+  | { view: 'slow'; entries: TypingBigramSlowEntry[]; truncated: boolean }
 
 /** Phase 1 metrics for the Layout Comparison. Bigram-derived ones
  * (travel distance / SFB) are added in Phase 2. */

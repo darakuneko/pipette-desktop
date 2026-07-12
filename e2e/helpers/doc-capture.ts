@@ -98,6 +98,32 @@ async function captureNamed(
   await takeScreenshot(page, `${name}.png`, '--', opts)
 }
 
+// Clicks a segmented control's "on" option, runs `shot` to capture that
+// state, then clicks the "off" option back so later capture steps (and
+// a re-run of this helper) don't inherit the alternate segment. Shared
+// by the Heatmap Speed mode and Bigrams 3-gram captures, which only
+// differ in what `shot` screenshots.
+async function captureSegmentVariant(
+  page: Page,
+  onTestId: string,
+  offTestId: string,
+  shot: () => Promise<void>,
+): Promise<void> {
+  const onToggle = page.locator(`[data-testid="${onTestId}"]`)
+  if (!(await isAvailable(onToggle))) {
+    console.log(`  [warn] ${onTestId} not available — capture skipped`)
+    return
+  }
+  await onToggle.click()
+  await page.waitForTimeout(800)
+  await shot()
+  const offToggle = page.locator(`[data-testid="${offTestId}"]`)
+  if (await isAvailable(offToggle)) {
+    await offToggle.click()
+    await page.waitForTimeout(500)
+  }
+}
+
 async function ensureOverlayOpen(page: Page): Promise<boolean> {
   const toggle = page.locator('button[aria-controls="keycodes-overlay-panel"]')
   if (!(await isAvailable(toggle))) return false
@@ -645,6 +671,15 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     await heatmapTab.click()
     await page.waitForTimeout(800)
     await captureNamed(page, 'analyze-heatmap', { fullPage: true })
+
+    // Speed mode: switch the Count/Speed toggle, capture, then switch back
+    // to Count. Mirrors the bigrams gram-toggle capture below.
+    await captureSegmentVariant(
+      page,
+      'analyze-keyheatmap-mode-toggle-speed',
+      'analyze-keyheatmap-mode-toggle-count',
+      () => captureNamed(page, 'analyze-heatmap-speed', { fullPage: true }),
+    )
   } else {
     console.log('  [skip] analyze-tab-keyHeatmap not found')
   }
@@ -790,6 +825,23 @@ async function captureAnalyzePage(page: Page): Promise<void> {
     } else {
       console.log('  [warn] analyze-bigrams-content not visible — capture skipped')
     }
+
+    // 3-gram view: switch the gram toggle, capture the root (toggle +
+    // content) so the "3-gram" segment reads as active in the shot, then
+    // switch back to 2-gram.
+    await captureSegmentVariant(
+      page,
+      'analyze-bigrams-gram-toggle-3',
+      'analyze-bigrams-gram-toggle-2',
+      async () => {
+        const bigramsRoot = page.locator('[data-testid="analyze-bigrams-root"]')
+        if (await isAvailable(bigramsRoot)) {
+          await captureNamed(page, 'analyze-bigrams-trigram', { element: bigramsRoot })
+        } else {
+          console.log('  [warn] analyze-bigrams-root not visible — trigram capture skipped')
+        }
+      },
+    )
   } else {
     console.log('  [skip] analyze-tab-bigrams not found')
   }
@@ -1700,7 +1752,7 @@ async function main(): Promise<void> {
     await captureDeviceSelection(page)       // 01
     await captureDataModal(page)             // 02
     await captureSettingsModal(page)         // named: settings-troubleshooting, settings-defaults
-    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
+    await captureAnalyzePage(page)           // named: analyze-heatmap, analyze-heatmap-speed, analyze-wpm-time-series, analyze-wpm-time-of-day, analyze-interval-time-series, analyze-interval-distribution, analyze-activity-keystrokes, analyze-activity-calendar, analyze-ergonomics, analyze-ergonomics-learning, analyze-finger-assignment-modal, analyze-layer-keystrokes, analyze-layer-activations
 
     const connected = await connectDevice(app, page)
     if (!connected) {
