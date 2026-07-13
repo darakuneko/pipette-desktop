@@ -28,13 +28,18 @@ function hasBooleanFields(obj: Record<string, unknown>, ...keys: string[]): bool
 function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>
+  // Optional carry-through: keep a persisted boolean romajiInput on
+  // words/time configs, drop any other type silently (the field is
+  // optional, so a malformed value degrades to "not set" rather than
+  // rejecting the whole config).
+  const romajiInput = typeof obj.romajiInput === 'boolean' ? { romajiInput: obj.romajiInput } : {}
   switch (obj.mode) {
     case 'words':
       if (!isFinitePositiveInt(obj.wordCount) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean }
+      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput }
     case 'time':
       if (!isFinitePositiveInt(obj.duration) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean }
+      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput }
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }

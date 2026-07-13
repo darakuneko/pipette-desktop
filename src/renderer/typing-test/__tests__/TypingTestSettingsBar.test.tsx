@@ -208,4 +208,48 @@ describe('TypingTestSettingsBar toggle preservation', () => {
       expect(timeConfig.numbers).toBe(true)
     }
   })
+
+  it('preserves romajiInput when switching words -> time', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    renderBar({ config, language: 'japanese_hiragana', onConfigChange })
+
+    fireEvent.click(screen.getByTestId('mode-time'))
+
+    const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(timeConfig.mode).toBe('time')
+    if (timeConfig.mode === 'time') {
+      expect(timeConfig.romajiInput).toBe(true)
+    }
+  })
+
+  it('preserves romajiInput through quote mode, same as punctuation/numbers', () => {
+    const onConfigChange = vi.fn()
+    const config: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
+    const { rerender } = render(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={config} onConfigChange={onConfigChange} language="japanese_hiragana" />
+      </I18nextProvider>,
+    )
+
+    // Switch to quote mode (romajiInput drops from the config but is remembered).
+    fireEvent.click(screen.getByTestId('mode-quote'))
+    const quoteConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(quoteConfig.mode).toBe('quote')
+
+    onConfigChange.mockClear()
+    rerender(
+      <I18nextProvider i18n={i18n}>
+        <TypingTestSettingsBar config={quoteConfig} onConfigChange={onConfigChange} language="japanese_hiragana" />
+      </I18nextProvider>,
+    )
+
+    // Switch back to words — romajiInput restored from before quote mode.
+    fireEvent.click(screen.getByTestId('mode-words'))
+    const wordsConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    expect(wordsConfig.mode).toBe('words')
+    if (wordsConfig.mode === 'words') {
+      expect(wordsConfig.romajiInput).toBe(true)
+    }
+  })
 })

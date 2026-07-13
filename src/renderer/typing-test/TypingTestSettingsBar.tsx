@@ -36,19 +36,19 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
   const { t } = useTranslation()
 
   // Remember toggle state so it persists through quote modes (which have no toggles).
-  const togglesRef = useRef({ punctuation: false, numbers: false })
+  const togglesRef = useRef({ punctuation: false, numbers: false, romajiInput: false })
   if (config.mode === 'words' || config.mode === 'time') {
-    togglesRef.current = { punctuation: config.punctuation, numbers: config.numbers }
+    togglesRef.current = { punctuation: config.punctuation, numbers: config.numbers, romajiInput: config.romajiInput === true }
   }
 
   const handleModeChange = useCallback((mode: TypingTestMode) => {
-    const { punctuation, numbers } = togglesRef.current
+    const { punctuation, numbers, romajiInput } = togglesRef.current
     switch (mode) {
       case 'words':
-        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers })
+        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, romajiInput })
         break
       case 'time':
-        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers })
+        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, romajiInput })
         break
       case 'quote':
         onConfigChange({ mode: 'quote', quoteLength: config.mode === 'quote' ? config.quoteLength : 'medium' })
