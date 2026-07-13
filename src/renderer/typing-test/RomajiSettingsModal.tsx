@@ -10,7 +10,7 @@ import { useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
-import { MODAL_MD } from '../components/editors/store-modal-shared'
+import { MODAL_LG } from '../components/editors/store-modal-shared'
 import { ROW_CLASS, ToggleRow } from '../components/editors/modal-controls'
 import type { RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
@@ -88,7 +88,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
       onClick={handleBackdropClick}
       data-testid="romaji-settings-modal"
     >
-      <div className={`flex max-h-modal-90vh flex-col ${MODAL_MD} rounded-2xl border border-edge bg-surface-alt shadow-xl`}>
+      <div className={`flex max-h-modal-90vh flex-col ${MODAL_LG} rounded-2xl border border-edge bg-surface-alt shadow-xl`}>
         <div className="flex items-center justify-between border-b border-edge px-4 py-3">
           <h2 id="romaji-settings-title" className="text-lg font-semibold text-content">
             {t('editor.typingTest.romajiSettings.title')}
