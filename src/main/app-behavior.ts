@@ -82,6 +82,26 @@ export function appIconPath(): string {
 
 let trayInstance: Tray | null = null
 
+/** Show and focus the given window. Shared by the tray menu/click
+ * handlers and the WINDOW_SHOW IPC handler so a hidden (start-in-tray)
+ * window and the tray icon reveal it the same way. */
+export function showWindow(getWindow: () => BrowserWindow | null): void {
+  const win = getWindow()
+  if (!win) return
+  win.show()
+  win.focus()
+}
+
+/** Hide the given window, but only while the tray is active — a hidden
+ * window with no tray icon to reopen it would be unreachable. Backs the
+ * WINDOW_HIDE IPC handler used by the renderer's "start hidden" flow. */
+export function hideWindow(getWindow: () => BrowserWindow | null): void {
+  if (!isTrayActive()) return
+  const win = getWindow()
+  if (!win) return
+  win.hide()
+}
+
 /**
  * Create the singleton system-tray icon and its context menu. Safe to
  * call repeatedly — a second call while the tray is already active is a
@@ -94,23 +114,18 @@ export function setupTray(getWindow: () => BrowserWindow | null): void {
   trayInstance = new Tray(nativeImage.createFromPath(appIconPath()))
   trayInstance.setToolTip('Pipette')
 
-  const showWindow = (): void => {
-    const win = getWindow()
-    if (!win) return
-    win.show()
-    win.focus()
-  }
+  const onShowClick = (): void => showWindow(getWindow)
 
   // Fixed English labels: the main process has no i18next runtime (it
   // only runs in the renderer), so the tray menu cannot be localized yet.
   const menu = Menu.buildFromTemplate([
-    { label: 'Show', click: showWindow },
+    { label: 'Show', click: onShowClick },
     { label: 'Quit', click: () => app.quit() },
   ])
   trayInstance.setContextMenu(menu)
   // Left-click shows the window too — Windows/Linux tray convention. A
   // harmless no-op on macOS, where clicking the icon opens the menu instead.
-  trayInstance.on('click', showWindow)
+  trayInstance.on('click', onShowClick)
 }
 
 export function destroyTray(): void {
@@ -121,4 +136,18 @@ export function destroyTray(): void {
 
 export function isTrayActive(): boolean {
   return trayInstance !== null
+}
+
+// Whether THIS launch created the main window hidden (startInTray +
+// trayResident both enabled at createWindow() time). This is a static
+// per-launch fact, not the window's current visibility — it never
+// changes after startup, even once the window is later shown.
+let didStartWindowHidden = false
+
+export function setWindowStartedHidden(hidden: boolean): void {
+  didStartWindowHidden = hidden
+}
+
+export function getWindowStartedHidden(): boolean {
+  return didStartWindowHidden
 }

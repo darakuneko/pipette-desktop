@@ -82,6 +82,10 @@ import {
   setupTray,
   destroyTray,
   isTrayActive,
+  showWindow,
+  hideWindow,
+  setWindowStartedHidden,
+  getWindowStartedHidden,
 } from '../app-behavior'
 
 const mockLog = vi.mocked(log)
@@ -235,5 +239,63 @@ describe('tray', () => {
 
     expect(win.show).toHaveBeenCalled()
     expect(win.focus).toHaveBeenCalled()
+  })
+})
+
+describe('showWindow', () => {
+  it('shows and focuses the window when one exists', () => {
+    const win = { show: vi.fn(), focus: vi.fn() }
+    showWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.show).toHaveBeenCalled()
+    expect(win.focus).toHaveBeenCalled()
+  })
+
+  it('is a no-op when there is no window', () => {
+    expect(() => showWindow(() => null)).not.toThrow()
+  })
+})
+
+describe('hideWindow', () => {
+  beforeEach(() => {
+    destroyTray()
+  })
+
+  afterEach(() => {
+    destroyTray()
+  })
+
+  it('is a no-op when the tray is inactive', () => {
+    const win = { hide: vi.fn() }
+    hideWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.hide).not.toHaveBeenCalled()
+  })
+
+  it('hides the window when the tray is active', () => {
+    setupTray(() => null)
+    const win = { hide: vi.fn() }
+    hideWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.hide).toHaveBeenCalled()
+  })
+
+  it('is a no-op when the tray is active but there is no window', () => {
+    setupTray(() => null)
+    expect(() => hideWindow(() => null)).not.toThrow()
+  })
+})
+
+describe('window started-hidden flag', () => {
+  afterEach(() => {
+    setWindowStartedHidden(false)
+  })
+
+  it('defaults to false', () => {
+    expect(getWindowStartedHidden()).toBe(false)
+  })
+
+  it('reflects the value recorded at window creation', () => {
+    setWindowStartedHidden(true)
+    expect(getWindowStartedHidden()).toBe(true)
+    setWindowStartedHidden(false)
+    expect(getWindowStartedHidden()).toBe(false)
   })
 })

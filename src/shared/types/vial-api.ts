@@ -441,4 +441,7 @@ export interface VialAPI {
   setWindowMinSize(width: number, height: number): Promise<void>
   isAlwaysOnTopSupported(): Promise<boolean>
   setWindowZoom(zoom: number): Promise<void>
+  windowShow(): Promise<void>
+  windowHide(): Promise<void>
+  windowStartedHidden(): Promise<boolean>
 }

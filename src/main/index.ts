@@ -24,7 +24,17 @@ import { log, logHidPacket } from './logger'
 import type { LogLevel } from './logger'
 import { loadWindowState, saveWindowState, setupAppConfigIpc, loadAppConfig, onAppConfigChange, MIN_WIDTH, MIN_HEIGHT } from './app-config'
 import { clampZoomFactor } from '../shared/types/app-config'
-import { applyAutoLaunch, setupTray, destroyTray, isTrayActive, appIconPath } from './app-behavior'
+import {
+  applyAutoLaunch,
+  setupTray,
+  destroyTray,
+  isTrayActive,
+  appIconPath,
+  showWindow,
+  hideWindow,
+  setWindowStartedHidden,
+  getWindowStartedHidden,
+} from './app-behavior'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
@@ -86,6 +96,7 @@ function hideMenuBar(): void {
 }
 
 function createWindow(): void {
+  const cfg = loadAppConfig()
   const saved = loadWindowState()
   const winOpts: Electron.BrowserWindowConstructorOptions = {
     width: saved.width,
@@ -104,6 +115,15 @@ function createWindow(): void {
     winOpts.x = saved.x
     winOpts.y = saved.y
   }
+  // Only start hidden when the tray can actually reopen the window — a
+  // hidden window with no tray icon would be unreachable. The tray is
+  // set up from the same trayResident flag elsewhere in the startup
+  // sequence (app.whenReady()), so this stays in sync with it.
+  const startHidden = cfg.startInTray && cfg.trayResident
+  if (startHidden) {
+    winOpts.show = false
+  }
+  setWindowStartedHidden(startHidden)
   const win = new BrowserWindow(winOpts)
 
   win.on('close', (e) => {
@@ -155,7 +175,6 @@ function createWindow(): void {
   }
   if (isDev) win.webContents.openDevTools()
 
-  const cfg = loadAppConfig()
   win.webContents.setZoomFactor(clampZoomFactor(cfg.zoomFactor) / 100)
 }
 
@@ -195,6 +214,13 @@ function animateBounds(
   tick()
 }
 let normalWindowSize: WindowSize | null = null
+
+/** The main window, shared by the tray (show-from-tray) and the
+ * show/hide IPC handlers. This app only ever has one top-level window,
+ * so "first" is unambiguous. */
+function getFirstWindow(): BrowserWindow | null {
+  return BrowserWindow.getAllWindows()[0] ?? null
+}
 
 function setupWindowIpc(): void {
   const COMPACT_MIN_WIDTH = 300
@@ -301,6 +327,16 @@ function setupWindowIpc(): void {
       win.webContents.setZoomFactor(clampZoomFactor(zoom) / 100)
     },
   )
+
+  secureHandle(IpcChannels.WINDOW_SHOW, () => {
+    showWindow(getFirstWindow)
+  })
+
+  secureHandle(IpcChannels.WINDOW_HIDE, () => {
+    hideWindow(getFirstWindow)
+  })
+
+  secureHandle(IpcChannels.WINDOW_STARTED_HIDDEN, (): boolean => getWindowStartedHidden())
 }
 
 function setupShellIpc(): void {
@@ -364,8 +400,6 @@ app.whenReady().then(() => {
       if (!w.isDestroyed()) w.webContents.setZoomFactor(pct / 100)
     }
   })
-
-  const getFirstWindow = (): BrowserWindow | null => BrowserWindow.getAllWindows()[0] ?? null
 
   onAppConfigChange((key, value) => {
     if (key === 'autoLaunch') {

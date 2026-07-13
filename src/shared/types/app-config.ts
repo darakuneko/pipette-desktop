@@ -34,6 +34,18 @@ export function clampZoomFactor(raw: unknown): number {
   return Math.max(ZOOM_FACTOR_MIN, Math.min(ZOOM_FACTOR_MAX, Math.round(n)))
 }
 
+/** USB identity of the most recently connected device. Reopening a
+ * keyboard at launch needs this because the firmware `uid` alone cannot
+ * locate a HID device to open — only vendorId/productId (and, when
+ * available, serialNumber to disambiguate multiple identical boards)
+ * can. Written by the renderer on successful connect, cleared (null) on
+ * manual disconnect. */
+export interface LastDeviceInfo {
+  vendorId: number
+  productId: number
+  serialNumber?: string
+}
+
 export interface AppConfig {
   autoSync: boolean
   windowState?: WindowState
@@ -78,6 +90,19 @@ export interface AppConfig {
   /** Keep the app running in the system tray when the main window is
    * closed, instead of quitting. */
   trayResident: boolean
+  /** Start the app with the main window hidden, resident in the tray.
+   * Only honored while `trayResident` is enabled — a hidden window with
+   * no tray icon to reopen it would be unreachable. The Settings UI
+   * enforces this dependency (disables/clears the toggle when tray
+   * residency is off). */
+  startInTray: boolean
+  /** Auto-reconnect the last-used keyboard at launch. Combined with the
+   * per-uid viewMode restore, this also brings back the last screen the
+   * user was on for that keyboard. */
+  restoreLastSession: boolean
+  /** USB identity of the last successfully connected device, used by
+   * `restoreLastSession` to reopen it at launch. */
+  lastDevice?: LastDeviceInfo | null
 }
 
 export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
@@ -102,6 +127,9 @@ export const SETTABLE_APP_CONFIG_KEYS: ReadonlySet<keyof AppConfig> = new Set([
   'zoomFactor',
   'autoLaunch',
   'trayResident',
+  'startInTray',
+  'restoreLastSession',
+  'lastDevice',
 ])
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -124,4 +152,6 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   zoomFactor: ZOOM_FACTOR_DEFAULT,
   autoLaunch: false,
   trayResident: false,
+  startInTray: false,
+  restoreLastSession: false,
 }
