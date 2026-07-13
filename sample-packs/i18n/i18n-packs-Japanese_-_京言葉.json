@@ -375,7 +375,7 @@
         "label": "Monitor App"
       },
       "heatmap": {
-        "legend": "ヒートマップ: ここ1時間どすえ"
+        "legend": "ヒートマップ: ここ{{minutes}}分どすえ"
       },
       "closeHint": "クリックしたらメニューが開きますえ",
       "recordingIndicator": "記録中どすえ",
