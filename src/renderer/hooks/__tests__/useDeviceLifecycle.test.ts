@@ -73,6 +73,8 @@ function makeOptions(overrides: Partial<{
       matrixMode: false,
       typingTestMode: false,
       typingTestViewOnly: false,
+      saveLastDevice: vi.fn(),
+      clearLastDevice: vi.fn(),
     },
     mocks: { connectDevice, disconnectDevice, keyboardReload, applyDevicePrefs, syncNow },
   }
@@ -149,5 +151,39 @@ describe('useDeviceLifecycle.handleConnect — issue #190 regression', () => {
 
     expect(syncNow).toHaveBeenCalled()
     expect(mocks.applyDevicePrefs).toHaveBeenCalledWith('uid-1')
+  })
+
+  it('records the last device on a genuine connect, and keeps it through the not-Vial-compatible bailout', async () => {
+    // makeOptions' reloadUid default swallows undefined (?? 'uid-1'), so
+    // the no-uid bailout needs an explicit reload mock.
+    const { options } = makeOptions({}, { keyboardReload: vi.fn().mockResolvedValue(undefined) })
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleConnect(mockDevice)
+    })
+
+    // uid never resolved: nothing saved, and the internal cleanup
+    // disconnect must not forget a previously remembered device.
+    expect(options.saveLastDevice).not.toHaveBeenCalled()
+    expect(options.clearLastDevice).not.toHaveBeenCalled()
+
+    const genuine = makeOptions()
+    const { result: result2 } = renderHook(() => useDeviceLifecycle(genuine.options))
+    await act(async () => {
+      await result2.current.handleConnect(mockDevice)
+    })
+    expect(genuine.options.saveLastDevice).toHaveBeenCalledWith(mockDevice)
+  })
+
+  it('clears the last device on a user-initiated disconnect', async () => {
+    const { options } = makeOptions()
+    const { result } = renderHook(() => useDeviceLifecycle(options))
+
+    await act(async () => {
+      await result.current.handleDisconnect()
+    })
+
+    expect(options.clearLastDevice).toHaveBeenCalled()
   })
 })

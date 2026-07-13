@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { TIME_STEPS } from './settings-modal-shared'
-import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from '../editors/modal-controls'
+import { ROW_CLASS, SettingsToggleRow } from '../editors/modal-controls'
 import { useAppConfig } from '../../hooks/useAppConfig'
 import { useKeyLabels } from '../../hooks/useKeyLabels'
 import { useI18nPackStore } from '../../hooks/useI18nPackStore'
@@ -227,49 +227,51 @@ export function SettingsToolsTab({
             </div>
           </div>
 
-          <div className={ROW_CLASS} data-testid="settings-auto-launch-row">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-content-secondary">
-                {t('settings.autoLaunch')}
-              </span>
-              <span className="text-xs text-content-muted">
-                {t('settings.autoLaunchDescription')}
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={appConfig.config.autoLaunch ?? false}
-              aria-label={t('settings.autoLaunch')}
-              className={toggleTrackClass(appConfig.config.autoLaunch ?? false)}
-              onClick={() => appConfig.set('autoLaunch', !(appConfig.config.autoLaunch ?? false))}
-              data-testid="settings-auto-launch-toggle"
-            >
-              <span className={toggleKnobClass(appConfig.config.autoLaunch ?? false)} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-auto-launch-row"
+            toggleTestId="settings-auto-launch-toggle"
+            label={t('settings.autoLaunch')}
+            description={t('settings.autoLaunchDescription')}
+            on={appConfig.config.autoLaunch ?? false}
+            onToggle={() => appConfig.set('autoLaunch', !(appConfig.config.autoLaunch ?? false))}
+          />
 
-          <div className={ROW_CLASS} data-testid="settings-tray-resident-row">
-            <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-medium text-content-secondary">
-                {t('settings.trayResident')}
-              </span>
-              <span className="text-xs text-content-muted">
-                {t('settings.trayResidentDescription')}
-              </span>
-            </div>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={appConfig.config.trayResident ?? false}
-              aria-label={t('settings.trayResident')}
-              className={toggleTrackClass(appConfig.config.trayResident ?? false)}
-              onClick={() => appConfig.set('trayResident', !(appConfig.config.trayResident ?? false))}
-              data-testid="settings-tray-resident-toggle"
-            >
-              <span className={toggleKnobClass(appConfig.config.trayResident ?? false)} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-tray-resident-row"
+            toggleTestId="settings-tray-resident-toggle"
+            label={t('settings.trayResident')}
+            description={t('settings.trayResidentDescription')}
+            on={appConfig.config.trayResident ?? false}
+            onToggle={() => {
+              const next = !(appConfig.config.trayResident ?? false)
+              appConfig.set('trayResident', next)
+              // A hidden window with no tray icon to reopen it would be
+              // unreachable, so turning tray residency off also clears
+              // startInTray when it was on.
+              if (!next && (appConfig.config.startInTray ?? false)) {
+                appConfig.set('startInTray', false)
+              }
+            }}
+          />
+
+          <SettingsToggleRow
+            rowTestId="settings-restore-last-session-row"
+            toggleTestId="settings-restore-last-session-toggle"
+            label={t('settings.restoreLastSession')}
+            description={t('settings.restoreLastSessionDescription')}
+            on={appConfig.config.restoreLastSession ?? true}
+            onToggle={() => appConfig.set('restoreLastSession', !(appConfig.config.restoreLastSession ?? true))}
+          />
+
+          <SettingsToggleRow
+            rowTestId="settings-start-in-tray-row"
+            toggleTestId="settings-start-in-tray-toggle"
+            label={t('settings.startInTray')}
+            description={t('settings.startInTrayDescription')}
+            on={appConfig.config.startInTray ?? false}
+            onToggle={() => appConfig.set('startInTray', !(appConfig.config.startInTray ?? false))}
+            disabled={!(appConfig.config.trayResident ?? false)}
+          />
         </div>
       </section>
 
@@ -315,73 +317,41 @@ export function SettingsToolsTab({
             </select>
           </div>
 
-          <div className={ROW_CLASS} data-testid="settings-default-auto-advance-row">
-            <span className="text-sm font-medium text-content">
-              {t('settings.defaultAutoAdvance')}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={defaultAutoAdvance}
-              aria-label={t('settings.defaultAutoAdvance')}
-              className={toggleTrackClass(defaultAutoAdvance)}
-              onClick={() => onDefaultAutoAdvanceChange(!defaultAutoAdvance)}
-              data-testid="settings-default-auto-advance-toggle"
-            >
-              <span className={toggleKnobClass(defaultAutoAdvance)} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-default-auto-advance-row"
+            toggleTestId="settings-default-auto-advance-toggle"
+            label={t('settings.defaultAutoAdvance')}
+            labelTone="content"
+            on={defaultAutoAdvance}
+            onToggle={() => onDefaultAutoAdvanceChange(!defaultAutoAdvance)}
+          />
 
-          <div className={ROW_CLASS} data-testid="settings-default-split-key-mode-row">
-            <span className="text-sm font-medium text-content">
-              {t('settings.defaultSplitKeyMode')}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={defaultSplitKeyMode === 'split'}
-              aria-label={t('settings.defaultSplitKeyMode')}
-              className={toggleTrackClass(defaultSplitKeyMode === 'split')}
-              onClick={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
-              data-testid="settings-default-split-key-mode-toggle"
-            >
-              <span className={toggleKnobClass(defaultSplitKeyMode === 'split')} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-default-split-key-mode-row"
+            toggleTestId="settings-default-split-key-mode-toggle"
+            label={t('settings.defaultSplitKeyMode')}
+            labelTone="content"
+            on={defaultSplitKeyMode === 'split'}
+            onToggle={() => onDefaultSplitKeyModeChange(defaultSplitKeyMode === 'split' ? 'flat' : 'split')}
+          />
 
-          <div className={ROW_CLASS} data-testid="settings-default-quick-select-row">
-            <span className="text-sm font-medium text-content">
-              {t('settings.defaultQuickSelect')}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={defaultQuickSelect}
-              aria-label={t('settings.defaultQuickSelect')}
-              className={toggleTrackClass(defaultQuickSelect)}
-              onClick={() => onDefaultQuickSelectChange(!defaultQuickSelect)}
-              data-testid="settings-default-quick-select-toggle"
-            >
-              <span className={toggleKnobClass(defaultQuickSelect)} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-default-quick-select-row"
+            toggleTestId="settings-default-quick-select-toggle"
+            label={t('settings.defaultQuickSelect')}
+            labelTone="content"
+            on={defaultQuickSelect}
+            onToggle={() => onDefaultQuickSelectChange(!defaultQuickSelect)}
+          />
 
-          <div className={ROW_CLASS} data-testid="settings-default-layer-panel-open-row">
-            <span className="text-sm font-medium text-content">
-              {t('settings.defaultLayerPanelOpen')}
-            </span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={defaultLayerPanelOpen}
-              aria-label={t('settings.defaultLayerPanelOpen')}
-              className={toggleTrackClass(defaultLayerPanelOpen)}
-              onClick={() => onDefaultLayerPanelOpenChange(!defaultLayerPanelOpen)}
-              data-testid="settings-default-layer-panel-open-toggle"
-            >
-              <span className={toggleKnobClass(defaultLayerPanelOpen)} />
-            </button>
-          </div>
+          <SettingsToggleRow
+            rowTestId="settings-default-layer-panel-open-row"
+            toggleTestId="settings-default-layer-panel-open-toggle"
+            label={t('settings.defaultLayerPanelOpen')}
+            labelTone="content"
+            on={defaultLayerPanelOpen}
+            onToggle={() => onDefaultLayerPanelOpenChange(!defaultLayerPanelOpen)}
+          />
 
           <div className={ROW_CLASS} data-testid="settings-max-keymap-history-row">
             <label htmlFor="settings-max-keymap-history-selector" className="text-sm font-medium text-content">

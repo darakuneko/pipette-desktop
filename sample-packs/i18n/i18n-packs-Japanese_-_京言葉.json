@@ -1,5 +1,5 @@
 {
-  "version": "0.1.8",
+  "version": "0.1.9",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -745,7 +745,11 @@
     "autoLaunch": "自動起動どすえ",
     "autoLaunchDescription": "サインインしはったら自動で Pipette を起動しますえ",
     "trayResident": "トレイに常駐どすえ",
-    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動き続けますえ"
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動き続けますえ",
+    "restoreLastSession": "最後の状態で起動どすえ",
+    "restoreLastSessionDescription": "起動しはったら前に繋いではったキーボードと画面を戻しますえ",
+    "startInTray": "トレイ常駐で起動どすえ",
+    "startInTrayDescription": "ウィンドウを開かんとトレイに常駐したまま起動しますえ"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがおへんなぁ",

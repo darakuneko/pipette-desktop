@@ -27,7 +27,7 @@ const {
   mockSetLoginItemSettings: vi.fn(),
   mockQuit: vi.fn(),
   mockCreateFromPath: vi.fn((path: string) => ({ __icon: path })),
-  mockBuildFromTemplate: vi.fn((template: Array<{ label: string; click: () => void }>) => ({ __template: template })),
+  mockBuildFromTemplate: vi.fn((template: Array<{ type?: string; label?: string; enabled?: boolean; click?: () => void }>) => ({ __template: template })),
 }))
 
 vi.mock('node:os', async () => {
@@ -82,7 +82,22 @@ import {
   setupTray,
   destroyTray,
   isTrayActive,
+  showWindow,
+  hideWindow,
+  setWindowStartedHidden,
+  getWindowStartedHidden,
+  updateTrayStatus,
 } from '../app-behavior'
+import type { TrayStatus } from '../app-behavior'
+
+const DISCONNECTED_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0, kpm: 0 }
+
+/** Maps a captured menu template to its labels, using a stand-in string
+ * for separator items (which carry no label) so assertions can compare
+ * against a plain array. */
+function templateLabels(template: Array<{ type?: string; label?: string }>): string[] {
+  return template.map((item) => (item.type === 'separator' ? '---' : (item.label ?? '')))
+}
 
 const mockLog = vi.mocked(log)
 
@@ -165,10 +180,12 @@ describe('tray', () => {
     vi.clearAllMocks()
     trayInstances.length = 0
     destroyTray()
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
   })
 
   afterEach(() => {
     destroyTray()
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
   })
 
   it('is inactive before setup', () => {
@@ -203,7 +220,7 @@ describe('tray', () => {
     const template = mockBuildFromTemplate.mock.calls[0][0]
     const showItem = template.find((item) => item.label === 'Show')
     expect(showItem).toBeDefined()
-    showItem!.click()
+    showItem!.click!()
 
     expect(win.show).toHaveBeenCalled()
     expect(win.focus).toHaveBeenCalled()
@@ -213,7 +230,7 @@ describe('tray', () => {
     setupTray(() => null)
     const template = mockBuildFromTemplate.mock.calls[0][0]
     const showItem = template.find((item) => item.label === 'Show')
-    expect(() => showItem!.click()).not.toThrow()
+    expect(() => showItem!.click!()).not.toThrow()
   })
 
   it('Quit menu item calls app.quit', () => {
@@ -221,7 +238,7 @@ describe('tray', () => {
     const template = mockBuildFromTemplate.mock.calls[0][0]
     const quitItem = template.find((item) => item.label === 'Quit')
     expect(quitItem).toBeDefined()
-    quitItem!.click()
+    quitItem!.click!()
     expect(mockQuit).toHaveBeenCalled()
   })
 
@@ -235,5 +252,150 @@ describe('tray', () => {
 
     expect(win.show).toHaveBeenCalled()
     expect(win.focus).toHaveBeenCalled()
+  })
+})
+
+describe('updateTrayStatus', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    trayInstances.length = 0
+    destroyTray()
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
+  })
+
+  afterEach(() => {
+    destroyTray()
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
+  })
+
+  it('is a no-op with no tray active, but still caches the status', () => {
+    expect(() => updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)).not.toThrow()
+    expect(trayInstances).toHaveLength(0)
+
+    // setupTray afterwards applies the cached status immediately.
+    setupTray(() => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R')
+  })
+
+  it('setupTray applies a status cached before the tray existed', () => {
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1234, kpm: 45 }, () => null)
+    setupTray(() => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R — Cnt: 1,234 · KPM: 45')
+  })
+
+  it('updates the tooltip to just "Pipette" when disconnected', () => {
+    setupTray(() => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette')
+  })
+
+  it('formats the tooltip with the keyboard name when connected but not recording', () => {
+    setupTray(() => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R')
+  })
+
+  it('formats the tooltip with Cnt/KPM and en-US thousands-separated numbers while recording', () => {
+    setupTray(() => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 12345, kpm: 1234 }, () => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R — Cnt: 12,345 · KPM: 1,234')
+  })
+
+  it('rebuilds the menu as Show / separator / Quit when disconnected', () => {
+    setupTray(() => null)
+    updateTrayStatus(DISCONNECTED_STATUS, () => null)
+    const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
+    expect(templateLabels(template)).toEqual(['Show', '---', 'Quit'])
+  })
+
+  it('rebuilds the menu with a disabled name row between two separators when connected but not recording', () => {
+    setupTray(() => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
+    const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
+    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', '---', 'Quit'])
+    expect(template.find((item) => item.label === 'GPK-63R')?.enabled).toBe(false)
+  })
+
+  it('rebuilds the menu with disabled name, Recording, Cnt and KPM rows while recording', () => {
+    setupTray(() => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 42, kpm: 20 }, () => null)
+    const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
+    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', 'Recording', 'Cnt: 42', 'KPM: 20', '---', 'Quit'])
+    expect(template.find((item) => item.label === 'Recording')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'Cnt: 42')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'KPM: 20')?.enabled).toBe(false)
+  })
+
+  it('the rebuilt Show item still shows and focuses the window', () => {
+    const win = { show: vi.fn(), focus: vi.fn() }
+    const getWindow = () => win as unknown as Electron.BrowserWindow
+    setupTray(getWindow)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1, kpm: 1 }, getWindow)
+
+    const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
+    const showItem = template.find((item) => item.label === 'Show')
+    showItem!.click!()
+
+    expect(win.show).toHaveBeenCalled()
+    expect(win.focus).toHaveBeenCalled()
+  })
+})
+
+describe('showWindow', () => {
+  it('shows and focuses the window when one exists', () => {
+    const win = { show: vi.fn(), focus: vi.fn() }
+    showWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.show).toHaveBeenCalled()
+    expect(win.focus).toHaveBeenCalled()
+  })
+
+  it('is a no-op when there is no window', () => {
+    expect(() => showWindow(() => null)).not.toThrow()
+  })
+})
+
+describe('hideWindow', () => {
+  beforeEach(() => {
+    destroyTray()
+  })
+
+  afterEach(() => {
+    destroyTray()
+  })
+
+  it('is a no-op when the tray is inactive', () => {
+    const win = { hide: vi.fn() }
+    hideWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.hide).not.toHaveBeenCalled()
+  })
+
+  it('hides the window when the tray is active', () => {
+    setupTray(() => null)
+    const win = { hide: vi.fn() }
+    hideWindow(() => win as unknown as Electron.BrowserWindow)
+    expect(win.hide).toHaveBeenCalled()
+  })
+
+  it('is a no-op when the tray is active but there is no window', () => {
+    setupTray(() => null)
+    expect(() => hideWindow(() => null)).not.toThrow()
+  })
+})
+
+describe('window started-hidden flag', () => {
+  afterEach(() => {
+    setWindowStartedHidden(false)
+  })
+
+  it('defaults to false', () => {
+    expect(getWindowStartedHidden()).toBe(false)
+  })
+
+  it('reflects the value recorded at window creation', () => {
+    setWindowStartedHidden(true)
+    expect(getWindowStartedHidden()).toBe(true)
+    setWindowStartedHidden(false)
+    expect(getWindowStartedHidden()).toBe(false)
   })
 })

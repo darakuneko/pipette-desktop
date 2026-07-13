@@ -9,6 +9,7 @@ import {
 import * as protocol from './protocol'
 import { IpcChannels } from '../shared/ipc/channels'
 import type { DeviceInfo, KeyboardDefinition, ProbeResult } from '../shared/types/protocol'
+import type { TrayStatus } from '../shared/types/vial-api'
 import type { SnapshotMeta } from '../shared/types/snapshot-store'
 import type { AnalyzeFilterSnapshotMeta } from '../shared/types/analyze-filter-store'
 import type { SavedFavoriteMeta, FavoriteImportResult } from '../shared/types/favorite-store'
@@ -757,6 +758,16 @@ const vialAPI = {
     ipcRenderer.invoke(IpcChannels.WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED),
   setWindowZoom: (zoom: number): Promise<void> =>
     ipcRenderer.invoke(IpcChannels.WINDOW_SET_ZOOM, zoom),
+  windowShow: (): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_SHOW),
+  windowHide: (): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_HIDE),
+  windowStartedHidden: (): Promise<boolean> =>
+    ipcRenderer.invoke(IpcChannels.WINDOW_STARTED_HIDDEN),
+
+  // --- Tray status ---
+  trayStatusUpdate: (status: TrayStatus): Promise<void> =>
+    ipcRenderer.invoke(IpcChannels.TRAY_STATUS_UPDATE, status),
 }
 
 contextBridge.exposeInMainWorld('vialAPI', vialAPI)

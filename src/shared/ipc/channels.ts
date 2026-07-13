@@ -303,4 +303,10 @@ export const IpcChannels = {
   WINDOW_SET_MIN_SIZE: 'window:set-min-size',
   WINDOW_IS_ALWAYS_ON_TOP_SUPPORTED: 'window:is-always-on-top-supported',
   WINDOW_SET_ZOOM: 'window:set-zoom',
+  WINDOW_SHOW: 'window:show',
+  WINDOW_HIDE: 'window:hide',
+  WINDOW_STARTED_HIDDEN: 'window:started-hidden',
+
+  // Tray status (renderer → main)
+  TRAY_STATUS_UPDATE: 'tray:status-update',
 } as const

@@ -40,6 +40,12 @@ interface Options {
   matrixMode: boolean
   typingTestMode: boolean
   typingTestViewOnly: boolean
+  // Last-device persistence (restoreLastSession). Called on a genuine
+  // real-device connect success / user-initiated disconnect only — the
+  // dummy and pipette-file paths never call handleConnect/handleDisconnect
+  // with a real device, so they never touch this.
+  saveLastDevice: (device: DeviceInfo) => void
+  clearLastDevice: () => void
 }
 
 export function useDeviceLifecycle(options: Options) {
@@ -70,6 +76,8 @@ export function useDeviceLifecycle(options: Options) {
     matrixMode,
     typingTestMode,
     typingTestViewOnly,
+    saveLastDevice,
+    clearLastDevice,
   } = options
 
   const { t } = useTranslation()
@@ -90,7 +98,7 @@ export function useDeviceLifecycle(options: Options) {
     if (!isPipetteFile) setLastLoadedLabel('')
   }, [keyboardUid, isPipetteFile])
 
-  const handleDisconnect = useCallback(async () => {
+  const handleDisconnect = useCallback(async (opts?: { keepLastDevice?: boolean }) => {
     try {
       await window.vialAPI.lock().catch(() => {})
       await disconnectDevice()
@@ -101,8 +109,13 @@ export function useDeviceLifecycle(options: Options) {
       setLastLoadedLabel('')
       setDeviceLoadError(null)
       resetHubState()
+      // Only a user-intended disconnect forgets the remembered device;
+      // internal cleanup disconnects (the not-Vial-compatible bailout in
+      // handleConnect) keep it, so a transient reload failure can't
+      // silently disable restoreLastSession.
+      if (!opts?.keepLastDevice) clearLastDevice()
     }
-  }, [disconnectDevice, keyboardReset, resetUIState, clearFileStatus, resetHubState])
+  }, [disconnectDevice, keyboardReset, resetUIState, clearFileStatus, resetHubState, clearLastDevice])
 
   const handleConnect = useCallback(
     async (dev: DeviceInfo) => {
@@ -116,6 +129,10 @@ export function useDeviceLifecycle(options: Options) {
           // that never saves a keymap still shows a name instead of its uid.
           // Fire-and-forget; the handler no-ops when a name already exists.
           void window.vialAPI.keyboardMetaNameIfMissing(uid, dev.productName).catch(() => { /* best-effort */ })
+          // Record this as the last-connected device for restoreLastSession,
+          // once we know the connect is genuine (uid resolved, not a
+          // "not Vial compatible" bailout below).
+          saveLastDevice(dev)
           // Pull the cloud copies of keyboards/{uid}/* (and favorites) BEFORE
           // applying local prefs. Otherwise applyDevicePrefs sees a missing
           // local file, writes defaults with a fresh _updatedAt, and the
@@ -133,13 +150,13 @@ export function useDeviceLifecycle(options: Options) {
           }
           await applyDevicePrefs(uid)
         } else {
-          try { await handleDisconnect() } catch { /* cleanup best-effort */ }
+          try { await handleDisconnect({ keepLastDevice: true }) } catch { /* cleanup best-effort */ }
           setDeviceLoadError(t('error.notVialCompatible'))
         }
       }
     },
     [connectDevice, keyboardReload, applyDevicePrefs, handleDisconnect, t,
-     autoSync, authenticated, hasPassword, syncNow],
+     autoSync, authenticated, hasPassword, syncNow, saveLastDevice],
   )
 
   const handleLock = useCallback(async () => {

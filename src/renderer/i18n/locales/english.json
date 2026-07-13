@@ -1,5 +1,5 @@
 {
-  "version": "0.1.8",
+  "version": "0.1.9",
   "name": "English",
   "common": {
     "save": "Save",
@@ -755,7 +755,11 @@
     "autoLaunch": "Launch at Login",
     "autoLaunchDescription": "Start Pipette automatically when you sign in",
     "trayResident": "Stay in System Tray",
-    "trayResidentDescription": "Closing the window keeps Pipette running in the tray"
+    "trayResidentDescription": "Closing the window keeps Pipette running in the tray",
+    "restoreLastSession": "Restore Last Session",
+    "restoreLastSessionDescription": "Reconnect the last keyboard and screen at launch",
+    "startInTray": "Start Hidden in Tray",
+    "startInTrayDescription": "Launch resident in the system tray without opening the window"
   },
   "analyze": {
     "noKeyboards": "No typing data yet.",

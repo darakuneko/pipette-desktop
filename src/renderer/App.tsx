@@ -19,7 +19,11 @@ import { useEntryOperations } from './hooks/useEntryOperations'
 import { useHubState } from './hooks/useHubState'
 import { useSnapshotMigration } from './hooks/useSnapshotMigration'
 import { useDeviceLifecycle } from './hooks/useDeviceLifecycle'
+import { useSessionRestore } from './hooks/useSessionRestore'
+import { useBootHiddenWindow } from './hooks/useBootHiddenWindow'
 import { useMissingKeyLabelNotice } from './hooks/useMissingKeyLabelNotice'
+import { useRecKeystrokeCounter } from './hooks/useRecKeystrokeCounter'
+import { useTrayStatus } from './hooks/useTrayStatus'
 import { MissingKeyLabelDialog } from './components/key-labels/MissingKeyLabelDialog'
 import { JaRemovedBanner } from './components/i18n-packs/JaRemovedBanner'
 import { formatDeviceId } from './app-types'
@@ -227,7 +231,41 @@ export function App() {
     matrixMode: editorUI.matrixState.matrixMode,
     typingTestMode: editorUI.typingTestMode,
     typingTestViewOnly: devicePrefs.typingTestViewOnly,
+    // Same-value guards: every appConfig.set rewrites the whole config
+    // file and re-renders all useAppConfig consumers, so skip the write
+    // when reconnecting the same keyboard / disconnecting with nothing
+    // remembered.
+    saveLastDevice: (dev) => {
+      const cur = appConfig.config.lastDevice
+      if (cur &&
+          cur.vendorId === dev.vendorId &&
+          cur.productId === dev.productId &&
+          cur.serialNumber === (dev.serialNumber || undefined)) return
+      appConfig.set('lastDevice', {
+        vendorId: dev.vendorId,
+        productId: dev.productId,
+        ...(dev.serialNumber ? { serialNumber: dev.serialNumber } : {}),
+      })
+    },
+    clearLastDevice: () => {
+      if (appConfig.config.lastDevice == null) return
+      appConfig.set('lastDevice', null)
+    },
   })
+
+  useSessionRestore({
+    configLoaded: !appConfig.loading,
+    restoreEnabled: appConfig.config.restoreLastSession === true,
+    devices: device.devices,
+    connectedDevice: device.connectedDevice,
+    lastDevice: appConfig.config.lastDevice ?? null,
+    connect: lifecycle.handleConnect,
+  })
+
+  // Show the window only for the Unlock dialog while a hidden launch
+  // (startInTray) is restoring the last session; hide it again once the
+  // dialog resolves. No-ops entirely once the boot-hidden phase ends.
+  useBootHiddenWindow(editorUI.showUnlockDialog)
 
   const missingKeyLabel = useMissingKeyLabelNotice(keyboard.uid || null)
 
@@ -335,6 +373,19 @@ export function App() {
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
   }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
+
+  // System tray: connected-keyboard name + live REC keystroke count.
+  // recordingActive mirrors useInputModes' authoritative definition
+  // exactly (narrower than recordingSnapshotRef's `active` above, which
+  // also counts an editor typing-test practice run) — the tray's REC
+  // line should only light up for the ambient Typing View record toggle.
+  const recordingActive = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+  const recKeystroke = useRecKeystrokeCounter(recordingActive)
+  // Dummy and pipette-file "connections" have no live device behind them
+  // (see useDeviceConnection's connectDummy/connectPipetteFile), so the
+  // tray should read as disconnected rather than show a pseudo name.
+  const trayKeyboardName = device.isDummy ? null : (device.connectedDevice?.productName ?? null)
+  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount, getKpm: recKeystroke.getKpm })
 
   // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
   // the StatusBar's "View Analytics" button can be disabled mid-run.
@@ -880,6 +931,7 @@ export function App() {
             onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
             onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
+            onRecKeystroke={recKeystroke.increment}
             typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
             onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
             typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}

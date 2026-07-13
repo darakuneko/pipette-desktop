@@ -1,5 +1,5 @@
 {
-  "version": "0.1.8",
+  "version": "0.1.9",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -745,7 +745,11 @@
     "autoLaunch": "自動起動",
     "autoLaunchDescription": "サインインの際に Pipette を自動で起動いたします",
     "trayResident": "システムトレイに常駐",
-    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐し、動作を続けます"
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐し、動作を続けます",
+    "restoreLastSession": "前回の状態を復元して起動",
+    "restoreLastSessionDescription": "起動の際、最後に接続していたキーボードと画面を復元いたします",
+    "startInTray": "トレイに常駐して起動",
+    "startInTrayDescription": "ウィンドウを開かず、システムトレイに常駐した状態で起動いたします"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵の記録がございません",

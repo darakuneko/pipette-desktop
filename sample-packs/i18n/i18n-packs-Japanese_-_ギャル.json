@@ -1,5 +1,5 @@
 {
-  "version": "0.1.8",
+  "version": "0.1.9",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -745,7 +745,11 @@
     "autoLaunch": "自動起動っしょ☆",
     "autoLaunchDescription": "サインインしたら自動で Pipette 起きるよ☆",
     "trayResident": "トレイ常駐っしょ",
-    "trayResidentDescription": "ウィンドウ閉じてもトレイでずっと動いてるからね☆"
+    "trayResidentDescription": "ウィンドウ閉じてもトレイでずっと動いてるからね☆",
+    "restoreLastSession": "最後の状態で起動っしょ☆",
+    "restoreLastSessionDescription": "起動したら前つないでたキーボードと画面、そのまま戻してくれるよ☆",
+    "startInTray": "トレイ常駐で起動っしょ",
+    "startInTrayDescription": "ウィンドウ開かんとトレイに常駐したまま起動するからね☆"
   },
   "analyze": {
     "noKeyboards": "データまだなくね？",

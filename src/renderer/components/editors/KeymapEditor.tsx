@@ -116,7 +116,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   typingTestDisplayLines, typingTestFontSize, onTypingTestDisplayLinesChange, onTypingTestFontSizeChange,
   typingTestHideKeymap, typingTestHideStatsRow, typingTestHideControls, typingTestSaveUnnamed = true, typingTestComparisonBaselines, onTypingTestHideKeymapChange, onTypingTestHideStatsRowChange, onTypingTestHideControlsChange, onTypingTestSaveUnnamedChange, onTypingTestComparisonBaselineChange,
   typingTestSettingsPanelOpen, onTypingTestSettingsPanelOpenChange,
-  typingRecordEnabled, onTypingRecordEnabledChange,
+  typingRecordEnabled, onTypingRecordEnabledChange, onRecKeystroke,
   typingRecordingConsentAccepted, onTypingRecordingConsentAccepted,
   typingHeatmapWindowMin, onTypingHeatmapWindowMinChange,
   typingMonitorAppEnabled, onTypingMonitorAppEnabledChange,
@@ -173,7 +173,7 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
     typingTestMode, onTypingTestModeChange, savedTypingTestConfig, savedTypingTestLanguage,
     onTypingTestConfigChange, onTypingTestLanguageChange, onSaveTypingTestResult, onRenameTypingTestResult, saveUnnamed: typingTestSaveUnnamed, typingTestHistory,
     savedTypingTestMemory, onTypingTestMemoryChange,
-    typingTestViewOnly, typingRecordEnabled,
+    typingTestViewOnly, typingRecordEnabled, onRecKeystroke,
     typingRecordKeyboard: keyboardUid && connectedDevice
       ? {
           uid: keyboardUid,
