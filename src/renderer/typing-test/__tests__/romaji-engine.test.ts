@@ -174,6 +174,50 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(matcher.isComplete()).toBe(true)
     expect(matcher.typedRomaji()).toBe('maltucha')
   })
+
+  it('completes via the explicit xtsu spelling (kixtsute)', () => {
+    const { matcher, results } = type('きって', 'kixtsute')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('kixtsute')
+  })
+})
+
+describe('っ — gemination excluded before an n/vowel/y-starting following kana', () => {
+  it('rejects doubling "n" before a na-row kana (あっな as anna would read back as あんな)', () => {
+    const matcher = createRomajiMatcher('あっな')
+    expect(matcher.acceptChar('a')).toBe('complete')
+    expect(matcher.acceptChar('n')).toBe('reject')
+    expect(matcher.typedRomaji()).toBe('a')
+  })
+
+  it('still completes あっな via the explicit tap (axtuna)', () => {
+    const { matcher, results } = type('あっな', 'axtuna')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('axtuna')
+  })
+
+  it('rejects doubling "y" before や (あっや as ayya has no real IME equivalent)', () => {
+    const matcher = createRomajiMatcher('あっや')
+    expect(matcher.acceptChar('a')).toBe('complete')
+    expect(matcher.acceptChar('y')).toBe('reject')
+    expect(matcher.typedRomaji()).toBe('a')
+  })
+
+  it('still completes あっや via the explicit tap (altuya)', () => {
+    const { matcher, results } = type('あっや', 'altuya')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('altuya')
+  })
+
+  it('still rejects doubling a vowel before あ (あっあ as aaa), the pre-existing exclusion', () => {
+    const matcher = createRomajiMatcher('あっあ')
+    expect(matcher.acceptChar('a')).toBe('complete')
+    expect(matcher.acceptChar('a')).toBe('reject')
+    expect(matcher.typedRomaji()).toBe('a')
+  })
 })
 
 describe('katakana normalization and the long vowel mark', () => {
@@ -256,5 +300,73 @@ describe('completedKanaCount', () => {
     for (const key of 'dhina-niiku') matcher.acceptChar(key)
     expect(matcher.isComplete()).toBe(true)
     expect(matcher.completedKanaCount()).toBe([...'でぃなーにいく'].length)
+  })
+})
+
+describe('あ行 alternate spellings (yi for い, wu/whu for う)', () => {
+  it('accepts yi for い alongside the canonical i, inside a word', () => {
+    const { matcher, results } = type('あい', 'ayi')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('ayi')
+  })
+
+  it('accepts wu and whu for う alongside the canonical u, inside a word', () => {
+    const wu = type('あう', 'awu')
+    expect(wu.results.at(-1)).toBe('complete')
+    expect(wu.matcher.typedRomaji()).toBe('awu')
+
+    const whu = type('あう', 'awhu')
+    expect(whu.results.at(-1)).toBe('complete')
+    expect(whu.matcher.typedRomaji()).toBe('awhu')
+  })
+})
+
+describe('ねっこ — full pattern enumeration', () => {
+  // Exhaustively walks every keystroke sequence the matcher accepts for
+  // ねっこ (via DFS over a-z plus '-'), pruning as soon as a keystroke is
+  // rejected and stopping at each completed word rather than continuing
+  // past it. Depth is capped well above the longest real spelling
+  // (neltsuko/nextsuko top out at 8 characters) purely as a safety bound
+  // against an unbounded search if the matcher regresses.
+  function enumerateCompletions(word: string, maxDepth: number): string[] {
+    const alphabet = [...'abcdefghijklmnopqrstuvwxyz-']
+    const completions: string[] = []
+
+    function dfs(path: string): void {
+      if (path.length >= maxDepth) return
+      for (const key of alphabet) {
+        const candidate = path + key
+        const { matcher, results } = type(word, candidate)
+        if (results.at(-1) === 'reject') continue
+        if (matcher.isComplete()) {
+          completions.push(candidate)
+          continue
+        }
+        dfs(candidate)
+      }
+    }
+
+    dfs('')
+    return completions
+  }
+
+  it('accepts exactly 10 full spellings: gemination (nekko/necco) plus the 4 explicit taps x2 following spellings', () => {
+    const completions = enumerateCompletions('ねっこ', 12).sort()
+    expect(completions).toEqual(
+      [
+        'nekko',
+        'necco',
+        'nextuko',
+        'nextuco',
+        'neltuko',
+        'neltuco',
+        'neltsuko',
+        'neltsuco',
+        'nextsuko',
+        'nextsuco',
+      ].sort(),
+    )
+    expect(completions).toHaveLength(10)
   })
 })

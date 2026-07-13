@@ -40,9 +40,17 @@ export type RomajiStyle = 'kunrei' | 'cq' | 'digraph' | 'xSmall' | 'lSmall'
 // single spelling ("-") never depends on context.
 export const KANA_TABLE: Record<string, readonly string[]> = {
   // -- vowels (あ行) --
+  // い/う carry an extra alternate spelling (yi / wu, whu) beyond the
+  // canonical Hepburn form. These stay untagged (no SPELLING_STYLES entry)
+  // rather than joining an existing family or forming a new one: they
+  // don't fit kunrei/cq/digraph, and inventing a dedicated style for two
+  // rarely-used spellings would add a Romaji Settings toggle for
+  // essentially nothing. Untagged means always accepted and never shown
+  // in the settings modal; promote them to a real style later if a
+  // toggle is actually requested.
   あ: ['a'],
-  い: ['i'],
-  う: ['u'],
+  い: ['i', 'yi'],
+  う: ['u', 'wu', 'whu'],
   え: ['e'],
   お: ['o'],
 
@@ -328,6 +336,7 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   // never has to fire for it. See SOKUON_EXPLICIT_PATTERNS and
   // N_PATTERNS_SINGLE_OR_DOUBLE below for the full pattern lists.
   'っ|xtu': 'xSmall',
+  'っ|xtsu': 'xSmall',
   'っ|ltu': 'lSmall',
   'っ|ltsu': 'lSmall',
   'ん|xn': 'xSmall',
@@ -349,9 +358,10 @@ const GUIDE_STYLE_PRIORITY: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph',
 
 // っ typed explicitly (small tsu, standalone) rather than as a doubled
 // consonant. Always available, including at word end where doubling has
-// no following consonant to double.
+// no following consonant to double. xtsu is the fourth MS-IME-standard
+// explicit spelling, alongside xtu/ltu/ltsu.
 // Exported for the SPELLING_STYLES referential-integrity sweep test only.
-export const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu']
+export const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu', 'xtsu']
 
 // ん's own patterns, split by whether the following kana forces the
 // two-keystroke spelling. な/や/あ行 (and their small-kana forms) would
@@ -428,12 +438,18 @@ function nPatternsFor(
 // Doubles a segment option's patterns by prefixing each with its own
 // leading consonant letter (っ + て "te" -> "tte"). Patterns that don't
 // start with a plain consonant letter (a vowel, or something like the
-// long-vowel mark's "-") can't be doubled and are skipped.
+// long-vowel mark's "-") can't be doubled and are skipped. "n" and "y"
+// starts are excluded too: doubling "na" into "nna" would make "anna"
+// read back as あんな (single ん + な) instead of あっな, and doubling "ya"
+// into "yya" has no real IME equivalent either — real input methods never
+// derive a consonant-doubled spelling from these starts, so the matcher
+// must not accept it as a gemination spelling of っ. The explicit taps
+// (xtu/ltu/ltsu/xtsu) remain the only way to type っ before such a kana.
 function doubledPatterns(option: SegmentOption): readonly string[] {
   const doubled: string[] = []
   for (const pattern of option.patterns) {
     const first = pattern[0]
-    if (first !== undefined && /[a-z]/.test(first) && !/[aiueo]/.test(first)) {
+    if (first !== undefined && /[a-z]/.test(first) && !/[aiueony]/.test(first)) {
       doubled.push(first + pattern)
     }
   }

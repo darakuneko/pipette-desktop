@@ -130,14 +130,16 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(type('でぃ', 'dhi', { disabledStyles: ['lSmall'] }).results.at(-1)).toBe('complete')
   })
 
-  it('lSmall OFF rejects the explicit small-tsu l-forms (ltu/ltsu) but keeps xtu', () => {
+  it('lSmall OFF rejects the explicit small-tsu l-forms (ltu/ltsu) but keeps xtu/xtsu', () => {
     expect(type('あっ', 'altu', { disabledStyles: ['lSmall'] }).results.at(-1)).toBe('reject')
     expect(type('あっ', 'altsu', { disabledStyles: ['lSmall'] }).results.at(-1)).toBe('reject')
     expect(type('あっ', 'axtu', { disabledStyles: ['lSmall'] }).results.at(-1)).toBe('complete')
+    expect(type('あっ', 'axtsu', { disabledStyles: ['lSmall'] }).results.at(-1)).toBe('complete')
   })
 
-  it('xSmall OFF rejects the explicit small-tsu x-form (xtu) but keeps ltu/ltsu', () => {
+  it('xSmall OFF rejects the explicit small-tsu x-forms (xtu/xtsu) but keeps ltu/ltsu', () => {
     expect(type('あっ', 'axtu', { disabledStyles: ['xSmall'] }).results).toContain('reject')
+    expect(type('あっ', 'axtsu', { disabledStyles: ['xSmall'] }).results).toContain('reject')
     expect(type('あっ', 'altu', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('complete')
     expect(type('あっ', 'altsu', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('complete')
   })
