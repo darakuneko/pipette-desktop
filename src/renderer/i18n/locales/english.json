@@ -335,11 +335,11 @@
           "nApos": "N separator (n')"
         },
         "styleTip": {
-          "hepburn": "し:shi じ:ji ち:chi つ:tsu ふ:fu しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo ちゃ:cha ちゅ:chu ちょ:cho",
-          "kunrei": "し:si じ:zi ち:ti つ:tu づ:zu ぢ:ji ふ:hu しゃ:sya しゅ:syu しょ:syo じゃ:zya じゅ:zyu じょ:zyo ちゃ:tya ちゅ:tyu ちょ:tyo",
+          "hepburn": "し:shi じ:ji ち:chi つ:tsu ふ:fu しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo ちゃ:cha ちゅ:chu ちょ:cho ぢ:ji ぢゃ:ja ぢゅ:ju ぢょ:jo",
+          "kunrei": "し:si じ:zi ち:ti つ:tu ぢ:zi ふ:hu しゃ:sya しゅ:syu しょ:syo じゃ:zya じゅ:zyu じょ:zyo ちゃ:tya ちゅ:tyu ちょ:tyo ぢゃ:zya ぢゅ:zyu ぢょ:zyo",
           "c": "か:ca く:cu こ:co し:ci せ:ce ちゃ:cya ちゅ:cyu ちょ:cyo",
           "q": "く:qu",
-          "digraph": "じゃ:jya じゅ:jyu じょ:jyo ぢゃ:ja ぢゅ:ju ぢょ:jo",
+          "digraph": "じゃ:jya じゅ:jyu じょ:jyo",
           "xSmall": "ぁ:xa ぃ:xi ぅ:xu ぇ:xe ぉ:xo ゃ:xya ゅ:xyu ょ:xyo ゎ:xwa ゕ:xka ゖ:xke っ:xtu っ:xtsu",
           "lSmall": "ぁ:la ぃ:li ぅ:lu ぇ:le ぉ:lo ゃ:lya ゅ:lyu ょ:lyo ゎ:lwa ゕ:lka ゖ:lke っ:ltu っ:ltsu",
           "w": "うぃ:wi うぃ:whi うぇ:we うぇ:whe うぉ:who う:wu う:whu",

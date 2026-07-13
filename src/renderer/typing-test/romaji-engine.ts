@@ -106,7 +106,7 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   て: ['te'],
   と: ['to'],
   だ: ['da'],
-  ぢ: ['di', 'ji'],
+  ぢ: ['di', 'ji', 'zi'],
   づ: ['du', 'zu'],
   で: ['de'],
   ど: ['do'],
@@ -194,9 +194,9 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   ちゃ: ['cha', 'tya', 'cya'],
   ちゅ: ['chu', 'tyu', 'cyu'],
   ちょ: ['cho', 'tyo', 'cyo'],
-  ぢゃ: ['dya', 'ja'],
-  ぢゅ: ['dyu', 'ju'],
-  ぢょ: ['dyo', 'jo'],
+  ぢゃ: ['dya', 'ja', 'zya'],
+  ぢゅ: ['dyu', 'ju', 'zyu'],
+  ぢょ: ['dyo', 'jo', 'zyo'],
 
   // -- youon: な行 --
   にゃ: ['nya'],
@@ -276,14 +276,18 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 //   can never empty an entry's spelling set.
 // - hepburn / kunrei tag *both* sides of the syllables where the two base
 //   systems actually diverge (shi/si, chi/ti, tsu/tu, fu/hu, ji/zi and
-//   their sha/sya-family compounds) — including the canonical Hepburn
-//   forms, which used to be left untagged before 'hepburn' existed as a
-//   style. Spellings the two systems already agree on (ka, mi, ...) stay
-//   untagged, as do IME-specific alternates that don't fit either system's
-//   own rules (ぢ's "di"/づ's "du" are the canonical, untagged forms; their
-//   "ji"/"zu" alternates keep the pre-existing 'kunrei' tag rather than
-//   gaining a 'hepburn' counterpart, since modern-pronunciation-based IMEs
-//   offer "ji"/"zu" independently of which base system is selected).
+//   their sha/sya-family compounds, plus ぢ's ji/zi and the ぢゃ-row's
+//   ja/zya-family compounds, which diverge the same way じ/じゃ do) —
+//   including the canonical Hepburn forms, which used to be left untagged
+//   before 'hepburn' existed as a style. Spellings the two systems already
+//   agree on (ka, mi, ...) stay untagged, as do IME-specific alternates
+//   that don't fit either system's own rules (ぢ's "di" and the ぢゃ-row's
+//   "dya"/"dyu"/"dyo" are the canonical, untagged IME forms). づ's "zu" is
+//   untagged too, but for a different reason: both base systems spell づ
+//   as "zu", so it's a spelling the two systems share rather than an
+//   IME-specific one — untagged here means always accepted regardless of
+//   which base style is selected, the same practical effect as an
+//   IME-specific tag but a different justification.
 // - xSmall / lSmall tag *both* spelling families of the standalone
 //   small-kana entries — including the canonical x-forms — because each
 //   toggle must be able to remove its whole family ("only type small kana
@@ -349,14 +353,17 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|cha': 'hepburn',
   'ちゅ|chu': 'hepburn',
   'ちょ|cho': 'hepburn',
+  'ぢ|ji': 'hepburn',
+  'ぢゃ|ja': 'hepburn',
+  'ぢゅ|ju': 'hepburn',
+  'ぢょ|jo': 'hepburn',
 
   // -- kunrei: kunrei-shiki-style alternates --
   'し|si': 'kunrei',
   'じ|zi': 'kunrei',
   'ち|ti': 'kunrei',
   'つ|tu': 'kunrei',
-  'づ|zu': 'kunrei',
-  'ぢ|ji': 'kunrei',
+  'ぢ|zi': 'kunrei',
   'ふ|hu': 'kunrei',
   'しゃ|sya': 'kunrei',
   'しゅ|syu': 'kunrei',
@@ -367,6 +374,9 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|tya': 'kunrei',
   'ちゅ|tyu': 'kunrei',
   'ちょ|tyo': 'kunrei',
+  'ぢゃ|zya': 'kunrei',
+  'ぢゅ|zyu': 'kunrei',
+  'ぢょ|zyo': 'kunrei',
 
   // -- digraph: alternate spellings of the youon j-row 2-kana table entries
   // that don't fall into the kunrei/c/q families above (the loanword W
@@ -374,9 +384,6 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'じゃ|jya': 'digraph',
   'じゅ|jyu': 'digraph',
   'じょ|jyo': 'digraph',
-  'ぢゃ|ja': 'digraph',
-  'ぢゅ|ju': 'digraph',
-  'ぢょ|jo': 'digraph',
 
   // -- w: W-notation loanword digraphs. Both spellings of うぃ/うぇ are
   // tagged (including the canonical "wi"/"we"), plus うぉ's sole spelling
