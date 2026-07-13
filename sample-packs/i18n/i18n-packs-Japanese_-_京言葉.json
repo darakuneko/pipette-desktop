@@ -317,7 +317,7 @@
         },
         "fontLinked": "Settings の Font と連動してますえ",
         "guideLabel": "表示パターン",
-        "guideAuto": "自動",
+        "guideHepburn": "ヘボン式",
         "guideHint": "表示だけどすえ。他の入力パターンでも正解になりますえ",
         "inputLabel": "入力パターン",
         "inputHint": "オフにしたパターンは受け付けまへん。ヘボン式はいつでも有効どす",

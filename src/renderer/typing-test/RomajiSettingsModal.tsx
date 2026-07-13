@@ -22,20 +22,23 @@ import { optionButtonClass } from './TypingTestSettingsBar'
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
-const GUIDE_STYLES: readonly (RomajiStyle | 'auto')[] = ['auto', 'kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
+// The guide row's Hepburn button (clears every selected guide style) is
+// rendered separately from this list — see the render section below.
+const GUIDE_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
 const INPUT_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
 
 /** Drops fields set back to their default value so a persisted config only
  *  ever carries what the user actually changed. The single source of truth
  *  for what "default" means per field (every call site above passes the
- *  real selected value — 'lower' / 'auto' included — rather than deciding
- *  locally whether that value is the default). Mirrors the same
- *  "undefined = default" contract `RomajiDetailSettings` documents. */
+ *  real selected value — 'lower' / an empty guideStyles selection included
+ *  — rather than deciding locally whether that value is the default).
+ *  Mirrors the same "undefined = default" contract `RomajiDetailSettings`
+ *  documents. */
 function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefined {
   const pruned: RomajiDetailSettings = {}
   if (next.caseStyle !== undefined && next.caseStyle !== 'lower') pruned.caseStyle = next.caseStyle
   if (next.fontSize !== undefined) pruned.fontSize = next.fontSize
-  if (next.guideStyle !== undefined && next.guideStyle !== 'auto') pruned.guideStyle = next.guideStyle
+  if (next.guideStyles !== undefined && next.guideStyles.length > 0) pruned.guideStyles = next.guideStyles
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
@@ -61,7 +64,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
   const romaji = config.romaji ?? {}
   const enabled = config.romajiInput === true
   const caseStyle = romaji.caseStyle ?? 'lower'
-  const guideStyle = romaji.guideStyle ?? 'auto'
+  const guideStyles = new Set(romaji.guideStyles ?? [])
   const disabledStyles = new Set(romaji.disabledStyles ?? [])
   const fontLinked = romaji.fontSize === undefined
   const fontValue = romaji.fontSize ?? linkedFontSize
@@ -78,6 +81,13 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
     else next.add(style)
     applyRomaji({ disabledStyles: [...next] })
   }, [disabledStyles, applyRomaji])
+
+  const toggleGuideStyle = useCallback((style: RomajiStyle) => {
+    const next = new Set(guideStyles)
+    if (next.has(style)) next.delete(style)
+    else next.add(style)
+    applyRomaji({ guideStyles: [...next] })
+  }, [guideStyles, applyRomaji])
 
   return (
     <div
@@ -160,21 +170,32 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
             </div>
           </section>
 
-          {/* Guide display pattern — single-select, display only. */}
+          {/* Guide display pattern — multi-select, display only. Hepburn
+              clears every selected style and shows the canonical
+              Hepburn-based spelling; the other five toggle independently,
+              same behaviour/look as Accepted input patterns below. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}:</span>
             <div className="flex flex-wrap gap-1">
+              <button
+                type="button"
+                data-testid="romaji-guide-hepburn"
+                aria-pressed={guideStyles.size === 0}
+                className={optionButtonClass(guideStyles.size === 0, 'px-2.5')}
+                onClick={() => applyRomaji({ guideStyles: [] })}
+              >
+                {t('editor.typingTest.romajiSettings.guideHepburn')}
+              </button>
               {GUIDE_STYLES.map((style) => (
                 <button
                   key={style}
                   type="button"
                   data-testid={`romaji-guide-${style}`}
-                  className={optionButtonClass(guideStyle === style, 'px-2.5')}
-                  onClick={() => applyRomaji({ guideStyle: style })}
+                  aria-pressed={guideStyles.has(style)}
+                  className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
+                  onClick={() => toggleGuideStyle(style)}
                 >
-                  {style === 'auto'
-                    ? t('editor.typingTest.romajiSettings.guideAuto')
-                    : t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  {t(`editor.typingTest.romajiSettings.style.${style}`)}
                 </button>
               ))}
             </div>

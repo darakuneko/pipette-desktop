@@ -317,7 +317,7 @@
         },
         "fontLinked": "Linked to Settings Font",
         "guideLabel": "Guide spelling pattern",
-        "guideAuto": "Auto",
+        "guideHepburn": "Hepburn",
         "guideHint": "Display only — typing any accepted pattern is still correct",
         "inputLabel": "Accepted input patterns",
         "inputHint": "Turned-off patterns are rejected; the Hepburn spelling is always accepted",

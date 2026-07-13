@@ -339,6 +339,14 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
 // the following small kana's tagged spelling (xi/li).
 const DECOMPOSING_GUIDE_STYLES: ReadonlySet<RomajiStyle> = new Set(['xSmall', 'lSmall'])
 
+// Fixed precedence used to break ties when more than one selected guide
+// style could tag a candidate within the same kana segment (e.g. both
+// 'kunrei' and 'cq' are selected and the segment has spellings tagged with
+// each). Declaration order, not selection order, decides the winner, so the
+// guide is deterministic regardless of the order the styles were toggled
+// on in the Romaji Settings modal.
+const GUIDE_STYLE_PRIORITY: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
+
 // っ typed explicitly (small tsu, standalone) rather than as a doubled
 // consonant. Always available, including at word end where doubling has
 // no following consonant to double.
@@ -506,29 +514,40 @@ function pickWinner(candidates: readonly FlatPattern[]): FlatPattern {
   return winner
 }
 
-/** Guide-only variant of `pickWinner`: when `guideStyle` names a specific
- *  style, prefers a candidate tagged with that style (falling back to
- *  `pickWinner`'s usual tie-break among just those candidates); otherwise
- *  behaves exactly like `pickWinner`. For the small-kana styles there is a
- *  second-level preference: a digraph position itself has no x/l-tagged
- *  spelling (dhi carries no tag), so when no candidate is tagged, prefer
- *  the *shortest* segmentation — that walks the guide into the decomposed
+/** Guide-only variant of `pickWinner`: when `guideStyles` names one or more
+ *  styles, walks `GUIDE_STYLE_PRIORITY` in order and returns the first
+ *  priority style's tagged candidates (via `pickWinner`'s usual tie-break
+ *  among just those candidates) — so when several selected styles could
+ *  each tag a different candidate within the same segment, the earlier
+ *  style in `GUIDE_STYLE_PRIORITY` wins, independent of the order the
+ *  styles were toggled on in the modal. When none of the selected styles
+ *  tags any candidate here at all, falls through to a second pass: for the
+ *  small-kana styles there is a second-level preference, since a digraph
+ *  position itself has no x/l tag (dhi carries no tag) — prefer the
+ *  *shortest* segmentation, which walks the guide into the decomposed
  *  path, where the following small kana's tagged spelling (xi/li) can then
- *  surface (でぃ -> "dexi"/"deli"). Never used for acceptance — only
+ *  surface (でぃ -> "dexi"/"deli"). With no `guideStyles` selected at all
+ *  (or none survive the segment), behaves exactly like `pickWinner` — the
+ *  canonical Hepburn-based spelling. Never used for acceptance — only
  *  `representativeAt`/`canonicalGuideFrom` (guide display) call this, so
- *  `guideStyle` never affects what `acceptChar` accepts or commits. */
-function pickGuideWinner(candidates: readonly FlatPattern[], guideStyle: RomajiStyle | undefined): FlatPattern {
-  if (guideStyle) {
-    const preferred = candidates.filter((c) => SPELLING_STYLES[`${c.scope}|${c.pattern}`] === guideStyle)
-    if (preferred.length > 0) return pickWinner(preferred)
-    if (DECOMPOSING_GUIDE_STYLES.has(guideStyle)) {
-      let shortest = candidates[0]
-      for (const candidate of candidates) {
-        if (candidate.length < shortest.length) shortest = candidate
+ *  `guideStyles` never affects what `acceptChar` accepts or commits. */
+function pickGuideWinner(candidates: readonly FlatPattern[], guideStyles: ReadonlySet<RomajiStyle> | undefined): FlatPattern {
+  if (guideStyles && guideStyles.size > 0) {
+    for (const style of GUIDE_STYLE_PRIORITY) {
+      if (!guideStyles.has(style)) continue
+      const preferred = candidates.filter((c) => SPELLING_STYLES[`${c.scope}|${c.pattern}`] === style)
+      if (preferred.length > 0) return pickWinner(preferred)
+    }
+    for (const style of GUIDE_STYLE_PRIORITY) {
+      if (guideStyles.has(style) && DECOMPOSING_GUIDE_STYLES.has(style)) {
+        let shortest = candidates[0]
+        for (const candidate of candidates) {
+          if (candidate.length < shortest.length) shortest = candidate
+        }
+        // Among equal-length candidates, candidates[0] is already the
+        // first-listed (canonical) spelling thanks to flatten order.
+        return shortest
       }
-      // Among equal-length candidates, candidates[0] is already the
-      // first-listed (canonical) spelling thanks to flatten order.
-      return shortest
     }
   }
   return pickWinner(candidates)
@@ -539,23 +558,23 @@ function representativeAt(
   index: number,
   buffer: string,
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
-  guideStyle: RomajiStyle | undefined,
+  guideStyles: ReadonlySet<RomajiStyle> | undefined,
 ): FlatPattern | null {
   const flat = flattenOptions(getSegmentOptions(kana, index, disabledStyles))
   const alive = flat.filter((f) => f.pattern.startsWith(buffer))
-  return alive.length > 0 ? pickGuideWinner(alive, guideStyle) : null
+  return alive.length > 0 ? pickGuideWinner(alive, guideStyles) : null
 }
 
 function canonicalGuideFrom(
   kana: readonly string[],
   index: number,
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
-  guideStyle: RomajiStyle | undefined,
+  guideStyles: ReadonlySet<RomajiStyle> | undefined,
 ): string {
   if (index >= kana.length) return ''
-  const winner = representativeAt(kana, index, '', disabledStyles, guideStyle)
+  const winner = representativeAt(kana, index, '', disabledStyles, guideStyles)
   if (!winner) return ''
-  return winner.pattern + canonicalGuideFrom(kana, index + winner.length, disabledStyles, guideStyle)
+  return winner.pattern + canonicalGuideFrom(kana, index + winner.length, disabledStyles, guideStyles)
 }
 
 /** The winning pattern that exactly matches `buffer` as a full spelling at
@@ -563,7 +582,7 @@ function canonicalGuideFrom(
  *  path in `stepAt`/`tryConsume` and by `isComplete`, both of which need to
  *  know whether the in-progress buffer already spells a complete segment
  *  (ん's bare "n" pending a possible second "n" is the only real case).
- *  Acceptance-only: never takes `guideStyle`, since it never feeds a guide. */
+ *  Acceptance-only: never takes `guideStyles`, since it never feeds a guide. */
 function exactWinnerAt(
   kana: readonly string[],
   index: number,
@@ -649,19 +668,26 @@ export interface RomajiMatcherOptions {
    *  small-kana entry's spelling set, `filterByStyle`'s dynamic guard
    *  keeps that entry's canonical spelling alive. */
   disabledStyles?: readonly RomajiStyle[]
-  /** Preferred style for `remainingGuide()`'s displayed spelling. `'auto'`
-   *  (the default) keeps the pre-existing canonical/longest-match
-   *  tie-break. Display-only: never affects what `acceptChar` accepts. */
-  guideStyle?: RomajiStyle | 'auto'
+  /** Preferred styles for `remainingGuide()`'s displayed spelling. Any
+   *  combination may be selected simultaneously — e.g. `['xSmall',
+   *  'kunrei']` surfaces both the small-kana-decomposition preference and
+   *  the kunrei alternate in the same guide, each applying to whichever
+   *  kana segments its own tag matches. When more than one selected style
+   *  could tag distinct candidates within a single segment, precedence is
+   *  `GUIDE_STYLE_PRIORITY`'s declaration order (see `pickGuideWinner`),
+   *  not the order styles appear in this array. Undefined/empty (the
+   *  default) keeps the pre-existing canonical/longest-match tie-break —
+   *  i.e. the plain Hepburn-based spelling, replacing the old `'auto'`
+   *  sentinel. Display-only: never affects what `acceptChar` accepts. */
+  guideStyles?: readonly RomajiStyle[]
 }
 
 export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): RomajiMatcher {
   const kana = [...word].map(toHiragana)
   const disabledStyles =
     opts?.disabledStyles && opts.disabledStyles.length > 0 ? new Set(opts.disabledStyles) : undefined
-  // Normalized once here so every internal helper works with a plain
-  // RomajiStyle | undefined instead of re-checking the 'auto' sentinel.
-  const guideStyle = opts?.guideStyle && opts.guideStyle !== 'auto' ? opts.guideStyle : undefined
+  const guideStyles =
+    opts?.guideStyles && opts.guideStyles.length > 0 ? new Set(opts.guideStyles) : undefined
   let position = 0
   let buffer = ''
   let typed = ''
@@ -712,11 +738,11 @@ export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): 
 
     remainingGuide(): string {
       if (position >= kana.length) return ''
-      const winner = representativeAt(kana, position, buffer, disabledStyles, guideStyle)
+      const winner = representativeAt(kana, position, buffer, disabledStyles, guideStyles)
       if (!winner) return ''
       return (
         winner.pattern.slice(buffer.length) +
-        canonicalGuideFrom(kana, position + winner.length, disabledStyles, guideStyle)
+        canonicalGuideFrom(kana, position + winner.length, disabledStyles, guideStyles)
       )
     },
 

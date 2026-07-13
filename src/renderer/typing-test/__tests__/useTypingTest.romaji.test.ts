@@ -317,7 +317,7 @@ describe('useTypingTest — romaji input mode', () => {
 })
 
 // Plan-typing-romaji-settings-modal Step 2: `config.romaji`'s disabledStyles
-// / guideStyle wired into the matcher (via `romajiMatcherOptions`), and
+// / guideStyles wired into the matcher (via `romajiMatcherOptions`), and
 // caseStyle applied as a display-only transform to the guide row.
 describe('useTypingTest — config.romaji wiring', () => {
   it('rejects a kunrei-tagged spelling once disabledStyles includes kunrei, while the canonical spelling still completes the word', async () => {
@@ -353,7 +353,7 @@ describe('useTypingTest — config.romaji wiring', () => {
   it('steers the guide toward the requested style without changing acceptance', async () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['し'])
     const { result } = renderHook(() => useTypingTest(
-      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { guideStyle: 'kunrei' } },
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { guideStyles: ['kunrei'] } },
       KANA_LANGUAGE,
     ))
 

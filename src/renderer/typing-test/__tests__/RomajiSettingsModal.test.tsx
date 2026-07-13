@@ -48,9 +48,12 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-case-upper').className).not.toContain('text-accent')
   })
 
-  it('defaults the guide selector to auto', () => {
+  it('defaults the guide selector to Hepburn, with no style toggled on', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-guide-auto').className).toContain('text-accent')
+    expect(screen.getByTestId('romaji-guide-hepburn').className).toContain('text-accent')
+    for (const style of ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']) {
+      expect(screen.getByTestId(`romaji-guide-${style}`)).toHaveAttribute('aria-pressed', 'false')
+    }
   })
 
   it('defaults every input pattern to enabled (pressed)', () => {
@@ -128,18 +131,42 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
-  it('sets guideStyle when a non-auto pattern is picked', () => {
+  it('adds a style to guideStyles when it is toggled on', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
     fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyle: 'kunrei' })
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['kunrei'] })
   })
 
-  it('omits guideStyle when auto is re-picked', () => {
+  it('toggling a second style on adds to the existing selection', () => {
     const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyle: 'kunrei' } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-auto'))
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-xSmall'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['kunrei', 'xSmall'] })
+  })
+
+  it('toggling an already-selected style back off removes it from guideStyles', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['xSmall'] })
+  })
+
+  it('omits guideStyles when the only selected style is toggled back off', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  })
+
+  it('clicking Hepburn clears every selected guide style', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-hepburn'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })

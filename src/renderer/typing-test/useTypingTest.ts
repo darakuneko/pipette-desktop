@@ -70,15 +70,15 @@ function buildRomajiMatcher(word: string, keystrokes: string, opts?: RomajiMatch
   return matcher
 }
 
-/** Romaji Settings modal detail fields (disabledStyles / guideStyle /
+/** Romaji Settings modal detail fields (disabledStyles / guideStyles /
  *  caseStyle), read only while `romajiInput` is honored (see
  *  `isRomajiInputActive`) — the config shape guarantees `romaji` only
  *  exists on words/time configs, so this is undefined for every other mode.
  *  Passed straight through as `buildRomajiMatcher`'s opts: its
- *  disabledStyles/guideStyle fields structurally satisfy
+ *  disabledStyles/guideStyles fields structurally satisfy
  *  `RomajiMatcherOptions`, and `createRomajiMatcher` itself already
- *  normalizes an empty disabledStyles array and a `'auto'` guideStyle, so
- *  there's nothing left to prune here. */
+ *  normalizes an empty disabledStyles/guideStyles array, so there's
+ *  nothing left to prune here. */
 function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | undefined {
   return config.mode === 'words' || config.mode === 'time' ? config.romaji : undefined
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 //
 // Tests for the RomajiStyle spelling tags and the createRomajiMatcher
-// disabledStyles/guideStyle options (Plan-typing-romaji-settings-modal
+// disabledStyles/guideStyles options (Plan-typing-romaji-settings-modal
 // Step 1). Complements romaji-engine.test.ts, which covers the untagged,
 // opts-less matcher behaviour that must stay byte-for-byte unchanged.
 
@@ -229,65 +229,97 @@ describe('canonical-sweep: every word stays completable with all styles disabled
   })
 })
 
-describe('guideStyle: display-only, never affects acceptance', () => {
-  it('guideStyle does not change which keystrokes are accepted (dexi still completes でぃ with guideStyle=digraph)', () => {
-    const { matcher, results } = type('でぃなーにいく', 'dexina-niiku', { guideStyle: 'digraph' })
+describe('guideStyles: display-only, never affects acceptance', () => {
+  it('guideStyles does not change which keystrokes are accepted (dexi still completes でぃ with guideStyles=[digraph])', () => {
+    const { matcher, results } = type('でぃなーにいく', 'dexina-niiku', { guideStyles: ['digraph'] })
     expect(results.at(-1)).toBe('complete')
     expect(matcher.isComplete()).toBe(true)
     expect(matcher.typedRomaji()).toBe('dexina-niiku')
   })
 
-  it("guideStyle: 'auto' (or omitted) reproduces the pre-existing canonical/longest-match guide", () => {
-    const withAuto = createRomajiMatcher('でぃなーにいく', { guideStyle: 'auto' })
+  it('an empty/omitted guideStyles reproduces the pre-existing canonical/longest-match guide (the old \'auto\' behaviour)', () => {
+    const withEmpty = createRomajiMatcher('でぃなーにいく', { guideStyles: [] })
     const withoutOpts = createRomajiMatcher('でぃなーにいく')
-    expect(withAuto.remainingGuide()).toBe(withoutOpts.remainingGuide())
-    expect(withAuto.remainingGuide()).toBe('dhina-niiku')
+    expect(withEmpty.remainingGuide()).toBe(withoutOpts.remainingGuide())
+    expect(withEmpty.remainingGuide()).toBe('dhina-niiku')
   })
 
-  it("guideStyle: 'kunrei' prefers the kunrei alternate as the guide for し", () => {
-    const matcher = createRomajiMatcher('し', { guideStyle: 'kunrei' })
+  it("guideStyles: ['kunrei'] prefers the kunrei alternate as the guide for し", () => {
+    const matcher = createRomajiMatcher('し', { guideStyles: ['kunrei'] })
     expect(matcher.remainingGuide()).toBe('si')
   })
 
-  it("guideStyle: 'digraph' prefers the digraph alternate for じゃ", () => {
-    const matcher = createRomajiMatcher('じゃ', { guideStyle: 'digraph' })
+  it("guideStyles: ['digraph'] prefers the digraph alternate for じゃ", () => {
+    const matcher = createRomajiMatcher('じゃ', { guideStyles: ['digraph'] })
     expect(matcher.remainingGuide()).toBe('jya')
   })
 
-  it("guideStyle: 'xSmall' shows the decomposed de+xi form for でぃ", () => {
-    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyle: 'xSmall' })
+  it("guideStyles: ['xSmall'] shows the decomposed de+xi form for でぃ", () => {
+    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyles: ['xSmall'] })
     expect(matcher.remainingGuide()).toBe('dexina-niiku')
   })
 
-  it("guideStyle: 'lSmall' shows the decomposed de+li form for でぃ", () => {
-    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyle: 'lSmall' })
+  it("guideStyles: ['lSmall'] shows the decomposed de+li form for でぃ", () => {
+    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyles: ['lSmall'] })
     expect(matcher.remainingGuide()).toBe('delina-niiku')
   })
 
-  it("guideStyle: 'xSmall' still only changes display — dhi keeps completing", () => {
-    const { matcher, results } = type('でぃなーにいく', 'dhina-niiku', { guideStyle: 'xSmall' })
+  it("guideStyles: ['xSmall'] still only changes display — dhi keeps completing", () => {
+    const { matcher, results } = type('でぃなーにいく', 'dhina-niiku', { guideStyles: ['xSmall'] })
     expect(results.at(-1)).toBe('complete')
     expect(matcher.typedRomaji()).toBe('dhina-niiku')
   })
 
-  it("guideStyle: 'xSmall' respects disabledStyles when picking the displayed spelling (falls back to the live l-form)", () => {
+  it("guideStyles: ['xSmall'] respects disabledStyles when picking the displayed spelling (falls back to the live l-form)", () => {
     // The guide is derived from the *filtered* spelling set, so with
     // xSmall disabled it can't show xi even when asked to prefer it.
-    const matcher = createRomajiMatcher('ぁ', { guideStyle: 'xSmall', disabledStyles: ['xSmall'] })
+    const matcher = createRomajiMatcher('ぁ', { guideStyles: ['xSmall'], disabledStyles: ['xSmall'] })
     expect(matcher.remainingGuide()).toBe('la')
   })
 
-  it('falls back to the usual canonical tie-break when no live spelling matches guideStyle', () => {
+  it('falls back to the usual canonical tie-break when no live spelling matches any selected guide style', () => {
     // あ has only one spelling, so no style tag can ever apply to it.
-    const matcher = createRomajiMatcher('あ', { guideStyle: 'kunrei' })
+    const matcher = createRomajiMatcher('あ', { guideStyles: ['kunrei'] })
     expect(matcher.remainingGuide()).toBe('a')
   })
 
-  it('re-derives the guide once earlier alternatives fall out of contention, respecting guideStyle throughout', () => {
-    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyle: 'digraph' })
+  it('re-derives the guide once earlier alternatives fall out of contention, respecting guideStyles throughout', () => {
+    const matcher = createRomajiMatcher('でぃなーにいく', { guideStyles: ['digraph'] })
     expect(matcher.remainingGuide()).toBe('dhina-niiku')
     matcher.acceptChar('d')
     expect(matcher.remainingGuide()).toBe('hina-niiku')
+  })
+
+  describe('multiple styles selected at once', () => {
+    it('xSmall + kunrei each apply to the segment their own tag matches, independently, in the same guide', () => {
+      // し -> kunrei's 'si' tag applies; でぃ has no tag of its own, so
+      // xSmall's decomposing fallback walks it into で+ぃ, where ぃ's
+      // xSmall-tagged 'xi' then surfaces.
+      const matcher = createRomajiMatcher('しでぃ', { guideStyles: ['xSmall', 'kunrei'] })
+      expect(matcher.remainingGuide()).toBe('sidexi')
+    })
+
+    it('acceptance is unaffected by combining styles — every spelling combination still completes the word', () => {
+      const { matcher, results } = type('しでぃ', 'shideli', { guideStyles: ['xSmall', 'kunrei'] })
+      expect(results.at(-1)).toBe('complete')
+      expect(matcher.typedRomaji()).toBe('shideli')
+    })
+
+    it('when two selected styles could both tag the same segment, GUIDE_STYLE_PRIORITY order decides — not selection order', () => {
+      // し's spellings: si (kunrei), ci (cq). kunrei precedes cq in
+      // GUIDE_STYLE_PRIORITY, so it wins even though 'cq' is listed first
+      // in guideStyles here.
+      const cqFirst = createRomajiMatcher('し', { guideStyles: ['cq', 'kunrei'] })
+      expect(cqFirst.remainingGuide()).toBe('si')
+
+      const kunreiFirst = createRomajiMatcher('し', { guideStyles: ['kunrei', 'cq'] })
+      expect(kunreiFirst.remainingGuide()).toBe('si')
+    })
+
+    it('cq alone (no kunrei selected) still prefers ci for し', () => {
+      const matcher = createRomajiMatcher('し', { guideStyles: ['cq'] })
+      expect(matcher.remainingGuide()).toBe('ci')
+    })
   })
 })
 

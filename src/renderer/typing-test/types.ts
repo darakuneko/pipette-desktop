@@ -19,9 +19,11 @@ export interface RomajiDetailSettings {
   /** Guide-row font size (px), overriding the linked Settings > Font value.
    *  Undefined means "linked" (tracks the reading-window font). */
   fontSize?: number
-  /** Preferred spelling style for the guide's displayed representative.
-   *  Passed straight through to `createRomajiMatcher`'s `guideStyle` opt. */
-  guideStyle?: RomajiStyle | 'auto'
+  /** Preferred spelling styles for the guide's displayed representative —
+   *  any combination may be selected at once. Empty/undefined shows the
+   *  canonical Hepburn-based spelling. Passed straight through to
+   *  `createRomajiMatcher`'s `guideStyles` opt. */
+  guideStyles?: RomajiStyle[]
   /** Alternate-spelling families excluded from acceptance. Passed straight
    *  through to `createRomajiMatcher`'s `disabledStyles` opt. */
   disabledStyles?: RomajiStyle[]

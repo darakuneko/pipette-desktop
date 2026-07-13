@@ -299,7 +299,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
       punctuation: false,
       numbers: false,
       romajiInput: true,
-      romaji: { guideStyle: 'kunrei' },
+      romaji: { guideStyles: ['kunrei'] },
     }
     const { rerender } = render(
       <I18nextProvider i18n={i18n}>
@@ -322,7 +322,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const wordsConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
     expect(wordsConfig.mode).toBe('words')
     if (wordsConfig.mode === 'words') {
-      expect(wordsConfig.romaji).toEqual({ guideStyle: 'kunrei' })
+      expect(wordsConfig.romaji).toEqual({ guideStyles: ['kunrei'] })
     }
   })
 })

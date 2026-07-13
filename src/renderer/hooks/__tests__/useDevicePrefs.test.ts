@@ -789,7 +789,7 @@ describe('useDevicePrefs', () => {
           punctuation: false,
           numbers: false,
           romajiInput: true,
-          romaji: { caseStyle: 'capital', fontSize: 28, guideStyle: 'kunrei', disabledStyles: ['cq', 'digraph'] },
+          romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['cq', 'digraph'] },
         },
       } as never)
 
@@ -805,7 +805,7 @@ describe('useDevicePrefs', () => {
         punctuation: false,
         numbers: false,
         romajiInput: true,
-        romaji: { caseStyle: 'capital', fontSize: 28, guideStyle: 'kunrei', disabledStyles: ['cq', 'digraph'] },
+        romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['cq', 'digraph'] },
       })
     })
 
@@ -852,7 +852,7 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyle: 'kunrei', disabledStyles: ['cq', 'not-a-style', 123] },
+          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyles: ['kunrei'], disabledStyles: ['cq', 'not-a-style', 123] },
         },
       } as never)
 
@@ -867,9 +867,9 @@ describe('useDevicePrefs', () => {
         wordCount: 30,
         punctuation: false,
         numbers: false,
-        // caseStyle and fontSize were malformed and dropped; guideStyle and
+        // caseStyle and fontSize were malformed and dropped; guideStyles and
         // the one known entry in disabledStyles survived.
-        romaji: { guideStyle: 'kunrei', disabledStyles: ['cq'] },
+        romaji: { guideStyles: ['kunrei'], disabledStyles: ['cq'] },
       })
     })
 
@@ -885,7 +885,7 @@ describe('useDevicePrefs', () => {
           duration: 60,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyle: 'nope', disabledStyles: 'cq' },
+          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'cq' },
         },
       } as never)
 
