@@ -18,11 +18,12 @@
 // pattern is both an exact match for what's typed and not itself a proper
 // prefix of any other still-alive pattern, that segment is unambiguous and
 // the matcher commits it and moves on. Only ん's own patterns
-// (n / nn / xn) are a genuine exact-match-that-is-also-a-prefix case (a
-// single "n" can validly finish ん, but so can typing a second "n"): the
-// matcher holds that keystroke as pending and resolves it against the
-// following character with a one-keystroke lookahead ("retroactive
-// commit" below), instead of hard-coding the ambiguity into the table.
+// (n / nn / xn / n') are a genuine exact-match-that-is-also-a-prefix case (a
+// single "n" can validly finish ん, but so can typing a second "n" or an
+// apostrophe): the matcher holds that keystroke as pending and resolves it
+// against the following character with a one-keystroke lookahead
+// ("retroactive commit" below), instead of hard-coding the ambiguity into
+// the table.
 
 import { toHiragana } from './kana-script'
 
@@ -32,8 +33,17 @@ import { toHiragana } from './kana-script'
 // possible. 'hepburn' and 'kunrei' are the two base systems: either one
 // alone can spell every kana in the table, so the settings modal only lets
 // the last enabled base be turned off together with the other (see
-// BASE_STYLES). The rest are independent options layered on top.
-export type RomajiStyle = 'hepburn' | 'kunrei' | 'cq' | 'digraph' | 'xSmall' | 'lSmall'
+// BASE_STYLES). The rest are independent options layered on top: 'cq' was
+// split into separate 'c' (ca/ci/cu/ce/co) and 'q' (qu) styles so the two
+// letter substitutions can be toggled independently, 'xn' was carved out of
+// 'xSmall' (ん's own x-tap is a different concern from standalone small
+// kana), and 'w'/'v'/'f'/'ye'/'nApos' are new loanword/extended-kana and
+// ん-spelling families. See the SPELLING_STYLES comment below for how the
+// new families' tagging differs from cq/digraph/xSmall/lSmall.
+export type RomajiStyle =
+  | 'hepburn' | 'kunrei'
+  | 'c' | 'q' | 'digraph' | 'xSmall' | 'lSmall'
+  | 'w' | 'v' | 'f' | 'ye' | 'xn' | 'nApos'
 
 // The two base spelling systems. Every kana in KANA_TABLE is typable using
 // only one of these (plus the untagged spellings shared by both), so the
@@ -52,13 +62,13 @@ export const BASE_STYLES: readonly RomajiStyle[] = ['hepburn', 'kunrei']
 export const KANA_TABLE: Record<string, readonly string[]> = {
   // -- vowels (あ行) --
   // い/う carry an extra alternate spelling (yi / wu, whu) beyond the
-  // canonical Hepburn form. These stay untagged (no SPELLING_STYLES entry)
-  // rather than joining an existing family or forming a new one: they
-  // don't fit kunrei/cq/digraph, and inventing a dedicated style for two
-  // rarely-used spellings would add a Romaji Settings toggle for
-  // essentially nothing. Untagged means always accepted and never shown
-  // in the settings modal; promote them to a real style later if a
-  // toggle is actually requested.
+  // canonical Hepburn form. い's "yi" stays untagged (no SPELLING_STYLES
+  // entry): it doesn't fit any of the families below, and inventing a
+  // dedicated style for one rarely-used spelling would add a Romaji
+  // Settings toggle for essentially nothing. Untagged means always
+  // accepted and never shown in the settings modal. う's "wu"/"whu" are
+  // tagged 'w' instead — they're the W-notation family's う-row member
+  // (see the 'w' entries in SPELLING_STYLES below).
   あ: ['a'],
   い: ['i', 'yi'],
   う: ['u', 'wu', 'whu'],
@@ -261,9 +271,9 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 // that collide across different kana (e.g. "ji" is both じ's canonical and
 // ぢ's alternate) resolve independently per entry.
 //
-// Three tagging regimes coexist here:
-// - cq / digraph tag only non-canonical alternates, so disabling them can
-//   never empty an entry's spelling set.
+// Four tagging regimes coexist here:
+// - c / q / digraph tag only non-canonical alternates, so disabling them
+//   can never empty an entry's spelling set.
 // - hepburn / kunrei tag *both* sides of the syllables where the two base
 //   systems actually diverge (shi/si, chi/ti, tsu/tu, fu/hu, ji/zi and
 //   their sha/sya-family compounds) — including the canonical Hepburn
@@ -278,27 +288,50 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 //   small-kana entries — including the canonical x-forms — because each
 //   toggle must be able to remove its whole family ("only type small kana
 //   the l-way" is a real preference).
-// For the both-tagged regimes (hepburn/kunrei, xSmall/lSmall), typability
-// is guaranteed not by leaving one side untagged but by `filterByStyle`'s
-// dynamic guard: whenever filtering would empty an entry's spelling set,
-// the canonical (first-listed) spelling is kept regardless of its tag. The
-// Romaji Settings modal additionally never lets both hepburn and kunrei be
-// disabled at once (see BASE_STYLES), so that guard is a safety net here
-// rather than the primary mechanism. See the canonical-sweep test for the
-// resulting invariant.
+// - w / v / f / ye tag *every* spelling of their 2-kana loanword digraph
+//   entries — including the sole/canonical one (ふぁ, ゔぁ, いぇ, ... each
+//   have exactly one listed spelling, or two for うぃ/うぇ) — even though
+//   that would normally trip `filterByStyle`'s empty-set guard. These
+//   entries are deliberately exempted from that guard (see the digraph
+//   branch of `getSegmentOptions`) because they always have a real
+//   decomposition fallback: every digraph key here is `firstKana +
+//   secondKana`, and both halves are independently typable (ふ alone, plus
+//   the standalone small kana ぁ/ぃ/ぅ/ぇ/ぉ/ゅ). Turning a whole family off
+//   is a deliberate "force the decomposed spelling" preference, not a trap
+//   — ふぁ with 'f' disabled still completes via "fu" + "xa"/"la". The 'w'
+//   family additionally reaches into う's own single-kana entry (wu/whu)
+//   since う is the first half of every W-notation digraph — that part
+//   keeps the ordinary tag-only-alternates treatment (う's canonical "u"
+//   stays untagged), and ゔ (v's own first half) is guarded normally as a
+//   standalone atomic kana with no decomposition of its own, so disabling
+//   'v' still leaves ゔ typable as "vu" while ゔぁ etc. need "vu"+small-kana.
+// For the both-tagged regimes without a decomposition fallback
+// (hepburn/kunrei, xSmall/lSmall, and w/v/f/ye's own atomic first-kana
+// entries う/ゔ), typability is guaranteed not by leaving one side untagged
+// but by `filterByStyle`'s dynamic guard: whenever filtering would empty an
+// entry's spelling set, the canonical (first-listed) spelling is kept
+// regardless of its tag. The Romaji Settings modal additionally never lets
+// both hepburn and kunrei be disabled at once (see BASE_STYLES), so that
+// guard is a safety net here rather than the primary mechanism. See the
+// canonical-sweep test for the resulting invariant, and its
+// decomposition-required exceptions for w/v/f/ye's own 2-kana entries.
 // Exported for the SPELLING_STYLES referential-integrity sweep test only
 // (romaji-engine-styles.test.ts) — not part of the matcher's public API.
 export const SPELLING_STYLES: Record<string, RomajiStyle> = {
-  // -- cq: c/q letter substitutions --
-  'か|ca': 'cq',
-  'く|cu': 'cq',
-  'く|qu': 'cq',
-  'こ|co': 'cq',
-  'し|ci': 'cq',
-  'せ|ce': 'cq',
-  'ちゃ|cya': 'cq',
-  'ちゅ|cyu': 'cq',
-  'ちょ|cyo': 'cq',
+  // -- c: "c"-letter substitutions --
+  'か|ca': 'c',
+  'く|cu': 'c',
+  'こ|co': 'c',
+  'し|ci': 'c',
+  'せ|ce': 'c',
+  'ちゃ|cya': 'c',
+  'ちゅ|cyu': 'c',
+  'ちょ|cyo': 'c',
+
+  // -- q: "qu"-letter substitution (く only; no "qa"-style spelling exists
+  // in KANA_TABLE today for くぁ etc. — add one here if it's ever added
+  // there) --
+  'く|qu': 'q',
 
   // -- hepburn: canonical Hepburn spellings, paired one-for-one with the
   // kunrei-shiki alternates directly below --
@@ -335,16 +368,50 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゅ|tyu': 'kunrei',
   'ちょ|tyo': 'kunrei',
 
-  // -- digraph: alternate spellings of 2-kana table entries that don't
-  // fall into the kunrei/cq families above --
+  // -- digraph: alternate spellings of the youon j-row 2-kana table entries
+  // that don't fall into the kunrei/c/q families above (the loanword W
+  // digraphs うぃ/うぇ moved out of this family into 'w' below) --
   'じゃ|jya': 'digraph',
   'じゅ|jyu': 'digraph',
   'じょ|jyo': 'digraph',
   'ぢゃ|ja': 'digraph',
   'ぢゅ|ju': 'digraph',
   'ぢょ|jo': 'digraph',
-  'うぃ|whi': 'digraph',
-  'うぇ|whe': 'digraph',
+
+  // -- w: W-notation loanword digraphs. Both spellings of うぃ/うぇ are
+  // tagged (including the canonical "wi"/"we"), plus うぉ's sole spelling
+  // "who" and う's own "wu"/"whu" alternates — see the SPELLING_STYLES
+  // header comment for why tagging a sole/canonical digraph spelling is
+  // safe here (decomposition into う + the standalone small kana always
+  // remains). --
+  'うぃ|wi': 'w',
+  'うぃ|whi': 'w',
+  'うぇ|we': 'w',
+  'うぇ|whe': 'w',
+  'うぉ|who': 'w',
+  'う|wu': 'w',
+  'う|whu': 'w',
+
+  // -- v: ゔ行 (ヴ/ゔ) loanword digraphs, canonical spellings tagged too —
+  // ゔ itself (the atomic first half) keeps the ordinary guarded treatment,
+  // ゔぁ/ゔぃ/ゔぇ/ゔぉ decompose to "vu" + small kana when 'v' is off --
+  'ゔ|vu': 'v',
+  'ゔぁ|va': 'v',
+  'ゔぃ|vi': 'v',
+  'ゔぇ|ve': 'v',
+  'ゔぉ|vo': 'v',
+
+  // -- f: ふぁ行 loanword digraphs (canonical tagged too; ふ itself is
+  // untouched by this tag — ふ=fu/hu stays hepburn/kunrei territory) --
+  'ふぁ|fa': 'f',
+  'ふぃ|fi': 'f',
+  'ふぇ|fe': 'f',
+  'ふぉ|fo': 'f',
+  'ふゅ|fyu': 'f',
+
+  // -- ye: いぇ, the sole loanword digraph with no other family to join.
+  // い itself (yi) stays untagged — see the あ行 KANA_TABLE comment. --
+  'いぇ|ye': 'ye',
 
   // -- xSmall / lSmall: standalone small-kana spellings, both families
   // tagged (canonical x-forms included — the dynamic guard in
@@ -373,30 +440,40 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ゕ|lka': 'lSmall',
   'ゖ|lke': 'lSmall',
 
-  // -- っ (explicit small-tsu tap) and ん follow the same x/l tagging.
-  // ん's 'n'/'nn' are untagged, so its set never empties and the guard
-  // never has to fire for it. See SOKUON_EXPLICIT_PATTERNS and
-  // N_PATTERNS_SINGLE_OR_DOUBLE below for the full pattern lists.
+  // -- っ (explicit small-tsu tap) keeps the x/l tagging above. --
   'っ|xtu': 'xSmall',
   'っ|xtsu': 'xSmall',
   'っ|ltu': 'lSmall',
   'っ|ltsu': 'lSmall',
-  'ん|xn': 'xSmall',
+
+  // -- ん: 'n'/'nn' stay untagged (shared baseline, always accepted, so its
+  // set never empties and the guard never has to fire for it). 'xn' is its
+  // own style (no longer folded into xSmall — ん's explicit x-tap is a
+  // separate preference from standalone small-kana spellings). 'nApos' is
+  // the "n'" IME-style separator that disambiguates ん before a vowel
+  // (kan'i) without forcing a double tap. See SOKUON_EXPLICIT_PATTERNS and
+  // N_PATTERNS_SINGLE_OR_DOUBLE below for the full pattern lists. --
+  'ん|xn': 'xn',
+  "ん|n'": 'nApos',
 }
 
 // Guide styles whose no-tagged-candidate fallback (see `pickGuideWinner`)
 // prefers the *shortest* segmentation — a digraph position itself carries no
 // x/l-tagged spelling, so walking into the decomposed path is what surfaces
-// the following small kana's tagged spelling (xi/li).
+// the following small kana's tagged spelling (xi/li). w/v/f/ye don't need
+// this: unlike xSmall/lSmall, they tag their own digraph scope directly
+// (see SPELLING_STYLES), so `pickGuideWinner`'s first pass already finds a
+// tagged candidate at the digraph position itself.
 const DECOMPOSING_GUIDE_STYLES: ReadonlySet<RomajiStyle> = new Set(['xSmall', 'lSmall'])
 
 // Fixed precedence used to break ties when more than one selected guide
 // style could tag a candidate within the same kana segment (e.g. both
-// 'kunrei' and 'cq' are selected and the segment has spellings tagged with
+// 'kunrei' and 'c' are selected and the segment has spellings tagged with
 // each). Declaration order, not selection order, decides the winner, so the
 // guide is deterministic regardless of the order the styles were toggled
 // on in the Romaji Settings modal.
-const GUIDE_STYLE_PRIORITY: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
+const GUIDE_STYLE_PRIORITY: readonly RomajiStyle[] =
+  ['kunrei', 'c', 'q', 'digraph', 'w', 'v', 'f', 'ye', 'xn', 'nApos', 'xSmall', 'lSmall']
 
 // っ typed explicitly (small tsu, standalone) rather than as a doubled
 // consonant. Always available, including at word end where doubling has
@@ -409,12 +486,17 @@ export const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu'
 // two-keystroke spelling. な/や/あ行 (and their small-kana forms) would
 // otherwise fold a bare "n" into their own na-row reading (e.g. typing
 // "kani" must produce かに, not かんい), so those contexts drop the
-// single-tap "n" option entirely.
+// single-tap "n" option entirely. "n'" (the IME-style apostrophe separator)
+// is valid in *both* contexts — that's its whole purpose: it confirms ん
+// even before a vowel/na-row/ya-row kana without needing a second "n"
+// (kan'i types かんい directly). It's also accepted at word end, confirmed
+// the same way as "n"/"nn" there (per real IME behaviour, a trailing
+// separator still commits the pending ん).
 // Exported for the SPELLING_STYLES referential-integrity sweep test only —
 // the superset of every pattern ん can resolve to (N_PATTERNS_DOUBLE_ONLY is
 // a subset of this list).
-export const N_PATTERNS_SINGLE_OR_DOUBLE: readonly string[] = ['n', 'nn', 'xn']
-const N_PATTERNS_DOUBLE_ONLY: readonly string[] = ['nn', 'xn']
+export const N_PATTERNS_SINGLE_OR_DOUBLE: readonly string[] = ['n', 'nn', 'xn', "n'"]
+const N_PATTERNS_DOUBLE_ONLY: readonly string[] = ['nn', 'xn', "n'"]
 const N_CONTEXT_REQUIRES_DOUBLE_TAP = new Set([
   'あ', 'い', 'う', 'え', 'お', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ',
   'な', 'に', 'ぬ', 'ね', 'の',
@@ -446,24 +528,32 @@ function kanaAt(kana: readonly string[], index: number): string | undefined {
 }
 
 /** Removes spellings tagged with a disabled style from `patterns`. Untagged
- *  spellings are never removed. Dynamic guard: when filtering would leave
- *  the entry with no spelling at all (both xSmall and lSmall disabled on a
- *  standalone small-kana entry is the only real case), the canonical
- *  (first-listed) spelling is kept regardless of its tag — no combination
- *  of disabled styles may ever make a kana untypable. Returns `patterns`
- *  unchanged (no allocation) when nothing is disabled, so the no-opts path
- *  used by every pre-existing call site is exactly as before. */
+ *  spellings are never removed. Dynamic guard (default on): when filtering
+ *  would leave the entry with no spelling at all (both xSmall and lSmall
+ *  disabled on a standalone small-kana entry is the main case), the
+ *  canonical (first-listed) spelling is kept regardless of its tag — no
+ *  combination of disabled styles may ever make a kana untypable this way.
+ *  Pass `allowEmpty: true` to skip that guard and let the result come back
+ *  empty instead — used only for the 2-kana digraph branch of
+ *  `getSegmentOptions` (w/v/f/ye's fully-tagged entries), where an empty
+ *  digraph option is safe because the decomposed single-kana + small-kana
+ *  path is always available as a fallback segmentation (see the
+ *  SPELLING_STYLES header comment). Returns `patterns` unchanged (no
+ *  allocation) when nothing is disabled, so the no-opts path used by every
+ *  pre-existing call site is exactly as before. */
 function filterByStyle(
   scope: string,
   patterns: readonly string[],
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
+  opts?: { allowEmpty?: boolean },
 ): readonly string[] {
   if (!disabledStyles || disabledStyles.size === 0) return patterns
   const filtered = patterns.filter((pattern) => {
     const style = SPELLING_STYLES[`${scope}|${pattern}`]
     return style === undefined || !disabledStyles.has(style)
   })
-  return filtered.length > 0 ? filtered : patterns.slice(0, 1)
+  if (filtered.length > 0 || opts?.allowEmpty) return filtered
+  return patterns.slice(0, 1)
 }
 
 function nPatternsFor(
@@ -543,7 +633,16 @@ function getSegmentOptions(
   if (next !== undefined) {
     const digraphKey = current + next
     const digraph = KANA_TABLE[digraphKey]
-    if (digraph) options.push({ length: 2, patterns: filterByStyle(digraphKey, digraph, disabledStyles), scope: digraphKey })
+    if (digraph) {
+      // No empty-guard here (see filterByStyle's doc comment): a 2-kana
+      // digraph key's first half always has its own KANA_TABLE entry (the
+      // `single` option pushed below), so when a fully-tagged digraph
+      // family (w/v/f/ye) is entirely disabled, this option is simply
+      // omitted and the decomposed single + following-small-kana path
+      // carries the segment instead.
+      const filtered = filterByStyle(digraphKey, digraph, disabledStyles, { allowEmpty: true })
+      if (filtered.length > 0) options.push({ length: 2, patterns: filtered, scope: digraphKey })
+    }
   }
   const single = KANA_TABLE[current]
   if (single) options.push({ length: 1, patterns: filterByStyle(current, single, disabledStyles), scope: current })
@@ -721,13 +820,17 @@ interface ConsumeResult {
 
 export interface RomajiMatcherOptions {
   /** Styles to exclude from acceptance. Every word remains completable
-   *  regardless of the combination chosen: cq/digraph tag only
-   *  non-canonical alternates; hepburn/kunrei and xSmall/lSmall tag both
-   *  sides of their respective pair, so disabling one side still leaves
-   *  the other (still tagged, still accepted) sufficient on its own, and
-   *  where disabling both at once would empty an entry's spelling set,
-   *  `filterByStyle`'s dynamic guard keeps that entry's canonical spelling
-   *  alive as a last resort. */
+   *  regardless of the combination chosen, via one of three mechanisms (see
+   *  the SPELLING_STYLES header comment for the full breakdown):
+   *  c/q/digraph tag only non-canonical alternates, so filtering never
+   *  empties an entry; hepburn/kunrei and xSmall/lSmall tag both sides of
+   *  their respective pair, so disabling one side still leaves the other
+   *  sufficient, and where disabling both at once would empty an entry's
+   *  spelling set, `filterByStyle`'s dynamic guard keeps that entry's
+   *  canonical spelling alive as a last resort; w/v/f/ye tag every spelling
+   *  of their own 2-kana digraph entries (including the canonical one) and
+   *  deliberately skip that guard, since disabling the whole family instead
+   *  forces the always-available decomposed spelling (ふぁ -> "fu"+"xa"). */
   disabledStyles?: readonly RomajiStyle[]
   /** Preferred styles for `remainingGuide()`'s displayed spelling. Any
    *  combination may be selected simultaneously — e.g. `['xSmall',

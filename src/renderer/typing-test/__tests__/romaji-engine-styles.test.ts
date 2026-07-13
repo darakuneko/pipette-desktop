@@ -2,8 +2,9 @@
 //
 // Tests for the RomajiStyle spelling tags and the createRomajiMatcher
 // disabledStyles/guideStyles options (Plan-typing-romaji-settings-modal
-// Step 1). Complements romaji-engine.test.ts, which covers the untagged,
-// opts-less matcher behaviour that must stay byte-for-byte unchanged.
+// Step 1, later subdivided into the 11-style Options layout). Complements
+// romaji-engine.test.ts, which covers the untagged, opts-less matcher
+// behaviour that must stay byte-for-byte unchanged.
 
 import { describe, it, expect } from 'vitest'
 import {
@@ -16,7 +17,22 @@ import {
   type RomajiStyle,
 } from '../romaji-engine'
 
-const ALL_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
+// Every option style except the base pair (hepburn/kunrei) — kunrei is
+// included since disabling it alone (keeping hepburn) never empties any
+// entry; hepburn is deliberately excluded since disabling both bases at
+// once is outside the invariant this sweep checks (see BASE_STYLES).
+const ALL_STYLES: readonly RomajiStyle[] = ['kunrei', 'c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']
+
+// KANA_TABLE keys whose entry is a 2-kana digraph fully tagged by one of
+// w/v/f/ye (canonical spelling included — see the SPELLING_STYLES header
+// comment in romaji-engine.ts). Disabling that entry's own style empties
+// its digraph option entirely (no guard — a decomposition fallback always
+// exists), so the canonical-sweep test below can't type these entries'
+// literal canonical string with ALL_STYLES disabled; they're excluded from
+// that sweep and checked via their decomposed spelling in a dedicated block.
+const DECOMPOSE_REQUIRED_ENTRIES: ReadonlySet<string> = new Set([
+  'うぃ', 'うぇ', 'うぉ', 'ゔぁ', 'ゔぃ', 'ゔぇ', 'ゔぉ', 'ふぁ', 'ふぃ', 'ふぇ', 'ふぉ', 'ふゅ', 'いぇ',
+])
 
 function type(
   word: string,
@@ -50,14 +66,29 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(type('ちゃ', 'cha', { disabledStyles: ['kunrei'] }).results.at(-1)).toBe('complete')
   })
 
-  it('cq OFF rejects ca (か) but still accepts ka', () => {
-    expect(type('か', 'ca', { disabledStyles: ['cq'] }).results.at(-1)).toBe('reject')
-    expect(type('か', 'ka', { disabledStyles: ['cq'] }).results.at(-1)).toBe('complete')
+  it('c OFF rejects ca (か) and cu (く) but still accepts ka/ku', () => {
+    expect(type('か', 'ca', { disabledStyles: ['c'] }).results.at(-1)).toBe('reject')
+    expect(type('か', 'ka', { disabledStyles: ['c'] }).results.at(-1)).toBe('complete')
+
+    expect(type('く', 'cu', { disabledStyles: ['c'] }).results.at(-1)).toBe('reject')
+    expect(type('く', 'ku', { disabledStyles: ['c'] }).results.at(-1)).toBe('complete')
+    // q is a separate style now — c OFF alone leaves qu accepted.
+    expect(type('く', 'qu', { disabledStyles: ['c'] }).results.at(-1)).toBe('complete')
   })
 
-  it('cq OFF rejects qu (く) but still accepts ku', () => {
-    expect(type('く', 'qu', { disabledStyles: ['cq'] }).results.at(-1)).toBe('reject')
-    expect(type('く', 'ku', { disabledStyles: ['cq'] }).results.at(-1)).toBe('complete')
+  it('c OFF rejects the youon c-alternate (cya) but keeps cha/tya', () => {
+    const cya = type('ちゃ', 'cya', { disabledStyles: ['c'] })
+    expect(cya.results).toContain('reject')
+    expect(cya.matcher.typedRomaji()).not.toBe('cya')
+
+    expect(type('ちゃ', 'cha', { disabledStyles: ['c'] }).results.at(-1)).toBe('complete')
+    expect(type('ちゃ', 'tya', { disabledStyles: ['c'] }).results.at(-1)).toBe('complete')
+  })
+
+  it('q OFF rejects qu (く) but still accepts ku and cu', () => {
+    expect(type('く', 'qu', { disabledStyles: ['q'] }).results.at(-1)).toBe('reject')
+    expect(type('く', 'ku', { disabledStyles: ['q'] }).results.at(-1)).toBe('complete')
+    expect(type('く', 'cu', { disabledStyles: ['q'] }).results.at(-1)).toBe('complete')
   })
 
   it('digraph OFF rejects the leftover youon j-alternate (jya) but keeps ja/zya', () => {
@@ -74,16 +105,6 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(type('じゃ', 'zya', { disabledStyles: ['digraph'] }).results.at(-1)).toBe('complete')
   })
 
-  it('digraph OFF rejects whi (うぃ) but keeps its canonical spelling (wi)', () => {
-    // Same prefix-collision shape as jya/ja above: 'w' stays live (prefix
-    // of "wi"), 'h' is what actually rejects.
-    const whi = type('うぃ', 'whi', { disabledStyles: ['digraph'] })
-    expect(whi.results).toContain('reject')
-    expect(whi.matcher.typedRomaji()).not.toBe('whi')
-
-    expect(type('うぃ', 'wi', { disabledStyles: ['digraph'] }).results.at(-1)).toBe('complete')
-  })
-
   it('digraph OFF still accepts the canonical spelling of a single-spelling 2-kana entry (dhi for でぃ)', () => {
     // でぃ has only one spelling in KANA_TABLE (canonical, untagged), so
     // digraph OFF has nothing to remove here — completability is
@@ -93,19 +114,19 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(matcher.typedRomaji()).toBe('dhi')
   })
 
-  it('xSmall OFF rejects xn (ん) but still accepts n/nn', () => {
+  it('xn OFF rejects xn (ん) but still accepts n/nn', () => {
     // ん's own single-tap "n" requires a following context that doesn't
     // force double-tap; "hon" (word-final) is that context. Typing "x"
     // rejects outright (no live pattern starts with "x"); the following
     // "n" is then just a fresh, valid keystroke on its own, so the last
     // result is 'accept' rather than 'reject' — the reject shows up
     // mid-sequence instead.
-    const hoxn = type('ほん', 'hoxn', { disabledStyles: ['xSmall'] })
+    const hoxn = type('ほん', 'hoxn', { disabledStyles: ['xn'] })
     expect(hoxn.results).toContain('reject')
     expect(hoxn.matcher.typedRomaji()).not.toBe('hoxn')
 
-    expect(type('ほん', 'hon', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('accept')
-    expect(type('ほん', 'honn', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('complete')
+    expect(type('ほん', 'hon', { disabledStyles: ['xn'] }).results.at(-1)).toBe('accept')
+    expect(type('ほん', 'honn', { disabledStyles: ['xn'] }).results.at(-1)).toBe('complete')
   })
 
   it('lSmall OFF rejects la (ぁ) but still accepts xa', () => {
@@ -144,12 +165,12 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(type('あっ', 'altsu', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('complete')
   })
 
-  it("xSmall OFF never touches ん's forced double-tap context — nn is untagged, so the guard has nothing to do", () => {
-    // ん before な forces the double-only pattern set ['nn', 'xn'];
-    // removing 'xn' still leaves 'nn', so filtering alone (no guard)
+  it("xn OFF never touches ん's forced double-tap context — nn is untagged, so the guard has nothing to do", () => {
+    // ん before な forces the double-only pattern set ['nn', 'xn', "n'"];
+    // removing 'xn' still leaves 'nn'/"n'", so filtering alone (no guard)
     // keeps the word typable.
-    expect(type('まんな', 'mannna', { disabledStyles: ['xSmall'] }).results.at(-1)).toBe('complete')
-    const maxnna = type('まんな', 'maxnna', { disabledStyles: ['xSmall'] })
+    expect(type('まんな', 'mannna', { disabledStyles: ['xn'] }).results.at(-1)).toBe('complete')
+    const maxnna = type('まんな', 'maxnna', { disabledStyles: ['xn'] })
     expect(maxnna.results).toContain('reject')
     expect(maxnna.matcher.typedRomaji()).not.toBe('maxnna')
   })
@@ -161,13 +182,96 @@ describe('disabledStyles: per-style acceptance', () => {
     expect(type('いっちゃ', 'ittya', { disabledStyles: ['kunrei'] }).results.at(-1)).toBe('reject')
     expect(type('いっちゃ', 'iccha', { disabledStyles: ['kunrei'] }).results.at(-1)).toBe('complete')
   })
+
+  it('w OFF rejects the wi/whi digraph spellings of うぃ, forcing the u+xi/li decomposition', () => {
+    // う's own remaining spelling ("u") doesn't start with "w", so typing
+    // "w" rejects immediately — no prefix collision here (unlike v/f/ye
+    // below, whose atomic first half keeps a "v"/"f"/"y"-starting spelling
+    // alive).
+    expect(type('うぃ', 'wi', { disabledStyles: ['w'] }).results.at(0)).toBe('reject')
+    expect(type('うぃ', 'whi', { disabledStyles: ['w'] }).results.at(0)).toBe('reject')
+
+    const { matcher: uxi, results: uxiResults } = type('うぃ', 'uxi', { disabledStyles: ['w'] })
+    expect(uxiResults.at(-1)).toBe('complete')
+    expect(uxi.typedRomaji()).toBe('uxi')
+
+    const { matcher: uli, results: uliResults } = type('うぃ', 'uli', { disabledStyles: ['w'] })
+    expect(uliResults.at(-1)).toBe('complete')
+    expect(uli.typedRomaji()).toBe('uli')
+  })
+
+  it('w OFF rejects we/whe (うぇ) and who (うぉ), forcing decomposition', () => {
+    expect(type('うぇ', 'we', { disabledStyles: ['w'] }).results.at(0)).toBe('reject')
+    expect(type('うぇ', 'uxe', { disabledStyles: ['w'] }).results.at(-1)).toBe('complete')
+
+    expect(type('うぉ', 'who', { disabledStyles: ['w'] }).results.at(0)).toBe('reject')
+    expect(type('うぉ', 'uxo', { disabledStyles: ['w'] }).results.at(-1)).toBe('complete')
+  })
+
+  it('w OFF also rejects wu/whu for う itself (standalone, not part of a digraph) but keeps u', () => {
+    expect(type('あう', 'awu', { disabledStyles: ['w'] }).results).toContain('reject')
+    expect(type('あう', 'awhu', { disabledStyles: ['w'] }).results).toContain('reject')
+    expect(type('あう', 'au', { disabledStyles: ['w'] }).results.at(-1)).toBe('complete')
+  })
+
+  it('v OFF rejects the va digraph spelling of ゔぁ, forcing the vu+xa/la decomposition', () => {
+    // ゔ's own sole spelling ("vu") is tagged 'v' too, but it's reached via
+    // the guarded single-kana branch (no decomposition of its own), so the
+    // dynamic guard keeps "vu" alive there — which is exactly what the
+    // decomposed path relies on. That guard-revived "vu" also means typing
+    // "va" doesn't reject on the very first keystroke: "v" is still a live
+    // prefix of the guarded "vu" option, so the rejection surfaces on "a".
+    const va = type('ゔぁ', 'va', { disabledStyles: ['v'] })
+    expect(va.results).toContain('reject')
+    expect(va.matcher.typedRomaji()).not.toBe('va')
+
+    const { matcher, results } = type('ゔぁ', 'vuxa', { disabledStyles: ['v'] })
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('vuxa')
+  })
+
+  it('v OFF still leaves ゔ itself (standalone, not part of a digraph) typable as vu — the guard has a real effect there', () => {
+    const { matcher, results } = type('ゔ', 'vu', { disabledStyles: ['v'] })
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('vu')
+  })
+
+  it('f OFF rejects the fa digraph spelling of ふぁ, forcing the fu+xa/la decomposition', () => {
+    // Same prefix-collision shape as v/va above: ふ's own "fu" (untouched
+    // by 'f' — it's hepburn-tagged, not f-tagged) keeps "f" alive as a
+    // prefix, so the rejection surfaces on "a" rather than "f".
+    const fa = type('ふぁ', 'fa', { disabledStyles: ['f'] })
+    expect(fa.results).toContain('reject')
+    expect(fa.matcher.typedRomaji()).not.toBe('fa')
+
+    const { matcher, results } = type('ふぁ', 'fuxa', { disabledStyles: ['f'] })
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('fuxa')
+  })
+
+  it('f OFF leaves ふ itself untouched (fu/hu are hepburn/kunrei territory, not f)', () => {
+    expect(type('ふ', 'fu', { disabledStyles: ['f'] }).results.at(-1)).toBe('complete')
+    expect(type('ふ', 'hu', { disabledStyles: ['f'] }).results.at(-1)).toBe('complete')
+  })
+
+  it('ye OFF rejects ye (いぇ), forcing the i+xe/le decomposition', () => {
+    // い's own "yi" alternate (untagged, unrelated to 'ye') keeps "y" alive
+    // as a prefix, so the rejection surfaces on "e" rather than "y".
+    const ye = type('いぇ', 'ye', { disabledStyles: ['ye'] })
+    expect(ye.results).toContain('reject')
+    expect(ye.matcher.typedRomaji()).not.toBe('ye')
+
+    const { matcher, results } = type('いぇ', 'ixe', { disabledStyles: ['ye'] })
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('ixe')
+  })
 })
 
 describe('disabledStyles: multiple styles at once', () => {
-  it('combines independently — kunrei+cq off on し leaves only shi', () => {
-    expect(type('し', 'si', { disabledStyles: ['kunrei', 'cq'] }).results.at(-1)).toBe('reject')
-    expect(type('し', 'ci', { disabledStyles: ['kunrei', 'cq'] }).results.at(-1)).toBe('reject')
-    expect(type('し', 'shi', { disabledStyles: ['kunrei', 'cq'] }).results.at(-1)).toBe('complete')
+  it('combines independently — kunrei+c off on し leaves only shi', () => {
+    expect(type('し', 'si', { disabledStyles: ['kunrei', 'c'] }).results.at(-1)).toBe('reject')
+    expect(type('し', 'ci', { disabledStyles: ['kunrei', 'c'] }).results.at(-1)).toBe('reject')
+    expect(type('し', 'shi', { disabledStyles: ['kunrei', 'c'] }).results.at(-1)).toBe('complete')
   })
 
   it('xSmall+lSmall both OFF: the dynamic guard revives the canonical x-form for a standalone small kana', () => {
@@ -201,15 +305,80 @@ describe('disabledStyles: multiple styles at once', () => {
   })
 })
 
+describe("nApos: the n' ん-separator", () => {
+  it("types かんい as kan'i (n' confirms ん before a vowel without a double tap)", () => {
+    const { matcher, results } = type('かんい', "kan'i")
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe("kan'i")
+  })
+
+  it("word-final ん also confirms via n' (hon' completes ほん, same as hon/honn)", () => {
+    const { matcher, results } = type('ほん', "hon'")
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe("hon'")
+  })
+
+  it("nApos OFF rejects the apostrophe continuation of a word-final ん, but the plain single/double tap still completes it", () => {
+    const rejected = type('ほん', "hon'", { disabledStyles: ['nApos'] })
+    expect(rejected.results.at(-1)).toBe('reject')
+    expect(rejected.matcher.typedRomaji()).toBe('hon')
+    expect(rejected.matcher.isComplete()).toBe(true)
+
+    expect(type('ほん', 'hon', { disabledStyles: ['nApos'] }).results.at(-1)).toBe('accept')
+    expect(type('ほん', 'honn', { disabledStyles: ['nApos'] }).results.at(-1)).toBe('complete')
+  })
+
+  it("nApos OFF rejects kan'i (the forced double-tap context loses its n' escape hatch) but kanni still completes", () => {
+    const rejected = type('かんい', "kan'i", { disabledStyles: ['nApos'] })
+    expect(rejected.results.at(-1)).toBe('reject')
+    expect(rejected.matcher.typedRomaji()).toBe('kan')
+
+    expect(type('かんい', 'kanni', { disabledStyles: ['nApos'] }).results.at(-1)).toBe('complete')
+  })
+})
+
 describe('canonical-sweep: every word stays completable with all styles disabled', () => {
   const opts = { disabledStyles: ALL_STYLES }
 
-  it.each(Object.entries(KANA_TABLE))('canonical spelling of "%s" still completes with every style disabled', (kana, patterns) => {
+  const sweepableEntries = Object.entries(KANA_TABLE).filter(([kana]) => !DECOMPOSE_REQUIRED_ENTRIES.has(kana))
+
+  it.each(sweepableEntries)('canonical spelling of "%s" still completes with every style disabled', (kana, patterns) => {
     const canonical = patterns[0]
     const { matcher, results } = type(kana, canonical, opts)
     expect(results.at(-1)).toBe('complete')
     expect(matcher.isComplete()).toBe(true)
     expect(matcher.typedRomaji()).toBe(canonical)
+  })
+
+  // w/v/f/ye tag every spelling of these 2-kana entries (canonical
+  // included) and are exempted from filterByStyle's empty-set guard, since
+  // a decomposition into (single kana) + (standalone small kana) always
+  // remains — see the SPELLING_STYLES header comment. So with every style
+  // disabled, these complete via their decomposed spelling instead of the
+  // literal canonical string.
+  const decomposedWords: ReadonlyArray<[word: string, decomposedKeys: string]> = [
+    ['うぃ', 'uxi'],
+    ['うぇ', 'uxe'],
+    ['うぉ', 'uxo'],
+    ['ゔぁ', 'vuxa'],
+    ['ゔぃ', 'vuxi'],
+    ['ゔぇ', 'vuxe'],
+    ['ゔぉ', 'vuxo'],
+    ['ふぁ', 'fuxa'],
+    ['ふぃ', 'fuxi'],
+    ['ふぇ', 'fuxe'],
+    ['ふぉ', 'fuxo'],
+    ['ふゅ', 'fuxyu'],
+    ['いぇ', 'ixe'],
+  ]
+
+  it.each(decomposedWords)('"%s" completes via its decomposed spelling (%s) with every style disabled', (word, keys) => {
+    const { matcher, results } = type(word, keys, opts)
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe(keys)
   })
 
   const contextWords: ReadonlyArray<[word: string, canonicalKeys: string]> = [
@@ -329,6 +498,26 @@ describe('guideStyles: display-only, never affects acceptance', () => {
     expect(matcher.remainingGuide()).toBe('jya')
   })
 
+  it("guideStyles: ['w'] prefers the W-notation digraph for うぃ", () => {
+    const matcher = createRomajiMatcher('うぃ', { guideStyles: ['w'] })
+    expect(matcher.remainingGuide()).toBe('wi')
+  })
+
+  it("guideStyles: ['v'] prefers va for ゔぁ", () => {
+    const matcher = createRomajiMatcher('ゔぁ', { guideStyles: ['v'] })
+    expect(matcher.remainingGuide()).toBe('va')
+  })
+
+  it("guideStyles: ['f'] prefers fa for ふぁ", () => {
+    const matcher = createRomajiMatcher('ふぁ', { guideStyles: ['f'] })
+    expect(matcher.remainingGuide()).toBe('fa')
+  })
+
+  it("guideStyles: ['nApos'] prefers n' for ん before a vowel", () => {
+    const matcher = createRomajiMatcher('かんい', { guideStyles: ['nApos'] })
+    expect(matcher.remainingGuide()).toBe("kan'i")
+  })
+
   it("guideStyles: ['xSmall'] shows the decomposed de+xi form for でぃ", () => {
     const matcher = createRomajiMatcher('でぃなーにいく', { guideStyles: ['xSmall'] })
     expect(matcher.remainingGuide()).toBe('dexina-niiku')
@@ -381,18 +570,18 @@ describe('guideStyles: display-only, never affects acceptance', () => {
     })
 
     it('when two selected styles could both tag the same segment, GUIDE_STYLE_PRIORITY order decides — not selection order', () => {
-      // し's spellings: si (kunrei), ci (cq). kunrei precedes cq in
-      // GUIDE_STYLE_PRIORITY, so it wins even though 'cq' is listed first
+      // し's spellings: si (kunrei), ci (c). kunrei precedes c in
+      // GUIDE_STYLE_PRIORITY, so it wins even though 'c' is listed first
       // in guideStyles here.
-      const cqFirst = createRomajiMatcher('し', { guideStyles: ['cq', 'kunrei'] })
-      expect(cqFirst.remainingGuide()).toBe('si')
+      const cFirst = createRomajiMatcher('し', { guideStyles: ['c', 'kunrei'] })
+      expect(cFirst.remainingGuide()).toBe('si')
 
-      const kunreiFirst = createRomajiMatcher('し', { guideStyles: ['kunrei', 'cq'] })
+      const kunreiFirst = createRomajiMatcher('し', { guideStyles: ['kunrei', 'c'] })
       expect(kunreiFirst.remainingGuide()).toBe('si')
     })
 
-    it('cq alone (no kunrei selected) still prefers ci for し', () => {
-      const matcher = createRomajiMatcher('し', { guideStyles: ['cq'] })
+    it('c alone (no kunrei selected) still prefers ci for し', () => {
+      const matcher = createRomajiMatcher('し', { guideStyles: ['c'] })
       expect(matcher.remainingGuide()).toBe('ci')
     })
   })

@@ -789,7 +789,7 @@ describe('useDevicePrefs', () => {
           punctuation: false,
           numbers: false,
           romajiInput: true,
-          romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['cq', 'digraph'] },
+          romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
         },
       } as never)
 
@@ -805,7 +805,7 @@ describe('useDevicePrefs', () => {
         punctuation: false,
         numbers: false,
         romajiInput: true,
-        romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['cq', 'digraph'] },
+        romaji: { caseStyle: 'capital', fontSize: 28, guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
       })
     })
 
@@ -852,7 +852,7 @@ describe('useDevicePrefs', () => {
           wordCount: 30,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyles: ['kunrei'], disabledStyles: ['cq', 'not-a-style', 123] },
+          romaji: { caseStyle: 'sideways', fontSize: -4, guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
         },
       } as never)
 
@@ -869,7 +869,7 @@ describe('useDevicePrefs', () => {
         numbers: false,
         // caseStyle and fontSize were malformed and dropped; guideStyles and
         // the one known entry in disabledStyles survived.
-        romaji: { guideStyles: ['kunrei'], disabledStyles: ['cq'] },
+        romaji: { guideStyles: ['kunrei'], disabledStyles: ['c'] },
       })
     })
 
@@ -888,7 +888,7 @@ describe('useDevicePrefs', () => {
           // Should never happen via the modal (it blocks disabling the last
           // enabled base), but a hand-edited or corrupted config could still
           // carry both disabled — at least one base must survive validation.
-          romaji: { disabledStyles: ['hepburn', 'kunrei', 'cq'] },
+          romaji: { disabledStyles: ['hepburn', 'kunrei', 'digraph'] },
         },
       } as never)
 
@@ -903,7 +903,38 @@ describe('useDevicePrefs', () => {
         wordCount: 30,
         punctuation: false,
         numbers: false,
-        romaji: { disabledStyles: ['hepburn', 'cq'] },
+        romaji: { disabledStyles: ['hepburn', 'digraph'] },
+      })
+    })
+
+    it('drops a legacy "cq" style from a persisted disabledStyles/guideStyles (split into separate c/q styles)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideStyles: ['cq', 'kunrei'], disabledStyles: ['cq', 'digraph'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideStyles: ['kunrei'], disabledStyles: ['digraph'] },
       })
     })
 
@@ -950,7 +981,7 @@ describe('useDevicePrefs', () => {
           duration: 60,
           punctuation: false,
           numbers: false,
-          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'cq' },
+          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'c' },
         },
       } as never)
 

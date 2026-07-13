@@ -17,7 +17,10 @@ import { clampZoomFactor } from '../../shared/types/app-config'
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
-const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set(['hepburn', 'kunrei', 'cq', 'digraph', 'xSmall', 'lSmall'])
+const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set([
+  'hepburn', 'kunrei',
+  'c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos',
+])
 const VALID_ROMAJI_CASE_STYLES: ReadonlySet<string> = new Set(['lower', 'capital', 'upper'])
 
 function isFinitePositiveInt(n: unknown): n is number {

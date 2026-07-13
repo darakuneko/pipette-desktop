@@ -278,7 +278,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
       punctuation: false,
       numbers: false,
       romajiInput: true,
-      romaji: { caseStyle: 'capital', disabledStyles: ['cq'] },
+      romaji: { caseStyle: 'capital', disabledStyles: ['c'] },
     }
     renderBar({ config, language: 'japanese_hiragana', onConfigChange })
 
@@ -287,7 +287,7 @@ describe('TypingTestSettingsBar toggle preservation', () => {
     const timeConfig = onConfigChange.mock.calls[0][0] as TypingTestConfig
     expect(timeConfig.mode).toBe('time')
     if (timeConfig.mode === 'time') {
-      expect(timeConfig.romaji).toEqual({ caseStyle: 'capital', disabledStyles: ['cq'] })
+      expect(timeConfig.romaji).toEqual({ caseStyle: 'capital', disabledStyles: ['c'] })
     }
   })
 

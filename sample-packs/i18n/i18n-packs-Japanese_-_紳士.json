@@ -325,10 +325,30 @@
         "style": {
           "hepburn": "ヘボン式 (shi/chi)",
           "kunrei": "訓令式 (si/ti)",
-          "cq": "C/Q表記 (ca/qu)",
+          "c": "C表記 (ca)",
+          "q": "Q表記 (qu)",
           "digraph": "二重字 (jya)",
-          "xSmall": "小文字x (xa/xtu)",
-          "lSmall": "小文字l (la/ltu)"
+          "xSmall": "小文字x (xa)",
+          "lSmall": "小文字l (la)",
+          "w": "W表記 (wi)",
+          "v": "V表記 (va)",
+          "f": "F表記 (fa)",
+          "ye": "YE表記 (ye)",
+          "xn": "撥音x (xn)",
+          "nApos": "N区切り (n')"
+        },
+        "styleTip": {
+          "c": "ca / ci / cu / ce / co にございます",
+          "q": "qu 等にございます",
+          "digraph": "jya / jyu / jyo 等にございます",
+          "xSmall": "xa / xi / xu / xe / xo / xya / xtu / xtsu 等にございます",
+          "lSmall": "la / li / lu / le / lo / lya / ltu / ltsu 等にございます",
+          "w": "wi / we / wha / who / wu / whu 等にございます",
+          "v": "va / vi / vu / ve / vo にございます",
+          "f": "fa / fi / fe / fo にございます",
+          "ye": "yeにございます",
+          "xn": "xnにございます",
+          "nApos": "n'（母音の前でも ん を確定できる区切り記法）にございます"
         }
       },
       "quoteLength": {

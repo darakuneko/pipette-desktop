@@ -321,7 +321,7 @@ describe('useTypingTest — romaji input mode', () => {
 // caseStyle applied as a display-only transform to the guide row.
 describe('useTypingTest — config.romaji wiring', () => {
   it('rejects a kunrei-tagged spelling once disabledStyles includes kunrei, while the canonical spelling still completes the word', async () => {
-    // し's spellings: 'shi' (canonical, hepburn), 'si' (kunrei), 'ci' (cq).
+    // し's spellings: 'shi' (canonical, hepburn), 'si' (kunrei), 'ci' (c).
     await seedKanaLanguage(KANA_LANGUAGE, ['し'])
     const { result } = renderHook(() => useTypingTest(
       { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { disabledStyles: ['kunrei'] } },
@@ -332,7 +332,7 @@ describe('useTypingTest — config.romaji wiring', () => {
     expect(result.current.state.incorrectChars).toBe(0)
     press(result, 'i')
     // 'si' is disabled and isn't a live prefix of the remaining canonical
-    // ('shi') or cq ('ci') spellings, so the second keystroke is rejected.
+    // ('shi') or c ('ci') spellings, so the second keystroke is rejected.
     expect(result.current.state.incorrectChars).toBe(1)
     expect(result.current.state.status).not.toBe('finished')
   })

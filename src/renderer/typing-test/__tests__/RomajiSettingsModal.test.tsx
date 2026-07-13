@@ -52,7 +52,7 @@ describe('RomajiSettingsModal defaults', () => {
     renderModal()
     expect(screen.getByTestId('romaji-guide-base-hepburn')).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByTestId('romaji-guide-base-kunrei')).toHaveAttribute('aria-pressed', 'false')
-    for (const style of ['cq', 'digraph', 'xSmall', 'lSmall']) {
+    for (const style of ['c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']) {
       expect(screen.getByTestId(`romaji-guide-${style}`)).toHaveAttribute('aria-pressed', 'false')
     }
   })
@@ -62,7 +62,7 @@ describe('RomajiSettingsModal defaults', () => {
     for (const style of ['hepburn', 'kunrei']) {
       expect(screen.getByTestId(`romaji-base-${style}`)).toHaveAttribute('aria-pressed', 'true')
     }
-    for (const style of ['cq', 'digraph', 'xSmall', 'lSmall']) {
+    for (const style of ['c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']) {
       expect(screen.getByTestId(`romaji-input-${style}`)).toHaveAttribute('aria-pressed', 'true')
     }
   })
@@ -184,15 +184,15 @@ describe('RomajiSettingsModal edits', () => {
   it('disables an input style on click', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-input-cq'))
+    fireEvent.click(screen.getByTestId('romaji-input-c'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toEqual({ disabledStyles: ['cq'] })
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ disabledStyles: ['c'] })
   })
 
   it('re-enabling the only disabled style prunes disabledStyles back to unset', () => {
     const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: ['cq'] } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-input-cq'))
+    renderModal({ config: { ...BASE_CONFIG, romaji: { disabledStyles: ['c'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-input-c'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     // Re-enabling the only disabled style empties the array, which is
     // pruned back to "field unset" rather than persisted as [].

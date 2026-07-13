@@ -29,7 +29,11 @@ const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 // select (exactly one of the two is always active); the input row's Base
 // row is a toggle pair where at least one must stay enabled (see
 // toggleBaseStyle). Both rows' Options are always a multi-select toggle.
-const OPTION_STYLES: readonly RomajiStyle[] = ['cq', 'digraph', 'xSmall', 'lSmall']
+// Each button shows a short label (system + one example spelling); the
+// full example list lives in the native `title` tooltip, the same
+// convention used elsewhere in the app (e.g. BigramsChart's SortHeader).
+const OPTION_STYLES: readonly RomajiStyle[] =
+  ['c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']
 
 /** Drops fields set back to their default value so a persisted config only
  *  ever carries what the user actually changed. The single source of truth
@@ -239,6 +243,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                     type="button"
                     data-testid={`romaji-guide-${style}`}
                     aria-pressed={guideStyles.has(style)}
+                    title={t(`editor.typingTest.romajiSettings.styleTip.${style}`)}
                     className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
                     onClick={() => toggleGuideStyle(style)}
                   >
@@ -287,6 +292,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                     type="button"
                     data-testid={`romaji-input-${style}`}
                     aria-pressed={!disabledStyles.has(style)}
+                    title={t(`editor.typingTest.romajiSettings.styleTip.${style}`)}
                     className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
                     onClick={() => toggleInputStyle(style)}
                   >

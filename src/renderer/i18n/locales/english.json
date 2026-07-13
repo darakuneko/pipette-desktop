@@ -325,10 +325,30 @@
         "style": {
           "hepburn": "Hepburn (shi/chi)",
           "kunrei": "Kunrei (si/ti)",
-          "cq": "C/Q (ca/qu)",
+          "c": "C notation (ca)",
+          "q": "Q notation (qu)",
           "digraph": "Digraph (jya)",
-          "xSmall": "Small x (xa/xtu)",
-          "lSmall": "Small l (la/ltu)"
+          "xSmall": "Small x (xa)",
+          "lSmall": "Small l (la)",
+          "w": "W notation (wi)",
+          "v": "V notation (va)",
+          "f": "F notation (fa)",
+          "ye": "YE notation (ye)",
+          "xn": "Nasal x (xn)",
+          "nApos": "N separator (n')"
+        },
+        "styleTip": {
+          "c": "ca / ci / cu / ce / co",
+          "q": "qu, etc.",
+          "digraph": "jya / jyu / jyo, etc.",
+          "xSmall": "xa / xi / xu / xe / xo / xya / xtu / xtsu, etc.",
+          "lSmall": "la / li / lu / le / lo / lya / ltu / ltsu, etc.",
+          "w": "wi / we / wha / who / wu / whu, etc.",
+          "v": "va / vi / vu / ve / vo",
+          "f": "fa / fi / fe / fo",
+          "ye": "ye",
+          "xn": "xn",
+          "nApos": "n' (a separator that confirms ん even before a vowel)"
         }
       },
       "quoteLength": {
