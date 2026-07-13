@@ -1,5 +1,5 @@
 {
-  "version": "0.1.8",
+  "version": "0.1.9",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -755,7 +755,11 @@
     "autoLaunch": "自動起動",
     "autoLaunchDescription": "サインイン時に Pipette を自動で起動します",
     "trayResident": "タスクトレイ常駐",
-    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動作し続けます"
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動作し続けます",
+    "restoreLastSession": "最後の状態で起動",
+    "restoreLastSessionDescription": "起動時に最後に接続していたキーボードと画面を復元します",
+    "startInTray": "トレイ常駐で起動",
+    "startInTrayDescription": "ウィンドウを開かずタスクトレイ常駐で起動します"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",

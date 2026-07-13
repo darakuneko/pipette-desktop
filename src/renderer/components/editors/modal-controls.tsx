@@ -46,3 +46,64 @@ export function ToggleRow({ label, on, onToggle, title, testid }: {
     </div>
   )
 }
+
+// Settings-modal switch row: label (single line, or label + description
+// block when `description` is given) on the left, a track/knob toggle on
+// the right. Row and toggle test ids are independent (unlike `ToggleRow`,
+// which derives the row id from the toggle id) so this matches the
+// pre-existing `settings-*-row` / `settings-*-toggle` naming used across
+// SettingsToolsTab. `labelTone` mirrors the two label styles that were
+// hand-rolled there: rows with a description use the secondary tone, plain
+// rows use the default content tone.
+export function SettingsToggleRow({
+  rowTestId,
+  toggleTestId,
+  label,
+  description,
+  labelTone = 'secondary',
+  on,
+  onToggle,
+  disabled,
+}: {
+  rowTestId: string
+  toggleTestId: string
+  label: string
+  description?: string
+  labelTone?: 'secondary' | 'content'
+  on: boolean
+  onToggle: () => void
+  disabled?: boolean
+}) {
+  const trackClass = disabled === undefined
+    ? toggleTrackClass(on)
+    : `${toggleTrackClass(on)} disabled:cursor-not-allowed disabled:opacity-50`
+
+  return (
+    <div className={ROW_CLASS} data-testid={rowTestId}>
+      {description === undefined ? (
+        <span className={`text-sm font-medium ${labelTone === 'secondary' ? 'text-content-secondary' : 'text-content'}`}>
+          {label}
+        </span>
+      ) : (
+        <div className="flex flex-col gap-0.5">
+          <span className={`text-sm font-medium ${labelTone === 'secondary' ? 'text-content-secondary' : 'text-content'}`}>
+            {label}
+          </span>
+          <span className="text-xs text-content-muted">{description}</span>
+        </div>
+      )}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        className={trackClass}
+        onClick={onToggle}
+        disabled={disabled}
+        data-testid={toggleTestId}
+      >
+        <span className={toggleKnobClass(on)} />
+      </button>
+    </div>
+  )
+}

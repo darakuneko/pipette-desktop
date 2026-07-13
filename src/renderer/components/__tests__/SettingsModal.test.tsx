@@ -23,9 +23,13 @@ vi.mock('../../i18n', () => ({
 }))
 
 const mockAppConfigSet = vi.fn()
+// Mutable so individual tests can set trayResident/startInTray before
+// rendering (e.g. to exercise the startInTray disabled-dependency and
+// the trayResident-off-clears-startInTray behavior).
+const mockAppConfigState: Record<string, unknown> = { language: 'en' }
 vi.mock('../../hooks/useAppConfig', () => ({
   useAppConfig: () => ({
-    config: { language: 'en' },
+    config: mockAppConfigState,
     loading: false,
     set: mockAppConfigSet,
   }),
@@ -151,6 +155,9 @@ describe('SettingsModal', () => {
     defaultProps.onAutoLockTimeChange = vi.fn()
     defaultProps.onHubEnabledChange = vi.fn()
     defaultProps.hubAuthenticated = false
+    for (const key of Object.keys(mockAppConfigState)) {
+      if (key !== 'language') delete mockAppConfigState[key]
+    }
   })
 
   function renderAndSwitchToTools(props?: Partial<Parameters<typeof SettingsModal>[0]>) {
@@ -698,6 +705,66 @@ describe('SettingsModal', () => {
 
       fireEvent.click(screen.getByTestId('settings-tray-resident-toggle'))
       expect(mockAppConfigSet).toHaveBeenCalledWith('trayResident', true)
+    })
+
+    it('renders restore last session toggle off by default', () => {
+      renderAndSwitchToTools()
+      const toggle = screen.getByTestId('settings-restore-last-session-toggle')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle.getAttribute('aria-checked')).toBe('false')
+    })
+
+    it('calls appConfig.set with restoreLastSession true when its toggle is clicked', () => {
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-restore-last-session-toggle'))
+      expect(mockAppConfigSet).toHaveBeenCalledWith('restoreLastSession', true)
+    })
+
+    it('renders startInTray toggle disabled when trayResident is off', () => {
+      renderAndSwitchToTools()
+      const toggle = screen.getByTestId('settings-start-in-tray-toggle')
+      expect(toggle).toBeInTheDocument()
+      expect(toggle).toBeDisabled()
+      expect(toggle.getAttribute('aria-checked')).toBe('false')
+    })
+
+    it('renders startInTray toggle enabled when trayResident is on', () => {
+      mockAppConfigState.trayResident = true
+      renderAndSwitchToTools()
+
+      const toggle = screen.getByTestId('settings-start-in-tray-toggle')
+      expect(toggle).not.toBeDisabled()
+    })
+
+    it('calls appConfig.set with startInTray true when trayResident is on and its toggle is clicked', () => {
+      mockAppConfigState.trayResident = true
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-start-in-tray-toggle'))
+      expect(mockAppConfigSet).toHaveBeenCalledWith('startInTray', true)
+    })
+
+    it('turning trayResident off also sets startInTray false when it was on', () => {
+      mockAppConfigState.trayResident = true
+      mockAppConfigState.startInTray = true
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-tray-resident-toggle'))
+
+      expect(mockAppConfigSet).toHaveBeenCalledWith('trayResident', false)
+      expect(mockAppConfigSet).toHaveBeenCalledWith('startInTray', false)
+    })
+
+    it('turning trayResident off does not touch startInTray when it was already off', () => {
+      mockAppConfigState.trayResident = true
+      mockAppConfigState.startInTray = false
+      renderAndSwitchToTools()
+
+      fireEvent.click(screen.getByTestId('settings-tray-resident-toggle'))
+
+      expect(mockAppConfigSet).toHaveBeenCalledWith('trayResident', false)
+      expect(mockAppConfigSet).not.toHaveBeenCalledWith('startInTray', false)
     })
   })
 
