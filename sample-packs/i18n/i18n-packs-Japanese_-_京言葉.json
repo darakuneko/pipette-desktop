@@ -1,5 +1,5 @@
 {
-  "version": "0.1.9",
+  "version": "0.1.10",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -66,6 +66,16 @@
   },
   "editor": {
     "autoAdvance": "自動移動",
+    "viewMatrix": {
+      "label": "ビューマトリクス",
+      "edit": "編集しますえ",
+      "done": "完了しましたえ",
+      "modalTitle": "表示位置を編集しますえ",
+      "physicalLabel": "マトリクス",
+      "rowLabel": "行",
+      "colLabel": "列",
+      "reset": "ビューマトリクスを戻しますえ"
+    },
     "keymap": {
       "title": "キーマップ",
       "layer": "Layer {{number}}",

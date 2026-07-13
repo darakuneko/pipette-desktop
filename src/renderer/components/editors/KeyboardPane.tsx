@@ -26,6 +26,10 @@ export interface KeyboardPaneProps {
   remappedKeys: Set<string>
   multiSelectedKeys?: Set<string>
   layoutOptions: Map<number, number>
+  /** Optional per-key label override keyed by `"row,col"` — used by View
+   *  Matrix mode to blank out keycode legends and show each key's
+   *  effective (row, col) instead. See `KeyboardWidget`'s `labelOverrides`. */
+  labelOverrides?: Map<string, { outer: string; inner: string; masked: boolean }>
   heatmapCells?: Map<string, TypingHeatmapCell> | null
   heatmapMaxTotal?: number
   heatmapMaxTap?: number
@@ -58,6 +62,7 @@ export function KeyboardPane({
   remappedKeys,
   multiSelectedKeys,
   layoutOptions,
+  labelOverrides,
   heatmapCells,
   heatmapMaxTotal,
   heatmapMaxTap,
@@ -97,6 +102,7 @@ export function KeyboardPane({
           remappedKeys={remappedKeys}
           multiSelectedKeys={multiSelectedKeys}
           layoutOptions={layoutOptions}
+          labelOverrides={labelOverrides}
           heatmapCells={heatmapCells}
           heatmapMaxTotal={heatmapMaxTotal}
           heatmapMaxTap={heatmapMaxTap}
