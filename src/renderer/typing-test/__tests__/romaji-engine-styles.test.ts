@@ -621,6 +621,15 @@ describe('styleTip i18n content matches SPELLING_STYLES exactly, per family', ()
   // tooltip text against it, so a future SPELLING_STYLES edit (adding or
   // dropping a tagged spelling) can't silently drift from what the tooltip
   // tells the user.
+  //
+  // hepburn/kunrei carry a second tooltip line documenting sokuon (っ)
+  // gemination derivatives of their own base spellings (shi -> sshi, ...).
+  // Those derived strings are never SPELLING_STYLES entries themselves —
+  // per the SegmentOption.scope comment in romaji-engine.ts, a doubled
+  // pattern's filtering already happened one level down, on the pattern it
+  // was doubled from — so only the first line is compared against
+  // SPELLING_STYLES here. The second line gets its own matcher-driven check
+  // in the describe block below instead.
   const familiesInUse = [...new Set(Object.values(SPELLING_STYLES))] as RomajiStyle[]
   const styleTip = english.editor.typingTest.romajiSettings.styleTip as Record<string, string>
 
@@ -630,9 +639,53 @@ describe('styleTip i18n content matches SPELLING_STYLES exactly, per family', ()
       .map(([key]) => key.replace('|', ':'))
       .sort()
 
-    const actual = (styleTip[style] ?? '').split(/\s+/).filter(Boolean).sort()
+    const firstLine = (styleTip[style] ?? '').split('\n')[0]
+    const actual = firstLine.split(/\s+/).filter(Boolean).sort()
 
     expect(actual).toEqual(expected)
+  })
+})
+
+describe('styleTip sokuon-derivative line: hepburn/kunrei second line matches real matcher acceptance', () => {
+  // The second styleTip line isn't checked against SPELLING_STYLES (see
+  // above) since gemination derivatives live outside that table, so this
+  // instead drives createRomajiMatcher directly: every listed pair must
+  // actually complete, which catches a typo'd or non-existent derivative
+  // the moment it's added to the tooltip.
+  const styleTip = english.editor.typingTest.romajiSettings.styleTip as Record<string, string>
+
+  function secondLinePairs(style: 'hepburn' | 'kunrei'): Array<[kana: string, spelling: string]> {
+    const line = styleTip[style].split('\n')[1] ?? ''
+    return line
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((pair) => pair.split(':') as [string, string])
+  }
+
+  it.each(secondLinePairs('hepburn'))('hepburn sokuon derivative %s:%s completes with default options', (kana, spelling) => {
+    const { matcher, results } = type(kana, spelling)
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe(spelling)
+  })
+
+  it.each(secondLinePairs('kunrei'))('kunrei sokuon derivative %s:%s completes with default options', (kana, spelling) => {
+    const { matcher, results } = type(kana, spelling)
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe(spelling)
+  })
+
+  it.each(secondLinePairs('hepburn'))("hepburn sokuon derivative %s:%s actually depends on hepburn (disabledStyles: ['hepburn'] breaks it)", (kana, spelling) => {
+    // Each of these is doubled from a hepburn-tagged base spelling one
+    // segment over, so disabling hepburn must remove it. Some share a
+    // leading letter with a still-live kunrei/c alternate (the same
+    // prefix-collision shape as the base-toggle sweep above), so the
+    // sequence can resync into completing a different, valid word instead
+    // of rejecting outright — the assertion is "a reject shows up and the
+    // literal derivative string is never actually typed", not "the whole
+    // sequence rejects".
+    const disabled = type(kana, spelling, { disabledStyles: ['hepburn'] })
+    expect(disabled.results).toContain('reject')
+    expect(disabled.matcher.typedRomaji()).not.toBe(spelling)
   })
 })
 
