@@ -131,8 +131,11 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
               stays disabled; unlinking hands control over to it. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
-            <div className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
+            {/* items-stretch equalises the two card frames' heights (the
+                toggle knob and the h-8 select have different natural
+                heights, which showed as mismatched borders). */}
+            <div className="flex items-stretch gap-2">
+              <div className="flex min-w-0 flex-1 flex-col justify-stretch [&>div]:h-full">
                 <ToggleRow
                   testid="romaji-font-linked"
                   label={t('editor.typingTest.romajiSettings.fontLinked')}
