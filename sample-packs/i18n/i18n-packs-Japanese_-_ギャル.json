@@ -304,11 +304,11 @@
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
       "romaji": {
-        "toggle": "ローマ字☆",
+        "toggle": "ローマ字入力☆",
         "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
       },
       "romajiSettings": {
-        "title": "ローマ字の詳細設定☆",
+        "title": "ローマ字入力の詳細設定☆",
         "caseLabel": "表示する文字っしょ",
         "case": {
           "upper": "ROMAJI",
@@ -458,7 +458,7 @@
         "conditionFilterLabel": "条件で絞り込みっしょ",
         "conditionPunctuation": "+句読点☆",
         "conditionNumbers": "+数字っしょ",
-        "conditionRomaji": "+ローマ字☆",
+        "conditionRomaji": "+ローマ字入力☆",
         "conditionTatoeba": "Tatoeba"
       }
     }
