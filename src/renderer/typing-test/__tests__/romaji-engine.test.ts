@@ -181,6 +181,40 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(matcher.isComplete()).toBe(true)
     expect(matcher.typedRomaji()).toBe('kixtsute')
   })
+
+  it('accepts the Hepburn tch- spelling before a ch- consonant alongside the pre-existing cch-/tt- forms (bocchi/botchi/botti)', () => {
+    const botchi = type('ぼっち', 'botchi')
+    expect(botchi.results.at(-1)).toBe('complete')
+    expect(botchi.matcher.typedRomaji()).toBe('botchi')
+
+    const bocchi = type('ぼっち', 'bocchi')
+    expect(bocchi.results.at(-1)).toBe('complete')
+    expect(bocchi.matcher.typedRomaji()).toBe('bocchi')
+
+    const botti = type('ぼっち', 'botti')
+    expect(botti.results.at(-1)).toBe('complete')
+    expect(botti.matcher.typedRomaji()).toBe('botti')
+  })
+
+  it('accepts tch- doubling a youon ch- digraph too (matcha), alongside maccha/mattya', () => {
+    const matcha = type('まっちゃ', 'matcha')
+    expect(matcha.results.at(-1)).toBe('complete')
+    expect(matcha.matcher.typedRomaji()).toBe('matcha')
+
+    const maccha = type('まっちゃ', 'maccha')
+    expect(maccha.results.at(-1)).toBe('complete')
+    expect(maccha.matcher.typedRomaji()).toBe('maccha')
+
+    const mattya = type('まっちゃ', 'mattya')
+    expect(mattya.results.at(-1)).toBe('complete')
+    expect(mattya.matcher.typedRomaji()).toBe('mattya')
+  })
+
+  it('never derives a tch- spelling for a non-ch- following consonant (っき never accepts tki)', () => {
+    const matcher = createRomajiMatcher('あっき')
+    expect(matcher.acceptChar('a')).toBe('complete')
+    expect(matcher.acceptChar('t')).toBe('reject')
+  })
 })
 
 describe('っ — gemination excluded before an n/vowel/y-starting following kana', () => {

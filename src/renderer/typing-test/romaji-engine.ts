@@ -584,12 +584,27 @@ function nPatternsFor(
 // derive a consonant-doubled spelling from these starts, so the matcher
 // must not accept it as a gemination spelling of っ. The explicit taps
 // (xtu/ltu/ltsu/xtsu) remain the only way to type っ before such a kana.
+//
+// Hepburn romanization has one extra rule beyond the plain consonant-double
+// above: before a ch- spelling, the promoted sokuon is written "tch-"
+// rather than "cch-" (ぼっち -> "botchi", not "bocchi"). That's added here
+// as an extra derivation alongside the regular doubled form, not a
+// replacement — the doubled "cch-" spelling stays valid too, since it's
+// the standard wordprocessor/IME romanization (and the kunrei-derived
+// "tt-" form from a ti-style spelling, when one exists, is unaffected
+// either way). Because this only fires on patterns already surviving
+// filterByStyle, disabling the style that supplies a kana's ch- spelling
+// (hepburn) removes "tch-" along with it automatically, with no separate
+// tag needed.
 function doubledPatterns(option: SegmentOption): readonly string[] {
   const doubled: string[] = []
   for (const pattern of option.patterns) {
     const first = pattern[0]
     if (first !== undefined && /[a-z]/.test(first) && !/[aiueony]/.test(first)) {
       doubled.push(first + pattern)
+    }
+    if (pattern.startsWith('ch')) {
+      doubled.push('t' + pattern)
     }
   }
   return doubled

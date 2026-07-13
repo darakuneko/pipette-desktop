@@ -442,6 +442,12 @@ describe('base toggle: hepburn OFF leaves kunrei-shiki a complete, self-sufficie
     expect(type('いっちゃ', 'ittya', opts).results.at(-1)).toBe('complete')
   })
 
+  it('the tch- derivative of っち disappears along with chi when hepburn is off, leaving only the kunrei-derived tti (botchi/bocchi reject, botti accepts)', () => {
+    expect(type('ぼっち', 'botchi', opts).results).toContain('reject')
+    expect(type('ぼっち', 'bocchi', opts).results).toContain('reject')
+    expect(type('ぼっち', 'botti', opts).results.at(-1)).toBe('complete')
+  })
+
   it.each(Object.entries(KANA_TABLE))('every KANA_TABLE entry stays completable via a non-Hepburn spelling with hepburn disabled (%s)', (kana, patterns) => {
     const spelling = patterns.find((p) => SPELLING_STYLES[`${kana}|${p}`] !== 'hepburn') ?? patterns[0]
     const { matcher, results } = type(kana, spelling, opts)
