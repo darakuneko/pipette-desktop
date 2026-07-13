@@ -159,7 +159,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               / romaji), invariant across locales; the key still routes
               through t() so it participates in the i18n pipeline. */}
           <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.caseLabel')}:</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.caseLabel')}</span>
             <div className="flex flex-wrap gap-1">
               {CASE_STYLES.map((value) => (
                 <button
@@ -182,7 +182,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               may all be off at once. Display only — the guide never
               affects what acceptChar() accepts. */}
           <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}:</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}</span>
 
             {/* Base row then options row — no sub-labels, the gap alone
                 separates the two groups (per design feedback). */}
@@ -225,7 +225,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               at least one always on) and Options (default all on, may all
               be turned off at once). */}
           <section className="flex flex-col gap-1.5">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputLabel')}:</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputLabel')}</span>
 
             {/* Base row then options row — no sub-labels, matching the
                 guide section above. */}

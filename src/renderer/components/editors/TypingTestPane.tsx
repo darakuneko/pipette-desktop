@@ -493,7 +493,7 @@ export function TypingTestPane({
         {/* Mode / language — shown for every mode (words / time / quote /
             fileImport); quote uses it to pick the quote source language. */}
         <div className="flex w-full flex-col items-start gap-1">
-          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
+          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType})</span>
           <button
             type="button"
             data-testid="language-selector"
@@ -536,7 +536,7 @@ export function TypingTestPane({
         <div className="flex w-full items-start gap-2">
           {layers > 1 && (
             <div className="flex flex-1 flex-col items-start gap-1">
-              <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
+              <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}</span>
               <select
                 data-testid="base-layer-select"
                 aria-label={t('editor.typingTest.baseLayer')}
@@ -551,7 +551,7 @@ export function TypingTestPane({
             </div>
           )}
           <div className="flex flex-1 flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}</span>
             <select
               data-testid="display-lines-select"
               aria-label={t('editor.typingTest.lines')}
@@ -563,7 +563,7 @@ export function TypingTestPane({
             </select>
           </div>
           <div className="flex flex-1 flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
+            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}</span>
             <select
               data-testid="font-size-select"
               aria-label={t('editor.typingTest.fontSize')}

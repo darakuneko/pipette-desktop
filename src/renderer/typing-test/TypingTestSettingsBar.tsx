@@ -83,7 +83,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
     <div className="flex w-full flex-col items-start gap-3">
       {/* Pattern — words / time / quote */}
       <div className="flex w-full flex-col items-start gap-1">
-        <span className={LABEL}>{t('editor.typingTest.pattern')}:</span>
+        <span className={LABEL}>{t('editor.typingTest.pattern')}</span>
         <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
           {MODES.map((mode) => (
             <button
@@ -102,7 +102,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
       {/* Units — the unit (words / sec) is shown on the label, so the value
           buttons stay compact numbers. Quote mode uses named lengths. */}
       <div className="flex w-full flex-col items-start gap-1">
-        <span className={LABEL}>{unitsLabel}:</span>
+        <span className={LABEL}>{unitsLabel}</span>
         {config.mode === 'words' && (
           <div className="flex w-full items-center gap-1">
             {WORD_COUNT_OPTIONS.map((count) => (
@@ -153,7 +153,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
       {/* Option — punctuation / numbers (words & time only) */}
       {hasPunctuationNumbers && (
         <div className="flex w-full flex-col items-start gap-1">
-          <span className={LABEL}>{t('editor.typingTest.optionLabel')}:</span>
+          <span className={LABEL}>{t('editor.typingTest.optionLabel')}</span>
           <div className="flex w-full items-center gap-1">
             <button
               type="button"
