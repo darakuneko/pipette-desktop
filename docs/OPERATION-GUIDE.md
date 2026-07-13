@@ -53,6 +53,7 @@ Screenshots were taken using the software-emulated GPK60-63R keyboard, displayed
   - [6.3 Language Packs Manage](#63-language-packs-manage)
   - [6.4 Theme Packs Manage](#64-theme-packs-manage)
   - [6.5 Zoom (UI Scale)](#65-zoom-ui-scale)
+  - [6.6 Launch at Login / Stay in System Tray](#66-launch-at-login--stay-in-system-tray)
 - [7. Pipette Hub](#7-pipette-hub)
   - [7.1 Hub Setup](#71-hub-setup)
   - [7.2 Uploading a Keymap](#72-uploading-a-keymap)
@@ -1759,6 +1760,15 @@ The Tools tab shows a **Zoom** row below Theme Packs. This setting scales the en
 > **Note**: This is separate from the per-keyboard zoom in the toolbar (§4.1), which only scales the keymap editor display, and from the **Key Editor Zoom** in the Keycodes Overlay Panel (§3.14), which overrides the window zoom level while in key editor mode. The UI zoom here is the baseline applied on all other screens.
 
 > **Warning**: Changing the zoom level may cause layout issues at extreme values. Use at your own risk.
+
+### 6.6 Launch at Login / Stay in System Tray
+
+The Tools tab shows two toggles below the Theme Packs and Zoom rows:
+
+- **Launch at Login**: Start Pipette automatically when you sign in to the OS. On Windows and macOS this registers a login item; on Linux it manages an XDG autostart entry (`~/.config/autostart/pipette.desktop`). This works in installed (packaged) builds only — the toggle has no effect when running from source.
+- **Stay in System Tray**: While ON, closing the window hides Pipette to the system tray and the app keeps running. Click the tray icon to show the window again, or choose **Quit** from the tray icon menu to exit. The tray menu offers **Show** and **Quit** (English-only labels for now).
+
+Both are machine-local settings — they are not synced to other devices via Cloud Sync.
 
 ---
 
