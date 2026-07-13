@@ -253,7 +253,9 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 //   whenever filtering would empty an entry's spelling set, the canonical
 //   (first-listed) spelling is kept regardless of its tag. See the
 //   canonical-sweep test for the resulting invariant.
-const SPELLING_STYLES: Record<string, RomajiStyle> = {
+// Exported for the SPELLING_STYLES referential-integrity sweep test only
+// (romaji-engine-styles.test.ts) — not part of the matcher's public API.
+export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   // -- cq: c/q letter substitutions --
   'か|ca': 'cq',
   'く|cu': 'cq',
@@ -331,17 +333,27 @@ const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ん|xn': 'xSmall',
 }
 
+// Guide styles whose no-tagged-candidate fallback (see `pickGuideWinner`)
+// prefers the *shortest* segmentation — a digraph position itself carries no
+// x/l-tagged spelling, so walking into the decomposed path is what surfaces
+// the following small kana's tagged spelling (xi/li).
+const DECOMPOSING_GUIDE_STYLES: ReadonlySet<RomajiStyle> = new Set(['xSmall', 'lSmall'])
+
 // っ typed explicitly (small tsu, standalone) rather than as a doubled
 // consonant. Always available, including at word end where doubling has
 // no following consonant to double.
-const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu']
+// Exported for the SPELLING_STYLES referential-integrity sweep test only.
+export const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu']
 
 // ん's own patterns, split by whether the following kana forces the
 // two-keystroke spelling. な/や/あ行 (and their small-kana forms) would
 // otherwise fold a bare "n" into their own na-row reading (e.g. typing
 // "kani" must produce かに, not かんい), so those contexts drop the
 // single-tap "n" option entirely.
-const N_PATTERNS_SINGLE_OR_DOUBLE: readonly string[] = ['n', 'nn', 'xn']
+// Exported for the SPELLING_STYLES referential-integrity sweep test only —
+// the superset of every pattern ん can resolve to (N_PATTERNS_DOUBLE_ONLY is
+// a subset of this list).
+export const N_PATTERNS_SINGLE_OR_DOUBLE: readonly string[] = ['n', 'nn', 'xn']
 const N_PATTERNS_DOUBLE_ONLY: readonly string[] = ['nn', 'xn']
 const N_CONTEXT_REQUIRES_DOUBLE_TAP = new Set([
   'あ', 'い', 'う', 'え', 'お', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ',
@@ -505,11 +517,11 @@ function pickWinner(candidates: readonly FlatPattern[]): FlatPattern {
  *  surface (でぃ -> "dexi"/"deli"). Never used for acceptance — only
  *  `representativeAt`/`canonicalGuideFrom` (guide display) call this, so
  *  `guideStyle` never affects what `acceptChar` accepts or commits. */
-function pickGuideWinner(candidates: readonly FlatPattern[], guideStyle: RomajiStyle | 'auto' | undefined): FlatPattern {
-  if (guideStyle && guideStyle !== 'auto') {
+function pickGuideWinner(candidates: readonly FlatPattern[], guideStyle: RomajiStyle | undefined): FlatPattern {
+  if (guideStyle) {
     const preferred = candidates.filter((c) => SPELLING_STYLES[`${c.scope}|${c.pattern}`] === guideStyle)
     if (preferred.length > 0) return pickWinner(preferred)
-    if (guideStyle === 'xSmall' || guideStyle === 'lSmall') {
+    if (DECOMPOSING_GUIDE_STYLES.has(guideStyle)) {
       let shortest = candidates[0]
       for (const candidate of candidates) {
         if (candidate.length < shortest.length) shortest = candidate
@@ -527,7 +539,7 @@ function representativeAt(
   index: number,
   buffer: string,
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
-  guideStyle: RomajiStyle | 'auto' | undefined,
+  guideStyle: RomajiStyle | undefined,
 ): FlatPattern | null {
   const flat = flattenOptions(getSegmentOptions(kana, index, disabledStyles))
   const alive = flat.filter((f) => f.pattern.startsWith(buffer))
@@ -538,7 +550,7 @@ function canonicalGuideFrom(
   kana: readonly string[],
   index: number,
   disabledStyles: ReadonlySet<RomajiStyle> | undefined,
-  guideStyle: RomajiStyle | 'auto' | undefined,
+  guideStyle: RomajiStyle | undefined,
 ): string {
   if (index >= kana.length) return ''
   const winner = representativeAt(kana, index, '', disabledStyles, guideStyle)
@@ -647,7 +659,9 @@ export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): 
   const kana = [...word].map(toHiragana)
   const disabledStyles =
     opts?.disabledStyles && opts.disabledStyles.length > 0 ? new Set(opts.disabledStyles) : undefined
-  const guideStyle = opts?.guideStyle
+  // Normalized once here so every internal helper works with a plain
+  // RomajiStyle | undefined instead of re-checking the 'auto' sentinel.
+  const guideStyle = opts?.guideStyle && opts.guideStyle !== 'auto' ? opts.guideStyle : undefined
   let position = 0
   let buffer = ''
   let typed = ''

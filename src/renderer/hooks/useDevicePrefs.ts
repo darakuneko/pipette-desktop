@@ -18,6 +18,7 @@ export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
 const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set(['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall'])
+const VALID_GUIDE_STYLES: ReadonlySet<string> = new Set([...VALID_ROMAJI_STYLES, 'auto'])
 const VALID_ROMAJI_CASE_STYLES: ReadonlySet<string> = new Set(['lower', 'capital', 'upper'])
 
 function isFinitePositiveInt(n: unknown): n is number {
@@ -47,9 +48,12 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     result.caseStyle = obj.caseStyle as RomajiCaseStyle
   }
   if (isFinitePositiveNumber(obj.fontSize)) {
-    result.fontSize = obj.fontSize
+    // Clamp rather than drop: an out-of-range persisted value (e.g. a
+    // corrupted 9999) still resolves to a valid, in-range font size instead
+    // of silently sailing through unclamped.
+    result.fontSize = clampFontSize(obj.fontSize)
   }
-  if (obj.guideStyle === 'auto' || (typeof obj.guideStyle === 'string' && VALID_ROMAJI_STYLES.has(obj.guideStyle))) {
+  if (typeof obj.guideStyle === 'string' && VALID_GUIDE_STYLES.has(obj.guideStyle)) {
     result.guideStyle = obj.guideStyle as RomajiStyle | 'auto'
   }
   if (Array.isArray(obj.disabledStyles)) {

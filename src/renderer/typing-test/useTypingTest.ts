@@ -5,7 +5,7 @@ import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './
 import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
-import type { TypingTestConfig, Quote, RomajiGuide } from './types'
+import type { TypingTestConfig, Quote, RomajiGuide, RomajiDetailSettings } from './types'
 import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, ROMAJI_INPUT_LANGUAGES, applyRomajiCaseStyle } from './types'
 import { createRomajiMatcher, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
@@ -70,19 +70,17 @@ function buildRomajiMatcher(word: string, keystrokes: string, opts?: RomajiMatch
   return matcher
 }
 
-/** Romaji Settings modal fields (disabledStyles / guideStyle), read only
- *  while `romajiInput` is honored (see `isRomajiInputActive`) \u2014 the config
- *  shape guarantees `romaji` only exists on words/time configs. Returns
- *  undefined for every other mode and when no detail fields are set, so the
- *  no-opts call sites (matcher construction elsewhere) are unaffected. */
-function romajiMatcherOptions(config: TypingTestConfig): RomajiMatcherOptions | undefined {
-  if (config.mode !== 'words' && config.mode !== 'time') return undefined
-  const romaji = config.romaji
-  if (!romaji) return undefined
-  const opts: RomajiMatcherOptions = {}
-  if (romaji.disabledStyles && romaji.disabledStyles.length > 0) opts.disabledStyles = romaji.disabledStyles
-  if (romaji.guideStyle) opts.guideStyle = romaji.guideStyle
-  return Object.keys(opts).length > 0 ? opts : undefined
+/** Romaji Settings modal detail fields (disabledStyles / guideStyle /
+ *  caseStyle), read only while `romajiInput` is honored (see
+ *  `isRomajiInputActive`) — the config shape guarantees `romaji` only
+ *  exists on words/time configs, so this is undefined for every other mode.
+ *  Passed straight through as `buildRomajiMatcher`'s opts: its
+ *  disabledStyles/guideStyle fields structurally satisfy
+ *  `RomajiMatcherOptions`, and `createRomajiMatcher` itself already
+ *  normalizes an empty disabledStyles array and a `'auto'` guideStyle, so
+ *  there's nothing left to prune here. */
+function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | undefined {
+  return config.mode === 'words' || config.mode === 'time' ? config.romaji : undefined
 }
 
 const MAX_WPM_HISTORY = 300
@@ -792,10 +790,10 @@ export function useTypingTest(
     if (!isRomajiInputActive(config, language)) return null
     if (state.currentWordIndex >= state.words.length) return null
     const word = state.words[state.currentWordIndex]
-    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiMatcherOptions(config))
+    const detail = romajiDetail(config)
+    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
     const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
-    const caseStyle = (config.mode === 'words' || config.mode === 'time') ? config.romaji?.caseStyle : undefined
-    return applyRomajiCaseStyle(guide, caseStyle)
+    return applyRomajiCaseStyle(guide, detail?.caseStyle)
   }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes])
 
   return {
@@ -942,7 +940,7 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
   if (state.currentWordIndex >= state.words.length) return state
 
   const word = state.words[state.currentWordIndex]
-  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiMatcherOptions(config))
+  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiDetail(config))
   const result = matcher.acceptChar(char)
 
   if (result === 'reject') {

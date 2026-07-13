@@ -151,11 +151,13 @@ export function TypingTestView({
   )
   // Romaji guide row's own font-size override (Romaji Settings modal). Falls
   // back to the same reading-window font when unset ("linked") — the
-  // reading window's own multilineStyle is left untouched either way.
+  // reading window's own multilineStyle is left untouched either way. No
+  // --tt-lines here: unlike .typing-multiline-window, the guide row's own
+  // CSS (.typing-romaji-guide-text) only reads --tt-font.
   const romajiGuideFontSize = (config.mode === 'words' || config.mode === 'time') ? config.romaji?.fontSize : undefined
   const romajiGuideStyle = useMemo(
-    () => ({ '--tt-font': romajiGuideFontSize ?? fontSize, '--tt-lines': displayLines } as CSSProperties),
-    [romajiGuideFontSize, fontSize, displayLines],
+    () => ({ '--tt-font': romajiGuideFontSize ?? fontSize } as CSSProperties),
+    [romajiGuideFontSize, fontSize],
   )
 
   // Char-progress modes (imported fileImport text; Tatoeba sentences) count

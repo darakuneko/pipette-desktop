@@ -6,7 +6,15 @@
 // opts-less matcher behaviour that must stay byte-for-byte unchanged.
 
 import { describe, it, expect } from 'vitest'
-import { createRomajiMatcher, KANA_TABLE, type RomajiAcceptResult, type RomajiStyle } from '../romaji-engine'
+import {
+  createRomajiMatcher,
+  KANA_TABLE,
+  SPELLING_STYLES,
+  SOKUON_EXPLICIT_PATTERNS,
+  N_PATTERNS_SINGLE_OR_DOUBLE,
+  type RomajiAcceptResult,
+  type RomajiStyle,
+} from '../romaji-engine'
 
 const ALL_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
 
@@ -280,6 +288,27 @@ describe('guideStyle: display-only, never affects acceptance', () => {
     expect(matcher.remainingGuide()).toBe('dhina-niiku')
     matcher.acceptChar('d')
     expect(matcher.remainingGuide()).toBe('hina-niiku')
+  })
+})
+
+describe('SPELLING_STYLES referential integrity', () => {
+  it('every "<scope>|<spelling>" key resolves to a spelling that actually exists for that scope', () => {
+    for (const key of Object.keys(SPELLING_STYLES)) {
+      const separatorIndex = key.indexOf('|')
+      const scope = key.slice(0, separatorIndex)
+      const spelling = key.slice(separatorIndex + 1)
+
+      // っ and ん have no KANA_TABLE entry — their spellings are derived at
+      // runtime (gemination / context-dependent double-tap), so they're
+      // checked against the same pattern lists the matcher itself uses.
+      const validSpellings =
+        scope === 'っ' ? SOKUON_EXPLICIT_PATTERNS
+        : scope === 'ん' ? N_PATTERNS_SINGLE_OR_DOUBLE
+        : KANA_TABLE[scope]
+
+      expect(validSpellings, `unknown scope "${scope}" (from key "${key}")`).toBeDefined()
+      expect(validSpellings, `"${spelling}" is not a valid spelling for scope "${scope}" (key "${key}")`).toContain(spelling)
+    }
   })
 })
 

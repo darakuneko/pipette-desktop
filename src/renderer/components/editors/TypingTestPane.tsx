@@ -22,10 +22,9 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestResult, PooledTypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import { DEFAULT_COMPARISON_BASELINE } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from '../../typing-test/types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_OPTIONS } from '../../typing-test/types'
 
 const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN + 1 }, (_, i) => DISPLAY_LINES_MIN + i)
-const FONT_OPTIONS = Array.from({ length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 }, (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP)
 
 /** Labelled group inside the left config panel — a small heading with an
  *  underline divider, then its controls (kept at natural width). */
@@ -40,39 +39,9 @@ function PanelSection({ title, children }: { title: string; children: ReactNode 
   )
 }
 
-// Full-width switch row: label on the left, a track/knob toggle on the right —
-// reused by the View visibility toggles and the Data "Save Unnamed" setting.
-// The accessible name is the fixed label; `title` carries the state-dependent
-// show/hide hint for the hover tooltip (the on/off state is read from
-// `aria-checked`, so it must not be baked into the accessible name).
-function ToggleRow({ label, on, onToggle, title, testid }: {
-  label: string
-  on: boolean
-  onToggle: () => void
-  title: string
-  testid: string
-}) {
-  return (
-    <div className={`${ROW_CLASS} w-full`} data-testid={`${testid}-row`}>
-      <span className="min-w-0 truncate text-sm font-medium text-content">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        title={title}
-        className={`${toggleTrackClass(on)} shrink-0`}
-        onClick={onToggle}
-        data-testid={testid}
-      >
-        <span className={toggleKnobClass(on)} />
-      </button>
-    </div>
-  )
-}
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
-import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
+import { ToggleRow } from './modal-controls'
 import type { AnalyticsOrigin } from './keymap-editor-types'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 

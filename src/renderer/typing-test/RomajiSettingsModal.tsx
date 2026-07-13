@@ -11,10 +11,11 @@ import { useTranslation } from 'react-i18next'
 import { useEscapeClose } from '../hooks/useEscapeClose'
 import { ModalCloseButton } from '../components/editors/ModalCloseButton'
 import { MODAL_MD } from '../components/editors/store-modal-shared'
-import { toggleTrackClass, toggleKnobClass, ROW_CLASS } from '../components/editors/modal-controls'
+import { ToggleRow } from '../components/editors/modal-controls'
 import type { RomajiStyle } from './romaji-engine'
 import type { RomajiCaseStyle, RomajiDetailSettings, TypingTestConfig } from './types'
-import { FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from './types'
+import { FONT_OPTIONS } from './types'
+import { optionButtonClass } from './TypingTestSettingsBar'
 
 // Display order matches the plan's spec ("大文字・先頭大文字・小文字"); the
 // i18n values for these keys are the fixed sample spellings ROMAJI / Romaji
@@ -24,26 +25,17 @@ const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 const GUIDE_STYLES: readonly (RomajiStyle | 'auto')[] = ['auto', 'kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
 const INPUT_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
 
-const FONT_OPTIONS = Array.from(
-  { length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 },
-  (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP,
-)
-
-function segmentButtonClass(active: boolean): string {
-  const base = 'inline-flex h-8 items-center rounded-md border px-2.5 text-sm transition-colors'
-  return active
-    ? `${base} border-accent bg-accent/10 font-semibold text-accent`
-    : `${base} border-edge text-content-secondary hover:text-content`
-}
-
-/** Drops fields set back to their unset/default value so a persisted config
- *  only ever carries what the user actually changed. Mirrors the same
+/** Drops fields set back to their default value so a persisted config only
+ *  ever carries what the user actually changed. The single source of truth
+ *  for what "default" means per field (every call site above passes the
+ *  real selected value — 'lower' / 'auto' included — rather than deciding
+ *  locally whether that value is the default). Mirrors the same
  *  "undefined = default" contract `RomajiDetailSettings` documents. */
 function pruneRomaji(next: RomajiDetailSettings): RomajiDetailSettings | undefined {
   const pruned: RomajiDetailSettings = {}
-  if (next.caseStyle !== undefined) pruned.caseStyle = next.caseStyle
+  if (next.caseStyle !== undefined && next.caseStyle !== 'lower') pruned.caseStyle = next.caseStyle
   if (next.fontSize !== undefined) pruned.fontSize = next.fontSize
-  if (next.guideStyle !== undefined) pruned.guideStyle = next.guideStyle
+  if (next.guideStyle !== undefined && next.guideStyle !== 'auto') pruned.guideStyle = next.guideStyle
   if (next.disabledStyles !== undefined && next.disabledStyles.length > 0) pruned.disabledStyles = next.disabledStyles
   return Object.keys(pruned).length > 0 ? pruned : undefined
 }
@@ -106,20 +98,12 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
 
         <div className="flex flex-col gap-4 overflow-y-auto p-4">
           {/* Master enable */}
-          <div className={ROW_CLASS} data-testid="romaji-settings-enabled-row">
-            <span className="text-sm font-medium text-content">{t('editor.typingTest.romaji.toggle')}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              aria-label={t('editor.typingTest.romaji.toggle')}
-              className={toggleTrackClass(enabled)}
-              onClick={() => onConfigChange({ ...config, romajiInput: !enabled })}
-              data-testid="romaji-settings-enabled"
-            >
-              <span className={toggleKnobClass(enabled)} />
-            </button>
-          </div>
+          <ToggleRow
+            testid="romaji-settings-enabled"
+            label={t('editor.typingTest.romaji.toggle')}
+            on={enabled}
+            onToggle={() => onConfigChange({ ...config, romajiInput: !enabled })}
+          />
 
           {/* Display case — sample text itself is the label (ROMAJI / Romaji
               / romaji), invariant across locales; the key still routes
@@ -132,8 +116,8 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                   key={value}
                   type="button"
                   data-testid={`romaji-case-${value}`}
-                  className={segmentButtonClass(caseStyle === value)}
-                  onClick={() => applyRomaji({ caseStyle: value === 'lower' ? undefined : value })}
+                  className={optionButtonClass(caseStyle === value, 'px-2.5')}
+                  onClick={() => applyRomaji({ caseStyle: value })}
                 >
                   {t(`editor.typingTest.romajiSettings.case.${value}`)}
                 </button>
@@ -144,20 +128,12 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
           {/* Font size — linked to Settings > Font by default. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
-            <div className={ROW_CLASS}>
-              <span className="text-sm text-content">{t('editor.typingTest.romajiSettings.fontLinked')}</span>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={fontLinked}
-                aria-label={t('editor.typingTest.romajiSettings.fontLinked')}
-                className={toggleTrackClass(fontLinked)}
-                onClick={() => applyRomaji({ fontSize: fontLinked ? linkedFontSize : undefined })}
-                data-testid="romaji-font-linked"
-              >
-                <span className={toggleKnobClass(fontLinked)} />
-              </button>
-            </div>
+            <ToggleRow
+              testid="romaji-font-linked"
+              label={t('editor.typingTest.romajiSettings.fontLinked')}
+              on={fontLinked}
+              onToggle={() => applyRomaji({ fontSize: fontLinked ? linkedFontSize : undefined })}
+            />
             {!fontLinked && (
               <select
                 data-testid="romaji-font-size-select"
@@ -180,8 +156,8 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                   key={style}
                   type="button"
                   data-testid={`romaji-guide-${style}`}
-                  className={segmentButtonClass(guideStyle === style)}
-                  onClick={() => applyRomaji({ guideStyle: style === 'auto' ? undefined : style })}
+                  className={optionButtonClass(guideStyle === style, 'px-2.5')}
+                  onClick={() => applyRomaji({ guideStyle: style })}
                 >
                   {style === 'auto'
                     ? t('editor.typingTest.romajiSettings.guideAuto')
@@ -202,7 +178,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                   type="button"
                   data-testid={`romaji-input-${style}`}
                   aria-pressed={!disabledStyles.has(style)}
-                  className={segmentButtonClass(!disabledStyles.has(style))}
+                  className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
                   onClick={() => toggleInputStyle(style)}
                 >
                   {t(`editor.typingTest.romajiSettings.style.${style}`)}

@@ -13,7 +13,7 @@ import { RomajiSettingsModal } from './RomajiSettingsModal'
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
 
-function optionButtonClass(active: boolean, px: 'px-2.5' | 'px-3' = 'px-3'): string {
+export function optionButtonClass(active: boolean, px: 'px-2.5' | 'px-3' = 'px-3'): string {
   // h-8 keeps every config control (here, the Mode row, and the History
   // button) the same height; inline-flex centres the label within it.
   const base = `inline-flex h-8 items-center rounded-md border ${px} text-sm transition-colors`
@@ -184,11 +184,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
             <button
               type="button"
               data-testid="romaji-settings-toggle"
-              className={`flex h-8 w-full items-center justify-center rounded-md border px-3 text-sm transition-colors ${
-                config.romajiInput === true
-                  ? 'border-accent bg-accent/10 font-semibold text-accent'
-                  : 'border-edge text-content-secondary hover:text-content'
-              }`}
+              className={`${optionButtonClass(config.romajiInput === true)} w-full justify-center`}
               onClick={() => setShowRomajiModal(true)}
               aria-haspopup="dialog"
               aria-expanded={showRomajiModal}

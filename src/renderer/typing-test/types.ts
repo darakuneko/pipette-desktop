@@ -107,6 +107,14 @@ export const FONT_SIZE_MAX = 48
 export const FONT_SIZE_STEP = 2
 export const DEFAULT_FONT_SIZE = 24
 
+/** Every selectable font size (px), in ascending order — shared by every
+ *  font-size <select> (the reading window's Settings > Font and the Romaji
+ *  Settings modal's own font-size field). */
+export const FONT_OPTIONS = Array.from(
+  { length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 },
+  (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP,
+)
+
 /** Clamp + round a display-line-count to the supported range. */
 export function clampDisplayLines(n: number): number {
   return Math.min(DISPLAY_LINES_MAX, Math.max(DISPLAY_LINES_MIN, Math.round(n)))
