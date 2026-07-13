@@ -182,10 +182,15 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(matcher.typedRomaji()).toBe('kixtsute')
   })
 
-  it('accepts the Hepburn tch- spelling before a ch- consonant alongside the pre-existing cch-/tt- forms (bocchi/botchi/botti)', () => {
+  it('rejects the tch- spelling before a ch- consonant; only the cch-/tt- forms complete (bocchi/botti accept, botchi rejects)', () => {
+    // Real IME input does not fold "t" into a ch- spelling's own doubling —
+    // typing "matcha" against 抹茶 leaves a literal "t" behind instead of
+    // completing まっちゃ, per Wikipedia's ローマ字入力 article and real IME
+    // behaviour, even though "matcha" is valid Hepburn orthography for the
+    // finished word. The wapuro cch- doubling and the kunrei-derived tt-
+    // doubling (from the ti spelling) remain the two accepted forms.
     const botchi = type('ぼっち', 'botchi')
-    expect(botchi.results.at(-1)).toBe('complete')
-    expect(botchi.matcher.typedRomaji()).toBe('botchi')
+    expect(botchi.results).toContain('reject')
 
     const bocchi = type('ぼっち', 'bocchi')
     expect(bocchi.results.at(-1)).toBe('complete')
@@ -196,10 +201,9 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(botti.matcher.typedRomaji()).toBe('botti')
   })
 
-  it('accepts tch- doubling a youon ch- digraph too (matcha), alongside maccha/mattya', () => {
+  it('rejects tch- doubling a youon ch- digraph too (matcha); maccha/mattya still complete', () => {
     const matcha = type('まっちゃ', 'matcha')
-    expect(matcha.results.at(-1)).toBe('complete')
-    expect(matcha.matcher.typedRomaji()).toBe('matcha')
+    expect(matcha.results).toContain('reject')
 
     const maccha = type('まっちゃ', 'maccha')
     expect(maccha.results.at(-1)).toBe('complete')
@@ -208,12 +212,6 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     const mattya = type('まっちゃ', 'mattya')
     expect(mattya.results.at(-1)).toBe('complete')
     expect(mattya.matcher.typedRomaji()).toBe('mattya')
-  })
-
-  it('never derives a tch- spelling for a non-ch- following consonant (っき never accepts tki)', () => {
-    const matcher = createRomajiMatcher('あっき')
-    expect(matcher.acceptChar('a')).toBe('complete')
-    expect(matcher.acceptChar('t')).toBe('reject')
   })
 })
 

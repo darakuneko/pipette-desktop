@@ -260,10 +260,10 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   ふぇ: ['fe'],
   ふぉ: ['fo'],
   ふゅ: ['fyu'],
-  くぁ: ['kwa'],
-  くぃ: ['kwi'],
-  くぇ: ['kwe'],
-  くぉ: ['kwo'],
+  くぁ: ['kwa', 'qa'],
+  くぃ: ['kwi', 'qi'],
+  くぇ: ['kwe', 'qe'],
+  くぉ: ['kwo', 'qo'],
   ぐぁ: ['gwa'],
 }
 
@@ -332,10 +332,13 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゅ|cyu': 'c',
   'ちょ|cyo': 'c',
 
-  // -- q: "qu"-letter substitution (く only; no "qa"-style spelling exists
-  // in KANA_TABLE today for くぁ etc. — add one here if it's ever added
-  // there) --
+  // -- q: "q"-letter substitutions (く row, including the くぁ-row's
+  // JIS X 4063 kwa(qa)-family spellings) --
   'く|qu': 'q',
+  'くぁ|qa': 'q',
+  'くぃ|qi': 'q',
+  'くぇ|qe': 'q',
+  'くぉ|qo': 'q',
 
   // -- hepburn: canonical Hepburn spellings, paired one-for-one with the
   // kunrei-shiki alternates directly below --
@@ -584,27 +587,12 @@ function nPatternsFor(
 // derive a consonant-doubled spelling from these starts, so the matcher
 // must not accept it as a gemination spelling of っ. The explicit taps
 // (xtu/ltu/ltsu/xtsu) remain the only way to type っ before such a kana.
-//
-// Hepburn romanization has one extra rule beyond the plain consonant-double
-// above: before a ch- spelling, the promoted sokuon is written "tch-"
-// rather than "cch-" (ぼっち -> "botchi", not "bocchi"). That's added here
-// as an extra derivation alongside the regular doubled form, not a
-// replacement — the doubled "cch-" spelling stays valid too, since it's
-// the standard wordprocessor/IME romanization (and the kunrei-derived
-// "tt-" form from a ti-style spelling, when one exists, is unaffected
-// either way). Because this only fires on patterns already surviving
-// filterByStyle, disabling the style that supplies a kana's ch- spelling
-// (hepburn) removes "tch-" along with it automatically, with no separate
-// tag needed.
 function doubledPatterns(option: SegmentOption): readonly string[] {
   const doubled: string[] = []
   for (const pattern of option.patterns) {
     const first = pattern[0]
     if (first !== undefined && /[a-z]/.test(first) && !/[aiueony]/.test(first)) {
       doubled.push(first + pattern)
-    }
-    if (pattern.startsWith('ch')) {
-      doubled.push('t' + pattern)
     }
   }
   return doubled
