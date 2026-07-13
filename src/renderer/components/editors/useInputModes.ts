@@ -57,6 +57,12 @@ export interface UseInputModesOptions {
   typingTestViewOnly?: boolean
   typingRecordEnabled?: boolean
   typingRecordKeyboard?: TypingAnalyticsKeyboard
+  /** Called once per matrix keystroke recorded while REC (Typing View
+   *  record toggle) is active — i.e. the same untagged events dispatched
+   *  to typingAnalyticsEvent, not the tagged editor-typing-test events.
+   *  Feeds the tray's session keystroke count (see useRecKeystrokeCounter
+   *  in App.tsx); this hook does no counting of its own. */
+  onRecKeystroke?: () => void
   /** TAPPING_TERM (ms) forwarded to useTypingTest for masked-key
    * tap/hold classification. Defaults to QMK's 200 ms when the
    * keyboard hasn't reported one. */
@@ -109,6 +115,7 @@ export function useInputModes({
   typingTestViewOnly,
   typingRecordEnabled,
   typingRecordKeyboard,
+  onRecKeystroke,
   tappingTermMs,
 }: UseInputModesOptions): UseInputModesReturn {
   // --- Matrix tester state ---
@@ -205,6 +212,8 @@ export function useInputModes({
   const recordingActiveRef = useRef(false)
   const testLabelRef = useRef<string | null>(null)
   const testRunIdRef = useRef<string | null>(null)
+  const onRecKeystrokeRef = useRef(onRecKeystroke)
+  onRecKeystrokeRef.current = onRecKeystroke
   const analyticsSink = useCallback((payload: TypingAnalyticsEventPayload) => {
     const keyboard = keyboardRef.current
     if (!keyboard) return
@@ -215,6 +224,12 @@ export function useInputModes({
     const event = label
       ? { ...payload, keyboard, typingTest: label, runId: testRunIdRef.current ?? undefined }
       : { ...payload, keyboard }
+    // Tray keystroke count tracks REC only (untagged matrix events), not
+    // the editor typing-test practice mode — matches recordingActive's
+    // narrower definition (typingRecordEnabled && typingTestViewOnly).
+    if (!label && payload.kind === 'matrix') {
+      onRecKeystrokeRef.current?.()
+    }
     window.vialAPI.typingAnalyticsEvent(event).catch(() => { /* fire-and-forget */ })
   }, [])
   const typingTest = useTypingTest(savedTypingTestConfig, savedTypingTestLanguage, {

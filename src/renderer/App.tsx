@@ -22,6 +22,8 @@ import { useDeviceLifecycle } from './hooks/useDeviceLifecycle'
 import { useSessionRestore } from './hooks/useSessionRestore'
 import { useBootHiddenWindow } from './hooks/useBootHiddenWindow'
 import { useMissingKeyLabelNotice } from './hooks/useMissingKeyLabelNotice'
+import { useRecKeystrokeCounter } from './hooks/useRecKeystrokeCounter'
+import { useTrayStatus } from './hooks/useTrayStatus'
 import { MissingKeyLabelDialog } from './components/key-labels/MissingKeyLabelDialog'
 import { JaRemovedBanner } from './components/i18n-packs/JaRemovedBanner'
 import { formatDeviceId } from './app-types'
@@ -372,6 +374,19 @@ export function App() {
     if (!snap) return
     void window.vialAPI.typingAnalyticsSaveKeymapSnapshot(snap).catch(() => { /* main logs */ })
   }, [devicePrefs.typingRecordEnabled, devicePrefs.typingTestViewOnly, editorUI.typingTestMode, keyboard])
+
+  // System tray: connected-keyboard name + live REC keystroke count.
+  // recordingActive mirrors useInputModes' authoritative definition
+  // exactly (narrower than recordingSnapshotRef's `active` above, which
+  // also counts an editor typing-test practice run) — the tray's REC
+  // line should only light up for the ambient Typing View record toggle.
+  const recordingActive = devicePrefs.typingRecordEnabled && devicePrefs.typingTestViewOnly
+  const recKeystroke = useRecKeystrokeCounter(recordingActive)
+  // Dummy and pipette-file "connections" have no live device behind them
+  // (see useDeviceConnection's connectDummy/connectPipetteFile), so the
+  // tray should read as disconnected rather than show a pseudo name.
+  const trayKeyboardName = device.isDummy ? null : (device.connectedDevice?.productName ?? null)
+  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount })
 
   // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
   // the StatusBar's "View Analytics" button can be disabled mid-run.
@@ -917,6 +932,7 @@ export function App() {
             onTypingTestSettingsPanelOpenChange={devicePrefs.setTypingTestSettingsPanelOpen}
             typingRecordEnabled={devicePrefs.typingRecordEnabled}
             onTypingRecordEnabledChange={handleTypingRecordEnabledChange}
+            onRecKeystroke={recKeystroke.increment}
             typingHeatmapWindowMin={appConfig.config.typingHeatmapWindowMin}
             onTypingHeatmapWindowMinChange={(m) => appConfig.set('typingHeatmapWindowMin', m as typeof appConfig.config.typingHeatmapWindowMin)}
             typingRecordingConsentAccepted={appConfig.config.typingRecordingConsentAccepted}

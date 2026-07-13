@@ -156,6 +156,10 @@ export interface KeymapEditorProps {
   onTypingTestSettingsPanelOpenChange?: (open: boolean) => void
   typingRecordEnabled?: boolean
   onTypingRecordEnabledChange?: (enabled: boolean) => void
+  /** Called once per matrix keystroke recorded while REC is active, so
+   *  the host (App) can drive the tray's session keystroke count. See
+   *  UseInputModesOptions.onRecKeystroke for the exact gating. */
+  onRecKeystroke?: () => void
   /** AppConfig flag — true once the user has accepted the recording
    * disclosure, so the REC tab Start button can skip the modal. */
   typingRecordingConsentAccepted?: boolean

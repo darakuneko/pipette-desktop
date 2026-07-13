@@ -7,6 +7,7 @@ import { mkdirSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 import { log } from './logger'
+import type { TrayStatus } from '../shared/types/vial-api'
 
 /** Path to the XDG autostart desktop entry used on Linux. Exported so
  * tests (and any future uninstall/cleanup path) can target the exact
@@ -92,6 +93,66 @@ export function showWindow(getWindow: () => BrowserWindow | null): void {
   win.focus()
 }
 
+const DEFAULT_TRAY_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0 }
+
+// Latest status reported by the renderer (the source of truth — see
+// App.tsx; the tray never reads HID/analytics state itself). Module-level
+// so a config toggle that tears down and recreates the tray (trayResident
+// off→on) does not lose the current keyboard/REC state — setupTray
+// re-applies whatever was last received, regardless of arrival order.
+// This is renderer-owned state: neither destroyTray nor updateTrayStatus
+// resets it back to the disconnected default — the renderer sends the
+// cleared status itself on disconnect.
+let cachedTrayStatus: TrayStatus = DEFAULT_TRAY_STATUS
+
+function formatRecLabel(count: number): string {
+  return `REC ${count.toLocaleString('en-US')}`
+}
+
+function formatTrayTooltip(status: TrayStatus): string {
+  if (!status.keyboardName) return 'Pipette'
+  if (!status.recording) return `Pipette — ${status.keyboardName}`
+  return `Pipette — ${status.keyboardName} — ${formatRecLabel(status.count)}`
+}
+
+/** Build the tray context menu for the given status. Disabled info rows
+ * (keyboard name, REC count) sit above the fixed Show/Quit items when
+ * applicable. Fixed English labels throughout — see setupTray for why. */
+function buildTrayMenu(getWindow: () => BrowserWindow | null, status: TrayStatus): Menu {
+  const items: Electron.MenuItemConstructorOptions[] = []
+  if (status.keyboardName) {
+    items.push({ label: status.keyboardName, enabled: false })
+  }
+  if (status.recording) {
+    items.push({ label: formatRecLabel(status.count), enabled: false })
+  }
+  items.push({ label: 'Show', click: () => showWindow(getWindow) })
+  items.push({ label: 'Quit', click: () => app.quit() })
+  return Menu.buildFromTemplate(items)
+}
+
+/** Apply the cached status to the live tray's tooltip and context menu.
+ * No-op when the tray hasn't been created yet. The menu is rebuilt on
+ * every applied update — including the ≤1 Hz count ticks while REC runs —
+ * deliberately: GNOME-family trays often never show tooltips, so the
+ * menu's REC row is the only place the live count is visible there, and
+ * the renderer's dedupe/throttle already bounds the rebuild rate. */
+function applyCachedTrayStatus(getWindow: () => BrowserWindow | null): void {
+  if (!trayInstance) return
+  trayInstance.setToolTip(formatTrayTooltip(cachedTrayStatus))
+  trayInstance.setContextMenu(buildTrayMenu(getWindow, cachedTrayStatus))
+}
+
+/** Update the tray with the connected keyboard's name and REC keystroke
+ * count. Always caches the status (even with no tray active yet) so a
+ * later setupTray() — e.g. the user enables trayResident after the status
+ * already arrived — reflects the current state immediately instead of
+ * starting from the disconnected default. */
+export function updateTrayStatus(status: TrayStatus, getWindow: () => BrowserWindow | null): void {
+  cachedTrayStatus = status
+  applyCachedTrayStatus(getWindow)
+}
+
 /** Hide the given window, but only while the tray is active — a hidden
  * window with no tray icon to reopen it would be unreachable. Backs the
  * WINDOW_HIDE IPC handler used by the renderer's "start hidden" flow. */
@@ -112,20 +173,14 @@ export function setupTray(getWindow: () => BrowserWindow | null): void {
   if (trayInstance) return
 
   trayInstance = new Tray(nativeImage.createFromPath(appIconPath()))
-  trayInstance.setToolTip('Pipette')
+  // Fixed English labels throughout: the main process has no i18next
+  // runtime (it only runs in the renderer), so the tray cannot be
+  // localized yet.
+  applyCachedTrayStatus(getWindow)
 
-  const onShowClick = (): void => showWindow(getWindow)
-
-  // Fixed English labels: the main process has no i18next runtime (it
-  // only runs in the renderer), so the tray menu cannot be localized yet.
-  const menu = Menu.buildFromTemplate([
-    { label: 'Show', click: onShowClick },
-    { label: 'Quit', click: () => app.quit() },
-  ])
-  trayInstance.setContextMenu(menu)
   // Left-click shows the window too — Windows/Linux tray convention. A
   // harmless no-op on macOS, where clicking the icon opens the menu instead.
-  trayInstance.on('click', onShowClick)
+  trayInstance.on('click', () => showWindow(getWindow))
 }
 
 export function destroyTray(): void {

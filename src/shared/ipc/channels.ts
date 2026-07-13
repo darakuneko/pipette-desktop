@@ -306,4 +306,7 @@ export const IpcChannels = {
   WINDOW_SHOW: 'window:show',
   WINDOW_HIDE: 'window:hide',
   WINDOW_STARTED_HIDDEN: 'window:started-hidden',
+
+  // Tray status (renderer → main)
+  TRAY_STATUS_UPDATE: 'tray:status-update',
 } as const

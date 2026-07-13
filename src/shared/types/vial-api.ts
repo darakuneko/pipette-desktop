@@ -444,4 +444,17 @@ export interface VialAPI {
   windowShow(): Promise<void>
   windowHide(): Promise<void>
   windowStartedHidden(): Promise<boolean>
+
+  // Tray status
+  trayStatusUpdate(status: TrayStatus): Promise<void>
+}
+
+/** Connected-keyboard name and REC keystroke-counter state reported by
+ * the renderer to the main-process tray. Purely display data — declared
+ * once here so every IPC leg (renderer hook, preload bridge, main
+ * handler) shares one shape instead of re-typing it per boundary. */
+export interface TrayStatus {
+  keyboardName: string | null
+  recording: boolean
+  count: number
 }

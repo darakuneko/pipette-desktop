@@ -34,7 +34,9 @@ import {
   hideWindow,
   setWindowStartedHidden,
   getWindowStartedHidden,
+  updateTrayStatus,
 } from './app-behavior'
+import type { TrayStatus } from '../shared/types/vial-api'
 import {
   setupTypingAnalytics,
   setupTypingAnalyticsIpc,
@@ -337,6 +339,23 @@ function setupWindowIpc(): void {
   })
 
   secureHandle(IpcChannels.WINDOW_STARTED_HIDDEN, (): boolean => getWindowStartedHidden())
+
+  secureHandle(IpcChannels.TRAY_STATUS_UPDATE, (_event, status: unknown) => {
+    if (!isValidTrayStatus(status)) return
+    updateTrayStatus(status, getFirstWindow)
+  })
+}
+
+/** Minimal shape validation for a payload crossing the IPC boundary —
+ * the renderer is trusted but not the wire format, so a malformed call
+ * (stale renderer bundle, future field drift) is dropped instead of
+ * corrupting the tray's cached status. */
+function isValidTrayStatus(value: unknown): value is TrayStatus {
+  if (typeof value !== 'object' || value === null) return false
+  const v = value as Record<string, unknown>
+  return (v.keyboardName === null || typeof v.keyboardName === 'string') &&
+    typeof v.recording === 'boolean' &&
+    typeof v.count === 'number'
 }
 
 function setupShellIpc(): void {
