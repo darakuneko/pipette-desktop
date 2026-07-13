@@ -80,6 +80,7 @@ Settings tied to a specific keyboard, identified by its unique ID.
 | Split key mode | How split-key tiles are displayed (split or flat) |
 | Quick select | Quick-select mode for the keycode popover |
 | Keymap scale | Keymap zoom level |
+| View matrix | Custom key positions for the Auto Move advance order (sparse — only overridden keys; others follow the physical matrix) |
 | View mode | Last active view (Editor / Typing Test / Typing View) — auto-restored on reconnect |
 | Typing test history | WPM/accuracy records (up to 500 entries) |
 | Typing test config | Mode, word count, and other test preferences |
