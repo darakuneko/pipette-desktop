@@ -298,11 +298,11 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --width-modal-md: 600px;     /* MissingKeyLabelDialog, UnlockDialog, QmkSettings, JsonEditor */
   --width-modal-notify: 560px; /* NotificationModal, AnalyzeExportModal */
   --width-modal-typing: 480px; /* TypingRecordingConsentModal */
-  --width-modal-lg: 760px;     /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal, SettingsModal, LanguageSelectorModal */
+  --width-modal-lg: 760px;     /* ThemePacksModal, KeyLabelsModal, LanguagePacksModal, LanguageSelectorModal */
   --width-modal-data: 860px;   /* DataModal */
   --width-modal-goal: 720px;   /* GoalAchievementsModal */
   --width-modal-app: 500px;    /* App toast, MacroTextEditor */
-  --width-modal-xl: 960px;     /* FingerAssignmentModal */
+  --width-modal-xl: 960px;     /* FingerAssignmentModal, SettingsModal */
   --width-modal-wide: 900px;   /* HistoryToggle, TapDanceModal (dummy) */
   --width-modal-editor: 1050px; /* KeycodeEntryModalShell, TapDanceModal */
   --width-modal-2xl: 1200px;   /* MacroModal large */
@@ -315,7 +315,7 @@ label:has(> input[type="radio"]:not(:disabled)) {
   --height-modal-70vh: 70vh; /* MissingKeysModal, TypingAnalyticsView */
   --height-modal-90vh: 90vh; /* MacroModal */
   --height-modal-data: min(720px, 80vh);     /* DataModal */
-  --height-modal-settings: min(840px, 85vh); /* SettingsModal */
+  --height-modal-settings: min(900px, 90vh); /* SettingsModal */
 
   /* Modal max-heights */
   --max-height-modal-80vh: 80vh; /* Various modals */
