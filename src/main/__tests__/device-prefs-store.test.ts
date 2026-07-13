@@ -469,6 +469,38 @@ describe('pipette-settings-store', () => {
       expect(result.error).toContain('Invalid prefs')
     })
 
+    it('accepts a valid viewMatrix map', async () => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMatrix: { '0,0': { row: 0, col: 5 }, '2,3': { row: 1, col: 0 } },
+      }) as { success: boolean }
+      expect(result.success).toBe(true)
+    })
+
+    it.each([
+      ['malformed key', { 'a,b': { row: 0, col: 0 } }],
+      ['string row value', { '0,0': { row: '1', col: 0 } }],
+      ['negative col value', { '0,0': { row: 0, col: -1 } }],
+      ['non-integer row value', { '0,0': { row: 1.5, col: 0 } }],
+      ['non-object cell', { '0,0': 7 }],
+      ['array map', [{ row: 0, col: 0 }]],
+    ])('rejects prefs with a viewMatrix having a %s', async (_label, viewMatrix) => {
+      const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
+      const result = await handler(fakeEvent, 'uid-1', {
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        viewMatrix,
+      }) as { success: boolean; error: string }
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Invalid prefs')
+    })
+
     it('rejects prefs with unsupported _rev', async () => {
       const handler = getHandler(IpcChannels.PIPETTE_SETTINGS_PATCH)
       const result = await handler(fakeEvent, 'uid-1', {
