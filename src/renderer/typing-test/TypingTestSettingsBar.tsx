@@ -83,7 +83,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
     : t('editor.typingTest.units')
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="flex w-full flex-col items-start gap-3">
       {/* Pattern — words / time / quote */}
       <div className="flex flex-col items-start gap-1">
         <span className={LABEL}>{t('editor.typingTest.pattern')}:</span>
@@ -155,7 +155,7 @@ export function TypingTestSettingsBar({ config, onConfigChange, language, fontSi
 
       {/* Option — punctuation / numbers (words & time only) */}
       {hasPunctuationNumbers && (
-        <div className="flex flex-col items-start gap-1">
+        <div className="flex w-full flex-col items-start gap-1">
           <span className={LABEL}>{t('editor.typingTest.optionLabel')}:</span>
           <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
             <button

@@ -1,5 +1,5 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Japanese - 京言葉",
   "common": {
     "save": "保存しますえ",
@@ -303,6 +303,32 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "romaji": {
+        "toggle": "ローマ字",
+        "imeHint": "ローマ字入力モードの時は、OSのIMEを切っておくれやす"
+      },
+      "romajiSettings": {
+        "title": "ローマ字の詳細設定どすえ",
+        "caseLabel": "表示する文字どす",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "fontLinked": "Settings の Font と連動してますえ",
+        "guideLabel": "表示パターン",
+        "guideAuto": "自動",
+        "guideHint": "表示だけどすえ。他の受理パターンで入力しても正解になりますえ",
+        "inputLabel": "入力パターン",
+        "inputHint": "オフにしたパターンは入力として受け付けまへん。標準の綴りはいつでも有効どす",
+        "style": {
+          "kunrei": "訓令式 (si/ti)",
+          "cq": "C/Q表記 (ca/qu)",
+          "digraph": "二重字 (jya)",
+          "xSmall": "小文字x (xa/xtu)",
+          "lSmall": "小文字l (la/ltu)"
+        }
+      },
       "quoteLength": {
         "short": "短いのん",
         "medium": "普通のん",
@@ -427,7 +453,13 @@
         "filterMode": "モードで絞り込みますえ",
         "filterText": "テキストで絞り込みますえ",
         "exportCsv": "CSV出しますえ",
-        "delete": "消しますえ"
+        "delete": "消しますえ",
+        "accuracyTrendTitle": "正確性の推移どすえ",
+        "conditionFilterLabel": "条件で絞り込みますえ",
+        "conditionPunctuation": "+句読点",
+        "conditionNumbers": "+数字",
+        "conditionRomaji": "+ローマ字",
+        "conditionTatoeba": "Tatoeba"
       }
     }
   },
@@ -1032,10 +1064,18 @@
         "slow": "ペア間隔",
         "fingerIki": "指間隔"
       },
+      "cappedNotice": "頻度上位 {{limit}} 件のペアから出してますえ — 珍しいペアは入っとらんこともありますえ",
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "ペア",
         "count": "回数",
         "avgIki": "平均間隔",
+        "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均どす。3キー全体の時間とは違いますえ",
+        "sd": "SD",
         "p95": "p95 間隔"
       },
       "fingerIki": {
@@ -1061,6 +1101,17 @@
       "bondToggle": "レイヤー {{i}} を結合しますえ",
       "noLayout": "このスナップショットにレイアウトデータがおへんなぁ",
       "noSnapshot": "この期間のスナップショットがおへんなぁ。Record を始めたら取れますえ。",
+      "modeToggle": {
+        "ariaLabel": "ヒートマップの着彩モード",
+        "count": "回数",
+        "speed": "速度"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKI",
+        "empty": "この期間の到達速度データはまだおへん",
+        "minSampleNote": "到達回数が {{n}} 回に満たへんキーは着彩しまへん",
+        "cappedNotice": "頻度上位 {{limit}} 件のペアから出してますえ — 珍しいペアは入っとらんこともありますえ"
+      },
       "ranking": {
         "frequentUsedN": "上位",
         "frequentUsed": "よう使うキー",

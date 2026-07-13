@@ -1,5 +1,5 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -303,6 +303,32 @@
       },
       "punctuation": "句読点",
       "numbers": "数字",
+      "romaji": {
+        "toggle": "ローマ字",
+        "imeHint": "ローマ字入力の折には、OSのIMEをお切りください"
+      },
+      "romajiSettings": {
+        "title": "ローマ字の詳細設定",
+        "caseLabel": "表示する書体",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "fontLinked": "Settings の Font と連動いたします",
+        "guideLabel": "表示する綴りの型",
+        "guideAuto": "自動",
+        "guideHint": "表示のみにございます。他の受理される型で打っても正解となります",
+        "inputLabel": "受理する入力の型",
+        "inputHint": "外した型は入力として認められません。標準の綴りは常に受理されます",
+        "style": {
+          "kunrei": "訓令式 (si/ti)",
+          "cq": "C/Q表記 (ca/qu)",
+          "digraph": "二重字 (jya)",
+          "xSmall": "小文字x (xa/xtu)",
+          "lSmall": "小文字l (la/ltu)"
+        }
+      },
       "quoteLength": {
         "short": "短め",
         "medium": "中くらい",
@@ -427,7 +453,13 @@
         "filterMode": "形式で絞り込む",
         "filterText": "文言で絞り込む",
         "exportCsv": "書付を出す (CSV)",
-        "delete": "抹消"
+        "delete": "抹消",
+        "accuracyTrendTitle": "正確性の推移",
+        "conditionFilterLabel": "条件による絞り込み",
+        "conditionPunctuation": "+句読点",
+        "conditionNumbers": "+数字",
+        "conditionRomaji": "+ローマ字",
+        "conditionTatoeba": "Tatoeba"
       }
     }
   },
@@ -1032,10 +1064,18 @@
         "slow": "ペア間隔",
         "fingerIki": "指間隔"
       },
+      "cappedNotice": "頻度上位 {{limit}} 件の組より算出しております — 稀な組は含まれぬこともございます",
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "ペア",
         "count": "回数",
         "avgIki": "平均間隔",
+        "avgIkiTrigramTooltip": "三つの打鍵の間にある二つの間隔の平均にございます。三つ全体の所要時間ではございません",
+        "sd": "SD",
         "p95": "p95 間隔"
       },
       "fingerIki": {
@@ -1061,6 +1101,17 @@
       "bondToggle": "階層 {{i}} を別グループと結合",
       "noLayout": "地図の写しにレイアウトデータがございません",
       "noSnapshot": "地図の写しが記録されておりません。記録を開始すれば取得されます。",
+      "modeToggle": {
+        "ariaLabel": "熱分布の彩色の型",
+        "count": "回数",
+        "speed": "速さ"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKI",
+        "empty": "この期間の到達速度の記録はまだございません",
+        "minSampleNote": "到達回数が {{n}} 回に満たぬ鍵には彩色いたしません",
+        "cappedNotice": "頻度上位 {{limit}} 件の組より算出しております — 稀な組は含まれぬこともございます"
+      },
       "ranking": {
         "frequentUsedN": "上位",
         "frequentUsed": "よく使うキー",

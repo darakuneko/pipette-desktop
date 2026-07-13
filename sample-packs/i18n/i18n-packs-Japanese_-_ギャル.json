@@ -1,5 +1,5 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -303,6 +303,32 @@
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
+      "romaji": {
+        "toggle": "ローマ字☆",
+        "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
+      },
+      "romajiSettings": {
+        "title": "ローマ字の詳細設定☆",
+        "caseLabel": "表示する文字っしょ",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "fontLinked": "Settings の Font と連動してるよん☆",
+        "guideLabel": "表示パターンっしょ",
+        "guideAuto": "自動っしょ",
+        "guideHint": "表示だけだから、他の受理パターンで打っても正解になるよん☆",
+        "inputLabel": "入力パターンっしょ",
+        "inputHint": "オフにしたパターンは入力としてハネられるよん。標準の綴りはいつでもOKね☆",
+        "style": {
+          "kunrei": "訓令式 (si/ti)☆",
+          "cq": "C/Q表記 (ca/qu)☆",
+          "digraph": "二重字 (jya)☆",
+          "xSmall": "小文字x (xa/xtu)☆",
+          "lSmall": "小文字l (la/ltu)☆"
+        }
+      },
       "quoteLength": {
         "short": "短っ！",
         "medium": "ふつー",
@@ -427,7 +453,13 @@
         "filterMode": "モードで絞り込むっしょ",
         "filterText": "テキストで絞り込むっしょ",
         "exportCsv": "CSV出すっしょ",
-        "delete": "ポイっちょ☆"
+        "delete": "ポイっちょ☆",
+        "accuracyTrendTitle": "正確性の推移☆",
+        "conditionFilterLabel": "条件で絞り込みっしょ",
+        "conditionPunctuation": "+句読点☆",
+        "conditionNumbers": "+数字っしょ",
+        "conditionRomaji": "+ローマ字☆",
+        "conditionTatoeba": "Tatoeba"
       }
     }
   },
@@ -1032,10 +1064,18 @@
         "slow": "ペア間隔っしょ",
         "fingerIki": "指間隔☆"
       },
+      "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ",
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度っしょ",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "ペア☆",
         "count": "回数っしょ",
         "avgIki": "平均間隔☆",
+        "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均だよ。3キー全体の時間じゃないから注意っしょ",
+        "sd": "SD",
         "p95": "p95間隔っしょ"
       },
       "fingerIki": {
@@ -1061,6 +1101,17 @@
       "bondToggle": "レイヤー {{i}} を結合☆",
       "noLayout": "レイアウトデータなくね？",
       "noSnapshot": "スナップショットないじゃん！REC開始しよ？☆",
+      "modeToggle": {
+        "ariaLabel": "ヒートマップの着彩モードっしょ",
+        "count": "回数っしょ",
+        "speed": "速度っしょ"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKIっしょ",
+        "empty": "この期間の到達速度データまだないっしょ",
+        "minSampleNote": "到達回数が {{n}} 回未満のキーは着彩しないっしょ",
+        "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ"
+      },
       "ranking": {
         "frequentUsedN": "上位☆",
         "frequentUsed": "よく使うキーっしょ",
