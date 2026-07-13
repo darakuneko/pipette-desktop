@@ -74,6 +74,20 @@ describe('RomajiSettingsModal defaults', () => {
     expect(select).toBeDisabled()
     expect(select.value).toBe('24')
   })
+
+  // Base and Options share the same grid-cols-4 container so every button
+  // (Base's 2 and Options' 11) lands in an identically wide column, instead
+  // of sizing to its own label's content width.
+  it('lays out the Base and Options rows on the same 4-column grid, for both Guide and Accepted input patterns', () => {
+    renderModal()
+    // Options buttons sit inside a Tooltip wrapper div, so the grid
+    // container is an ancestor rather than the immediate parent — closest()
+    // finds it either way.
+    for (const testid of ['romaji-guide-base-hepburn', 'romaji-guide-c', 'romaji-base-hepburn', 'romaji-input-c']) {
+      const container = screen.getByTestId(testid).closest('.grid-cols-4')
+      expect(container).not.toBeNull()
+    }
+  })
 })
 
 describe('RomajiSettingsModal edits', () => {

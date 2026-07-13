@@ -36,6 +36,14 @@ const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 const OPTION_STYLES: readonly RomajiStyle[] =
   ['c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos']
 
+// Shared by all four Base/Options button rows (Guide and Accepted input
+// patterns each have one of each) so every button lands in the same column
+// width regardless of its label length. Base only ever renders 2 buttons
+// into this 4-column grid, leaving the last 2 cells empty — using the same
+// grid-cols-4 as Options (11 buttons, wrapping to 3 rows) is what makes the
+// two rows' columns line up instead of Base's pair rendering wider.
+const STYLE_GRID_CLASS = 'grid grid-cols-4 gap-1'
+
 /** Drops fields set back to their default value so a persisted config only
  *  ever carries what the user actually changed. The single source of truth
  *  for what "default" means per field (every call site above passes the
@@ -219,14 +227,14 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
 
             <div className="flex flex-col gap-1">
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
-              <div className="flex flex-wrap gap-1">
+              <div className={STYLE_GRID_CLASS}>
                 {BASE_STYLES.map((style) => (
                   <button
                     key={style}
                     type="button"
                     data-testid={`romaji-guide-base-${style}`}
                     aria-pressed={guideBase === style}
-                    className={optionButtonClass(guideBase === style, 'px-2.5')}
+                    className={`${optionButtonClass(guideBase === style, 'px-2.5')} w-full justify-center`}
                     onClick={() => selectGuideBase(style)}
                   >
                     {t(`editor.typingTest.romajiSettings.style.${style}`)}
@@ -237,14 +245,14 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
 
             <div className="flex flex-col gap-1">
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
-              <div className="flex flex-wrap gap-1">
+              <div className={STYLE_GRID_CLASS}>
                 {OPTION_STYLES.map((style) => (
-                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top">
+                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                     <button
                       type="button"
                       data-testid={`romaji-guide-${style}`}
                       aria-pressed={guideStyles.has(style)}
-                      className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
+                      className={`${optionButtonClass(guideStyles.has(style), 'px-2.5')} w-full justify-center`}
                       onClick={() => toggleGuideStyle(style)}
                     >
                       {t(`editor.typingTest.romajiSettings.style.${style}`)}
@@ -265,7 +273,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
 
             <div className="flex flex-col gap-1">
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
-              <div className="flex flex-wrap gap-1">
+              <div className={STYLE_GRID_CLASS}>
                 {BASE_STYLES.map((style) => {
                   const baseEnabled = !disabledStyles.has(style)
                   return (
@@ -274,7 +282,7 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
                       type="button"
                       data-testid={`romaji-base-${style}`}
                       aria-pressed={baseEnabled}
-                      className={optionButtonClass(baseEnabled, 'px-2.5')}
+                      className={`${optionButtonClass(baseEnabled, 'px-2.5')} w-full justify-center`}
                       onClick={() => toggleBaseStyle(style)}
                     >
                       {t(`editor.typingTest.romajiSettings.style.${style}`)}
@@ -286,14 +294,14 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
 
             <div className="flex flex-col gap-1">
               <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
-              <div className="flex flex-wrap gap-1">
+              <div className={STYLE_GRID_CLASS}>
                 {OPTION_STYLES.map((style) => (
-                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top">
+                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full">
                     <button
                       type="button"
                       data-testid={`romaji-input-${style}`}
                       aria-pressed={!disabledStyles.has(style)}
-                      className={optionButtonClass(!disabledStyles.has(style), 'px-2.5')}
+                      className={`${optionButtonClass(!disabledStyles.has(style), 'px-2.5')} w-full justify-center`}
                       onClick={() => toggleInputStyle(style)}
                     >
                       {t(`editor.typingTest.romajiSettings.style.${style}`)}

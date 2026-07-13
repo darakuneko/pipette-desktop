@@ -338,14 +338,14 @@
           "nApos": "N区切り (n')"
         },
         "styleTip": {
-          "c": "ca / ci / cu / ce / co",
-          "q": "qu 等",
-          "digraph": "jya / jyu / jyo 等",
-          "xSmall": "xa / xi / xu / xe / xo / xya / xtu / xtsu 等",
-          "lSmall": "la / li / lu / le / lo / lya / ltu / ltsu 等",
-          "w": "wi / we / wha / who / wu / whu 等",
-          "v": "va / vi / vu / ve / vo",
-          "f": "fa / fi / fe / fo",
+          "c": "ca / cu / co / ci / ce / cya / cyu / cyo",
+          "q": "qu",
+          "digraph": "jya / jyu / jyo / ja / ju / jo",
+          "xSmall": "xa / xi / xu / xe / xo / xya / xyu / xyo / xwa / xka / xke / xtu / xtsu",
+          "lSmall": "la / li / lu / le / lo / lya / lyu / lyo / lwa / lka / lke / ltu / ltsu",
+          "w": "wi / whi / we / whe / who / wu / whu",
+          "v": "vu / va / vi / ve / vo",
+          "f": "fa / fi / fe / fo / fyu",
           "ye": "ye",
           "xn": "xn",
           "nApos": "n'（母音の前でも ん を確定できる区切り記法）"

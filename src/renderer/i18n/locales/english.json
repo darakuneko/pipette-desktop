@@ -338,14 +338,14 @@
           "nApos": "N separator (n')"
         },
         "styleTip": {
-          "c": "ca / ci / cu / ce / co",
-          "q": "qu, etc.",
-          "digraph": "jya / jyu / jyo, etc.",
-          "xSmall": "xa / xi / xu / xe / xo / xya / xtu / xtsu, etc.",
-          "lSmall": "la / li / lu / le / lo / lya / ltu / ltsu, etc.",
-          "w": "wi / we / wha / who / wu / whu, etc.",
-          "v": "va / vi / vu / ve / vo",
-          "f": "fa / fi / fe / fo",
+          "c": "ca / cu / co / ci / ce / cya / cyu / cyo",
+          "q": "qu",
+          "digraph": "jya / jyu / jyo / ja / ju / jo",
+          "xSmall": "xa / xi / xu / xe / xo / xya / xyu / xyo / xwa / xka / xke / xtu / xtsu",
+          "lSmall": "la / li / lu / le / lo / lya / lyu / lyo / lwa / lka / lke / ltu / ltsu",
+          "w": "wi / whi / we / whe / who / wu / whu",
+          "v": "vu / va / vi / ve / vo",
+          "f": "fa / fi / fe / fo / fyu",
           "ye": "ye",
           "xn": "xn",
           "nApos": "n' (a separator that confirms ん even before a vowel)"
