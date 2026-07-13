@@ -507,6 +507,20 @@ describe('TypingTestView romaji guide', () => {
     fireEvent.compositionStart(textarea)
     expect(screen.queryByTestId('typing-test-romaji-ime-hint')).toBeNull()
   })
+
+  it('tracks the Font setting via --tt-font, same as the reading window', () => {
+    renderView({
+      fontSize: 40,
+      state: makeState({ status: 'running', words: ['あい'] }),
+      romajiGuide: { typed: '', remaining: 'ai', kanaCompleted: 0 },
+    })
+    const guide = screen.getByTestId('typing-test-romaji-guide')
+    expect(guide.style.getPropertyValue('--tt-font')).toBe('40')
+    const typedRemaining = guide.querySelector('.typing-romaji-guide-text')
+    expect(typedRemaining).not.toBeNull()
+    // The IME hint stays a fixed small size, not tied to --tt-font.
+    expect(guide.querySelector('[data-testid="typing-test-romaji-ime-hint"]')).toBeNull()
+  })
 })
 
 describe('TypingTestView paused overlay', () => {

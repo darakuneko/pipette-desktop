@@ -70,6 +70,13 @@
   height: calc(var(--tt-font) * var(--tt-lines) * 1.5px);
 }
 
+/* Romaji guide line below the reading window tracks the same --tt-font
+   Font setting as the reading window itself (the IME hint next to it stays
+   a fixed small size — see TypingTestView.tsx). */
+.typing-romaji-guide-text {
+  font-size: calc(var(--tt-font) * 1px);
+}
+
 /* Interactive elements use pointer cursor */
 button:not(:disabled),
 a,
