@@ -1,15 +1,34 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
-import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './keycode-char-map'
-import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
-import type { FileImportTextData } from './word-generator'
+import { isTapKeycode } from './keycode-char-map'
+import { getLanguageData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
-import type { TypingTestConfig, Quote, RomajiGuide, RomajiDetailSettings } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, ROMAJI_INPUT_LANGUAGES, applyRomajiCaseStyle } from './types'
-import { createRomajiMatcher, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
+import type { TypingTestConfig, RomajiGuide } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, applyRomajiCaseStyle } from './types'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
+import { createWordsForConfig } from './word-supply'
+import {
+  type TypingTestState,
+  freshState,
+  createInitialState,
+  isSubmitKey,
+  handleChar,
+  handleBackspace,
+  handleSpace,
+  tryFinishLastWord,
+} from './run-state'
+import { isRomajiInputActive, buildRomajiMatcher, romajiDetail, processRomajiKeyEvent } from './romaji-input'
+import {
+  type PressStartRecord,
+  parseMatrixKey,
+  extractSwitchLayer,
+  resolveEffectiveCode,
+  resolveEffectiveCodeWithLayer,
+} from './matrix-layers'
+
+export type { WordResult, TypingTestState, TypingTestStatus } from './run-state'
 
 export interface UseTypingTestOptions {
   onAnalyticsEvent?: (event: TypingAnalyticsEventPayload) => void
@@ -20,109 +39,11 @@ export interface UseTypingTestOptions {
   tappingTermMs?: number
 }
 
-/** Press-edge record kept until the matching release edge is seen so
- * masked keys can classify the press as tap vs hold. Non-masked keys
- * are emitted immediately on press and never land in this map. */
-interface PressStartRecord {
-  tsMs: number
-  row: number
-  col: number
-  layer: number
-  keycode: number
-}
-
-export type TypingTestStatus = 'countdown' | 'waiting' | 'running' | 'finished' | 'paused'
-
 const COUNTDOWN_MS = 3000
-const TIME_MODE_BATCH_SIZE = 60
-const TIME_MODE_EXTEND_THRESHOLD = 10
+
 const IGNORED_KEYS = new Set(['Dead', 'Unidentified'])
 
-/** Check if a key is a word-submit key (half-width space or full-width space). */
-function isSubmitKey(key: string): boolean {
-  return key === ' ' || key === '\u3000'
-}
-
-/** True when the config opts into sequential romaji-keystroke judging AND
- *  the active language is one of the kana packs the matcher supports (see
- *  `ROMAJI_INPUT_LANGUAGES` in types.ts). `romajiInput` is persisted as-is
- *  regardless of language — same as `punctuation`/`numbers` — and is simply
- *  not honored while a non-kana language is active. This keeps the flag
- *  intact across any config/language sync order (e.g. a persisted config
- *  landing before the persisted language on mount), and it comes back into
- *  effect automatically once a kana pack is selected again, without the
- *  user needing to re-toggle it. */
-function isRomajiInputActive(config: TypingTestConfig, language: string): boolean {
-  return (config.mode === 'words' || config.mode === 'time') && config.romajiInput === true
-    && ROMAJI_INPUT_LANGUAGES.has(language)
-}
-
-/** Rebuilds a matcher for `word` by replaying every keystroke accepted so
- *  far for it. Called fresh on each read/write instead of keeping a live
- *  `RomajiMatcher` instance in React state, so state transitions (and the
- *  read-only `romajiGuide` selector) stay pure \u2014 mutation is local to this
- *  call and never escapes it, even under StrictMode's double-invoked
- *  updater functions. Word lengths are short (a handful of kana), so the
- *  replay cost is negligible. */
-function buildRomajiMatcher(word: string, keystrokes: string, opts?: RomajiMatcherOptions): RomajiMatcher {
-  const matcher = createRomajiMatcher(word, opts)
-  for (const key of keystrokes) matcher.acceptChar(key)
-  return matcher
-}
-
-/** Romaji Settings modal detail fields (disabledStyles / guideStyles /
- *  caseStyle), read only while `romajiInput` is honored (see
- *  `isRomajiInputActive`) — the config shape guarantees `romaji` only
- *  exists on words/time configs, so this is undefined for every other mode.
- *  Passed straight through as `buildRomajiMatcher`'s opts: its
- *  disabledStyles/guideStyles fields structurally satisfy
- *  `RomajiMatcherOptions`, and `createRomajiMatcher` itself already
- *  normalizes an empty disabledStyles/guideStyles array, so there's
- *  nothing left to prune here. */
-function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | undefined {
-  return config.mode === 'words' || config.mode === 'time' ? config.romaji : undefined
-}
-
 const MAX_WPM_HISTORY = 300
-
-export interface WordResult {
-  word: string
-  typed: string
-  correct: boolean
-}
-
-export interface TypingTestState {
-  status: TypingTestStatus
-  /** Unique id for this run, regenerated by `freshState` on every
-   *  (re)start and preserved across pause/resume. Tags analytics events
-   *  so Analyze can slice a test material down to individual History
-   *  runs. */
-  runId: string
-  words: string[]
-  currentWordIndex: number
-  currentInput: string
-  compositionText: string
-  wordResults: WordResult[]
-  startTime: number | null
-  endTime: number | null
-  correctChars: number
-  incorrectChars: number
-  currentQuote: Quote | null
-  wpmHistory: number[]
-  /** Word indices that end a line (imported fileImport text only). At these
-   *  words Enter advances; elsewhere Space advances. Empty for every other
-   *  mode, so their submit behaviour is unchanged. */
-  lineBreaks: Set<number>
-  /** Leading whitespace per logical line (imported fileImport text, display only).
-   *  Indexed by line order; empty for every other mode. */
-  lineIndents: string[]
-  /** Romaji keystrokes accepted so far for the current word (romajiInput
-   *  mode only). Rejected keystrokes are never appended. Replayed through
-   *  a fresh `createRomajiMatcher` on every read/write instead of holding
-   *  a live matcher instance, so state transitions stay pure — see
-   *  `buildRomajiMatcher`. Reset to '' whenever the word advances. */
-  romajiKeystrokes: string
-}
 
 export interface UseTypingTestReturn {
   state: TypingTestState
@@ -154,159 +75,6 @@ export interface UseTypingTestReturn {
   captureMemory: () => TypingTestMemory | null
   pause: () => void
   restoreState: (memory: TypingTestMemory, resume: boolean) => Promise<boolean>
-}
-
-/** Return the word count and generation options for word-based modes (words/time). */
-function wordGenParams(config: TypingTestConfig & { mode: 'words' | 'time' }): { count: number; opts: { punctuation: boolean; numbers: boolean } } {
-  return {
-    count: config.mode === 'words' ? config.wordCount : TIME_MODE_BATCH_SIZE,
-    opts: { punctuation: config.punctuation, numbers: config.numbers },
-  }
-}
-
-interface WordsForConfig {
-  words: string[]
-  quote: Quote | null
-  /** Line-end word indices — Enter advances past them; empty for flat
-   *  word-flow sources. */
-  lineBreaks: number[]
-  /** Per-line leading whitespace (fileImport mode only); empty otherwise. */
-  lineIndents: string[]
-}
-
-/** Build the verbatim quote shell for an imported fileImport text so the
- *  finished screen can show its name as the source. Carries the line-break
- *  positions through so Enter can advance at line ends. */
-function fileImportTextToWords(data: FileImportTextData): WordsForConfig {
-  const text = data.words.join(' ')
-  return {
-    words: data.words,
-    quote: { id: 0, text, source: data.name, length: text.length },
-    lineBreaks: data.lineBreaks,
-    lineIndents: data.indents,
-  }
-}
-
-/** Build a word-flow config from a sampled Tatoeba run (empty when the pack
- *  is uncached / not downloaded). Reuses the quote path's char-based
- *  counting and carries the run's per-sentence `lineBreaks` through so each
- *  sampled sentence renders on its own line, same as imported fileImport
- *  text. */
-function tatoebaWordsForConfig(pack: { name: string; words: string[] } | undefined): WordsForConfig {
-  if (!pack) return { words: [], quote: null, lineBreaks: [], lineIndents: [] }
-  return { ...tatoebaRun(pack), lineIndents: [] }
-}
-
-function createWordsForConfigSync(config: TypingTestConfig, language: string): WordsForConfig {
-  if (config.mode === 'quote') {
-    const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
-  }
-  if (config.mode === 'fileImport') {
-    const data = getFileImportTextDataSync(config.textId)
-    // Cache miss — the async setConfig path fills words once the store
-    // round-trip resolves. Return empty (never call sampleWords on []).
-    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
-  }
-  if (config.mode === 'tatoeba') {
-    // Cache miss — the async path fills words once langGet resolves.
-    return tatoebaWordsForConfig(getTatoebaPackSync(config.language))
-  }
-  const { count, opts } = wordGenParams(config)
-  const { words } = generateWordsSync(count, opts, language)
-  return { words, quote: null, lineBreaks: [], lineIndents: [] }
-}
-
-async function createWordsForConfig(config: TypingTestConfig, language: string): Promise<WordsForConfig> {
-  if (config.mode === 'quote') {
-    const quote = selectQuote(config.quoteLength)
-    return { words: quoteToWords(quote), quote, lineBreaks: [], lineIndents: [] }
-  }
-  if (config.mode === 'fileImport') {
-    const data = await getFileImportTextData(config.textId)
-    return data ? fileImportTextToWords(data) : { words: [], quote: null, lineBreaks: [], lineIndents: [] }
-  }
-  if (config.mode === 'tatoeba') {
-    return tatoebaWordsForConfig(await getTatoebaPack(config.language))
-  }
-  const { count, opts } = wordGenParams(config)
-  const { words } = await generateWords(count, opts, language)
-  return { words, quote: null, lineBreaks: [], lineIndents: [] }
-}
-
-function createInitialState(config: TypingTestConfig, language: string, status: TypingTestStatus = 'waiting'): TypingTestState {
-  return freshState(createWordsForConfigSync(config, language), status)
-}
-
-function freshState({ words, quote, lineBreaks, lineIndents }: WordsForConfig, status: TypingTestStatus = 'waiting'): TypingTestState {
-  return {
-    status,
-    runId: crypto.randomUUID(),
-    words,
-    currentWordIndex: 0,
-    currentInput: '',
-    compositionText: '',
-    wordResults: [],
-    startTime: null,
-    endTime: null,
-    correctChars: 0,
-    incorrectChars: 0,
-    currentQuote: quote,
-    wpmHistory: [],
-    lineBreaks: new Set(lineBreaks),
-    lineIndents,
-    romajiKeystrokes: '',
-  }
-}
-
-/** Parse a "row,col" matrix key string into numeric row and col. */
-function parseMatrixKey(key: string): [number, number] {
-  const [r, c] = key.split(',')
-  return [Number(r), Number(c)]
-}
-
-/** Extract the target layer from any layer switch keycode (MO, LT, or LM). */
-function extractSwitchLayer(code: number): number | null {
-  return extractMOLayer(code) ?? extractLTLayer(code) ?? extractLMLayer(code)
-}
-
-/** Resolve the effective keycode for a matrix position by checking active
- * layers in descending order, skipping KC_TRNS (0x01), then falling back
- * to the base layer. */
-function resolveEffectiveCode(
-  row: number,
-  col: number,
-  keymap: Map<string, number>,
-  sortedLayers: number[],
-  baseLayer: number,
-): number | undefined {
-  for (const layer of sortedLayers) {
-    const code = keymap.get(`${layer},${row},${col}`)
-    if (code != null && code !== 0x01) return code
-  }
-  return keymap.get(`${baseLayer},${row},${col}`)
-}
-
-/** Resolve the effective keycode AND the layer the keycode was picked
- * from. Used by the analytics path so each event is attributed to the
- * layer where the key is actually defined, not the (possibly different)
- * layer the pressed key itself is activating. For example, a lone LT1
- * press at base 0 resolves to LT1(kc) from layer 0 even though it
- * activates layer 1, so the heatmap shows the press on the base-layer
- * view the user is looking at. */
-function resolveEffectiveCodeWithLayer(
-  row: number,
-  col: number,
-  keymap: Map<string, number>,
-  sortedLayers: number[],
-  baseLayer: number,
-): { code: number; layer: number } | undefined {
-  for (const layer of sortedLayers) {
-    const code = keymap.get(`${layer},${row},${col}`)
-    if (code != null && code !== 0x01) return { code, layer }
-  }
-  const baseCode = keymap.get(`${baseLayer},${row},${col}`)
-  return baseCode != null ? { code: baseCode, layer: baseLayer } : undefined
 }
 
 export function useTypingTest(
@@ -628,10 +396,9 @@ export function useTypingTest(
     setState((s) => {
       if (s.status !== 'waiting' && s.status !== 'running') return s
 
-      // Romaji mode has its own key semantics for every key kind handled
-      // below (submit/Backspace no-ops, printable dispatched to the
-      // matcher) — dispatch once here instead of re-checking
-      // isRomajiInputActive in each branch.
+      // Romaji mode has its own key semantics for every key kind — see
+      // processRomajiKeyEvent's doc comment in romaji-input.ts. Dispatch
+      // once here instead of re-checking isRomajiInputActive per branch.
       if (isRomajiInputActive(configRef.current, languageRef.current)) {
         return processRomajiKeyEvent(s, key, configRef.current, languageRef.current)
       }
@@ -826,164 +593,4 @@ export function useTypingTest(
     pause,
     restoreState,
   }
-}
-
-function handleChar(state: TypingTestState, char: string): TypingTestState {
-  if (state.currentWordIndex >= state.words.length) return state
-  return {
-    ...state,
-    currentInput: state.currentInput + char,
-  }
-}
-
-/** If the last word is fully typed, finalize it and finish the test. */
-function tryFinishLastWord(state: TypingTestState): TypingTestState | null {
-  if (state.currentWordIndex !== state.words.length - 1) return null
-  const currentWord = state.words[state.currentWordIndex]
-  if (state.currentInput !== currentWord) return null
-
-  // Count chars without trailing space bonus (no space needed for last word)
-  let correct = 0
-  for (let i = 0; i < currentWord.length; i++) correct++
-
-  return {
-    ...state,
-    currentWordIndex: state.currentWordIndex + 1,
-    currentInput: '',
-    wordResults: [...state.wordResults, { word: currentWord, typed: currentWord, correct: true }],
-    correctChars: state.correctChars + correct,
-    incorrectChars: state.incorrectChars,
-    status: 'finished',
-    endTime: Date.now(),
-  }
-}
-
-/** Shared word-advance tail, run after a word has just been finalized into
- *  `base.wordResults` and `base.currentWordIndex` moved past it. Used by
- *  both the Space/Enter submit path (`handleSpace`) and the romaji
- *  auto-advance path (`handleRomajiChar`) so the time-mode word-supply
- *  refill and the words/quote finish transition stay in one place. */
-function advanceAfterWord(base: TypingTestState, config: TypingTestConfig, language: string): TypingTestState {
-  const nextIndex = base.currentWordIndex
-
-  // Time mode: extend words if running low, never finish from words
-  if (config.mode === 'time') {
-    const wordsRemaining = base.words.length - nextIndex
-    if (wordsRemaining < TIME_MODE_EXTEND_THRESHOLD) {
-      const { words: moreWords } = generateWordsSync(TIME_MODE_BATCH_SIZE, {
-        punctuation: config.punctuation,
-        numbers: config.numbers,
-      }, language)
-      return { ...base, words: [...base.words, ...moreWords] }
-    }
-    return base
-  }
-
-  // Words and quote modes: finish when all words typed
-  if (nextIndex >= base.words.length) {
-    return { ...base, status: 'finished', endTime: Date.now() }
-  }
-  return base
-}
-
-function handleSpace(state: TypingTestState, config: TypingTestConfig, language: string): TypingTestState {
-  if (state.currentWordIndex >= state.words.length) return state
-
-  const currentWord = state.words[state.currentWordIndex]
-  const typed = state.currentInput
-  const isCorrect = typed === currentWord
-  const charCounts = computeWordCharCounts(currentWord, typed)
-
-  const nextIndex = state.currentWordIndex + 1
-
-  const base: TypingTestState = {
-    ...state,
-    currentWordIndex: nextIndex,
-    currentInput: '',
-    wordResults: [...state.wordResults, { word: currentWord, typed, correct: isCorrect }],
-    correctChars: state.correctChars + charCounts.correct,
-    incorrectChars: state.incorrectChars + charCounts.incorrect,
-  }
-
-  return advanceAfterWord(base, config, language)
-}
-
-/** Romaji-mode key semantics, dispatched once from `processKeyEvent`'s
- *  updater instead of checking `isRomajiInputActive` separately at each key
- *  kind. Submit keys (Space/Enter) and Backspace are no-ops in this mode —
- *  romaji mode auto-advances on completion and rejected keystrokes never
- *  entered the buffer, so there is nothing to submit or undo (see
- *  `handleRomajiChar`). A printable character starts the run from
- *  'waiting' before being fed to the matcher; every other key (multi-char
- *  names like Shift/Control) passes through untouched, matching the
- *  non-romaji fallback. IME composition input is gated separately in
- *  `processCompositionEnd`, not here. */
-function processRomajiKeyEvent(state: TypingTestState, key: string, config: TypingTestConfig, language: string): TypingTestState {
-  if (isSubmitKey(key) || key === 'Enter') return state
-  if (key === 'Backspace') return state
-  if (key.length === 1) {
-    const current = state.status === 'waiting' ? { ...state, status: 'running' as const, startTime: Date.now() } : state
-    return handleRomajiChar(current, key, config, language)
-  }
-  return state
-}
-
-/** Sequential romaji-keystroke judging (romajiInput mode). Unlike
- *  `handleChar`, correctness is counted per keystroke rather than per word:
- *  an accepted keystroke (including the one that completes a kana segment)
- *  is a correct char, a rejected one is an incorrect char and leaves the
- *  matcher's position untouched (nothing is appended to currentInput or
- *  the keystroke buffer). Completing the whole word auto-advances — the
- *  submit key is blocked in this mode (see `processKeyEvent`), so there is
- *  no separate Space-triggered finalize path to keep in sync. */
-function handleRomajiChar(state: TypingTestState, char: string, config: TypingTestConfig, language: string): TypingTestState {
-  if (state.currentWordIndex >= state.words.length) return state
-
-  const word = state.words[state.currentWordIndex]
-  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiDetail(config))
-  const result = matcher.acceptChar(char)
-
-  if (result === 'reject') {
-    return { ...state, incorrectChars: state.incorrectChars + 1 }
-  }
-
-  const correctChars = state.correctChars + 1
-
-  if (result === 'complete' && matcher.isComplete()) {
-    const base: TypingTestState = {
-      ...state,
-      currentWordIndex: state.currentWordIndex + 1,
-      currentInput: '',
-      romajiKeystrokes: '',
-      wordResults: [...state.wordResults, { word, typed: matcher.typedRomaji(), correct: true }],
-      correctChars,
-    }
-    return advanceAfterWord(base, config, language)
-  }
-
-  return { ...state, romajiKeystrokes: state.romajiKeystrokes + char, correctChars }
-}
-
-function handleBackspace(state: TypingTestState): TypingTestState {
-  if (state.currentInput.length === 0) return state
-  return {
-    ...state,
-    currentInput: state.currentInput.slice(0, -1),
-  }
-}
-
-function computeWordCharCounts(word: string, typed: string): { correct: number; incorrect: number } {
-  const len = Math.max(typed.length, word.length)
-  let correct = 1 // count the space separator as a correct char
-  let incorrect = 0
-
-  for (let i = 0; i < len; i++) {
-    if (i < typed.length && i < word.length && typed[i] === word[i]) {
-      correct++
-    } else {
-      incorrect++
-    }
-  }
-
-  return { correct, incorrect }
 }
