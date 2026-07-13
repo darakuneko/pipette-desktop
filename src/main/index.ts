@@ -355,7 +355,8 @@ function isValidTrayStatus(value: unknown): value is TrayStatus {
   const v = value as Record<string, unknown>
   return (v.keyboardName === null || typeof v.keyboardName === 'string') &&
     typeof v.recording === 'boolean' &&
-    typeof v.count === 'number'
+    typeof v.count === 'number' &&
+    typeof v.kpm === 'number'
 }
 
 function setupShellIpc(): void {

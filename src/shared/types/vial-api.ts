@@ -457,4 +457,7 @@ export interface TrayStatus {
   keyboardName: string | null
   recording: boolean
   count: number
+  /** Rolling keystrokes-per-minute rate — keystrokes recorded in the last
+   * 60 seconds. See useRecKeystrokeCounter for how it is computed. */
+  kpm: number
 }

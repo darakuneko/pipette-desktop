@@ -27,7 +27,7 @@ const {
   mockSetLoginItemSettings: vi.fn(),
   mockQuit: vi.fn(),
   mockCreateFromPath: vi.fn((path: string) => ({ __icon: path })),
-  mockBuildFromTemplate: vi.fn((template: Array<{ label: string; enabled?: boolean; click?: () => void }>) => ({ __template: template })),
+  mockBuildFromTemplate: vi.fn((template: Array<{ type?: string; label?: string; enabled?: boolean; click?: () => void }>) => ({ __template: template })),
 }))
 
 vi.mock('node:os', async () => {
@@ -90,7 +90,14 @@ import {
 } from '../app-behavior'
 import type { TrayStatus } from '../app-behavior'
 
-const DISCONNECTED_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0 }
+const DISCONNECTED_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0, kpm: 0 }
+
+/** Maps a captured menu template to its labels, using a stand-in string
+ * for separator items (which carry no label) so assertions can compare
+ * against a plain array. */
+function templateLabels(template: Array<{ type?: string; label?: string }>): string[] {
+  return template.map((item) => (item.type === 'separator' ? '---' : (item.label ?? '')))
+}
 
 const mockLog = vi.mocked(log)
 
@@ -262,7 +269,7 @@ describe('updateTrayStatus', () => {
   })
 
   it('is a no-op with no tray active, but still caches the status', () => {
-    expect(() => updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0 }, () => null)).not.toThrow()
+    expect(() => updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)).not.toThrow()
     expect(trayInstances).toHaveLength(0)
 
     // setupTray afterwards applies the cached status immediately.
@@ -271,58 +278,60 @@ describe('updateTrayStatus', () => {
   })
 
   it('setupTray applies a status cached before the tray existed', () => {
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1234 }, () => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1234, kpm: 45 }, () => null)
     setupTray(() => null)
-    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R — REC 1,234')
+    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R — Cnt 1,234 · KPM 45')
   })
 
   it('updates the tooltip to just "Pipette" when disconnected', () => {
     setupTray(() => null)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0 }, () => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
     updateTrayStatus(DISCONNECTED_STATUS, () => null)
     expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette')
   })
 
   it('formats the tooltip with the keyboard name when connected but not recording', () => {
     setupTray(() => null)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0 }, () => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
     expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R')
   })
 
-  it('formats the tooltip with REC and an en-US thousands-separated count while recording', () => {
+  it('formats the tooltip with Cnt/KPM and en-US thousands-separated numbers while recording', () => {
     setupTray(() => null)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 12345 }, () => null)
-    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R — REC 12,345')
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 12345, kpm: 1234 }, () => null)
+    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R — Cnt 12,345 · KPM 1,234')
   })
 
-  it('rebuilds the menu with no info rows when disconnected', () => {
+  it('rebuilds the menu as Show / separator / Quit when disconnected', () => {
     setupTray(() => null)
     updateTrayStatus(DISCONNECTED_STATUS, () => null)
     const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
-    expect(template.map((item) => item.label)).toEqual(['Show', 'Quit'])
+    expect(templateLabels(template)).toEqual(['Show', '---', 'Quit'])
   })
 
-  it('rebuilds the menu with a disabled name row when connected but not recording', () => {
+  it('rebuilds the menu with a disabled name row between two separators when connected but not recording', () => {
     setupTray(() => null)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0 }, () => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: false, count: 0, kpm: 0 }, () => null)
     const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
-    expect(template.map((item) => item.label)).toEqual(['GPK-63R', 'Show', 'Quit'])
+    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', '---', 'Quit'])
     expect(template.find((item) => item.label === 'GPK-63R')?.enabled).toBe(false)
   })
 
-  it('rebuilds the menu with disabled name and REC rows while recording', () => {
+  it('rebuilds the menu with disabled name, Recording, Cnt and KPM rows while recording', () => {
     setupTray(() => null)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 42 }, () => null)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 42, kpm: 20 }, () => null)
     const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
-    expect(template.map((item) => item.label)).toEqual(['GPK-63R', 'REC 42', 'Show', 'Quit'])
-    expect(template.find((item) => item.label === 'REC 42')?.enabled).toBe(false)
+    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', 'Recording', 'Cnt 42', 'KPM 20', '---', 'Quit'])
+    expect(template.find((item) => item.label === 'Recording')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'Cnt 42')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'KPM 20')?.enabled).toBe(false)
   })
 
   it('the rebuilt Show item still shows and focuses the window', () => {
     const win = { show: vi.fn(), focus: vi.fn() }
     const getWindow = () => win as unknown as Electron.BrowserWindow
     setupTray(getWindow)
-    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1 }, getWindow)
+    updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1, kpm: 1 }, getWindow)
 
     const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
     const showItem = template.find((item) => item.label === 'Show')

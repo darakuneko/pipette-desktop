@@ -386,7 +386,7 @@ export function App() {
   // (see useDeviceConnection's connectDummy/connectPipetteFile), so the
   // tray should read as disconnected rather than show a pseudo name.
   const trayKeyboardName = device.isDummy ? null : (device.connectedDevice?.productName ?? null)
-  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount })
+  useTrayStatus({ keyboardName: trayKeyboardName, recording: recordingActive, getCount: recKeystroke.getCount, getKpm: recKeystroke.getKpm })
 
   // Whether an editor typing test is mid-run — surfaced from KeymapEditor so
   // the StatusBar's "View Analytics" button can be disabled mid-run.

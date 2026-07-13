@@ -93,7 +93,7 @@ export function showWindow(getWindow: () => BrowserWindow | null): void {
   win.focus()
 }
 
-const DEFAULT_TRAY_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0 }
+const DEFAULT_TRAY_STATUS: TrayStatus = { keyboardName: null, recording: false, count: 0, kpm: 0 }
 
 // Latest status reported by the renderer (the source of truth — see
 // App.tsx; the tray never reads HID/analytics state itself). Module-level
@@ -105,38 +105,57 @@ const DEFAULT_TRAY_STATUS: TrayStatus = { keyboardName: null, recording: false, 
 // cleared status itself on disconnect.
 let cachedTrayStatus: TrayStatus = DEFAULT_TRAY_STATUS
 
-function formatRecLabel(count: number): string {
-  return `REC ${count.toLocaleString('en-US')}`
+function formatCount(n: number): string {
+  return n.toLocaleString('en-US')
 }
 
 function formatTrayTooltip(status: TrayStatus): string {
   if (!status.keyboardName) return 'Pipette'
   if (!status.recording) return `Pipette — ${status.keyboardName}`
-  return `Pipette — ${status.keyboardName} — ${formatRecLabel(status.count)}`
+  return `Pipette — ${status.keyboardName} — Cnt ${formatCount(status.count)} · KPM ${formatCount(status.kpm)}`
 }
 
-/** Build the tray context menu for the given status. Disabled info rows
- * (keyboard name, REC count) sit above the fixed Show/Quit items when
- * applicable. Fixed English labels throughout — see setupTray for why. */
-function buildTrayMenu(getWindow: () => BrowserWindow | null, status: TrayStatus): Menu {
-  const items: Electron.MenuItemConstructorOptions[] = []
+/** Disabled info rows shown between the two separators: the connected
+ * keyboard's name (when connected), then — while recording — a
+ * "Recording" marker plus separate Cnt/KPM rows. Empty when disconnected
+ * and not recording, in which case buildTrayMenu omits the surrounding
+ * block entirely. */
+function buildInfoRows(status: TrayStatus): Electron.MenuItemConstructorOptions[] {
+  const rows: Electron.MenuItemConstructorOptions[] = []
   if (status.keyboardName) {
-    items.push({ label: status.keyboardName, enabled: false })
+    rows.push({ label: status.keyboardName, enabled: false })
   }
   if (status.recording) {
-    items.push({ label: formatRecLabel(status.count), enabled: false })
+    rows.push({ label: 'Recording', enabled: false })
+    rows.push({ label: `Cnt ${formatCount(status.count)}`, enabled: false })
+    rows.push({ label: `KPM ${formatCount(status.kpm)}`, enabled: false })
   }
+  return rows
+}
+
+/** Build the tray context menu for the given status: Show, a separator,
+ * the disabled info block (only when non-empty), another separator, then
+ * Quit. Fixed English labels throughout — see setupTray for why. */
+function buildTrayMenu(getWindow: () => BrowserWindow | null, status: TrayStatus): Menu {
+  const items: Electron.MenuItemConstructorOptions[] = []
   items.push({ label: 'Show', click: () => showWindow(getWindow) })
+  items.push({ type: 'separator' })
+  const infoRows = buildInfoRows(status)
+  if (infoRows.length > 0) {
+    items.push(...infoRows)
+    items.push({ type: 'separator' })
+  }
   items.push({ label: 'Quit', click: () => app.quit() })
   return Menu.buildFromTemplate(items)
 }
 
 /** Apply the cached status to the live tray's tooltip and context menu.
  * No-op when the tray hasn't been created yet. The menu is rebuilt on
- * every applied update — including the ≤1 Hz count ticks while REC runs —
- * deliberately: GNOME-family trays often never show tooltips, so the
- * menu's REC row is the only place the live count is visible there, and
- * the renderer's dedupe/throttle already bounds the rebuild rate. */
+ * every applied update — including the ≤1 Hz count/KPM ticks while REC
+ * runs — deliberately: GNOME-family trays often never show tooltips, so
+ * the menu's Cnt/KPM rows are the only place the live rate is visible
+ * there, and the renderer's dedupe/throttle already bounds the rebuild
+ * rate. */
 function applyCachedTrayStatus(getWindow: () => BrowserWindow | null): void {
   if (!trayInstance) return
   trayInstance.setToolTip(formatTrayTooltip(cachedTrayStatus))
