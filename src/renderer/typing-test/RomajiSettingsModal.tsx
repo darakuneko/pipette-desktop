@@ -202,7 +202,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               ))}
             </div>
 
-            <div className={STYLE_GRID_CLASS}>
+            <div className={`${STYLE_GRID_CLASS} mt-3`}>
               {OPTION_STYLES.map((style) => (
                 <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
                   <button
@@ -248,7 +248,7 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
               })}
             </div>
 
-            <div className={STYLE_GRID_CLASS}>
+            <div className={`${STYLE_GRID_CLASS} mt-3`}>
               {OPTION_STYLES.map((style) => (
                 <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
                   <button
