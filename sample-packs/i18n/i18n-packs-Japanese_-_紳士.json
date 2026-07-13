@@ -1,5 +1,5 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "name": "Japanese - 紳士",
   "common": {
     "save": "保存を承る",
@@ -741,7 +741,11 @@
       "licenseValue": "GPL-3.0-or-later"
     },
     "zoomLevel": "拡大縮小",
-    "zoomLevelWarning": "表示が乱れることがございます。ご自身の責においてお変えくださいませ。"
+    "zoomLevelWarning": "表示が乱れることがございます。ご自身の責においてお変えくださいませ。",
+    "autoLaunch": "自動起動",
+    "autoLaunchDescription": "サインインの際に Pipette を自動で起動いたします",
+    "trayResident": "システムトレイに常駐",
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐し、動作を続けます"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵の記録がございません",

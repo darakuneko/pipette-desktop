@@ -1,5 +1,5 @@
 {
-  "version": "0.1.7",
+  "version": "0.1.8",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -751,7 +751,11 @@
       "licenseValue": "GPL-3.0-or-later"
     },
     "zoomLevel": "ズーム",
-    "zoomLevelWarning": "表示が崩れる場合があります。自己責任で変更してください。"
+    "zoomLevelWarning": "表示が崩れる場合があります。自己責任で変更してください。",
+    "autoLaunch": "自動起動",
+    "autoLaunchDescription": "サインイン時に Pipette を自動で起動します",
+    "trayResident": "タスクトレイ常駐",
+    "trayResidentDescription": "ウィンドウを閉じてもトレイに常駐して動作し続けます"
   },
   "analyze": {
     "noKeyboards": "まだ打鍵データがありません",

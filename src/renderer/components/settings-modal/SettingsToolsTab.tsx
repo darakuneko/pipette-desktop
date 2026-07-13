@@ -226,6 +226,50 @@ export function SettingsToolsTab({
               <span className="text-sm text-content-muted">%</span>
             </div>
           </div>
+
+          <div className={ROW_CLASS} data-testid="settings-auto-launch-row">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-content-secondary">
+                {t('settings.autoLaunch')}
+              </span>
+              <span className="text-xs text-content-muted">
+                {t('settings.autoLaunchDescription')}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={appConfig.config.autoLaunch ?? false}
+              aria-label={t('settings.autoLaunch')}
+              className={toggleTrackClass(appConfig.config.autoLaunch ?? false)}
+              onClick={() => appConfig.set('autoLaunch', !(appConfig.config.autoLaunch ?? false))}
+              data-testid="settings-auto-launch-toggle"
+            >
+              <span className={toggleKnobClass(appConfig.config.autoLaunch ?? false)} />
+            </button>
+          </div>
+
+          <div className={ROW_CLASS} data-testid="settings-tray-resident-row">
+            <div className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium text-content-secondary">
+                {t('settings.trayResident')}
+              </span>
+              <span className="text-xs text-content-muted">
+                {t('settings.trayResidentDescription')}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={appConfig.config.trayResident ?? false}
+              aria-label={t('settings.trayResident')}
+              className={toggleTrackClass(appConfig.config.trayResident ?? false)}
+              onClick={() => appConfig.set('trayResident', !(appConfig.config.trayResident ?? false))}
+              data-testid="settings-tray-resident-toggle"
+            >
+              <span className={toggleKnobClass(appConfig.config.trayResident ?? false)} />
+            </button>
+          </div>
         </div>
       </section>
 
