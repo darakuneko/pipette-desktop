@@ -5,9 +5,9 @@ import { extractMOLayer, extractLTLayer, extractLMLayer, isTapKeycode } from './
 import { generateWords, generateWordsSync, getLanguageData, selectQuote, quoteToWords, getFileImportTextData, getFileImportTextDataSync, getTatoebaPack, getTatoebaPackSync, tatoebaRun } from './word-generator'
 import type { FileImportTextData } from './word-generator'
 import { DEFAULT_TAPPING_TERM_MS } from '../../shared/qmk-settings-tapping-term'
-import type { TypingTestConfig, Quote, RomajiGuide } from './types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, ROMAJI_INPUT_LANGUAGES } from './types'
-import { createRomajiMatcher, type RomajiMatcher } from './romaji-engine'
+import type { TypingTestConfig, Quote, RomajiGuide, RomajiDetailSettings } from './types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, ROMAJI_INPUT_LANGUAGES, applyRomajiCaseStyle } from './types'
+import { createRomajiMatcher, type RomajiMatcher, type RomajiMatcherOptions } from './romaji-engine'
 import type { TypingTestMemory } from '../../shared/types/pipette-settings'
 import type { TypingAnalyticsEventPayload, TypingMatrixAction } from '../../shared/types/typing-analytics'
 
@@ -64,10 +64,23 @@ function isRomajiInputActive(config: TypingTestConfig, language: string): boolea
  *  call and never escapes it, even under StrictMode's double-invoked
  *  updater functions. Word lengths are short (a handful of kana), so the
  *  replay cost is negligible. */
-function buildRomajiMatcher(word: string, keystrokes: string): RomajiMatcher {
-  const matcher = createRomajiMatcher(word)
+function buildRomajiMatcher(word: string, keystrokes: string, opts?: RomajiMatcherOptions): RomajiMatcher {
+  const matcher = createRomajiMatcher(word, opts)
   for (const key of keystrokes) matcher.acceptChar(key)
   return matcher
+}
+
+/** Romaji Settings modal detail fields (disabledStyles / guideStyles /
+ *  caseStyle), read only while `romajiInput` is honored (see
+ *  `isRomajiInputActive`) — the config shape guarantees `romaji` only
+ *  exists on words/time configs, so this is undefined for every other mode.
+ *  Passed straight through as `buildRomajiMatcher`'s opts: its
+ *  disabledStyles/guideStyles fields structurally satisfy
+ *  `RomajiMatcherOptions`, and `createRomajiMatcher` itself already
+ *  normalizes an empty disabledStyles/guideStyles array, so there's
+ *  nothing left to prune here. */
+function romajiDetail(config: TypingTestConfig): RomajiDetailSettings | undefined {
+  return config.mode === 'words' || config.mode === 'time' ? config.romaji : undefined
 }
 
 const MAX_WPM_HISTORY = 300
@@ -777,8 +790,10 @@ export function useTypingTest(
     if (!isRomajiInputActive(config, language)) return null
     if (state.currentWordIndex >= state.words.length) return null
     const word = state.words[state.currentWordIndex]
-    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes)
-    return { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
+    const detail = romajiDetail(config)
+    const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, detail)
+    const guide: RomajiGuide = { typed: matcher.typedRomaji(), remaining: matcher.remainingGuide(), kanaCompleted: matcher.completedKanaCount() }
+    return applyRomajiCaseStyle(guide, detail?.caseStyle)
   }, [config, language, state.words, state.currentWordIndex, state.romajiKeystrokes])
 
   return {
@@ -925,7 +940,7 @@ function handleRomajiChar(state: TypingTestState, char: string, config: TypingTe
   if (state.currentWordIndex >= state.words.length) return state
 
   const word = state.words[state.currentWordIndex]
-  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes)
+  const matcher = buildRomajiMatcher(word, state.romajiKeystrokes, romajiDetail(config))
   const result = matcher.acceptChar(char)
 
   if (result === 'reject') {

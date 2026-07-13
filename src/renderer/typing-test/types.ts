@@ -1,14 +1,39 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
+import type { RomajiStyle } from './romaji-engine'
+
 export type TypingTestMode = 'words' | 'time' | 'quote' | 'fileImport' | 'tatoeba'
 export type QuoteLength = 'short' | 'medium' | 'long' | 'all'
+
+// Display-only case transform for the romaji guide row (Romaji Settings
+// modal). Never affects acceptance — see `applyRomajiCaseStyle`.
+export type RomajiCaseStyle = 'lower' | 'capital' | 'upper'
+
+/** Romaji Settings modal fields (words/time modes only, kana packs only).
+ *  Every field is optional and undefined means "default behaviour" — the
+ *  modal omits a field entirely rather than persisting an explicit default
+ *  value, so a stored config always shows exactly what the user changed. */
+export interface RomajiDetailSettings {
+  /** Display-only case transform for the guide row. Default: 'lower'. */
+  caseStyle?: RomajiCaseStyle
+  /** Preferred spelling styles for the guide's displayed representative —
+   *  any combination may be selected at once. Empty/undefined shows the
+   *  canonical Hepburn-based spelling. Passed straight through to
+   *  `createRomajiMatcher`'s `guideStyles` opt. */
+  guideStyles?: RomajiStyle[]
+  /** Alternate-spelling families excluded from acceptance. Passed straight
+   *  through to `createRomajiMatcher`'s `disabledStyles` opt. */
+  disabledStyles?: RomajiStyle[]
+}
 
 export type TypingTestConfig =
   // `romajiInput` opts into sequential romaji-keystroke judging for kana
   // packs (japanese_hiragana / japanese_katakana); undefined/false keeps
-  // the existing verbatim-string matching behaviour.
-  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
-  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean }
+  // the existing verbatim-string matching behaviour. `romaji` holds the
+  // Romaji Settings modal's detail fields and is only ever read while
+  // `romajiInput` is honored (see `isRomajiInputActive`).
+  | { mode: 'words'; wordCount: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
+  | { mode: 'time'; duration: number; punctuation: boolean; numbers: boolean; romajiInput?: boolean; romaji?: RomajiDetailSettings }
   | { mode: 'quote'; quoteLength: QuoteLength }
   // Imported user text, played verbatim in order via the quote rendering
   // path. `textId` references an entry in the typing-test-texts store.
@@ -51,6 +76,27 @@ export interface RomajiGuide {
   kanaCompleted: number
 }
 
+/** Applies the Romaji Settings modal's display-only case transform to a
+ *  guide's typed/remaining strings. Never touches acceptance/matching —
+ *  `createRomajiMatcher` always works in lowercase; this only changes what
+ *  `TypingTestView`'s guide row renders. 'upper' uppercases the whole
+ *  string; 'capital' uppercases only the first character of the word as a
+ *  whole (the first char of `typed` once anything is typed, otherwise the
+ *  first char of `remaining`); 'lower'/undefined is a no-op. */
+export function applyRomajiCaseStyle(guide: RomajiGuide, caseStyle: RomajiCaseStyle | undefined): RomajiGuide {
+  if (!caseStyle || caseStyle === 'lower') return guide
+  if (caseStyle === 'upper') {
+    return { ...guide, typed: guide.typed.toUpperCase(), remaining: guide.remaining.toUpperCase() }
+  }
+  if (guide.typed.length > 0) {
+    return { ...guide, typed: guide.typed[0].toUpperCase() + guide.typed.slice(1) }
+  }
+  if (guide.remaining.length > 0) {
+    return { ...guide, remaining: guide.remaining[0].toUpperCase() + guide.remaining.slice(1) }
+  }
+  return guide
+}
+
 // Imported file-import-text display preferences (fileImport mode only).
 export const DISPLAY_LINES_MIN = 2
 export const DISPLAY_LINES_MAX = 10
@@ -59,6 +105,14 @@ export const FONT_SIZE_MIN = 14
 export const FONT_SIZE_MAX = 48
 export const FONT_SIZE_STEP = 2
 export const DEFAULT_FONT_SIZE = 24
+
+/** Every selectable font size (px), in ascending order — shared by every
+ *  font-size <select> (the reading window's Settings > Font and the Romaji
+ *  Settings modal's own font-size field). */
+export const FONT_OPTIONS = Array.from(
+  { length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 },
+  (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP,
+)
 
 /** Clamp + round a display-line-count to the supported range. */
 export function clampDisplayLines(n: number): number {

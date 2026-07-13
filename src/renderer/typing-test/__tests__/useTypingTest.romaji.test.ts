@@ -315,3 +315,104 @@ describe('useTypingTest — romaji input mode', () => {
     expect(result.current.state.wordResults[0]).toEqual({ word: firstWord, typed: firstWord, correct: true })
   })
 })
+
+// Plan-typing-romaji-settings-modal Step 2: `config.romaji`'s disabledStyles
+// / guideStyles wired into the matcher (via `romajiMatcherOptions`), and
+// caseStyle applied as a display-only transform to the guide row.
+describe('useTypingTest — config.romaji wiring', () => {
+  it('rejects a kunrei-tagged spelling once disabledStyles includes kunrei, while the canonical spelling still completes the word', async () => {
+    // し's spellings: 'shi' (canonical, hepburn), 'si' (kunrei), 'ci' (c).
+    await seedKanaLanguage(KANA_LANGUAGE, ['し'])
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { disabledStyles: ['kunrei'] } },
+      KANA_LANGUAGE,
+    ))
+
+    press(result, 's')
+    expect(result.current.state.incorrectChars).toBe(0)
+    press(result, 'i')
+    // 'si' is disabled and isn't a live prefix of the remaining canonical
+    // ('shi') or c ('ci') spellings, so the second keystroke is rejected.
+    expect(result.current.state.incorrectChars).toBe(1)
+    expect(result.current.state.status).not.toBe('finished')
+  })
+
+  it('still completes the word via its canonical spelling with the same style disabled', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['し'])
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { disabledStyles: ['kunrei'] } },
+      KANA_LANGUAGE,
+    ))
+
+    type(result, 'shi')
+
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.incorrectChars).toBe(0)
+  })
+
+  it('steers the guide toward the requested style without changing acceptance', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['し'])
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { guideStyles: ['kunrei'] } },
+      KANA_LANGUAGE,
+    ))
+
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'si', kanaCompleted: 0 })
+
+    // The canonical spelling is still accepted even though the guide shows 'si'.
+    type(result, 'shi')
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.incorrectChars).toBe(0)
+  })
+
+  it('uppercases the whole guide for caseStyle upper, display-only', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'upper' } },
+      KANA_LANGUAGE,
+    ))
+
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'AI', kanaCompleted: 0 })
+    press(result, 'a')
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'I', kanaCompleted: 1 })
+    // Lowercase 'a' is still what's accepted — the transform never reaches acceptance.
+    expect(result.current.state.incorrectChars).toBe(0)
+  })
+
+  it('capitalizes only the first character of the word for caseStyle capital', async () => {
+    await seedKanaLanguage(KANA_LANGUAGE, ['あい'])
+    const { result } = renderHook(() => useTypingTest(
+      { mode: 'words', wordCount: 1, punctuation: false, numbers: false, romajiInput: true, romaji: { caseStyle: 'capital' } },
+      KANA_LANGUAGE,
+    ))
+
+    // Nothing typed yet — the capital lands on the first char of `remaining`.
+    expect(result.current.romajiGuide).toEqual({ typed: '', remaining: 'Ai', kanaCompleted: 0 })
+
+    press(result, 'a')
+    // Once something is typed, the capital moves onto `typed`'s first char
+    // and `remaining` goes back to lowercase.
+    expect(result.current.romajiGuide).toEqual({ typed: 'A', remaining: 'i', kanaCompleted: 1 })
+  })
+
+  it('changing config.romaji via setConfig restarts the test, same as any other config field change', async () => {
+    // Plan-typing-romaji-settings-modal Step 2 design judgement: the Romaji
+    // Settings modal writes through the same onConfigChange -> setConfig
+    // path as punctuation/numbers/mode, which unconditionally regenerates
+    // words and resets state (see `setConfig` above) — so a disabledStyles
+    // edit mid-word already gets a full restart with no special-case code.
+    await seedKanaLanguage(KANA_LANGUAGE, ['し'])
+    const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
+
+    press(result, 's')
+    expect(result.current.state.romajiKeystrokes).toBe('s')
+
+    await act(async () => {
+      await result.current.setConfig({ ...wordsConfig(1), romaji: { disabledStyles: ['kunrei'] } })
+    })
+
+    expect(result.current.state.romajiKeystrokes).toBe('')
+    expect(result.current.state.currentWordIndex).toBe(0)
+    expect(result.current.state.status).toBe('waiting')
+  })
+})

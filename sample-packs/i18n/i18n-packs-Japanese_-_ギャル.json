@@ -1,5 +1,5 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Japanese - ギャル",
   "common": {
     "save": "保存☆",
@@ -303,6 +303,53 @@
       },
       "punctuation": "句読点☆",
       "numbers": "数字っしょ",
+      "romaji": {
+        "toggle": "ローマ字入力☆",
+        "imeHint": "ローマ字入力モードの時はOSのIMEオフにしといてね☆"
+      },
+      "romajiSettings": {
+        "title": "ローマ字入力の詳細設定☆",
+        "caseLabel": "表示する文字っしょ",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "guideLabel": "表示パターンっしょ",
+        "guideHint": "表示だけだから、他の入力パターンでも正解になるよん☆",
+        "inputLabel": "入力パターンっしょ",
+        "inputHint": "オフにしたパターンはハネられるよん。ベース（ヘボン式/訓令式）は最低1つ生かしといてね☆",
+        "style": {
+          "hepburn": "ヘボン式 (shi/chi)☆",
+          "kunrei": "訓令式 (si/ti)☆",
+          "c": "C表記 (ca) ☆",
+          "q": "Q表記 (qu) ☆",
+          "digraph": "二重字 (jya)☆",
+          "xSmall": "小文字x (xa) ☆",
+          "lSmall": "小文字l (la) ☆",
+          "w": "W表記 (wi) ☆",
+          "v": "V表記 (va) ☆",
+          "f": "F表記 (fa) ☆",
+          "ye": "YE表記 (ye) ☆",
+          "xn": "撥音x (xn) ☆",
+          "nApos": "N区切り (n') ☆"
+        },
+        "styleTip": {
+          "hepburn": "し:shi じ:ji ち:chi つ:tsu ふ:fu しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo ちゃ:cha ちゅ:chu ちょ:cho\nっし:sshi っち:cchi っち:tchi っつ:ttsu っふ:ffu っしゃ:ssha っちゃ:tcha っじゃ:jja",
+          "kunrei": "し:si じ:zi ち:ti つ:tu ふ:hu しゃ:sya しゅ:syu しょ:syo じゃ:zya じゅ:zyu じょ:zyo ちゃ:tya ちゅ:tyu ちょ:tyo\nっし:ssi っち:tti っつ:ttu っふ:hhu っしゃ:ssya っちゃ:ttya っじゃ:zzya",
+          "c": "か:ca く:cu こ:co し:ci せ:ce ちゃ:cya ちゅ:cyu ちょ:cyo ちぃ:cyi ちぇ:cye",
+          "q": "く:qu くぁ:qa くぃ:qi くぇ:qe くぉ:qo",
+          "digraph": "じゃ:jya じゅ:jyu じょ:jyo じぃ:jyi じぇ:jye",
+          "xSmall": "ぁ:xa ぃ:xi ぅ:xu ぇ:xe ぉ:xo ゃ:xya ゅ:xyu ょ:xyo ゎ:xwa ゕ:xka ゖ:xke ぃ:xyi ぇ:xye っ:xtu っ:xtsu",
+          "lSmall": "ぁ:la ぃ:li ぅ:lu ぇ:le ぉ:lo ゃ:lya ゅ:lyu ょ:lyo ゎ:lwa ゕ:lka ゖ:lke ぃ:lyi ぇ:lye っ:ltu っ:ltsu",
+          "w": "うぃ:wi うぃ:whi うぇ:we うぇ:whe うぉ:who うぁ:wha う:wu う:whu",
+          "v": "ゔ:vu ゔぁ:va ゔぃ:vi ゔぇ:ve ゔぉ:vo ゔゃ:vya ゔゅ:vyu ゔょ:vyo ゔぃ:vyi ゔぇ:vye",
+          "f": "ふぁ:fa ふぃ:fi ふぇ:fe ふぉ:fo ふゅ:fyu ふゃ:fya ふょ:fyo ふぁ:hwa ふぃ:hwi ふぇ:hwe ふぉ:hwo ふゅ:hwyu",
+          "ye": "いぇ:ye",
+          "xn": "ん:xn",
+          "nApos": "ん:n'"
+        }
+      },
       "quoteLength": {
         "short": "短っ！",
         "medium": "ふつー",
@@ -427,7 +474,13 @@
         "filterMode": "モードで絞り込むっしょ",
         "filterText": "テキストで絞り込むっしょ",
         "exportCsv": "CSV出すっしょ",
-        "delete": "ポイっちょ☆"
+        "delete": "ポイっちょ☆",
+        "accuracyTrendTitle": "正確性の推移☆",
+        "conditionFilterLabel": "条件で絞り込みっしょ",
+        "conditionPunctuation": "+句読点☆",
+        "conditionNumbers": "+数字っしょ",
+        "conditionRomaji": "+ローマ字入力☆",
+        "conditionTatoeba": "Tatoeba"
       }
     }
   },
@@ -1032,10 +1085,18 @@
         "slow": "ペア間隔っしょ",
         "fingerIki": "指間隔☆"
       },
+      "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ",
+      "gramToggle": {
+        "ariaLabel": "N-gram の粒度っしょ",
+        "bigram": "2-gram",
+        "trigram": "3-gram"
+      },
       "column": {
         "pair": "ペア☆",
         "count": "回数っしょ",
         "avgIki": "平均間隔☆",
+        "avgIkiTrigramTooltip": "3キー間にある2つの間隔の平均だよ。3キー全体の時間じゃないから注意っしょ",
+        "sd": "SD",
         "p95": "p95間隔っしょ"
       },
       "fingerIki": {
@@ -1061,6 +1122,17 @@
       "bondToggle": "レイヤー {{i}} を結合☆",
       "noLayout": "レイアウトデータなくね？",
       "noSnapshot": "スナップショットないじゃん！REC開始しよ？☆",
+      "modeToggle": {
+        "ariaLabel": "ヒートマップの着彩モードっしょ",
+        "count": "回数っしょ",
+        "speed": "速度っしょ"
+      },
+      "speed": {
+        "colAvgIki": "到達 Avg IKIっしょ",
+        "empty": "この期間の到達速度データまだないっしょ",
+        "minSampleNote": "到達回数が {{n}} 回未満のキーは着彩しないっしょ",
+        "cappedNotice": "頻度上位 {{limit}} 件から出してるよん — レアなペアは入ってないかもっしょ"
+      },
       "ranking": {
         "frequentUsedN": "上位☆",
         "frequentUsed": "よく使うキーっしょ",

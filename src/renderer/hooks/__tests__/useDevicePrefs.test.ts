@@ -775,6 +775,255 @@ describe('useDevicePrefs', () => {
         romajiInput: true,
       })
     })
+
+    it('preserves a fully valid romaji detail block on a words config restored from IPC', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romajiInput: true,
+          romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romajiInput: true,
+        romaji: { caseStyle: 'capital', guideStyles: ['kunrei'], disabledStyles: ['c', 'digraph'] },
+      })
+    })
+
+    it('silently drops a persisted romaji fontSize (the guide always tracks Settings > Font now)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          // Left over from a build that still had the per-guide font
+          // control; must not resurface anywhere on the restored config.
+          romaji: { fontSize: 40, caseStyle: 'capital' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { caseStyle: 'capital' },
+      })
+    })
+
+    it('drops individually invalid romaji fields but keeps the ones that validate', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'sideways', guideStyles: ['kunrei'], disabledStyles: ['c', 'not-a-style', 123] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        // caseStyle was malformed and dropped; guideStyles and the one
+        // known entry in disabledStyles survived.
+        romaji: { guideStyles: ['kunrei'], disabledStyles: ['c'] },
+      })
+    })
+
+    it('sanitizes a persisted disabledStyles that disables both base systems by dropping kunrei from it', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          // Should never happen via the modal (it blocks disabling the last
+          // enabled base), but a hand-edited or corrupted config could still
+          // carry both disabled — at least one base must survive validation.
+          romaji: { disabledStyles: ['hepburn', 'kunrei', 'digraph'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { disabledStyles: ['hepburn', 'digraph'] },
+      })
+    })
+
+    it('drops a legacy "cq" style from a persisted disabledStyles/guideStyles (split into separate c/q styles)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideStyles: ['cq', 'kunrei'], disabledStyles: ['cq', 'digraph'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideStyles: ['kunrei'], disabledStyles: ['digraph'] },
+      })
+    })
+
+    it('drops a stray hepburn entry from a persisted guideStyles (it is the implicit default, never stored by the modal)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideStyles: ['hepburn', 'xSmall'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideStyles: ['xSmall'] },
+      })
+    })
+
+    it('drops the whole romaji block when every field is invalid', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'time',
+          duration: 60,
+          punctuation: false,
+          numbers: false,
+          romaji: { caseStyle: 'nope', fontSize: 'big', guideStyles: 'nope', disabledStyles: 'c' },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'time',
+        duration: 60,
+        punctuation: false,
+        numbers: false,
+      })
+    })
+
+    it('drops a non-object romaji value but keeps the rest of the config', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romaji: 'lower' },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+      })
+    })
   })
 
   describe('splitKeyMode', () => {

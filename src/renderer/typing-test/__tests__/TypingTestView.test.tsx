@@ -521,6 +521,7 @@ describe('TypingTestView romaji guide', () => {
     // The IME hint stays a fixed small size, not tied to --tt-font.
     expect(guide.querySelector('[data-testid="typing-test-romaji-ime-hint"]')).toBeNull()
   })
+
 })
 
 describe('TypingTestView paused overlay', () => {

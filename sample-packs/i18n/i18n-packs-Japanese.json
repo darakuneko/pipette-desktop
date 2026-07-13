@@ -1,5 +1,5 @@
 {
-  "version": "0.1.6",
+  "version": "0.1.7",
   "name": "Japanese",
   "common": {
     "save": "保存",
@@ -304,8 +304,51 @@
       "punctuation": "句読点",
       "numbers": "数字",
       "romaji": {
-        "toggle": "ローマ字",
+        "toggle": "ローマ字入力",
         "imeHint": "ローマ字入力モードでは OS の IME をオフにしてください"
+      },
+      "romajiSettings": {
+        "title": "ローマ字入力の詳細設定",
+        "caseLabel": "表示する文字列",
+        "case": {
+          "upper": "ROMAJI",
+          "capital": "Romaji",
+          "lower": "romaji"
+        },
+        "guideLabel": "表示パターン",
+        "guideHint": "表示のみです。他の入力パターンでも正解になります",
+        "inputLabel": "入力パターン",
+        "inputHint": "オフにしたパターンは拒否されます。ベース（ヘボン式/訓令式）は最低1つ有効です",
+        "style": {
+          "hepburn": "ヘボン式 (shi/chi)",
+          "kunrei": "訓令式 (si/ti)",
+          "c": "C表記 (ca)",
+          "q": "Q表記 (qu)",
+          "digraph": "二重字 (jya)",
+          "xSmall": "小文字x (xa)",
+          "lSmall": "小文字l (la)",
+          "w": "W表記 (wi)",
+          "v": "V表記 (va)",
+          "f": "F表記 (fa)",
+          "ye": "YE表記 (ye)",
+          "xn": "撥音x (xn)",
+          "nApos": "N区切り (n')"
+        },
+        "styleTip": {
+          "hepburn": "し:shi じ:ji ち:chi つ:tsu ふ:fu しゃ:sha しゅ:shu しょ:sho じゃ:ja じゅ:ju じょ:jo ちゃ:cha ちゅ:chu ちょ:cho\nっし:sshi っち:cchi っち:tchi っつ:ttsu っふ:ffu っしゃ:ssha っちゃ:tcha っじゃ:jja",
+          "kunrei": "し:si じ:zi ち:ti つ:tu ふ:hu しゃ:sya しゅ:syu しょ:syo じゃ:zya じゅ:zyu じょ:zyo ちゃ:tya ちゅ:tyu ちょ:tyo\nっし:ssi っち:tti っつ:ttu っふ:hhu っしゃ:ssya っちゃ:ttya っじゃ:zzya",
+          "c": "か:ca く:cu こ:co し:ci せ:ce ちゃ:cya ちゅ:cyu ちょ:cyo ちぃ:cyi ちぇ:cye",
+          "q": "く:qu くぁ:qa くぃ:qi くぇ:qe くぉ:qo",
+          "digraph": "じゃ:jya じゅ:jyu じょ:jyo じぃ:jyi じぇ:jye",
+          "xSmall": "ぁ:xa ぃ:xi ぅ:xu ぇ:xe ぉ:xo ゃ:xya ゅ:xyu ょ:xyo ゎ:xwa ゕ:xka ゖ:xke ぃ:xyi ぇ:xye っ:xtu っ:xtsu",
+          "lSmall": "ぁ:la ぃ:li ぅ:lu ぇ:le ぉ:lo ゃ:lya ゅ:lyu ょ:lyo ゎ:lwa ゕ:lka ゖ:lke ぃ:lyi ぇ:lye っ:ltu っ:ltsu",
+          "w": "うぃ:wi うぃ:whi うぇ:we うぇ:whe うぉ:who うぁ:wha う:wu う:whu",
+          "v": "ゔ:vu ゔぁ:va ゔぃ:vi ゔぇ:ve ゔぉ:vo ゔゃ:vya ゔゅ:vyu ゔょ:vyo ゔぃ:vyi ゔぇ:vye",
+          "f": "ふぁ:fa ふぃ:fi ふぇ:fe ふぉ:fo ふゅ:fyu ふゃ:fya ふょ:fyo ふぁ:hwa ふぃ:hwi ふぇ:hwe ふぉ:hwo ふゅ:hwyu",
+          "ye": "いぇ:ye",
+          "xn": "ん:xn",
+          "nApos": "ん:n'"
+        }
       },
       "quoteLength": {
         "short": "短い",
@@ -436,7 +479,7 @@
         "conditionFilterLabel": "条件で絞り込み",
         "conditionPunctuation": "+句読点",
         "conditionNumbers": "+数字",
-        "conditionRomaji": "+ローマ字",
+        "conditionRomaji": "+ローマ字入力",
         "conditionTatoeba": "Tatoeba"
       }
     }

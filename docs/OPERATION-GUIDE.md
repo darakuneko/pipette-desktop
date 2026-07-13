@@ -1099,13 +1099,29 @@ The Option row is hidden in the quote pattern (which uses the original text as-i
 
 ![Typing Test — Romaji input](screenshots/typing-test-romaji.png)
 
-With the **hiragana** or **katakana** language pack selected, the Option row also gains a **Romaji** toggle (words and time patterns only). Turning it on switches judging from literal text matching to sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its accepted spellings is accepted interchangeably — for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you happen to type.
+With the **hiragana** or **katakana** language pack selected, the Option row also gains a full-width **Romaji** button (words and time patterns only). Clicking it opens the **Romaji Settings** modal instead of toggling judging directly; the button turns accent-colored once Romaji input is enabled from inside the modal.
+
+![Typing Test — Romaji settings](screenshots/typing-test-romaji-settings.png)
+
+The modal has three settings, in addition to the Romaji input master switch. The guide row's font size always tracks the shared **Settings > Font** size — there is no separate control for it.
+
+- **Displayed case**: how the guide row's romaji is rendered — **ROMAJI** (upper case), **Romaji** (capitalized), or **romaji** (lower case, default). Display only; it never changes which keystrokes are accepted.
+- **Guide spelling pattern**: split into two rows, mirroring Accepted input patterns below.
+  - **Base**: a single-select choice between **Hepburn** (shi/chi) and **Kunrei** (si/ti) — exactly one is always active, and it picks which base system's spelling the guide line shows for kana with multiple accepted spellings. **Hepburn is the default.**
+  - **Options**: **C** (ca), **Q** (qu), **Digraph** (jya), **Small x** (xa), **Small l** (la), **W** (wi), **V** (va), **F** (fa), **YE** (ye), **Nasal x** (xn), and **N separator** (n') — independent alternate-spelling preferences layered on top of the selected Base, off by default. Multiple can be selected at once — e.g. selecting both Small x and the Kunrei base applies each preference to whichever kana it matches, in the same guide. Each button's label shows one example spelling; hover it for the full spelling list it covers.
+  **Display only** — whichever accepted spelling you actually type is still correct, regardless of what the guide shows.
+- **Accepted input patterns**: split into two rows.
+  - **Base**: **Hepburn** (shi/chi) and **Kunrei** (si/ti), either of which can spell every kana on its own. Both are enabled by default. Clicks are selection-first: clicking an enabled base while both are on keeps **only** that base (one click switches to Kunrei alone), clicking a disabled base brings it back so both are accepted, and **at least one base always stays enabled** (clicking the sole enabled base does nothing).
+  - **Options**: the same eleven families as the guide row above — **C**, **Q**, **Digraph**, **Small x**, **Small l**, **W**, **V**, **F**, **YE**, **Nasal x**, and **N separator** — all enabled by default. Turning any of them off rejects that family's spellings as input; unlike the base row, every option can be turned off at once, since the enabled base(s) already cover every kana on their own. Disabling a whole loanword family (W/V/F/YE) still leaves its kana typable via the decomposed spelling — e.g. with F off, ふぁ still completes as `fu` + `xa`.
+
+Turning on Romaji input switches judging from literal text matching to sequential romaji-keystroke matching: each keystroke is checked against the current kana as you type, and any of its currently-accepted spellings is accepted interchangeably — for example でぃ accepts `dhi`, `deli`, or `dexi`, whichever you happen to type (subject to the Accepted input patterns above).
 
 - The current word's kana are colored per confirmed segment, and a guide line below the reading window shows the romaji accepted so far plus the canonical spelling for the rest of the word — both update on every keystroke, including when a mid-word branch (like でぃ above) narrows down which spelling you're typing
 - **Turn off your OS IME before typing.** Romaji input judges direct keystrokes, and an active IME composition intercepts them before they ever reach the matcher. If a composition event is detected while Romaji input is active, a hint appears below the guide line reminding you to turn the IME off
 - A rejected keystroke does not advance the guide, and it stays counted against Accuracy — Backspace cannot undo it, so keep typing the current kana until it's accepted
 - Words advance automatically as soon as their kana are complete; Space is not needed
 - Because WPM tracks keystroke rate rather than confirmed word length in this mode, Romaji runs get their own personal best and history grouping (labeled with a `+romaji` suffix, e.g. "30 words (japanese_hiragana) +romaji") instead of being compared against non-Romaji runs
+- This grouping does not track which Accepted input patterns were enabled — runs typed with different style restrictions still share the same personal best, Compare baseline, history filter, and Accuracy trend entries as long as everything else (mode, word count/duration, language, punctuation/numbers) matches
 
 #### Tatoeba
 

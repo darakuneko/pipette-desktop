@@ -8,14 +8,20 @@ import { MIN_SCALE, MAX_SCALE } from '../components/editors/keymap-editor-types'
 import type { TypingTestResult, TypingViewMenuTab, ViewMode, TypingTestMemory, TypingTestMemoryWord, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { VIEW_MODES, isTypingViewMenuTab, isTypingTestComparisonBaselines } from '../../shared/types/pipette-settings'
 import { trimResults } from '../typing-test/result-builder'
-import type { TypingTestConfig } from '../typing-test/types'
+import type { TypingTestConfig, RomajiDetailSettings, RomajiCaseStyle } from '../typing-test/types'
 import { DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, clampDisplayLines, clampFontSize } from '../typing-test/types'
+import type { RomajiStyle } from '../typing-test/romaji-engine'
 import type { AutoLockMinutes, BasicViewType, SplitKeyMode } from '../../shared/types/app-config'
 import { clampZoomFactor } from '../../shared/types/app-config'
 
 export type { KeyboardLayoutId, AutoLockMinutes, BasicViewType, SplitKeyMode }
 
 const VALID_QUOTE_LENGTHS: ReadonlySet<string> = new Set(['short', 'medium', 'long', 'all'])
+const VALID_ROMAJI_STYLES: ReadonlySet<string> = new Set([
+  'hepburn', 'kunrei',
+  'c', 'q', 'digraph', 'xSmall', 'lSmall', 'w', 'v', 'f', 'ye', 'xn', 'nApos',
+])
+const VALID_ROMAJI_CASE_STYLES: ReadonlySet<string> = new Set(['lower', 'capital', 'upper'])
 
 function isFinitePositiveInt(n: unknown): n is number {
   return typeof n === 'number' && Number.isFinite(n) && n > 0 && Number.isInteger(n)
@@ -25,21 +31,73 @@ function hasBooleanFields(obj: Record<string, unknown>, ...keys: string[]): bool
   return keys.every((k) => typeof obj[k] === 'boolean')
 }
 
+/** Validates `config.romaji` (Romaji Settings modal fields) field-by-field:
+ *  an unknown/malformed field is dropped individually instead of rejecting
+ *  the whole nested object, so a stray/corrupted field never takes out
+ *  fields that did validate (Plan-typing-romaji-settings-modal design
+ *  judgement #9 — the same nested-config drop bug that hit `romajiInput`
+ *  before it was carried through explicitly below). Returns undefined when
+ *  `raw` isn't a plausible object, or every field turned out invalid. */
+function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | undefined {
+  if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
+  const obj = raw as Record<string, unknown>
+  const result: RomajiDetailSettings = {}
+  if (typeof obj.caseStyle === 'string' && VALID_ROMAJI_CASE_STYLES.has(obj.caseStyle)) {
+    result.caseStyle = obj.caseStyle as RomajiCaseStyle
+  }
+  // A persisted `fontSize` (from a build that still had the per-guide font
+  // control) is intentionally not read here — it silently falls through to
+  // "not set" now that the guide always tracks Settings > Font.
+  if (Array.isArray(obj.guideStyles)) {
+    // 'hepburn' is dropped here (unlike disabledStyles below, which keeps
+    // it): the Guide row's Base selection is single-select, and hepburn is
+    // its implicit default — the modal never writes 'hepburn' into
+    // guideStyles itself (see RomajiSettingsModal's selectGuideBase), and
+    // GUIDE_STYLE_PRIORITY in romaji-engine.ts has no 'hepburn' entry, so a
+    // stray 'hepburn' here would sit inert. Sanitizing it out keeps a
+    // hand-edited or legacy-written config equivalent to the canonical
+    // default rather than persisting a functionally meaningless entry.
+    const styles = obj.guideStyles.filter(
+      (s): s is RomajiStyle => typeof s === 'string' && VALID_ROMAJI_STYLES.has(s) && s !== 'hepburn',
+    )
+    if (styles.length > 0) result.guideStyles = styles
+  }
+  if (Array.isArray(obj.disabledStyles)) {
+    let styles = obj.disabledStyles.filter(
+      (s): s is RomajiStyle => typeof s === 'string' && VALID_ROMAJI_STYLES.has(s),
+    )
+    // At least one base system (hepburn/kunrei) must stay enabled — the
+    // Romaji Settings modal enforces this on the way in, but a persisted
+    // config could still carry both disabled (e.g. hand-edited, or written
+    // by a future version with looser rules). Sanitize deterministically
+    // by dropping 'kunrei' from the disabled set rather than rejecting the
+    // whole field, so kunrei-shiki wins and stays enabled.
+    if (styles.includes('hepburn') && styles.includes('kunrei')) {
+      styles = styles.filter((s) => s !== 'kunrei')
+    }
+    if (styles.length > 0) result.disabledStyles = styles
+  }
+  return Object.keys(result).length > 0 ? result : undefined
+}
+
 function validateTypingTestConfig(raw: unknown): TypingTestConfig | undefined {
   if (raw == null || typeof raw !== 'object' || Array.isArray(raw)) return undefined
   const obj = raw as Record<string, unknown>
   // Optional carry-through: keep a persisted boolean romajiInput on
   // words/time configs, drop any other type silently (the field is
   // optional, so a malformed value degrades to "not set" rather than
-  // rejecting the whole config).
+  // rejecting the whole config). Same treatment for the nested `romaji`
+  // detail settings.
   const romajiInput = typeof obj.romajiInput === 'boolean' ? { romajiInput: obj.romajiInput } : {}
+  const romaji = validateRomajiDetailSettings(obj.romaji)
+  const romajiDetail = romaji ? { romaji } : {}
   switch (obj.mode) {
     case 'words':
       if (!isFinitePositiveInt(obj.wordCount) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput }
+      return { mode: 'words', wordCount: obj.wordCount, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput, ...romajiDetail }
     case 'time':
       if (!isFinitePositiveInt(obj.duration) || !hasBooleanFields(obj, 'punctuation', 'numbers')) return undefined
-      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput }
+      return { mode: 'time', duration: obj.duration, punctuation: obj.punctuation as boolean, numbers: obj.numbers as boolean, ...romajiInput, ...romajiDetail }
     case 'quote':
       if (typeof obj.quoteLength !== 'string' || !VALID_QUOTE_LENGTHS.has(obj.quoteLength)) return undefined
       return { mode: 'quote', quoteLength: obj.quoteLength as 'short' | 'medium' | 'long' | 'all' }

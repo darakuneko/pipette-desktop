@@ -149,7 +149,6 @@ export function TypingTestView({
     () => ({ '--tt-font': fontSize, '--tt-lines': displayLines } as CSSProperties),
     [fontSize, displayLines],
   )
-
   // Char-progress modes (imported fileImport text; Tatoeba sentences) count
   // progress by character (spaces included): each word-gap is one separator
   // char, so total = Σ word lengths + (words - 1). Gated on the mode (not

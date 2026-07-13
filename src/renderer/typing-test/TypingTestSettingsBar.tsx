@@ -4,15 +4,16 @@
 // gates on mode). Extracted from TypingTestView so the config controls live
 // with the Mode / Base Layer row rather than above the reading area.
 
-import { useRef, useCallback } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { TypingTestConfig, TypingTestMode, QuoteLength } from './types'
+import type { TypingTestConfig, TypingTestMode, QuoteLength, RomajiDetailSettings } from './types'
 import { WORD_COUNT_OPTIONS, TIME_DURATION_OPTIONS, ROMAJI_INPUT_LANGUAGES } from './types'
+import { RomajiSettingsModal } from './RomajiSettingsModal'
 
 const MODES: TypingTestMode[] = ['words', 'time', 'quote']
 const QUOTE_LENGTHS: QuoteLength[] = ['short', 'medium', 'long', 'all']
 
-function optionButtonClass(active: boolean, px: 'px-2.5' | 'px-3' = 'px-3'): string {
+export function optionButtonClass(active: boolean, px: 'px-2.5' | 'px-3' = 'px-3'): string {
   // h-8 keeps every config control (here, the Mode row, and the History
   // button) the same height; inline-flex centres the label within it.
   const base = `inline-flex h-8 items-center rounded-md border ${px} text-sm transition-colors`
@@ -27,28 +28,38 @@ const LABEL = 'text-sm text-content-muted'
 interface Props {
   config: TypingTestConfig
   onConfigChange: (config: TypingTestConfig) => void
-  /** Currently selected word-language pack. Gates the Romaji toggle, which
+  /** Currently selected word-language pack. Gates the Romaji button, which
    *  only applies to the kana packs (see `ROMAJI_INPUT_LANGUAGES`). */
   language: string
 }
 
 export function TypingTestSettingsBar({ config, onConfigChange, language }: Props) {
   const { t } = useTranslation()
+  const [showRomajiModal, setShowRomajiModal] = useState(false)
 
-  // Remember toggle state so it persists through quote modes (which have no toggles).
-  const togglesRef = useRef({ punctuation: false, numbers: false, romajiInput: false })
+  // Remember toggle state (incl. the Romaji Settings detail fields) so it
+  // persists through quote mode (which has no toggles at all).
+  const togglesRef = useRef<{ punctuation: boolean; numbers: boolean; romajiInput: boolean; romaji?: RomajiDetailSettings }>(
+    { punctuation: false, numbers: false, romajiInput: false },
+  )
   if (config.mode === 'words' || config.mode === 'time') {
-    togglesRef.current = { punctuation: config.punctuation, numbers: config.numbers, romajiInput: config.romajiInput === true }
+    togglesRef.current = {
+      punctuation: config.punctuation,
+      numbers: config.numbers,
+      romajiInput: config.romajiInput === true,
+      romaji: config.romaji,
+    }
   }
 
   const handleModeChange = useCallback((mode: TypingTestMode) => {
-    const { punctuation, numbers, romajiInput } = togglesRef.current
+    const { punctuation, numbers, romajiInput, romaji } = togglesRef.current
+    const romajiDetail = romaji ? { romaji } : {}
     switch (mode) {
       case 'words':
-        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, romajiInput })
+        onConfigChange({ mode: 'words', wordCount: config.mode === 'words' ? config.wordCount : 30, punctuation, numbers, romajiInput, ...romajiDetail })
         break
       case 'time':
-        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, romajiInput })
+        onConfigChange({ mode: 'time', duration: config.mode === 'time' ? config.duration : 30, punctuation, numbers, romajiInput, ...romajiDetail })
         break
       case 'quote':
         onConfigChange({ mode: 'quote', quoteLength: config.mode === 'quote' ? config.quoteLength : 'medium' })
@@ -69,17 +80,17 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
     : t('editor.typingTest.units')
 
   return (
-    <div className="flex flex-col items-start gap-3">
+    <div className="flex w-full flex-col items-start gap-3">
       {/* Pattern — words / time / quote */}
-      <div className="flex flex-col items-start gap-1">
-        <span className={LABEL}>{t('editor.typingTest.pattern')}:</span>
-        <div className="flex h-8 items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
+      <div className="flex w-full flex-col items-start gap-1">
+        <span className={LABEL}>{t('editor.typingTest.pattern')}</span>
+        <div className="flex h-8 w-full items-center gap-1 rounded-lg bg-surface-alt/50 px-1">
           {MODES.map((mode) => (
             <button
               key={mode}
               type="button"
               data-testid={`mode-${mode}`}
-              className={optionButtonClass(config.mode === mode)}
+              className={`${optionButtonClass(config.mode === mode)} flex-1 justify-center`}
               onClick={() => handleModeChange(mode)}
             >
               {t(`editor.typingTest.mode.${mode}`)}
@@ -90,16 +101,16 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
 
       {/* Units — the unit (words / sec) is shown on the label, so the value
           buttons stay compact numbers. Quote mode uses named lengths. */}
-      <div className="flex flex-col items-start gap-1">
-        <span className={LABEL}>{unitsLabel}:</span>
+      <div className="flex w-full flex-col items-start gap-1">
+        <span className={LABEL}>{unitsLabel}</span>
         {config.mode === 'words' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {WORD_COUNT_OPTIONS.map((count) => (
               <button
                 key={count}
                 type="button"
                 data-testid={`word-count-${count}`}
-                className={optionButtonClass(config.wordCount === count)}
+                className={`${optionButtonClass(config.wordCount === count)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, wordCount: count })}
               >
                 {count}
@@ -108,13 +119,13 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
           </div>
         )}
         {config.mode === 'time' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {TIME_DURATION_OPTIONS.map((dur) => (
               <button
                 key={dur}
                 type="button"
                 data-testid={`duration-${dur}`}
-                className={optionButtonClass(config.duration === dur)}
+                className={`${optionButtonClass(config.duration === dur)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, duration: dur })}
               >
                 {dur}
@@ -123,13 +134,13 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
           </div>
         )}
         {config.mode === 'quote' && (
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+          <div className="flex w-full items-center gap-1">
             {QUOTE_LENGTHS.map((len) => (
               <button
                 key={len}
                 type="button"
                 data-testid={`quote-${len}`}
-                className={optionButtonClass(config.quoteLength === len)}
+                className={`${optionButtonClass(config.quoteLength === len)} flex-1 justify-center`}
                 onClick={() => onConfigChange({ ...config, quoteLength: len })}
               >
                 {t(`editor.typingTest.quoteLength.${len}`)}
@@ -141,13 +152,13 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
 
       {/* Option — punctuation / numbers (words & time only) */}
       {hasPunctuationNumbers && (
-        <div className="flex flex-col items-start gap-1">
-          <span className={LABEL}>{t('editor.typingTest.optionLabel')}:</span>
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
+        <div className="flex w-full flex-col items-start gap-1">
+          <span className={LABEL}>{t('editor.typingTest.optionLabel')}</span>
+          <div className="flex w-full items-center gap-1">
             <button
               type="button"
               data-testid="toggle-punctuation"
-              className={optionButtonClass(config.punctuation, 'px-2.5')}
+              className={`${optionButtonClass(config.punctuation, 'px-2.5')} flex-1 justify-center`}
               onClick={() => onConfigChange({ ...config, punctuation: !config.punctuation })}
             >
               {t('editor.typingTest.punctuation')}
@@ -155,23 +166,37 @@ export function TypingTestSettingsBar({ config, onConfigChange, language }: Prop
             <button
               type="button"
               data-testid="toggle-numbers"
-              className={optionButtonClass(config.numbers, 'px-2.5')}
+              className={`${optionButtonClass(config.numbers, 'px-2.5')} flex-1 justify-center`}
               onClick={() => onConfigChange({ ...config, numbers: !config.numbers })}
             >
               {t('editor.typingTest.numbers')}
             </button>
-            {showRomajiToggle && (
-              <button
-                type="button"
-                data-testid="toggle-romaji"
-                className={optionButtonClass(config.romajiInput === true, 'px-2.5')}
-                onClick={() => onConfigChange({ ...config, romajiInput: !config.romajiInput })}
-              >
-                {t('editor.typingTest.romaji.toggle')}
-              </button>
-            )}
           </div>
+          {/* Romaji — a dialog trigger (opens the detail settings modal),
+              not a stateful toggle, so it keeps the full-width DATA-section
+              button convention (see HistoryToggle) rather than the compact
+              option buttons above. Active (accent) whenever romajiInput is
+              on, so the state is visible without opening the modal. */}
+          {showRomajiToggle && (
+            <button
+              type="button"
+              data-testid="romaji-settings-toggle"
+              className={`${optionButtonClass(config.romajiInput === true)} w-full justify-center`}
+              onClick={() => setShowRomajiModal(true)}
+              aria-haspopup="dialog"
+              aria-expanded={showRomajiModal}
+            >
+              {t('editor.typingTest.romaji.toggle')}
+            </button>
+          )}
         </div>
+      )}
+      {showRomajiModal && hasPunctuationNumbers && (
+        <RomajiSettingsModal
+          config={config}
+          onConfigChange={onConfigChange}
+          onClose={() => setShowRomajiModal(false)}
+        />
       )}
     </div>
   )

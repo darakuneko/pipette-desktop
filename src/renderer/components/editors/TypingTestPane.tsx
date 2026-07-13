@@ -22,10 +22,9 @@ import type { KleKey } from '../../../shared/kle/types'
 import type { TypingTestResult, PooledTypingTestResult, TypingViewMenuTab, TypingTestComparisonBaseline, TypingTestComparisonBaselines } from '../../../shared/types/pipette-settings'
 import { DEFAULT_COMPARISON_BASELINE } from '../../../shared/types/pipette-settings'
 import type { TypingTestConfig } from '../../typing-test/types'
-import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_SIZE_MIN, FONT_SIZE_MAX, FONT_SIZE_STEP } from '../../typing-test/types'
+import { DEFAULT_CONFIG, DEFAULT_LANGUAGE, DEFAULT_DISPLAY_LINES, DEFAULT_FONT_SIZE, DISPLAY_LINES_MIN, DISPLAY_LINES_MAX, FONT_OPTIONS } from '../../typing-test/types'
 
 const LINE_OPTIONS = Array.from({ length: DISPLAY_LINES_MAX - DISPLAY_LINES_MIN + 1 }, (_, i) => DISPLAY_LINES_MIN + i)
-const FONT_OPTIONS = Array.from({ length: (FONT_SIZE_MAX - FONT_SIZE_MIN) / FONT_SIZE_STEP + 1 }, (_, i) => FONT_SIZE_MIN + i * FONT_SIZE_STEP)
 
 /** Labelled group inside the left config panel — a small heading with an
  *  underline divider, then its controls (kept at natural width). */
@@ -40,39 +39,9 @@ function PanelSection({ title, children }: { title: string; children: ReactNode 
   )
 }
 
-// Full-width switch row: label on the left, a track/knob toggle on the right —
-// reused by the View visibility toggles and the Data "Save Unnamed" setting.
-// The accessible name is the fixed label; `title` carries the state-dependent
-// show/hide hint for the hover tooltip (the on/off state is read from
-// `aria-checked`, so it must not be baked into the accessible name).
-function ToggleRow({ label, on, onToggle, title, testid }: {
-  label: string
-  on: boolean
-  onToggle: () => void
-  title: string
-  testid: string
-}) {
-  return (
-    <div className={`${ROW_CLASS} w-full`} data-testid={`${testid}-row`}>
-      <span className="min-w-0 truncate text-sm font-medium text-content">{label}</span>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={on}
-        aria-label={label}
-        title={title}
-        className={`${toggleTrackClass(on)} shrink-0`}
-        onClick={onToggle}
-        data-testid={testid}
-      >
-        <span className={toggleKnobClass(on)} />
-      </button>
-    </div>
-  )
-}
 import type { useTypingTest } from '../../typing-test/useTypingTest'
 import { BTN_TOGGLE_ACTIVE, BTN_TOGGLE_INACTIVE } from '../../constants/ui-tokens'
-import { ROW_CLASS, toggleTrackClass, toggleKnobClass } from './modal-controls'
+import { ToggleRow } from './modal-controls'
 import type { AnalyticsOrigin } from './keymap-editor-types'
 import { PANEL_COLLAPSED_WIDTH } from './keymap-editor-types'
 
@@ -514,17 +483,17 @@ export function TypingTestPane({
   const configSidebar = viewOnly ? null : (
     <div
       className="flex shrink-0 flex-col self-stretch overflow-hidden rounded-xl border border-edge bg-picker-bg transition-width duration-200 ease-out"
-      style={{ width: settingsCollapsed ? PANEL_COLLAPSED_WIDTH : '15rem' }}
+      style={{ width: settingsCollapsed ? PANEL_COLLAPSED_WIDTH : '18rem' }}
       data-testid={settingsCollapsed ? 'typing-settings-panel-collapsed' : 'typing-settings-panel'}
     >
       {!settingsCollapsed && (
-      <div className="flex min-h-0 w-60 flex-1 flex-col gap-4 overflow-y-auto p-3">
+      <div className="flex min-h-0 w-72 flex-1 flex-col gap-4 overflow-y-auto p-3">
       {/* Settings — language/mode, base layer, pattern / units / options. */}
       <PanelSection title={t('editor.typingTest.section.settings')}>
         {/* Mode / language — shown for every mode (words / time / quote /
             fileImport); quote uses it to pick the quote source language. */}
         <div className="flex w-full flex-col items-start gap-1">
-          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType}):</span>
+          <span className="text-sm text-content-muted">{t('editor.typingTest.modeLabel')}({modeType})</span>
           <button
             type="button"
             data-testid="language-selector"
@@ -564,16 +533,16 @@ export function TypingTestPane({
         )}
         {/* Base Layer / Lines / Font side by side. Lines + Font are the shared
             reading-window display settings (every mode); wraps if too narrow. */}
-        <div className="flex flex-wrap items-start gap-2">
+        <div className="flex w-full items-start gap-2">
           {layers > 1 && (
-            <div className="flex flex-col items-start gap-1">
-              <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}:</span>
+            <div className="flex flex-1 flex-col items-start gap-1">
+              <span className="text-sm text-content-muted">{t('editor.typingTest.baseLayer')}</span>
               <select
                 data-testid="base-layer-select"
                 aria-label={t('editor.typingTest.baseLayer')}
                 value={typingTest.baseLayer}
                 onChange={(e) => typingTest.setBaseLayer(Number(e.target.value))}
-                className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+                className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
               >
                 {Array.from({ length: layers }, (_, i) => (
                   <option key={i} value={i}>{layerNames?.[i] || i}</option>
@@ -581,26 +550,26 @@ export function TypingTestPane({
               </select>
             </div>
           )}
-          <div className="flex flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}:</span>
+          <div className="flex flex-1 flex-col items-start gap-1">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.lines')}</span>
             <select
               data-testid="display-lines-select"
               aria-label={t('editor.typingTest.lines')}
               value={displayLines ?? DEFAULT_DISPLAY_LINES}
               onChange={(e) => onDisplayLinesChange?.(Number(e.target.value))}
-              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+              className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
             >
               {LINE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
           </div>
-          <div className="flex flex-col items-start gap-1">
-            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}:</span>
+          <div className="flex flex-1 flex-col items-start gap-1">
+            <span className="text-sm text-content-muted">{t('editor.typingTest.fontSize')}</span>
             <select
               data-testid="font-size-select"
               aria-label={t('editor.typingTest.fontSize')}
               value={fontSize ?? DEFAULT_FONT_SIZE}
               onChange={(e) => onFontSizeChange?.(Number(e.target.value))}
-              className="h-8 w-14 rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
+              className="h-8 w-full rounded-md border border-edge bg-surface-alt px-2 text-sm text-content-secondary focus:border-accent focus:outline-none"
             >
               {FONT_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
             </select>
