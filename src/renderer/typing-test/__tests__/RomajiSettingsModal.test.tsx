@@ -48,10 +48,11 @@ describe('RomajiSettingsModal defaults', () => {
     expect(screen.getByTestId('romaji-case-upper').className).not.toContain('text-accent')
   })
 
-  it('defaults the guide selector to Base, with no style toggled on', () => {
+  it('defaults the guide Base selector to Hepburn, with every Option off', () => {
     renderModal()
-    expect(screen.getByTestId('romaji-guide-base').className).toContain('text-accent')
-    for (const style of ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']) {
+    expect(screen.getByTestId('romaji-guide-base-hepburn')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('romaji-guide-base-kunrei')).toHaveAttribute('aria-pressed', 'false')
+    for (const style of ['cq', 'digraph', 'xSmall', 'lSmall']) {
       expect(screen.getByTestId(`romaji-guide-${style}`)).toHaveAttribute('aria-pressed', 'false')
     }
   })
@@ -134,15 +135,15 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
-  it('adds a style to guideStyles when it is toggled on', () => {
+  it('selecting Kunrei as the guide Base adds kunrei to guideStyles', () => {
     const onConfigChange = vi.fn()
     renderModal({ onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
+    fireEvent.click(screen.getByTestId('romaji-guide-base-kunrei'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['kunrei'] })
   })
 
-  it('toggling a second style on adds to the existing selection', () => {
+  it('toggling a guide Option on adds to the existing guideStyles selection', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei'] } }, onConfigChange })
     fireEvent.click(screen.getByTestId('romaji-guide-xSmall'))
@@ -150,28 +151,34 @@ describe('RomajiSettingsModal edits', () => {
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['kunrei', 'xSmall'] })
   })
 
-  it('toggling an already-selected style back off removes it from guideStyles', () => {
+  it('toggling an already-selected guide Option back off removes it from guideStyles', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
+    fireEvent.click(screen.getByTestId('romaji-guide-xSmall'))
+    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
+    if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['kunrei'] })
+  })
+
+  it('selecting Hepburn as the guide Base removes kunrei from guideStyles', () => {
+    const onConfigChange = vi.fn()
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
+    fireEvent.click(screen.getByTestId('romaji-guide-base-hepburn'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toEqual({ guideStyles: ['xSmall'] })
   })
 
-  it('omits guideStyles when the only selected style is toggled back off', () => {
+  it('omits guideStyles when Hepburn is re-selected and it was the only selected style', () => {
     const onConfigChange = vi.fn()
     renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei'] } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-kunrei'))
+    fireEvent.click(screen.getByTestId('romaji-guide-base-hepburn'))
     const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
     if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
   })
 
-  it('clicking Base clears every selected guide style', () => {
-    const onConfigChange = vi.fn()
-    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei', 'xSmall'] } }, onConfigChange })
-    fireEvent.click(screen.getByTestId('romaji-guide-base'))
-    const arg = onConfigChange.mock.calls[0][0] as TypingTestConfig
-    if (arg.mode === 'words') expect(arg.romaji).toBeUndefined()
+  it('marks Kunrei active and Hepburn inactive as the guide Base once guideStyles carries kunrei', () => {
+    renderModal({ config: { ...BASE_CONFIG, romaji: { guideStyles: ['kunrei'] } } })
+    expect(screen.getByTestId('romaji-guide-base-kunrei')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('romaji-guide-base-hepburn')).toHaveAttribute('aria-pressed', 'false')
   })
 
   it('disables an input style on click', () => {

@@ -907,6 +907,37 @@ describe('useDevicePrefs', () => {
       })
     })
 
+    it('drops a stray hepburn entry from a persisted guideStyles (it is the implicit default, never stored by the modal)', async () => {
+      setupMocks()
+      mockPipetteSettingsGet.mockResolvedValue({
+        _rev: 1,
+        keyboardLayout: 'qwerty',
+        autoAdvance: true,
+        layerNames: [],
+        typingTestConfig: {
+          mode: 'words',
+          wordCount: 30,
+          punctuation: false,
+          numbers: false,
+          romaji: { guideStyles: ['hepburn', 'xSmall'] },
+        },
+      } as never)
+
+      const { result } = renderHookWithConfig(() => useDevicePrefs())
+      await act(async () => {})
+      await act(async () => {
+        await result.current.applyDevicePrefs('0xAABB')
+      })
+
+      expect(result.current.typingTestConfig).toEqual({
+        mode: 'words',
+        wordCount: 30,
+        punctuation: false,
+        numbers: false,
+        romaji: { guideStyles: ['xSmall'] },
+      })
+    })
+
     it('drops the whole romaji block when every field is invalid', async () => {
       setupMocks()
       mockPipetteSettingsGet.mockResolvedValue({

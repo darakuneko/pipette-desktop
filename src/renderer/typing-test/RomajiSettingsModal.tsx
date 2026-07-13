@@ -22,12 +22,13 @@ import { optionButtonClass } from './TypingTestSettingsBar'
 // / romaji, identical in every locale (see english.json + the Japanese pack).
 const CASE_STYLES: readonly RomajiCaseStyle[] = ['upper', 'capital', 'lower']
 
-// The guide row's Base button (clears every selected guide style) is
-// rendered separately from this list — see the render section below.
-const GUIDE_STYLES: readonly RomajiStyle[] = ['kunrei', 'cq', 'digraph', 'xSmall', 'lSmall']
-// Accepted input patterns split into two rows: BASE_STYLES (hepburn/kunrei
-// — at least one always stays enabled, see toggleBaseStyle) and the
-// independent options below, which may all be disabled at once.
+// Both the Guide and the Accepted input patterns sections share the same
+// Base/Options row split: BASE_STYLES (hepburn/kunrei) picks which base
+// spelling system is represented, and OPTION_STYLES are the independent
+// alternate-spelling families layered on top. Guide's Base row is a single
+// select (exactly one of the two is always active); the input row's Base
+// row is a toggle pair where at least one must stay enabled (see
+// toggleBaseStyle). Both rows' Options are always a multi-select toggle.
 const OPTION_STYLES: readonly RomajiStyle[] = ['cq', 'digraph', 'xSmall', 'lSmall']
 
 /** Drops fields set back to their default value so a persisted config only
@@ -98,6 +99,19 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
     const next = new Set(guideStyles)
     if (next.has(style)) next.delete(style)
     else next.add(style)
+    applyRomaji({ guideStyles: [...next] })
+  }, [guideStyles, applyRomaji])
+
+  // Guide's Base row is a single select between the two base spelling
+  // systems, unlike the input row's Base toggle pair above: the guide only
+  // ever shows one representative spelling, so 'kunrei' presence in
+  // guideStyles *is* the selection (hepburn is the implicit default and is
+  // never itself stored — see pruneRomaji's default table).
+  const guideBase: RomajiStyle = guideStyles.has('kunrei') ? 'kunrei' : 'hepburn'
+  const selectGuideBase = useCallback((style: RomajiStyle) => {
+    const next = new Set(guideStyles)
+    if (style === 'kunrei') next.add('kunrei')
+    else next.delete('kunrei')
     applyRomaji({ guideStyles: [...next] })
   }, [guideStyles, applyRomaji])
 
@@ -182,36 +196,51 @@ export function RomajiSettingsModal({ config, onConfigChange, linkedFontSize, on
             </div>
           </section>
 
-          {/* Guide display pattern — multi-select, display only. Base
-              clears every selected style and shows the canonical
-              representative for whichever base system is active; the
-              other five toggle independently, same behaviour/look as
-              Accepted input patterns below. */}
+          {/* Guide display pattern — same Base/Options row split as
+              Accepted input patterns below. Base is a single select
+              (exactly one of hepburn/kunrei is always the active
+              representative spelling); Options toggle independently and
+              may all be off at once. Display only — the guide never
+              affects what acceptChar() accepts. */}
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}:</span>
-            <div className="flex flex-wrap gap-1">
-              <button
-                type="button"
-                data-testid="romaji-guide-base"
-                aria-pressed={guideStyles.size === 0}
-                className={optionButtonClass(guideStyles.size === 0, 'px-2.5')}
-                onClick={() => applyRomaji({ guideStyles: [] })}
-              >
-                {t('editor.typingTest.romajiSettings.guideBase')}
-              </button>
-              {GUIDE_STYLES.map((style) => (
-                <button
-                  key={style}
-                  type="button"
-                  data-testid={`romaji-guide-${style}`}
-                  aria-pressed={guideStyles.has(style)}
-                  className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
-                  onClick={() => toggleGuideStyle(style)}
-                >
-                  {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                </button>
-              ))}
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
+              <div className="flex flex-wrap gap-1">
+                {BASE_STYLES.map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    data-testid={`romaji-guide-base-${style}`}
+                    aria-pressed={guideBase === style}
+                    className={optionButtonClass(guideBase === style, 'px-2.5')}
+                    onClick={() => selectGuideBase(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
+              <div className="flex flex-wrap gap-1">
+                {OPTION_STYLES.map((style) => (
+                  <button
+                    key={style}
+                    type="button"
+                    data-testid={`romaji-guide-${style}`}
+                    aria-pressed={guideStyles.has(style)}
+                    className={optionButtonClass(guideStyles.has(style), 'px-2.5')}
+                    onClick={() => toggleGuideStyle(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.guideHint')}</p>
           </section>
 

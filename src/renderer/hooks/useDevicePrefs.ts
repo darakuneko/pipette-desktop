@@ -53,8 +53,16 @@ function validateRomajiDetailSettings(raw: unknown): RomajiDetailSettings | unde
     result.fontSize = clampFontSize(obj.fontSize)
   }
   if (Array.isArray(obj.guideStyles)) {
+    // 'hepburn' is dropped here (unlike disabledStyles below, which keeps
+    // it): the Guide row's Base selection is single-select, and hepburn is
+    // its implicit default — the modal never writes 'hepburn' into
+    // guideStyles itself (see RomajiSettingsModal's selectGuideBase), and
+    // GUIDE_STYLE_PRIORITY in romaji-engine.ts has no 'hepburn' entry, so a
+    // stray 'hepburn' here would sit inert. Sanitizing it out keeps a
+    // hand-edited or legacy-written config equivalent to the canonical
+    // default rather than persisting a functionally meaningless entry.
     const styles = obj.guideStyles.filter(
-      (s): s is RomajiStyle => typeof s === 'string' && VALID_ROMAJI_STYLES.has(s),
+      (s): s is RomajiStyle => typeof s === 'string' && VALID_ROMAJI_STYLES.has(s) && s !== 'hepburn',
     )
     if (styles.length > 0) result.guideStyles = styles
   }

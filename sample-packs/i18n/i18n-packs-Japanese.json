@@ -317,7 +317,6 @@
         },
         "fontLinked": "Settings の Font と連動",
         "guideLabel": "表示パターン",
-        "guideBase": "ベース",
         "guideHint": "表示のみです。他の入力パターンでも正解になります",
         "inputLabel": "入力パターン",
         "inputBaseLabel": "ベース",
