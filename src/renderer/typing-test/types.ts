@@ -31,13 +31,12 @@ export const DEFAULT_LANGUAGE = 'english'
 
 /** Word-language packs the romaji-keystroke matcher supports (kana word
  *  lists only). Drives the SettingsBar toggle's visibility, and — via
- *  `clearRomajiInputForLanguage` in `useTypingTest` — whether `romajiInput`
- *  is ever allowed to stay `true`: the flag is dropped the moment the
- *  active language isn't in this set, whether that happens by switching
- *  languages, restoring a persisted config/language pair on mount, or any
- *  other direct `setConfig` call. `isRomajiInputActive` therefore trusts
- *  `romajiInput: true` at face value without re-checking the language
- *  itself. */
+ *  `isRomajiInputActive` in `useTypingTest` — whether a persisted
+ *  `romajiInput: true` is actually honored. The flag itself is never
+ *  stripped from the config (same as `punctuation`/`numbers`): it stays
+ *  saved across language switches, mount, and `setConfig` calls, and is
+ *  simply inert whenever the active language isn't in this set. Selecting
+ *  a kana pack again picks it back up automatically. */
 export const ROMAJI_INPUT_LANGUAGES = new Set(['japanese_hiragana', 'japanese_katakana'])
 
 /** Current word's confirmed romaji + canonical remaining spelling, plus the

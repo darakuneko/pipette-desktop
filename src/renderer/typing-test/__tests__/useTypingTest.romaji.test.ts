@@ -8,11 +8,11 @@ import { clearLanguageCache, getLanguageData } from '../word-generator'
 import type { TypingTestConfig } from '../types'
 
 // A real kana pack id (see ROMAJI_INPUT_LANGUAGES) is required everywhere a
-// test mounts with `romajiInput: true` already set: useTypingTest now
-// normalizes that pairing at mount (clearRomajiInputForLanguage), so an
-// arbitrary language name would have the flag dropped before the test body
-// runs. Every case below reseeds this same id with its own single-word
-// list via `seedKanaLanguage`, which evicts the previous entry first.
+// test wants the romaji matcher actually active: `romajiInput: true` alone
+// is not enough — `isRomajiInputActive` also requires the active language
+// to be a kana pack (see useTypingTest.ts). Every case below reseeds this
+// same id with its own single-word list via `seedKanaLanguage`, which
+// evicts the previous entry first.
 const KANA_LANGUAGE = 'japanese_hiragana'
 
 const mockLangGet = vi.fn()
@@ -199,7 +199,7 @@ describe('useTypingTest — romaji input mode', () => {
     expect(result.current.romajiGuide).toEqual({ typed: 'dhi', remaining: 'na-', kanaCompleted: 2 })
   })
 
-  it('clears romajiInput when the language switches off a kana pack', async () => {
+  it('keeps romajiInput saved but inactive once the language switches off a kana pack', async () => {
     await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
     const { result } = renderHook(() => useTypingTest(wordsConfig(1), KANA_LANGUAGE))
     expect(result.current.config.mode === 'words' && result.current.config.romajiInput).toBe(true)
@@ -210,31 +210,32 @@ describe('useTypingTest — romaji input mode', () => {
 
     expect(result.current.language).toBe('english')
     expect(result.current.config.mode).toBe('words')
+    // The flag itself is preserved, same as punctuation/numbers — it's just
+    // not honored while a non-kana language is active.
     if (result.current.config.mode === 'words') {
-      expect(result.current.config.romajiInput).toBe(false)
+      expect(result.current.config.romajiInput).toBe(true)
     }
-    // The cleared flag also takes matching out of romaji mode immediately —
-    // a submitted word now goes through verbatim comparison, not the matcher.
+    // Inactive language takes matching out of romaji mode immediately — a
+    // submitted word now goes through verbatim comparison, not the matcher.
     expect(result.current.romajiGuide).toBeNull()
   })
 
-  it('normalizes a persisted romajiInput=true + non-kana language pair on mount', () => {
+  it('mounts with a persisted romajiInput=true + non-kana language pair inactive, not stripped', () => {
     // Mirrors a persisted config/language pair restored from device prefs
-    // (e.g. via sync) that is already out of sync — setLanguage was never
-    // the one that paired these two values, so the mount-time normalization
-    // has to catch it instead. See clearRomajiInputForLanguage.
+    // (e.g. via sync). The flag is kept as-is; isRomajiInputActive is what
+    // decides it isn't honored yet.
     const persistedConfig: TypingTestConfig = { mode: 'words', wordCount: 30, punctuation: false, numbers: false, romajiInput: true }
     const { result } = renderHook(() => useTypingTest(persistedConfig, 'english'))
 
     expect(result.current.language).toBe('english')
     expect(result.current.config.mode).toBe('words')
     if (result.current.config.mode === 'words') {
-      expect(result.current.config.romajiInput).toBe(false)
+      expect(result.current.config.romajiInput).toBe(true)
     }
     expect(result.current.romajiGuide).toBeNull()
   })
 
-  it('normalizes a config pushed in via setConfig against whichever language is already active', async () => {
+  it('keeps romajiInput from a config pushed via setConfig inactive against whichever language is already active', async () => {
     // Mirrors useInputModes.ts's device-prefs sync effect, which calls
     // setConfig directly with a persisted config rather than going through
     // setLanguage.
@@ -246,9 +247,46 @@ describe('useTypingTest — romaji input mode', () => {
 
     expect(result.current.config.mode).toBe('words')
     if (result.current.config.mode === 'words') {
-      expect(result.current.config.romajiInput).toBe(false)
+      expect(result.current.config.romajiInput).toBe(true)
     }
     expect(result.current.romajiGuide).toBeNull()
+  })
+
+  it('regression: honors romajiInput once the language sync catches up, even when the config sync landed first', async () => {
+    // Reproduces the reported bug: useInputModes.ts syncs the persisted
+    // config and language into useTypingTest via two independent effects.
+    // When the config effect resolves before the language effect (both can
+    // fire on the same mount, in either order), a config-first setConfig
+    // call must not lose romajiInput before setLanguage lands the kana
+    // pack that makes it meaningful again.
+    await seedKanaLanguage(KANA_LANGUAGE, ['あ'])
+    const { result } = renderHook(() => useTypingTest(undefined, undefined))
+
+    await act(async () => {
+      await result.current.setConfig(wordsConfig(1))
+    })
+    // Config landed while the default (non-kana) language was still active —
+    // the flag must survive this, not just carry through a same-order path.
+    expect(result.current.language).toBe('english')
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(true)
+    }
+    expect(result.current.romajiGuide).toBeNull()
+
+    await act(async () => {
+      await result.current.setLanguage(KANA_LANGUAGE)
+    })
+
+    expect(result.current.language).toBe(KANA_LANGUAGE)
+    if (result.current.config.mode === 'words') {
+      expect(result.current.config.romajiInput).toBe(true)
+    }
+    expect(result.current.romajiGuide).not.toBeNull()
+    expect(result.current.state.words).toEqual(['あ'])
+
+    press(result, 'a')
+    expect(result.current.state.status).toBe('finished')
+    expect(result.current.state.correctChars).toBe(1)
   })
 
   it('preserves romajiInput when switching between two kana languages', async () => {

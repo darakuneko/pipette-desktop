@@ -359,10 +359,13 @@ export function TypingTestView({
           row below the reading window rather than inline per-word: the
           words row is a single flex-wrap flow (word-flow modes have no
           per-line rows to anchor an inline guide under), so a fixed row
-          here avoids overlapping whatever wraps below the current word. */}
+          here avoids overlapping whatever wraps below the current word.
+          The typed/remaining line tracks the Font setting via the same
+          --tt-font var as the reading window; the IME hint stays a fixed
+          small size since it's a hint, not reading content. */}
       {romajiGuide && (
-        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono text-sm">
-          <p className="break-all">
+        <div data-testid="typing-test-romaji-guide" className="flex w-full max-w-4xl flex-col items-start gap-1 font-mono" style={multilineStyle}>
+          <p className="typing-romaji-guide-text break-all">
             <span className="text-success">{romajiGuide.typed}</span>
             <span className="text-content-muted">{romajiGuide.remaining}</span>
           </p>
