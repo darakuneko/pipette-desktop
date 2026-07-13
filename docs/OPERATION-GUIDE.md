@@ -722,10 +722,10 @@ When **Auto Move** is enabled (§3.14), assigning a keycode automatically advanc
 To edit the View Matrix, open the Keycodes Overlay Panel (§3.14) and click **Edit** in the **View Matrix** row. While the mode is active:
 
 - The keymap display goes blank — instead of keycodes, each key shows its effective view position as two lines: `R` (row) and `C` (column)
-- All keymap operations are disabled: layer switching, key assignment, the key popover, and the Key Tester (turned off automatically on entry)
-- The layer panel is replaced by a **View Matrix** panel with a **Reset View Matrix** button — click it and confirm (**Reset?**) to delete all custom positions and return to the physical matrix order
+- All keymap operations are disabled: layer switching, key assignment, the key popover, and the Key Tester (turned off automatically on entry). The keycode picker area (tabs, tiles, and menu) is hidden entirely, leaving a two-pane view: the **View Matrix** panel on the left and the keymap on the right (zoom and scrolling keep working)
+- The layer panel is replaced by the **View Matrix** panel, which holds the **Done** toggle and a **Reset View Matrix** button — click Reset and confirm (**Reset?**) to delete all custom positions and return to the physical matrix order
 - Clicking a key opens the **Edit View Position** dialog. **Matrix** shows the key's physical matrix position (read-only); enter a new **Row** and **Col** and click **Save**. Entering values equal to the key's physical position removes its custom position instead
-- Click **Done** in the **View Matrix** row to exit the mode (it also exits automatically when switching or disconnecting the keyboard)
+- Click **Done** in the **View Matrix** panel to exit the mode (it also exits automatically when switching or disconnecting the keyboard)
 
 Only keys you change are stored — every other key keeps its physical matrix position in the ordering. Encoders and decorative keys are not part of the Auto Move order and cannot be edited in this mode. The View Matrix is saved per keyboard and included in cloud sync (§6.1).
 

@@ -130,22 +130,56 @@ describe('KeymapEditor — View Matrix mode', () => {
     capturedOnKeyClick = undefined
   })
 
-  it('starts with normal editing: layer list shown, Edit button present', () => {
+  it('starts with normal editing: layer list and keycode picker shown, Edit button present', () => {
     render(<KeymapEditor {...defaultProps} />)
 
     expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('tabbed-keycodes')).toBeInTheDocument()
     expect(screen.queryByTestId('view-matrix-reset-panel')).not.toBeInTheDocument()
     expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
   })
 
-  it('entering the mode hides the layer selector and shows the Reset panel', () => {
+  it('entering the mode hides the layer selector and the entire keycode picker, and shows the panel', () => {
     render(<KeymapEditor {...defaultProps} />)
 
     fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
 
-    expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Done')
+    // The picker (tabs, tiles, overlay panel incl. its own Edit/Done button)
+    // is unmounted entirely — nothing of it should remain in the DOM.
+    expect(screen.queryByTestId('tabbed-keycodes')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('overlay-view-matrix-edit-button')).not.toBeInTheDocument()
     expect(screen.queryByTestId('layer-list-panel')).not.toBeInTheDocument()
+
+    // The left pane shows the ON-state toggle + the keyboard is still shown.
     expect(screen.getByTestId('view-matrix-reset-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('view-matrix-mode-toggle')).toHaveTextContent('Done')
+    expect(screen.getByTestId('keyboard-widget')).toBeInTheDocument()
+  })
+
+  it('clicking the mode toggle in the left pane exits back to normal mode and the picker returns', () => {
+    render(<KeymapEditor {...defaultProps} />)
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    expect(screen.getByTestId('view-matrix-reset-panel')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
+
+    expect(screen.queryByTestId('view-matrix-reset-panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('tabbed-keycodes')).toBeInTheDocument()
+    expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
+  })
+
+  it('keeps the zoom toolbar mounted and functional while the mode is active', () => {
+    const onScaleChange = vi.fn()
+    render(<KeymapEditor {...defaultProps} scale={1} onScaleChange={onScaleChange} />)
+
+    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+
+    const zoomInButton = screen.getByTestId('zoom-in-button')
+    expect(zoomInButton).toBeInTheDocument()
+    fireEvent.click(zoomInButton)
+    expect(onScaleChange).toHaveBeenCalledWith(0.1)
   })
 
   it('key click in the mode opens the edit modal instead of selecting the key', () => {
@@ -186,7 +220,9 @@ describe('KeymapEditor — View Matrix mode', () => {
   it('exiting the mode restores the layer selector and normal key click selection', () => {
     render(<KeymapEditor {...defaultProps} />)
     fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
-    fireEvent.click(screen.getByTestId('overlay-view-matrix-edit-button'))
+    // The overlay's own toggle is hidden along with the rest of the picker
+    // once the mode is active — exit through the left pane's toggle instead.
+    fireEvent.click(screen.getByTestId('view-matrix-mode-toggle'))
 
     expect(screen.getByTestId('overlay-view-matrix-edit-button')).toHaveTextContent('Edit')
     expect(screen.getByTestId('layer-list-panel')).toBeInTheDocument()

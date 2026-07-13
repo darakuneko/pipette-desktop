@@ -7,18 +7,25 @@ import { useTranslation } from 'react-i18next'
 // extract it to a generically named shared component instead.
 import { DisconnectConfirmButton } from '../settings-modal/DisconnectConfirmButton'
 
-export interface ViewMatrixResetPanelProps {
+export interface ViewMatrixPanelProps {
   onReset: () => void
+  /** Exits View Matrix mode. The keycode picker (and with it the overlay
+   *  panel's own Edit/Done button) is hidden for the duration of the mode,
+   *  so this panel's toggle — rendered permanently in its ON ("Done")
+   *  state while mounted — is the only way back to normal editing. */
+  onToggle: () => void
 }
 
 /**
  * Replaces the layer selector panel while View Matrix mode is active — layer
  * switching is disabled for the duration of the mode (see
- * `useViewMatrixMode`), so the same slot instead offers a 2-step confirm
- * (mirrors `DisconnectConfirmButton`'s existing pattern) to clear the saved
- * position overrides and fall back to the physical Vial matrix.
+ * `useViewMatrixMode`), and the keycode picker area is hidden entirely, so
+ * this panel becomes the mode's whole left pane: the mode label, the Edit
+ * toggle that exits the mode, and a 2-step confirm (mirrors
+ * `DisconnectConfirmButton`'s existing pattern) to clear the saved position
+ * overrides and fall back to the physical Vial matrix.
  */
-export function ViewMatrixResetPanel({ onReset }: ViewMatrixResetPanelProps) {
+export function ViewMatrixPanel({ onReset, onToggle }: ViewMatrixPanelProps) {
   const { t } = useTranslation()
   const [confirming, setConfirming] = useState(false)
 
@@ -27,7 +34,18 @@ export function ViewMatrixResetPanel({ onReset }: ViewMatrixResetPanelProps) {
       className="flex w-44 shrink-0 flex-col gap-2 rounded-xl border border-edge bg-picker-bg p-3"
       data-testid="view-matrix-reset-panel"
     >
-      <p className="text-xs text-content-secondary">{t('editor.viewMatrix.label')}</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-xs text-content-secondary">{t('editor.viewMatrix.label')}</p>
+        <button
+          type="button"
+          aria-pressed={true}
+          className="rounded border border-edge px-2 py-1 text-xs text-content-secondary hover:bg-surface-dim"
+          onClick={onToggle}
+          data-testid="view-matrix-mode-toggle"
+        >
+          {t('editor.viewMatrix.done')}
+        </button>
+      </div>
       <DisconnectConfirmButton
         confirming={confirming}
         onRequestConfirm={() => setConfirming(true)}

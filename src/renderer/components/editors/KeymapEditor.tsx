@@ -18,7 +18,7 @@ import { comboToJson, parseCombo, keyOverrideToJson, parseKeyOverride, altRepeat
 import { KeycodesOverlayPanel } from './KeycodesOverlayPanel'
 import { useViewMatrixMode } from './useViewMatrixMode'
 import { ViewMatrixModal } from './ViewMatrixModal'
-import { ViewMatrixResetPanel } from './ViewMatrixResetPanel'
+import { ViewMatrixPanel } from './ViewMatrixPanel'
 import { applyViewMatrixOverride } from './view-matrix'
 import { ZoomIn, ZoomOut, SlidersHorizontal, Undo2, Redo2 } from 'lucide-react'
 import { ICON_SM, ICON_MD } from '../../constants/ui-tokens'
@@ -989,13 +989,31 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
   return (
     <div className={`flex min-h-0 flex-1 flex-col ${typingTestMode && typingTestViewOnly ? '' : 'gap-3'}`}>
       <div
-        className={typingTestMode ? (typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex min-h-0 flex-1 items-stretch gap-2 overflow-auto') : 'flex items-start gap-2 overflow-auto'}
+        className={typingTestMode
+          ? (typingTestViewOnly ? 'flex flex-1 items-stretch gap-2' : 'flex min-h-0 flex-1 items-stretch gap-2 overflow-auto')
+          // View Matrix mode hides the keycode picker row entirely (see
+          // below), so this row alone must fill the remaining vertical
+          // space it would otherwise have shared with the picker.
+          : viewMatrixMode.active ? 'flex min-h-0 flex-1 items-start gap-2 overflow-auto' : 'flex items-start gap-2 overflow-auto'}
         style={!typingTestMode && keyboardAreaMinHeight ? { minHeight: keyboardAreaMinHeight } : undefined}
         onClick={!typingTestMode ? handleDeselectClick : undefined}
       >
         {/* The toolbar (undo/redo/zoom) is empty in typing-test mode — all its
-            controls are editor-only — so drop the whole 50px column there. */}
+            controls are editor-only — so drop the whole 50px column there.
+            It stays mounted in View Matrix mode so zoom remains usable. */}
         {!typingTestMode && toolbar}
+        {/* View Matrix mode's left pane — replaces the layer selector slot
+            that normally sits below, since this row is now the only one
+            rendered (the keycode picker row is hidden for the mode's
+            duration). Its Edit toggle (rendered ON) is the sole way back
+            to normal editing now that the overlay panel's own toggle is
+            hidden along with the rest of the picker. */}
+        {!typingTestMode && viewMatrixMode.active && (
+          <ViewMatrixPanel
+            onReset={() => onViewMatrixChange?.(undefined)}
+            onToggle={handleToggleViewMatrixMode}
+          />
+        )}
         <div className={typingTestMode ? 'flex min-h-0 min-w-0 flex-1 flex-col gap-3' : 'flex min-w-0 flex-1 items-center justify-center gap-4 overflow-auto'}>
           {typingTestMode ? (
             <TypingTestPane
@@ -1092,15 +1110,16 @@ export const KeymapEditor = forwardRef<import('./keymap-editor-types').KeymapEdi
         />
       )}
 
-      {!typingTestMode && (
+      {/* The entire keycode picker area — tabs, tiles, and the overlay panel
+          (incl. its own View Matrix Edit/Done button) — is hidden while
+          View Matrix mode is active; ViewMatrixPanel above is the mode's
+          only surface, and its own toggle is the sole way back to normal
+          editing. */}
+      {!typingTestMode && !viewMatrixMode.active && (
         <div className="flex min-h-0 flex-1 gap-2">
-          {viewMatrixMode.active ? (
-            <ViewMatrixResetPanel onReset={() => onViewMatrixChange?.(undefined)} />
-          ) : (
-            onLayerChange && layers > 1 && (
-              <LayerListPanel layers={layers} currentLayer={currentLayer} onLayerChange={onLayerChange}
-                layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
-            )
+          {onLayerChange && layers > 1 && (
+            <LayerListPanel layers={layers} currentLayer={currentLayer} onLayerChange={onLayerChange}
+              layerNames={layerNames} onSetLayerName={onSetLayerName} collapsed={layerPanelCollapsed} onToggleCollapse={toggleLayerPanel} />
           )}
           <TabbedKeycodes
             keyboardPickerContent={layoutPickerContent}
