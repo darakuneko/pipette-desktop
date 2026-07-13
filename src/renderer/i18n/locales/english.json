@@ -318,8 +318,6 @@
         "guideLabel": "Guide spelling pattern",
         "guideHint": "Display only — typing any accepted pattern is still correct",
         "inputLabel": "Accepted input patterns",
-        "inputBaseLabel": "Base",
-        "inputOptionsLabel": "Options",
         "inputHint": "Turned-off patterns are rejected; at least one base system stays enabled",
         "style": {
           "hepburn": "Hepburn (shi/chi)",

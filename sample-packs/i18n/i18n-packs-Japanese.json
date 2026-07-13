@@ -318,8 +318,6 @@
         "guideLabel": "表示パターン",
         "guideHint": "表示のみです。他の入力パターンでも正解になります",
         "inputLabel": "入力パターン",
-        "inputBaseLabel": "ベース",
-        "inputOptionsLabel": "オプション",
         "inputHint": "オフにしたパターンは拒否されます。ベース（ヘボン式/訓令式）は最低1つ有効です",
         "style": {
           "hepburn": "ヘボン式 (shi/chi)",

@@ -184,42 +184,38 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.guideLabel')}:</span>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
-              <div className={STYLE_GRID_CLASS}>
-                {BASE_STYLES.map((style) => (
-                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
-                    <button
-                      type="button"
-                      data-testid={`romaji-guide-base-${style}`}
-                      aria-pressed={guideBase === style}
-                      className={`${optionButtonClass(guideBase === style, 'px-2.5')} w-full justify-center`}
-                      onClick={() => selectGuideBase(style)}
-                    >
-                      {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                    </button>
-                  </Tooltip>
-                ))}
-              </div>
+            {/* Base row then options row — no sub-labels, the gap alone
+                separates the two groups (per design feedback). */}
+            <div className={STYLE_GRID_CLASS}>
+              {BASE_STYLES.map((style) => (
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                  <button
+                    type="button"
+                    data-testid={`romaji-guide-base-${style}`}
+                    aria-pressed={guideBase === style}
+                    className={`${optionButtonClass(guideBase === style, 'px-2.5')} w-full justify-center`}
+                    onClick={() => selectGuideBase(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                </Tooltip>
+              ))}
             </div>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
-              <div className={STYLE_GRID_CLASS}>
-                {OPTION_STYLES.map((style) => (
-                  <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
-                    <button
-                      type="button"
-                      data-testid={`romaji-guide-${style}`}
-                      aria-pressed={guideStyles.has(style)}
-                      className={`${optionButtonClass(guideStyles.has(style), 'px-2.5')} w-full justify-center`}
-                      onClick={() => toggleGuideStyle(style)}
-                    >
-                      {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                    </button>
-                  </Tooltip>
-                ))}
-              </div>
+            <div className={STYLE_GRID_CLASS}>
+              {OPTION_STYLES.map((style) => (
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                  <button
+                    type="button"
+                    data-testid={`romaji-guide-${style}`}
+                    aria-pressed={guideStyles.has(style)}
+                    className={`${optionButtonClass(guideStyles.has(style), 'px-2.5')} w-full justify-center`}
+                    onClick={() => toggleGuideStyle(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                </Tooltip>
+              ))}
             </div>
 
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.guideHint')}</p>
@@ -231,45 +227,41 @@ export function RomajiSettingsModal({ config, onConfigChange, onClose }: Props) 
           <section className="flex flex-col gap-1.5">
             <span className="text-sm text-content-muted">{t('editor.typingTest.romajiSettings.inputLabel')}:</span>
 
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputBaseLabel')}:</span>
-              <div className={STYLE_GRID_CLASS}>
-                {BASE_STYLES.map((style) => {
-                  const baseEnabled = !disabledStyles.has(style)
-                  return (
-                    <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
-                      <button
-                        type="button"
-                        data-testid={`romaji-base-${style}`}
-                        aria-pressed={baseEnabled}
-                        className={`${optionButtonClass(baseEnabled, 'px-2.5')} w-full justify-center`}
-                        onClick={() => toggleBaseStyle(style)}
-                      >
-                        {t(`editor.typingTest.romajiSettings.style.${style}`)}
-                      </button>
-                    </Tooltip>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputOptionsLabel')}:</span>
-              <div className={STYLE_GRID_CLASS}>
-                {OPTION_STYLES.map((style) => (
+            {/* Base row then options row — no sub-labels, matching the
+                guide section above. */}
+            <div className={STYLE_GRID_CLASS}>
+              {BASE_STYLES.map((style) => {
+                const baseEnabled = !disabledStyles.has(style)
+                return (
                   <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
                     <button
                       type="button"
-                      data-testid={`romaji-input-${style}`}
-                      aria-pressed={!disabledStyles.has(style)}
-                      className={`${optionButtonClass(!disabledStyles.has(style), 'px-2.5')} w-full justify-center`}
-                      onClick={() => toggleInputStyle(style)}
+                      data-testid={`romaji-base-${style}`}
+                      aria-pressed={baseEnabled}
+                      className={`${optionButtonClass(baseEnabled, 'px-2.5')} w-full justify-center`}
+                      onClick={() => toggleBaseStyle(style)}
                     >
                       {t(`editor.typingTest.romajiSettings.style.${style}`)}
                     </button>
                   </Tooltip>
-                ))}
-              </div>
+                )
+              })}
+            </div>
+
+            <div className={STYLE_GRID_CLASS}>
+              {OPTION_STYLES.map((style) => (
+                <Tooltip key={style} content={t(`editor.typingTest.romajiSettings.styleTip.${style}`)} side="top" wrapperClassName="w-full" className="max-w-sm">
+                  <button
+                    type="button"
+                    data-testid={`romaji-input-${style}`}
+                    aria-pressed={!disabledStyles.has(style)}
+                    className={`${optionButtonClass(!disabledStyles.has(style), 'px-2.5')} w-full justify-center`}
+                    onClick={() => toggleInputStyle(style)}
+                  >
+                    {t(`editor.typingTest.romajiSettings.style.${style}`)}
+                  </button>
+                </Tooltip>
+              ))}
             </div>
 
             <p className="text-xs text-content-muted">{t('editor.typingTest.romajiSettings.inputHint')}</p>
