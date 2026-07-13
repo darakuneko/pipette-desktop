@@ -317,9 +317,17 @@ describe('key-label-store', () => {
       const origA = a.data!.updatedAt
       const origB = b.data!.updatedAt
 
-      vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 1000)
-      await reorderActive([b.data!.id, a.data!.id])
-      vi.mocked(Date.now).mockRestore()
+      // A Date.now spy never affects `new Date().toISOString()`, which is what the
+      // store actually calls, so freeze the clock and jump it forward instead.
+      // Freezing also removes the same-millisecond flake window when the real
+      // wall clock happens not to tick between saveRecord and reorderActive.
+      try {
+        vi.useFakeTimers()
+        vi.setSystemTime(Date.parse(origB) + 1000)
+        await reorderActive([b.data!.id, a.data!.id])
+      } finally {
+        vi.useRealTimers()
+      }
 
       const metas = await listMetas()
       const metaA = metas.find((m) => m.id === a.data!.id)!
