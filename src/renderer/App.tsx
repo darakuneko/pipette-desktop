@@ -254,9 +254,8 @@ export function App() {
   })
 
   useSessionRestore({
-    enabled: !appConfig.loading &&
-      appConfig.config.restoreLastSession === true &&
-      appConfig.config.lastDevice != null,
+    configLoaded: !appConfig.loading,
+    restoreEnabled: appConfig.config.restoreLastSession === true,
     devices: device.devices,
     connectedDevice: device.connectedDevice,
     lastDevice: appConfig.config.lastDevice ?? null,

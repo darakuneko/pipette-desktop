@@ -259,8 +259,8 @@ export function SettingsToolsTab({
             toggleTestId="settings-restore-last-session-toggle"
             label={t('settings.restoreLastSession')}
             description={t('settings.restoreLastSessionDescription')}
-            on={appConfig.config.restoreLastSession ?? false}
-            onToggle={() => appConfig.set('restoreLastSession', !(appConfig.config.restoreLastSession ?? false))}
+            on={appConfig.config.restoreLastSession ?? true}
+            onToggle={() => appConfig.set('restoreLastSession', !(appConfig.config.restoreLastSession ?? true))}
           />
 
           <SettingsToggleRow

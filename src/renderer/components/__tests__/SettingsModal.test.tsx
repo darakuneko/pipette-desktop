@@ -707,18 +707,18 @@ describe('SettingsModal', () => {
       expect(mockAppConfigSet).toHaveBeenCalledWith('trayResident', true)
     })
 
-    it('renders restore last session toggle off by default', () => {
+    it('renders restore last session toggle on by default', () => {
       renderAndSwitchToTools()
       const toggle = screen.getByTestId('settings-restore-last-session-toggle')
       expect(toggle).toBeInTheDocument()
-      expect(toggle.getAttribute('aria-checked')).toBe('false')
+      expect(toggle.getAttribute('aria-checked')).toBe('true')
     })
 
-    it('calls appConfig.set with restoreLastSession true when its toggle is clicked', () => {
+    it('calls appConfig.set with restoreLastSession false when its toggle is clicked', () => {
       renderAndSwitchToTools()
 
       fireEvent.click(screen.getByTestId('settings-restore-last-session-toggle'))
-      expect(mockAppConfigSet).toHaveBeenCalledWith('restoreLastSession', true)
+      expect(mockAppConfigSet).toHaveBeenCalledWith('restoreLastSession', false)
     })
 
     it('renders startInTray toggle disabled when trayResident is off', () => {

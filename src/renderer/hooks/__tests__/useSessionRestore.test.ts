@@ -35,7 +35,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     renderHook(() => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices: [wrongSerial, rightSerial],
       connectedDevice: null,
       lastDevice: stored,
@@ -52,7 +53,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     renderHook(() => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices: [device],
       connectedDevice: null,
       lastDevice: stored,
@@ -69,7 +71,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     const { rerender } = renderHook(({ devices }) => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices,
       connectedDevice: null,
       lastDevice: stored,
@@ -90,7 +93,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     const { rerender } = renderHook(({ devices }) => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices,
       connectedDevice: null,
       lastDevice: stored,
@@ -111,7 +115,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     const { rerender } = renderHook(({ connectedDevice, devices }) => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices,
       connectedDevice,
       lastDevice: stored,
@@ -129,7 +134,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     renderHook(() => useSessionRestore({
-      enabled: false,
+      configLoaded: true,
+      restoreEnabled: false,
       devices: [device],
       connectedDevice: null,
       lastDevice: { vendorId: 0x1234, productId: 0x5678 },
@@ -144,7 +150,8 @@ describe('useSessionRestore', () => {
     const connect = vi.fn()
 
     renderHook(() => useSessionRestore({
-      enabled: true,
+      configLoaded: true,
+      restoreEnabled: true,
       devices: [device],
       connectedDevice: null,
       lastDevice: null,
@@ -152,5 +159,79 @@ describe('useSessionRestore', () => {
     }))
 
     expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('never connects when restoreEnabled is flipped true after launch, even within the 10s window', () => {
+    const stored: LastDeviceInfo = { vendorId: 0x1234, productId: 0x5678 }
+    const device = makeDevice()
+    const connect = vi.fn()
+
+    // configLoaded=true, restoreEnabled=false at the moment config first
+    // finishes loading — the arming decision latches here.
+    const { rerender } = renderHook(({ restoreEnabled }) => useSessionRestore({
+      configLoaded: true,
+      restoreEnabled,
+      devices: [device],
+      connectedDevice: null,
+      lastDevice: stored,
+      connect,
+    }), { initialProps: { restoreEnabled: false } })
+
+    expect(connect).not.toHaveBeenCalled()
+
+    // The user opens Settings and turns the toggle ON mid-session, well
+    // inside the 10s give-up window.
+    rerender({ restoreEnabled: true })
+    vi.advanceTimersByTime(5_000)
+
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('never connects this session when lastDevice is written after launch (null at config load)', () => {
+    const stored: LastDeviceInfo = { vendorId: 0x1234, productId: 0x5678 }
+    const device = makeDevice()
+    const connect = vi.fn()
+
+    // configLoaded=true, lastDevice=null at the moment config first
+    // finishes loading — the arming decision latches here with no device.
+    const { rerender } = renderHook(({ lastDevice }) => useSessionRestore({
+      configLoaded: true,
+      restoreEnabled: true,
+      devices: [device],
+      connectedDevice: null,
+      lastDevice,
+      connect,
+    }), { initialProps: { lastDevice: null as LastDeviceInfo | null } })
+
+    expect(connect).not.toHaveBeenCalled()
+
+    // A device connects manually shortly after launch, writing lastDevice
+    // for the *next* launch — this session must not react to it.
+    rerender({ lastDevice: stored })
+    vi.advanceTimersByTime(5_000)
+
+    expect(connect).not.toHaveBeenCalled()
+  })
+
+  it('latches the arming decision at the first configLoaded=true render, ignoring the earlier configLoaded=false render', () => {
+    const stored: LastDeviceInfo = { vendorId: 0x1234, productId: 0x5678 }
+    const device = makeDevice()
+    const connect = vi.fn()
+
+    const { rerender } = renderHook(({ configLoaded }) => useSessionRestore({
+      configLoaded,
+      restoreEnabled: true,
+      devices: [device],
+      connectedDevice: null,
+      lastDevice: stored,
+      connect,
+    }), { initialProps: { configLoaded: false } })
+
+    expect(connect).not.toHaveBeenCalled()
+
+    rerender({ configLoaded: true })
+
+    expect(connect).toHaveBeenCalledTimes(1)
+    expect(connect).toHaveBeenCalledWith(device)
   })
 })

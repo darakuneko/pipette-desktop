@@ -98,7 +98,7 @@ export interface AppConfig {
   startInTray: boolean
   /** Auto-reconnect the last-used keyboard at launch. Combined with the
    * per-uid viewMode restore, this also brings back the last screen the
-   * user was on for that keyboard. */
+   * user was on for that keyboard. Defaults to on. */
   restoreLastSession: boolean
   /** USB identity of the last successfully connected device, used by
    * `restoreLastSession` to reopen it at launch. */
@@ -153,5 +153,5 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
   autoLaunch: false,
   trayResident: false,
   startInTray: false,
-  restoreLastSession: false,
+  restoreLastSession: true,
 }
