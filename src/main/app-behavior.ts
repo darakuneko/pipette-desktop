@@ -112,7 +112,7 @@ function formatCount(n: number): string {
 function formatTrayTooltip(status: TrayStatus): string {
   if (!status.keyboardName) return 'Pipette'
   if (!status.recording) return `Pipette — ${status.keyboardName}`
-  return `Pipette — ${status.keyboardName} — Cnt ${formatCount(status.count)} · KPM ${formatCount(status.kpm)}`
+  return `Pipette — ${status.keyboardName} — Cnt: ${formatCount(status.count)} · KPM: ${formatCount(status.kpm)}`
 }
 
 /** Disabled info rows shown between the two separators: the connected
@@ -127,8 +127,8 @@ function buildInfoRows(status: TrayStatus): Electron.MenuItemConstructorOptions[
   }
   if (status.recording) {
     rows.push({ label: 'Recording', enabled: false })
-    rows.push({ label: `Cnt ${formatCount(status.count)}`, enabled: false })
-    rows.push({ label: `KPM ${formatCount(status.kpm)}`, enabled: false })
+    rows.push({ label: `Cnt: ${formatCount(status.count)}`, enabled: false })
+    rows.push({ label: `KPM: ${formatCount(status.kpm)}`, enabled: false })
   }
   return rows
 }

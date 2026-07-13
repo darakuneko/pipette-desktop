@@ -280,7 +280,7 @@ describe('updateTrayStatus', () => {
   it('setupTray applies a status cached before the tray existed', () => {
     updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 1234, kpm: 45 }, () => null)
     setupTray(() => null)
-    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R — Cnt 1,234 · KPM 45')
+    expect(trayInstances[0].setToolTip).toHaveBeenCalledWith('Pipette — GPK-63R — Cnt: 1,234 · KPM: 45')
   })
 
   it('updates the tooltip to just "Pipette" when disconnected', () => {
@@ -299,7 +299,7 @@ describe('updateTrayStatus', () => {
   it('formats the tooltip with Cnt/KPM and en-US thousands-separated numbers while recording', () => {
     setupTray(() => null)
     updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 12345, kpm: 1234 }, () => null)
-    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R — Cnt 12,345 · KPM 1,234')
+    expect(trayInstances[0].setToolTip).toHaveBeenLastCalledWith('Pipette — GPK-63R — Cnt: 12,345 · KPM: 1,234')
   })
 
   it('rebuilds the menu as Show / separator / Quit when disconnected', () => {
@@ -321,10 +321,10 @@ describe('updateTrayStatus', () => {
     setupTray(() => null)
     updateTrayStatus({ keyboardName: 'GPK-63R', recording: true, count: 42, kpm: 20 }, () => null)
     const template = mockBuildFromTemplate.mock.calls.at(-1)![0]
-    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', 'Recording', 'Cnt 42', 'KPM 20', '---', 'Quit'])
+    expect(templateLabels(template)).toEqual(['Show', '---', 'GPK-63R', 'Recording', 'Cnt: 42', 'KPM: 20', '---', 'Quit'])
     expect(template.find((item) => item.label === 'Recording')?.enabled).toBe(false)
-    expect(template.find((item) => item.label === 'Cnt 42')?.enabled).toBe(false)
-    expect(template.find((item) => item.label === 'KPM 20')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'Cnt: 42')?.enabled).toBe(false)
+    expect(template.find((item) => item.label === 'KPM: 20')?.enabled).toBe(false)
   })
 
   it('the rebuilt Show item still shows and focuses the window', () => {
