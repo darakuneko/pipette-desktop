@@ -32,7 +32,8 @@ const ALL_STYLES: readonly RomajiStyle[] = ['kunrei', 'c', 'q', 'digraph', 'xSma
 // literal canonical string with ALL_STYLES disabled; they're excluded from
 // that sweep and checked via their decomposed spelling in a dedicated block.
 const DECOMPOSE_REQUIRED_ENTRIES: ReadonlySet<string> = new Set([
-  'うぃ', 'うぇ', 'うぉ', 'ゔぁ', 'ゔぃ', 'ゔぇ', 'ゔぉ', 'ふぁ', 'ふぃ', 'ふぇ', 'ふぉ', 'ふゅ', 'いぇ',
+  'うぁ', 'うぃ', 'うぇ', 'うぉ', 'ゔぁ', 'ゔぃ', 'ゔぇ', 'ゔぉ', 'ゔゃ', 'ゔゅ', 'ゔょ',
+  'ふぁ', 'ふぃ', 'ふぇ', 'ふぉ', 'ふゃ', 'ふゅ', 'ふょ', 'いぇ',
 ])
 
 function type(
@@ -256,8 +257,9 @@ describe('disabledStyles: per-style acceptance', () => {
   })
 
   it('ye OFF rejects ye (いぇ), forcing the i+xe/le decomposition', () => {
-    // い's own "yi" alternate (untagged, unrelated to 'ye') keeps "y" alive
-    // as a prefix, so the rejection surfaces on "e" rather than "y".
+    // い has no alternate spelling starting with "y" (mozc has no yi row),
+    // so with 'ye' disabled the "y" keystroke itself rejects immediately —
+    // there's no live prefix left to survive into "e".
     const ye = type('いぇ', 'ye', { disabledStyles: ['ye'] })
     expect(ye.results).toContain('reject')
     expect(ye.matcher.typedRomaji()).not.toBe('ye')
@@ -442,7 +444,7 @@ describe('base toggle: hepburn OFF leaves kunrei-shiki a complete, self-sufficie
     expect(type('いっちゃ', 'ittya', opts).results.at(-1)).toBe('complete')
   })
 
-  it('the tch- derivative of っち disappears along with chi when hepburn is off, leaving only the kunrei-derived tti (botchi/bocchi reject, botti accepts)', () => {
+  it('the tch- and cch- derivatives of っち disappear along with chi when hepburn is off, leaving only the kunrei-derived tti (botchi/bocchi reject, botti accepts)', () => {
     expect(type('ぼっち', 'botchi', opts).results).toContain('reject')
     expect(type('ぼっち', 'bocchi', opts).results).toContain('reject')
     expect(type('ぼっち', 'botti', opts).results.at(-1)).toBe('complete')

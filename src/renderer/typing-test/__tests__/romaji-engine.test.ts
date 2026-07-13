@@ -182,15 +182,15 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(matcher.typedRomaji()).toBe('kixtsute')
   })
 
-  it('rejects the tch- spelling before a ch- consonant; only the cch-/tt- forms complete (bocchi/botti accept, botchi rejects)', () => {
-    // Real IME input does not fold "t" into a ch- spelling's own doubling —
-    // typing "matcha" against 抹茶 leaves a literal "t" behind instead of
-    // completing まっちゃ, per Wikipedia's ローマ字入力 article and real IME
-    // behaviour, even though "matcha" is valid Hepburn orthography for the
+  it('accepts the tch- spelling before a ch- consonant, alongside cch-/tt- (botchi/bocchi/botti all complete)', () => {
+    // mozc's romaji table has an explicit "tch -> っ + ch" doubling row
+    // alongside its per-letter doubling rows, so typing "botchi" against
+    // ぼっち is real IME input, not just valid Hepburn orthography for the
     // finished word. The wapuro cch- doubling and the kunrei-derived tt-
-    // doubling (from the ti spelling) remain the two accepted forms.
+    // doubling (from the ti spelling) remain accepted too.
     const botchi = type('ぼっち', 'botchi')
-    expect(botchi.results).toContain('reject')
+    expect(botchi.results.at(-1)).toBe('complete')
+    expect(botchi.matcher.typedRomaji()).toBe('botchi')
 
     const bocchi = type('ぼっち', 'bocchi')
     expect(bocchi.results.at(-1)).toBe('complete')
@@ -201,9 +201,10 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
     expect(botti.matcher.typedRomaji()).toBe('botti')
   })
 
-  it('rejects tch- doubling a youon ch- digraph too (matcha); maccha/mattya still complete', () => {
+  it('accepts tch- doubling a youon ch- digraph too (matcha), alongside maccha/mattya', () => {
     const matcha = type('まっちゃ', 'matcha')
-    expect(matcha.results).toContain('reject')
+    expect(matcha.results.at(-1)).toBe('complete')
+    expect(matcha.matcher.typedRomaji()).toBe('matcha')
 
     const maccha = type('まっちゃ', 'maccha')
     expect(maccha.results.at(-1)).toBe('complete')
@@ -215,7 +216,7 @@ describe('っ — gemination vs explicit small-tsu spelling', () => {
   })
 })
 
-describe('っ — gemination excluded before an n/vowel/y-starting following kana', () => {
+describe('っ — gemination excluded before an n/vowel-starting following kana', () => {
   it('rejects doubling "n" before a na-row kana (あっな as anna would read back as あんな)', () => {
     const matcher = createRomajiMatcher('あっな')
     expect(matcher.acceptChar('a')).toBe('complete')
@@ -230,11 +231,11 @@ describe('っ — gemination excluded before an n/vowel/y-starting following kan
     expect(matcher.typedRomaji()).toBe('axtuna')
   })
 
-  it('rejects doubling "y" before や (あっや as ayya has no real IME equivalent)', () => {
-    const matcher = createRomajiMatcher('あっや')
-    expect(matcher.acceptChar('a')).toBe('complete')
-    expect(matcher.acceptChar('y')).toBe('reject')
-    expect(matcher.typedRomaji()).toBe('a')
+  it('doubles "y" before や, matching mozc\'s own yy -> っ + y row (あっや as ayya)', () => {
+    const { matcher, results } = type('あっや', 'ayya')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('ayya')
   })
 
   it('still completes あっや via the explicit tap (altuya)', () => {
@@ -335,14 +336,7 @@ describe('completedKanaCount', () => {
   })
 })
 
-describe('あ行 alternate spellings (yi for い, wu/whu for う)', () => {
-  it('accepts yi for い alongside the canonical i, inside a word', () => {
-    const { matcher, results } = type('あい', 'ayi')
-    expect(results.at(-1)).toBe('complete')
-    expect(matcher.isComplete()).toBe(true)
-    expect(matcher.typedRomaji()).toBe('ayi')
-  })
-
+describe('あ行 alternate spellings (wu/whu for う)', () => {
   it('accepts wu and whu for う alongside the canonical u, inside a word', () => {
     const wu = type('あう', 'awu')
     expect(wu.results.at(-1)).toBe('complete')
@@ -351,6 +345,89 @@ describe('あ行 alternate spellings (yi for い, wu/whu for う)', () => {
     const whu = type('あう', 'awhu')
     expect(whu.results.at(-1)).toBe('complete')
     expect(whu.matcher.typedRomaji()).toBe('awhu')
+  })
+})
+
+// Single-kana acceptance of every mozc spelling is swept exhaustively by
+// romaji-engine-mozc.test.ts against the vendored fixture; the cases here
+// cover only compositions that sweep can't generate (mid-word doubling,
+// doubling an apostrophe digraph, the decomposed fallback spelling).
+describe('mozc-aligned additions: y-doubling, apostrophe digraphs, and new extended rows', () => {
+  it('doubles a y-starting spelling mid-word (やっよ as yayyo)', () => {
+    const { matcher, results } = type('やっよ', 'yayyo')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('yayyo')
+  })
+
+  it('doubles the apostrophe-separated d\'- spelling of でゅ (っでゅ as dd\'yu)', () => {
+    const { matcher, results } = type('っでゅ', "dd'yu")
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe("dd'yu")
+  })
+
+  it('still completes via the decomposed spelling (きぃ as ki + xi)', () => {
+    const { matcher, results } = type('きぃ', 'kixi')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('kixi')
+  })
+})
+
+describe('mozc-aligned removals: い has no yi, ぢ/づ have no ji/zi/zu alternates', () => {
+  it('rejects yi for い (mozc has no such row)', () => {
+    const { results } = type('い', 'yi')
+    expect(results).toContain('reject')
+  })
+
+  it('rejects ji and zi for ぢ, but still accepts di', () => {
+    expect(type('ぢ', 'ji').results).toContain('reject')
+    expect(type('ぢ', 'zi').results).toContain('reject')
+
+    const { matcher, results } = type('ぢ', 'di')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('di')
+  })
+
+  it('rejects zu for づ', () => {
+    expect(type('づ', 'zu').results).toContain('reject')
+  })
+
+  it('rejects ja for ぢゃ, but still accepts dya', () => {
+    expect(type('ぢゃ', 'ja').results).toContain('reject')
+
+    const { matcher, results } = type('ぢゃ', 'dya')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.typedRomaji()).toBe('dya')
+  })
+})
+
+describe('ん — mozc consonant-lookahead retroactive commit', () => {
+  it('commits ん before a w-starting continuation even though う forces the guide\'s double-tap form (んう as nwu)', () => {
+    const { matcher, results } = type('んう', 'nwu')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('nwu')
+  })
+
+  it('still rejects a bare single "n" continuation into a vowel keystroke (んう as nu)', () => {
+    const { results } = type('んう', 'nu')
+    expect(results).toContain('reject')
+  })
+
+  it('still allows the double-tap spelling (んう as nnu)', () => {
+    const { matcher, results } = type('んう', 'nnu')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('nnu')
+  })
+
+  it('commits ん before a consonant-starting continuation across a full word (しんうち as shinwuchi)', () => {
+    const { matcher, results } = type('しんうち', 'shinwuchi')
+    expect(results.at(-1)).toBe('complete')
+    expect(matcher.isComplete()).toBe(true)
+    expect(matcher.typedRomaji()).toBe('shinwuchi')
   })
 })
 

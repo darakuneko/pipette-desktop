@@ -23,7 +23,19 @@
 // apostrophe): the matcher holds that keystroke as pending and resolves it
 // against the following character with a one-keystroke lookahead
 // ("retroactive commit" below), instead of hard-coding the ambiguity into
-// the table.
+// the table. That lookahead also covers mozc's own composer behaviour of
+// committing a pending "n" the moment the *next keystroke* is a consonant
+// that ん's own spellings can't extend, even when the guide would otherwise show
+// the forced double-tap form for that context (see the retroactive-commit
+// branch of `tryConsume`).
+//
+// The tables below mirror Google mozc's own romaji input table
+// (mozc/src/data/preedit/romanji-hiragana.tsv) — IME keystroke input, not
+// romanization orthography — so every accepted spelling here is something
+// a real IME actually accepts, not merely a valid way to transliterate the
+// finished word. See `.claude/docs/ROMAJI-ENGINE.md` for the mapping
+// rationale and `__tests__/romaji-engine-mozc.test.ts` for the compliance
+// sweep against that table.
 
 import { toHiragana } from './kana-script'
 
@@ -61,16 +73,11 @@ export const BASE_STYLES: readonly RomajiStyle[] = ['hepburn', 'kunrei']
 // single spelling ("-") never depends on context.
 export const KANA_TABLE: Record<string, readonly string[]> = {
   // -- vowels (あ行) --
-  // い/う carry an extra alternate spelling (yi / wu, whu) beyond the
-  // canonical Hepburn form. い's "yi" stays untagged (no SPELLING_STYLES
-  // entry): it doesn't fit any of the families below, and inventing a
-  // dedicated style for one rarely-used spelling would add a Romaji
-  // Settings toggle for essentially nothing. Untagged means always
-  // accepted and never shown in the settings modal. う's "wu"/"whu" are
-  // tagged 'w' instead — they're the W-notation family's う-row member
-  // (see the 'w' entries in SPELLING_STYLES below).
+  // う carries an extra alternate spelling (wu, whu) beyond the canonical
+  // Hepburn form "u". These are tagged 'w' — they're the W-notation
+  // family's う-row member (see the 'w' entries in SPELLING_STYLES below).
   あ: ['a'],
-  い: ['i', 'yi'],
+  い: ['i'],
   う: ['u', 'wu', 'whu'],
   え: ['e'],
   お: ['o'],
@@ -106,8 +113,8 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   て: ['te'],
   と: ['to'],
   だ: ['da'],
-  ぢ: ['di', 'ji', 'zi'],
-  づ: ['du', 'zu'],
+  ぢ: ['di'],
+  づ: ['du'],
   で: ['de'],
   ど: ['do'],
 
@@ -154,18 +161,20 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   れ: ['re'],
   ろ: ['ro'],
 
-  // -- わ行 --
+  // -- わ行 (ゐ/ゑ are historical kana, kept for completeness) --
   わ: ['wa'],
   を: ['wo'],
+  ゐ: ['wyi'],
+  ゑ: ['wye'],
 
   // -- long vowel mark (shared by hiragana/katakana text) --
   ー: ['-'],
 
   // -- small kana, typed standalone (x- canonical, l- alternate) --
   ぁ: ['xa', 'la'],
-  ぃ: ['xi', 'li'],
+  ぃ: ['xi', 'li', 'xyi', 'lyi'],
   ぅ: ['xu', 'lu'],
-  ぇ: ['xe', 'le'],
+  ぇ: ['xe', 'le', 'xye', 'lye'],
   ぉ: ['xo', 'lo'],
   ゃ: ['xya', 'lya'],
   ゅ: ['xyu', 'lyu'],
@@ -194,9 +203,9 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
   ちゃ: ['cha', 'tya', 'cya'],
   ちゅ: ['chu', 'tyu', 'cyu'],
   ちょ: ['cho', 'tyo', 'cyo'],
-  ぢゃ: ['dya', 'ja', 'zya'],
-  ぢゅ: ['dyu', 'ju', 'zyu'],
-  ぢょ: ['dyo', 'jo', 'zyo'],
+  ぢゃ: ['dya'],
+  ぢゅ: ['dyu'],
+  ぢょ: ['dyo'],
 
   // -- youon: な行 --
   にゃ: ['nya'],
@@ -226,45 +235,112 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 
   // -- extended (外来音) digraphs used by loanword katakana --
   いぇ: ['ye'],
+  うぁ: ['wha'],
   うぃ: ['wi', 'whi'],
   うぇ: ['we', 'whe'],
   うぉ: ['who'],
   ゔ: ['vu'],
   ゔぁ: ['va'],
-  ゔぃ: ['vi'],
-  ゔぇ: ['ve'],
+  ゔぃ: ['vi', 'vyi'],
+  ゔぇ: ['ve', 'vye'],
   ゔぉ: ['vo'],
+  ゔゃ: ['vya'],
+  ゔゅ: ['vyu'],
+  ゔょ: ['vyo'],
+
+  // -- extended い/え-row digraphs, one consonant-pair per row (きぃ/きぇ,
+  // ぎぃ/ぎぇ, ...). Most of these have no toggleable family and no
+  // decomposition fallback beyond the digraph spelling itself, so they're
+  // deliberately left untagged in SPELLING_STYLES below (see that file's
+  // header comment for the untagged-IME-extension policy) — the few that
+  // do share a family with an existing style (cyi/cye, jyi/jye) are tagged
+  // individually where they occur. --
+  きぃ: ['kyi'],
   きぇ: ['kye'],
+  ぎぃ: ['gyi'],
   ぎぇ: ['gye'],
-  しぇ: ['she'],
-  じぇ: ['je'],
-  ちぇ: ['che'],
+  しぃ: ['syi'],
+  しぇ: ['she', 'sye'],
+  じぃ: ['zyi', 'jyi'],
+  じぇ: ['je', 'zye', 'jye'],
+  ちぃ: ['tyi', 'cyi'],
+  ちぇ: ['che', 'tye', 'cye'],
+  ぢぃ: ['dyi'],
+  ぢぇ: ['dye'],
+  にぃ: ['nyi'],
   にぇ: ['nye'],
+  ひぃ: ['hyi'],
   ひぇ: ['hye'],
+  びぃ: ['byi'],
   びぇ: ['bye'],
+  ぴぃ: ['pyi'],
   ぴぇ: ['pye'],
+  みぃ: ['myi'],
   みぇ: ['mye'],
+  りぃ: ['ryi'],
   りぇ: ['rye'],
+
+  // -- つ行 extended digraphs --
   つぁ: ['tsa'],
   つぃ: ['tsi'],
   つぇ: ['tse'],
   つぉ: ['tso'],
-  てぃ: ['thi'],
-  てゅ: ['thu'],
-  とぅ: ['twu'],
-  でぃ: ['dhi'],
-  でゅ: ['dhu'],
-  どぅ: ['dwu'],
-  ふぁ: ['fa'],
-  ふぃ: ['fi'],
-  ふぇ: ['fe'],
-  ふぉ: ['fo'],
-  ふゅ: ['fyu'],
+
+  // -- て/で/と/ど full digraph rows: th-/dh-/tw-/dw- spellings, plus the
+  // apostrophe-separated t'-/d'- alternates for てぃ/てゅ/とぅ/でぃ/でゅ/どぅ --
+  てゃ: ['tha'],
+  てぃ: ['thi', "t'i"],
+  てゅ: ['thu', "t'yu"],
+  てぇ: ['the'],
+  てょ: ['tho'],
+  でゃ: ['dha'],
+  でぃ: ['dhi', "d'i"],
+  でゅ: ['dhu', "d'yu"],
+  でぇ: ['dhe'],
+  でょ: ['dho'],
+  とぁ: ['twa'],
+  とぃ: ['twi'],
+  とぅ: ['twu', "t'u"],
+  とぇ: ['twe'],
+  とぉ: ['two'],
+  どぁ: ['dwa'],
+  どぃ: ['dwi'],
+  どぅ: ['dwu', "d'u"],
+  どぇ: ['dwe'],
+  どぉ: ['dwo'],
+
+  // -- ふぁ行 loanword digraphs (fa-/hwa- both tagged 'f' below) --
+  ふぁ: ['fa', 'hwa'],
+  ふぃ: ['fi', 'hwi'],
+  ふぇ: ['fe', 'hwe'],
+  ふぉ: ['fo', 'hwo'],
+  ふゃ: ['fya'],
+  ふゅ: ['fyu', 'hwyu'],
+  ふょ: ['fyo'],
+
+  // -- くぁ/ぐぁ full digraph rows (qa-family tagged 'q' below) --
   くぁ: ['kwa', 'qa'],
   くぃ: ['kwi', 'qi'],
+  くぅ: ['kwu'],
   くぇ: ['kwe', 'qe'],
   くぉ: ['kwo', 'qo'],
   ぐぁ: ['gwa'],
+  ぐぃ: ['gwi'],
+  ぐぅ: ['gwu'],
+  ぐぇ: ['gwe'],
+  ぐぉ: ['gwo'],
+
+  // -- すぁ/ずぁ full digraph rows --
+  すぁ: ['swa'],
+  すぃ: ['swi'],
+  すぅ: ['swu'],
+  すぇ: ['swe'],
+  すぉ: ['swo'],
+  ずぁ: ['zwa'],
+  ずぃ: ['zwi'],
+  ずぅ: ['zwu'],
+  ずぇ: ['zwe'],
+  ずぉ: ['zwo'],
 }
 
 // Style tag per spelling, keyed by "<tableKey>|<spelling>" so spellings
@@ -276,39 +352,41 @@ export const KANA_TABLE: Record<string, readonly string[]> = {
 //   can never empty an entry's spelling set.
 // - hepburn / kunrei tag *both* sides of the syllables where the two base
 //   systems actually diverge (shi/si, chi/ti, tsu/tu, fu/hu, ji/zi and
-//   their sha/sya-family compounds, plus ぢ's ji/zi and the ぢゃ-row's
-//   ja/zya-family compounds, which diverge the same way じ/じゃ do) —
-//   including the canonical Hepburn forms, which used to be left untagged
-//   before 'hepburn' existed as a style. Spellings the two systems already
-//   agree on (ka, mi, ...) stay untagged, as do IME-specific alternates
-//   that don't fit either system's own rules (ぢ's "di" and the ぢゃ-row's
-//   "dya"/"dyu"/"dyo" are the canonical, untagged IME forms). づ's "zu" is
-//   untagged too, but for a different reason: both base systems spell づ
-//   as "zu", so it's a spelling the two systems share rather than an
-//   IME-specific one — untagged here means always accepted regardless of
-//   which base style is selected, the same practical effect as an
-//   IME-specific tag but a different justification.
+//   their sha/sya-family compounds) — including the canonical Hepburn
+//   forms, which used to be left untagged before 'hepburn' existed as a
+//   style. Spellings the two systems already agree on (ka, mi, ...) stay
+//   untagged, and ぢ/づ (di/du) are untagged for a different reason: they're
+//   the sole IME-input spellings mozc's own romaji table lists for those
+//   two kana — unlike じ/じゃ, ぢ/ぢゃ have no hepburn/kunrei divergence to
+//   tag at all.
 // - xSmall / lSmall tag *both* spelling families of the standalone
 //   small-kana entries — including the canonical x-forms — because each
 //   toggle must be able to remove its whole family ("only type small kana
 //   the l-way" is a real preference).
 // - w / v / f / ye tag *every* spelling of their 2-kana loanword digraph
-//   entries — including the sole/canonical one (ふぁ, ゔぁ, いぇ, ... each
-//   have exactly one listed spelling, or two for うぃ/うぇ) — even though
-//   that would normally trip `filterByStyle`'s empty-set guard. These
-//   entries are deliberately exempted from that guard (see the digraph
-//   branch of `getSegmentOptions`) because they always have a real
+//   entries — including the sole/canonical one (いぇ, ゔゃ, ... some entries
+//   list two or more spellings, e.g. ふぁ's fa/hwa or ゔぃ's vi/vyi) — even
+//   though that would normally trip `filterByStyle`'s empty-set guard.
+//   These entries are deliberately exempted from that guard (see the
+//   digraph branch of `getSegmentOptions`) because they always have a real
 //   decomposition fallback: every digraph key here is `firstKana +
 //   secondKana`, and both halves are independently typable (ふ alone, plus
-//   the standalone small kana ぁ/ぃ/ぅ/ぇ/ぉ/ゅ). Turning a whole family off
-//   is a deliberate "force the decomposed spelling" preference, not a trap
-//   — ふぁ with 'f' disabled still completes via "fu" + "xa"/"la". The 'w'
-//   family additionally reaches into う's own single-kana entry (wu/whu)
-//   since う is the first half of every W-notation digraph — that part
-//   keeps the ordinary tag-only-alternates treatment (う's canonical "u"
-//   stays untagged), and ゔ (v's own first half) is guarded normally as a
-//   standalone atomic kana with no decomposition of its own, so disabling
-//   'v' still leaves ゔ typable as "vu" while ゔぁ etc. need "vu"+small-kana.
+//   the standalone small kana ぁ/ぃ/ぅ/ぇ/ぉ/ゃ/ゅ/ょ). Turning a whole family
+//   off is a deliberate "force the decomposed spelling" preference, not a
+//   trap — ふぁ with 'f' disabled still completes via "fu" + "xa"/"la". The
+//   'w' family additionally reaches into う's own single-kana entry
+//   (wu/whu) since う is the first half of every W-notation digraph — that
+//   part keeps the ordinary tag-only-alternates treatment (う's canonical
+//   "u" stays untagged), and ゔ (v's own first half) is guarded normally as
+//   a standalone atomic kana with no decomposition of its own, so
+//   disabling 'v' still leaves ゔ typable as "vu" while ゔぁ etc. need
+//   "vu"+small-kana.
+// Every other mozc-only IME-extension spelling stays untagged on purpose:
+// it doesn't fit any of the families above, and inventing a dedicated style
+// per rarely-used spelling would add Romaji Settings toggles for
+// essentially nothing. Untagged means always accepted and never shown in
+// the settings modal. The exhaustive spelling list lives in KANA_TABLE
+// itself, pinned against the mozc fixture by romaji-engine-mozc.test.ts.
 // For the both-tagged regimes without a decomposition fallback
 // (hepburn/kunrei, xSmall/lSmall, and w/v/f/ye's own atomic first-kana
 // entries う/ゔ), typability is guaranteed not by leaving one side untagged
@@ -331,6 +409,8 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|cya': 'c',
   'ちゅ|cyu': 'c',
   'ちょ|cyo': 'c',
+  'ちぃ|cyi': 'c',
+  'ちぇ|cye': 'c',
 
   // -- q: "q"-letter substitutions (く row, including the くぁ-row's
   // JIS X 4063 kwa(qa)-family spellings) --
@@ -356,17 +436,12 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|cha': 'hepburn',
   'ちゅ|chu': 'hepburn',
   'ちょ|cho': 'hepburn',
-  'ぢ|ji': 'hepburn',
-  'ぢゃ|ja': 'hepburn',
-  'ぢゅ|ju': 'hepburn',
-  'ぢょ|jo': 'hepburn',
 
   // -- kunrei: kunrei-shiki-style alternates --
   'し|si': 'kunrei',
   'じ|zi': 'kunrei',
   'ち|ti': 'kunrei',
   'つ|tu': 'kunrei',
-  'ぢ|zi': 'kunrei',
   'ふ|hu': 'kunrei',
   'しゃ|sya': 'kunrei',
   'しゅ|syu': 'kunrei',
@@ -377,9 +452,6 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ちゃ|tya': 'kunrei',
   'ちゅ|tyu': 'kunrei',
   'ちょ|tyo': 'kunrei',
-  'ぢゃ|zya': 'kunrei',
-  'ぢゅ|zyu': 'kunrei',
-  'ぢょ|zyo': 'kunrei',
 
   // -- digraph: alternate spellings of the youon j-row 2-kana table entries
   // that don't fall into the kunrei/c/q families above (the loanword W
@@ -387,13 +459,16 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'じゃ|jya': 'digraph',
   'じゅ|jyu': 'digraph',
   'じょ|jyo': 'digraph',
+  'じぃ|jyi': 'digraph',
+  'じぇ|jye': 'digraph',
 
   // -- w: W-notation loanword digraphs. Both spellings of うぃ/うぇ are
-  // tagged (including the canonical "wi"/"we"), plus うぉ's sole spelling
-  // "who" and う's own "wu"/"whu" alternates — see the SPELLING_STYLES
-  // header comment for why tagging a sole/canonical digraph spelling is
-  // safe here (decomposition into う + the standalone small kana always
-  // remains). --
+  // tagged (including the canonical "wi"/"we"), plus うぁ/うぉ's sole
+  // spellings "wha"/"who" and う's own "wu"/"whu" alternates — see the
+  // SPELLING_STYLES header comment for why tagging a sole/canonical digraph
+  // spelling is safe here (decomposition into う + the standalone small
+  // kana always remains). --
+  'うぁ|wha': 'w',
   'うぃ|wi': 'w',
   'うぃ|whi': 'w',
   'うぇ|we': 'w',
@@ -408,19 +483,31 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ゔ|vu': 'v',
   'ゔぁ|va': 'v',
   'ゔぃ|vi': 'v',
+  'ゔぃ|vyi': 'v',
   'ゔぇ|ve': 'v',
+  'ゔぇ|vye': 'v',
   'ゔぉ|vo': 'v',
+  'ゔゃ|vya': 'v',
+  'ゔゅ|vyu': 'v',
+  'ゔょ|vyo': 'v',
 
-  // -- f: ふぁ行 loanword digraphs (canonical tagged too; ふ itself is
-  // untouched by this tag — ふ=fu/hu stays hepburn/kunrei territory) --
+  // -- f: ふぁ行 loanword digraphs (canonical and hwa-family spellings both
+  // tagged; ふ itself is untouched by this tag — ふ=fu/hu stays
+  // hepburn/kunrei territory) --
   'ふぁ|fa': 'f',
+  'ふぁ|hwa': 'f',
   'ふぃ|fi': 'f',
+  'ふぃ|hwi': 'f',
   'ふぇ|fe': 'f',
+  'ふぇ|hwe': 'f',
   'ふぉ|fo': 'f',
+  'ふぉ|hwo': 'f',
+  'ふゃ|fya': 'f',
   'ふゅ|fyu': 'f',
+  'ふゅ|hwyu': 'f',
+  'ふょ|fyo': 'f',
 
-  // -- ye: いぇ, the sole loanword digraph with no other family to join.
-  // い itself (yi) stays untagged — see the あ行 KANA_TABLE comment. --
+  // -- ye: いぇ, the sole loanword digraph with no other family to join. --
   'いぇ|ye': 'ye',
 
   // -- xSmall / lSmall: standalone small-kana spellings, both families
@@ -429,8 +516,10 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   // families are disabled at once) --
   'ぁ|xa': 'xSmall',
   'ぃ|xi': 'xSmall',
+  'ぃ|xyi': 'xSmall',
   'ぅ|xu': 'xSmall',
   'ぇ|xe': 'xSmall',
+  'ぇ|xye': 'xSmall',
   'ぉ|xo': 'xSmall',
   'ゃ|xya': 'xSmall',
   'ゅ|xyu': 'xSmall',
@@ -440,8 +529,10 @@ export const SPELLING_STYLES: Record<string, RomajiStyle> = {
   'ゖ|xke': 'xSmall',
   'ぁ|la': 'lSmall',
   'ぃ|li': 'lSmall',
+  'ぃ|lyi': 'lSmall',
   'ぅ|lu': 'lSmall',
   'ぇ|le': 'lSmall',
+  'ぇ|lye': 'lSmall',
   'ぉ|lo': 'lSmall',
   'ゃ|lya': 'lSmall',
   'ゅ|lyu': 'lSmall',
@@ -507,6 +598,13 @@ export const SOKUON_EXPLICIT_PATTERNS: readonly string[] = ['xtu', 'ltu', 'ltsu'
 // a subset of this list).
 export const N_PATTERNS_SINGLE_OR_DOUBLE: readonly string[] = ['n', 'nn', 'xn', "n'"]
 const N_PATTERNS_DOUBLE_ONLY: readonly string[] = ['nn', 'xn', "n'"]
+// Next-keystroke class that lets a pending single "n" retroactively commit
+// as ん (see the fallback in `tryConsume`): every consonant that can't
+// extend ん's own spellings. Vowels, "n", and "y" stay excluded — they'd
+// fold the pending "n" into a na/nya-row reading instead. Deliberately one
+// letter narrower than `doubledPatterns`' vowel/n exclusion, where "y" is
+// a valid doubling start (mozc's yy row).
+const N_SINGLE_COMMIT_NEXT_KEY = /^[b-df-hj-mp-tv-xz]$/
 const N_CONTEXT_REQUIRES_DOUBLE_TAP = new Set([
   'あ', 'い', 'う', 'え', 'お', 'ぁ', 'ぃ', 'ぅ', 'ぇ', 'ぉ',
   'な', 'に', 'ぬ', 'ね', 'の',
@@ -580,19 +678,22 @@ function nPatternsFor(
 // Doubles a segment option's patterns by prefixing each with its own
 // leading consonant letter (っ + て "te" -> "tte"). Patterns that don't
 // start with a plain consonant letter (a vowel, or something like the
-// long-vowel mark's "-") can't be doubled and are skipped. "n" and "y"
-// starts are excluded too: doubling "na" into "nna" would make "anna"
-// read back as あんな (single ん + な) instead of あっな, and doubling "ya"
-// into "yya" has no real IME equivalent either — real input methods never
-// derive a consonant-doubled spelling from these starts, so the matcher
-// must not accept it as a gemination spelling of っ. The explicit taps
-// (xtu/ltu/ltsu/xtsu) remain the only way to type っ before such a kana.
+// long-vowel mark's "-") can't be doubled and are skipped. "n" starts stay
+// excluded: doubling "na" into "nna" would make "anna" read back as あんな
+// (single ん + な) instead of あっな. "y" starts are doubleable, matching
+// mozc's own romaji table (yy -> っ + y is one of its listed doubling
+// rows), so "yya"/"yyo" etc. are accepted here too. っち also gets the
+// extra "tch-" derivation on top of its own leading-letter double
+// ("cchi"): mozc's table has an explicit "tch -> っ + ch" row alongside the
+// regular per-letter doubling rows, so a pattern starting with "ch" (chi,
+// cha, chu, che, cho) additionally doubles via a literal "t" prefix.
 function doubledPatterns(option: SegmentOption): readonly string[] {
   const doubled: string[] = []
   for (const pattern of option.patterns) {
     const first = pattern[0]
-    if (first !== undefined && /[a-z]/.test(first) && !/[aiueony]/.test(first)) {
+    if (first !== undefined && /[a-z]/.test(first) && !/[aiueon]/.test(first)) {
       doubled.push(first + pattern)
+      if (pattern.startsWith('ch')) doubled.push('t' + pattern)
     }
   }
   return doubled
@@ -881,7 +982,23 @@ export function createRomajiMatcher(word: string, opts?: RomajiMatcherOptions): 
     // possible second "n"), retroactively commit that segment and retry
     // this keystroke fresh against the next kana position.
     if (buffer === '') return null
-    const winner = exactWinnerAt(kana, position, buffer, disabledStyles)
+    let winner = exactWinnerAt(kana, position, buffer, disabledStyles)
+    // mozc's composer commits a pending "n" as ん the moment the next
+    // keystroke is a consonant that can't extend any of ん's own spellings
+    // (n/nn/xn/n'), even in contexts whose guide shows the forced
+    // double-tap form (N_CONTEXT_REQUIRES_DOUBLE_TAP only governs
+    // nPatternsFor's forward-looking pattern list, not this backward
+    // lookahead). E.g. んう typed "nwu": "n" alone isn't a live prefix of
+    // う's own patterns, but "n" + "w" can't continue as ん's own spelling
+    // either, so mozc commits the pending ん and reprocesses "w" against
+    // the next kana — "kani" must still reject, since "i" is a vowel and
+    // stays excluded here, along with "y" (yi/ya/yu/yo could extend ん's
+    // own "n" into a na-row misreading the same way a vowel would).
+    // Synthesizing the winner without `filterByStyle` is safe only because
+    // bare "n" is permanently untagged (see SPELLING_STYLES' ん comment).
+    if (!winner && buffer === 'n' && kanaAt(kana, position) === 'ん' && N_SINGLE_COMMIT_NEXT_KEY.test(char)) {
+      winner = { pattern: 'n', length: 1, scope: 'ん' }
+    }
     if (!winner) return null
 
     const nextPosition = position + winner.length
